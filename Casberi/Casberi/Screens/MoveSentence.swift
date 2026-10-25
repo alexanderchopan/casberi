@@ -426,6 +426,15 @@ struct MoveSentence: View {
             #if DEBUG
             draft()
             #endif
+            // **THE FIRST BLANK OPENS ITSELF (prd §1534, user: "make sure …
+            // that its very easy to use").** Swap and Send landed as a grey
+            // sentence and nothing said the words were the controls. With
+            // money to spend and nothing picked, what you hold is shown —
+            // shown, not chosen (§1438c), and with the keyboard down.
+            if open == nil, with == nil, verb == .swap || verb == .send,
+               heldBy.values.contains(where: { !$0.isEmpty }) {
+                withAnimation(DS.Motion.standard) { open = .with; search = "" }
+            }
             // No keyboard on its own: Move is a page, and a keyboard raised
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
@@ -1873,11 +1882,18 @@ struct MoveSentence: View {
     // MARK: - The choices
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
-                         mark: String? = nil, image: String? = nil, brand: String? = nil, dim: Bool = false,
+                         mark: String? = nil, image: String? = nil, brand: String? = nil,
+                         remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
                          act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: DS.Space.s3) {
-                if let brand {
+                if let face {
+                    // A person: the face the Wallet draws for that address
+                    // (its ENS avatar, else its tinted mark), never initials
+                    // or an empty column (prd §1534).
+                    WalletFace(address: face, size: DS.Face.list, circular: true)
+                        .accessibilityHidden(true)
+                } else if let brand {
                     // An app's or a company's own mark (`BridgeIcon`), not a
                     // token's (`AssetMark` reads token art only, prd §1481).
                     BridgeIcon(name: brand, size: DS.Face.list, circular: true)
@@ -1888,6 +1904,19 @@ struct MoveSentence: View {
                         .scaledToFill()
                         .frame(width: DS.Face.list, height: DS.Face.list)
                         .clipShape(Circle())
+                        .accessibilityHidden(true)
+                } else if let remote {
+                    // A picture the read named (Relay's network icon), over
+                    // the letters until it lands (prd §1534).
+                    RemoteAssetMark(urlString: remote, size: DS.Face.list,
+                                    monogram: String((mark ?? title).prefix(2)).uppercased())
+                } else if let symbol {
+                    // A glyph for what has no logo of its own (Buy's
+                    // categories, a person with no face, prd §1534).
+                    Circle().fill(DS.fillStrong)
+                        .frame(width: DS.Face.list, height: DS.Face.list)
+                        .overlay(Image(systemName: symbol).dsGlyph(.body, weight: .semibold)
+                            .foregroundStyle(DS.textSecondary))
                         .accessibilityHidden(true)
                 } else if let mark {
                     AssetMark(name: mark, size: DS.Face.list)
@@ -2005,19 +2034,23 @@ struct MoveSentence: View {
         return VStack(alignment: .leading, spacing: 0) {
             if let above, q.isEmpty {
                 listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
-                        mark: above.toName ?? "") {
+                        face: above.to) {
                     to = above.toName ?? above.to
                     resolved = Recipient(address: above.to, name: above.toName, imitates: nil)
                     pick {}
                 }
             }
             if let r = resolved, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
-                listRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address)) {
+                listRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address),
+                        face: r.address) {
                     pick {}
                 }
             }
             ForEach(Array(book.filter { e in above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true }.prefix(20)), id: \.address) { e in
-                listRow(e.name, sub: YourAccount.short(e.address), mark: e.name) {
+                // A company in the book (Uniswap, Coinbase) wears its logo; a
+                // person, their face (prd §1534).
+                listRow(e.name, sub: YourAccount.short(e.address), mark: e.name,
+                        face: AssetMark.hasAsset(e.name) ? nil : e.address) {
                     to = e.name
                     resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
                     pick {}
@@ -2045,7 +2078,8 @@ struct MoveSentence: View {
                 }
             }
             ForEach(elsewhereNetworks) { n in
-                listRow(n.name, sub: String(localized: "through Relay"), mark: String(n.name.prefix(1))) {
+                listRow(n.name, sub: String(localized: "through Relay"), mark: n.name,
+                        image: Self.networkMark(chainId: n.id), remote: n.icon) {
                     pick {}
                     takeRoute(from: n, token: n.coin(like: elsewhere?.token))
                 }
@@ -2154,12 +2188,30 @@ struct MoveSentence: View {
     }
 
     /// Each network's own mark, from the brand set the Wallet already draws.
-    static func networkMark(_ n: Op.Network) -> String? {
-        switch n.chainId {
-        case 8453: "brand-l2b-base"
-        case 4663: "brand-l2b-robinhood"
-        case 1: "brand-eth"
-        default: nil
+    static func networkMark(_ n: Op.Network) -> String? { networkMark(chainId: n.chainId) }
+
+    /// **EVERY NETWORK WEARS ITS MARK (prd §1534).** The bundled set by chain
+    /// id — the L2BEAT marks the Wallet already ships, Base's for its test
+    /// network — and nil where none is bundled, so the row falls back to
+    /// Relay's own picture of the network, never a letter.
+    static func networkMark(chainId: Int) -> String? {
+        let l2b: [Int: String] = [
+            10: "optimism", 100: "gnosis", 130: "unichain", 137: "polygon-pos", 169: "mantapacific",
+            196: "xlayer", 288: "bobanetwork", 324: "zksync2", 360: "shape", 480: "worldchain",
+            999: "hyperliquid", 1088: "metis", 1135: "lisk", 1337: "hyperliquid", 1868: "soneium",
+            2020: "roninnetwork", 2741: "abstract", 2818: "morph", 4326: "megaeth", 4663: "robinhood",
+            5000: "mantle", 8453: "base", 84532: "base", 33139: "apechain", 34443: "mode",
+            42161: "arbitrum", 42220: "celo", 48900: "zircuit", 57073: "ink", 59144: "linea",
+            60808: "bob", 98866: "plumenetwork", 534352: "scroll", 747474: "katana",
+            3586256: "lighter", 5064014: "ethereal", 7777777: "zora", 9286185: "eclipse",
+            548123634: "lighter-robinhood",
+        ]
+        if let name = l2b[chainId] { return "brand-l2b-" + name }
+        switch chainId {
+        case 1: return "brand-eth"
+        case 792703809: return "brand-sol"
+        case 8253038: return "brand-wbtc"
+        default: return nil
         }
     }
 
@@ -3061,7 +3113,7 @@ struct MoveSentence: View {
     private var groupList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(BitrefillBuy.Group.allCases, id: \.self) { g in
-                listRow(g.title, sub: g.examples, dim: buyGroup == g) {
+                listRow(g.title, sub: g.examples, symbol: g.glyph, dim: buyGroup == g) {
                     pick {
                         buyGroup = g
                         if let p = buyProduct, BitrefillBuy.group(of: p) != g { buyProduct = nil }

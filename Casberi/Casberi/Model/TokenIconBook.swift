@@ -41,6 +41,13 @@ enum TokenIconBook {
     /// The one host a book entry may name — the host Zerion's own CDN
     /// answers from. Anything else is refused at `note`, not at fetch time.
     static let host = "cdn.zerion.io"
+    /// **AND THE HOSTS RELAY'S TOKEN LIST NAMES (prd §1534).** Move's lists
+    /// read Relay's tokens anyway, and each verified entry carries its logo
+    /// (`metadata.logoURI`), so the For list's tokens wear their pictures
+    /// with no request of their own — the rule above, applied to a second
+    /// read we already pay for. Declared under "Your account" in
+    /// `NetworkReach`.
+    static let relayHosts: Set<String> = ["coin-images.coingecko.com", "assets.coingecko.com", "assets.relay.link"]
 
     private static let lock = NSLock()
     /// Ordered oldest-first; a re-noted symbol moves to the end.
@@ -67,7 +74,7 @@ enum TokenIconBook {
     /// Whether a URL may enter the book: https, on `host`, nothing else.
     static func accepts(_ urlString: String) -> Bool {
         guard let url = URL(string: urlString), url.scheme == "https",
-              url.host?.lowercased() == host else { return false }
+              let named = url.host?.lowercased(), named == host || relayHosts.contains(named) else { return false }
         return true
     }
 
@@ -105,6 +112,15 @@ enum TokenIconBook {
         if let data = try? JSONEncoder().encode(snapshot) {
             DefaultsWrite.set(data, forKey: key)
         }
+    }
+
+    /// Record what Relay's list named, only for symbols the book has no
+    /// picture for: the holdings read's own picture (Zerion's) is never
+    /// replaced, and only a token Relay verified is offered here.
+    static func fill(_ found: [(symbol: String, url: String)]) {
+        let missing = found.filter { url(for: $0.symbol) == nil }
+        guard !missing.isEmpty else { return }
+        note(missing)
     }
 
     /// Everything, for the probe and the harness.

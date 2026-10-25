@@ -87,6 +87,7 @@ struct ReceiveFromWalletSheet: View {
                     if on { model.picked.remove(leg.id) } else { model.picked.insert(leg.id) }
                 } label: {
                     row(Self.words(leg.holding.symbol, raw: leg.amount, decimals: leg.holding.decimals),
+                        symbol: leg.holding.symbol,
                         line: Self.line(leg), figure: WalletValue.exactMoney(leg.usd), on: on)
                 }
                 .buttonStyle(RowPress())
@@ -98,6 +99,7 @@ struct ReceiveFromWalletSheet: View {
                 .padding(.top, DS.Space.s3)
             ForEach(plan.stays, id: \.0.id) { held, why in
                 row(Self.words(held.symbol, raw: held.raw, decimals: held.decimals),
+                    symbol: held.symbol,
                     line: "\(held.networkName) · \(Self.reason(why))", figure: WalletValue.exactMoney(held.usd), on: nil)
             }
         }
@@ -111,8 +113,12 @@ struct ReceiveFromWalletSheet: View {
         }
     }
 
-    private func row(_ title: String, line: String, figure: String, on: Bool?) -> some View {
+    private func row(_ title: String, symbol: String, line: String, figure: String, on: Bool?) -> some View {
         HStack(spacing: DS.Space.s3) {
+            // Every token row in Move wears its mark (prd §1534); one that
+            // stays behind is dimmed with its words.
+            AssetMark(name: symbol, size: DS.Face.list)
+                .opacity(on == true ? 1 : 0.55)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title).dsText(.body17)
                     .foregroundStyle(on == false ? DS.textTertiary : on == nil ? DS.textSecondary : DS.textPrimary)

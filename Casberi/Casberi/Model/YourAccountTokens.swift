@@ -59,11 +59,16 @@ enum YourAccountTokens {
         var seen: Set<String> = []
         var out: [Listed] = q.isEmpty ? [Listed(token: Op.eth, name: "Ether", onList: true)] : []
         if q.isEmpty { seen.insert(Op.eth.symbol) }
+        // A verified token's logo goes to the icon book (prd §1534), so its
+        // row draws its picture rather than its initials.
+        var logos: [(symbol: String, url: String)] = []
         for c in await YourAccountChain.relayCurrencies(net, term: q) {
             guard let address = c["address"] as? String,
                   let symbol = c["symbol"] as? String, !symbol.isEmpty, symbol.count <= 16,
                   let decimals = c["decimals"] as? Int, (0...36).contains(decimals) else { continue }
-            let verified = ((c["metadata"] as? [String: Any])?["verified"] as? Bool) ?? false
+            let metadata = c["metadata"] as? [String: Any]
+            let verified = (metadata?["verified"] as? Bool) ?? false
+            if verified, let logo = metadata?["logoURI"] as? String { logos.append((symbol, logo)) }
             let token: Op.Token
             if address.lowercased() == YourAccountSwap.native {
                 token = Op.eth
@@ -75,6 +80,7 @@ enum YourAccountTokens {
             guard seen.insert(id).inserted else { continue }
             out.append(Listed(token: token, name: (c["name"] as? String) ?? symbol, onList: verified))
         }
+        TokenIconBook.fill(logos)
         // Verified first, each group in Relay's order.
         out = out.filter(\.onList) + out.filter { !$0.onList }
         if q.isEmpty, out.count > 1 { lists[net.chainId] = (out, .now) }

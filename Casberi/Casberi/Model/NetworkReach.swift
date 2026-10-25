@@ -481,12 +481,16 @@ enum NetworkReach {
         // only (`YourAccountOp.networks`, prd §1439a).
         Endpoint(service: "Your account",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what your account holds on Base, Ethereum and Robinhood Chain, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Receiving from another network, or a round-up's buy, asks Relay for the deposit address of that route, refused unless Relay names your account as the one that gets it. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
+                 purpose: "Reads what your account holds on Base, Ethereum and Robinhood Chain, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Receiving from another network, or a round-up's buy, asks Relay for the deposit address of that route, refused unless Relay names your account as the one that gets it. A token's picture is fetched from the image address Relay's list gives for it (CoinGecko's or Relay's), carrying nothing about you. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
                  hosts: ["public.pimlico.io", "api.candide.dev",
                          "mainnet.base.org", "base-rpc.publicnode.com",
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
                          "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link",
-                         "rpc.mainnet.chain.robinhood.com", "robinhood-rpc.publicnode.com"],
+                         "rpc.mainnet.chain.robinhood.com", "robinhood-rpc.publicnode.com",
+                         // Token pictures Relay's verified list names (prd
+                         // §1534), fetched only from these, never learned by a
+                         // request of their own (`TokenIconBook.relayHosts`).
+                         "coin-images.coingecko.com", "assets.coingecko.com", "assets.relay.link"],
                  credentialed: false,
                  throughTor: true,
                  refusesTor: ["api.relay.link"]),

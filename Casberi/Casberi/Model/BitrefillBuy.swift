@@ -172,6 +172,20 @@ enum BitrefillBuy {
         }
 
         /// The cards people know it by, for the row under the sentence.
+        /// The row's glyph in Buy's category list (prd §1534): every row in
+        /// Move wears a mark, and a category has no logo of its own.
+        var glyph: String {
+            switch self {
+            case .shopping: "bag"
+            case .food: "fork.knife"
+            case .travel: "airplane"
+            case .games: "gamecontroller"
+            case .entertainment: "tv"
+            case .phone: "iphone"
+            case .money: "creditcard"
+            }
+        }
+
         var examples: String {
             switch self {
             case .shopping: "Amazon, Apple, Walmart, Target"

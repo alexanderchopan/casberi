@@ -39,6 +39,9 @@ enum YourAccountElsewhere {
         let name: String
         /// What Relay bridges from here, its own coin first, then A–Z.
         let coins: [Coin]
+        /// Relay's own picture of the network (`iconUrl`), drawn where the
+        /// app bundles none (prd §1534); only from Relay's image host.
+        var icon: String? = nil
 
         /// What to offer first on this network: what was being sent before,
         /// where this network has it too; else USDC; else its first coin.
@@ -88,7 +91,9 @@ enum YourAccountElsewhere {
             guard !tags.contains("testnet") else { continue }
             let coins = Self.coins(of: c)
             guard !coins.isEmpty else { continue }
-            out.append(Network(id: id, name: name, coins: coins))
+            let icon = (c["iconUrl"] as? String).flatMap { URL(string: $0) }
+                .flatMap { $0.scheme == "https" && $0.host?.lowercased() == "assets.relay.link" ? $0.absoluteString : nil }
+            out.append(Network(id: id, name: name, coins: coins, icon: icon))
         }
         out.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         if !out.isEmpty { listed = (out, .now) }
