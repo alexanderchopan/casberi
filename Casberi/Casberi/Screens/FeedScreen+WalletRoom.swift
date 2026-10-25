@@ -193,7 +193,7 @@ extension FeedScreen {
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
         // Home's doors state their own count (prd §1480).
-        case .yourAccount, .following, .needsYou, .permissions, .threats:
+        case .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey:
             walletPageFigure(section, upcoming: upcoming)
         // Spending's pages keep Spending's box: the window and its total.
         case .places, .fees:
@@ -558,7 +558,7 @@ extension FeedScreen {
         // their figure; Activity and Home's doors state their own count
         // (prd §1480), an empty one included.
         case .home, .markets, .subscriptions, .spending, .places, .fees,
-             .activity, .yourAccount, .following, .needsYou, .permissions, .threats:
+             .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             return blockStream.els.isEmpty
@@ -579,7 +579,7 @@ extension FeedScreen {
         // which an app pick clears (§1067), as Security was.
         // Markets is what YOU watch, no account's (§1498, after §1491).
         var out: Set<WalletSection> = [.spending, .places, .fees, .markets,
-                                       .permissions, .threats, .yourAccount]
+                                       .permissions, .threats, .yourAccount, .recoveryKey]
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),

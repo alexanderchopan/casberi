@@ -164,6 +164,7 @@ extension FeedScreen {
         let rows = Self.things(groups.flatMap(\.1)).filter(\.isLive).count
         let onAll = selectedSeat == nil && selectedWallet == nil
         let nudges = (onAll && OutsideKeyNudge.shown ? 1 : 0) + (onAll && RecoveryKeyNudge.shown ? 1 : 0)
+            + (onAll && RecoveryCheckNudge.shown ? 1 : 0)
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil }.count : 0
         return rows + walletSignatureWarnings.count + nudges + cards
     }
@@ -184,6 +185,9 @@ extension FeedScreen {
         walletDoorsSection {
             if yours != nil, onAll || yoursPicked {
                 walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)
+                    // Read when Home stands, never in a body (prd §1515): the
+                    // demo, and a launch before the first foreground sweep.
+                    .task { RecoveryCheckState.shared.refresh() }
             } else if yours == nil, onAll {
                 // **NONE YET: THE VERB (prd §1480 item 2).** Move makes it.
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
@@ -366,6 +370,8 @@ extension FeedScreen {
         switch section {
         case .yourAccount:
             walletAccountSection
+        case .recoveryKey:
+            RecoveryCheckRows()
         case .following:
             walletFollowingPage
         case .needsYou:
@@ -456,6 +462,8 @@ extension FeedScreen {
         walletSignaturesSection
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }
+            // The monthly check (prd §1515): one row when it is due.
+            if onAll && RecoveryCheckNudge.shown { RecoveryCheckNudge().listRow }
             if onAll && OutsideKeyNudge.shown { OutsideKeyNudge().listRow }
         }
         if !needs.isEmpty {
@@ -558,6 +566,8 @@ extension FeedScreen {
         switch section {
         case .yourAccount:
             WalletYourAccountFigure(address: YourAccountDemo.shownAddress)
+        case .recoveryKey:
+            RecoveryCheckFigure()
         case .following:
             let slots = walletFollowingSlots
             DSFigureReading(number: "\(slots.count)",

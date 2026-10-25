@@ -73,6 +73,7 @@ check(WalletSection.spending.label == "Spending", "the tile reads Spending — H
 // Holdings' four and Spending's three; together with the tiles they are
 // every case, each once, so a new scope cannot be silently unlisted.
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
+    + WalletSection.yourAccountDoors
 check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
       && WalletSection.order.count + doors.count == WalletSection.allCases.count,
       "the tiles and the doors list every case once (prd §1480)")
@@ -82,11 +83,14 @@ check(WalletSection.holdingsDoors == [.holdingAccounts, .apps, .positions, .nfts
       "Holdings' pages are Following, Apps, Positions, NFTs (You narrows, Tokens is its sheet) (prd §1503)")
 check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
       "Spending's doors are Subscriptions, Places, Fees (prd §1480)")
+check(WalletSection.yourAccountDoors == [.recoveryKey],
+      "Your account's one door is the recovery key's monthly check (prd §1515)")
 // A page goes back to the page it opened from (prd §1480 item 9).
 for s in WalletSection.order { check(s.parent == nil && s.isTile, "\(s.rawValue) is a tile with no parent") }
 for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes back to Home") }
 for s in WalletSection.holdingsDoors { check(s.parent == .holdings, "\(s.rawValue) goes back to Holdings") }
 for s in WalletSection.spendingDoors { check(s.parent == .spending, "\(s.rawValue) goes back to Spending") }
+for s in WalletSection.yourAccountDoors { check(s.parent == .yourAccount, "\(s.rawValue) goes back to Your account") }
 check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you follow read Following, the word Home uses (prd §1503)")
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")

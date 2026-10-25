@@ -2755,6 +2755,10 @@ harness "Move warnings self-test" "move-warnings self-test" "scripts/move-warnin
 # unknown), unlimited approvals from the bytes with selectors pinned, the
 # three EIP-712 hashes; and an unconfirmed pairing held, never auto-approved.
 harness "Safe sign checks self-test" "safe-sign-checks self-test" "scripts/safe-sign-checks-selftest.sh" "the co-signer's checks drifted — run scripts/safe-sign-checks-selftest.sh"
+# The monthly recovery check (prd §1515): the due rule's edges, each
+# network's standing, the sentence; the signature verified on the phone, not
+# by a chain (§1456's threshold), only a good check dated, no badge.
+harness "Recovery check self-test" "recovery-check self-test" "scripts/recovery-check-selftest.sh" "the recovery check drifted — run scripts/recovery-check-selftest.sh"
 
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 

@@ -23,6 +23,8 @@ enum ScopeTileGlyph {
     // account, Permissions and Threats, each wearing its own glyph.
     /// The account the app made you, and the controls on it (prd §1480).
     static let yourAccount = "person.badge.shield.checkmark"
+    /// The recovery key's check (prd §1515).
+    static let recoveryKey = "key.horizontal"
     /// Approvals and delegations: who can spend from you (prd §1480). The key
     /// the user reserved for Permissions (2026-09-18) is its own again.
     static let permissions = "key"
@@ -236,6 +238,7 @@ extension WalletSection: DSTileScope {
         case .subscriptions:   return ScopeTileGlyph.subscriptions
         case .places:          return ScopeTileGlyph.places
         case .fees:            return ScopeTileGlyph.fees
+        case .recoveryKey:     return ScopeTileGlyph.recoveryKey
         }
     }
 }

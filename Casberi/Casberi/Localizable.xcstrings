@@ -40045,6 +40045,34 @@
         }
       }
     },
+    "A month since it was last checked. No fee, nothing sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hace un mes de la última comprobación. Sin comisión, no se envía nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回の確認から1か月。手数料なし、送信もしません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막 확인 후 한 달이 지났습니다. 수수료 없음, 전송 없음."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "距上次检查已一个月。无手续费，不发送任何内容。"
+          }
+        }
+      }
+    },
     "A name and an email or address" : {
       "localizations" : {
         "es" : {
@@ -49052,6 +49080,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "普通转账 — 一个结果，而不是每部分一个步骤。"
+          }
+        }
+      }
+    },
+    "An owner" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Es propietaria"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オーナー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "소유자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "是所有者"
           }
         }
       }
@@ -60030,6 +60086,62 @@
         }
       }
     },
+    "Check with Face ID" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobar con Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID で確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID로 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用 Face ID 检查"
+          }
+        }
+      }
+    },
+    "Check your recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprueba tu llave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーを確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "检查你的恢复密钥"
+          }
+        }
+      }
+    },
     "Checked" : {
       "localizations" : {
         "es" : {
@@ -60642,6 +60754,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在检查你的通知…"
+          }
+        }
+      }
+    },
+    "Checking your recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobando tu llave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーを確認中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키 확인 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在检查你的恢复密钥"
           }
         }
       }
@@ -80327,6 +80467,34 @@
         }
       }
     },
+    "Face ID unlocks it, it signs a test message on this device, and each network says whether it still accepts it. No fee, nothing sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID la desbloquea, firma un mensaje de prueba en este dispositivo y cada red dice si aún la acepta. Sin comisión, no se envía nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID でロックを解除し、このデバイスでテストメッセージに署名し、各ネットワークがまだ受け付けるかを確認します。手数料なし、送信もしません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID로 잠금을 풀고, 이 기기에서 테스트 메시지에 서명하며, 각 네트워크가 아직 받아들이는지 확인합니다. 수수료 없음, 전송 없음."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID 解锁它，它在本设备上签署一条测试消息，各网络会说明是否仍接受它。无手续费，不发送任何内容。"
+          }
+        }
+      }
+    },
     "Face ID was set up again on this phone, which erases the key. Nothing was signed and nothing was lost — make a new key, then authorize it from another account that can act for this one." : {
       "localizations" : {
         "es" : {
@@ -92045,6 +92213,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已存于 iCloud 钥匙串"
+          }
+        }
+      }
+    },
+    "In iCloud Keychain. Checked %@ with Face ID." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En el Llavero de iCloud. Comprobada %@ con Face ID."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud キーチェーン内。%@ Face ID で確認しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud 키체인에 있음. %@ Face ID로 확인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 iCloud 钥匙串中。%@ 已用 Face ID 检查。"
           }
         }
       }
@@ -113284,6 +113480,34 @@
         }
       }
     },
+    "Not an owner" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No es propietaria"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オーナーではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "소유자 아님"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不是所有者"
+          }
+        }
+      }
+    },
     "Not answering" : {
       "localizations" : {
         "es" : {
@@ -113420,6 +113644,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未检查"
+          }
+        }
+      }
+    },
+    "Not checked yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún sin comprobar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ確認していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 확인 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未检查"
           }
         }
       }
@@ -114288,6 +114540,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "不在本纪元的委员会中"
+          }
+        }
+      }
+    },
+    "Not on yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no está"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未添加"
           }
         }
       }
@@ -125898,6 +126178,34 @@
         }
       }
     },
+    "Opens the recovery key's check" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre la comprobación de la llave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーの確認を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키 확인을 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开恢复密钥检查"
+          }
+        }
+      }
+    },
     "Opens the video" : {
       "localizations" : {
         "es" : {
@@ -135077,6 +135385,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "存入至"
+          }
+        }
+      }
+    },
+    "Put it on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadirla en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加到 %@"
           }
         }
       }
@@ -189445,6 +189781,34 @@
         }
       }
     },
+    "Whether your recovery key still works" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si tu llave de recuperación aún funciona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーがまだ使えるか"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 아직 작동하는지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥是否仍然有效"
+          }
+        }
+      }
+    },
     "Which accounts" : {
       "localizations" : {
         "es" : {
@@ -199415,6 +199779,34 @@
         }
       }
     },
+    "Your recovery key did not sign. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación no firmó. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーが署名しませんでした。何も送信していません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 서명하지 않았습니다. 아무것도 전송되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥未签名。没有发送任何内容。"
+          }
+        }
+      }
+    },
     "Your recovery key is in iCloud Keychain. It can move your account to this iPhone; the old one stops signing." : {
       "localizations" : {
         "es" : {
@@ -199443,6 +199835,34 @@
         }
       }
     },
+    "Your recovery key is not an owner on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación no es propietaria en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーは %@ のオーナーではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 %@의 소유자가 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥不是 %@ 上的所有者。"
+          }
+        }
+      }
+    },
     "Your recovery key is not on %@" : {
       "localizations" : {
         "es" : {
@@ -199467,6 +199887,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的恢复密钥不在 %@ 上"
+          }
+        }
+      }
+    },
+    "Your recovery key isn't in iCloud Keychain on this device." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación no está en el Llavero de iCloud de este dispositivo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスの iCloud キーチェーンに復元キーがありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기의 iCloud 키체인에 복구 키가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此设备的 iCloud 钥匙串中没有你的恢复密钥。"
+          }
+        }
+      }
+    },
+    "Your recovery key works on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación funciona en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーは %@ で使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 %@에서 작동합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥在 %@ 上有效。"
+          }
+        }
+      }
+    },
+    "Your recovery key works, and no network has it yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación funciona y aún no está en ninguna red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーは使えますが、まだどのネットワークにもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키는 작동하지만 아직 어떤 네트워크에도 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥有效，但尚未添加到任何网络。"
+          }
+        }
+      }
+    },
+    "Your recovery key, checked once a month with Face ID: no fee, nothing sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu llave de recuperación, comprobada una vez al mes con Face ID: sin comisión, no se envía nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復元キーを月に一度 Face ID で確認します。手数料なし、送信もしません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키를 한 달에 한 번 Face ID로 확인합니다. 수수료 없음, 전송 없음."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥每月用 Face ID 检查一次：无手续费，不发送任何内容。"
           }
         }
       }

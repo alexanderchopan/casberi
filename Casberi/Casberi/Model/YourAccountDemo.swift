@@ -189,6 +189,22 @@ enum YourAccountDemo {
         return (out, [String(localized: "GoPlus's reports (SlowMist, ScamSniffer)")])
     }
 
+    // MARK: - The recovery check (prd §1515)
+
+    /// The demo's key is due, so Needs you shows the row.
+    static let recoveryCheckDue = true
+
+    /// The demo's check off the table: an owner on Base and Ethereum, not on
+    /// Robinhood yet (the canvas's figure 13); `failing` makes Ethereum
+    /// refuse it, for the red sentence.
+    static func recoveryResult(failing: Bool) -> YourAccountRecoveryCheck.Result {
+        YourAccountRecoveryCheck.Result(keyPresent: true, signed: true, networks: [
+            .init(name: Op.base.name, chainId: Op.base.chainId, standing: .owner),
+            .init(name: Op.ethereum.name, chainId: Op.ethereum.chainId, standing: failing ? .notOwner : .owner),
+            .init(name: Op.robinhood.name, chainId: Op.robinhood.chainId, standing: .notOnYet),
+        ], at: .now)
+    }
+
     /// What every act says in the demo.
     static var actsLater: String { String(localized: "This works once you leave the demo.") }
 }

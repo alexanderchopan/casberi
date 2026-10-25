@@ -436,7 +436,7 @@ extension FeedScreen {
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,
-                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees:
+                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .recoveryKey:
                     walletPageSections(section, all: all, upcoming: upcoming,
                                        nextEventID: nextEventID)
                 // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's

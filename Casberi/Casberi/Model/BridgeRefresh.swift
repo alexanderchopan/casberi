@@ -431,6 +431,8 @@ enum BridgeRefresh {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 await YourAccountProtection.check()
+                // The monthly recovery check's row (prd §1515).
+                await MainActor.run { RecoveryCheckState.shared.refresh() }
             }
         }
         // What the articles actually SAY (2026-08-06) — a bounded, ledgered
