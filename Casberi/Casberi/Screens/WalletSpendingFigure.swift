@@ -29,9 +29,13 @@ struct WalletSpendingFigure: View {
             // **THE THREE ROWS ARE DOORS NOW (prd §1480 item 5):**
             // Subscriptions, Places and Fees stand under the tiles, each
             // opening its page, so the box says the window and its total.
-            DSRangeChips(ranges: Spending.Window.allCases, range: window,
-                         label: Self.label, slim: true, onPick: onPick)
-                .padding(.top, DS.Space.s3)
+            HStack(spacing: DS.Space.s4) {
+                // Yours · Everything leads the foot (prd §1526).
+                WalletWhoseSwitch()
+                DSRangeChips(ranges: Spending.Window.allCases, range: window,
+                             label: Self.label, slim: true, onPick: onPick)
+            }
+            .padding(.top, DS.Space.s3)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .contain)

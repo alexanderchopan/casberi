@@ -90,6 +90,11 @@ extension FeedScreen {
         guard let address = walletNaming else { return }
         let draft = walletNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = draft.isEmpty && Self.isYourAccount(address) ? WalletStore.yourAccountName : draft
+        // Only your Casberi account is yours (prd §1526 item 4).
+        if !Self.isYourAccount(address), WalletWhose.reservedName(name) {
+            chrome.flash(String(localized: "Only your Casberi account is Yours. Pick another name."), tone: .failure)
+            return
+        }
         if let watched = wallet.addresses.first(where: { WalletWatch.sameAddress($0.address, address) }) {
             wallet.rename(watched.id, to: name)
         } else if !name.isEmpty {

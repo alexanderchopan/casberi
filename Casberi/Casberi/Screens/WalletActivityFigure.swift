@@ -88,10 +88,14 @@ struct WalletActivityFigure: View {
             .padding(.top, DS.Space.s3)
             .accessibilityElement()
             .accessibilityLabel(Text("Transactions each day"))
-            DSRangeChips(ranges: Spending.Window.allCases, range: window,
-                         label: { $0 == .week ? String(localized: "Week") : String(localized: "Month") },
-                         slim: true) { picked in
-                withAnimation(DS.Motion.standard) { windowRaw = picked.rawValue }
+            HStack(spacing: DS.Space.s4) {
+                // Yours · Everything leads the foot (prd §1526).
+                WalletWhoseSwitch()
+                DSRangeChips(ranges: Spending.Window.allCases, range: window,
+                             label: { $0 == .week ? String(localized: "Week") : String(localized: "Month") },
+                             slim: true) { picked in
+                    withAnimation(DS.Motion.standard) { windowRaw = picked.rawValue }
+                }
             }
             .padding(.top, DS.Space.s2)
         }

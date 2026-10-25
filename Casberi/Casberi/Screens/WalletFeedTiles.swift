@@ -126,6 +126,8 @@ struct WalletBalanceHeadline: View {
     /// `Text` still draws a line box, so without this the room shows a gap
     /// where the words used to be.
     var hidesEmptyCaption: Bool = false
+    /// Draw the Yours · Everything switch at the foot (prd §1526).
+    var whose: Bool = false
     /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
     /// snapshots the combined sheet's "What moved" reads. nil when the record
     /// can't attribute the move yet.
@@ -404,7 +406,15 @@ struct WalletBalanceHeadline: View {
                     .onAppear { draw(); enter() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
-                if ranges.count > 1 { rangeChips }
+                if ranges.count > 1 || whose {
+                    // Yours · Everything leads the foot (prd §1526), the
+                    // window beside it: one row of choices, never a new one.
+                    HStack(spacing: DS.Space.s4) {
+                        if whose { WalletWhoseSwitch() }
+                        if ranges.count > 1 { rangeChips }
+                    }
+                    .padding(.top, whose && ranges.count < 2 ? DS.Space.s2 : 0)
+                }
             }
         }
     }

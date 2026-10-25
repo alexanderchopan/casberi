@@ -337,6 +337,7 @@ extension FeedScreen {
                             hidesEmptyCaption: true,
                             // No mover line and a shorter chart — see the
                             // parameters' own docs (prd §483).
+                            whose: drawsChart && WalletWhoseSwitch.shows(chrome),
                             mover: nil,
                             // THE DATE, WHEN THERE IS ONE (prd §825). Non-nil
                             // only while the crown is standing on the wallets'
@@ -371,7 +372,7 @@ extension FeedScreen {
                             // clip. The predicate is `WalletBalanceHeadline`'s
                             // own gate for drawing them, not a second guess at
                             // it.
-                            chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1),
+                            chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome)),
                             ranges: ranges,
                             range: active,
                             onPickRange: { r in
@@ -511,6 +512,12 @@ extension FeedScreen {
                     .modifier(rowEntrance(0))
             } else {
                 WalletScopeEmptyFigure(section: .home, padded: false)
+                    // An account with nothing read yet still offers the way
+                    // back to Everything (prd §1526): the switch at the foot.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .overlay(alignment: .bottomLeading) {
+                        if drawsChart { WalletWhoseSwitch() }
+                    }
                     .modifier(rowEntrance(0))
             }
         }

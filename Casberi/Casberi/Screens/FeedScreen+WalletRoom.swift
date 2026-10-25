@@ -224,7 +224,12 @@ extension FeedScreen {
         // Holdings' pages keep Holdings' box: the treemap says which tile
         // you are in (prd §1480).
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
-            holdingsBlockSection
+            // The map takes what the switch leaves (prd §1526): its
+            // GeometryReader shrinks, the box keeps its size.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                holdingsBlockSection
+                if WalletWhoseSwitch.shows(chrome) { WalletWhoseSwitch() }
+            }
         }
     }
 
@@ -364,6 +369,9 @@ extension FeedScreen {
             .id(roomBoxPlace == .paneBox ? "paneBalance:\(portfolioShown?.totalUSD ?? 0)" : "walletChrome")
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
+            // Where a launch opens the Wallet: Yours, unless you last chose
+            // Everything (prd §1526).
+            .task { WalletWhoseSwitch.applyLaunchChoice(chrome) }
             // The tray's Wallet folder leads with Follow a wallet (prd §1133)
             // and can be opened from any room, so it asks; the room raises.
             .onChange(of: chrome.walletFollowPending, initial: true) { _, pending in
