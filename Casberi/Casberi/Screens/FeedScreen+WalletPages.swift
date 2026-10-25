@@ -303,30 +303,155 @@ extension FeedScreen {
         // already made.
         let splits = selectedSeat == nil && selectedWallet == nil
             && [hasYou, hasFollowing, hasApps].filter { $0 }.count > 1
+        // **EACH DOOR SHOWS ITS TOP THREE (prd §1525, user: "You could show
+        // top 3 tokens under it in a list, same w/ following, apps, and
+        // positions").** The page answers "what do I hold" before a tap; a
+        // preview row wears the mark its treemap tile wears, and opens what
+        // its door opens.
+        let narrowToYou = { (you: WalletPortfolio.Holder) in
+            withAnimation(DS.Motion.standard) { chrome.walletScope = you.address }
+        }
         walletDoorsSection {
             if splits, let you = groups.you {
                 // Narrows the Wallet to it: its tokens fill the treemap.
                 walletDoor(.yourAccount, name: String(localized: "You"), figure: money([you]),
-                           act: { withAnimation(DS.Motion.standard) { chrome.walletScope = you.address } })
+                           act: { narrowToYou(you) })
+                walletTokenPreview(Self.topTokens(portfolioShown, held: [you.address]),
+                                   mask: mask, act: { narrowToYou(you) })
             }
             if splits, hasFollowing {
                 walletDoor(.holdingAccounts, figure: money(groups.following))
+                walletTokenPreview(Self.topTokens(portfolioShown, held: groups.following.map(\.address)),
+                                   mask: mask, act: { chrome.walletSection = .holdingAccounts })
             }
             if splits, hasApps {
                 walletDoor(.apps, figure: money(groups.apps))
+                ForEach(Array(groups.apps.sorted { $0.usd > $1.usd }.prefix(Self.holdingsPreviewCount))) { app in
+                    walletPreviewRow(app.label, figure: mask ?? WalletValue.money(app.usd),
+                                     act: { chrome.walletSection = .apps }) {
+                        BridgeIcon(name: app.label, size: DS.Mark.badge)
+                    }
+                }
             }
             if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"),
                            act: { feedSheet = .walletTokens })
+                // One account, or one group: the whose doors are not drawn,
+                // so the tokens preview here instead (prd §1525).
+                if !splits {
+                    walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)),
+                                       mask: mask, act: { feedSheet = .walletTokens })
+                }
             }
             if positions > 0 {
                 walletDoor(.positions)
+                ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in
+                    walletPreviewRow(row.name, figure: row.word,
+                                     tone: row.alert ? DS.attentionInk : DS.textSecondary,
+                                     act: { chrome.walletSection = .positions }) {
+                        BridgeIcon(name: row.mark, size: DS.Mark.badge)
+                    }
+                }
             }
             // An app the menu picked holds no collections (prd §1048b).
             if selectedSeat == nil {
                 walletDoor(.nfts)
             }
         }
+    }
+
+    /// How many rows a Holdings door previews under it (prd §1525).
+    static let holdingsPreviewCount = 3
+
+    /// The biggest tokens the given accounts hold, biggest first, cut to the
+    /// preview. Addresses match as the portfolio stores them, lower case.
+    static func topTokens(_ portfolio: WalletPortfolio?, held addresses: [String]) -> [WalletPortfolio.Position] {
+        guard let portfolio, !addresses.isEmpty else { return [] }
+        let slice = portfolio.scoped(toAddresses: Set(addresses.map { $0.lowercased() }))
+        return Array(slice.positions.sorted { $0.usd > $1.usd }.prefix(holdingsPreviewCount))
+    }
+
+    /// One of a door's top three (prd §1525): the mark in the door's glyph
+    /// column, the name and figure a rung under the door's, so the door
+    /// still reads as the heading. A press opens what the door opens.
+    func walletPreviewRow<Mark: View>(_ name: String, figure: String?, tone: Color = DS.textSecondary,
+                                      act: @escaping () -> Void,
+                                      @ViewBuilder mark: () -> Mark) -> some View {
+        Button {
+            DSHaptic.selection()
+            act()
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                mark()
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                Text(verbatim: name)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                if let figure {
+                    walletRowFigure(figure, tone: tone)
+                }
+            }
+            .padding(.vertical, DS.Space.s1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityLabel(Text(verbatim: [name, figure].compactMap { $0 }.joined(separator: ". ")))
+        .walletListRow()
+    }
+
+    /// A door's tokens, each wearing the mark its treemap tile wears.
+    @ViewBuilder
+    func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
+                            act: @escaping () -> Void) -> some View {
+        ForEach(tokens) { token in
+            walletPreviewRow(token.symbol, figure: mask ?? WalletValue.money(token.usd), act: act) {
+                AssetMark(name: token.symbol, size: DS.Mark.badge)
+            }
+        }
+    }
+
+    /// Positions' preview (prd §1525), in the page's order: each borrow by
+    /// how far it can fall (the page's own words, `walletLendingFalls`), else
+    /// lending; then perps, liquidity, AZTEC staked and zFi orders, each its
+    /// count.
+    var walletPositionPreview: [(name: String, mark: String, word: String?, alert: Bool)] {
+        var rows: [(name: String, mark: String, word: String?, alert: Bool)] = []
+        if hasLendingCard {
+            let falls = walletLendingFalls.sorted { $0.key < $1.key }
+            if falls.isEmpty {
+                rows.append((String(localized: "Lending"), "Aave", nil, false))
+            } else {
+                for (name, fall) in falls {
+                    let protocolName = name == "Morpho" ? "Morpho" : "Aave"
+                    let shown = name == "Morpho" ? name : "Aave · \(name)"
+                    rows.append((shown, protocolName, fall, true))
+                }
+            }
+        }
+        func count(_ n: Int, one: String, many: String) -> String? {
+            n == 0 ? nil : (n == 1 ? one : many)
+        }
+        let perps = walletLive.hyperliquid.positions.count
+        if let word = count(perps, one: String(localized: "1 perp"), many: String(localized: "\(perps) perps")) {
+            rows.append(("Hyperliquid", "Hyperliquid", word, false))
+        }
+        let pools = walletLive.uniswap.positions.count
+        if let word = count(pools, one: String(localized: "1 pool"), many: String(localized: "\(pools) pools")) {
+            rows.append(("Uniswap", "Uniswap", word, false))
+        }
+        let stakes = walletLive.aztecStaking.stakes.count
+        if let word = count(stakes, one: String(localized: "1 stake"), many: String(localized: "\(stakes) stakes")) {
+            rows.append(("Aztec", "Aztec", word, false))
+        }
+        let orders = walletLive.zfiOrders.orders.count
+        if let word = count(orders, one: String(localized: "1 order"), many: String(localized: "\(orders) orders")) {
+            rows.append(("zFi", "zFi", word, false))
+        }
+        return rows
     }
 
     /// How many positions Holdings' Positions page lists, by kind.
