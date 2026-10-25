@@ -44,7 +44,7 @@ echo "  ok   the funnel routes through the rule, never fails over, has no bypass
 # Every move Relay carries says it left Tor (prd §1512): the foot reads one
 # rule, and the rule names the three moves that ask Relay.
 MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
-use "$MOVE" 'if relayCarries, receipt == nil {' "Relay's foot no longer reads relayCarries"
+use "$MOVE" 'if relayCarries, receipt == nil, !nothingToMove {' "Relay's foot no longer reads relayCarries"
 use "$MOVE" 'case .swap: true' "a swap no longer says Relay carries it"
 use "$MOVE" 'case .send: roundUpPlan?.buy != nil' "a round-up that buys no longer says Relay carries it"
 use "$MOVE" 'case .receive: elsewhere != nil' "Receive from another network no longer says Relay carries it"
