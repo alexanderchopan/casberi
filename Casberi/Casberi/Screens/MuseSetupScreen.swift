@@ -127,7 +127,7 @@ struct MuseSetupScreen: View {
                 configured = true
                 keyDraft = ""
                 DSHaptic.success()
-                result = .connected(String(localized: "answers now offer \"Try with your key\" on Muse."))
+                result = .connected(String(localized: "pick Muse when you ask."))
                 store.registerConnected(id: "muse", name: "Muse",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",

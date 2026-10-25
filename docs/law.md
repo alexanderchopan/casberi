@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1642 of 1711 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1643 of 1712 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -880,11 +880,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §574 — §572's ring was wrong for one of the three controls, and the guard caught it after it shipped
 - §575 — The composer takes the design language — and the one lockup that was refused because the document already says it (amended by §577)
 - §576 — "Watch an account" was a button wired to nothing, and the guard had been saying so since §545 (part superseded by §1038)
-- §577 — The surface turns blue when you ask — the destination as a face, the words at the head rung, and the wait as a clock [+3 sub-entries]
+- §577 — The surface turns blue when you ask — the destination as a face, the words at the head rung, and the wait as a clock (amended by §1505) [+3 sub-entries]
 - §578 — The agent becomes a console — keys, not chips
 - §579 — The send that sent nothing, and the keystroke that read the Keychain
 - §580 — The wait becomes a receipt, the destinations become tiles, and a pick mid-wait re-addresses the question
-- §581 — The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen [+3 sub-entries]
+- §581 — The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen (amended by §1505) [+3 sub-entries]
 - §582 — Bankr stops being promoted, and asks again
 - §583 — The sheet heads lose their paper (amended by §584; part superseded by §1181)
 - §584 — The ramp is already right, and the pill was the real finding (amended by §585)
@@ -1856,7 +1856,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
-- §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model
+- §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model (amended by §1505)
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
 - §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
@@ -1883,6 +1883,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every…
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
+- §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 
 ## Dead rulings → what replaced them (generated)
 

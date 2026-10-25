@@ -232,11 +232,11 @@ struct AgentActiveStatusRow: View {
                 if active == provider {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(DS.confirm)
-                    DSProse.text("\(provider.agent) is your active agent for \"Try with your key.\"")
+                    DSProse.text("\(provider.agent) is your default agent.")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 } else {
-                    Text(active.map { "\($0.agent) is currently answering \"Try with your key.\"" }
-                         ?? "\(provider.agent) is saved but not active.")
+                    Text(active.map { "\($0.agent) is your default agent." }
+                         ?? "\(provider.agent) is saved but not your default.")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     // The row's trailing verb, not a capsule (prd §746).
@@ -245,7 +245,7 @@ struct AgentActiveStatusRow: View {
                         AgentKey.activate(provider)
                         tick += 1
                     } label: {
-                        DSPushRowTrail(fact: Text("Make active"), factTone: DS.pickInk, opens: false)
+                        DSPushRowTrail(fact: Text("Make default"), factTone: DS.pickInk, opens: false)
                             .dsTapTarget()
                     }
                     .buttonStyle(RowPress())

@@ -102,7 +102,7 @@ struct VeniceSetupScreen: View {
                 configured = true
                 keyDraft = ""
                 DSHaptic.success()
-                result = .connected(String(localized: "answers now offer \"Try with your key\" on Venice."))
+                result = .connected(String(localized: "pick Venice when you ask."))
                 store.registerConnected(id: "venice", name: "Venice",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",

@@ -86,6 +86,13 @@ grep -q 'mode: .noAccount' "$SCREEN" \
   || { echo "✗ the page claims a key is pasted"; exit 1; }
 grep -q 'keyed: hasKey' "$SCREEN" \
   || { echo "✗ the Your key row draws over no key"; exit 1; }
+# The composer opens on an agent when one exists, so every send is an explicit
+# ask and §1502's failure line covers it; the device key is gone (prd §1505).
+COMPOSER="Casberi/Casberi/Shell/Composer.swift"
+grep -q 'if chosenAgent == nil, let agent = AgentKey.active,' "$COMPOSER" \
+  || { echo "✗ the composer no longer opens on the active agent"; exit 1; }
+grep -q 'onDevice' "Casberi/Casberi/Shell/AgentTerminal.swift" \
+  && { echo "✗ the device key is back in the composer's foot"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

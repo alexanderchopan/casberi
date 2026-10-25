@@ -215,10 +215,10 @@ struct OwnModelSetupScreen: View {
                 keyDraft = ""
                 tick += 1
                 DSHaptic.success()
-                result = .connected(String(localized: "answers now offer \"Try with your key\" on \(model)."))
+                result = .connected(String(localized: "answers on \(model) when you ask."))
                 store.registerConnected(id: OwnModel.seatID, name: OwnModel.name,
                                         proof: String(localized: "At \(OwnModel.hostLine(url))"),
-                                        can: ["Answers on your own server — only when you tap.",
+                                        can: ["Answers on your own server — only when you ask it.",
                                               OwnModel.privacyLine,
                                               "Remembers a chat's earlier answers; screenshots and web search stay off."])
             case .unreachable:

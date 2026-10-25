@@ -48,12 +48,6 @@ enum AskDestination {
         findShown ? agentSlotsWithFind : agentSlots
     }
 
-    /// The device's own raw value in the recency ledger. Deliberately not a
-    /// provider raw value and deliberately not spellable as one: it shares
-    /// the ledger with them, so it must never collide with a real provider
-    /// (`AgentProvider` is a bare-word enum — `anthropic`, `bankr`, …).
-    static let deviceRaw = "__device"
-
     /// The most-recently-asked ledger. Not the keychain and not `AgentKey`'s
     /// `active` pointer: `active` answers "which key does a keyed answer
     /// spend" and moves when a key is SAVED, which is a different question
@@ -174,12 +168,5 @@ enum AskDestination {
     static func deviceLabel(isMac: Bool, isPad: Bool) -> String {
         if isMac { return String(localized: "Mac") }
         return isPad ? String(localized: "iPad") : String(localized: "iPhone")
-    }
-
-    /// The device segment's glyph, on the same two facts as the label — so a
-    /// Mac can never wear a phone.
-    static func deviceGlyph(isMac: Bool, isPad: Bool) -> String {
-        if isMac { return "laptopcomputer" }
-        return isPad ? "ipad" : "iphone"
     }
 }

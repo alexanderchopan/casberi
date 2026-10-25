@@ -111,7 +111,7 @@ struct GrokSetupScreen: View {
                 configured = true
                 keyDraft = ""
                 DSHaptic.success()
-                result = .connected(String(localized: "answers now offer \"Try with your key\" on Grok."))
+                result = .connected(String(localized: "pick Grok when you ask."))
                 store.registerConnected(id: "grok", name: "Grok",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",

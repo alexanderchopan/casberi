@@ -30,7 +30,7 @@ struct AgentDestinationKeys: View {
     /// a scroller has no such budget — nothing here is reachable only through
     /// a menu (§578's ruling, carried).
     let providers: [AgentProvider]
-    /// nil is the device.
+    /// nil only when no agent is configured.
     let active: AgentProvider?
     /// Drawn in place of the second key when no agent is configured at all.
     /// A destination-shaped hole rather than a banner: the offer lives exactly
@@ -45,7 +45,6 @@ struct AgentDestinationKeys: View {
     /// biggest thing on the screen for the one moment there is nothing to
     /// read, and it pushed the answer out of view when it arrived.
     var thinking: Bool = false
-    let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
     /// 88pt, which is what makes this a key you press without looking. It is
@@ -63,12 +62,10 @@ struct AgentDestinationKeys: View {
 
     /// What the keys would take if nothing constrained them.
     private var intrinsicWidth: CGFloat {
-        let count = CGFloat(providers.count + 1 + (providers.isEmpty && onAddAgent != nil ? 1 : 0))
+        let count = CGFloat(providers.count + (providers.isEmpty && onAddAgent != nil ? 1 : 0))
         return count * Self.side + max(0, count - 1) * DS.Space.s2
     }
 
-    private var deviceGlyph: String { AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad) }
-    private var deviceLabel: String { AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad) }
 
     var body: some View {
         // A ScrollView even at two keys, so the fourth destination shows past
@@ -76,15 +73,10 @@ struct AgentDestinationKeys: View {
         // scrolls when everything fits.
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DS.Space.s2) {
-                key(chosen: active == nil, action: onDevice) {
-                    Image(systemName: deviceGlyph)
-                        .dsGlyph(.hero, weight: .regular)
-                        .foregroundStyle(active == nil ? Color.white : DS.textTertiary)
-                        .agentBreath(thinking && active == nil)
-                }
-                .accessibilityLabel("Answer on \(deviceLabel)")
-                .accessibilityAddTraits(active == nil ? [.isSelected] : [])
-
+                // NO DEVICE KEY (prd §1483, user 2026-10-24: "we should just
+                // remove the phone icon b/c we don't have that option
+                // anymore"). The phone answers nothing since §1047; with no
+                // agent the plain Ask finds over your things and needs no key.
                 ForEach(providers) { provider in
                     key(chosen: provider == active, action: { onAgent(provider) }) {
                         // A BRAND MARK IS OPAQUE AND FULL-BLEED, so the key's

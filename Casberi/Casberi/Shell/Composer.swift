@@ -868,6 +868,20 @@ struct Composer: View {
                 // fixing the rail rather than for joining it. It is fixed
                 // (see `configuredAgents`), and this is now the read.
                 configuredAgents = AgentKey.configured
+                // AN AGENT IS ALWAYS PICKED WHEN ONE EXISTS (prd §1505; a
+                // tester: "it just does nothing when I query"). With no pick
+                // the foot's Ask went to the phone, so a person whose agent is
+                // their own server typed, sent, and saw no request in its log
+                // — and the phone answers nothing since §1047, so its key is
+                // gone. The active agent is lit before a word is typed, which
+                // is the visible choice the 2026-08-31 ruling asked for; a tap
+                // on another face takes the pick. Every send is then an
+                // explicit ask, so a failure draws its own line (§1502).
+                if chosenAgent == nil, let agent = AgentKey.active,
+                   configuredAgents.contains(agent) {
+                    chosenAgent = agent
+                    askProvider = agent
+                }
                 riseT0 = .now
                 risePhase("raise")
                 // Flip BEFORE the heavy synchronous work, then yield once —
@@ -1331,7 +1345,6 @@ struct Composer: View {
                     active: activeAskAgent,
                     onAddAgent: onOpenAgents,
                     thinking: inFlight,
-                    onDevice: { pickDevice() },
                     // `pickAgent` re-addresses a running question itself
                     // (§580), so this must not test for it first — doing that
                     // returned before the pick was recorded, which left a
@@ -1997,7 +2010,11 @@ struct Composer: View {
         let cloudAnswer = cloud && !keyed && !found
         let glyph = found ? "magnifyingglass" : (cloudAnswer ? "apple.intelligence" : "lock.iphone")
         let words = found ? String(localized: "Matched on \(DS.device) — nothing was written")
-                          : (keyed ? ((agent.map { String(localized: "\($0) · with your key\(detail)") })
+                          // Your own model may have no key at all (§1478): its
+                          // badge says where it ran, never "with your key".
+                          : (keyed ? ((agent.map { $0 == AgentProvider.ownModel.agent
+                                          ? String(localized: "\($0) · on your server\(detail)")
+                                          : String(localized: "\($0) · with your key\(detail)") })
                                       ?? String(localized: "Answered with your key\(detail)"))
                                    : (cloudAnswer ? String(localized: "Apple Intelligence · Private Cloud Compute\(detail)")
                                                   : String(localized: "On \(DS.device)")))
@@ -2075,20 +2092,6 @@ struct Composer: View {
     /// mid-flight would credit an agent's answer to whatever key happened to
     /// be active. `chosenAgent` is cleared either way because `activeAskAgent`
     /// already ignores it while in flight.
-    private func pickDevice() {
-        AskDestination.used(AskDestination.deviceRaw)
-        chosenAgent = nil
-        guard !readdressed(to: nil) else { return }
-        askProvider = nil
-        // STAND THE CONVERSATION'S KEYED DEFAULT DOWN. `activeAskAgent` lets
-        // an explicit pick win over every inference, so the device key lights
-        // — but `commit`'s `stayKeyed` read `conversationIsKeyed` alone, so
-        // mid-thread the pill said "Ask" and the words still went to the
-        // agent, and were still billed to it. §543's confusion in the
-        // direction §577 did not check.
-        conversationIsKeyed = false
-    }
-
     private func pickAgent(_ provider: AgentProvider) {
         AskDestination.used(provider.rawValue)
         chosenAgent = provider

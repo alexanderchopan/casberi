@@ -185,16 +185,6 @@ check(AskDestination.deviceLabel(isMac: true, isPad: false) == "Mac", "mac says 
 // isMac wins: Catalyst reports a pad idiom in some configurations, and a Mac
 // labelled "iPad" is the same wrong claim one step quieter.
 check(AskDestination.deviceLabel(isMac: true, isPad: true) == "Mac", "mac beats pad")
-check(AskDestination.deviceGlyph(isMac: false, isPad: false) == "iphone", "phone glyph")
-check(AskDestination.deviceGlyph(isMac: false, isPad: true) == "ipad", "pad glyph")
-check(AskDestination.deviceGlyph(isMac: true, isPad: false) == "laptopcomputer", "mac glyph")
-check(AskDestination.deviceGlyph(isMac: true, isPad: true) == "laptopcomputer", "mac glyph beats pad")
-
-// The device's ledger key must never collide with a provider raw value —
-// they share one list, and a collision silently promotes or drops an agent.
-check(AskDestination.deviceRaw.hasPrefix("__"), "the device raw value is not a bare word")
-let providerRaws = ["anthropic", "openai", "google", "venice", "bankr", "openrouter", "grok"]
-check(!providerRaws.contains(AskDestination.deviceRaw), "the device raw value is not a provider")
 
 // ---- the recency ledger --------------------------------------------------
 let suite = UserDefaults(suiteName: "ask-destination-selftest")!
@@ -279,15 +269,9 @@ mutate "the slot count ignores Find" \
 mutate "a Mac claims to be an iPhone" \
        'if isMac { return String(localized: "Mac") }' \
        'if false { return String(localized: "Mac") }'
-mutate "a Mac wears a phone glyph" \
-       'if isMac { return "laptopcomputer" }' \
-       'if false { return "laptopcomputer" }'
 mutate "iPad is reported as iPhone" \
        'return isPad ? String(localized: "iPad") : String(localized: "iPhone")' \
        'return String(localized: "iPhone")'
-mutate "the device shares a provider's raw value" \
-       'static let deviceRaw = "__device"' \
-       'static let deviceRaw = "bankr"'
 mutate "re-asking duplicates the ledger entry instead of promoting" \
        "var list = recent(defaults).filter { \$0 != raw }" \
        "var list = recent(defaults)"
@@ -373,11 +357,11 @@ print "  ok   askWithKey keeps exactly one caller, the deferred keyed follow-up"
 # still described a rule kept in two places; one function both callers reach is
 # the stronger answer, and this is that they reach it.
 picker_handlers=$(grep -c 'AskDestination.used(' "$WORK/composer.nc")
-if [[ $picker_handlers -ne 2 ]]; then
-  print -u2 "  ✗ drift: AskDestination.used has $picker_handlers sites, expected 2 (pickDevice and pickAgent)"
+if [[ $picker_handlers -ne 1 ]]; then
+  print -u2 "  ✗ drift: AskDestination.used has $picker_handlers sites, expected 1 (pickAgent; the device key is gone, prd §1483)"
   exit 1
 fi
-print "  ok   both picks go through one handler each, and only those"
+print "  ok   the one pick goes through one handler, and only that"
 
 # ---- A PICK MID-WAIT RE-ADDRESSES (prd §580) ----------------------------
 # The one resend that is safe, and the reason is the change of ADDRESS: one

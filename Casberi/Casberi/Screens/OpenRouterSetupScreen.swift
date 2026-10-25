@@ -105,7 +105,7 @@ struct OpenRouterSetupScreen: View {
                 configured = true
                 keyDraft = ""
                 DSHaptic.success()
-                result = .connected(String(localized: "answers now offer \"Try with your key\" on OpenRouter."))
+                result = .connected(String(localized: "pick OpenRouter when you ask."))
                 store.registerConnected(id: "openrouter", name: "OpenRouter",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",
