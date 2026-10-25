@@ -1,5 +1,4 @@
 import Foundation
-import P256K
 
 /// **The one curve operation in the verification** — split from
 /// `NearAIVerify` so that file stays Foundation-only and its decision logic can
@@ -14,21 +13,8 @@ extension NearAIVerify {
     /// here. It arrives as 27/28 (EIP-191's offset) or as a bare 0/1; both are
     /// normalized to the recovery id libsecp256k1 wants.
     static func recoverSigner(message: String, signatureHex: String) -> String? {
-        guard let raw = hexBytes(signatureHex), raw.count == 65 else { return nil }
-        let recoveryID = raw[64] >= 27 ? Int32(raw[64]) - 27 : Int32(raw[64])
-        guard recoveryID == 0 || recoveryID == 1 else { return nil }
-
-        let digest = personalSignDigest(message)
-        guard let signature = try? P256K.Recovery.ECDSASignature(
-                  compactRepresentation: Data(raw[0..<64]), recoveryId: recoveryID),
-              let key = try? P256K.Recovery.PublicKey(HashDigest(digest), signature: signature,
-                                                      format: .uncompressed)
-        else { return nil }
-
-        let bytes = [UInt8](key.dataRepresentation)
-        guard bytes.count == 65, bytes[0] == 0x04 else { return nil }
-        let hash = Keccak256.hash(Array(bytes.dropFirst()))
-        return "0x" + Keccak256.hexString(Array(hash.suffix(20)))
+        guard let raw = hexBytes(signatureHex) else { return nil }
+        return EcRecover.address(digest: personalSignDigest(message), signature: raw)
     }
 
 }

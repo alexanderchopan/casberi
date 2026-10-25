@@ -2740,6 +2740,9 @@ harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.s
 # writes counted and their hosts pinned to Safe's own.
 harness "Safe signer §913 self-test" "safe-signer self-test" "scripts/safe-signer-selftest.sh" "the §913 signer self-test failed — run scripts/safe-signer-selftest.sh"
 harness "Your account self-test" "your-account self-test" "scripts/your-account-selftest.sh" "your account's address arithmetic or the Move gate drifted — run scripts/your-account-selftest.sh"
+# A Signer is a key that answered (prd §1516): the proof's EIP-712 digest
+# against an independent encoder, and the proof before every add.
+harness "Signer-proof self-test" "signer-proof self-test" "scripts/signer-proof-selftest.sh" "a Signer could be added without signing for its address — run scripts/signer-proof-selftest.sh"
 
 # Move's Details (prd §1509): the fee ceiling and its words, ERC-8213's
 # Calldata Digest pinned to the ERC's own vector, the revert words pinned to

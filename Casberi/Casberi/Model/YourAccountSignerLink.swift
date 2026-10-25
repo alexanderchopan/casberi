@@ -1,13 +1,15 @@
 import Foundation
+import Security
 import WalletConnectNetworking
 import WalletConnectSign
 
 /// **THE SIGNER'S SIGNATURE, FROM THE PERSON'S OWN WALLET (prd §1447 item 17).**
 ///
 /// When an operation needs both keys, the Signer (MetaMask, Rabby, any
-/// WalletConnect wallet) signs the SafeOp as typed data. This is the ONE
-/// place Casberi asks a wallet to sign anything, and it is shaped so nothing
-/// outlives the one signature:
+/// WalletConnect wallet) signs the SafeOp as typed data; before it becomes a
+/// key at all, it signs `YourAccountSignerProof`'s typed data once (prd
+/// §1516). This is the ONE place Casberi asks a wallet to sign anything, and
+/// it is shaped so nothing outlives the one signature:
 /// - its own proposal, never `WalletConnectBridge.readOnlyNamespaces()`
 ///   (that one asks for nothing and stays that way): ONE chain and ONE
 ///   method, `eth_signTypedData_v4`, no events;
@@ -28,6 +30,9 @@ enum YourAccountSignerLink {
         case notTheSigner(String)
         case refused(String)
         case malformedSignature
+        /// The wallet's answer to the proof is not a signature by the
+        /// Signer's key (prd §1516): another key's, or a contract's.
+        case notProven
     }
 
     static let method = "eth_signTypedData_v4"
@@ -54,7 +59,7 @@ enum YourAccountSignerLink {
     /// network the batch will ask on, one method; the settled session must
     /// name the Signer. Several requests then ride it, one per network.
     /// With no Signer yet (choosing one at Create, prd §1457), the wallet's
-    /// first address is the Signer, and nothing is asked over the session.
+    /// first address is the Signer — a key only once `prove` says so.
     /// `method` is the one thing the session may ask: a signature here, a
     /// send for Receive › From another wallet (prd §1506).
     static func connect(signer: String?, chainIds: [Int], method: String = method,
@@ -118,6 +123,30 @@ enum YourAccountSignerLink {
             guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }
             return try normalized(hex)
         }
+    }
+
+    /// **The wallet holds the Signer's key (prd §1516).** One typed-data
+    /// signature over the account, the key and a fresh challenge, which must
+    /// recover to `pairing.signer`; asked on Base when the wallet agreed to
+    /// it. Throws `.notProven` for any other answer.
+    static func prove(_ pairing: Pairing, account: String, timeout: Duration = .seconds(300)) async throws {
+        var challenge = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, 32, &challenge) == errSecSuccess,
+              let chainId = YourAccountSignerProof.chain(of: pairing.chainIds, preferring: YourAccountOp.base.chainId),
+              let typed = YourAccountSignerProof.typedData(account: account, signer: pairing.signer,
+                                                           chainId: chainId, challenge: challenge),
+              let digest = YourAccountSignerProof.digest(typed) else { throw Failure.unavailable }
+        let signature: [UInt8]
+        do {
+            signature = try await request(pairing, typedData: typed, chainId: chainId, timeout: timeout)
+        } catch Failure.malformedSignature {
+            // A smart wallet's ERC-1271/6492 answer is longer than 65 bytes.
+            throw Failure.notProven
+        }
+        let verdict = YourAccountSignerProof.verdict(signer: pairing.signer,
+                                                     recovered: EcRecover.address(digest: digest, signature: signature))
+        trace("proof: \(verdict)")
+        guard verdict == .holds else { throw Failure.notProven }
     }
 
     /// The session torn down, answered or not.

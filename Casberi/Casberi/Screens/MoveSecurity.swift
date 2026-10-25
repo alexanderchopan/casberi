@@ -965,8 +965,23 @@ struct MoveSecurity: View {
         if demoSays() { return }
         guard working == nil, let owner = addingOutside ? outsideCandidate : outsideOwner else { return }
         let targets = outsideTargets.map(\.network)
-        working = (String(localized: "Co-signer"), String(localized: "Adding…"))
+        // A typed address is a key only once its wallet signs for it (prd
+        // §1516); the one chosen at Create signed then.
+        let typed = addingOutside
+        working = (String(localized: "Co-signer"), typed ? String(localized: "Waiting for your wallet…") : String(localized: "Adding…"))
         Task {
+            if typed {
+                do {
+                    try await SignerRequestSheet.prove(signer: owner, on: YourAccountOp.networks.filter { !$0.isTest }.map(\.chainId),
+                                                       account: account)
+                } catch {
+                    working = nil
+                    chrome.flash(SignerRequestSheet.proofWords(error)
+                                 ?? String(localized: "No wallet connected, so nothing was added"), tone: .failure, seconds: 6)
+                    return
+                }
+                working = (String(localized: "Co-signer"), String(localized: "Adding…"))
+            }
             var done: [String] = []
             var failed: [String] = []
             for net in targets {

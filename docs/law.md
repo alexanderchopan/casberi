@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1653 of 1722 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1654 of 1723 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1811,7 +1811,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1429 — Your account, measured on Base mainnet (proves §1424 and §1427 with real money; Move stays DEBUG-only until the whole…
 - §1430 — Your account swaps through CoW: a pre-signed order this phone builds and CoW must name back (builds the canvas's Send…
 - §1431 — Swap, measured on Base mainnet (proves §1430)
-- §1432 — Your account takes a key held outside Casberi, and Needs you asks for one until it has it (builds §1422 item 7's nudge)
+- §1432 — Your account takes a key held outside Casberi, and Needs you asks for one until it has it (builds §1422 item 7's nudge) (amended by §1516)
 - §1433 — The Wallet's + leads with Create an account (builds §1422 item 4)
 - §1434 — Recovery says what it means: "Use on this iPhone", and the other one is "your other device" (rewords §1427's "Move it…
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
@@ -1835,7 +1835,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1454 — Robinhood Chain comes back to the account with every feature
 - §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458)
 - §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458)
-- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501)
+- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501, §1516)
 - §1458 — The spend limit fits the bundler: a change in two operations, a renewal that leaves ended periods be, Finish that kee…
 - §1459 — Two lines cut from creating your account (amended by §1500, §1501)
 - §1460 — No summary after your keys: the Created sentence says it in one line
@@ -1894,6 +1894,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1513 — Warnings in Move: one line you can sign past, a second tap for the verb, history-wide lookalikes, reported and sancti…
 - §1514 — The co-signer's checks: pairing asks Reown Verify, an unlimited approval is a red line in words, and the sign block's…
 - §1515 — The recovery key is checked once a month: one row in Needs you, a check with Face ID and no fee, and a page that says…
+- §1516 — A co-signer is a key that answered, not an address a wallet named
 
 ## Dead rulings → what replaced them (generated)
 

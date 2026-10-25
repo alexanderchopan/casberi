@@ -330,7 +330,7 @@ struct MoveKeysWalk: View {
             Task {
                 defer { connecting = false }
                 do {
-                    let owner = try await SignerRequestSheet.choose(on: networks.map(\.chainId))
+                    let owner = try await SignerRequestSheet.choose(on: networks.map(\.chainId), account: account)
                     // A contract (a smart wallet) cannot sign for the account.
                     if try await YourAccountChain.isContract(YourAccountOp.base, owner) {
                         note = String(localized: "That wallet is a contract, not one whose key you hold")
@@ -344,7 +344,8 @@ struct MoveKeysWalk: View {
                     DSHaptic.success()
                     advance()
                 } catch {
-                    note = String(localized: "No wallet connected. Try again, or add one later.")
+                    note = SignerRequestSheet.proofWords(error)
+                        ?? String(localized: "No wallet connected. Try again, or add one later.")
                 }
             }
         case .limit:

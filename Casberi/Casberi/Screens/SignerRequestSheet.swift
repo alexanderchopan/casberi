@@ -19,7 +19,7 @@ struct SignerRequestSheet: View {
                height: 600, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(signer.map { String(localized: "Scan with …\(String($0.suffix(4))) in its wallet, then approve.") }
-                     ?? String(localized: "Scan with the wallet you want, then approve."))
+                     ?? String(localized: "Scan with the wallet you want, then approve twice: connect, then sign."))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                 if let code = Self.code(url.absoluteString) {
@@ -126,15 +126,38 @@ struct SignerRequestSheet: View {
     }
 
     /// A wallet chosen as the Signer (prd §1457): scanned once, its first
-    /// address taken, the session closed; nothing signed.
-    static func choose(on chainIds: [Int]) async throws -> String {
+    /// address taken once it signs the proof (§1516), the session closed.
+    static func choose(on chainIds: [Int], account: String) async throws -> String {
         let handle = await MainActor.run { Handle() }
         defer { Task { @MainActor in handle.close() } }
         let pairing = try await YourAccountSignerLink.connect(signer: nil, chainIds: chainIds) { url in
             handle.close = present(url: url, signer: nil)
         }
-        YourAccountSignerLink.close(pairing)
+        defer { YourAccountSignerLink.close(pairing) }
+        try await YourAccountSignerLink.prove(pairing, account: account)
         return pairing.signer
+    }
+
+    /// A typed address proven before it is added (prd §1516): its wallet
+    /// connects as that address and signs the proof.
+    static func prove(signer: String, on chainIds: [Int], account: String) async throws {
+        let handle = await MainActor.run { Handle() }
+        defer { Task { @MainActor in handle.close() } }
+        let pairing = try await YourAccountSignerLink.connect(signer: signer, chainIds: chainIds) { url in
+            handle.close = present(url: url, signer: signer)
+        }
+        defer { YourAccountSignerLink.close(pairing) }
+        try await YourAccountSignerLink.prove(pairing, account: account)
+    }
+
+    /// The words for a proof that failed, or nil for any other failure.
+    static func proofWords(_ error: Error) -> String? {
+        switch error as? YourAccountSignerLink.Failure {
+        case .notProven?: String(localized: "That wallet could not sign for this address, so it was not added")
+        case .notTheSigner?: String(localized: "That wallet connected as another address")
+        case .refused?: String(localized: "Your wallet declined to sign, so nothing was added")
+        default: nil
+        }
     }
 
     @MainActor
