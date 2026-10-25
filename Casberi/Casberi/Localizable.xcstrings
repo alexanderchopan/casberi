@@ -94083,6 +94083,34 @@
         }
       }
     },
+    "It answered with these and no words." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Respondió con estos y sin palabras."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "言葉はなく、これらだけで答えました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "말 없이 이것들로 답했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它只给出了这些，没有文字。"
+          }
+        }
+      }
+    },
     "It approves neither, so the transaction has no payer." : {
       "localizations" : {
         "es" : {
