@@ -14,8 +14,8 @@ import Foundation
 ///     NFTs, each a door.
 ///   • **Markets** is what you watch, then the companies behind your apps
 ///     (§1498, user: "lets bring the tile back but keep watchlist on the with
-///     the tile not on home"). It is yours, not an account's, so one account
-///     picked dims it, as it dims Spending.
+///     the tile not on home"). It is yours, not an account's, so it stays
+///     lit whatever account is picked (§1519, user: "markets should stay lit").
 ///   • **Spending** is a reading of Activity: Subscriptions, Places, Fees.
 ///
 /// Security is deleted (user: "we will break those out into what they are"):

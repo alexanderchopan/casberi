@@ -68588,3 +68588,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **One copy per screen:** the Copy address row under your own address and the Copy deposit address row under a route's are deleted. A route's address is still named a deposit address by the line under it ("This deposit address takes only …", §1501 item 6). The short address in the sentence still copies once a network is picked.
 3. **Nothing to swap, send or pay with draws no foot act** (`nothingToMove`: read, nothing on any network, nothing kept, nothing under way): no Add, no grey verb, no Relay credit. The sentence's "Nothing to swap yet." and "Receive something first" stay. A move landing keeps its foot.
 4. **Not seen:** written in a Linux session with no Xcode; not built, not run.
+
+## §1519 — Markets stays lit whatever account or app is picked (amends §1498 item 4) (user, 2026-10-25, on a screenshot of "Wallet · You" with the Markets tile grey: "why is markets grayed out on my account"; "i only have one account connected to"; "markets should stay lit") — WRITTEN, NOT YET COMPILED
+
+1. **The cause.** §1498 item 4 dimmed the Markets tile under any pick, an address or an app, because what you watch is nobody's account. The Holdings page's You row narrows the Wallet to your own address (`FeedScreen+WalletPages.swift`), and the narrowing stands when you go back to Home, so a person with one account found the tile grey on the account that is all they have. The dim kept them from a list that reads the same on every pick.
+2. **The rule.** No pick dims Markets. The address pick's inert set is Spending, Places and Fees (`FeedScreen+ShapedSections.swift`); an app pick's (`walletInertSections`) loses `.markets` and keeps the rest. A Markets tile remembered under a pick now resolves to Markets, not Home.
+3. **Not changed.** Spending still dims on a pick (§1468 item 4): it reads every account, so one account's page cannot stand on it. Home still draws no Markets door (§1498 item 3).
+4. **Self-test.** `wallet-section-selftest.sh`'s two §1498 guards are turned to `deny`: either inert set naming `.markets` again fails the pass.

@@ -316,10 +316,11 @@ extension FeedScreen {
                 // §1078), and a remembered one of them resolves to Home.
                 // One address picked dims Spending too (prd §1468): it reads
                 // every account, as Home's list does only on All (§1201).
-                // Markets is no account's at all (§1498), so it dims with it.
+                // Markets is no account's, so a pick leaves it as it is and it
+                // stays lit (§1519, amending §1498 item 4).
                 let inert: Set<WalletSection> = seatPicked
                     ? walletInertSections(visible: visible, upcoming: upcoming)
-                    : (selectedWallet != nil ? [.spending, .places, .fees, .markets] : [])
+                    : (selectedWallet != nil ? [.spending, .places, .fees] : [])
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)

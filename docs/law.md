@@ -148,7 +148,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1250).
-- The Wallet's tiles are Home · Activity · Holdings · Markets · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats. Markets is a tile, its first list the Watchlist (Watchlist · Alerts), then From your apps; one account picked dims it, as it dims Spending (§1480, §1498).
+- The Wallet's tiles are Home · Activity · Holdings · Markets · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats. Markets is a tile, its first list the Watchlist (Watchlist · Alerts), then From your apps; it stays lit whatever account or app is picked (§1480, §1498, §1519).
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1656 of 1725 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1657 of 1726 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1876,7 +1876,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
-- §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door
+- §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
@@ -1897,6 +1897,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1516 — A co-signer is a key that answered, not an address a wallet named
 - §1517 — Your own node: a Nodes page under Your account, an address per network checked against its chain before use, and that…
 - §1518 — Receive's foot copies the address, and an empty account's Move draws no verb
+- §1519 — Markets stays lit whatever account or app is picked
 
 ## Dead rulings → what replaced them (generated)
 

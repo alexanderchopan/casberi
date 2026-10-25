@@ -264,18 +264,18 @@ guard MainSurface.swift "extension WalletSection: DSSectionScope" \
 
 # **MARKETS IS A TILE AGAIN (prd §1498, user: "lets bring the tile back but
 # keep watchlist on the with the tile not on home").** Home draws no Markets
-# door, and one account picked dims the tile, as it dims Spending: what you
-# watch is nobody's account (§1491).
+# door. What you watch is nobody's account, so no pick dims the tile (§1519,
+# user: "markets should stay lit", amending §1498 item 4).
 PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 SHAPED="Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift"
 for f in "$PAGES" "$WROOM" "$SHAPED"; do strip_comments "$f" > "$work/$(basename $f).bare"; done
 deny FeedScreen+WalletPages.swift "walletDoor(.markets" \
   "Home draws a Markets door again — Markets is a tile (prd §1498)"
-guard FeedScreen+WalletRoom.swift "\.fees, \.markets," \
-  "an app pick no longer dims the Markets tile (prd §1498)"
-guard FeedScreen+ShapedSections.swift "\[\.spending, \.places, \.fees, \.markets\]" \
-  "one address picked no longer dims the Markets tile (prd §1498)"
+deny FeedScreen+WalletRoom.swift "\.fees, \.markets," \
+  "an app pick dims the Markets tile again — it stays lit (prd §1519)"
+deny FeedScreen+ShapedSections.swift "\[\.spending, \.places, \.fees, \.markets\]" \
+  "one address picked dims the Markets tile again — it stays lit (prd §1519)"
 
 # **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's own page; user: "it
 # should open in place not the overlay. it's jarring").** The Wallet's FeedScreen
