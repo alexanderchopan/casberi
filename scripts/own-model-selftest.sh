@@ -37,8 +37,28 @@ grep -q 'if provider == .ownModel, declareTools, case .toolsUnsupported = failur
   || { echo "✗ a refused tool round is no longer retried without tools"; exit 1; }
 grep -q 'OwnModel.namesToolRefusal(body) ? .toolsUnsupported : .providerError(400)' "$ANSWER" \
   || { echo "✗ a 400 is read as a tool refusal without its body naming tools"; exit 1; }
-grep -q 'guard !candidates.isEmpty, steps.isEmpty else { return .failure(.empty) }' "$ANSWER" \
-  || { echo "✗ a tool-less retry can ask a question of no evidence"; exit 1; }
+# Your own model is ALWAYS asked (prd §1531, a tester: "asking it anything does
+# nada"): nothing matched is an open ask under its own contract, never a
+# request withheld — at the shell's gate, the loop's guard and the tool-less
+# retry alike.
+grep -q 'guard !hits.isEmpty || provider == .bankr || provider == .ownModel' "$SHELL_FILE" \
+  || { echo "✗ the shell withholds your own model's question when nothing kept matched"; exit 1; }
+grep -q 'let openAsk = provider == .ownModel && candidates.isEmpty' "$ANSWER" \
+  || { echo "✗ an open ask is no longer your own model's alone"; exit 1; }
+grep -q 'guard !candidates.isEmpty || toolsOn || openAsk else { return .failure(.empty) }' "$ANSWER" \
+  || { echo "✗ a tool-less own model is not asked when nothing matched"; exit 1; }
+grep -q 'system += openAsk ? openInstructions' "$ANSWER" \
+  || { echo "✗ an open ask is sent the grounding contract over an empty list"; exit 1; }
+grep -q 'let userText = history.isEmpty && !openAsk' "$ANSWER" \
+  || { echo "✗ an open ask is sent an empty numbered list as its question"; exit 1; }
+grep -q 'guard steps.isEmpty else { return .failure(.empty) }' "$ANSWER" \
+  || { echo "✗ the tool-less retry no longer guards a spent tool round"; exit 1; }
+# A reply that is only the marker is no prose: drawing the text back put
+# "PICKS: 1, 2, 4, 5" on screen as the answer (prd §1531).
+grep -q 'prose.isEmpty ? text' "$ANSWER" \
+  && { echo "✗ a marker-only reply is drawn as its own answer again"; exit 1; }
+grep -q 'It answered with these and no words.' "$ANSWER" \
+  || { echo "✗ picks with no words have no line of their own"; exit 1; }
 # Nothing kept is a FAILURE that names the agent, never a success the composer
 # ticks as the agent's own answer (2026-10-24: "my logs show nothing").
 grep -q 'return .failure(.nothingKept(agent: provider?.agent' "$SHELL_FILE" \

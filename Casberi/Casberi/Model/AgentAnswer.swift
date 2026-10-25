@@ -1170,7 +1170,10 @@ enum AgentAnswer {
            OwnModel.isToolless(address: address, model: provider.model) {
             toolsOn = false
         }
-        guard !candidates.isEmpty || toolsOn else { return .failure(.empty) }
+        // Your own model is asked over nothing too (prd §1531): with no
+        // evidence it answers from what it knows, under its own contract.
+        let openAsk = provider == .ownModel && candidates.isEmpty
+        guard !candidates.isEmpty || toolsOn || openAsk else { return .failure(.empty) }
 
         // Page reading is only reachable when the corpus tools are on: the URLs
         // it may fetch ride the TOOL RESULTS (see `AgentWebFetch`), and
@@ -1190,10 +1193,13 @@ enum AgentAnswer {
         // told to use tools it no longer has.
         func systemPrompt(tools: Bool) -> String {
             var system = systemPrefix.isEmpty ? "" : systemPrefix + "\n\n"
-            system += OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
+            // Nothing matched: no list to ground in, so the grounding contract
+            // and the list's pick line would ask about evidence not there.
+            system += openAsk ? openInstructions
+                : OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
             if tools { system += toolGuidance }
             if tools && fetchOn { system += AgentWebFetch.guidance }
-            system += tools ? toolPickInstructions : pickInstructions
+            system += tools ? toolPickInstructions : (openAsk ? "" : pickInstructions)
             if provider.searchesWeb { system += webSearchGuidance }
             if provider == .anthropic { system += thinkingOffGuidance }
             return system
@@ -1204,7 +1210,7 @@ enum AgentAnswer {
         // candidates); a follow-up sends just the bare question — the
         // candidates and grounding rule already live in `history`'s first
         // exchange and the (unchanged) system prompt.
-        let userText = history.isEmpty
+        let userText = history.isEmpty && !openAsk
             ? OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
             : query
 
@@ -1289,10 +1295,10 @@ enum AgentAnswer {
                     NSLog("[Casberi] AgentAnswer(ownmodel): %@ refused tools (HTTP 400) — asking again without them",
                           wire.model)
                     toolsOn = false
-                    // Without tools the candidates are the whole evidence, and
-                    // none is the honest "nothing matches", not a question
-                    // asked of nothing (the guard above the loop's rule).
-                    guard !candidates.isEmpty, steps.isEmpty else { return .failure(.empty) }
+                    // Without tools the candidates are the whole evidence;
+                    // none is an open ask (prd §1531), which this seat may
+                    // send. A round already spent on tools cannot be undone.
+                    guard steps.isEmpty else { return .failure(.empty) }
                     system = systemPrompt(tools: false)
                     continue
                 }
@@ -1358,10 +1364,15 @@ enum AgentAnswer {
             }))
         }
 
-        let text = stripPickLine(finalText)
-        guard !text.isEmpty else { return .failure(.empty) }
         let grounding = resolvePicks(from: finalText, candidateCount: candidates.count,
                                      surfaced: sink.ids)
+        // Picks and no words: the rows are the answer, under a line that says
+        // that is all it gave — never its marker.
+        var text = stripPickLine(finalText)
+        if text.isEmpty, !grounding.picks.isEmpty || !grounding.toolHitIDs.isEmpty {
+            text = String(localized: "It answered with these and no words.")
+        }
+        guard !text.isEmpty else { return .failure(.empty) }
         // THE EVIDENCE, ONCE (prd §848). Awaited rather than fired and
         // forgotten: a badge that lands after the answer has been read is a
         // badge nobody saw. `nil` stays `nil` for every other provider, which
@@ -1779,6 +1790,19 @@ enum AgentAnswer {
     // MARK: - The "PICKS: …" marker — structured grounding without a
     // separate structured-output API per provider
 
+    /// The contract for an ask nothing kept matched (prd §1531, Your own
+    /// model only): no list, so no grounding rule — the model answers from
+    /// what it knows, as any chat would, and says so when it does not know.
+    static var openInstructions: String {
+        """
+        You are answering someone inside Casberi, the app where they keep \
+        their things. A first search of what they have kept found nothing for \
+        this question, so answer it from what you know, in a few plain \
+        sentences. Address them as "you". No preamble and no markdown: the \
+        answer is drawn as plain text. If you do not know, say so.
+        """ + LanguageStore.shared.llmLanguageDirective
+    }
+
     /// Prepended to the system prompt when the corpus tools are declared
     /// (2026-08-06). Three things it has to say, each earned:
     ///
@@ -1881,9 +1905,11 @@ enum AgentAnswer {
         }) else {
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        let prose = lines[..<markerIndex].joined(separator: "\n")
+        // A reply that is ONLY the marker has no prose, and says so: handing
+        // the whole text back drew "PICKS: 1, 2, 4, 5" as the answer (prd
+        // §1531, a 1.5B Qwen on Ollama).
+        return lines[..<markerIndex].joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return prose.isEmpty ? text.trimmingCharacters(in: .whitespacesAndNewlines) : prose
     }
 
     /// Splits the marker's numbers across the two things they can mean: a

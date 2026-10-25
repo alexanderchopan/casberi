@@ -4209,7 +4209,13 @@ struct RootShell: View {
         // A tester with nothing kept read it as the seat being broken ("my
         // logs show nothing"). The failure line names the agent and says what
         // to do.
-        guard !hits.isEmpty || provider == .bankr || !corpus.isEmpty else {
+        //
+        // YOUR OWN MODEL IS ALWAYS ASKED (prd §1531, a tester: "asking it
+        // anything does nada"). It is a model you run, not a librarian over
+        // your things: a question nothing kept matches is still a question,
+        // and it answers from what it knows (`AgentAnswer.openInstructions`).
+        guard !hits.isEmpty || provider == .bankr || provider == .ownModel
+                || !corpus.isEmpty else {
             return .failure(.nothingKept(agent: provider?.agent ?? String(localized: "your agent")))
         }
         // CARRYING AN IMPORTED CONVERSATION ON (2026-08-20). A sheet that
