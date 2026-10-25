@@ -618,16 +618,8 @@ enum BridgeRefresh {
                 ContactIndexSources.rebuild(context: context)
             }
         }
-        // Not an ingest — the watchlist's 24h pulse for the feed-row
-        // sparkline. Exits instantly when no tokens are watched. Then the
-        // Watchlist widget, from the prices just read (prd §1223).
-        let s = slot(); BridgeRefresh.landingTask { @MainActor in
-            await BridgeRefresh.stagger(s)
-            await TokenPulse.shared.refresh(context: context)
-            await WidgetPublish.watchlist(context: context, read: true)
-            // The price pinned to the Lock Screen, from the same reads (prd §1250).
-            await PriceActivityDriver.sync(context: context)
-        }
+        // The watchlist's price pulse, its widget and the pinned price left
+        // with Markets (prd §1529).
         for provider in MailProvider.allCases where provider.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)

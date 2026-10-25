@@ -211,7 +211,7 @@ if not page or "walletNFTListSection" not in page.group(1) or "walletNFTDoorSect
     sys.exit("  ✗ the NFTs page does not draw the shelf's door and the NFT rows (prd §1480)")
 if "walletDoor(.nfts)" not in src:
     sys.exit("  ✗ Holdings lost its NFTs door (prd §1480)")
-if not re.search(r'case \.holdings, \.holdingAccounts, \.positions, \.apps, \.nfts:\s*holdingsBlockSection', src):
+if not re.search(r'case \.holdings, \.holdingAccounts, \.positions, \.apps, \.nfts:[^}]{0,400}?holdingsBlockSection', src, re.S):
     sys.exit("  ✗ the NFTs page's box is not Holdings' — it would say a different tile (prd §1480)")
 PY
 grep -q 'static let holdingsDoors: \[WalletSection\] = \[.holdingAccounts, .apps, .positions, .nfts\]' \

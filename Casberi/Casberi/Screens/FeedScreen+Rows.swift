@@ -30,7 +30,7 @@ extension FeedScreen {
     private var entranceStyle: RowEntrance.Style {
         switch shape {
         case .calendar: .init(dx: -28, dy: 0, scale: 1, step: 0.045)
-        case .wallet, .tokens: .init(dx: 0, dy: 16, scale: 1, step: 0.04)
+        case .wallet: .init(dx: 0, dy: 16, scale: 1, step: 0.04)
         case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
         case .music:    .init(dx: 0, dy: 10, scale: 1, step: 0.035)
         // Frames settle in like the music room's covers — a touch of scale so
@@ -134,10 +134,6 @@ extension FeedScreen {
             return SocialRoomSource.standsAlone(thing)
         }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
-        // Markets draws its own row, the plain one (prd §1081): it is no card,
-        // so it takes the one pitch (§1496); the fat anatomy below is the
-        // rest of the app's.
-        if drawsMarketsRow(thing), !PriceAlertStore.isAlertRow(thing) { return false }
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
         if StockWatch.symbol(of: thing) != nil { return true }             // its twin for a stock
         return false
@@ -412,12 +408,7 @@ extension FeedScreen {
                 // the thing and derives when the press raises it — so this is
                 // work that no longer runs, not a cache over it.
                 RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
-                            onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) },
-                            onUnwatch: drawsMarketsRow(thing) ? { unwatch($0) } : nil,
-                            onMoveToTop: drawsMarketsRow(thing) ? { moveToTop($0, in: walletMarketsRows) } : nil,
-                            onReorder: drawsMarketsRow(thing) ? { startReorder() } : nil,
-                            onPin: drawsMarketsRow(thing) ? { pinToLockScreen($0) } : nil,
-                            onRemoveAlertRow: drawsMarketsRow(thing) ? { removeAlertRow($0) } : nil)
+                            onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -639,11 +630,7 @@ extension FeedScreen {
                 // watched token whose pulse has landed wears the fat anatomy
                 // (TokenRow, prd §102) everywhere too; until it lands, the
                 // plain band + timestamp — never a faked price.
-                if drawsMarketsRow(thing), !PriceAlertStore.isAlertRow(thing) {
-                    // Markets' own row (prd §1081): the one line, the day's
-                    // shape and the span's move.
-                    marketsRow(thing)
-                } else if let pulse = TokenPulse.shared.pulse(for: thing) {
+                if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
                 } else if let symbol = StockWatch.symbol(of: thing) {
                     // A stock watched in Markets: a pack's row, on Nasdaq's
@@ -747,15 +734,6 @@ struct RowVerbMenu: View {
     var onFile: ((Thing, String?) -> Void)? = nil
     /// Asks for a new folder's name, then files the row in it.
     var onNewFolder: ((Thing) -> Void)? = nil
-    /// A watched row in Markets (prd §1081): Move to top and Stop watching.
-    var onUnwatch: ((Thing) -> Void)? = nil
-    var onMoveToTop: ((Thing) -> Void)? = nil
-    /// Markets (prd §1250): drag the list in My order, and pin a row's price
-    /// to the Lock Screen.
-    var onReorder: (() -> Void)? = nil
-    var onPin: ((Thing) -> Void)? = nil
-    /// A Went off row in Markets (user, 2026-10-17): Delete, the row alone.
-    var onRemoveAlertRow: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
 
@@ -769,53 +747,7 @@ struct RowVerbMenu: View {
         // Edit, and Copy and Translate are the system's on selected words.
         // Nothing to open in another app, so no Open in app either.
         let note = Pinboard.isNote(thing)
-        // A watched row holds Move to top, Reorder (in My order), Pin to Lock
-        // Screen (where Live Activities are on), Share and Stop following
-        // (prd §1081, §1250). Nothing else in the menu is about a thing you
-        // follow.
-        if let onUnwatch, let onMoveToTop, !PriceAlertStore.isAlertRow(thing) {
-            Button {
-                onMoveToTop(thing)
-            } label: {
-                Label("Move to top", systemImage: "arrow.up.to.line")
-            }
-            if let onReorder, TokenWatchOrder.shared.mode == .manual {
-                Button {
-                    onReorder()
-                } label: {
-                    Label("Reorder", systemImage: "arrow.up.arrow.down")
-                }
-            }
-            if let onPin, PriceActivityDriver.available {
-                let pinned = thing.sourceRef != nil && PriceActivityDriver.pinnedRef == thing.sourceRef
-                Button {
-                    onPin(thing)
-                } label: {
-                    Label(pinned ? String(localized: "Unpin from Lock Screen")
-                                 : String(localized: "Pin to Lock Screen"),
-                          systemImage: pinned ? "pin.slash" : "pin")
-                }
-            }
-            ThingShareLink(thing: thing) {
-                Label("Share", systemImage: "square.and.arrow.up")
-            }
-            Button(role: .destructive) {
-                onUnwatch(thing)
-            } label: {
-                Label("Stop following", systemImage: "star.slash")
-            }
-        } else {
-            standardMenu(note: note)
-            // A row an alert landed is history, not a thing that lands again
-            // (the alert is gone or has fired its day), so it may be deleted.
-            if let onRemoveAlertRow, PriceAlertStore.isAlertRow(thing) {
-                Button(role: .destructive) {
-                    onRemoveAlertRow(thing)
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-        }
+        standardMenu(note: note)
     }
 
     @ViewBuilder private func standardMenu(note: Bool) -> some View {

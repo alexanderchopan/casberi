@@ -578,16 +578,11 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
-                // Stocktwits' watched tickers into Markets (2026-09-29).
-                SourceRename.sweepStockWatches(context: modelContext, store: bridges)
-                // Followed coins by their own price (prd §1250): a wrapped
-                // native or an index coin followed as a DEX token converges
-                // onto its CoinPaprika follow, in place, before the dedupe.
-                CoinWatch.converge(context: modelContext)
-                CoinWatch.clearDeadLogos(context: modelContext)
+                // Markets' sweeps (Stocktwits into Markets, coin converge, dead
+                // logos, removed alerts) went with Markets (prd §1529); its
+                // rows go through `sweepRetiredSeats` below.
                 // Logos node rows lose the node's address (prd §1474).
                 LogosIngest.scrubNodeRows(context: modelContext)
-                PriceAlertStore.shared.sweepRemoved(context: modelContext)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
                 // records, address-book tags, defaults and devnet keys.
                 SourceRename.sweepRetiredSeats(context: modelContext, store: bridges)

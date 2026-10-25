@@ -231,8 +231,6 @@ extension WalletSection: DSTileScope {
         case .needsYou:        return ScopeTileGlyph.alerts
         case .permissions:     return ScopeTileGlyph.permissions
         case .threats:         return ScopeTileGlyph.threats
-        // Markets' own dock glyph (prd §1232).
-        case .markets:         return CategoryFold.glyph(for: HomeScope.markets)
         case .holdingAccounts: return ScopeTileGlyph.holdingAccounts
         case .positions:       return ScopeTileGlyph.positions
         case .apps:            return ScopeTileGlyph.apps

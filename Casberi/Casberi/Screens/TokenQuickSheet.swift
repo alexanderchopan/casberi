@@ -83,8 +83,6 @@ struct TokenQuickSheet: View {
                 // No top padding: the head block's own bottom inset is the gap.
                 .padding(.horizontal, DS.Space.s4)
                 heldInSection
-                watchRow
-                    .padding(.top, DS.Space.s6)
             }
             .padding(.bottom, DS.Space.s6)
         }
@@ -147,46 +145,4 @@ struct TokenQuickSheet: View {
         }
     }
 
-    /// One real verb: Watch. Once it lands (or the token was already
-    /// watched), the row states the fact instead — never a dead control.
-    @ViewBuilder private var watchRow: some View {
-        if let watchedTitle {
-            HStack(spacing: DS.Space.s4) {
-                Image(systemName: "checkmark")
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(DS.confirm)
-                    .frame(width: 26, alignment: .center)
-                Text("Following \(watchedTitle)")
-                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s4)
-        } else if let resolved {
-            Button {
-                DSHaptic.tap()
-                if let thing = TokenWatch.add(resolved, context: modelContext) {
-                    DSHaptic.success()
-                    watchedTitle = thing.title
-                    TokenWatch.registerBridge(store: store, context: modelContext)
-                } else {
-                    watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
-                }
-            } label: {
-                HStack(spacing: DS.Space.s4) {
-                    Image(systemName: "eye")
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 26, alignment: .center)
-                    Text("Follow this token")
-                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                    Spacer()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s4)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-        }
-    }
 }

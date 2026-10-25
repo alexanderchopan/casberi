@@ -440,11 +440,6 @@ extension FeedScreen {
                      .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes:
                     walletPageSections(section, all: all, upcoming: upcoming,
                                        nextEventID: nextEventID)
-                // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
-                // own page).** Its tiles are the box's figure; what you follow,
-                // its alerts or a category's companies follow under the row.
-                case .markets:
-                    walletMarketsSections(nextEventID: nextEventID)
                 case .subscriptions:
                     // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
                     // the person builds the list up, then every plan.

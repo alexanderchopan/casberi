@@ -72,6 +72,8 @@ enum WidgetPublish {
                               "widget.people", "widget.peopleAt",
                               // The Category widget's shelves (§1210).
                               "widget.shelves", "widget.shelvesAt",
+                              // The Watchlist widget, gone with Markets (§1529).
+                              "widget.watchlist", "widget.watchlistAt",
                               // The Daily Brief quick action's and the brief
                               // control's flag, left by an older build.
                               "brief.request"]
@@ -130,75 +132,6 @@ enum WidgetPublish {
             WidgetFeed.Section(room: $0, today: today[$0] ?? 0)
         }
         return WidgetFeed(day: calendar.startOfDay(for: now), sections: sections)
-    }
-
-    /// The Watchlist widget's rows (prd §1223): what you follow in Markets,
-    /// in the watchlist's own order (`TokenWatchOrder`, the room's), each with
-    /// the price this app last read and when.
-    ///
-    /// Not part of `publishAll`: the prices land seconds after the foreground
-    /// pass, so `BridgeRefresh` calls this once the watchlist's pulse has read,
-    /// and the background task once its alert check has. `read` asks for fresh
-    /// prices first, and only while the tile is on a Home Screen: a watched
-    /// stock's quote is otherwise read only when Markets draws its row.
-    static func watchlist(context: ModelContext, read: Bool) async {
-        // The §217 demo doctrine: nothing the demo composes reaches a widget.
-        guard !DemoMode.isActive,
-              let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
-        if read, !watched(context).isEmpty, await watchlistOnHomeScreen() {
-            await TokenPulse.shared.refresh(context: context)
-            let stocks = watched(context).compactMap { thing in
-                StockWatch.symbol(of: thing).map {
-                    CompanyPacks.Company(name: TokensAsk.name(of: thing.title),
-                                         listing: .stock($0), seats: [TokenWatch.source])
-                }
-            }
-            if !stocks.isEmpty { await CompanyQuotes.shared.load(stocks) }
-        }
-        // Fetched again after the reads: a row unwatched while they ran is gone.
-        let ordered = TokenWatchOrder.shared.apply(
-            watched(context), sourceRef: \.sourceRef,
-            change24h: { PriceAlertStore.reading(for: $0)?.change })
-        let rows = ordered.compactMap { thing -> WidgetWatchlist.Row? in
-            guard let ref = thing.sourceRef else { return nil }
-            let reading = PriceAlertStore.reading(for: thing)
-            return WidgetWatchlist.Row(
-                ref: ref,
-                symbol: StockWatch.symbol(of: thing) ?? thing.authorHandle
-                    ?? TokensAsk.symbol(of: thing.title),
-                name: TokensAsk.name(of: thing.title),
-                price: reading?.price, change: reading?.change, at: reading?.at,
-                // A token's reading IS its pulse, so the closes are the same
-                // read; a stock's are its day line (prd §1250), read with its quote.
-                closes: (TokenPulse.shared.pulse(for: thing)?.closes ?? TokenPulse.shared.stockLine(for: thing))
-                    .flatMap { WidgetWatch.sparkCloses($0) })
-        }
-        let previous = WidgetWatch.published(defaults: group)
-        // Every row up to `publishCap`, not the small tile's four: a tile can
-        // be set to show any row you follow (prd §1250), and each tile takes
-        // its own few.
-        let list = WidgetWatchlist(rows: WidgetWatch.carryForward(
-            Array(rows.prefix(WidgetWatch.publishCap)), from: previous))
-        if WidgetPayload.write(list, key: WidgetWatch.key,
-                               stampKey: WidgetWatch.stampKey, defaults: group) {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetWatch.kind)
-        }
-    }
-
-    /// The rows you follow in Markets, newest first (the "Recently followed"
-    /// order `TokenWatchOrder` starts from); never an alert that went off.
-    private static func watched(_ context: ModelContext) -> [Thing] {
-        let source = TokenWatch.source
-        let d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source },
-                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        return ((try? context.fetch(d)) ?? []).live.filter { !PriceAlertStore.isAlertRow($0) }
-    }
-
-    /// Whether a Watchlist tile stands on a Home Screen, so a price is read
-    /// for it only when someone can see it.
-    private static func watchlistOnHomeScreen() async -> Bool {
-        let tiles = (try? await WidgetCenter.shared.currentConfigurations()) ?? []
-        return tiles.contains { $0.kind == WidgetWatch.kind }
     }
 
     private static func rows(_ things: [Thing], stamp: (Thing) -> Date) -> [WidgetShelf.Row] {
@@ -315,20 +248,6 @@ enum WidgetPublish {
         } else {
             NSLog("[Casberi] widgetFeed| none")
         }
-        // What the last watchlist publish left (`watchlist(context:read:)`
-        // runs after the prices read, not in this pass).
-        if let list = WidgetWatch.published(defaults: group) {
-            NSLog("[Casberi] widgetWatchlist| rows=%d", list.rows.count)
-            for row in list.rows {
-                NSLog("[Casberi] widgetWatchlist| %@ price=%@ change=%@ at=%@", row.symbol,
-                      row.price.map { WidgetWatch.priceText($0) } ?? "none",
-                      row.change.map { MoneyFormat.percentLabel($0 * 100) } ?? "none",
-                      row.at.map { String(format: "%.0fm ago", Date.now.timeIntervalSince($0) / 60) } ?? "never")
-            }
-        } else {
-            NSLog("[Casberi] widgetWatchlist| none")
-        }
-
         // The week's flow. `none` is the HEALTHY answer for most weeks — the
         // band declines on an unpriceable window, on fewer than two lanes, and
         // on lanes too thin to draw honestly — so the line names which, and

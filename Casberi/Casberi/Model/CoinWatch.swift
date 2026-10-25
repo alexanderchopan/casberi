@@ -100,7 +100,7 @@ enum CoinWatch {
         let source = TokenWatch.source
         let rows = ((try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source }))) ?? [])
-            .filter { $0.isLive && !PriceAlertStore.isAlertRow($0) }
+            .filter(\.isLive)
         guard !rows.isEmpty else { return 0 }
         // Oldest first, so the follow that has stood longest is the one kept;
         // a row with no ref is no follow and is not handed in.
@@ -144,7 +144,6 @@ enum CoinWatch {
             TokenWatchOrder.shared.saveManual(
                 CoinFollow.rewrite(order: TokenWatchOrder.shared.manual, map: map))
         }
-        PriceAlertStore.shared.rewriteRefs(map)
         return map.count
     }
 

@@ -355,14 +355,15 @@ enum NetworkReach {
                          // read by its id, drawn only if it hashes to that id.
                          "api.cow.fi"],
                  throughTor: true),
-        // Markets (2026-09-29) is the Tokens seat with Stocktwits' watched
-        // stocks folded in, so it carries both seats' hosts. Yahoo's two chart
-        // hosts are built at runtime (`StockChart` tries
-        // `"https://\(host).finance.yahoo.com/…"` with query1 then query2), so
-        // neither is a literal the audit could read without this line.
-        Endpoint(service: "Markets",
-                 reach: .whenConnected(bridge: "Markets"),
-                 purpose: "Fetches the public price history of a token or stock you follow to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin; a coin you follow is priced and charted by CoinPaprika too, and wears CoinPaprika's image of its mark. Draws a followed stock's logo from Financial Modeling Prep's public image. Reads the current gas price on Ethereum and Base from public nodes for the line above your watchlist and the gas alerts you set. Carries only the ticker — nothing about you, and never a portfolio.",
+        // Token prices: what Markets read until it was deleted (prd §1529),
+        // filed under the Wallet, whose token pages still chart a token you
+        // hold. Yahoo's two chart hosts are built at runtime (`StockChart`
+        // tries `"https://\(host).finance.yahoo.com/…"` with query1 then
+        // query2), so neither is a literal the audit could read without this
+        // line.
+        Endpoint(service: "Token prices",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Fetches the public price history of a token you hold to draw its chart on \(DS.device), and its public price and mark. Carries only the token or ticker — nothing about you, and never a portfolio.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com",
                          "api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com",
@@ -564,7 +565,7 @@ enum NetworkReach {
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co", "mainnet.optimism.io"]),
         Endpoint(service: "Exchange rates",
-                 reach: .whenConnected(bridge: "Markets"),
+                 reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Fetches public reference prices to show token and account values in your currency. Carries only the pair being priced.",
                  hosts: ["api.coinbase.com", "api.kraken.com"]),
         // Binance/Gemini's own hosts, separate from the pricing entry above —

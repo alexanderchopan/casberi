@@ -81,9 +81,6 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .dsHover()
         .contextMenu {
-            // ALERT ME (prd §1090): Markets' alerts, from the money you hold.
-            // A token with no route has no price to watch, so it offers none.
-            if position.route != nil { walletHoldingAlertMenu(position) }
             // Out of the list, the map and the total (user: "should be able
             // to long press and hide a token"); the Hidden row brings it back.
             Button {
@@ -105,75 +102,6 @@ extension FeedScreen {
         }
     }
 
-    /// Markets' alert choices (`PriceAlert.choices`), worded relative to the
-    /// price because the menu opens before the price is read. Built from the
-    /// choices themselves at a unit price, so a choice added or reordered
-    /// there is worded and set here with no second list to keep in step.
-    @ViewBuilder
-    func walletHoldingAlertMenu(_ position: WalletPortfolio.Position) -> some View {
-        Section(String(localized: "Alert me when \(position.symbol)")) {
-            ForEach(PriceAlert.choices(ref: "", name: "", price: 1)) { template in
-                Button { walletSetHoldingAlert(position, template: template) } label: {
-                    Text(Self.relativeAlertLabel(template))
-                }
-            }
-        }
-    }
-
-    /// "Rises 10%", "Falls 10%", "Moves 10% in a day" — a choice made at a
-    /// price of 1, so its target IS its ratio.
-    static func relativeAlertLabel(_ template: PriceAlert) -> String {
-        let pct = Int((abs(template.target - (template.kind == .move ? 0 : 1)) * 100).rounded())
-        switch template.kind {
-        case .above: return String(localized: "Rises \(pct)%")
-        case .below: return String(localized: "Falls \(pct)%")
-        case .move:  return String(localized: "Moves \(pct)% in a day")
-        // Not among `PriceAlert.choices` (prd §1250): worded as the Alerts tile words them.
-        case .volume, .gasBelow: return WatchAlertsSection.title(template)
-        }
-    }
-
-    /// Watches the token in Markets if it isn't yet — an alert is checked on
-    /// a watched price (prd §1081) — then sets the alert there, where the
-    /// Alerts tile lists it and its switch turns it off. The level is taken
-    /// from a LIVE price only: the pulse this launch read, else a fresh
-    /// resolve. Never `watchPriceUsd`, the price the day you started watching.
-    func walletSetHoldingAlert(_ position: WalletPortfolio.Position, template: PriceAlert) {
-        guard !DemoMode.isActive else {
-            chrome.flash(String(localized: "Alerts work once you leave the demo."))
-            return
-        }
-        guard let routeString = position.route,
-              let r = TokenQuickRoute.from(sentinel: "@token:\(routeString):\(position.symbol)") else { return }
-        let context = modelContext
-        let store = bridges
-        Task { @MainActor in
-            var thing = r.watchedThing(in: context)
-            var price = thing.flatMap { TokenPulse.shared.pulse(for: $0)?.price }
-            if thing == nil || price == nil {
-                guard let resolved = await TokenWatch.search(r.address).first(where: { $0.id == r.id }) else {
-                    chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to follow."))
-                    return
-                }
-                if thing == nil {
-                    thing = TokenWatch.add(resolved, context: context) ?? r.watchedThing(in: context)
-                    TokenWatch.registerBridge(store: store, context: context)
-                }
-                price = resolved.priceUsd.flatMap(Double.init)
-            }
-            guard let thing, thing.isLive, let ref = thing.sourceRef, let price, price > 0 else {
-                chrome.flash(String(localized: "Couldn't find \(position.symbol)'s price to follow."))
-                return
-            }
-            let alert = PriceAlert(ref: ref, name: position.symbol, kind: template.kind,
-                                   target: template.kind == .move ? template.target : template.target * price)
-            PriceAlertStore.shared.add(alert)
-            DSHaptic.success()
-            chrome.flash(String(localized: "Alert set: \(position.symbol) \(WatchAlertsSection.title(alert).lowercased())"),
-                         tone: .success)
-        }
-    }
-
     /// The one drawing this scope leads with, in the box (prd §483, §1107).
     ///
     /// **The rule, in the user's own words: "above the toggles is always a
@@ -185,10 +113,6 @@ extension FeedScreen {
         switch section {
         case .home:
             EmptyView()
-        // **MARKETS' BOX IS WHAT YOU WATCH, TODAY (prd §1480 item 7)**: the
-        // watchlist as a heat map; the category boxes are deleted.
-        case .markets:
-            walletMarketsFigure
         // **ACTIVITY'S BOX IS HOW BUSY IT WAS (prd §1480 item 3).**
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
@@ -565,7 +489,7 @@ extension FeedScreen {
         // Subscriptions and Spending are decided by their own reading, in
         // their figure; Activity and Home's doors state their own count
         // (prd §1480), an empty one included.
-        case .home, .markets, .subscriptions, .spending, .places, .fees, .roundUps,
+        case .home, .subscriptions, .spending, .places, .fees, .roundUps,
              .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:

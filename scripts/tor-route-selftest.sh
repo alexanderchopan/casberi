@@ -110,7 +110,7 @@ for e in NetworkReach.endpoints where !e.refusesTor.isEmpty {
     }
 }
 for name in ["X notifications", "Instagram live", "TikTok live", "Spotify", "Gmail", "iCloud Mail",
-             "GitHub", "Bluesky", "Privy", "Connect a wallet", "Markets"] {
+             "GitHub", "Bluesky", "Privy", "Connect a wallet", "Token prices"] {
     check(NetworkReach.endpoint(forService: name)?.throughTor == false, "\(name) is not routed through Tor")
 }
 

@@ -29,7 +29,7 @@ extension FeedScreen {
 
     /// The shape a source takes when its chip is in force.
     enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, snapchat, files, instagram, tiktok, x, appStoreConnect, cardPointers, walletbeat, l2beat, telegram, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, snapchat, files, instagram, tiktok, x, appStoreConnect, cardPointers, walletbeat, l2beat, telegram, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -56,7 +56,7 @@ extension FeedScreen {
         /// deadlines). Where nothing can carry the line, the head stands.
         var carriesCover: Bool {
             switch self {
-            case .ledger, .calendar, .gmail, .reminders, .tokens,
+            case .ledger, .calendar, .gmail, .reminders,
                  .cardPointers, .walletbeat, .l2beat, .wallet: return false
             default: return true
             }
@@ -283,7 +283,6 @@ extension FeedScreen {
             // podcast art, which is §219's own decay arriving as designed
             // rather than a new behaviour.
             case _ where MediaShape.isMediaFeed(source): self = .media
-            case "Markets":             self = .tokens
             default:                    self = .plain
             }
         }
@@ -296,9 +295,6 @@ extension FeedScreen {
     /// deadline. Every other folded row reads as the room's ledger, which is
     /// already how card spends and transfers want to look.
     func rowShape(_ thing: Thing) -> Shape {
-        // Markets' rows in the Wallet's Markets tile (prd §1337) keep
-        // Markets' own row, never the ledger's band.
-        if drawsMarketsRow(thing) { return .tokens }
         // **THE FEED'S WALLET SECTION READS AS THE WALLET (prd §1343, user:
         // "fix rows").** A money row in the Feed keeps the ledger's band, its
         // amount pulled out to the right, as on the Wallet's own lists.

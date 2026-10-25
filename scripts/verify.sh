@@ -2100,7 +2100,6 @@ harness "YouTube player self-test" "youtube player self-test" "scripts/youtube-p
 
 # Markets' watchlist and alerts (prd §1081): when an alert fires and turns
 # itself off, which line a row says, and a heat map that fills its box.
-harness "Markets self-test" "markets self-test" "scripts/markets-selftest.sh" "the markets self-test failed — run scripts/markets-selftest.sh"
 
 # The tray's one search, grouped by category (prd §1185): which hits match
 # (a word's start in a sentence, a coin by any name), which group leads, and

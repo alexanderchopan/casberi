@@ -53,20 +53,16 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .activity, .spending, .markets],
-      "order is home → holdings → activity → spending → markets (prd §1480, §1527)")
-// **FIVE TILES (prd §1480, §1498).** Security is deleted — its parts are Your
-// account, Permissions and Threats, each a page off Home — and Markets is a
-// tile again, never a door off Home (§1498). A remembered "security" must
-// resolve to Home, never to a page that claims to be it.
-for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts"] {
+check(WalletSection.order == [.home, .holdings, .activity, .spending],
+      "order is home → holdings → activity → spending (prd §1480, §1529)")
+// **FOUR TILES (prd §1480, §1529).** Security is deleted — its parts are Your
+// account, Permissions and Threats, each a page off Home — and Markets is
+// deleted (§1529). A remembered "security" or "markets" must resolve to Home,
+// never to a page that claims to be it.
+for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts", "markets"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1480)")
 }
-check(WalletSection.order.count == 5, "the wallet has five tiles (prd §1498)")
-check(WalletSection.order.contains(.markets) && WalletSection.markets.isTile,
-      "markets is a tile, not a page off Home (prd §1498)")
-check(!WalletSection.homeDoors.contains(.markets), "Home draws no Markets door — its tile is the one way in (prd §1498)")
-check(WalletSection.markets.label == "Markets", "the tile reads Markets; its list is the Watchlist (prd §1498)")
+check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1529)")
 check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
@@ -95,17 +91,12 @@ check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
-// Markets is yours, not an account's, so it stands last, after the account
-// pages (prd §1527, user: "markets should be the last tile in the row"). No
-// tile is hidden when empty (below), so the strip's head is the same on
-// every wallet either way.
-check(WalletSection.order.last == .markets, "markets is last (prd §1527)")
+check(WalletSection.order.last == .spending, "spending is last (prd §1529)")
 check(WalletSection.order.first == .home, "home leads")
 
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
-check(!WalletSection.markets.isConditional, "markets is not conditional")
 for s in [WalletSection.subscriptions, .activity, .spending, .permissions, .threats] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
@@ -116,11 +107,7 @@ check(all == WalletSection.order, "every tile is present, in order")
 check(all.count == WalletSection.order.count, "no tile is hidden from anybody")
 
 // Every scope that CAN BE EMPTY teaches its own empty state (prd §611, §799).
-// Markets is never empty — its list needs nothing followed (§1167) — so it
-// has none.
-let drawn = WalletSection.allCases.filter { $0 != .markets }
-check(WalletSection.markets.emptyHeadline == nil && WalletSection.markets.emptyBody == nil,
-      "markets draws no empty state — it is never empty (prd §1167, §1337)")
+let drawn = WalletSection.allCases
 for s in drawn {
     check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
     check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
@@ -206,10 +193,10 @@ mutate() {
   echo "  ok   catches  $why"
 }
 
-mutate "markets no longer last (prd §1527)" \
-  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .markets, .spending]/'
+mutate "spending no longer last (prd §1529)" \
+  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .spending, .activity]/'
 mutate "spending dropped from the row, its case still compiling (prd §1468)" \
-  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .markets]/'
+  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .activity]/'
 mutate "home no longer leads" \
   's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -228,8 +215,6 @@ mutate "a door dropped from Home's row, its page unreachable (prd §1480)" \
   's/\.permissions, \.threats\]/.permissions]/'
 mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1480)" \
   's/case \.following:       return String\(localized: "Following"\)/case .following:       return String(localized: "Accounts")/'
-mutate "Markets sent back to a door off Home (prd §1498)" \
-  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .spending]/; s/\.permissions, \.threats\]/.permissions, .threats, .markets]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:            return String\(localized: "No balance yet"\)/case .home:            return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
@@ -260,32 +245,13 @@ deny()  { have "$1"; if grep -q -- "$2" "$work/$1.bare"; then fail "drift: $3"; 
 guard MainSurface.swift "extension WalletSection: DSSectionScope" \
   "the conformance moved — it must stay OUT of the Foundation-only model file"
 
-# **MARKETS IS A TILE AGAIN (prd §1498, user: "lets bring the tile back but
-# keep watchlist on the with the tile not on home").** Home draws no Markets
-# door. What you watch is nobody's account, so no pick dims the tile (§1519,
-# user: "markets should stay lit", amending §1498 item 4).
+# Markets is deleted (prd §1529): no door, tile or landing names it.
 PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 SHAPED="Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift"
 for f in "$PAGES" "$WROOM" "$SHAPED"; do strip_comments "$f" > "$work/$(basename $f).bare"; done
-deny FeedScreen+WalletPages.swift "walletDoor(.markets" \
-  "Home draws a Markets door again — Markets is a tile (prd §1498)"
-deny FeedScreen+WalletRoom.swift "\.fees, \.markets," \
-  "an app pick dims the Markets tile again — it stays lit (prd §1519)"
-deny FeedScreen+ShapedSections.swift "\[\.spending, \.places, \.fees, \.markets\]" \
-  "one address picked dims the Markets tile again — it stays lit (prd §1519)"
-
-# **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's own page; user: "it
-# should open in place not the overlay. it's jarring").** The Wallet's FeedScreen
-# no longer turns the Markets pick into a request for another page, every door
-# that names Markets lands on the Wallet with the tile picked, and the tile's
-# lists draw under the Wallet's row.
-deny FeedScreen.swift "chrome.sourceRequest = HomeScope.markets" \
-  "the Markets tile requests its own page again — it is drawn in place (prd §1337)"
-guard MainSurface.swift "chrome.walletSection = .markets" \
-  "a Markets door no longer lands on the Wallet's Markets tile (prd §1337)"
-guard FeedScreen.swift "walletMarketsSections(nextEventID: nextEventID)" \
-  "the Wallet's Markets tile draws no lists under its row (prd §1337)"
+deny MainSurface.swift "chrome.walletSection = .markets" \
+  "a Markets door lands on a Markets tile again — Markets is deleted (prd §1529)"
 
 # BELOW THE SPARKLINE, IN THE CONTENT (user ruling, 2026-08-26: "we need to have
 # those toggles be below the sparkline", "we cannot have four rows of chips").

@@ -2574,10 +2574,8 @@ private struct TokenChartContent: View {
         return (p, thing.capturedAt)
     }
 
-    /// This IS the watchlist's own thing — the row below already says so via
-    /// its "since you watched" anchor, so a second Watch verb would be a
-    /// dead control on the one place it can never apply.
-    private var offersWatch: Bool { thing.source != TokenWatch.source }
+    /// Following a token was Markets' (prd §1529): no page offers it now.
+    private var offersWatch: Bool { false }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -2636,7 +2634,7 @@ private struct TokenChartContent: View {
                            object: PriceObjectSource.identity(
                                title: thing.title,
                                authorHandle: thing.authorHandle),
-                           levels: alertLevels(thing)) {
+                           levels: []) {
                 // No pool (dead/illiquid) — the plain link, honestly.
                 if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
                     LinkPreviewCard(url: url)
@@ -2649,7 +2647,6 @@ private struct TokenChartContent: View {
             if boxTiles == nil { chart }
             statStrip
             if offersWatch && boxTiles == nil { watchRow }
-            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2785,7 +2782,7 @@ private struct TokenPulseChartContent: View {
                 // pass it, so the boxed price drops its own name.
                 object: PriceObjectSource.identity(title: thing.title,
                                                    authorHandle: thing.authorHandle),
-                levels: alertLevels(thing)) { EmptyView() }
+                levels: []) { EmptyView() }
             // In the room's frame (prd §1188), as every other price: it drew
             // no tiles at all, so the sheet had no Share (sheet sweep,
             // 2026-10-16).
@@ -2798,7 +2795,6 @@ private struct TokenPulseChartContent: View {
             }
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 if boxTiles == nil { chart }
-                watchAlerts(thing, adds: boxTiles == nil)
             }
             .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
             .padding(.horizontal, DS.Space.s4)
@@ -2844,7 +2840,6 @@ private struct StockChartContent: View {
         }
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             if boxTiles == nil { chart }
-            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2868,7 +2863,7 @@ private struct StockChartContent: View {
                        object: PriceObjectSource.identity(
                            title: thing.title,
                            authorHandle: thing.authorHandle),
-                       levels: alertLevels(thing)) {
+                       levels: []) {
             if let url = URL(string: thing.content) {
                 LinkPreviewCard(url: url)
             }
@@ -2910,7 +2905,6 @@ private struct CoinChartContent: View {
         }
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             if boxTiles == nil { chart }
-            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2930,35 +2924,11 @@ private struct CoinChartContent: View {
                        object: PriceObjectSource.identity(
                            title: thing.title,
                            authorHandle: thing.authorHandle),
-                       levels: alertLevels(thing)) {
+                       levels: []) {
             if let url = URL(string: CoinFollow.page(id)) {
                 ArticleDoor(url: url)
             }
         }
-    }
-}
-
-/// A watched row's price levels still on, for its chart (prd §1081).
-@MainActor
-private func alertLevels(_ thing: Thing) -> [Double] {
-    guard thing.isLive, thing.source == TokenWatch.source, let ref = thing.sourceRef else { return [] }
-    return PriceAlertStore.shared.alerts(for: ref)
-        .filter { $0.on && ($0.kind == .above || $0.kind == .below) }.map(\.target)
-}
-
-/// A watched row's alerts on its page (prd §1081) — only on the watchlist's
-/// own row, never on a token a post merely mentions, and never on a fired
-/// alert's row.
-@MainActor @ViewBuilder
-private func watchAlerts(_ thing: Thing, adds: Bool = true) -> some View {
-    if thing.isLive, thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
-       let ref = thing.sourceRef {
-        WatchAlertsSection(ref: ref, name: TokensAsk.name(of: thing.title),
-                           price: PriceAlertStore.reading(for: thing)?.price,
-                           // A day-volume alert is a DEX token's (prd §1250).
-                           volume: TokenChart.route(from: thing.content) != nil,
-                           adds: adds)
-            .padding(.top, DS.Space.s2)
     }
 }
 
@@ -2973,29 +2943,10 @@ private struct ChartTiles: View {
     let tiles: (VerbDial.Keep?) -> AnyView
     var keep: VerbDial.Keep? = nil
 
-    @State private var tray: WatchAlertTray.Route?
-    @Environment(\.dsInSheetStack) private var inSheetStack
-
+    // Alert left with Markets (prd §1529): the chart's own keep, or none.
     var body: some View {
         if thing.isLive {
-            tiles(keep ?? alertKeep)
-                .dsOneSheet(item: $tray, pushes: { _ in inSheetStack }) { route in
-                    WatchAlertTray(route: route, ref: thing.sourceRef ?? "",
-                                   name: TokensAsk.name(of: thing.title),
-                                   price: PriceAlertStore.reading(for: thing)?.price,
-                                   volume: TokenChart.route(from: thing.content) != nil)
-                }
-        }
-    }
-
-    /// Alert, while a price is in hand to measure a level from — the card's
-    /// own rule for its Add row.
-    private var alertKeep: VerbDial.Keep? {
-        guard thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
-              thing.sourceRef != nil, PriceAlertStore.reading(for: thing)?.price != nil
-        else { return nil }
-        return VerbDial.Keep(label: String(localized: "Alert"), glyph: ScopeTileGlyph.alerts) {
-            tray = .new
+            tiles(keep)
         }
     }
 }

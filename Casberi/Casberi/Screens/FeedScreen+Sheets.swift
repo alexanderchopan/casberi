@@ -50,8 +50,6 @@ extension FeedScreen {
         /// routed here since the row moved into the room (§959): a `.sheet`
         /// inside a List row tears this screen's own sheet down mid-rise.
         case socialFaces
-        /// Markets' Add (prd §1081): find a token or a stock and watch it.
-        case watchAdd
         /// One thing followed, by its id and room (prd §1118).
         case following(String, Following.Room)
         /// A room's verb for what you follow: Reading's Follow tray, Media's
@@ -77,8 +75,6 @@ extension FeedScreen {
         case mailSubscription(String)
         /// Track a sender's mail as a subscription (prd §1117).
         case mailSubscriptionAdd
-        /// A company from Markets' index you don't watch yet (prd §1082).
-        case company(CompanyPacks.Company)
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
         /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
@@ -92,7 +88,6 @@ extension FeedScreen {
             case .token(let r): "token:\(r.id)"
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
-            case .watchAdd: "watchAdd"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room, let seat): "followingAdd:\(room.rawValue):\(seat ?? "")"
             case .calendarSubscribe: "calendarSubscribe"
@@ -105,7 +100,6 @@ extension FeedScreen {
             case .subscriptionTrack(let app): "subscriptionTrack:\(app)"
             case .mailSubscription(let id): "mailSubscription:\(id)"
             case .mailSubscriptionAdd: "mailSubscriptionAdd"
-            case .company(let c): "company:\(c.name)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .logosSend: "logosSend"
@@ -283,8 +277,6 @@ extension FeedScreen {
             TokenQuickSheet(route: route)
         case .socialFaces:
             socialFacesTray
-        case .watchAdd:
-            WatchAddSheet()
         case .socialFollow:
             SocialFollowSheet()
         case .walletFollow:
@@ -340,8 +332,6 @@ extension FeedScreen {
             CalendarSubscribeSheet()
         case .feedOrder:
             NavigationStack { CategoryOrderSheet() }
-        case .company(let company):
-            CompanySheet(company: company)
         case .githubWatch:
             GitHubWatchTray()
         case .worthALook:

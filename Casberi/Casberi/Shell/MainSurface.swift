@@ -2570,15 +2570,12 @@ struct MainSurface: View {
         return b >= a ? .trailing : .leading
     }
 
-    /// **MARKETS OPENS IN PLACE, A WALLET TILE (prd §1337, user: "it should
-    /// open in place not the overlay. it's jarring").** Every door that names
-    /// Markets (the Wallet's tile, the tray's door and its search, the rail,
-    /// `-openRoom Markets`, `casberi://room/Markets`) lands on the Wallet with
-    /// Markets picked: the Wallet's box and row stay, Markets lit, and
-    /// Markets' lists stand under them. Markets has no room of its own.
+    /// **A DOOR THAT STILL NAMES MARKETS LANDS ON THE WALLET (prd §1529).**
+    /// Markets is gone; an old link (`casberi://room/Markets`, a Shortcut, a
+    /// remembered landing) opens the Wallet's Home rather than nothing.
     private func walletLanding(_ label: String) -> String {
         guard HomeScope.isMarkets(label) else { return label }
-        chrome.walletSection = .markets
+        chrome.walletSection = .home
         return CategoryFold.walletRoom
     }
 

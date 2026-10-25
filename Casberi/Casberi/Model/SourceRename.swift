@@ -294,6 +294,9 @@ enum SourceRename {
         "1Claw",
         "Hegotá Frames", "Frames Devnet",
         "Gnosis Pay",
+        // Markets (prd §1529): its follows, alert rows and the names its
+        // rows were stored under before the renames.
+        "Markets", "Tokens", "Dexscreener",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
@@ -318,6 +321,8 @@ enum SourceRename {
         "room.value.history.privacyDevnet", "feed.reddit",
         "deals.", "shopify.", "heal.due.cursor.", "nostr.", "farcaster.",
         "frames.", "gnosispay.",
+        // Markets (prd §1529): price alerts, the watchlist's order and sort.
+        "markets.", "tokens.watch.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money
@@ -337,10 +342,10 @@ enum SourceRename {
 
     /// `.v2` since prd §1049 added three seats, `.v3` since Nostr joined,
     /// `.v4` since Farcaster joined (prd §1110), `.v5` since Hegotá Frames
-    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318): a device that ran the earlier pass would otherwise
+    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318), `.v7` since Markets joined (prd §1529): a device that ran the earlier pass would otherwise
     /// never clear the new seats' defaults. The work it repeats is idempotent
     /// — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v6"
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v7"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a

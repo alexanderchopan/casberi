@@ -25,8 +25,9 @@ grep -q 'TraySearch.closest(' "$TRAY" \
   || { echo "✗ the tray no longer offers the closest names when nothing matches"; exit 1; }
 grep -q '\.task(id: query)' "$TRAY" \
   || { echo "✗ the tray's search no longer runs after a pause — it would rebuild in every body"; exit 1; }
-grep -q 'MarketsIndex.matches(' "$TRAY" \
-  || { echo "✗ the tray no longer finds a company by its ticker or an app it makes"; exit 1; }
+# Companies and the market left the tray with Markets (prd §1529).
+! grep -q 'MarketsIndex\|MarketsSearchRead\|CompanyQuotes' "$TRAY" \
+  || { echo "✗ the tray asks the market again — Markets is deleted (prd §1529)"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

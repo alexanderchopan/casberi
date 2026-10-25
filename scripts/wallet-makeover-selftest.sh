@@ -46,10 +46,9 @@ grep -q 'environment(\\.holdingsDayMoves' "$ROOM" \
   || { echo "✗ the Holdings box no longer hands the treemap its moves"; exit 1; }
 grep -q 'WalletRiskScale.shortFall' "$ROOM" \
   || { echo "✗ a borrow's Positions row no longer says what it can bear (prd §1107)"; exit 1; }
-! awk '/func walletSetHoldingAlert/,/^    }$/' "$ROOM" | grep -q 'watchPriceUsd' \
-  || { echo "✗ a holding's alert reads watchPriceUsd — the price the day you watched, not today's"; exit 1; }
-grep -q 'PriceAlert.choices(ref: "", name: "", price: 1)' "$ROOM" \
-  || { echo "✗ the holding alert menu no longer words Markets' own choices — a second list to drift"; exit 1; }
+# A holding's alert menu left with Markets (prd §1529).
+! grep -q 'walletHoldingAlertMenu\|PriceAlert' "$ROOM" \
+  || { echo "✗ a holding offers a price alert again — Markets is deleted (prd §1529)"; exit 1; }
 grep -q 'fell below the' Casberi/Casberi/Model/WalletDeFi.swift && grep -q 'fell below the' Casberi/Casberi/Model/MorphoDeFi.swift \
   || { echo "✗ a borrow under your line but over the app's says 'close to liquidation' again"; exit 1; }
 grep -q 'HoldingMoves.note(owners:' "$INGEST" \

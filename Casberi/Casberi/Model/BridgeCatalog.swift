@@ -282,24 +282,8 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 8, 8)),
         Offer(name: "Gemini",      tagline: "", group: "Agent",     connectable: true,
               needsSetup: true),
-        // MARKETS IS DELETED (user ruling 2026-09-06, prd §638: "i want to get
-        // away from crypto bullshit but wallets and the other stuff in them
-        // are important"). Six seats went with the category — Kalshi,
-        // Polymarket, GeckoTerminal, Circle x402, 1Claw and Open Food Facts
-        // — and the ones that read as a lens on money you hold (Tokens,
-        // L2BEAT) moved to Wallet. OpenSea moved with them and was retired
-        // the same day by the ruling's second amendment. Their code was
-        // deleted by its third; their rows stay, and nothing in the strip
-        // draws them (`Corpus.retiredSources`).
-        // MARKETS (2026-09-29, user: "we have stocktwits as a separate room
-        // … we should just combine it as part of tokens and call that app
-        // 'markets'"). The Tokens seat took in Stocktwits' watched stocks and
-        // was renamed; Stocktwits is retired and its traders' takes are gone.
-        // One watchlist of stocks and tokens, and a company pack per
-        // catalogue category (`CompanyPacks`). An offer, never a category:
-        // the Markets CATEGORY stays deleted (prd §638).
-        Offer(name: "Markets",     tagline: "",              group: "Markets",    connectable: true,
-              needsSetup: true),
+        // Markets is deleted (prd §1529, user: "i do want to cut it"); its
+        // rows and defaults go through `SourceRename.sweepRetiredSeats`.
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
         // settled transaction landing in their OWN wallet — not a market they
@@ -779,7 +763,6 @@ enum BridgeCatalog {
         // alone, and the devnets stand in Testnets (Logos since Hegotá Frames
         // went, prd §1206), never inside Wallet: real money moves in Wallet,
         // and test money must never share its room.
-        ("Markets", "Markets",     ["Markets"]),
         ("Testnets", "Logos",      ["Testnets"]),
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
@@ -1084,7 +1067,7 @@ enum BridgeSetupMode {
         "MetaMask Card", "ether.fi", "Plasma One"]
 
     /// A handle, an address, a feed URL — public reads, no key.
-    static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",
+    static let noAccountSeats: Set<String> = ["Wallet", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
         "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS",

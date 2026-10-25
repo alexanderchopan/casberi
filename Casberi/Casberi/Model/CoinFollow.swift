@@ -156,19 +156,6 @@ enum CoinFollow {
         return out
     }
 
-    /// The alerts with every converged ref renamed. A renamed alert takes the
-    /// moment as its change, so a device that has not swept yet cannot sync
-    /// the old ref back over it (`PriceAlert.merged`).
-    static func rewrite(alerts: [PriceAlert], map: [String: String], now: Date) -> [PriceAlert] {
-        alerts.map { alert in
-            guard let next = map[alert.ref], next != alert.ref else { return alert }
-            var moved = alert
-            moved.ref = next
-            moved.changedAt = now
-            return moved
-        }
-    }
-
     // MARK: - CoinPaprika's answers
 
     /// One ticker: the price, the day move as a FRACTION (`TokenPulse`'s unit),

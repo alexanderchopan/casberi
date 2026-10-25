@@ -707,7 +707,7 @@ enum DemoSeedAll {
     /// grades a year wall below everything, and a demo that fought that ruling
     /// would be showing a panel the app doesn't actually build.)
     static let demoVisits: [String: Int] = [
-        "Photos": 9, "X": 8, "Markets": 7, "Obsidian": 6, "Linear": 6,
+        "Photos": 9, "X": 8, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5,
@@ -3123,64 +3123,10 @@ enum DemoSeedAll {
     /// went the other way, surviving that ruling by a day and leaving with
     /// its second amendment.
     private static func watchesAndShops() -> [Thing] {
-        var out: [Thing] = []
-        // The WATCHED TICKERS (2026-08-12), in Markets beside the tokens since
-        // 2026-09-29. `StockWatch.add` lands one `.link` thing per symbol,
-        // titled `"\(company) — $\(TICKER)"` (the seam, §915). The traders'
-        // takes this seeded went with the Stocktwits seat.
-        //
-        // Real refs, spelled through `StockWatch`s own builder — and listed in
-        // `refPrefixes` as EXACT refs rather than the bare
-        // "stocktwits:sym:" prefix, so demo exit can never delete a real
-        // watch (the `PostHogWatch.metricRef` reasoning, same hazard).
-        let tickers: [(company: String, symbol: String, watchedAt: Double, days: Double)] = [
-            ("Apple Inc", "AAPL", 214.60, 6),
-            ("NVIDIA Corp", "NVDA", 118.20, 8),
-            ("Tesla Inc", "TSLA", 246.90, 11),
-        ]
-        out += tickers.map { t in
-            row(.link, "\(t.company) — $\(t.symbol)", source: TokenWatch.source,
-                ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
-                tags: [t.symbol]) { thing in
-                thing.watchPriceUsd = t.watchedAt
-                // The company's own mark, which the bridge stamps
-                // (2026-08-17) — without it every watched stock wore the
-                // source glyph and the watchlist read as one repeated icon.
-                thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
-            }
-        }
-        // No dexscreener content URL on any row here (P4, 2026-08-07) — this
-        // is sharper than the usual dead-door case: `TokenChart.route(from:)`
-        // does NO validation, it blindly reads `pathComponents[0]`/`[1]` off
-        // any URL whose host contains "dexscreener.com". A fabricated
-        // `/base/demo0` path parses clean as `chain: "base", address:
-        // "demo0"`, and `ThingChart.kind(for:)` would hand that straight to
-        // `TokenChartContent`, which fetches a LIVE price curve for that
-        // bogus address the moment the row is opened — a real network call
-        // for garbage data, on the sheet's PRIMARY content, and one that
-        // `BridgeRefresh`'s demo gate can't see because it's a per-view
-        // on-open fetch, not part of the foreground sweep. Dropping the
-        // content URL means `route(from:)`'s host check fails and nothing is
-        // ever attempted. `TokenPulse.seedDemo` (2026-08-11) is what gives
-        // these rows a sparkline/price/chart instead — a synthetic in-memory
-        // pulse, never a URL, so it can never trigger a fetch either.
-        // Title format is LOAD-BEARING, not cosmetic (2026-08-12).
-        // `TokenWatch` lands `"\(name) — $\(symbol)"` (the seam, §915) and `TokensAsk`
-        // .name/.symbol is the format's one parser — it splits on the literal
-        // " · $". The demo's old "Ethereum (ETH)" matched nothing, so
-        // `symbol(of:)` returned the WHOLE title, `TokenRow.vitals` read that
-        // as "no symbol", and every row lost its second line while the first
-        // rendered the ticker inline as "(ETH)". The logo is the same story:
-        // the real bridge stamps `previewImageURL`, and without it the row
-        // and the watchlist roster both fall back to the Tokens source glyph.
-        out += tokenSeeds.enumerated().map { i, t in
-            row(.link, "\(t.name) — $\(t.symbol)", source: TokenWatch.source, ref: "demo:token:\(i)",
-                days: t.dayOffset, hour: 12) { thing in
-                thing.watchPriceUsd = t.price
-                thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
-            }
-        }
-        return out
+        // Markets is deleted (prd §1529): no watched tickers or tokens. The
+        // refs above stay in `refPrefixes`, so a demo poured by an older
+        // build still leaves cleanly.
+        []
     }
 
     // MARK: Wallet — the flow band, the curve, the approvals, the pools

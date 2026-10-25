@@ -165,6 +165,9 @@ enum Corpus {
         // Gnosis Pay the same way (prd §1318, user: "they are deprecating
         // it"); the card head it shared stays for the other onchain cards.
         "Gnosis Pay",
+        // Markets the same way (prd §1529, user: "i do want to cut it"), with
+        // the two names its rows were stored under before the renames.
+        "Markets", "Tokens", "Dexscreener",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -227,17 +230,10 @@ enum Corpus {
         // (prd §685's "Frames Devnet" → "Hegotá Frames" left with the seat,
         // prd §1206: both names are in `retiredSources`, and the retired
         // seats' sweep deletes their rows.)
-        // prd §650, 2026-09-08 — the token-watch seat became "Tokens" when its
-        // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
-        // commit moved the ref prefix in the same breath, which is why this
-        // entry has one and the one below does not.
-        "Dexscreener": Rename(current: "Markets",
-                              refPrefix: .init(old: "dexscreener:", current: "tokens:")),
-        // 2026-09-29 — Tokens took in Stocktwits' watched stocks and became
-        // "Markets". The NAME only: token rows stay keyed `tokens:`, and the
-        // Dexscreener entry above points here in one hop.
-        "Tokens": Rename(current: "Markets"),
-    ]
+        // Dexscreener → Tokens → Markets (prd §650, 2026-09-29) are gone with
+        // Markets (prd §1529): all three names are in `droppedSources`, and
+        // the retired seats' sweep deletes their rows.
+    :]
 
     /// A renamed seat: what it answers to now, and — when the rename moved the
     /// rows' ref namespace as well — the `sourceRef` prefix pair.

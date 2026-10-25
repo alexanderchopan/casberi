@@ -170,11 +170,6 @@ struct RoomsTray: View {
                 for group in search(words) {
                     NSLog("[Casberi] traySearch| %@ | %@", group.title, group.hits.map(\.name).joined(separator: ", "))
                 }
-                // The market's rows (prd §1467): one line, the kinds counted.
-                let reading = await MarketsSearchRead.read(words)
-                NSLog("[Casberi] traySearch| Markets · market | %d rows | %@ | %@", reading.hits.count,
-                      MarketsSearch.showAllLine(chains: reading.chains, stocks: reading.stocks),
-                      reading.hits.prefix(6).map(\.name).joined(separator: ", "))
             }
         }
         #endif
@@ -448,16 +443,9 @@ struct RoomsTray: View {
     private var youDoors: [Door] {
         let place = route.path.isEmpty ? HomeScope.Place(source: filter.source) : nil
         return doors(home: filter.source == "All" && route.path.isEmpty,
-                     wallet: filter.source == CategoryFold.walletRoom && !standsInMarkets && route.path.isEmpty,
+                     wallet: filter.source == CategoryFold.walletRoom && route.path.isEmpty,
                      notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
-                     markets: standsInMarkets && route.path.isEmpty,
                      place: place)
-    }
-
-    /// Markets is the Wallet's tile, drawn in place (prd §1337): you stand
-    /// in it while the Wallet shows it.
-    private var standsInMarkets: Bool {
-        filter.source == CategoryFold.walletRoom && chrome.walletSection == .markets
     }
 
     /// The You row's doors, in order.
@@ -471,20 +459,13 @@ struct RoomsTray: View {
     }
 
     private func doors(home: Bool = false, wallet: Bool = false, notes: Bool = false,
-                       markets: Bool = false, place: HomeScope.Place? = nil) -> [Door] {
+                       place: HomeScope.Place? = nil) -> [Door] {
         [
             Door(word: String(localized: "Feed"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.feed,
                  lit: home, key: "All") { pick("All") },
             // You's four places, in the tiles' order (prd §1136 item 1):
             // Home, then A–Z. Apps and Addresses are filters inside Sources
             // now, the master list of everything you've connected.
-            // Markets (prd §1123), always drawn (§969, §1167): the Wallet
-            // with its Markets tile picked, in place (§1337; the shell turns
-            // the request into the Wallet).
-            Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
-                 lit: markets, key: Self.markets) {
-                pickCategory(Self.markets)
-            },
             // The Notes tile's own glyph (`ScopeTileGlyph.notes`), lit or not: the
             // bare `note` read as an empty window (user, 2026-10-06), and the
             // white disc already says which place is standing.
@@ -499,8 +480,6 @@ struct RoomsTray: View {
             // the Wallet, where the swipe left lands and its card begins.
             Door(word: String(localized: "Wallet"), glyph: CategoryFold.glyph(for: CategoryFold.walletCategory),
                  lit: wallet, key: CategoryFold.walletRoom) {
-                // From the Wallet's Markets tile, the Wallet door is its Home.
-                if standsInMarkets { chrome.walletSection = .home }
                 pickCategory(CategoryFold.walletCategory)
             },
         ]
@@ -780,8 +759,6 @@ struct RoomsTray: View {
     private enum Trailing {
         /// A word: Add, for an app you could connect.
         case word(String)
-        /// A company's price and day move, drawn as they arrive.
-        case quote(CompanyPacks.Listing)
         /// A figure you hold or pay, already through Hide balances.
         case money(String)
         /// A market row's price and day move, read with the row (prd §1467).
@@ -817,14 +794,6 @@ struct RoomsTray: View {
     /// The groups before the market's rows join them (prd §1467), so the
     /// market can land later without searching your things again.
     @State private var baseResults: [Found] = []
-    /// The market's answer for `marketFor` (prd §1467), read after your
-    /// things, never in a body; the Markets group draws it.
-    @State private var market = MarketsSearchRead.Reading()
-    @State private var marketFor = ""
-    /// Show all pressed: the Markets group draws every market row.
-    @State private var marketsExpanded = false
-    /// The refs Markets follows, so a market row wears its mark.
-    @State private var followed: Set<String> = []
     /// The row whose follow just landed, so its mark bounces once.
     @State private var justFollowed: String? = nil
     /// What you hold, read with the other kinds when the field is focused.
@@ -894,111 +863,16 @@ struct RoomsTray: View {
             }
         }
         baseResults = found
-        results = withMarket(found)
+        results = found
         #if DEBUG
         NSLog("[Casberi] traySearchTime| %@ | %d ms", words, Int(Date.now.timeIntervalSince(began) * 1000))
         #endif
-        let companies = found.flatMap(\.hits).compactMap(\.company)
-        if !companies.isEmpty { await CompanyQuotes.shared.load(companies) }
-        // Then the market (prd §1467): coins, tokens and stocks for the
-        // words, once per words, after your own things stand.
-        if tokens.isEmpty, marketFor != words { await readMarket(words) }
-    }
-
-    // MARK: - The market (prd §1467)
-
-    /// Asks the market for the words and lets its rows join the Markets
-    /// group. A newer word cancels this one (`.task(id: query)`).
-    private func readMarket(_ words: String) async {
-        let reading = await MarketsSearchRead.read(words)
-        guard !Task.isCancelled, query.trimmingCharacters(in: .whitespaces) == words else { return }
-        marketsExpanded = false
-        followed = MarketsSearchRead.followedRefs(context: context)
-        market = reading
-        marketFor = words
-        withAnimation(reduceMotion ? nil : DS.Motion.standard) { results = withMarket(baseResults) }
-    }
-
-    /// The groups with the market's rows in Markets: `MarketsSearch.shown`
-    /// of them, then "Show all N in Markets", which grows the group in place.
-    /// A stock the index already lists as a company stands once.
-    private func withMarket(_ base: [Found]) -> [Found] {
-        let words = query.trimmingCharacters(in: .whitespaces)
-        guard marketFor == words, !market.hits.isEmpty else { return base }
-        let standing = base.first { $0.id == Self.markets }
-        let listedTickers = Set((standing?.hits ?? []).compactMap { $0.company?.listing.ticker?.uppercased() })
-        let listedCoins = Set((standing?.hits ?? []).compactMap { hit -> String? in
-            if case .token(_, let id) = hit.company?.listing { return id }
-            return nil
-        })
-        let rows = market.hits.filter { hit in
-            switch hit.kind {
-            case .stock(let symbol, _): return !listedTickers.contains(symbol.uppercased())
-            case .coin(let id, _): return !listedCoins.contains(id)
-            case .token: return true
-            }
-        }
-        var hits = rows.prefix(marketsExpanded ? rows.count : MarketsSearch.shown).map { hit in
-            Hit(id: "market:" + hit.ref, group: Self.markets, name: hit.name, line: hit.line,
-                trailing: .market(price: hit.price, change: hit.change), follow: followed.contains(hit.ref),
-                mark: .image(url: hit.imageURL, lettered: hit.lettered, onWhite: hit.onWhite)) {
-                toggleFollow(hit)
-            }
-        }
-        if !marketsExpanded, rows.count > MarketsSearch.shown {
-            hits.append(Hit(id: "market:all", group: Self.markets,
-                            name: String(localized: "Show all \(rows.count) in Markets"),
-                            line: MarketsSearch.showAllLine(chains: market.chains, stocks: market.stocks),
-                            mark: .glyph("chevron.down")) {
-                withAnimation(reduceMotion ? nil : DS.Motion.standard) {
-                    marketsExpanded = true
-                    results = withMarket(baseResults)
-                }
-            })
-        }
-        if let standing, let at = base.firstIndex(where: { $0.id == Self.markets }) {
-            var out = base
-            out[at] = Found(id: standing.id, title: standing.title, glyph: standing.glyph, hits: standing.hits + hits)
-            return out
-        }
-        let group = Found(id: Self.markets, title: Self.markets, glyph: CategoryFold.glyph(for: Self.markets), hits: hits)
-        // After Everything and the place you stand in, before the rest.
-        let at = base.firstIndex { $0.id != Self.pivotGroup && $0.id != standingGroup } ?? base.count
-        var out = base
-        out.insert(group, at: at)
-        return out
-    }
-
-    /// The row's tap: follow it, or stop (prd §1467). The follow lands as
-    /// the Follow tray's star does: the mark fills with a bounce, the toast
-    /// names it with Undo.
-    private func toggleFollow(_ hit: MarketsSearchRead.Hit) {
-        if followed.contains(hit.ref) {
-            MarketsWatch.unfollow(ref: hit.ref, context: context)
-            followed.remove(hit.ref)
-            DSHaptic.tap()
-        } else {
-            guard let thing = MarketsSearchRead.follow(hit, context: context) else { return }
-            let ref = thing.sourceRef ?? hit.ref
-            followed.insert(ref)
-            justFollowed = "market:" + ref
-            DSHaptic.success()
-            TokenWatch.registerBridge(store: bridges, context: context)
-            chrome.flash(String(localized: "Following \(TokensAsk.name(of: thing.title))"),
-                         action: .init(label: String(localized: "Undo")) { [ref] in
-                MarketsWatch.unfollow(ref: ref, context: context)
-                followed.remove(ref)
-                results = withMarket(baseResults)
-            })
-        }
-        results = withMarket(baseResults)
     }
 
     /// The group the place you stand in leads with: your notes and You's
     /// places in You, Markets in Markets, a room in its category.
     private var standingGroup: String? {
         guard route.path.isEmpty, filter.source != "All" else { return nil }
-        if standsInMarkets { return Self.markets }
         if HomeScope.contains(filter.source) { return TraySearch.you }
         return standingCategory
     }
@@ -1121,37 +995,6 @@ struct RoomsTray: View {
                        tier: byWords ? .thing : .name, anyWord: true, given: byWords ? .word : nil, line: line,
                        mark: .icon(thing.source, symbol: BridgeIcon.noteSymbol(for: thing))) {
                 openThing(id)
-            }
-        }
-    }
-
-    /// The companies behind every app whose name, ticker or app the words
-    /// find (`MarketsIndex.matches`, Markets' own rule, prd §1082), with
-    /// their quote at the edge. Only traded ones: an unlisted company has
-    /// nothing to open.
-    private func companyHits(_ words: String) -> [Hit] {
-        // A coin you hold stands once, in Wallet, with what you hold.
-        let held = Set(holdings.map { $0.symbol.uppercased() })
-        return companyPool.filter { hit in
-            guard let company = hit.company else { return false }
-            if case .token = company.listing, let t = company.listing.ticker, held.contains(t.uppercased()) { return false }
-            return MarketsIndex.matches(words, MarketsWatch.entry(company))
-        }
-    }
-
-    /// Every traded company, as hits — the pool a typo reaches too.
-    private var companyPool: [Hit] {
-        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        return TokensScope.everyCompany.filter { $0.listing != .unlisted }.map { company in
-            let ticker = company.listing.ticker
-            let apps = MarketsIndex.appsLine(MarketsWatch.entry(company), connected: connected)
-            let line = ([ticker].compactMap(\.self) + [apps.prefix(3).joined(separator: ", ")])
-                .filter { !$0.isEmpty }.joined(separator: " · ")
-            return Hit(id: "company:" + company.name, group: Self.markets, name: company.name,
-                       aliases: [ticker].compactMap(\.self) + company.seats, tier: .money,
-                       line: line, trailing: .quote(company.listing), company: company,
-                       mark: .icon(company.seats.first ?? company.name, symbol: nil)) {
-                openCompany(company)
             }
         }
     }
@@ -1470,17 +1313,6 @@ struct RoomsTray: View {
         if let url = URL(string: "casberi://thing/\(id.uuidString)") { openURL(url) }
     }
 
-    /// A company you watch opens its own page; one you don't, its sheet in
-    /// Markets (`FeedScreen.openCompany`, asked through the shell).
-    private func openCompany(_ company: CompanyPacks.Company) {
-        if let thing = MarketsWatch.watchedThing(company, context: context) {
-            openThing(thing.id)
-            return
-        }
-        chrome.marketsRequest = .company(company)
-        pickCategory(Self.markets)
-    }
-
     /// Read what the kinds need once the field is focused: notes, the
     /// phone's calendars, what you hold, and the readings Settings keeps.
     private func readKinds() async {
@@ -1525,7 +1357,7 @@ struct RoomsTray: View {
     /// names closest to the words, under "Closest to".
     private func search(_ words: String) -> [Found] {
         let titled = thingHits(words)
-        let hits = nameHits + kindHits + noteHits(words) + companyHits(words)
+        let hits = nameHits + kindHits + noteHits(words)
             + holdingHits + titled + bodyHits(words, excluding: Set(titled.map(\.id))) + addressHits(words)
         let candidates = hits.enumerated().map { i, hit in
             TraySearch.Candidate(index: i, group: hit.group, name: hit.name, aliases: hit.aliases,
@@ -1540,7 +1372,7 @@ struct RoomsTray: View {
                       hits: g.hits.map { said(hits[$0.index], for: words) })
             }
         }
-        let pool = nameHits.filter { !$0.id.hasPrefix("cat:") } + addHits + companyPool
+        let pool = nameHits.filter { !$0.id.hasPrefix("cat:") } + addHits
         let near = TraySearch.closest(words, among: pool.map(\.name))
         var out: [Found] = []
         // A typo in a thing's word: what the word it meant finds (item 3).
@@ -1792,10 +1624,6 @@ struct RoomsTray: View {
                 .monospacedDigit()
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
-        case .quote(let listing):
-            if let quote = CompanyQuotes.shared.quote(listing) {
-                figure(price: quote.price, change: quote.change)
-            }
         case .market(let price, let change):
             if let price {
                 figure(price: price, change: change)

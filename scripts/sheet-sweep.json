@@ -957,29 +957,6 @@
    "afterSwipe": "button:=Search"
   },
   {
-   "id": "thing-alert-new",
-   "covers": [
-    "Screens/MarketsViews.swift:tray#new"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Ethereum"
-     ]
-    },
-    {
-     "tap": "button:=Alert, Alert"
-    }
-   ],
-   "anchor": "text:=New alert",
-   "afterSwipe": "button:=Search"
-  },
-  {
    "id": "pivot-thing",
    "covers": [
     "Screens/PivotPage.swift:opened"
@@ -1279,40 +1256,6 @@
    "afterControl": "button:^Follow, Follow"
   },
   {
-   "id": "alert-edit",
-   "covers": [
-    "Screens/MarketsViews.swift:tray#edit"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Ethereum"
-     ]
-    },
-    {
-     "tap": "button:=Alert, Alert"
-    },
-    {
-     "tap": "button:=+10%"
-    },
-    {
-     "tap": "button:=Set alert"
-    },
-    {
-     "tap": "button:^Rises to "
-    }
-   ],
-   "anchor": "text:=Edit alert",
-   "afterSwipe": "button:=Search",
-   "control": "button:=Back",
-   "afterControl": "button:^Rises to "
-  },
-  {
    "id": "wallet-worth-a-look",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
@@ -1401,51 +1344,6 @@
     }
    ],
    "anchor": "button:=Share, Share"
-  },
-  {
-   "id": "markets-follow-company",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#watchAdd"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Markets, What"
-    },
-    {
-     "tap": "button:=Follow a company"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
-   "id": "markets-company",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#company"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Markets, What"
-    },
-    {
-     "tap": "button:=Work"
-    },
-    {
-     "tap": "button:^Amazon, AMZN"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
   },
   {
    "id": "notes-trash",
@@ -1696,8 +1594,6 @@
   },
   {
    "covers": [
-    "Screens/ThingContent.swift:tray#new",
-    "Screens/ThingContent.swift:tray#edit"
    ],
    "why": "NOT WALKED YET: a watched chart's Alert tile (prd §1363) raises the same price-alert tray Markets does; the journey to a demo chart sheet is not written (2026-10-16)"
   },

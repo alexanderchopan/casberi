@@ -2848,154 +2848,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-stockWatch "<query[,query]>"` — resolve each through Stocktwits'
-        // symbol search and watch it in Markets; NSLogs the tickers.
-        Hook(key: "stockWatch") { spec, context in
-            Task { @MainActor in
-                var symbols: [String] = []
-                for raw in spec.split(separator: ",") {
-                    let q = String(raw).trimmingCharacters(in: .whitespaces)
-                    guard let hit = await StockWatch.resolve(q) else { continue }
-                    _ = StockWatch.add(hit, context: context)
-                    symbols.append(hit.symbol)
-                }
-                NSLog("stockWatch probe: watching %@",
-                      symbols.isEmpty ? "NOTHING (resolve failed)" : symbols.joined(separator: ","))
-            }
-        },
-        // `-stockChartProbe <ticker>` — fetch the Yahoo v8 curve on-device and
-        // NSLog points/price/change (verifies the UA quirk holds from the
-        // app's URLSession, not just curl).
-        Hook(key: "stockChartProbe") { ticker, _ in
-            Task { @MainActor in
-                let t = ticker.trimmingCharacters(in: .whitespaces).uppercased()
-                if let c = await StockChart.fetch(ticker: t, range: .day) {
-                    NSLog("Stock chart probe: %@ — %d points, $%.2f, %+.1f%%",
-                          t, c.closes.count, c.price, c.change * 100)
-                } else {
-                    NSLog("Stock chart probe: %@ — FAILED", t)
-                }
-            }
-        },
-        // `-coinProbe <coinpaprika id>` — a followed coin's reads (prd §1250),
-        // MEASURED on-device: the ticker's fields, then each chart range's
-        // closes or `absent`. The shapes `CoinFollow` parses were authored
-        // from CoinPaprika's docs; this is the line that says they hold.
-        Hook(key: "coinProbe") { raw, _ in
-            Task { @MainActor in
-                let id = raw.trimmingCharacters(in: .whitespaces).lowercased()
-                if let t = await CoinWatch.ticker(id: id) {
-                    NSLog("coinProbe| %@ ticker price=%.6f change=%@ cap=%@ volume=%@", id, t.price,
-                          t.change24h.map { String(format: "%+.2f%%", $0 * 100) } ?? "none",
-                          t.marketCap.map { String(format: "%.0f", $0) } ?? "none",
-                          t.volume24h.map { String(format: "%.0f", $0) } ?? "none")
-                } else {
-                    NSLog("coinProbe| %@ ticker FAILED", id)
-                }
-                for range in TokenRange.allCases {
-                    if let c = await CoinWatch.chart(id: id, range: range) {
-                        NSLog("coinProbe| %@ %@ closes=%d price=%.6f change=%+.2f%%",
-                              id, range.rawValue, c.closes.count, c.price, c.change * 100)
-                    } else {
-                        NSLog("coinProbe| %@ %@ absent", id, range.rawValue)
-                    }
-                }
-            }
-        },
-        // `-coinConvergeProbe YES` — run the launch sweep again (prd §1250) and
-        // list every followed coin: its ref, its title and the price kept from
-        // when it was followed. A second run says `moved=0`.
-        Hook(key: "coinConvergeProbe") { _, context in
-            let moved = CoinWatch.converge(context: context)
-            NSLog("coinConverge| moved=%d", moved)
-            let source = TokenWatch.source
-            let rows = ((try? context.fetch(FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source }))) ?? []).filter(\.isLive)
-            for thing in rows where CoinFollow.id(fromRef: thing.sourceRef) != nil {
-                NSLog("coinConverge| %@ | %@ | anchor=%@ | alerts=%d", thing.title, thing.sourceRef ?? "-",
-                      thing.watchPriceUsd.map { String(format: "%.4f", $0) } ?? "none",
-                      PriceAlertStore.shared.alerts(for: thing.sourceRef ?? "").count)
-            }
-        },
-        // `-alertFireProbe fire|delete|row` — fire an alert on the first
-        // followed row with no price read (2026-10-17), so Went off has a
-        // row: `fire` lands one and logs its count; `delete` fires one and
-        // deletes the ALERT, which must take the row with it; `row` fires one
-        // and deletes the ROW alone, which must leave the alert standing.
-        Hook(key: "alertFireProbe") { spec, context in
-            let source = TokenWatch.source
-            let rows = ((try? context.fetch(FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source }))) ?? [])
-                .filter { $0.isLive && !PriceAlertStore.isAlertRow($0) && $0.sourceRef != nil }
-            guard let watched = rows.first, let alert = PriceAlertStore.shared.fireNow(on: watched, context: context) else {
-                NSLog("alertFire| no followed row to fire on"); return
-            }
-            let before = PriceAlertStore.landedRows(by: alert.id, context: context).count
-            switch spec {
-            case "delete":
-                PriceAlertStore.shared.remove(alert.id, context: context)
-            case "row":
-                for row in PriceAlertStore.landedRows(by: alert.id, context: context) {
-                    PriceAlertStore.deleteRow(row, context: context)
-                }
-            default: break
-            }
-            let after = PriceAlertStore.landedRows(by: alert.id, context: context).count
-            let stands = PriceAlertStore.shared.alerts.contains { $0.id == alert.id }
-            NSLog("alertFire| %@ | %@ | rows before=%d after=%d | alert %@", spec, alert.name,
-                  before, after, stands ? "stands" : "gone")
-        },
-        // `-gasProbe YES` — the Watchlist head's gas (prd §1250): one line a
-        // chain, the gwei, and whether the head would stamp it.
-        Hook(key: "gasProbe") { _, _ in
-            Task { @MainActor in
-                await MarketsGas.shared.load()
-                for chain in GasPrice.chains {
-                    if let r = MarketsGas.shared.reading(chain.network) {
-                        NSLog("gasProbe| %@ %@ stamped=%@", chain.network, GasPrice.text(r.gwei),
-                              GasPrice.stamped(at: r.at, now: .now) ? "YES" : "no")
-                    } else {
-                        NSLog("gasProbe| %@ FAILED", chain.network)
-                    }
-                }
-            }
-        },
-        // `-pricePin "<symbol>"|off` — pin a followed row's price to the Lock
-        // Screen as its long press does (prd §1250), after one pulse, and log
-        // the outcome; `off` takes it down. The simulator draws Live
-        // Activities; a pass shows the activity, never a background update.
-        Hook(key: "pricePin") { raw, context in
-            Task { @MainActor in
-                let want = raw.trimmingCharacters(in: .whitespaces).uppercased()
-                if want == "OFF" {
-                    await PriceActivityDriver.unpin()
-                    NSLog("pricePin| off")
-                    return
-                }
-                await TokenPulse.shared.refresh(context: context)
-                let source = TokenWatch.source
-                let rows = ((try? context.fetch(FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == source }))) ?? [])
-                    .filter { $0.isLive && !PriceAlertStore.isAlertRow($0) }
-                guard let thing = rows.first(where: {
-                    (StockWatch.symbol(of: $0) ?? $0.authorHandle ?? "").uppercased() == want
-                }) else {
-                    NSLog("pricePin| %@ not followed", want)
-                    return
-                }
-                if let symbol = StockWatch.symbol(of: thing) {
-                    await CompanyQuotes.shared.load([CompanyPacks.Company(
-                        name: symbol, listing: .stock(symbol), seats: [TokenWatch.source])])
-                }
-                let outcome: String
-                switch await PriceActivityDriver.pin(thing) {
-                case .pinned: outcome = "pinned"
-                case .off:    outcome = "off (Live Activities disabled)"
-                case .unread: outcome = "unread (no price yet)"
-                }
-                NSLog("pricePin| %@ %@ ref=%@", want, outcome, PriceActivityDriver.pinnedRef ?? "-")
-            }
-        },
         // `-ensFollow "<name[,name]>"` — follow each name headlessly (prd
         // §534), NSLogging the outcome word per name (followed / adopted —
         // the wallet already had this row / already / invalid), then runs one
@@ -3077,17 +2929,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-watchToken <address|symbol|link>` watches a token headlessly.
-        Hook(key: "watchToken") { query, context in
-            Task { @MainActor in
-                guard let token = await TokenWatch.resolve(query) else {
-                    NSLog("Dexscreener probe: FAILED to resolve"); return
-                }
-                let added = TokenWatch.add(token, context: context)
-                NSLog("Dexscreener probe: %@ (%@)", token.name,
-                      added != nil ? "watched" : "already")
-            }
-        },
         // `-userSearch "bluesky:<query>"` runs the find-a-person search and
         // logs the hits — headless test of the search endpoint.
         Hook(key: "userSearch") { spec, _ in
@@ -3099,16 +2940,6 @@ enum ProbeHooks {
                 NSLog("User search probe (%@ '%@'): %d hits%@", which, query, hits.count,
                       hits.isEmpty ? "" : " — " + hits.map {
                           "\($0.displayName) @\($0.handle)"
-                      }.joined(separator: ", "))
-            }
-        },
-        // `-tokenSearch <query>` runs the token search and logs the matches.
-        Hook(key: "tokenSearch") { query, _ in
-            Task { @MainActor in
-                let hits = await TokenWatch.search(query)
-                NSLog("Token search probe ('%@'): %d hits%@", query, hits.count,
-                      hits.isEmpty ? "" : " — " + hits.map {
-                          "\($0.name) $\($0.symbol) (\($0.chain))"
                       }.joined(separator: ", "))
             }
         },

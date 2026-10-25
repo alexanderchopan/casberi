@@ -4,18 +4,14 @@ import Foundation
 ///
 /// **FIVE TILES, EVERY LIST BEHIND A DOOR (prd §1480, user: "i want to totally
 /// refactor wallet. it has the right things, but has redundancy, shows too
-/// much"; Markets a tile again by §1498).** The tiles are Home · Activity ·
-/// Holdings · Markets · Spending, and each answers one question:
+/// much"; Markets deleted by §1529).** The tiles are Home · Holdings ·
+/// Activity · Spending, and each answers one question:
 ///
 ///   • **Home** is the overview: the balance and its line, then five doors —
 ///     Your account, Following, Needs you, Permissions, Threats.
 ///   • **Activity** is the stream: every transaction by day.
 ///   • **Holdings** is what the money is: Accounts, Tokens, Positions, Apps,
 ///     NFTs, each a door.
-///   • **Markets** is what you watch, then the companies behind your apps
-///     (§1498, user: "lets bring the tile back but keep watchlist on the with
-///     the tile not on home"). It is yours, not an account's, so it stays
-///     lit whatever account is picked (§1519, user: "markets should stay lit").
 ///   • **Spending** is a reading of Activity: Subscriptions, Places, Fees,
 ///     Round-ups (§1523).
 ///
@@ -42,9 +38,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     /// A reading of Activity: subscriptions, places, fees (prd §1468, §1480).
     case spending
-    /// What you watch, and the companies behind your apps (prd §1480 item 7;
-    /// a tile again by §1498, a door off Home before it).
-    case markets
 
     // ── Home's doors ─────────────────────────────────────────────────────────
     /// The account the app made you, and its controls (prd §1480 item 6).
@@ -87,7 +80,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// first (§483), so the strip's head is the same on every wallet. They
     /// DRAW A–Z after Home — Activity, Holdings, Markets, Spending (§995).
     /// `allCases` adds the pages.
-    static let order: [WalletSection] = [.home, .holdings, .activity, .spending, .markets]
+    static let order: [WalletSection] = [.home, .holdings, .activity, .spending]
 
     /// Home's doors, in the row's order (prd §1480 item 2; Markets left for
     /// its tile, §1498).
@@ -115,7 +108,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Which scopes can be EMPTY: each must carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .holdings, .markets: return false
+        case .home, .holdings: return false
         default: return true
         }
     }
@@ -134,7 +127,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "Needs you")
         case .permissions:     return String(localized: "Permissions")
         case .threats:         return String(localized: "Threats")
-        case .markets:         return String(localized: "Markets")
         // The wallets you follow, by balance; Home's Following is where you
         // add and remove them (§1503).
         case .holdingAccounts: return String(localized: "Following")
@@ -162,7 +154,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "What is waiting on you")
         case .permissions:     return String(localized: "Who can spend from you")
         case .threats:         return String(localized: "What's trying to fool you")
-        case .markets:         return String(localized: "What you watch")
         case .holdingAccounts: return String(localized: "What each wallet you follow holds")
         case .positions:       return String(localized: "Money lent, pooled, staked or held as a perp")
         case .apps:            return String(localized: "What each app holds for you")
@@ -196,7 +187,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "Nothing waiting")
         case .permissions:     return String(localized: "No permissions")
         case .threats:         return String(localized: "Nothing to fool you")
-        case .markets:         return nil
         case .holdingAccounts: return String(localized: "No wallets you follow")
         case .positions:       return String(localized: "No positions")
         case .apps:            return String(localized: "No apps")
@@ -234,8 +224,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "A delegate or a token approval that can spend from you.")
         case .threats:
             return String(localized: "An address made to look like yours, a fake token or a fake transfer.")
-        case .markets:
-            return nil
         case .holdingAccounts:
             return String(localized: "Each wallet you follow, and what it holds.")
         case .positions:

@@ -14,7 +14,6 @@ enum BridgeRouter {
     /// A screen a bridge can navigate to.
     enum Destination: Identifiable, Hashable {
         case wallet
-        case tokens
         case peer
         case privacyPools
         case railgun
@@ -299,7 +298,6 @@ enum BridgeRouter {
         var id: String {
             switch self {
             case .wallet:         "wallet"
-            case .tokens:         "tokens"
             case .peer:           "peer"
             case .privacyPools:   "privacypools"
             case .railgun:        "railgun"
@@ -395,7 +393,6 @@ enum BridgeRouter {
     /// `TokenBridge.allCases`, so their eight setup screens need no rows here.
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
-        Row(offer: "Markets",   id: "tokens", destination: .tokens),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
@@ -614,7 +611,6 @@ struct BridgeDestinationView: View {
     var body: some View {
         switch destination {
         case .wallet:         WalletScreen()
-        case .tokens:         TokenWatchScreen()
         case .peer:           PeerScreen()
         case .privacyPools:   PrivacyPoolsScreen()
         case .railgun:        RailgunScreen()

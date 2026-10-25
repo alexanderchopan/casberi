@@ -88,11 +88,6 @@ enum WalletBackgroundRefresh {
             // bridges land rows on foreground and through their own paths; this
             // asks what among them deserves telling.
             await runNotifySweep()
-            // The Watchlist widget's prices (prd §1223), last, so the sweep
-            // never waits on them; read only while the tile is on a Home Screen.
-            if !Task.isCancelled, let context = SharedStore.live?.mainContext {
-                await WidgetPublish.watchlist(context: context, read: true)
-            }
             state.complete(task, success: !Task.isCancelled)
         }
     }
@@ -106,9 +101,6 @@ enum WalletBackgroundRefresh {
     @MainActor
     static func runNotifySweep() async {
         guard let context = SharedStore.live?.mainContext else { return }
-        // Price alerts first (prd §1081): a crossing lands as a row, so the
-        // sweep below finds it in the same pass and sends it at once.
-        await PriceAlertStore.shared.check(context: context)
         guard let things = sweepCorpus(context) else { return }
         let (plans, photos) = NotifySweep.plans(things: things)
         // **THE DEVNET SPEAKS HERE TOO (prd §522, §728).** A corpus sweep

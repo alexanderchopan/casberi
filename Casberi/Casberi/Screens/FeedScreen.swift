@@ -1514,12 +1514,7 @@ struct FeedScreen: View {
             // and it SUPERSEDES §357's placement for these two rooms rather
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
-            .onChange(of: chrome.walletSection) { old, picked in
-                // **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's
-                // request for its own page, user: "it should open in place
-                // not the overlay. it's jarring")**: a tile like Holdings,
-                // opening on what you follow, as its room did.
-                if picked == .markets, old != .markets { chrome.tokensScope = .watchlist }
+            .onChange(of: chrome.walletSection) { _, _ in
                 // A WALLET TILE IS THE WALLET'S PAGE, on every size class
                 // (prd §1321, retiring §1220's phone sheet, user: "ya wallet
                 // needs to do the same"): the tile swaps the page in place,
