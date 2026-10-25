@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Signing details and warnings</title><style>
+:root{color-scheme:light dark;--ground:#e4e3ea;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
+--p:#000;--w:#fff;--g2:#8e8e93;--g3:#636366;--pick:#ff2d55;--amber:#ff9f0a;--red:#ff453a;--green:#30d158;--fill:#1c1c1e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;padding:28px 16px 64px}
+main{max-width:1280px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)} h2{font:700 21px/27px var(--rounded);margin-top:44px}
+.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:920px;margin-top:6px} .desc b{color:var(--ink)}
+.stage{display:flex;flex-wrap:wrap;gap:28px 30px;margin-top:16px;align-items:flex-start}
+figure{width:322px;flex:none} figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 4px 0} figcaption b{color:var(--ink)}
+.ph{width:402px;height:874px;zoom:.8;border-radius:56px;overflow:hidden;position:relative;background:var(--p);color:var(--w);font-family:var(--rounded);box-shadow:0 24px 70px #00000040}
+.status{display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.pad{padding:26px 20px 0}
+.verbs{display:flex;gap:18px;font:600 24px/30px var(--rounded);color:var(--g3);min-height:44px;align-items:center}
+.verbs .on{color:var(--w)}
+.sent{font:600 52px/58px var(--rounded);letter-spacing:0;margin-top:4px;font-variant-numeric:tabular-nums}
+.sent .pk{color:var(--pick)} .sent .am{color:var(--amber)} .sent .rd{color:var(--red)}
+.print{font:400 17px/22px var(--rounded);color:var(--g2);margin-top:12px}
+.print .det{color:var(--w)} .print .det::after{content:" ›";color:var(--g3)}
+.print .det.open::after{content:" ⌄"}
+.warn{font:400 17px/22px var(--rounded);color:var(--amber);margin-top:12px}
+.warn.red{color:var(--red)}
+.rows{margin-top:14px}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;min-height:40px;padding:9px 0;font:400 17px/22px var(--rounded)}
+.kv span{color:var(--g2);flex:none} .kv b{font-weight:400;text-align:right;font-variant-numeric:tabular-nums}
+.kv b small{display:block;font-size:13px;line-height:18px;color:var(--g2)}
+.kv b.ok{color:var(--green)} .kv b.am{color:var(--amber)} .kv b.rd{color:var(--red)}
+.mono{font-family:var(--mono);font-size:14px;line-height:20px;word-break:break-all}
+.door{display:flex;align-items:center;justify-content:space-between;min-height:48px;font:400 17px/22px var(--rounded)}
+.door::after{content:"›";color:var(--g3);font-size:22px}
+.foot{position:absolute;left:20px;right:20px;bottom:118px;display:flex;align-items:baseline;justify-content:space-between}
+.foot .v{font:600 34px/40px var(--rounded);color:var(--pick)} .foot .v.am{color:var(--amber)} .foot .v.rd{color:var(--red)} .foot .v.off{color:var(--g3)}
+.foot .add{font:600 24px/30px var(--rounded);color:var(--g2)}
+.tab{position:absolute;left:20px;right:20px;bottom:28px;display:flex;align-items:center;gap:12px}
+.tab .bar{flex:1;height:62px;border-radius:40px;background:#2a2a2d;display:flex;justify-content:space-around;align-items:center;font:500 12px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pick);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 14px}
+.tab .s{width:62px;height:62px;border-radius:50%;background:#2a2a2d}
+.title{padding:30px 20px 0} .title .back{font:400 17px/22px var(--rounded);color:var(--g2);margin-bottom:6px}
+.title h3{font:700 34px/40px var(--rounded)}
+.sec{font:600 24px/30px var(--rounded);margin:24px 0 6px;display:flex;align-items:center;gap:10px}
+.sec svg{flex:none}
+.step{display:flex;gap:12px;padding:8px 0;font:400 17px/22px var(--rounded)} .step i{font-style:normal;color:var(--g2);width:16px;flex:none}
+.step small{display:block;font-size:13px;line-height:18px;color:var(--g2)}
+.box{background:var(--fill);border-radius:18px;padding:14px 16px;margin-top:8px}
+.copy{color:var(--pick);font:400 17px/22px var(--rounded);padding:10px 0;display:flex;gap:8px;align-items:center}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:96px;background:var(--fill);border-radius:40px 40px 0 0;padding:14px 20px 0}
+.grab{width:36px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 20px}
+.eye{font:400 13px/18px var(--rounded);color:var(--g2)}
+.sheet h4{font:700 28px/34px var(--rounded);margin-top:4px}
+.slab{position:absolute;left:20px;right:20px;bottom:40px;height:56px;border-radius:28px;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;font:600 19px var(--rounded)}
+.slab.am{background:var(--amber)} .slab.rd{background:var(--red);color:#fff}
+.slab2{position:absolute;left:20px;right:20px;bottom:104px;height:44px;display:flex;align-items:center;justify-content:center;font:600 17px var(--rounded);color:var(--g2)}
+.field{background:var(--fill);border-radius:14px;padding:13px 14px;font:400 17px/22px var(--rounded);color:var(--g3);margin-top:6px}
+.sw{width:51px;height:31px;border-radius:16px;background:var(--green);position:relative;flex:none}.sw:after{content:"";position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff}
+.sw.offs{background:#39393d}.sw.offs:after{right:auto;left:2px}
+.hr{height:18px}
+.notes{flex:1;min-width:280px;max-width:600px}
+.notes p{font-size:14.5px;line-height:21px;color:var(--ink2);margin-top:8px} .notes p b{color:var(--ink)}
+</style></head><body><main>
+
+<h1>Signing: details one tap away, warnings as one line</h1>
+<p class="desc">Covers the checklist rows we are building: the nonce, fees, raw view and hashes, simulating sends, the scam warnings, the co-signer's pairing check, the recovery check and your own node. <b>The sentence stays the screen.</b> Everything technical sits behind <b>Details</b> in the grey line, the way a word's choices already open under the sentence (§1438). A warning takes the grey line's place in amber or red, as "Looks like ana's — check it" does today. Nothing new on screen until you ask, or until something is wrong.</p>
+
+<h2>1 · Details</h2>
+<div class="stage">
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="pk">ana.eth</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="print">$25.00 · Fee $0.01 · <span class="det">Details</span></div>
+</div>
+<div class="foot"><span class="v">Send</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>1. Closed, the default.</b> The grey line gains the network fee (today a send shows none) and one word, <b>Details</b>. That's the whole change to the resting screen.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="pk">ana.eth</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="print">$25.00 · Fee $0.01 · <span class="det open">Details</span></div>
+<div class="rows">
+<div class="kv"><span>To</span><b class="mono" style="max-width:230px">0x1a2B8f0c4E7d9A61b3C5e2F04d8a7B93c6E19cD0</b></div>
+<div class="kv"><span>From</span><b>Your account …3416</b></div>
+<div class="kv"><span>Network fee</span><b>$0.012<small>0.0000041 ETH</small></b></div>
+<div class="kv"><span>Nonce</span><b>14</b></div>
+<div class="kv"><span>Checked</span><b class="ok">Lands as written</b></div>
+<div class="door">Raw transaction</div>
+</div></div>
+<div class="foot"><span class="v">Send</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>2. Details open, under the sentence.</b> The full address (the sentence shows the name), from, the fee in ETH, the nonce, and the result of simulating this exact send. Network and amount are already in the sentence, so they aren't repeated. Tap Details again to close.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="title"><div class="back">‹ Move</div><h3>Raw transaction</h3></div><div class="pad" style="padding-top:8px">
+<div class="eye" style="font-size:17px;line-height:22px">What it does</div>
+<div class="step"><i>1</i><div>Sends 25 USDC to 0x1a2B…cD0</div></div>
+<div class="step"><i>2</i><div>Moves your account to a new key<small>This iPhone's key 5. The old key stops working.</small></div></div>
+<div class="kv" style="margin-top:10px"><span>Operation hash</span><b></b></div>
+<div class="mono" style="color:var(--w)">0x5f3c9e1a7b2d48e60c91f3a5d7b2e84c 1a9f6d03e7c25b8a4f19d0c6e3b72a58</div>
+<div class="copy">Copy hash</div>
+<div class="kv"><span>Calldata · 612 bytes</span><b></b></div>
+<div class="box mono" style="color:var(--g2);max-height:122px;overflow:hidden">0x7bb37428000000000000000000000000a238dd80c259a72e81d7e4664a9801593f98d1c5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001…</div>
+<div class="copy">Copy calldata</div>
+</div></div><figcaption><b>3. Raw, a page deeper.</b> The decoded calls in words first, including the key change every send carries, then the hash Face ID signs and the bytes, each with Copy. The hash matches what a hardware wallet or a second device would show (ERC-8213, once we've read its spec).</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span class="on">Swap</span><span>Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">100</span> <span class="pk">USDC</span></div><div>for ≈ <span class="pk">ETH</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="print">≈ 0.0102 ETH · Fee $0.05 · <span class="det open">Details</span></div>
+<div class="rows">
+<div class="kv"><span>You get at least</span><b>0.0101 ETH</b></div>
+<div class="kv"><span>Fee</span><b>$0.05<small>Network $0.01 · Relay $0.04 (0.04%)<br>Casberi none</small></b></div>
+<div class="kv"><span>Approves</span><b>Exactly 100 USDC<small>to Relay, used in the same step</small></b></div>
+<div class="kv"><span>Nonce</span><b>15</b></div>
+<div class="kv"><span>Checked</span><b class="ok">Returns at least 0.0101 ETH</b></div>
+<div class="door">Raw transaction</div>
+</div></div>
+<div class="foot"><span class="v">Swap</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>4. A swap's Details.</b> The fee split three ways under its total: network, Relay as a percentage, and ours, stated as none, and the approval's amount, which is always exact. "Checked" is the simulation Move already runs before Face ID.</figcaption></figure>
+
+</div>
+
+<h2>2 · Warnings</h2>
+<p class="desc">Each warning replaces the grey line, and the word it's about takes its colour. <b>Amber: check it. Red: reported as a scam.</b> Walletbeat says warn, don't block, so the verb stays, but on a warning it becomes "Send anyway" and needs a second tap.</p>
+<div class="stage">
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="pk">0x71C7…49A2</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="warn">First send to this address.</div>
+</div>
+<div class="foot"><span class="v">Send</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>5. First-time recipient.</b> Only a note, so the verb stays "Send". Checked against everything you've sent from, received from or named, on the phone.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="am">0x71C7…49A2</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="warn">Looks like 0x71C7…49A2, which you paid on Oct 3. They differ in the middle. Check it.</div>
+</div>
+<div class="foot"><span class="v am">Send anyway</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>6. Lookalike of someone you've paid.</b> Today only names in your book are compared, and the send is blocked. Now your whole history is compared, and the sentence says when you paid the real one. The word shakes once, as today.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="rd">0xd9A1…07fE</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="warn red">Reported as a scam address.</div>
+</div>
+<div class="foot"><span class="v rd">Send anyway</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>7. Known scam address.</b> Matched on the phone against a list downloaded once a day, so the address never leaves the phone. Details names the list and its date.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span class="on">Swap</span><span>Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">100</span> <span class="pk">USDC</span></div><div>for ≈ <span class="am">PEPE2</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="warn">Not verified by Relay. Its contract is 2 days old, and you've never used it.</div>
+</div>
+<div class="foot"><span class="v am">Swap anyway</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>8. New or unknown contract.</b> Joins today's "Not verified by Relay" in one sentence. "Never used" comes from your history and the age from the network, both read through Tor.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="pad">
+<div class="verbs"><span>Swap</span><span class="on">Send</span><span>Receive</span><span>Buy</span></div>
+<div class="sent"><div><span class="pk">25</span> <span class="pk">USDC</span></div><div>to <span class="pk">ana.eth</span></div><div>on <span class="pk">Base</span>.</div></div>
+<div class="warn red">This send would fail: USDC refuses transfers to this address.</div>
+</div>
+<div class="foot"><span class="v off">Send</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>9. Simulated, and it fails.</b> Sends are now simulated like swaps. The verb dims because it would fail anyway, and the sentence says why. If the result depends on the block it lands in, the line says so instead and the verb stays.</figcaption></figure>
+
+</div>
+
+<h2>3 · Signing for someone else's Safe</h2>
+<div class="stage">
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="sheet"><div class="grab"></div>
+<div class="eye">app.safe.global</div>
+<h4>Pair as a co-signer</h4>
+<div class="warn red" style="font-size:17px">Reported as a scam site. It isn't app.safe.global.</div>
+<div class="rows">
+<div class="kv"><span>Says it is</span><b>Safe{Wallet}</b></div>
+<div class="kv"><span>Really is</span><b class="rd">safe-global-app.xyz</b></div>
+</div>
+<div class="slab2">Pair anyway</div>
+<div class="slab">Don't pair</div>
+</div></div><figcaption><b>10. Pairing, checked by Reown Verify.</b> A site states its own name, so only Verify can say where the request really came from. The three outcomes: the site matches (nothing shown), it can't be confirmed (amber, "Couldn't confirm it's app.safe.global"), or it's a reported scam (red, shown here).</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="sheet"><div class="grab"></div>
+<div class="eye">Team Safe · 2 of 3</div>
+<h4>Approve USDC</h4>
+<div class="warn red" style="font-size:17px">Lets 0xdef1…c0de spend all of this Safe's USDC, with no end.</div>
+<div class="print">No balance changes · <span class="det open">Details</span></div>
+<div class="rows">
+<div class="kv"><span>Nonce</span><b>42</b></div>
+<div class="kv"><span>Safe tx hash</span><b class="mono">0x8c1f…a03e</b></div>
+<div class="kv"><span>Domain hash</span><b class="mono">0x2b9d…71c4</b></div>
+<div class="kv"><span>Message hash</span><b class="mono">0xe40a…5f9b</b></div>
+<div class="door">Raw transaction</div>
+</div>
+<div class="slab2">Not now</div>
+<div class="slab">Sign with Face ID</div>
+</div></div><figcaption><b>11. The co-signer's sign sheet.</b> An unlimited approval gets a red line in words, not just the "Unlimited" label. Details carries the nonce and the three EIP-712 hashes Safe's app and hardware wallets show, so you can compare them before signing.</figcaption></figure>
+
+</div>
+
+<h2>4 · Keys and nodes</h2>
+<div class="stage">
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="title"><h3>Wallet</h3></div><div class="pad" style="padding-top:6px">
+<div style="font:700 44px/52px var(--rounded)">$4,182</div>
+<div class="sec"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>Needs you</div>
+<div class="door"><span>Check your recovery key</span></div>
+<div class="sec"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="9" r="4"/><path d="M5 20c1.2-3.4 4-5 7-5s5.8 1.6 7 5"/></svg>Your account</div>
+<div class="sec"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h16M4 6h16M4 18h10"/></svg>Following</div>
+<div class="sec"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l8 4v5c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V7z"/></svg>Permissions</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>12. Every three months, one row in Needs you.</b> No notification, no badge (§1490). Checking clears the row for another three months.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="title"><div class="back">‹ Wallet</div><h3>Recovery key</h3></div><div class="pad">
+<div style="font:600 34px/42px var(--rounded)">Your recovery key <span style="color:var(--green)">works</span> on Base and Ethereum.</div>
+<div class="print" style="margin-top:14px">In iCloud Keychain. Checked today with Face ID.</div>
+<div class="rows">
+<div class="kv"><span>Base</span><b class="ok">An owner</b></div>
+<div class="kv"><span>Ethereum</span><b class="ok">An owner</b></div>
+<div class="kv"><span>Robinhood</span><b class="am">Not on yet</b></div>
+</div>
+<div class="door" style="margin-top:6px">Put it on Robinhood</div>
+</div>
+<div class="slab">Done</div>
+</div><figcaption><b>13. The check.</b> Face ID unlocks the key, it signs a test message (nothing sent, no fee), and each network says whether it still accepts the key. Any "No" turns the sentence red and offers the fix.</figcaption></figure>
+
+<figure><div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="title"><div class="back">‹ Your account</div><h3>Nodes</h3></div><div class="pad">
+<div class="kv"><span style="color:var(--w)">Your own node</span><span class="sw"></span></div>
+<div class="sec" style="font-size:17px;line-height:22px;color:var(--g2);font-weight:400;margin:18px 0 0">Base</div>
+<div class="field" style="color:var(--w)">https://base.mynode.home:8545</div>
+<div class="kv"><span>Answers</span><b class="ok">Chain 8453 · block 31,882,104</b></div>
+<div class="sec" style="font-size:17px;line-height:22px;color:var(--g2);font-weight:400;margin:18px 0 0">Ethereum</div>
+<div class="field">Casberi's list</div>
+<div class="sec" style="font-size:17px;line-height:22px;color:var(--g2);font-weight:400;margin:18px 0 0">Robinhood</div>
+<div class="field">Casberi's list</div>
+<div class="print" style="margin-top:18px">Your node sees your address. Tor doesn't hide it from your own node.</div>
+</div>
+</div><figcaption><b>14. Your own node.</b> Off, every network uses Casberi's list. On, each network takes an address or keeps the list, which is checked against the right chain id before it's used. The one sentence says what Tor no longer covers. The door would be a row under Your account › Keys.</figcaption></figure>
+
+<div class="notes">
+<p><b>Decisions on this canvas</b></p>
+<p><b>Send anyway.</b> Walletbeat says warn, don't block. Today a lookalike of a name in your book blocks the send. This canvas turns every warning into a second tap. The alternative is to keep blocking lookalikes and scam addresses.</p>
+<p><b>Fee in the grey line.</b> A send today shows no fee at all. This adds "Fee $0.01" to every send, not only in Details.</p>
+<p><b>The recovery check's cadence.</b> Every three months. It could be monthly, or only after an iOS or Apple ID change.</p>
+<p><b>Not drawn.</b> Tor on the Mac has no new screen: "the Mac has no Tor yet" goes away.</p>
+</div>
+
+</div>
+</main></body></html>
