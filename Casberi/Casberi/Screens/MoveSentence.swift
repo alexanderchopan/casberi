@@ -921,12 +921,14 @@ struct MoveSentence: View {
     /// in dollars, "of <token>" is the clause after it.
     @ViewBuilder private func currentSellClauses(glue: String?, trail: String?, leads: Bool = false) -> some View {
         MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : DS.textPrimary, trail: inDollars ? nil : trail) {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
-                amountField
-                if !inDollars {
-                    withWord.padding(.leading, 8)
+            // The figure and its token wrap between them when the two are
+            // wider than a line ("1234567.89" over "USDC"), never truncate.
+            MoveClauseLayout(spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
+                    amountField
                 }
+                if !inDollars { withWord }
             }
             .contentShape(Rectangle())
             .onTapGesture { if stage == nil { focus = .amount } }
@@ -1050,6 +1052,10 @@ struct MoveSentence: View {
             .keyboardType(.decimalPad)
             .focused($focus, equals: .amount)
             .dsText(rung)
+            // The field is as wide as the figure drawn over it, so its
+            // digits are the figure's: proportional "100" under a
+            // monospaced one ate the gap before the token ("100USDC").
+            .monospacedDigit()
             // Not typing, the figure is drawn over the field so its digits
             // roll as the slider moves (§1438b); the field still takes the tap.
             .foregroundStyle(typing || amount.isEmpty ? DS.pickInk : .clear)
@@ -3258,13 +3264,20 @@ struct MoveRungReader<Content: View>: View {
 /// piece until the clause is wider than a whole line.
 struct MoveClauseLayout: Layout {
     var spacing: CGFloat
+    /// Less than a pixel: a piece measured to fit exactly still fits when
+    /// a parent hands back its width rounded.
+    static let slack: CGFloat = 0.5
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         rows(proposal.width, subviews).size
     }
 
+    /// Placed against the PROPOSAL it was measured for, never `bounds.width`:
+    /// the bounds come back rounded to the pixel grid, a hair narrower, and
+    /// a clause measured as one line then wrapped its last word under itself
+    /// onto the next clause's line ("ETH" over "on Base.", prd §1511).
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (view, frame) in rows(bounds.width, subviews).frames {
+        for (view, frame) in rows(proposal.width, subviews).frames {
             view.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
                        anchor: .topLeading, proposal: ProposedViewSize(frame.size))
         }
@@ -3278,8 +3291,8 @@ struct MoveClauseLayout: Layout {
             var size = view.sizeThatFits(.unspecified)
             // A piece wider than the whole line is offered the line: a word
             // shrinks, a phrase wraps.
-            if size.width > limit { size = view.sizeThatFits(ProposedViewSize(width: limit, height: nil)) }
-            if x > 0, x + size.width > limit {
+            if size.width > limit + Self.slack { size = view.sizeThatFits(ProposedViewSize(width: limit, height: nil)) }
+            if x > 0, x + size.width > limit + Self.slack {
                 x = 0; y += rowH; rowH = 0
             }
             frames.append((view, CGRect(x: x, y: y, width: size.width, height: size.height)))

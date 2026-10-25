@@ -510,6 +510,10 @@ grep -q '.environment(\\.moveRung, MoveSentence.rung)' "$SENTENCE" || { echo "�
 grep -q 'fitsWide: true' "$SENTENCE" && grep -q 'var fitsWide = false' "$FLOW" \
   || { echo "✗ a clause wider than a line is no longer offered the line — it would overflow the screen (prd §1501)"; exit 1; }
 grep -q 'MoveClauseLayout(spacing: MoveSentence.clauseGap)' "$SENTENCE" || { echo "✗ a clause can no longer wrap inside itself (prd §1501)"; exit 1; }
+grep -q 'rows(proposal.width, subviews).frames' "$SENTENCE" \
+  || { echo "✗ a clause is placed against its rounded bounds, not the width it was measured for — its last word drops onto the next clause's line (prd §1511)"; exit 1; }
+grep -q 'let width = proposal.width ?? bounds.width' "$FLOW" \
+  || { echo "✗ the flow wraps against its rounded bounds, not the width it was measured for (prd §1511)"; exit 1; }
 grep -q '\.minimumScaleFactor(0.5)' "$SENTENCE" || { echo "✗ a word wider than a line no longer shrinks — it would clip (prd §1501)"; exit 1; }
 grep -q '@Environment(\\.moveRung) private var rung' "$SENTENCE" || { echo "✗ MoveWord no longer reads the flow's size (prd §1501)"; exit 1; }
 grep -rq 'dsText(.heading28)\|dsText(.heading52)\|dsText(.heading44)' "$SENTENCE" Casberi/Casberi/Screens/MoveScreen.swift "$WALK" \

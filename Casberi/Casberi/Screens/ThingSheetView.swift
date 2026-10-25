@@ -5233,12 +5233,17 @@ struct FlowLayout: Layout {
         return CGSize(width: width, height: y + rowH)
     }
 
+    /// Wraps against the width it was MEASURED for, not the placed bounds,
+    /// which come back rounded to the pixel grid: a piece ending exactly at
+    /// the edge would otherwise hop at placement, under a height that left
+    /// it no room (prd §1511).
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let width = proposal.width ?? bounds.width
         var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
         for view in subviews {
-            let (size, offer) = measure(view, bounds.width)
+            let (size, offer) = measure(view, width)
             let breaks = view[FlowBreak.self] && x > bounds.minX
-            if breaks || (x + size.width > bounds.maxX && x > bounds.minX) {
+            if breaks || (x + size.width > bounds.minX + width && x > bounds.minX) {
                 x = bounds.minX; y += rowH + (lineSpacing ?? spacing) + (breaks ? breakGap : 0); rowH = 0
             }
             view.place(at: CGPoint(x: x, y: y), proposal: offer)
