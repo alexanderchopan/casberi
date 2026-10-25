@@ -334,7 +334,11 @@ extension FeedScreen {
                 }
             }
             if !tokens.isEmpty || anyHidden {
-                walletDoor(.holdings, name: String(localized: "Tokens"),
+                // **ALL TOKENS UNDER THE WHOSE DOORS (prd §1530, user: "what is
+                // the point of having tokens … if it is already in you and
+                // following").** It is every account's tokens merged, one row
+                // each; under You and Following the name says so.
+                walletDoor(.holdings, name: splits ? String(localized: "All tokens") : String(localized: "Tokens"),
                            act: { feedSheet = .walletTokens })
                 // One account, or one group: the whose doors are not drawn,
                 // so the tokens preview here instead (prd §1525).

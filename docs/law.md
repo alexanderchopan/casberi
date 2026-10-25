@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1667 of 1736 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1668 of 1737 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1881,7 +1881,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1500 — Create's small print is "Face ID approves every move."
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
-- §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525)
+- §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
@@ -1903,11 +1903,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1522 — Markets has a search page: the Follow tray's field asks the market, and the head's door is the magnifier (amends §139…
 - §1523 — Round-ups is Spending's fourth door: what the change bought, kept out of the total, and the buy is never spending (bu…
 - §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amended by §1526)
-- §1525 — Holdings' doors show their top three
+- §1525 — Holdings' doors show their top three (amended by §1530)
 - §1526 — Yours · Everything: one switch in the Wallet's boxes
 - §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 - §1528 — Logos, the record to 2026-10-25: a chat nobody is known in can be named, and the Observer becomes a Basecamp module (…
 - §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §…
+- §1530 — Under You and Following, Holdings' Tokens door is All tokens
 
 ## Dead rulings → what replaced them (generated)
 

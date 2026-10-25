@@ -540,7 +540,7 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not You, Following, Apps, Tokens, Positions, then NFTs (prd §1503)"
+python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings' doors are not You, Following, Apps, Tokens, Positions, then NFTs (prd §1503)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
@@ -555,7 +555,7 @@ sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
 # Whose draws only when it splits (prd §1520): on one account, or on All with
 # one group, You's figure was the box's and its press the pick already made.
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings draws You, Following, Apps on one account or one group — the box's figure twice (prd §1520)"
+python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings draws You, Following, Apps on one account or one group — the box's figure twice (prd §1520)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
@@ -565,6 +565,15 @@ ok = "selectedSeat == nil && selectedWallet == nil" in body and ".count > 1" in 
     and "if splits, hasApps" in body
 sys.exit(0 if ok else 1)
 PY
+# Under the whose doors, Tokens names itself the merged list (prd §1530):
+# "Tokens" after You and Following read as the same tokens a third time.
+python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY2' || fail "drift: Holdings' Tokens door no longer says All tokens under You and Following (prd §1530)"
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
+body = m.group(0) if m else ""
+sys.exit(0 if 'splits ? String(localized: "All tokens")' in body else 1)
+PY2
 # Tokens is a door on Holdings since prd §1480, opening every token in its
 # sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \
