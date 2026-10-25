@@ -154,6 +154,14 @@ enum YourAccountTokens {
     /// The account's tokens on `net` with something in them, biggest first.
     @MainActor
     static func held(_ account: String, on net: Op.Network) async -> [Held] {
+        await read(account, on: net) ?? []
+    }
+
+    /// `held`, or nil when no node answered for any token: a read that
+    /// failed is not an empty account (user: "i have money in my account
+    /// but casberi says i can't receive or swap").
+    @MainActor
+    static func read(_ account: String, on net: Op.Network) async -> [Held]? {
         // The demo's account holds the demo's table, read off no node (§1475).
         if YourAccountDemo.isDemo(account) { return YourAccountDemo.held(on: net) }
         let reading = await WalletIngest.lastKnownHoldings(owner: account)
@@ -187,19 +195,25 @@ enum YourAccountTokens {
         }
         let tokens = candidates
         var found: [Held] = []
-        await withTaskGroup(of: Held?.self) { group in
+        var answered = false
+        await withTaskGroup(of: (answered: Bool, held: Held?).self) { group in
             for token in tokens {
                 group.addTask {
-                    guard let units = await YourAccountChain.balance(net, token, of: account), units != "0" else { return nil }
-                    return Held(token: token, units: units, price: nil)
+                    guard let units = await YourAccountChain.balance(net, token, of: account) else { return (false, nil) }
+                    return (true, units == "0" ? nil : Held(token: token, units: units, price: nil))
                 }
             }
-            for await h in group { if let h { found.append(h) } }
+            for await r in group {
+                answered = answered || r.answered
+                if let h = r.held { found.append(h) }
+            }
         }
         #if DEBUG
         let samples = await sampleHoldings(on: net)
         found = found.filter { h in !samples.contains { $0.token == h.token } } + samples
+        if !samples.isEmpty { answered = true }
         #endif
+        guard answered else { return nil }
         // A token the Wallet has not priced asks Relay, so dollars always work.
         var priced: [Held] = []
         await withTaskGroup(of: Held.self) { group in

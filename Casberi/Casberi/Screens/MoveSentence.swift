@@ -51,6 +51,7 @@ struct MoveSentence: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     typealias Op = YourAccountOp
     typealias Chain = YourAccountChain
@@ -73,6 +74,9 @@ struct MoveSentence: View {
     /// starts "0 token for token on network." and the network comes first.
     @State private var networkPicked = false
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
+    /// The networks no node answered for: their empty list is unknown,
+    /// never "nothing there".
+    @State private var unread: Set<Int> = []
     /// The networks this phone can use the account on (§1442k); nil until
     /// read, and every network on the phone that made the account.
     @State private var reach: [Op.Network]?
@@ -238,9 +242,20 @@ struct MoveSentence: View {
     /// network as often as after).
     private var lookIn: [Op.Network] { networkPicked ? [network] : networksByWorth }
 
-    /// Read, and nothing anywhere: there is nothing to spend yet.
+    /// Read, and nothing anywhere: there is nothing to spend yet. A network
+    /// no node answered for is not nothing, so it never says so.
     private var emptyEverywhere: Bool {
-        !heldBy.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+        !heldBy.isEmpty && unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+    }
+
+    /// Nothing found, because a read failed: the line says which networks
+    /// and offers the read again, never "Receive something first".
+    private var readFailed: Bool {
+        !heldBy.isEmpty && !unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+    }
+
+    private var unreadNames: String {
+        ListFormatter.localizedString(byJoining: Op.networks.filter { unread.contains($0.chainId) }.map(\.name))
     }
 
     /// What is left of a holding once the transaction's earlier lines are
@@ -389,13 +404,18 @@ struct MoveSentence: View {
             withAnimation(DS.Motion.standard) { arrived = true }
             DSHaptic.success()
         }
-        .onChange(of: verb) { _, now in
+        .onChange(of: verb) { was, now in
             if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
             if now == .buy { enterBuy() }
+            // Back from Receive: what was sent meanwhile is spendable.
+            if was == .receive { Task { await readHoldings() } }
             // Details stays open across edits of the sentence, and closes
             // when the verb changes (prd §1509).
             details = false
             rawOpen = false
+        }
+        .onChange(of: scenePhase) { _, now in
+            if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
         .task(id: previewKey) { await repreview() }
@@ -1309,6 +1329,14 @@ struct MoveSentence: View {
                 Text("Receive something first").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
+        } else if readFailed, verb != .receive {
+            Button {
+                DSHaptic.selection()
+                Task { await readHoldings() }
+            } label: {
+                Text("Couldn't read \(unreadNames): try again").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+            }
+            .buttonStyle(RowPress())
         } else if verb == .receive {
             // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
             // address. and somewhere on the page complete address should be
@@ -1441,6 +1469,8 @@ struct MoveSentence: View {
             EmptyView()
         } else if heldBy.isEmpty {
             Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
+        } else if held.isEmpty, unread.contains(network.chainId) {
+            Text("Couldn't read \(network.name)").dsText(.body17).foregroundStyle(DS.attentionInk)
         } else if held.isEmpty {
             Text("Nothing on \(network.name) yet").dsText(.body17).foregroundStyle(DS.textSecondary)
         }
@@ -1900,6 +1930,7 @@ struct MoveSentence: View {
             if rows.isEmpty {
                 Text(verbatim: heldBy.isEmpty ? String(localized: "Reading…")
                      : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
+                     : networkPicked && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
                      : networkPicked ? String(localized: "Nothing on \(network.name) yet")
                      : String(localized: "Nothing to spend yet"))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
@@ -2787,16 +2818,37 @@ struct MoveSentence: View {
     /// Every network's holdings at once; the sentence starts on the one
     /// holding the most, and spends its biggest token.
     private func readAll() async {
+        await readHoldings()
+        await readLists()
+    }
+
+    /// What the account holds, everywhere, read again whenever money may
+    /// have arrived since (user: "i have money in my account but casberi
+    /// says i can't receive or swap"): the app coming back and leaving
+    /// Receive (another tab unmounts Move, so its return reads anew). A
+    /// token being spent keeps up.
+    private func readHoldings() async {
         // Every network at once: one slow node holds none of the others.
         var found: [Int: [Tokens.Held]] = [:]
-        await withTaskGroup(of: (Int, [Tokens.Held]).self) { group in
+        var failed: Set<Int> = []
+        await withTaskGroup(of: (Int, [Tokens.Held]?).self) { group in
             for net in Op.networks {
-                group.addTask { @MainActor in (net.chainId, await Tokens.held(account, on: net)) }
+                group.addTask { @MainActor in (net.chainId, await Tokens.read(account, on: net)) }
             }
-            for await (id, held) in group { found[id] = held }
+            for await (id, held) in group {
+                found[id] = held ?? []
+                if held == nil { failed.insert(id) }
+            }
         }
         heldBy = found
+        unread = failed
+        if let w = with, !failed.contains(network.chainId) {
+            with = found[network.chainId]?.first { $0.id == w.id }
+        }
         reach = await YourAccountReach.usable(account)
+    }
+
+    private func readLists() async {
         // Nothing is picked for you (§1438c): the lists lead with where you
         // hold the most, and the sentence waits for your picks.
         var lists: [Int: [Tokens.Listed]] = [:]
@@ -2811,8 +2863,10 @@ struct MoveSentence: View {
     }
 
     private func readNetwork() async {
-        let now = await Tokens.held(account, on: network)
+        let read = await Tokens.read(account, on: network)
+        let now = read ?? []
         heldBy[network.chainId] = now
+        if read == nil { unread.insert(network.chainId) } else { unread.remove(network.chainId) }
         if let w = with { with = now.first { $0.id == w.id } }
         listedBy[network.chainId] = await Tokens.list(network)
     }
@@ -3148,7 +3202,10 @@ struct MoveSentence: View {
     private var buyMissing: String? {
         guard verb == .buy else { return nil }
         if !buyAvailable { return String(localized: "Make your account first") }
-        if with == nil { return held.isEmpty && heldBy.isEmpty ? String(localized: "Reading…") : String(localized: "You have no USDC on Base") }
+        if with == nil {
+            if held.isEmpty && heldBy.isEmpty { return String(localized: "Reading…") }
+            return unread.contains(Op.base.chainId) ? String(localized: "Couldn't read Base") : String(localized: "You have no USDC on Base")
+        }
         if buyProduct == nil { return String(localized: "Pick a merchant") }
         if let p = buyProduct, let v = buyValue, let why = p.refusal(v) { return why }
         if amount.isEmpty { return String(localized: "Type an amount first") }
