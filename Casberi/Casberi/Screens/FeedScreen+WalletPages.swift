@@ -294,16 +294,25 @@ extension FeedScreen {
         let money = { (holders: [WalletPortfolio.Holder]) in
             mask ?? WalletValue.money(holders.reduce(0) { $0 + $1.usd })
         }
+        let hasYou = groups.you != nil
+        let hasFollowing = !groups.following.isEmpty
+        let hasApps = !groups.apps.isEmpty || !appAccounts.isEmpty
+        // **WHOSE ONLY WHEN IT SPLITS (prd §1520, user: "what's the point of
+        // it saying you on holdings?").** On one account, or on All with one
+        // group, the group's figure is the box's and its door is the pick
+        // already made.
+        let splits = selectedSeat == nil && selectedWallet == nil
+            && [hasYou, hasFollowing, hasApps].filter { $0 }.count > 1
         walletDoorsSection {
-            if let you = groups.you {
+            if splits, let you = groups.you {
                 // Narrows the Wallet to it: its tokens fill the treemap.
                 walletDoor(.yourAccount, name: String(localized: "You"), figure: money([you]),
                            act: { withAnimation(DS.Motion.standard) { chrome.walletScope = you.address } })
             }
-            if !groups.following.isEmpty {
+            if splits, hasFollowing {
                 walletDoor(.holdingAccounts, figure: money(groups.following))
             }
-            if !groups.apps.isEmpty || !appAccounts.isEmpty {
+            if splits, hasApps {
                 walletDoor(.apps, figure: money(groups.apps))
             }
             if !tokens.isEmpty || anyHidden {

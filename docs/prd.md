@@ -68595,3 +68595,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **The rule.** No pick dims Markets. The address pick's inert set is Spending, Places and Fees (`FeedScreen+ShapedSections.swift`); an app pick's (`walletInertSections`) loses `.markets` and keeps the rest. A Markets tile remembered under a pick now resolves to Markets, not Home.
 3. **Not changed.** Spending still dims on a pick (§1468 item 4): it reads every account, so one account's page cannot stand on it. Home still draws no Markets door (§1498 item 3).
 4. **Self-test.** `wallet-section-selftest.sh`'s two §1498 guards are turned to `deny`: either inert set naming `.markets` again fails the pass.
+
+## §1520 — Holdings says whose only when it splits (amends §1503 item 1) (user, 2026-10-25, on a screenshot of "Wallet · You" with Holdings' You row at the box's $8: "what's the point of it saying you on holdings? … you still have a tokens number of a balance, right? So what would we need you for") — WRITTEN, NOT YET COMPILED
+
+1. **The cause.** §1503 drew You whenever your account existed. Picked to your account (the You row's own press does that, and §1519 item 1 says the pick stands), the holders are yours alone: You's figure was the box's, and its press picked the account already picked. On All with nothing followed and no app holding money, the same.
+2. **The rule.** You, Following and Apps draw only on All (no address, no app picked) and only when two or more of them stand (`splits` in `walletHoldingsDoors`). Otherwise Holdings opens on Tokens, Positions, NFTs.
+3. **Not changed.** The three groups' figures and pages (§1503 items 1, 3), Tokens' door with no figure (item 2), NFTs on every account (item 4).
+4. **Self-test.** `wallet-section-selftest.sh` fails if the three doors lose the `splits` gate.

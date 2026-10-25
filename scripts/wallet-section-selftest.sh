@@ -585,6 +585,18 @@ if '.count)")' in body:
     sys.exit(1)
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
+# Whose draws only when it splits (prd §1520): on one account, or on All with
+# one group, You's figure was the box's and its press the pick already made.
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings draws You, Following, Apps on one account or one group — the box's figure twice (prd §1520)"
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
+body = m.group(0) if m else ""
+ok = "selectedSeat == nil && selectedWallet == nil" in body and ".count > 1" in body \
+    and "if splits, let you = groups.you" in body and "if splits, hasFollowing" in body \
+    and "if splits, hasApps" in body
+sys.exit(0 if ok else 1)
+PY
 # Tokens is a door on Holdings since prd §1480, opening every token in its
 # sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \
