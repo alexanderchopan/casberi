@@ -68666,3 +68666,9 @@ Every card's charges already counted in Spending on All. §1480 item 8 deleted C
 2. **It is the Wallet's account pick, made visible.** Yours sets `chrome.walletScope` to your Casberi account; Everything clears it. A launch opens on Yours unless you last chose Everything (`WalletWhose.launchScope`, `wallet.whose.v1`), never over a pick a link or hook already made.
 3. **It draws only when it can be true:** when your Casberi account is in the Wallet (creating or recovering it watches it), and not while search has picked another account (the box names that one). With no Casberi account there is no Yours, so no switch. An account with nothing read yet still shows the switch over its empty box, so the way back is never gone.
 4. **Only your Casberi account is Yours.** A followed wallet may not be named Yours, You, Your account, My account, Me or Mine (`WalletWhose.reservedName`); the rename says so.
+
+## §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column (amends §1498's order, §1480) (user, 2026-10-25: "i think markets should be the last tile in the row. i also think where it says 'nothing followed yet' needs to have same indentation as the header") — BUILT
+
+1. **The tiles read Home · Holdings · Activity · Spending · Markets** (`WalletSection.order`). Markets is yours, not an account's (§1519, §1526), so it stands after the account pages. §483's "unconditional tiles first" no longer holds the order: no tile is hidden when empty, so the strip's head is the same on every wallet regardless.
+2. **"Nothing followed yet" starts where the Watchlist header's words start**, past its glyph (`rowInset + headGlyph + headGap`).
+3. **A Holdings preview row (§1525) takes the app's one row pitch** (`walletRowPitch`, §1496), not a tighter hand-padded one.

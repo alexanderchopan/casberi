@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1664 of 1733 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1665 of 1734 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1858,7 +1858,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model (amended by §1505)
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526)
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526, §1527)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1876,7 +1876,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
-- §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519)
+- §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
@@ -1905,6 +1905,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amended by §1526)
 - §1525 — Holdings' doors show their top three
 - §1526 — Yours · Everything: one switch in the Wallet's boxes
+- §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 
 ## Dead rulings → what replaced them (generated)
 
