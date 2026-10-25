@@ -626,6 +626,40 @@ extension FeedScreen {
         }
     }
 
+    /// **EVERY ACCOUNT CAN CHOOSE (prd §1503, user: "when i click NFTs now it
+    /// is empty but we used to have a way for a user to show their NFTs").**
+    /// With several wallets and none picked, the shelf has no one wallet to
+    /// speak for (§387) and the page drew nothing, not even its door. It
+    /// offers each instead: You first, then every wallet you follow.
+    @ViewBuilder
+    var walletNFTChooseEachSection: some View {
+        let own = YourAccountDemo.shownAddress
+        let followed = wallet.addresses.filter { !Self.isYourAccount($0.address) }
+        walletCard(String(localized: "Choose collections"), glyph: Self.nftGlyph) {
+            if let own {
+                walletNFTChooseRow(address: own, name: String(localized: "You"))
+            }
+            ForEach(followed, id: \.address) { entry in
+                walletNFTChooseRow(address: entry.address, name: entry.label.isEmpty ? entry.short : entry.label)
+            }
+        }
+    }
+
+    func walletNFTChooseRow(address: String, name: String) -> some View {
+        Button {
+            DSHaptic.selection()
+            feedSheet = .nftPicks(address: address, label: name)
+        } label: {
+            DSFeedRow(name: name, trailingBesideLine: true) {
+                WalletFace(address: address, size: DS.Face.row, circular: true)
+            } trailing: { EmptyView() }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .walletListRow()
+    }
+
     /// The NFTs group's mark, the door's and the list's one header.
     static let nftGlyph = "photo.on.rectangle.angled"
 
@@ -940,19 +974,6 @@ extension FeedScreen {
     func walletAccountsSection(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
         if !rows.isEmpty {
             walletCard(String(localized: "Accounts"), glyph: "banknote") {
-                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    if case .single(let item) = row.kind, let thing = item.live {
-                        shapedListRow(thing, index: i, nextEventID: nextEventID)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    func walletAppsSection(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
-        if !rows.isEmpty {
-            walletCard(String(localized: "Apps"), glyph: ScopeTileGlyph.apps) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if case .single(let item) = row.kind, let thing = item.live {
                         shapedListRow(thing, index: i, nextEventID: nextEventID)

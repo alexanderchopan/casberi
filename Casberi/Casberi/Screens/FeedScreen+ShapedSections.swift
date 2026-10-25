@@ -454,9 +454,9 @@ extension FeedScreen {
                 // Fees, each its own page.
                 case .spending:
                     walletSpendingDoors
-                // **FIVE DOORS (prd §1480 item 4):** Accounts, Tokens,
-                // Positions, Apps, NFTs — the lists behind them are the ones
-                // that shipped here (§1107, §1124, §1341), each on its page.
+                // **WHOSE, THEN WHAT (prd §1480 item 4, §1503):** You,
+                // Following, Apps, each its total, then Tokens, Positions,
+                // NFTs — the lists behind them each on its page.
                 case .holdings:
                     let apps = walletAppRows(all)
                     let accounts = walletAccountRows(all)

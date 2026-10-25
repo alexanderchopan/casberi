@@ -258,33 +258,53 @@ extension FeedScreen {
         return holders
     }
 
-    /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4).** The treemap in the
-    /// box, then five doors: Accounts, Tokens, Positions, Apps, NFTs.
+    /// Holdings' money by whose it is (prd §1503): your own account, the
+    /// wallets you follow, and what apps hold for you — a venue, a cash
+    /// account, a Privy app.
+    var walletHolderGroups: (you: WalletPortfolio.Holder?, following: [WalletPortfolio.Holder],
+                             apps: [WalletPortfolio.Holder]) {
+        let holders = walletAccountHolders
+        let you = holders.first { Self.isYourAccount($0.address) && !WalletPortfolio.isVenue($0.address) }
+        let rest = holders.filter { $0.address != you?.address }
+        return (you,
+                rest.filter { !WalletPortfolio.isVenue($0.address) },
+                rest.filter { WalletPortfolio.isVenue($0.address) && $0.usd > 0 })
+    }
+
+    /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503).** The treemap
+    /// in the box, then whose it is — You, Following, Apps, each its total,
+    /// never a count (user: "i don't care that i have 90 apps. i care about
+    /// the total of tokens in those apps") — then Tokens, Positions, NFTs.
     @ViewBuilder
     func walletHoldingsDoors(all: [Thing]) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let holders = walletAccountHolders
+        let groups = walletHolderGroups
         let appAccounts = walletAccountRows(all)
-        let apps = walletAppRows(all)
         let tokens = portfolioShown?.positions ?? []
-        let tokensUSD = tokens.reduce(0) { $0 + $1.usd }
         // Every token hidden still leaves the door, to the Hidden row.
         let anyHidden = portfolioUnhidden?.positions.contains { walletHidden.contains($0.symbol.uppercased()) } ?? false
         let positions = walletPositionCount
+        let money = { (holders: [WalletPortfolio.Holder]) in
+            mask ?? WalletValue.money(holders.reduce(0) { $0 + $1.usd })
+        }
         walletDoorsSection {
-            if !holders.isEmpty || !appAccounts.isEmpty {
-                walletDoor(.holdingAccounts, figure: "\(holders.count + appAccounts.count)")
+            if let you = groups.you {
+                // Narrows the Wallet to it: its tokens fill the treemap.
+                walletDoor(.yourAccount, name: String(localized: "You"), figure: money([you]),
+                           act: { withAnimation(DS.Motion.standard) { chrome.walletScope = you.address } })
+            }
+            if !groups.following.isEmpty {
+                walletDoor(.holdingAccounts, figure: money(groups.following))
+            }
+            if !groups.apps.isEmpty || !appAccounts.isEmpty {
+                walletDoor(.apps, figure: money(groups.apps))
             }
             if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"),
-                           figure: mask ?? WalletValue.money(tokensUSD),
                            act: { feedSheet = .walletTokens })
             }
             if positions > 0 {
-                walletDoor(.positions, figure: "\(positions)")
-            }
-            if !apps.isEmpty {
-                walletDoor(.apps, figure: "\(apps.count)")
+                walletDoor(.positions)
             }
             // An app the menu picked holds no collections (prd §1048b).
             if selectedSeat == nil {
@@ -360,16 +380,18 @@ extension FeedScreen {
             walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
                                  word: String(localized: "Fake transfers"))
         case .holdingAccounts:
-            walletHolderAccountsPage(all: all, nextEventID: nextEventID)
+            let following = walletHolderGroups.following
+            if following.isEmpty { walletSkeletonRowsSection }
+            walletHolderList(following, section: .holdingAccounts)
         case .positions:
             if walletPositionCount == 0 { walletSkeletonRowsSection }
             walletPositionsSections
         case .apps:
-            let apps = walletAppRows(all)
-            if apps.isEmpty { walletSkeletonRowsSection }
-            walletAppsSection(apps, nextEventID: nextEventID)
+            walletHolderAppsPage(all: all, nextEventID: nextEventID)
         case .nfts:
-            if nftShelfEntry == nil {
+            if nftShelfWallet == nil {
+                walletNFTChooseEachSection
+            } else if nftShelfEntry == nil {
                 walletNFTDoorSection
             }
             walletNFTListSection
@@ -459,17 +481,26 @@ extension FeedScreen {
         }
     }
 
-    /// Holdings' Accounts page: each account's balance, largest first, then
-    /// what an app holds for you as it read it (§1341), which the total
+    /// Holdings' Apps page (prd §1503): what each app holds for you, largest
+    /// first, an app holding nothing left out (Home's Following still lists
+    /// it), then what an app holds as it read it (§1341), which the total
     /// leaves out.
     @ViewBuilder
-    func walletHolderAccountsPage(all: [Thing], nextEventID: UUID?) -> some View {
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let holders = walletAccountHolders
+    func walletHolderAppsPage(all: [Thing], nextEventID: UUID?) -> some View {
+        let apps = walletHolderGroups.apps
         let appAccounts = walletAccountRows(all)
-        if holders.isEmpty && appAccounts.isEmpty { walletSkeletonRowsSection }
+        if apps.isEmpty && appAccounts.isEmpty { walletSkeletonRowsSection }
+        walletHolderList(apps, section: .apps)
+        walletAccountsSection(appAccounts, nextEventID: nextEventID)
+    }
+
+    /// One group of Holdings' money, each holder its balance; a wallet's row
+    /// narrows the Wallet to it.
+    @ViewBuilder
+    func walletHolderList(_ holders: [WalletPortfolio.Holder], section: WalletSection) -> some View {
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         if !holders.isEmpty {
-            walletCard(WalletSection.holdingAccounts.label, glyph: WalletSection.holdingAccounts.glyph) {
+            walletCard(section.label, glyph: section.glyph) {
                 ForEach(holders) { holder in
                     let isVenue = WalletPortfolio.isVenue(holder.address)
                     // Your own account keeps a name you gave it, else "Your account".
@@ -505,7 +536,6 @@ extension FeedScreen {
                 }
             }
         }
-        walletAccountsSection(appAccounts, nextEventID: nextEventID)
     }
 
     /// The Privy app a `privy:` holder names, for its logo.

@@ -214,7 +214,7 @@ if "walletDoor(.nfts)" not in src:
 if not re.search(r'case \.holdings, \.holdingAccounts, \.positions, \.apps, \.nfts:\s*holdingsBlockSection', src):
     sys.exit("  ✗ the NFTs page's box is not Holdings' — it would say a different tile (prd §1480)")
 PY
-grep -q 'static let holdingsDoors: \[WalletSection\] = \[.holdingAccounts, .positions, .apps, .nfts\]' \
+grep -q 'static let holdingsDoors: \[WalletSection\] = \[.holdingAccounts, .apps, .positions, .nfts\]' \
   Casberi/Casberi/Model/WalletSection.swift \
   || fail "NFTs is not one of Holdings' doors — it would be a tile again (prd §1048, §1480)"
 ok "the NFT rows stand behind Holdings' NFTs door, in Holdings' box (§124a, §1048, §1480)"

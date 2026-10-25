@@ -58,7 +58,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case threats
 
     // ── Holdings' doors ──────────────────────────────────────────────────────
-    /// Each account's balance: the wallets and the accounts apps hold.
+    /// Each wallet you follow, and its balance (prd §1503).
     case holdingAccounts
     /// Lending, perps, liquidity, stakes and orders (prd §1107).
     case positions
@@ -84,8 +84,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// its tile, §1498).
     static let homeDoors: [WalletSection] = [.yourAccount, .following, .needsYou,
                                              .permissions, .threats]
-    /// Holdings' doors (prd §1480 item 4).
-    static let holdingsDoors: [WalletSection] = [.holdingAccounts, .positions, .apps, .nfts]
+    /// Holdings' doors (prd §1480 item 4, §1503): whose, then what.
+    static let holdingsDoors: [WalletSection] = [.holdingAccounts, .apps, .positions, .nfts]
     /// Spending's doors (prd §1480 item 5).
     static let spendingDoors: [WalletSection] = [.subscriptions, .places, .fees]
 
@@ -123,8 +123,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .permissions:     return String(localized: "Permissions")
         case .threats:         return String(localized: "Threats")
         case .markets:         return String(localized: "Markets")
-        // Where the money sits: a wallet, or an account an app holds (§1480).
-        case .holdingAccounts: return String(localized: "Accounts")
+        // The wallets you follow, by balance; Home's Following is where you
+        // add and remove them (§1503).
+        case .holdingAccounts: return String(localized: "Following")
         case .positions:       return String(localized: "Positions")
         case .apps:            return String(localized: "Apps")
         case .nfts:            return String(localized: "NFTs")
@@ -147,9 +148,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .permissions:     return String(localized: "Who can spend from you")
         case .threats:         return String(localized: "What's trying to fool you")
         case .markets:         return String(localized: "What you watch")
-        case .holdingAccounts: return String(localized: "What each account holds")
+        case .holdingAccounts: return String(localized: "What each wallet you follow holds")
         case .positions:       return String(localized: "Money lent, pooled, staked or held as a perp")
-        case .apps:            return String(localized: "The apps that made you a wallet")
+        case .apps:            return String(localized: "What each app holds for you")
         case .nfts:            return String(localized: "Your collections")
         case .subscriptions:   return String(localized: "What renews, and what it costs you")
         case .places:          return String(localized: "Where your money went")
@@ -178,7 +179,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .permissions:     return String(localized: "No permissions")
         case .threats:         return String(localized: "Nothing to fool you")
         case .markets:         return nil
-        case .holdingAccounts: return String(localized: "No accounts")
+        case .holdingAccounts: return String(localized: "No wallets you follow")
         case .positions:       return String(localized: "No positions")
         case .apps:            return String(localized: "No apps")
         case .nfts:            return String(localized: "No collections")
@@ -215,11 +216,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .markets:
             return nil
         case .holdingAccounts:
-            return String(localized: "Each wallet's balance, and what an app holds for you.")
+            return String(localized: "Each wallet you follow, and what it holds.")
         case .positions:
             return String(localized: "Money lent, pooled, staked or held as a perp.")
         case .apps:
-            return String(localized: "The apps that made you a wallet, with what each holds.")
+            return String(localized: "What each app holds for you, largest first.")
         case .nfts:
             return String(localized: "The collections you chose to show.")
         case .subscriptions:

@@ -78,8 +78,8 @@ check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
       "the tiles and the doors list every case once (prd §1480)")
 check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats],
       "Home's doors are Your account, Following, Needs you, Permissions, Threats (prd §1480, §1498)")
-check(WalletSection.holdingsDoors == [.holdingAccounts, .positions, .apps, .nfts],
-      "Holdings' pages are Accounts, Positions, Apps, NFTs (Tokens is its sheet) (prd §1480)")
+check(WalletSection.holdingsDoors == [.holdingAccounts, .apps, .positions, .nfts],
+      "Holdings' pages are Following, Apps, Positions, NFTs (You narrows, Tokens is its sheet) (prd §1503)")
 check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
       "Spending's doors are Subscriptions, Places, Fees (prd §1480)")
 // A page goes back to the page it opened from (prd §1480 item 9).
@@ -87,7 +87,7 @@ for s in WalletSection.order { check(s.parent == nil && s.isTile, "\(s.rawValue)
 for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes back to Home") }
 for s in WalletSection.holdingsDoors { check(s.parent == .holdings, "\(s.rawValue) goes back to Holdings") }
 for s in WalletSection.spendingDoors { check(s.parent == .spending, "\(s.rawValue) goes back to Spending") }
-check(WalletSection.holdingAccounts.label == "Accounts", "Holdings' Accounts keeps the word: where the money sits (prd §1480)")
+check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you follow read Following, the word Home uses (prd §1503)")
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
@@ -568,13 +568,17 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not Accounts, Tokens, Positions, Apps, then NFTs (prd §1480)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not You, Following, Apps, Tokens, Positions, then NFTs (prd §1503)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
 body = m.group(0) if m else ""
-order = [body.find(k) for k in ("walletDoor(.holdingAccounts", "feedSheet = .walletTokens",
-                                "walletDoor(.positions", "walletDoor(.apps", "walletDoor(.nfts")]
+order = [body.find(k) for k in ("walletDoor(.yourAccount", "walletDoor(.holdingAccounts", "walletDoor(.apps",
+                                "feedSheet = .walletTokens", "walletDoor(.positions", "walletDoor(.nfts")]
+# Whose money it is says money, never a count (user: "i don't care that i
+# have 90 apps. i care about the total of tokens in those apps").
+if '.count)")' in body:
+    sys.exit(1)
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
 # Tokens is a door on Holdings since prd §1480, opening every token in its
