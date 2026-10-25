@@ -62,7 +62,8 @@ enum WalletUnwatch {
     /// otherwise.
     static func perform(_ entry: AddressBook.Entry,
                         context: ModelContext,
-                        chrome: ShellChrome) {
+                        chrome: ShellChrome,
+                        bridges: BridgeStore) {
         let wallet = WalletStore.shared
         guard let i = wallet.addresses.firstIndex(where: {
             wallet.scopeMatches(entry.address, scope: $0.address)
@@ -85,13 +86,31 @@ enum WalletUnwatch {
             if !keepsEntry { AddressBook.shared.remove(entry.address) }
         }
         FollowPrune.pruneUnwatchedWallets(context: context)
-        chrome.flash(keepsEntry
-                     ? String(localized: "Stopped following · \(name) is still in your book")
-                     : String(localized: "Stopped following \(name)"),
+        let dropped = dropRiders(of: gone, context: context, bridges: bridges)
+        let said = keepsEntry
+            ? String(localized: "Stopped following · \(name) is still in your book")
+            : String(localized: "Stopped following \(name)")
+        chrome.flash(dropped.isEmpty ? said
+                     : said + " · " + String(localized: "\(ListFormatter.localizedString(byJoining: dropped)) disconnected"),
                      action: .init(label: String(localized: "Undo")) {
                          undo(gone, label: label, context: context)
                      },
                      seconds: 4)
+    }
+
+    /// **WHAT RODE THE WALLET LEAVES WITH IT, AT ONCE (prd §1504, user: "it
+    /// shouldn't be optional it should happen when you unfollow
+    /// automatically").** A Safe no follow reaches any more is forgotten now,
+    /// not at the next launch (§1330), and the seats riding the follows are
+    /// reconciled. Privy is not one of them: it is its own sign-in, and its
+    /// apps stand whatever you follow (user: "with privy you have to sign
+    /// in"). Returns what disconnected, for the flash.
+    @discardableResult
+    static func dropRiders(of address: String, context: ModelContext, bridges: BridgeStore) -> [String] {
+        SafeBridge.forgetUnfollowed(context: context)
+        let hadSafe = bridges.bridges.contains { $0.id == "safe" }
+        bridges.reconcileWalletSeats()
+        return hadSafe && !bridges.bridges.contains(where: { $0.id == "safe" }) ? ["Safe"] : []
     }
 
     /// Puts the watch back, and goes and gets what it pruned.

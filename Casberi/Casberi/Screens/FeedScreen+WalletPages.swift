@@ -115,10 +115,13 @@ extension FeedScreen {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// The accounts Following lists: every slot but All and your own.
+    /// The accounts Following lists: the wallets you follow, never All, your
+    /// own, or an app the Wallet folded in (prd §1504, user: "i'm nto
+    /// following any wallets so why would it show Safe") — an app is
+    /// Holdings' Apps, and the account menu still picks it.
     var walletFollowingSlots: [DSAccountSlot] {
         walletAccountSlots.filter { slot in
-            !slot.id.isEmpty && !Self.isYourAccount(slot.id)
+            !slot.id.isEmpty && !Self.isYourAccount(slot.id) && !RoomAccounts.isSeat(slot.id)
         }
     }
 

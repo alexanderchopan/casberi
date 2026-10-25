@@ -110,7 +110,7 @@ def self_test():
         (SCREENS + "/FeedScreen+Subscriptions.swift", ".contextMenu { stopTrackingMenu(item) }", "", "WalletSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+MergedRoom.swift", ".contextMenu { stopTrackingMenu(item) }", "", "MailSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+Following.swift", ".contextMenu { stopFollowingMenu(item, room) }", "", "FollowingRow has no hold menu"),
-        (WALLETS, "WalletUnwatch.perform(entry, context: context, chrome: chrome)", "", "followed wallet's row has no hold menu"),
+        (WALLETS, "WalletUnwatch.perform(entry, context: context, chrome: chrome, bridges: bridges)", "", "followed wallet's row has no hold menu"),
     ]
     clean = audit(ROOT)
     if clean:

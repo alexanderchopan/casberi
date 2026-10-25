@@ -149,7 +149,7 @@ extension FeedScreen {
                 // your own account: it holds this phone's keys.
                 if !Self.isYourAccount(address), let entry = AddressBook.shared.entry(for: address) {
                     Button(role: .destructive) {
-                        WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)
+                        WalletUnwatch.perform(entry, context: modelContext, chrome: chrome, bridges: bridges)
                     } label: {
                         Label(String(localized: "Stop following"), systemImage: "trash")
                     }

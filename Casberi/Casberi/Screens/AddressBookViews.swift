@@ -613,10 +613,10 @@ struct AddressCard: View {
     // and the same reasoning the `bridges` note below gives applies: an unread
     // `@Environment` is a standing claim that this sheet depends on something
     // it does not.
-    // `bridges` retired here 2026-08-24 (prd §461) — it existed for one line,
-    // `reconcileWalletSeats()` inside `toggleWatch`, and this card no longer
-    // watches anything. An unread `@Environment` is harmless but it is also a
-    // standing claim that this sheet needs the catalog store, which it does not.
+    // `bridges` is back (prd §1504): the unwatch this card raises drops the
+    // seats that rode the wallet (Safe, Privy) at once, through the catalog
+    // store. §461 retired it while the card watched nothing.
+    @Environment(BridgeStore.self) private var bridges
     private var book = AddressBook.shared
     /// Naming happens IN PLACE now (prd §444) — see `nameField`.
     @State private var editingName = false
@@ -1063,7 +1063,7 @@ struct AddressCard: View {
             // chain to read.
             if isWatched {
                 Button(role: .destructive) {
-                    WalletUnwatch.perform(current, context: modelContext, chrome: chrome)
+                    WalletUnwatch.perform(current, context: modelContext, chrome: chrome, bridges: bridges)
                 } label: { Label("Stop following", systemImage: "eye.slash") }
             } else if WalletStore.shared.canWatchMore, !current.kind.isMonogram {
                 Button {

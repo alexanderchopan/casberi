@@ -650,8 +650,18 @@ guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = 
   "the Accounts header's + no longer raises Follow an account (prd §1410, §1090)"
 guard FeedScreen+WalletHome.swift "route.present(.apps)" \
   "Connect an app no longer lands on the catalogue (prd §1410, §1234)"
-guard FeedScreen+WalletHome.swift "WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)" \
+guard FeedScreen+WalletHome.swift "WalletUnwatch.perform(entry, context: modelContext, chrome: chrome, bridges: bridges)" \
   "an account row's hold lost Stop following (prd §1302, §1410)"
+# Following is wallets only, and what rode a wallet leaves with it (prd §1504,
+# user: "i'm nto following any wallets so why would it show Safe").
+guard FeedScreen+WalletPages.swift "!Self.isYourAccount(slot.id) && !RoomAccounts.isSeat(slot.id)" \
+  "Following lists the apps the Wallet folded in again — a connected Safe reads as followed (prd §1504)"
+WATCHING="Casberi/Casberi/Screens/WalletWatching.swift"
+strip_comments "$WATCHING" > "$work/WalletWatching.swift.bare"
+guard WalletWatching.swift "let dropped = dropRiders(of: gone, context: context, bridges: bridges)" \
+  "an unfollow no longer drops what rode the wallet — Privy and Safe outlive it (prd §1504)"
+guard WalletWatching.swift "SafeBridge.forgetUnfollowed(context: context)" \
+  "an unfollow leaves the Safes it led to until the next launch again (prd §1504, §1330)"
 guard FeedScreen+Scroll.swift "if category == Self.accountsName {" \
   "the Accounts header lost its + (prd §1410)"
 guard FeedScreen+Scroll.swift "adds = walletAccountAdds" \

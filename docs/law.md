@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1641 of 1710 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1642 of 1711 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1396,7 +1396,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
 - §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a, §1078, §1105)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (part superseded by §1078)
-- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e)
+- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e, §1504)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
@@ -1711,7 +1711,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1327 — A tab bar: Feed · Day · Wallet · Notes · Library, and Search (ruled, not built; retires §100's "no tab bar" on the ph… (amended by §1344)
 - §1328 — The Feed's row is its categories (amends §1327 item 8)
 - §1329 — Day leads with Needs you, gathered from every place (builds §1327 item 9; Wallet's Home and Work's Coming up keep the…
-- §1330 — Spending counts only what you follow, and never a trade; an unfollow takes the Safes it led to (amends §1201 item 2,…
+- §1330 — Spending counts only what you follow, and never a trade; an unfollow takes the Safes it led to (amends §1201 item 2,… (amended by §1504)
 - §1331 — The Wallet's Home, first pass: a bare line, the pick lit, Overview without sub-lines; the Feed's Newest is the Feed's… (amended by §1471)
 - §1332 — A Wise transfer is a receipt; an empty history draws nothing
 - §1333 — "Needs you", never "Your turn"; nothing to follow on the lock screen when it waits on you (amends §1332)
@@ -1858,7 +1858,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503)
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1882,6 +1882,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every…
+- §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 
 ## Dead rulings → what replaced them (generated)
 

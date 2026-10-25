@@ -1024,7 +1024,7 @@ struct SettingsHome: View {
                     .contextMenu {
                         if let entry = AddressBook.shared.entry(for: addr.address) {
                             Button(role: .destructive) {
-                                WalletUnwatch.perform(entry, context: context, chrome: chrome)
+                                WalletUnwatch.perform(entry, context: context, chrome: chrome, bridges: bridges)
                             } label: {
                                 Label(String(localized: "Stop following"), systemImage: "trash")
                             }
