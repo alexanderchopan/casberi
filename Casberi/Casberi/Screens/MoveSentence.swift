@@ -121,8 +121,12 @@ struct MoveSentence: View {
 
     // MARK: - Buy (prd §1473)
 
-    /// Buy stands on the verbs' line only with an account on this phone.
-    @State private var buyAvailable = false
+    /// Buy stands on the verbs' line only with an account on this phone —
+    /// known from the first frame (one `UserDefaults` read), never after the
+    /// balances load: Buy arriving a second late read as an error (user,
+    /// 2026-10-24: "it takes a second or two before it does so it looks like
+    /// an error").
+    @State private var buyAvailable = BitrefillX402.available
     @State private var buyGroup: BitrefillBuy.Group?
     @State private var buyProduct: BitrefillBuy.Product?
     /// Bitrefill's 25 most popular in the country, read once per visit.
@@ -1330,6 +1334,16 @@ struct MoveSentence: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            }
+            // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
+            // elsewhere sends it all here, each send approved there — §1484's
+            // bar, the transaction filled, never an address to paste. It needs
+            // no network picked, so it stands from the first moment; the
+            // demo's other wallet is made up too, and nothing connects.
+            if elsewhere == nil {
+                DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
+                    ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
+                }
             }
         } else if let note = lineNote {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {

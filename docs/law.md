@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1643 of 1712 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1645 of 1714 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -403,7 +403,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §109 — HomeKit joins the catalog — live accessory state, not an event history
 - §110 — SpeechAnalyzer — the iOS 26 voice-transcription path, alongside SFSpeechRecognizer
 - §111 — 1Claw joins the catalog — the agents' vault, grants not secrets
-- §112 — Smart accounts without the finance-app tripwire — the preparing surface (amended by §425)
+- §112 — Smart accounts without the finance-app tripwire — the preparing surface (amended by §425, §1506)
 - §114 — Catalog re-shelving: Markets leads, Onchain dissolved, Wallet its own, Farcaster social
 - §115 — DeFiLlama price backstop — holdings stop vanishing, no new UI
 - §116 — Home: quiet the bento's chrome, restore one synthesized line
@@ -449,7 +449,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §159 — The crown pour goes permanent, and up to the shell (amended by §204)
 - §160b — Both boxed — the wallet room's two reads become parcels
 - §161 — Settings speaks the feed's row grammar
-- §163 — Read-only exchange seats — the balance that isn't onchain
+- §163 — Read-only exchange seats — the balance that isn't onchain (amended by §1506)
 - §164 — The feed-head doctrine — one boxed aggregate; rows own recency (part superseded by §832)
 - §165 — The whisper carries the day brief (part superseded by §550, §1047)
 - §166 — The Today brief — the mosaic, with the agent's own read on top [+1 sub-entries]
@@ -1862,7 +1862,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
-- §1484 — Receive has no exchange door (amended by §1486)
+- §1484 — Receive has no exchange door (amended by §1486, §1506)
 - §1485 — Receive from another network: a chain's own coin quotes 0.01, a floor refusal is asked again over it, and Relay's raw…
 - §1486 — Receive picks its network, always (amended by §1488, §1501)
 - §1487 — Your account wears your face and is named You
@@ -1884,6 +1884,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every…
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
+- §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
+- §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 
 ## Dead rulings → what replaced them (generated)
 

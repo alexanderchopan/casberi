@@ -2450,6 +2450,11 @@ harness "World ID pure-logic self-test" "worldid self-test" "scripts/worldid-sel
 # timeless transfer passed through, a hex block or timestamp read as decimal, a
 # timed transfer rewritten from the cache, and `fetchAlchemy` bypassing the fill.
 harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-times-selftest.sh" "the transfer-times self-test failed — run scripts/transfer-times-selftest.sh"
+# Receive › From another wallet (prd §1506). What another wallet of yours is
+# asked to send: the network's own coin last and short of the gas, no token
+# asked for on a network with no coin to pay, nothing sent to a Relay route it
+# does not take or under its floor, and `transfer` calldata to the word.
+harness "Wallet-sweep self-test" "wallet sweep self-test" "scripts/wallet-sweep-selftest.sh" "the wallet-sweep self-test failed — run scripts/wallet-sweep-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is

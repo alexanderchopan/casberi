@@ -5339,6 +5339,16 @@ enum ProbeHooks {
         // Wallet screen's promise is broken and this probe is how we find out.
         // Pair with `-wcProjectID <id>`; with no id it logs the honest
         // unavailable line (the paste-only degrade).
+        // `-moveFromWallet sample|live` raises Receive › From another wallet
+        // (prd §1506) four seconds after launch: `sample` over made-up
+        // holdings with no connection, `live` through WalletConnect.
+        Hook(key: "moveFromWallet") { value, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(4))
+                NSLog("[Casberi] moveFromWallet: %@", value)
+                ReceiveFromWalletSheet.present(account: YourAccountDemo.shownAddress ?? "", sample: value == "sample")
+            }
+        },
         Hook(key: "wcConnectProbe") { _, _ in
             guard WalletConnectBridge.isAvailable else {
                 NSLog("WalletConnect probe: unavailable (no project id) — paste-only")

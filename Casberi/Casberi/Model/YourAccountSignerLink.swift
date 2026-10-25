@@ -55,7 +55,10 @@ enum YourAccountSignerLink {
     /// name the Signer. Several requests then ride it, one per network.
     /// With no Signer yet (choosing one at Create, prd §1457), the wallet's
     /// first address is the Signer, and nothing is asked over the session.
-    static func connect(signer: String?, chainIds: [Int], timeout: Duration = .seconds(300),
+    /// `method` is the one thing the session may ask: a signature here, a
+    /// send for Receive › From another wallet (prd §1506).
+    static func connect(signer: String?, chainIds: [Int], method: String = method,
+                        timeout: Duration = .seconds(300),
                         show: @MainActor (URL) -> Void) async throws -> Pairing {
         let chains = chainIds.compactMap { Blockchain("eip155:\($0)") }
         guard WalletConnectBridge.isAvailable, !chains.isEmpty else { throw Failure.unavailable }
@@ -160,7 +163,7 @@ enum YourAccountSignerLink {
         }
     }
 
-    private static func response(to id: RPCID, timeout: Duration) async -> RPCResult? {
+    static func response(to id: RPCID, timeout: Duration) async -> RPCResult? {
         await withTaskGroup(of: RPCResult?.self) { group in
             group.addTask {
                 for await response in Sign.instance.sessionResponsePublisher.values where response.id == id {

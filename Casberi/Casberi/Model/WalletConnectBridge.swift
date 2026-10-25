@@ -159,7 +159,7 @@ enum WalletConnectBridge {
 
         let metadata = AppMetadata(
             name: "Casberi",
-            description: "Follow an account's activity — read-only.",
+            description: "Follow your accounts. A send is asked only to move your own money into Casberi.",
             url: "https://casberi.app",
             icons: [],
             redirect: redirect
