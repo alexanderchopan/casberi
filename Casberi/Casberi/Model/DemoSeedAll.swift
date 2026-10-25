@@ -3387,7 +3387,7 @@ enum DemoSeedAll {
         // and bought ETH on Base through a Relay deposit address, so
         // Spending's Round-ups door draws, beside the $2.60 still waiting
         // (`YourAccountDemo`), and neither counts as spending.
-        for (i, days) in [3, 14].enumerated() {
+        for (i, days) in [3.0, 14.0].enumerated() {
             let deposit = "0x7e1a\(i)c0de5e7d0f4a9b2c6e8d1f3a5b7c9e0d2f\(i)"
             out.append(row(.transaction, "Sent 5 USDC to Relay",
                            source: "Wallet", ref: "demo:wallet:roundup:\(i)", days: days, hour: 12,

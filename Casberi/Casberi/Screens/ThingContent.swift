@@ -2362,7 +2362,7 @@ struct FactRows: View {
             guard let url = URL(string: fact.value),
                   url.scheme == "https" || url.scheme == "http" else { return nil }
             return url
-        case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee:
+        case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp:
             return nil
         }
     }
