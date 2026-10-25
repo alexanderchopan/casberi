@@ -436,6 +436,11 @@ struct SafeSignBlock: View {
             // Safe's last 100 transactions as `multiSend`, so this is not a
             // branch for an exotic case — it is the one most people meet.
             batchList(ready)
+            // The co-signer's checks (prd §1514): an unlimited approval in
+            // red words, then Details — the nonce, the EIP-712 Digest, the
+            // Domain and Message Hashes, Raw transaction.
+            SafeSignDetails(chainId: ready.chainId, safe: ready.safeAddress, tx: ready.tx,
+                            calls: signCalls(ready), words: signWords(ready))
             // An N-of-N Safe is stated, never REFUSED over (prd §426
             // amendment). Declining to sign here would be the lock itself: in
             // a 2-of-2 that names this phone, our refusal is what stops the
@@ -461,6 +466,19 @@ struct SafeSignBlock: View {
                 Task { await sign(ready) }
             }
         }
+    }
+
+    /// The calls the transaction makes: a batch's entries, else the one.
+    private func signCalls(_ ready: SafeSigner.Ready) -> [(to: String, data: String)] {
+        let batch = ready.reading.batchCalls
+        return batch.isEmpty ? [(ready.tx.to, ready.tx.data)] : batch.map { ($0.to, $0.data) }
+    }
+
+    /// The same calls in this block's own words, for Raw transaction.
+    private func signWords(_ ready: SafeSigner.Ready) -> [String] {
+        let batch = ready.reading.batchCalls
+        guard !batch.isEmpty else { return [reading(ready)] }
+        return batch.map { sentence(for: $0.reading, to: $0.to, value: $0.value, hash: ready.safeTxHash) }
     }
 
     /// What the calldata SAYS, or an honest refusal to say (§8.5). A fluent

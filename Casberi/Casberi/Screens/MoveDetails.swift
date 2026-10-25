@@ -176,17 +176,38 @@ struct MoveDetails: View {
 /// for a SafeOp, the "Operation hash" for the session key's), and the
 /// operation's calldata with its byte count and its Calldata Digest, each
 /// with Copy. It takes the sentence's place in Move, its title the way back.
+/// What Raw transaction shows, whoever signs it: Move's own operation, or
+/// a Safe transaction the co-signer is asked for (prd §1514).
+struct RawTransaction: Equatable {
+    let words: [YourAccountPreview.Step]
+    let hash: [UInt8]
+    let hashKind: YourAccountPreview.HashKind
+    let callData: [UInt8]
+}
+
+extension YourAccountChain.Preview {
+    var raw: RawTransaction? {
+        hash.map { RawTransaction(words: words, hash: $0, hashKind: hashKind, callData: callData) }
+    }
+}
+
 struct MoveRawPage: View {
-    let preview: YourAccountChain.Preview?
-    let onBack: () -> Void
+    let raw: RawTransaction?
+    var refusal: String? = nil
+    /// Move's page draws its title, the way back; the Safe's sign block
+    /// opens it in place and has none.
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             // The title row indents itself to the rows' column from the
             // chassis inset; Move's page already stands in that column.
-            DSRoomTitleRow(title: String(localized: "Move"), pick: String(localized: "Raw transaction"), onTitle: onBack)
-                .padding(.leading, -DSRoomChassis.titleIndent)
-            if let p = preview, let hash = p.hash {
+            if let onBack {
+                DSRoomTitleRow(title: String(localized: "Move"), pick: String(localized: "Raw transaction"), onTitle: onBack)
+                    .padding(.leading, -DSRoomChassis.titleIndent)
+            }
+            if let p = raw {
+                let hash = p.hash
                 section(String(localized: "What it does")) {
                     ForEach(Array(p.words.enumerated()), id: \.offset) { n, step in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
@@ -232,7 +253,7 @@ struct MoveRawPage: View {
                         .fixedSize(horizontal: false, vertical: true)
                     DSCopyRow(value: data, label: "Copy calldata", sensitive: false)
                 }
-            } else if let refusal = preview?.refusal {
+            } else if let refusal {
                 Text(verbatim: refusal).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             } else {

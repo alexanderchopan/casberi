@@ -31,6 +31,9 @@ KNOWN_NON_REACH=(
   hyperevmscan.io monadscan.com worldscan.org explorer.arc.io explore.tempo.xyz
   # A Twitch channel page, opened by a stream's Play tile (prd §1363).
   www.twitch.tv
+  # A made-up scam origin (prd §1514): the text `-pairVerifyProbe scam`
+  # draws in "Really is", DEBUG only, never fetched.
+  safe-global-app.xyz
   # Linea's explorer (2026-09-20) — the permalink a MetaMask Card spend row
   # opens in the PERSON's browser (as `gnosisscan.io` was for the Gnosis Pay
   # row until prd §1318 removed the seat). The seat's own two RPC hosts (`rpc.linea.build`,

@@ -48,7 +48,21 @@ enum SafePeer {
         var asks: [PendingAsk] = []
         var pairing = false
         var lastRefusal: String?
+        /// A pairing Reown Verify could not confirm, held until the person
+        /// answers (prd §1514): paired on "Pair anyway", refused on "Don't pair".
+        var check: PairCheck?
     }
+
+    /// A proposal waiting on the person: who it says it is, and what Verify said.
+    struct PairCheck: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let url: String
+        let verdict: SafeSignChecks.Pairing
+    }
+
+    /// The proposal behind `state.check`; nil for a DEBUG preview.
+    private static var held: Session.Proposal?
 
     struct PeerSession: Identifiable, Equatable {
         let topic: String
@@ -86,8 +100,12 @@ enum SafePeer {
 
         Sign.instance.sessionProposalPublisher
             .receive(on: DispatchQueue.main)
-            .sink { proposal, _ in
-                Task { @MainActor in await handle(proposal: proposal) }
+            .sink { proposal, verify in
+                // Reown Verify's word on where the request came from (prd
+                // §1514): no configuration of ours; a nil context is unknown.
+                let validation = verify.map { "\($0.validation)" }
+                let origin = verify?.origin
+                Task { @MainActor in await handle(proposal: proposal, validation: validation, origin: origin) }
             }
             .store(in: &cancellables)
         Sign.instance.sessionRequestPublisher
@@ -155,7 +173,57 @@ enum SafePeer {
 
     // MARK: - The proposal
 
-    private static func handle(proposal: Session.Proposal) async {
+    /// **PAIRING ASKS REOWN VERIFY FIRST (prd §1509 item 3, §1514).** A site
+    /// states its own name, so only Verify can say where the request came
+    /// from. Confirmed, it pairs as it always did; anything else is held for
+    /// the person — amber "Couldn't confirm it's …", red for a reported scam.
+    private static func handle(proposal: Session.Proposal, validation: String?, origin: String?) async {
+        let verdict = SafeSignChecks.pairing(validation: validation, origin: origin,
+                                             claimedURL: proposal.proposer.url, claimedName: proposal.proposer.name)
+        #if DEBUG
+        NSLog("pairVerify| %@ validation=%@ origin=%@ claimed=%@", proposal.proposer.name, validation ?? "nil",
+              origin ?? "nil", proposal.proposer.url)
+        #endif
+        guard verdict == .confirmed else {
+            // One held at a time: an earlier one still waiting is refused, so
+            // no proposal hangs until it expires.
+            if let earlier = held, earlier.id != proposal.id {
+                try? await Sign.instance.rejectSession(proposalId: earlier.id, reason: .userRejected)
+            }
+            held = proposal
+            state.check = PairCheck(id: proposal.id, name: proposal.proposer.name, url: proposal.proposer.url, verdict: verdict)
+            return
+        }
+        await approve(proposal)
+    }
+
+    /// The person's answer to a held pairing.
+    static func answer(pair: Bool) async {
+        let proposal = held
+        held = nil
+        state.check = nil
+        guard let proposal else { return }
+        if pair {
+            await approve(proposal)
+        } else {
+            try? await Sign.instance.rejectSession(proposalId: proposal.id, reason: .userRejected)
+        }
+    }
+
+    #if DEBUG
+    /// `-pairVerifyProbe valid|unknown|scam` (prd §1514): the pair block's
+    /// three states with no live site; nothing is held, so neither verb pairs.
+    static func previewCheck(_ kind: String) {
+        let verdict = SafeSignChecks.pairing(validation: kind == "unknown" ? nil : kind,
+                                             origin: kind == "scam" ? "https://safe-global-app.xyz" : nil,
+                                             claimedURL: "https://app.safe.global", claimedName: "Safe{Wallet}")
+        NSLog("pairVerify| preview %@ → %@", kind, SafeSignChecks.line(verdict) ?? "confirmed: nothing drawn")
+        state.check = verdict == .confirmed ? nil
+            : PairCheck(id: "preview", name: "Safe{Wallet}", url: "https://app.safe.global", verdict: verdict)
+    }
+    #endif
+
+    private static func approve(_ proposal: Session.Proposal) async {
         var chains: [Blockchain] = []
         var accounts: [Account] = []
         for chainId in SafeSigner.chainIDs {

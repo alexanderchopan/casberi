@@ -230,10 +230,11 @@ KNOWN_PROPER: set[str] = {
     # Tor, the network every Wallet read goes through (prd §1495): "Through
     # Tor", "refuses Tor" name the network, as "Relay" names Relay.
     "Tor",
-    # ERC-8213's terms (prd §1509): "EIP-712 Digest" and "Calldata Digest"
-    # are what the ERC says a wallet MUST label these values, exactly, so a
-    # hardware wallet and this page name the same hash the same way.
-    "Digest",
+    # ERC-8213's terms (prd §1509, §1514): "EIP-712 Digest", "Calldata
+    # Digest", "Domain Hash" and "Message Hash" are what the ERC says a
+    # wallet MUST label these values, exactly, so a hardware wallet and this
+    # page name the same hash the same way.
+    "Digest", "Hash",
     # Aztec's fee token (prd §1270, §1271): "Fee Juice" is the name Aztec
     # gives it, as "Optic ID" is Apple's.
     "Fee", "Juice",

@@ -64919,6 +64919,34 @@
         }
       }
     },
+    "Copy digest" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar digest"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダイジェストをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다이제스트 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制摘要"
+          }
+        }
+      }
+    },
     "Copy hash" : {
       "localizations" : {
         "es" : {
@@ -65562,6 +65590,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法查看你的提及——请稍后重试。"
+          }
+        }
+      }
+    },
+    "Couldn't confirm it's %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo confirmar que sea %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ であることを確認できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@인지 확인할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法确认它是 %@"
           }
         }
       }
@@ -73857,6 +73913,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "美元,如 5M"
+          }
+        }
+      }
+    },
+    "Domain Hash" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Domain Hash"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Domain Hash"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Domain Hash"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Domain Hash"
+          }
+        }
+      }
+    },
+    "Don't pair" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No vincular"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ペアリングしない"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "페어링 안 함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不配对"
           }
         }
       }
@@ -98277,6 +98389,40 @@
         }
       }
     },
+    "Lets %@ move all of this Safe's %@, with no end." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lets %1$@ move all of this Safe's %2$@, with no end."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permite a %1$@ mover todos los %2$@ de esta Safe, sin límite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ がこの Safe のすべての %2$@ を無期限に移動できるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@이(가) 이 Safe의 모든 %2$@을(를) 무기한 옮길 수 있게 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许 %1$@ 无限期转移此 Safe 的全部 %2$@。"
+          }
+        }
+      }
+    },
     "Lets %@ move funds without any signature at all." : {
       "localizations" : {
         "es" : {
@@ -98301,6 +98447,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "允许 %@ 在完全不需要签名的情况下转移资金。"
+          }
+        }
+      }
+    },
+    "Lets %@ spend all of this Safe's %@, with no end." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lets %1$@ spend all of this Safe's %2$@, with no end."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permite a %1$@ gastar todo el %2$@ de esta Safe, sin límite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ がこの Safe のすべての %2$@ を無期限に使えるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@이(가) 이 Safe의 모든 %2$@을(를) 무기한 쓸 수 있게 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许 %1$@ 无限期花费此 Safe 的全部 %2$@。"
           }
         }
       }
@@ -102176,6 +102356,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "消息"
+          }
+        }
+      }
+    },
+    "Message Hash" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Message Hash"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Message Hash"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Message Hash"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Message Hash"
           }
         }
       }
@@ -113744,6 +113952,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未保存"
+          }
+        }
+      }
+    },
+    "Not known" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desconocido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不明"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未知"
           }
         }
       }
@@ -128219,6 +128455,62 @@
         }
       }
     },
+    "Pair anyway" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vincular de todos modos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それでもペアリング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그래도 페어링"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍要配对"
+          }
+        }
+      }
+    },
+    "Pair as a co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vincular como cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者としてペアリング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자로 페어링"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "作为共同签名人配对"
+          }
+        }
+      }
+    },
     "Pair with %@" : {
       "localizations" : {
         "es" : {
@@ -139549,6 +139841,34 @@
         }
       }
     },
+    "Really is" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En realidad es"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "実際は"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실제로는"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "实际是"
+          }
+        }
+      }
+    },
     "Reason" : {
       "localizations" : {
         "es" : {
@@ -143916,6 +144236,34 @@
         }
       }
     },
+    "Reported as a scam site. It isn't %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Denunciado como sitio de estafa. No es %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "詐欺サイトとして報告されています。%@ ではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사기 사이트로 신고되었습니다. %@이(가) 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已被举报为诈骗网站。它不是 %@。"
+          }
+        }
+      }
+    },
     "Reports success — the money did not move." : {
       "localizations" : {
         "es" : {
@@ -146758,6 +147106,34 @@
         }
       }
     },
+    "Safe's safeTxHash" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "safeTxHash de Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe の safeTxHash"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe의 safeTxHash"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 的 safeTxHash"
+          }
+        }
+      }
+    },
     "Safe's service didn't take it" : {
       "localizations" : {
         "es" : {
@@ -147944,6 +148320,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在保存你的 %@ 存档"
+          }
+        }
+      }
+    },
+    "Says it is" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dice ser"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名乗っている名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자칭"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自称"
           }
         }
       }

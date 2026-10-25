@@ -1063,6 +1063,13 @@ struct RootShell: View {
                     sceneState.route.present(.casberi)
                 }
             }
+            // `-openSafe YES` — the Safe screen itself (prd §1514), for
+            // `-pairVerifyProbe` and `-safeSignPreview`: Safe's catalogue door
+            // leads to the Wallet, and its own screen opens only once connected.
+            if UserDefaults.standard.bool(forKey: "openSafe") {
+                sceneState.route.pushBridge(.safe)
+                NSLog("[Casberi] openSafe: pushed")
+            }
             // `-openAddresses YES` lands on Sources › Contacts, where the
             // directory lives since its own screen was deleted (prd §1323).
             if UserDefaults.standard.bool(forKey: "openAddresses") {

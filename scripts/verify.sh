@@ -2751,6 +2751,10 @@ harness "Move details self-test" "move-details self-test" "scripts/move-details-
 # one-way rule, OFAC's list guard, red over amber, the services' answers as
 # measured; and the second tap that replaced §1438b's block.
 harness "Move warnings self-test" "move-warnings self-test" "scripts/move-warnings-selftest.sh" "Move's warnings drifted — run scripts/move-warnings-selftest.sh"
+# The co-signer's checks (prd §1514): Verify's answer read (missing is
+# unknown), unlimited approvals from the bytes with selectors pinned, the
+# three EIP-712 hashes; and an unconfirmed pairing held, never auto-approved.
+harness "Safe sign checks self-test" "safe-sign-checks self-test" "scripts/safe-sign-checks-selftest.sh" "the co-signer's checks drifted — run scripts/safe-sign-checks-selftest.sh"
 
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 

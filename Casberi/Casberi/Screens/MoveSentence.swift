@@ -1648,7 +1648,7 @@ struct MoveSentence: View {
     }
 
     private var rawPage: some View {
-        MoveRawPage(preview: shownPreview) {
+        MoveRawPage(raw: shownPreview?.raw, refusal: shownPreview?.refusal) {
             withAnimation(DS.Motion.standard) { rawOpen = false }
             DSHaptic.selection()
         }

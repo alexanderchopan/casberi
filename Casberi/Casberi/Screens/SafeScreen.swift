@@ -106,6 +106,9 @@ struct SafeScreen: View {
                 connectBlock
                 signerBlock
                 enclaveBlock
+                #if DEBUG
+                signPreview
+                #endif
                 pairBlock
                 guardsBlock
                 requestBlock
@@ -127,6 +130,11 @@ struct SafeScreen: View {
             }
             enclavePresence = SafeEnclaveKey.presence()
             enclaveAddress = SafeEnclaveSigner.anyCachedAddress()
+            #if DEBUG
+            if let kind = UserDefaults.standard.string(forKey: "pairVerifyProbe"), !kind.isEmpty {
+                SafePeer.previewCheck(kind)
+            }
+            #endif
             Task { await readEnclave() }
             Task { await readGuards() }
         }
@@ -501,6 +509,9 @@ struct SafeScreen: View {
     /// The Safe web app, paired to this phone the way it pairs to a hardware
     /// wallet. A pasted `wc:` link in, one method offered out.
     @ViewBuilder private var pairBlock: some View {
+        // A pairing Verify could not confirm waits here for the person
+        // (prd §1514, canvas figure 10).
+        if let check = SafePeer.state.check { pairCheck(check) }
         if SafeSigner.hasAnyKey {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(SafePeer.state.sessions) { session in
@@ -541,6 +552,73 @@ struct SafeScreen: View {
             }
         }
     }
+
+    /// **PAIR AS A CO-SIGNER (prd §1509 item 3, §1514).** The site's name,
+    /// the line Verify's answer draws, and the two answers: "Pair anyway",
+    /// then the slab "Don't pair". A reported scam names what it says it is
+    /// and where it really came from.
+    private func pairCheck(_ check: SafePeer.PairCheck) -> some View {
+        let ink = check.verdict.red ? DS.destructiveInk : DS.attentionInk
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: SafeSignChecks.host(check.url) ?? check.url)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                Text("Pair as a co-signer").dsText(.heading24).foregroundStyle(DS.textPrimary)
+            }
+            if let line = SafeSignChecks.line(check.verdict) {
+                Text(verbatim: line).dsText(.body17).foregroundStyle(ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if case .scam(_, let says, let really) = check.verdict {
+                pairFact(String(localized: "Says it is"), says)
+                pairFact(String(localized: "Really is"), really ?? String(localized: "Not known"))
+            }
+            Button {
+                Task { await SafePeer.answer(pair: true) }
+            } label: {
+                Text("Pair anyway").dsText(.body17).foregroundStyle(ink).frame(minHeight: 44)
+            }
+            .buttonStyle(RowPress())
+            DSSlabDoor(title: String(localized: "Don't pair"), systemImage: "xmark", opens: false) {
+                Task { await SafePeer.answer(pair: false) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Its own block, apart from the rows above it.
+        .padding(.vertical, DS.Space.s6)
+    }
+
+    private func pairFact(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(verbatim: label).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: value).dsText(.body17).foregroundStyle(DS.textPrimary)
+        }
+        .frame(minHeight: 44)
+    }
+
+    #if DEBUG
+    /// `-safeSignPreview YES` (prd §1514): the sign block's new parts over a
+    /// sample transaction — USDC on Ethereum approved to 0xdef1…5eff for
+    /// everything — because a live ask needs a Safe this phone co-signs.
+    @ViewBuilder private var signPreview: some View {
+        if UserDefaults.standard.bool(forKey: "safeSignPreview") {
+            let spender = String(repeating: "0", count: 24) + "def1c0ded9bec7f1a1670819833240f027b25eff"
+            let data = "0x095ea7b3" + spender + String(repeating: "f", count: 64)
+            let tx = SafeTransaction(to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", value: "0", data: data, operation: 0,
+                                     safeTxGas: "0", baseGas: "0", gasPrice: "0",
+                                     gasToken: "0x0000000000000000000000000000000000000000",
+                                     refundReceiver: "0x0000000000000000000000000000000000000000", nonce: 42)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(verbatim: "Approve USDC").dsText(.body17).foregroundStyle(DS.textPrimary)
+                SafeSignDetails(chainId: 1, safe: "0x5A1E7C93b0d24F86a1C3E5b7d9f0A2C4E6B8d203", tx: tx,
+                                calls: [(tx.to, tx.data)], words: ["Approve USDC"], opened: true)
+            }
+            .padding(.vertical, DS.Space.s6)
+            .onAppear { NSLog("safeSignPreview| drawn") }
+        }
+    }
+    #endif
 
     static func pairSentence(_ error: SafePeer.PairError) -> String {
         switch error {
