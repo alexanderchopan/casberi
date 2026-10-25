@@ -49448,6 +49448,68 @@
         }
       }
     },
+    "Answers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Responde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "応答"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "응답"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有响应"
+          }
+        }
+      }
+    },
+    "Answers for chain %@, not %@'s %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Answers for chain %1$@, not %2$@'s %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Responde por la cadena %1$@, no por la %3$@ de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン %1$@ で応答。%2$@ の %3$@ ではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인 %1$@에 응답합니다. %2$@의 %3$@이(가) 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "响应的是链 %1$@，不是 %2$@ 的 %3$@"
+          }
+        }
+      }
+    },
     "Answers run on %@ until you add one" : {
       "localizations" : {
         "es" : {
@@ -52446,6 +52508,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在询问 Relay"
+          }
+        }
+      }
+    },
+    "Asking it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "問い合わせ中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "묻는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问"
           }
         }
       }
@@ -59162,6 +59252,34 @@
         }
       }
     },
+    "Casberi's list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La lista de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi のリスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 목록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 的列表"
+          }
+        }
+      }
+    },
     "Casberi's own options" : {
       "localizations" : {
         "es" : {
@@ -59466,6 +59584,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "链"
+          }
+        }
+      }
+    },
+    "Chain %@ · block %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chain %1$@ · block %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cadena %1$@ · bloque %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーン %1$@ · ブロック %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인 %1$@ · 블록 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链 %1$@ · 区块 %2$@"
           }
         }
       }
@@ -73131,6 +73283,34 @@
         }
       }
     },
+    "Did not answer as a node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No respondió como nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードとして応答しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드로 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未以节点身份响应"
+          }
+        }
+      }
+    },
     "Didn't go through" : {
       "localizations" : {
         "es" : {
@@ -75198,6 +75378,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每把密钥只用一次，永远无法再次使用——这正是防止这笔支出被重复的机制。它不会隐藏发送者。"
+          }
+        }
+      }
+    },
+    "Each network read from Casberi's list through Tor, or from a node of your own." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada red se lee de la lista de Casberi a través de Tor, o de un nodo propio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各ネットワークは Tor 経由で Casberi のリストから、または自分のノードから読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 네트워크는 Tor를 통해 Casberi 목록에서, 또는 내 노드에서 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每个网络通过 Tor 从 Casberi 的列表读取，或从你自己的节点读取。"
           }
         }
       }
@@ -113088,6 +113296,34 @@
         }
       }
     },
+    "Nodes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nodos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "节点"
+          }
+        }
+      }
+    },
     "Nonce" : {
       "localizations" : {
         "es" : {
@@ -113448,6 +113684,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未生效"
+          }
+        }
+      }
+    },
+    "Not an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No es una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소가 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不是地址"
           }
         }
       }
@@ -115408,6 +115672,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未上市，无可关注"
+          }
+        }
+      }
+    },
+    "Not used" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se usa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용 안 함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未使用"
           }
         }
       }
@@ -179659,6 +179951,34 @@
         }
       }
     },
+    "Use Casberi's list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar la lista de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi のリストを使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 목록 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用 Casberi 的列表"
+          }
+        }
+      }
+    },
     "Use multiple signatures to approve sensitive actions." : {
       "localizations" : {
         "es" : {
@@ -189725,6 +190045,34 @@
         }
       }
     },
+    "Where your account reads each network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dónde lee tu cuenta cada red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントが各ネットワークを読み取る場所"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 각 네트워크를 읽는 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户从哪里读取每个网络"
+          }
+        }
+      }
+    },
     "Where your money went" : {
       "localizations" : {
         "es" : {
@@ -198880,6 +199228,62 @@
         }
       }
     },
+    "Your node for %@ did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu nodo de %@ no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のノードが応答しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 노드가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 %@ 节点未响应"
+          }
+        }
+      }
+    },
+    "Your node sees your address. Tor doesn't hide it from your own node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu nodo ve tu dirección. Tor no la oculta de tu propio nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードにはアドレスが見えます。Tor は自分のノードからアドレスを隠しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 노드는 내 주소를 봅니다. Tor는 내 노드에서 주소를 숨기지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点能看到你的地址。Tor 不会对你自己的节点隐藏它。"
+          }
+        }
+      }
+    },
     "Your node stopped" : {
       "localizations" : {
         "es" : {
@@ -199324,6 +199728,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你自己的地址"
+          }
+        }
+      }
+    },
+    "Your own node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu propio nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自分のノード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 노드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你自己的节点"
           }
         }
       }
@@ -211445,6 +211877,34 @@
         }
       }
     },
+    "network reads from your node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "red se lee de tu nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワークが自分のノードから読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "개 네트워크가 내 노드에서 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个网络从你的节点读取"
+          }
+        }
+      }
+    },
     "network." : {
       "localizations" : {
         "es" : {
@@ -211469,6 +211929,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "网络。"
+          }
+        }
+      }
+    },
+    "networks read from Casberi's list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "redes se leen de la lista de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワークが Casberi のリストから読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "개 네트워크가 Casberi 목록에서 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个网络从 Casberi 的列表读取"
+          }
+        }
+      }
+    },
+    "networks read from your node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "redes se leen de tu nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワークが自分のノードから読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "개 네트워크가 내 노드에서 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个网络从你的节点读取"
           }
         }
       }

@@ -1066,6 +1066,25 @@ struct RootShell: View {
             // `-openSafe YES` — the Safe screen itself (prd §1514), for
             // `-pairVerifyProbe` and `-safeSignPreview`: Safe's catalogue door
             // leads to the Wallet, and its own screen opens only once connected.
+            // `-ownNode "<chainId>|<url>"|clear` (prd §1517): check an address
+            // as the Nodes page does and keep it only if it answers for that
+            // chain; `clear` turns your own node off and forgets every address.
+            if let spec = UserDefaults.standard.string(forKey: "ownNode"), !spec.isEmpty {
+                if spec == "clear" {
+                    OwnNodeStore.save(OwnNode.Settings())
+                    NSLog("[Casberi] ownNode: cleared")
+                } else {
+                    let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
+                    if parts.count == 2, let chain = Int(parts[0]) {
+                        Task {
+                            let (verdict, url) = await OwnNodeStore.check(parts[1], chainId: chain)
+                            var s = OwnNodeStore.settings
+                            if case .answers = verdict, let url { s.on = true; s.nodes[String(chain)] = url; OwnNodeStore.save(s) }
+                            NSLog("[Casberi] ownNode: %@ → %@", parts[1], OwnNode.words(verdict, network: String(chain), expected: chain).text)
+                        }
+                    }
+                }
+            }
             if UserDefaults.standard.bool(forKey: "openSafe") {
                 sceneState.route.pushBridge(.safe)
                 NSLog("[Casberi] openSafe: pushed")

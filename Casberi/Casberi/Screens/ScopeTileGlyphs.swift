@@ -239,6 +239,8 @@ extension WalletSection: DSTileScope {
         case .places:          return ScopeTileGlyph.places
         case .fees:            return ScopeTileGlyph.fees
         case .recoveryKey:     return ScopeTileGlyph.recoveryKey
+        // Your own node (prd §1517) wears the node's own glyph.
+        case .nodes:           return ScopeTileGlyph.node
         }
     }
 }

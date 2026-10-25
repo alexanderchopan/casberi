@@ -489,6 +489,14 @@ enum NetworkReach {
                  credentialed: false,
                  throughTor: true,
                  refusesTor: ["api.relay.link"]),
+        // Your own node (prd §1517): an address the person types, per network,
+        // reached directly (a home node is on their own network). Every
+        // request names this service to `NetworkLedger`, the Logos node's rule.
+        Endpoint(service: "Your own node",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "When you turn on your own node, your account reads that network from the address you give it, and from nothing else, directly rather than through Tor. Your node sees your account's address and what it reads. Sending still goes through the public bundlers.",
+                 hosts: ["the node address you give it"],
+                 credentialed: false),
         // Move's checks (prd §1509 item 2, §1513): what a send or a swap is
         // looked up against before you sign. GoPlus names the address you
         // are about to pay, and Blockscout the contract, so both go through

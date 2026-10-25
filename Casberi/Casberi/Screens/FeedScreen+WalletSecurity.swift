@@ -81,6 +81,12 @@ extension FeedScreen {
                         chrome.walletScrollRequest = nil
                     }
             }
+            // Where each network is read from (prd §1517), under the Keys card.
+            // The recovery check's page is Needs you's door (§1515): the Keys
+            // card already has a Recovery key row.
+            walletDoorsSection {
+                walletDoor(.nodes)
+            }
         }
     }
 

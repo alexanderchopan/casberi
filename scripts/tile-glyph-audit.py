@@ -67,6 +67,8 @@ ALIASES = {
     # The Wallet's Following (prd §1480) is Home's Accounts list renamed —
     # the accounts you follow — so it wears the Accounts glyph it wore.
     ("WalletSection", "following"): "accounts",
+    # Your own node's page (prd §1517) is the node a Logos room means.
+    ("WalletSection", "nodes"): "node",
     # The Wallet's Needs you (prd §1480) is Home's Needs you list as a page:
     # what waits on you, the bell it wore since §1111.
     ("WalletSection", "needsYou"): "alerts",
@@ -248,6 +250,7 @@ enum ScopeTileGlyph {
     static let new         = "plus"
     static let accounts    = "person.2"
     static let alerts      = "bell"
+    static let node        = "server.rack"
 }
 
 // A comment quoting `case .home: return "house"` is not code.
@@ -261,6 +264,8 @@ extension WalletSection: DSTileScope {
         // real `ALIASES` table names (check C flags an alias with no case).
         case .following: return ScopeTileGlyph.accounts
         case .needsYou:  return ScopeTileGlyph.alerts
+        // §1517's alias: Nodes wears the node's glyph.
+        case .nodes:     return ScopeTileGlyph.node
         }
     }
 }

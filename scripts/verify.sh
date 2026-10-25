@@ -2762,6 +2762,9 @@ harness "Safe sign checks self-test" "safe-sign-checks self-test" "scripts/safe-
 # network's standing, the sentence; the signature verified on the phone, not
 # by a chain (§1456's threshold), only a good check dated, no badge.
 harness "Recovery check self-test" "recovery-check self-test" "scripts/recovery-check-selftest.sh" "the recovery check drifted — run scripts/recovery-check-selftest.sh"
+# Your own node (prd §1517): the address rule, the chain-id check (a wrong
+# chain never kept), the switch; and no fall-through to Casberi's list.
+harness "Own node self-test" "own-node self-test" "scripts/own-node-selftest.sh" "your own node drifted — run scripts/own-node-selftest.sh"
 
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 

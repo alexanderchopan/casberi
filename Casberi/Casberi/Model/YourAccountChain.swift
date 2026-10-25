@@ -35,9 +35,10 @@ enum YourAccountChain {
 
     // MARK: - JSON-RPC
 
-    private static func post(_ url: String, _ method: String, _ params: [Any]) async -> (result: Any?, error: String?) {
+    private static func post(_ url: String, _ method: String, _ params: [Any],
+                             as caller: String = service) async -> (result: Any?, error: String?) {
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": method, "params": params]
-        let (json, status) = await IngestSupport.postJSONBody(url, body: body, service: service)
+        let (json, status) = await IngestSupport.postJSONBody(url, body: body, service: caller)
         guard let root = json as? [String: Any] else { return (nil, status == 0 ? nil : "HTTP \(status)") }
         if let error = root["error"] as? [String: Any] {
             return (nil, (error["message"] as? String) ?? "\(error)")
@@ -49,6 +50,14 @@ enum YourAccountChain {
     /// `error` object) is the answer too, since the next host would refuse it
     /// the same way.
     static func rpc(_ net: Network, _ method: String, _ params: [Any]) async throws -> Any {
+        // YOUR OWN NODE (prd §1517): that network's reads go to it and to
+        // nothing else, directly — falling back to the list would send your
+        // address where you said not to.
+        if let own = OwnNodeStore.settings.address(for: net.chainId) {
+            let (result, error) = await post(own, method, params, as: OwnNodeStore.service)
+            if let result, !(result is NSNull) { return result }
+            throw Failure(message: error ?? String(localized: "Your node for \(net.name) did not answer"))
+        }
         var last = "\(net.name) did not answer"
         for url in net.rpcs {
             let (result, error) = await post(url, method, params)

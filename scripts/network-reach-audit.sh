@@ -34,6 +34,9 @@ KNOWN_NON_REACH=(
   # A made-up scam origin (prd §1514): the text `-pairVerifyProbe scam`
   # draws in "Really is", DEBUG only, never fetched.
   safe-global-app.xyz
+  # The demo's own node (prd §1517): an address the demo's Nodes page shows,
+  # never fetched.
+  base.mynode.home
   # Linea's explorer (2026-09-20) — the permalink a MetaMask Card spend row
   # opens in the PERSON's browser (as `gnosisscan.io` was for the Gnosis Pay
   # row until prd §1318 removed the seat). The seat's own two RPC hosts (`rpc.linea.build`,

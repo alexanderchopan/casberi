@@ -83,8 +83,8 @@ check(WalletSection.holdingsDoors == [.holdingAccounts, .apps, .positions, .nfts
       "Holdings' pages are Following, Apps, Positions, NFTs (You narrows, Tokens is its sheet) (prd §1503)")
 check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
       "Spending's doors are Subscriptions, Places, Fees (prd §1480)")
-check(WalletSection.yourAccountDoors == [.recoveryKey],
-      "Your account's one door is the recovery key's monthly check (prd §1515)")
+check(WalletSection.yourAccountDoors == [.recoveryKey, .nodes],
+      "Your account's doors are the recovery key's check and Nodes (prd §1515, §1517)")
 // A page goes back to the page it opened from (prd §1480 item 9).
 for s in WalletSection.order { check(s.parent == nil && s.isTile, "\(s.rawValue) is a tile with no parent") }
 for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes back to Home") }

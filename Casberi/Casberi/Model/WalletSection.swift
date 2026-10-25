@@ -60,6 +60,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     // ── Your account's doors ─────────────────────────────────────────────────
     /// The monthly recovery check (prd §1509 item 4, §1515).
     case recoveryKey
+    /// Your own node per network (prd §1509 item 5, §1517).
+    case nodes
 
     // ── Holdings' doors ──────────────────────────────────────────────────────
     /// Each wallet you follow, and its balance (prd §1503).
@@ -93,7 +95,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Spending's doors (prd §1480 item 5).
     static let spendingDoors: [WalletSection] = [.subscriptions, .places, .fees]
     /// Your account's doors (prd §1515): the recovery key's check.
-    static let yourAccountDoors: [WalletSection] = [.recoveryKey]
+    static let yourAccountDoors: [WalletSection] = [.recoveryKey, .nodes]
 
     /// The page a page was opened from, where its title goes back: nil for a
     /// tile.
@@ -140,6 +142,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .places:          return String(localized: "Places")
         case .fees:            return String(localized: "Fees")
         case .recoveryKey:     return String(localized: "Recovery key")
+        case .nodes:           return String(localized: "Nodes")
         }
     }
 
@@ -164,6 +167,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .places:          return String(localized: "Where your money went")
         case .fees:            return String(localized: "What your sends paid the network")
         case .recoveryKey:     return String(localized: "Whether your recovery key still works")
+        case .nodes:           return String(localized: "Where your account reads each network")
         }
     }
 
@@ -196,6 +200,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .places:          return String(localized: "No places")
         case .fees:            return String(localized: "No fees")
         case .recoveryKey:     return String(localized: "Not checked yet")
+        case .nodes:           return String(localized: "Casberi's list")
         }
     }
 
@@ -241,6 +246,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Gas on every transaction your wallets sent, by network.")
         case .recoveryKey:
             return String(localized: "Your recovery key, checked once a month with Face ID: no fee, nothing sent.")
+        case .nodes:
+            return String(localized: "Each network read from Casberi's list through Tor, or from a node of your own.")
         }
     }
 

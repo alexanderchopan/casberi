@@ -205,6 +205,16 @@ enum YourAccountDemo {
         ], at: .now)
     }
 
+    // MARK: - Your own node (prd §1517)
+
+    /// The demo's node on Base, as the canvas draws it; the rest on the list.
+    static var ownNode: OwnNode.Settings {
+        OwnNode.Settings(on: true, nodes: [String(Op.base.chainId): "https://base.mynode.home:8545"])
+    }
+    static var ownNodeVerdicts: [Int: OwnNode.Verdict] {
+        [Op.base.chainId: .answers(chainId: Op.base.chainId, block: 31_882_104)]
+    }
+
     /// What every act says in the demo.
     static var actsLater: String { String(localized: "This works once you leave the demo.") }
 }

@@ -372,6 +372,8 @@ extension FeedScreen {
             walletAccountSection
         case .recoveryKey:
             RecoveryCheckRows()
+        case .nodes:
+            OwnNodeRows()
         case .following:
             walletFollowingPage
         case .needsYou:
@@ -568,6 +570,8 @@ extension FeedScreen {
             WalletYourAccountFigure(address: YourAccountDemo.shownAddress)
         case .recoveryKey:
             RecoveryCheckFigure()
+        case .nodes:
+            OwnNodeFigure()
         case .following:
             let slots = walletFollowingSlots
             DSFigureReading(number: "\(slots.count)",
