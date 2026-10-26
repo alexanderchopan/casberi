@@ -500,7 +500,7 @@ extension FeedScreen {
     private var rowWalk: WalkScope {
         WalkScope.feed(source: source, tag: filter.tag,
                        narrowed: Pinboard.isPinnedRoom(source)
-                           || (roomTakesWalletScope && selectedWallet != nil)
+                           || (roomTakesWalletScope && (selectedWallet != nil || walletOnFollowing))
                            || personScoped)
     }
 }

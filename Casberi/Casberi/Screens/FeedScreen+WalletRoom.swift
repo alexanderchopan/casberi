@@ -221,7 +221,9 @@ extension FeedScreen {
                 // everything below and settles it back.
                 onPick: { picked in chrome.walletSection = picked },
                 accounts: walletAccountSlots,
-                scope: chrome.walletScope,
+                // Following is no one account (prd §1536): the box stands in
+                // All's slot and reads Following's money.
+                scope: walletOnFollowing ? nil : chrome.walletScope,
                 onPickAccount: { picked in
                     withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
                 },
@@ -232,7 +234,7 @@ extension FeedScreen {
                     // drop).** Every room's lead is held to this height now, and
                     // Home is where it was taken from, so Home keeps it.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        if slot.isShowing(chrome.walletScope) {
+                        if slot.isShowing(walletOnFollowing ? nil : chrome.walletScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
                             if let seat = selectedSeat, seatKeepsLine(seat),

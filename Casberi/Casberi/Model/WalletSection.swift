@@ -122,7 +122,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .activity:        return String(localized: "Activity")
         case .holdings:        return String(localized: "Holdings")
         case .spending:        return String(localized: "Spending")
-        case .yourAccount:     return String(localized: "Your account")
+        case .yourAccount:     return String(localized: "Account")
         case .following:       return String(localized: "Following")
         case .needsYou:        return String(localized: "Needs you")
         case .permissions:     return String(localized: "Permissions")

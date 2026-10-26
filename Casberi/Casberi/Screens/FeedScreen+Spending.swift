@@ -57,9 +57,14 @@ extension FeedScreen {
         if let seat = selectedSeat {
             return .app(Set(SpendingReading.sources.filter(seat.owns)))
         }
-        if let address = selectedWallet {
-            var forms: Set<String> = [address.lowercased()]
-            if let hex = wallet.resolvedForm(of: address) { forms.insert(hex.lowercased()) }
+        // One wallet, or every wallet you follow (prd §1536): each by every
+        // spelling it is followed by.
+        if let addresses = selectedWallet.map({ [$0] }) ?? walletFollowingOnly {
+            var forms: Set<String> = []
+            for address in addresses {
+                forms.insert(address.lowercased())
+                if let hex = wallet.resolvedForm(of: address) { forms.insert(hex.lowercased()) }
+            }
             return .wallet(forms)
         }
         return .all

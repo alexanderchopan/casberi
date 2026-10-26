@@ -269,6 +269,10 @@ extension FeedScreen {
         // An app the menu picked (prd §1048b) keeps its own rows, and an app
         // whose rows don't ride this room keeps none: its money is in the box.
         if let seat = selectedSeat { return seat.owns(thing.source) }
+        // Following (prd §1536): any wallet you follow, never yours or an app.
+        if roomTakesWalletScope, let only = walletFollowingOnly {
+            return only.contains { wallet.scopeMatches(thing.walletAddress, scope: $0) }
+        }
         guard roomTakesWalletScope, let scope = selectedWallet else { return true }
         return wallet.scopeMatches(thing.walletAddress, scope: scope)
     }

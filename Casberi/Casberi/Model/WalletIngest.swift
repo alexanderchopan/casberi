@@ -2056,8 +2056,11 @@ enum WalletIngest {
     /// the map it already drew over such a nil, rather than "Nothing held"
     /// over money it showed a minute ago; a reached, empty nil clears it.
     @MainActor
-    static func portfolioReading(scopeTo address: String? = nil) async
+    static func portfolioReading(scopeTo address: String? = nil, only: [String]? = nil) async
         -> (read: (doc: [String], portfolio: WalletPortfolio)?, failed: Bool) {
+        // Following (prd §1536) reads every wallet you follow and nothing
+        // that is not a wallet: no exchange, cash, validators or Privy app.
+        let combined = address == nil && only == nil
         // **THE DEMO READS NOTHING, SO IT BUILDS ITS OWN** (prd §483). Without
         // this the Holdings scope is absent from the demo entirely — the room's
         // most distinctive drawing, missing from the thing that exists to show
@@ -2066,12 +2069,12 @@ enum WalletIngest {
         // `WalletPortfolio.demoFixture`.
         if DemoMode.isActive {
             var privy: [(symbol: String, usd: Double, holderID: String, label: String)] = []
-            if address == nil {
+            if combined {
                 privy = await MainActor.run { PrivyHomeStore.shared.walletHoldings }
                     .map { (symbol: $0.symbol, usd: $0.usd,
                             holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
             }
-            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, privy: privy)
+            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy)
             guard !portfolio.isEmpty else { return (read: nil, failed: false) }
             let cells = portfolio.treemapCells.joined(separator: ", ")
             // The line carries the total the room's crown reads (prd §953);
@@ -2103,6 +2106,7 @@ enum WalletIngest {
         // history still samples (holdingsByWallet's recordSample side effect)
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
+        if let only { groups = groups.filter { g in only.contains { scopeMatch(g.address, $0) } } }
         // Stamped from the groups that SURVIVED the scope, so a scoped page
         // never wears another wallet's date (nil on a live read — the normal
         // case — because a live group carries no `stale`).
@@ -2110,16 +2114,16 @@ enum WalletIngest {
         // Connected exchanges merge into the COMBINED read only (prd §163). A
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
-        let exchange = address == nil ? await ExchangeBridge.pricedBalances() : []
+        let exchange = combined ? await ExchangeBridge.pricedBalances() : []
         // Watched validators merge into the COMBINED read only, same reasoning
         // as exchanges above — they aren't scoped to any one address.
-        let validatorsUSD = address == nil ? (await EthValidatorRead.totalUSD() ?? 0) : 0
+        let validatorsUSD = combined ? (await EthValidatorRead.totalUSD() ?? 0) : 0
         // Cash at a bank — Wise and Apple Wallet's asset accounts — joins the
         // COMBINED read, as the exchanges do (prd §1048, user: "top number
         // should include cash and exchange balances").
         var cash: [(symbol: String, usd: Double, holderID: String, label: String)] = []
         var unpricedCash: [String] = []
-        if address == nil { (cash, unpricedCash) = await WalletCash.priced() }
+        if combined { (cash, unpricedCash) = await WalletCash.priced() }
         // **PRIVY IS IN THIS NUMBER AGAIN, AND NEVER ALONE (prd §1048, user:
         // "you need to include privy with wallet"; reverses §826).** §826 took
         // it out because it was the one STORED reading beside live ones, and a
@@ -2128,7 +2132,7 @@ enum WalletIngest {
         // counts only beside some other contributor: with none, there is no
         // portfolio, exactly as before.
         var privy: [(symbol: String, usd: Double, holderID: String, label: String)] = []
-        if address == nil {
+        if combined {
             privy = await MainActor.run { PrivyHomeStore.shared.walletHoldings }
                 .map { (symbol: $0.symbol, usd: $0.usd,
                         holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
@@ -2145,7 +2149,7 @@ enum WalletIngest {
         portfolio.unpricedCash = unpricedCash
         // What the total leaves out (prd §1078). Combined read only, as the
         // cash and Privy themselves are.
-        if address == nil {
+        if combined {
             portfolio.owed = WalletCash.owed()
         }
 

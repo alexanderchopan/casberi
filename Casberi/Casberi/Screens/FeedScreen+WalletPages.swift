@@ -162,7 +162,7 @@ extension FeedScreen {
     func walletNeedsCount(upcoming: [Thing]) -> Int {
         let groups = walletComingUpDays(upcoming)
         let rows = Self.things(groups.flatMap(\.1)).filter(\.isLive).count
-        let onAll = selectedSeat == nil && selectedWallet == nil
+        let onAll = walletOnAll
         let nudges = (onAll && OutsideKeyNudge.shown ? 1 : 0) + (onAll && RecoveryKeyNudge.shown ? 1 : 0)
             + (onAll && RecoveryCheckNudge.shown ? 1 : 0)
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil }.count : 0
@@ -175,7 +175,7 @@ extension FeedScreen {
     /// empty; Your account stands on All or with your account picked.
     @ViewBuilder
     func walletHomeDoors(upcoming: [Thing]) -> some View {
-        let onAll = selectedSeat == nil && selectedWallet == nil
+        let onAll = walletOnAll
         let yours = YourAccountDemo.shownAddress
         let yoursPicked = yours.map { a in chrome.walletScope.map { WalletWatch.sameAddress($0, a) } ?? false } ?? false
         let following = walletFollowingSlots
@@ -183,6 +183,8 @@ extension FeedScreen {
         let counts = walletSecurityCounts
         let permissions = counts.delegations + counts.approvals
         walletDoorsSection {
+            // Account (prd §1536): your Casberi account's keys and settings,
+            // not a pick — Yours on the switch is the pick.
             if yours != nil, onAll || yoursPicked {
                 walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)
                     // Read when Home stands, never in a body (prd §1515): the
@@ -197,13 +199,11 @@ extension FeedScreen {
             // am on railgun and see 'markets' why is that?"):** with one
             // account picked, Home lists only what is that account's. Markets
             // left Home for its own tile (§1498), dimmed on a pick.
-            if onAll {
-                if following.isEmpty {
-                    walletDoor(.following, name: String(localized: "Follow an account"),
-                               act: { feedSheet = .walletFollow })
-                } else {
-                    walletDoor(.following, figure: "\(following.count)")
-                }
+            // Following is a word on the switch (prd §1536), its wallets
+            // listed on Home when it is lit; with none followed, the verb.
+            if onAll, following.isEmpty {
+                walletDoor(.following, name: String(localized: "Follow an account"),
+                           act: { feedSheet = .walletFollow })
             }
             if needs > 0 {
                 // What waits on you is the pick's ink (§1385: pink says state).
@@ -224,7 +224,7 @@ extension FeedScreen {
             // Home blank under the tiles. §769's empty state fills it: what
             // would stand here, empty, and the account named. The pick still
             // lands on Home; it never jumps to Activity.
-            if !onAll, !(yours != nil && yoursPicked), needs == 0, permissions == 0, counts.flagged == 0 {
+            if !onAll, !walletOnFollowing, !(yours != nil && yoursPicked), needs == 0, permissions == 0, counts.flagged == 0 {
                 walletHomeQuiet
             }
         }
@@ -278,10 +278,11 @@ extension FeedScreen {
                 rest.filter { WalletPortfolio.isVenue($0.address) && $0.usd > 0 })
     }
 
-    /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503).** The treemap
-    /// in the box, then whose it is — You, Following, Apps, each its total,
-    /// never a count (user: "i don't care that i have 90 apps. i care about
-    /// the total of tokens in those apps") — then Tokens, Positions, NFTs.
+    /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503, §1536).** The
+    /// treemap in the box, then Apps on All (its total, never a count — user:
+    /// "i don't care that i have 90 apps. i care about the total of tokens in
+    /// those apps"), then Tokens, Positions, NFTs, for whatever the switch
+    /// picked.
     @ViewBuilder
     func walletHoldingsDoors(all: [Thing]) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
@@ -294,37 +295,15 @@ extension FeedScreen {
         let money = { (holders: [WalletPortfolio.Holder]) in
             mask ?? WalletValue.money(holders.reduce(0) { $0 + $1.usd })
         }
-        let hasYou = groups.you != nil
-        let hasFollowing = !groups.following.isEmpty
         let hasApps = !groups.apps.isEmpty || !appAccounts.isEmpty
-        // **WHOSE ONLY WHEN IT SPLITS (prd §1520, user: "what's the point of
-        // it saying you on holdings?").** On one account, or on All with one
-        // group, the group's figure is the box's and its door is the pick
-        // already made.
-        let splits = selectedSeat == nil && selectedWallet == nil
-            && [hasYou, hasFollowing, hasApps].filter { $0 }.count > 1
-        // **EACH DOOR SHOWS ITS TOP THREE (prd §1525, user: "You could show
-        // top 3 tokens under it in a list, same w/ following, apps, and
-        // positions").** The page answers "what do I hold" before a tap; a
-        // preview row wears the mark its treemap tile wears, and opens what
-        // its door opens.
-        let narrowToYou = { (you: WalletPortfolio.Holder) in
-            withAnimation(DS.Motion.standard) { chrome.walletScope = you.address }
-        }
+        // **NO WHOSE ROWS (prd §1536, user: "i think yours following all
+        // switch is most sensible").** You and Following were rows here that
+        // picked an account, the same choice the box's switch makes, under
+        // other words. The switch is the one control; Holdings shows what it
+        // picked: one token list, its top three, and the apps on All only
+        // (an app's money is in All and in neither of the others).
         walletDoorsSection {
-            if splits, let you = groups.you {
-                // Narrows the Wallet to it: its tokens fill the treemap.
-                walletDoor(.yourAccount, name: String(localized: "You"), figure: money([you]),
-                           act: { narrowToYou(you) })
-                walletTokenPreview(Self.topTokens(portfolioShown, held: [you.address]),
-                                   mask: mask, act: { narrowToYou(you) })
-            }
-            if splits, hasFollowing {
-                walletDoor(.holdingAccounts, figure: money(groups.following))
-                walletTokenPreview(Self.topTokens(portfolioShown, held: groups.following.map(\.address)),
-                                   mask: mask, act: { chrome.walletSection = .holdingAccounts })
-            }
-            if splits, hasApps {
+            if walletOnAll, hasApps {
                 walletDoor(.apps, figure: money(groups.apps))
                 ForEach(Array(groups.apps.sorted { $0.usd > $1.usd }.prefix(Self.holdingsPreviewCount))) { app in
                     walletPreviewRow(app.label, figure: mask ?? WalletValue.money(app.usd),
@@ -334,18 +313,9 @@ extension FeedScreen {
                 }
             }
             if !tokens.isEmpty || anyHidden {
-                // **ALL TOKENS UNDER THE WHOSE DOORS (prd §1530, user: "what is
-                // the point of having tokens … if it is already in you and
-                // following").** It is every account's tokens merged, one row
-                // each; under You and Following the name says so.
-                walletDoor(.holdings, name: splits ? String(localized: "All tokens") : String(localized: "Tokens"),
-                           act: { feedSheet = .walletTokens })
-                // One account, or one group: the whose doors are not drawn,
-                // so the tokens preview here instead (prd §1525).
-                if !splits {
-                    walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)),
-                                       mask: mask, act: { feedSheet = .walletTokens })
-                }
+                walletDoor(.holdings, name: String(localized: "Tokens"), act: { feedSheet = .walletTokens })
+                walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)),
+                                   mask: mask, act: { feedSheet = .walletTokens })
             }
             if positions > 0 {
                 walletDoor(.positions)
@@ -611,7 +581,7 @@ extension FeedScreen {
         let groups = walletComingUpDays(upcoming)
         let needs = groups.first { $0.0 == Self.needsYouGroup }?.1 ?? []
         let dated = groups.filter { $0.0 != Self.needsYouGroup }
-        let onAll = selectedSeat == nil && selectedWallet == nil
+        let onAll = walletOnAll
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil } : []
         if walletNeedsCount(upcoming: upcoming) == 0 { walletSkeletonRowsSection }
         walletSignaturesSection

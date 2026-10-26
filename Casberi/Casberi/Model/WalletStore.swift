@@ -550,8 +550,9 @@ final class WalletStore {
     /// means the line only ever shows the true combined net worth, never a
     /// composition change masquerading as a gain. Empty until at least two such
     /// aligned points exist, so a single-point line never draws.
-    func combinedValueSamples() -> [ValueSample] {
+    func combinedValueSamples(only: [String]? = nil) -> [ValueSample] {
         let lines = addresses
+            .filter { a in only.map { $0.contains { WalletWatch.sameAddress($0, a.address) } } ?? true }
             .map { valueSamples(forAddress: $0.address) }
             .filter { !$0.isEmpty }
         guard !lines.isEmpty, let start = lines.compactMap({ $0.first?.at }).max()

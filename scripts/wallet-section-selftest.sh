@@ -228,8 +228,11 @@ strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
 HISTORY="Casberi/Casberi/Screens/WalletHistoryScreen.swift"
 WALLETHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
 SCROLL="Casberi/Casberi/Screens/FeedScreen+Scroll.swift"
+WHOSE="Casberi/Casberi/Model/WalletWhose.swift"
+WHOSESWITCH="Casberi/Casberi/Screens/WalletWhoseSwitch.swift"
 for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
-         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY" "$WALLETHOME" "$SCROLL"; do
+         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY" "$WALLETHOME" "$SCROLL" \
+         "$WHOSE" "$WHOSESWITCH"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -540,40 +543,32 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings' doors are not You, Following, Apps, Tokens, Positions, then NFTs (prd §1503)"
+python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings' doors are not Apps, Tokens, Positions, then NFTs (prd §1503, §1536)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
 body = m.group(0) if m else ""
-order = [body.find(k) for k in ("walletDoor(.yourAccount", "walletDoor(.holdingAccounts", "walletDoor(.apps",
-                                "feedSheet = .walletTokens", "walletDoor(.positions", "walletDoor(.nfts")]
+order = [body.find(k) for k in ("walletDoor(.apps", "feedSheet = .walletTokens",
+                                "walletDoor(.positions", "walletDoor(.nfts")]
 # Whose money it is says money, never a count (user: "i don't care that i
 # have 90 apps. i care about the total of tokens in those apps").
 if '.count)")' in body:
     sys.exit(1)
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
-# Whose draws only when it splits (prd §1520): on one account, or on All with
-# one group, You's figure was the box's and its press the pick already made.
-python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings draws You, Following, Apps on one account or one group — the box's figure twice (prd §1520)"
+# **NO WHOSE ROWS ON HOLDINGS (prd §1536, user: "i think yours following all
+# switch is most sensible").** You and Following were rows that picked an
+# account, the box's switch under other words; Apps stands on All only, the
+# one word an app's money belongs to.
+python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY' || fail "drift: Holdings picks an account again — the switch is the one whose-control (prd §1536)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
 body = m.group(0) if m else ""
-ok = "selectedSeat == nil && selectedWallet == nil" in body and ".count > 1" in body \
-    and "if splits, let you = groups.you" in body and "if splits, hasFollowing" in body \
-    and "if splits, hasApps" in body
-sys.exit(0 if ok else 1)
+bad = "walletDoor(.yourAccount" in body or "walletDoor(.holdingAccounts" in body \
+    or "chrome.walletScope =" in body or "All tokens" in body
+sys.exit(0 if not bad and "if walletOnAll, hasApps" in body else 1)
 PY
-# Under the whose doors, Tokens names itself the merged list (prd §1530):
-# "Tokens" after You and Following read as the same tokens a third time.
-python3 - "$work/FeedScreen+WalletPages.swift.bare" <<'PY2' || fail "drift: Holdings' Tokens door no longer says All tokens under You and Following (prd §1530)"
-import re, sys
-src = open(sys.argv[1]).read()
-m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
-body = m.group(0) if m else ""
-sys.exit(0 if 'splits ? String(localized: "All tokens")' in body else 1)
-PY2
 # Tokens is a door on Holdings since prd §1480, opening every token in its
 # sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \
@@ -604,7 +599,7 @@ grep -q "wallet-section-selftest.sh" "$VERIFY" \
 guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
   "the chips left the crown's budget — every crown drawing a range track clips it again"
 guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome))" \
-  "the wallet crown stopped paying for its foot row (range chips, Yours · Everything, prd §1526) — the track clips at the slot's edge"
+  "the wallet crown stopped paying for its foot row (range chips, Yours · Following · All, prd §1526, §1536) — the track clips at the slot's edge"
 # (The activity chart's own guard went with the chart, prd §1039.)
 # (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
 # stayed the chips' own gate, went with prd §942: a flexing drawing reserves
@@ -623,8 +618,23 @@ guard DSChip.swift "if ranges.count > 1" \
 # §1489, and the menu is the Accounts header's alone). Since prd §1480 the list
 # is Following, a door on Home: your own account apart (it is Your account's),
 # every other account a row with its Rename and Stop following.
-guard FeedScreen.swift "walletDoor(.following, figure:" \
-  "Home lost its Following door (prd §1410, §1480)"
+# Since prd §1536 Following is a word on the switch, not a door on Home: lit,
+# Home leads with the wallets you follow; on All a Following row would be the
+# switch's choice a second time.
+guard FeedScreen.swift "if walletOnFollowing { walletFollowingPage }" \
+  "Home under Following no longer lists the wallets you follow (prd §1536)"
+deny FeedScreen.swift "walletDoor(.following, figure:" \
+  "Home has a Following door again beside the switch's Following (prd §1536)"
+# The switch: three words, Following lit for any wallet you follow, its lit
+# word a way back (a second tap on Following leaves one wallet for all).
+guard WalletWhose.swift "case yours, following, everything" \
+  "the switch lost a word (prd §1536)"
+guard WalletWhose.swift 'case .everything: return String(localized: "All")' \
+  "the switch says Everything again; it is All (prd §1536)"
+guard WalletWhoseSwitch.swift "repicks: true" \
+  "a tap on the lit Following no longer leaves one followed wallet (prd §1536)"
+guard FeedScreen.swift "scope: walletOnFollowing ? nil : chrome.walletScope" \
+  "the box draws nothing under Following — no account slot is Following (prd §1536)"
 # A door is a section's name with a figure (prd §1496): the glyph in the head
 # column, the name at the section rung, the figure at its peer rung, one pitch,
 # no line. Every page's doors come from this one row, so the rule is held here

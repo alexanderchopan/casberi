@@ -242,12 +242,13 @@ struct WalletPortfolio: Equatable {
                                walletCount: 0, asOf: asOf)
     }
 
-    static func demoFixture(scopeTo address: String? = nil,
+    static func demoFixture(scopeTo address: String? = nil, only: [String]? = nil,
                             privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [])
     -> WalletPortfolio {
-        let watched = WalletStore.shared.addresses.filter {
+        let watched = WalletStore.shared.addresses.filter { entry in
+            if let only { return only.contains { WalletWatch.sameAddress(entry.address, $0) } }
             guard let address else { return true }
-            return WalletWatch.sameAddress($0.address, address)
+            return WalletWatch.sameAddress(entry.address, address)
         }
         var bySymbol: [String: Double] = [:]
         var holders: [String: [Holder]] = [:]
@@ -277,7 +278,7 @@ struct WalletPortfolio: Equatable {
         // has the same relationship between the number and the sparkline
         // under it. A demo that hid the gap would be demonstrating a wallet
         // room this app does not ship.
-        if address == nil {
+        if address == nil, only == nil {
             for holding in ExchangeBridge.demoBalances where holding.usd > 0 {
                 total += holding.usd
                 bySymbol[holding.symbol, default: 0] += holding.usd

@@ -110,7 +110,10 @@ extension FeedScreen {
         let picked = slot.isShowing(chrome.walletScope)
         Button {
             DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { chrome.walletScope = picked ? nil : slot.id }
+            // A second tap on a followed wallet goes back to Following, the
+            // word it was opened from (prd §1536); anything else to All.
+            let back = !Self.isYourAccount(slot.id) && !RoomAccounts.isSeat(slot.id) ? WalletWhose.followingScope : nil
+            withAnimation(DS.Motion.standard) { chrome.walletScope = picked ? back : slot.id }
         } label: {
             // The Feed's row (prd §744), as the Wallet's doors are.
             DSFeedRow(name: slot.name, line: slot.sub.map { Text(verbatim: $0) },

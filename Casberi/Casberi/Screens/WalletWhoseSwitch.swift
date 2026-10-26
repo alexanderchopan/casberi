@@ -1,18 +1,14 @@
 import SwiftUI
 
-/// The Yours · Everything switch (prd §1526), drawn at the foot of every
-/// Wallet tile's box but Markets', in the range strip's slim grammar: the
-/// lit word in primary ink, the other quiet. It draws nothing when
-/// `WalletWhose.lit` says it has no honest state.
+/// The Yours · Following · All switch (prd §1526, §1536), drawn at the foot
+/// of every Wallet tile's box but Markets', in the range strip's slim
+/// grammar: the lit word in primary ink, the others quiet.
 struct WalletWhoseSwitch: View {
     @Environment(ShellChrome.self) private var chrome
 
-    /// Whether the switch draws for this pick — the box budgets its row on it.
-    static func shows(_ chrome: ShellChrome) -> Bool { lit(chrome) != nil }
-
-    private static func lit(_ chrome: ShellChrome) -> WalletWhose? {
-        WalletWhose.lit(scope: chrome.walletScope, yours: yours, same: WalletWatch.sameAddress)
-    }
+    /// Whether the switch draws — the box budgets its row on it: two words
+    /// or more to choose between.
+    static func shows(_ chrome: ShellChrome) -> Bool { offered.count > 1 }
 
     /// Your Casberi account, when the Wallet holds it: creating or recovering
     /// it watches it (`MoveScreen`), and Yours narrows to a watched account,
@@ -24,11 +20,24 @@ struct WalletWhoseSwitch: View {
         return own
     }
 
+    /// The wallets Following stands for: every watched address but yours.
+    static var followed: [String] {
+        let own = YourAccountDemo.shownAddress
+        return WalletStore.shared.addresses.map(\.address)
+            .filter { a in own.map { !WalletWatch.sameAddress(a, $0) } ?? true }
+    }
+
+    static var offered: [WalletWhose] {
+        WalletWhose.offered(hasYours: yours != nil, hasFollowing: !followed.isEmpty)
+    }
+
     var body: some View {
-        if let lit = Self.lit(chrome), let yours = Self.yours {
-            DSRangeChips(ranges: WalletWhose.allCases, range: lit, label: \.label, slim: true) { picked in
+        let offered = Self.offered
+        if offered.count > 1 {
+            let lit = WalletWhose.lit(scope: chrome.walletScope, yours: Self.yours, same: WalletWatch.sameAddress)
+            DSRangeChips(ranges: offered, range: lit, label: \.label, slim: true, repicks: true) { picked in
                 DefaultsWrite.set(Data(picked.rawValue.utf8), forKey: WalletWhose.defaultsKey)
-                withAnimation(DS.Motion.standard) { chrome.walletScope = picked.scope(yours: yours) }
+                withAnimation(DS.Motion.standard) { chrome.walletScope = picked.scope(yours: Self.yours) }
             }
             .fixedSize(horizontal: true, vertical: false)
             .accessibilityElement(children: .contain)
@@ -45,8 +54,10 @@ struct WalletWhoseSwitch: View {
         applied = true
         let remembered = UserDefaults.standard.data(forKey: WalletWhose.defaultsKey)
             .flatMap { String(data: $0, encoding: .utf8) }.flatMap(WalletWhose.init(rawValue:))
+        // Following with nothing followed any more opens on All.
+        let start = remembered == .following && followed.isEmpty ? .everything : remembered
         chrome.walletScope = WalletWhose.launchScope(current: chrome.walletScope,
                                                      yours: yours,
-                                                     remembered: remembered)
+                                                     remembered: start)
     }
 }

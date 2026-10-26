@@ -348,10 +348,11 @@ extension FeedScreen {
         // pick that moves between two apps is caught as well.
         let seat = selectedSeat
         let scopeKey = chrome.walletScope
+        let only = walletFollowingOnly
         holdingsReads += 1
         Task { @MainActor in
             defer { holdingsReads -= 1 }
-            let reading = await WalletIngest.portfolioReading(scopeTo: scope)
+            let reading = await WalletIngest.portfolioReading(scopeTo: scope, only: only)
             var read = reading.read
             #if DEBUG
             NSLog("[Casberi] walletHoldings| asked=%@ now=%@ total=%.0f", scope ?? "all", selectedWallet ?? "all", read?.portfolio.totalUSD ?? -1)

@@ -226,7 +226,10 @@ def audit(texts: dict) -> list:
     if "countsInWallet" in code["PrivyHomeLive"]:
         bad.append("the Privy toggle is back (`countsInWallet`) — the merged Wallet counts "
                    "Privy with no switch (prd §1048)")
-    if "if address == nil { (cash, unpricedCash) = await WalletCash.priced() }" not in pr:
+    # Combined means no address AND no group: Following (prd §1536) reads
+    # wallets only, so cash is gated on both.
+    if "if combined { (cash, unpricedCash) = await WalletCash.priced() }" not in pr \
+            or "let combined = address == nil && only == nil" not in pr:
         bad.append("cash is not gated on the combined scope — a page scoped to one address "
                    "would count a bank balance (prd §1048)")
 
@@ -426,8 +429,11 @@ def self_test() -> int:
          lambda t: t.replace("    var walletHoldings:",
                              "    var countsInWallet = true\n    var walletHoldings:")),
         ("cash leaks into a scoped page", "WalletIngest",
-         lambda t: t.replace("if address == nil { (cash, unpricedCash) = await WalletCash.priced() }",
+         lambda t: t.replace("if combined { (cash, unpricedCash) = await WalletCash.priced() }",
                              "(cash, unpricedCash) = await WalletCash.priced()")),
+        ("cash leaks into Following", "WalletIngest",
+         lambda t: t.replace("let combined = address == nil && only == nil",
+                             "let combined = address == nil")),
         ("Zerion answering ends the read again", "WalletIngest",
          lambda t: t.replace("collectCandidatesAlchemy(addresses: answered, only: blind)",
                              "collectCandidatesAlchemy(addresses: addresses)")),

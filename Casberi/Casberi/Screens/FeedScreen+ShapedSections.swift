@@ -433,6 +433,9 @@ extension FeedScreen {
                     // **HOME IS THE OVERVIEW (prd §1480 item 2).** Five doors,
                     // no list: the stream is Activity's, the readings
                     // Spending's, what the money is Holdings'.
+                    // Following lit (prd §1536): the wallets you follow lead
+                    // Home, each a tap to open, and Follow an account.
+                    if walletOnFollowing { walletFollowingPage }
                     walletHomeDoors(upcoming: upcoming)
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)

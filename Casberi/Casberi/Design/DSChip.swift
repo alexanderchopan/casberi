@@ -101,14 +101,20 @@ struct DSRangeChips<Option: Hashable>: View {
     /// corner, a raised fill, the pick in tint with white ink — one even row
     /// spanning the figure, words in place of glyphs. A thing sheet's chart.
     var tiles = false
+    /// A tap on the lit word still picks it (prd §1536): the Wallet's
+    /// Following stays lit with one followed wallet open, and tapping it
+    /// goes back to all of them.
+    var repicks = false
 
     init(ranges: [Option], range: Option, label: @escaping (Option) -> String,
-         slim: Bool = false, tiles: Bool = false, onPick: @escaping (Option) -> Void) {
+         slim: Bool = false, tiles: Bool = false, repicks: Bool = false,
+         onPick: @escaping (Option) -> Void) {
         self.ranges = ranges
         self.range = range
         self.label = label
         self.slim = slim
         self.tiles = tiles
+        self.repicks = repicks
         self.onPick = onPick
     }
 
@@ -128,7 +134,7 @@ struct DSRangeChips<Option: Hashable>: View {
                 ForEach(ranges, id: \.self) { r in
                     let on = r == range
                     Button {
-                        guard !on else { return }
+                        guard !on || repicks else { return }
                         DSHaptic.tap()
                         onPick(r)
                     } label: {
@@ -154,7 +160,7 @@ struct DSRangeChips<Option: Hashable>: View {
             HStack(spacing: DS.Space.s4) {
                 ForEach(ranges, id: \.self) { r in
                     Button {
-                        guard r != range else { return }
+                        guard r != range || repicks else { return }
                         DSHaptic.tap()
                         onPick(r)
                     } label: {
@@ -181,7 +187,7 @@ struct DSRangeChips<Option: Hashable>: View {
             HStack(spacing: DS.Space.s1) {
                 ForEach(ranges, id: \.self) { r in
                     Button {
-                        guard r != range else { return }
+                        guard r != range || repicks else { return }
                         DSHaptic.tap()
                         onPick(r)
                     } label: {

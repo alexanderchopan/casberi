@@ -1,51 +1,77 @@
 import Foundation
 
-/// **YOURS · EVERYTHING (prd §1526, user, 2026-10-25: "the underlying problem
+/// **YOURS · FOLLOWING · ALL (prd §1526, §1536, user, 2026-10-25: "the underlying problem
 /// is user doesn't have an easy way to toggle between the aggregated view or
 /// just their own wallet"; "Yours means casberi").**
 ///
 /// One switch, one state, drawn in the box of every tile but Markets. It is
 /// the Wallet's account pick put where it can be seen: Yours narrows the
 /// Wallet to this phone's Casberi account (`chrome.walletScope` = its
-/// address), Everything clears the pick. Search still picks any one account;
-/// while it has, the switch is not drawn, because the box then names that
-/// account and neither word would be true.
+/// address), Following to every wallet you follow (`followingScope`), All
+/// clears the pick. It is the ONLY whose-control: Home and Holdings draw no
+/// rows that pick an account (§1536). One followed wallet, opened from
+/// Following's list, lights Following, and the switch is the way back.
 ///
 /// Foundation-only, so the rules below are one place: what is lit, whether
 /// the switch draws, and where a launch starts.
 enum WalletWhose: String, CaseIterable, Hashable, Sendable {
-    case yours, everything
+    // `everything` keeps its raw value: a launch remembers the last pick by it.
+    case yours, following, everything
 
     static let defaultsKey = "wallet.whose.v1"
+
+    /// **FOLLOWING IS A PICK OF ITS OWN (prd §1536, user: "i think yours
+    /// following all switch is most sensible").** The scope that stands for
+    /// every wallet you follow at once — not an address, not an app — so
+    /// `selectedWallet` and `selectedSeat` both read it as nil.
+    static let followingScope = "group:following"
+
+    static func isFollowing(_ scope: String?) -> Bool { scope == followingScope }
 
     /// The word on the switch.
     var label: String {
         switch self {
         case .yours: return String(localized: "Yours")
-        case .everything: return String(localized: "Everything")
+        case .following: return String(localized: "Following")
+        case .everything: return String(localized: "All")
         }
     }
 
-    /// Which word is lit for the Wallet's current pick, or nil when the
-    /// switch does not draw: no Casberi account (Yours would be empty), or a
-    /// pick that is neither yours nor everything.
-    static func lit(scope: String?, yours: String?, same: (String, String) -> Bool) -> WalletWhose? {
-        guard let yours else { return nil }
+    /// The words the switch offers: Yours when your Casberi account is in
+    /// the Wallet, Following when you follow a wallet, All always.
+    static func offered(hasYours: Bool, hasFollowing: Bool) -> [WalletWhose] {
+        allCases.filter { $0 == .everything || ($0 == .yours && hasYours) || ($0 == .following && hasFollowing) }
+    }
+
+    /// Which word is lit for the Wallet's pick: All for no pick, Yours for
+    /// your account, Following for the group or any one wallet you follow,
+    /// All for an app (its money is part of All).
+    static func lit(scope: String?, yours: String?, same: (String, String) -> Bool) -> WalletWhose {
         guard let scope else { return .everything }
-        return same(scope, yours) ? .yours : nil
+        if isFollowing(scope) { return .following }
+        if scope.hasPrefix("seat:") { return .everything }
+        if let yours, same(scope, yours) { return .yours }
+        return .following
     }
 
     /// The scope a launch opens the Wallet on: yours unless you last chose
-    /// Everything; untouched when you have no account, or when something
-    /// already picked a scope (a deep link, a probe hook).
+    /// another word; untouched when something already picked a scope.
     static func launchScope(current: String?, yours: String?, remembered: WalletWhose?) -> String? {
-        guard current == nil, let yours else { return current }
-        return remembered == .everything ? nil : yours
+        guard current == nil else { return current }
+        switch remembered {
+        case .everything: return nil
+        case .following: return followingScope
+        case .yours, nil: return yours
+        }
     }
 
     /// The scope a press on the switch sets.
-    func scope(yours: String) -> String? {
-        self == .yours ? yours : nil
+    func scope(yours: String?) -> String? {
+        switch self {
+        case .yours: return yours
+        case .following: return Self.followingScope
+        case .everything: return nil
+        }
     }
 
     /// **ONLY YOUR CASBERI ACCOUNT IS YOURS (prd §1526 item 4, user: "i don't

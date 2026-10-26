@@ -22,9 +22,19 @@ extension FeedScreen {
     /// this property means an address, so a seat reads as nil here and as
     /// `selectedSeat` below.
     var selectedWallet: String? {
-        get { RoomAccounts.isSeat(chrome.walletScope) ? nil : chrome.walletScope }
+        get { RoomAccounts.isSeat(chrome.walletScope) || WalletWhose.isFollowing(chrome.walletScope) ? nil : chrome.walletScope }
         nonmutating set { chrome.walletScope = newValue }
     }
+
+    /// Following lit as a group (prd §1536): every wallet you follow at once,
+    /// read as neither an address nor an app.
+    var walletOnFollowing: Bool { WalletWhose.isFollowing(chrome.walletScope) }
+
+    /// The wallets Following stands for, when it is lit; nil otherwise.
+    var walletFollowingOnly: [String]? { walletOnFollowing ? WalletWhoseSwitch.followed : nil }
+
+    /// All: no account, app or group picked.
+    var walletOnAll: Bool { chrome.walletScope == nil }
 
     /// The app the menu picked, when it picked an app rather than an address.
     ///
@@ -103,12 +113,12 @@ extension FeedScreen {
         }
         // Cash in a currency Kraken can't price (prd §1048). Combined read
         // only, so a scoped page never carries it.
-        if selectedWallet == nil, let cash = portfolio?.unpricedCash, !cash.isEmpty {
+        if walletOnAll, let cash = portfolio?.unpricedCash, !cash.isEmpty {
             parts.append(cash.joined(separator: ", "))
         }
         // A card balance owed (prd §1078): money the total leaves out on
         // purpose, named beside it. The combined page only.
-        if selectedWallet == nil, selectedSeat == nil, let owed = portfolio?.owed, !owed.isEmpty {
+        if walletOnAll, let owed = portfolio?.owed, !owed.isEmpty {
             parts.append(owed.joined(separator: ", "))
         }
         guard !parts.isEmpty else { return nil }
@@ -207,7 +217,7 @@ extension FeedScreen {
         // draws that line.
         let samples = selectedSeat.map(seatValueSamples)
             ?? selectedWallet.map { wallet.valueSamples(forAddress: $0) }
-                ?? wallet.combinedValueSamples()
+                ?? wallet.combinedValueSamples(only: walletFollowingOnly)
         let ranges = WalletRange.offered(for: samples)
         let active = ranges.contains(balanceRange) ? balanceRange
             : WalletRange.remembered(offered: ranges)
@@ -286,7 +296,7 @@ extension FeedScreen {
                         // `chips`, gathered once at the top of this section —
                         // it walks the portfolio's holders, so re-deriving it
                         // here would do that twice per body pass.
-                        let hasBreakdown = !chips.isEmpty && selectedWallet == nil
+                        let hasBreakdown = !chips.isEmpty && walletOnAll
                         // SCOPED, THIS LINE IS THE WALLET'S NAME (prd §450).
                         // The rail above stopped captioning its faces on the
                         // strength of this slot existing — so when it is set,
@@ -328,7 +338,7 @@ extension FeedScreen {
                             // which has no rail at all (`WalletScopeRail.shows`
                             // wants > 1) and so has nothing else naming it.
                             caption: scoped?.name ?? selectedSeat?.name
-                                ?? (hasBreakdown ? "" : String(localized: "Balance")),
+                                ?? (hasBreakdown || walletOnFollowing ? "" : String(localized: "Balance")),
                             captionAddress: selectedWallet,
                             captionDetail: scoped?.detail,
                             // An empty caption must take NO height, or dropping
@@ -531,7 +541,7 @@ extension FeedScreen {
     /// moved" surface; the combined sheet that carried a fuller table retired
     /// with prd §208.)
     private func moverLine() -> String? {
-        guard let top = wallet.holdingsDeltas(forAddress: selectedWallet).first else { return nil }
+        guard !walletOnFollowing, let top = wallet.holdingsDeltas(forAddress: selectedWallet).first else { return nil }
         let sign = top.delta >= 0 ? "+" : "−"
         return String(localized: "Mostly \(top.symbol) · \(sign)\(TokenStats.compact(abs(top.delta)))")
     }
@@ -603,7 +613,7 @@ extension FeedScreen {
         // Scoped to ONE wallet, the question is that wallet's, and a venue
         // isn't part of the answer — the same reason `WalletIngest` only
         // merges venues into the combined read.
-        guard selectedWallet == nil, let portfolio else { return [] }
+        guard walletOnAll, let portfolio else { return [] }
         return portfolio.venueTotals
             .filter { $0.usd >= WalletIngest.holdingFloor }
             .map { WalletFaceChips.Entry(id: $0.address, value: $0.usd,
