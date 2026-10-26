@@ -142,6 +142,8 @@ struct BridgeIcon: View {
     /// from a seat keeps its seat's mark, which is how the room tells a pin
     /// from a note. Callers hold a live model.
     static func noteSymbol(for thing: Thing) -> String? {
+        // A private move's Activity row wears the eye-slash (prd §1554).
+        if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }
         guard Pinboard.isNote(thing) else { return nil }
         return Highlight.isHighlight(thing) ? "text.quote" : thing.kind.symbol
     }

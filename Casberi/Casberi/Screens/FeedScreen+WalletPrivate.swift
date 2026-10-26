@@ -7,9 +7,10 @@ import SwiftUI
 /// Aave" once a pool earns, not built: Sepolia has no Aave), "ETH, moving in" with the amber clock and
 /// "Waiting for approval", "ETH, not approved". The Tokens rows above are
 /// public balances only; the box counts approved private money as one
-/// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`). No verb here: the act is Move's
-/// (`MovePrivateSentence`), and every row is its door, opening Move already
-/// on "to private". Private is never the default.
+/// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`).
+/// No verb here: the acts are Send's (`MovePrivateSentence`). The header
+/// opens Send to your private balance; a row opens Send with the Private
+/// switch on. Private is never the default.
 ///
 /// Sepolia only for now. The section stands where there is a note to show,
 /// or, in a DEBUG build whose test sender can move (`PrivateMove.available`),
@@ -45,17 +46,18 @@ extension FeedScreen {
         return PrivateMoney.figure(only.amount, decimals: only.decimals, symbol: only.symbol)
     }
 
-    /// Opens Move on its private sentence (prd §1554).
-    private func walletOpenPrivate() {
+    /// Opens Send privately (prd §1554): to your private balance from the
+    /// header, from it (the switch on) from a row.
+    private func walletOpenPrivate(_ mode: PrivateMove.Mode) {
         DSHaptic.selection()
-        chrome.moveToPrivate = true
+        chrome.movePrivately = mode
         chrome.moveTray = true
     }
 
     /// The head: the door anatomy (`walletDoor`), whose page is Move's
     /// private sentence.
     private func walletPrivateHead(total: String?) -> some View {
-        Button { walletOpenPrivate() } label: {
+        Button { walletOpenPrivate(.deposit) } label: {
             HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                 Image(systemName: "eye.slash")
                     .dsGlyph(.body)
@@ -81,7 +83,7 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .dsHover()
         .accessibilityLabel(Text(verbatim: [String(localized: "Private"), total].compactMap { $0 }.joined(separator: ". ")))
-        .accessibilityHint(Text("Opens moving money to private"))
+        .accessibilityHint(Text("Sends to your private balance"))
         .walletListRow()
     }
 
@@ -96,7 +98,7 @@ extension FeedScreen {
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
-        return Button { walletOpenPrivate() } label: {
+        return Button { walletOpenPrivate(.send) } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
                 Group {
                     if let glyph {
@@ -130,7 +132,7 @@ extension FeedScreen {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [row.title, state, figure].joined(separator: ". ")))
-        .accessibilityHint(Text("Opens moving money to private"))
+        .accessibilityHint(Text("Sends from your private balance"))
         .walletListRow()
     }
 }

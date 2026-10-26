@@ -239,6 +239,80 @@ enum PrivateMoney {
         return plain(gasBudget * price * 2)
     }
 
+    // MARK: - Sending from it (prd §1554)
+
+    /// What 0xBow's relayer charges for ETH (`/v1/details/evm/<chain>`): a
+    /// share in basis points, plus a fixed amount in base units.
+    struct RelayerTerms: Equatable {
+        let feeBPS: Int
+        let fixed: String
+    }
+
+    /// The relayer's terms for ETH, or nil when the answer names none.
+    static func relayerTerms(_ data: Data) -> RelayerTerms? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let assets = json["assets"] as? [[String: Any]],
+              let eth = assets.first(where: { ($0["ticker"] as? String)?.uppercased() == "ETH" }) else { return nil }
+        let bps = Int((eth["feeBPS"] as? String) ?? "") ?? (eth["feeBPS"] as? Int) ?? 0
+        let fixed = (eth["fixedFeeAmount"] as? String).flatMap { $0.allSatisfy(\.isNumber) && !$0.isEmpty ? $0 : nil } ?? "0"
+        return RelayerTerms(feeBPS: bps, fixed: fixed)
+    }
+
+    /// The relayer's fee on `amount` (base units): its share, rounded up, plus
+    /// the fixed part. Base units, decimal.
+    static func relayFee(_ amount: String, terms: RelayerTerms) -> String {
+        guard let units = Decimal(string: amount), let fixed = Decimal(string: terms.fixed) else { return "0" }
+        var share = units * Decimal(terms.feeBPS) / 10_000
+        var up = Decimal()
+        NSDecimalRound(&up, &share, 0, .up)
+        return plain(up + fixed)
+    }
+
+    /// A 0x-hex quantity as decimal digits ("0x38d7ea4c68000" → "1000000000000000"); "0" for anything else.
+    static func decimal(hex: String) -> String {
+        guard hex.hasPrefix("0x"), hex.count > 2 else { return "0" }
+        var digits: [Int] = [0]
+        for c in hex.dropFirst(2) {
+            guard let v = c.hexDigitValue else { return "0" }
+            var carry = v
+            for i in stride(from: digits.count - 1, through: 0, by: -1) {
+                let x = digits[i] * 16 + carry
+                digits[i] = x % 10
+                carry = x / 10
+            }
+            while carry > 0 { digits.insert(carry % 10, at: 0); carry /= 10 }
+        }
+        let s = digits.map(String.init).joined().drop { $0 == "0" }
+        return s.isEmpty ? "0" : String(s)
+    }
+
+    // MARK: - In Activity (prd §1554)
+
+    /// A private move's Activity row: `private:<tx hash>`, never a
+    /// `privacypools:` ref (the Privacy Pools seat reads those as its own).
+    static let activityPrefix = "private:"
+
+    static func isActivity(_ ref: String?) -> Bool { ref?.hasPrefix(activityPrefix) == true }
+
+    /// The row's words, with no verb (the Activity rule): "0.001 ETH to your
+    /// private balance" moving in, "0.001 ETH to ...a3f1" sent from it.
+    static func activityTitle(figure: String, to recipient: String?) -> String {
+        guard let recipient else { return String(localized: "\(figure) to your private balance") }
+        return String(localized: "\(figure) to \(recipient)")
+    }
+
+    /// A plain EVM address: 0x and forty hex digits.
+    static func isAddress(_ s: String) -> Bool {
+        s.range(of: #"^0x[0-9a-fA-F]{40}$"#, options: .regularExpression) != nil
+    }
+
+    /// What the approved notes on `chainId` hold, base units: the private
+    /// money a send can spend. A note waiting for approval is not spendable.
+    static func spendable(_ notes: [Note], chainId: Int, symbol: String = "ETH") -> String {
+        plain(notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }
+            .compactMap { Decimal(string: $0.amount) }.reduce(0, +))
+    }
+
     private static func pow10(_ n: Int) -> Decimal {
         var d = Decimal(1)
         for _ in 0..<max(n, 0) { d *= 10 }

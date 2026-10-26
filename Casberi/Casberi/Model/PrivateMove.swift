@@ -1,19 +1,31 @@
 import Foundation
 import Observation
 
-/// **MOVE TO PRIVATE, THE ACT (prd §1554).** One tap: the private account
-/// opens (its seed behind Face ID), the keystore is registered the first time
-/// (two transactions, so the notes can be spent later), the deposit is
-/// proved on the phone and sent, and the note is kept as waiting for
-/// approval. Sepolia only; in DEBUG builds only, because the sender is the
-/// DEBUG testnet sender (`PrivacyTestnetSender`) until your account sends.
+/// **SEND, PRIVATELY (prd §1554).** Two acts on Send, neither a verb:
+///
+/// - **Into your private balance** (`Mode.deposit`, the recipient "Your
+///   private balance"): the private account opens (its seed behind Face ID),
+///   the keystore is registered the first time (two transactions, so the
+///   notes can be spent later), the deposit is proved on the phone and sent,
+///   and the note is kept as waiting for approval.
+/// - **From your private balance** (`Mode.send`, the Private switch on): the
+///   account opens, finds its notes, proves a withdrawal of the amount to the
+///   address, and hands it to 0xBow's relayer, which posts it and pays the
+///   gas for a fee. Only APPROVED private money is spendable.
+///
+/// Sepolia only; in DEBUG builds only, because the sender is the DEBUG
+/// testnet sender (`PrivacyTestnetSender`) until your account sends.
 @MainActor
 @Observable
 final class PrivateMove {
 
+    enum Mode: Equatable { case deposit, send }
+
     enum Stage: Equatable {
         case reading
         case ready
+        /// Switch on, nothing approved to spend.
+        case nothingPrivate
         /// The sender holds too little Sepolia ETH; the address to fund.
         case needsFunds(String)
         /// Face ID, for the private account's seed.
@@ -27,7 +39,17 @@ final class PrivateMove {
         case failed(String)
     }
 
+    var mode: Mode
     var stage: Stage = .reading
+    /// Switch on: who it goes to, an address.
+    var recipient: String?
+    /// Switch on: the relayer's terms for ETH (`PrivateMoney.relayerTerms`).
+    private(set) var terms: PrivateMoney.RelayerTerms?
+
+    init(mode: Mode = .deposit, recipient: String? = nil) {
+        self.mode = mode
+        self.recipient = recipient
+    }
     /// The sender's Sepolia ETH and the gas a first move keeps back, base units.
     private(set) var balance: String?
     private(set) var reserve: String?
@@ -47,8 +69,21 @@ final class PrivateMove {
     var held: String? { balance.flatMap { PrivateMoney.number($0, decimals: 18) } }
 
     var choices: [String] {
-        guard let balance, let reserve else { return [] }
-        return PrivateMoney.choices(balance: balance, reserve: reserve)
+        switch mode {
+        case .deposit:
+            guard let balance, let reserve else { return [] }
+            return PrivateMoney.choices(balance: balance, reserve: reserve)
+        case .send:
+            // The approved private balance; the relayer's fee comes out of it.
+            return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId),
+                                        reserve: "0")
+        }
+    }
+
+    /// The relayer's fee on this amount, base units, once its terms are read.
+    var fee: String? {
+        guard let terms, let value = PrivateMoney.baseUnits(amount, decimals: 18) else { return nil }
+        return PrivateMoney.relayFee(value, terms: terms)
     }
 
     var busy: Bool {
@@ -63,6 +98,7 @@ final class PrivateMove {
 
     func read() async {
         #if DEBUG
+        if mode == .send { await readSend(); return }
         // The demo reaches nothing (§217): its sentence stands on a pretended
         // balance, and the act says it works once you leave the demo.
         if DemoMode.isActive {
@@ -104,7 +140,66 @@ final class PrivateMove {
     }
     #endif
 
+    /// Switch on: what is spendable, and the relayer's terms.
+    private func readSend() async {
+        stage = .reading
+        let options = choices
+        guard !options.isEmpty else { stage = .nothingPrivate; return }
+        if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+        if !DemoMode.isActive, terms == nil,
+           let url = URL(string: PrivacyNetwork.sepolia.relayerUrl + "/v1/details/evm/\(PrivacyNetwork.sepolia.chainId)"),
+           let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: PrivacyEngine.service),
+           http.statusCode == 200 {
+            terms = PrivateMoney.relayerTerms(data)
+        }
+        stage = .ready
+        NSLog("privateMove| send read | %d choices | fee %@ bps", options.count, terms.map { String($0.feeBPS) } ?? "-")
+    }
+
+    /// The act: a deposit, or switch on a relayed withdrawal.
     func run() async {
+        if mode == .send { await runSend(); return }
+        await runDeposit()
+    }
+
+    private func runSend() async {
+        #if DEBUG
+        if DemoMode.isActive {
+            stage = .failed(YourAccountDemo.actsLater)
+            return
+        }
+        guard let to = recipient, PrivateMoney.isAddress(to),
+              let value = PrivateMoney.baseUnits(amount, decimals: 18), let hex = PrivateMoney.hex(value) else { return }
+        let engine = PrivacyEngine.shared
+        let started = Date()
+        do {
+            let owner = try PrivacyTestnetSender.ensure()
+            stage = .opening
+            if !PrivacyPoolsKey.exists() { try PrivacyPoolsKey.create() }
+            var seed = try PrivacyPoolsKey.seed(reason: String(localized: "Send from your private balance"))
+            defer { seed.resetBytes(in: 0..<seed.count) }
+            stage = .preparing
+            _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)
+            seed.resetBytes(in: 0..<seed.count)
+            // The notes as the pool holds them: what is spendable is theirs.
+            let found = try await engine.discover()
+            PrivateMoneyStore.shared.reconcile(found)
+            stage = .proving
+            let spend = try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to)
+            NSLog("privateMove| proved withdraw | %d ms", spend.ms)
+            stage = .sending
+            let relayed = try await engine.relay(handle: spend.handle)
+            stage = .done(relayed.tx)
+            NSLog("privateMove| relayed | %@ | %@ ETH | %d s", relayed.tx, amount, Int(Date().timeIntervalSince(started)))
+            if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after) }
+        } catch {
+            stage = .failed(Self.words(error))
+            NSLog("privateMove| failed | %@", String(describing: error))
+        }
+        #endif
+    }
+
+    private func runDeposit() async {
         #if DEBUG
         if DemoMode.isActive {
             stage = .failed(YourAccountDemo.actsLater)
@@ -163,6 +258,13 @@ final class PrivateMove {
     static func words(_ error: Error) -> String {
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
+            if failure.name.localizedCaseInsensitiveContains("BelowMinimum") {
+                return String(localized: "Below the pool's smallest deposit")
+            }
+            if failure.message.localizedCaseInsensitiveContains("does not cover")
+                || failure.message.localizedCaseInsensitiveContains("insufficient") {
+                return String(localized: "Your approved private balance does not cover it")
+            }
             return String(localized: "The private account could not be opened")
         }
         #if DEBUG

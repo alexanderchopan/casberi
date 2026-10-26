@@ -15,7 +15,7 @@ enum PrivacyEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
-        case discover, prepareTransfer, prepareWithdraw, bench, labelHash
+        case discover, prepareTransfer, prepareWithdraw, bench, labelHash, relay
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -159,6 +159,17 @@ enum PrivacyEngineWire {
         let handle: String
         let ms: Int
         let proofs: [Proof]
+    }
+
+    /// A prepared spend, named for the relayer (prd §1554).
+    struct Handle: Codable, Equatable {
+        let handle: String
+    }
+
+    /// What the relayer posted: the transaction's hash.
+    struct Relayed: Decodable, Equatable {
+        let tx: String
+        let ms: Int
     }
 
     struct Benched: Decodable, Equatable {

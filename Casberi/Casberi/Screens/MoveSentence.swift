@@ -35,20 +35,32 @@ struct MoveSentence: View {
     enum Arrival { case broughtHere }
     var arrival: Arrival?
 
-    init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil, toPrivate: Bool = false) {
+    init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
+         privately: PrivateMove.Mode? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
-        _verb = State(initialValue: opening ?? (arrival == nil ? .swap : .receive))
+        let mode = PrivateMove.available ? privately : nil
+        _verb = State(initialValue: mode != nil ? .send : opening ?? (arrival == nil ? .swap : .receive))
         _fresh = State(initialValue: arrival != nil)
-        _privately = State(initialValue: toPrivate && PrivateMove.available)
+        _privateMode = State(initialValue: mode)
+        _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
     }
 
-    /// **TO PRIVATE (prd §1554): the one sentence that is not this account's.**
-    /// Its own page (`MovePrivateSentence`) under these verbs, over the
-    /// account's sentence, which stays as it was for the verb picked next.
-    @State private var privately = false
+    /// **SEND, PRIVATELY (prd §1554): a recipient and a switch, never a
+    /// verb.** "Your private balance" leads Send's recipients (`.deposit`);
+    /// the Private switch under any other recipient sends from it (`.send`).
+    /// Either draws `MovePrivateSentence` under these verbs, over the
+    /// account's sentence, which stays as it was. Never remembered on.
+    @State private var privateMode: PrivateMove.Mode?
     @State private var privateMove = PrivateMove()
+
+    private func goPrivate(_ mode: PrivateMove.Mode) {
+        privateMove.mode = mode
+        privateMove.recipient = mode == .send ? resolved?.address : nil
+        withAnimation(DS.Motion.standard) { open = nil; privateMode = mode }
+        DSHaptic.selection()
+    }
 
     /// Still the arrival's sentence: until a verb is picked.
     @State private var fresh = false
@@ -430,15 +442,20 @@ struct MoveSentence: View {
     var body: some View {
         ZStack {
             accountPage
-                .opacity(privately ? 0 : 1)
-                .allowsHitTesting(!privately)
-                .accessibilityHidden(privately)
-            if privately {
-                MovePrivateSentence(move: privateMove, inTray: inTray) { verbs }
-                    .transition(.opacity)
+                .opacity(privateMode == nil ? 1 : 0)
+                .allowsHitTesting(privateMode == nil)
+                .accessibilityHidden(privateMode != nil)
+            if privateMode != nil {
+                MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
+                    withAnimation(DS.Motion.standard) {
+                        privateMode = nil
+                        if why == .pickRecipient { open = .to; search = "" }
+                    }
+                }) { verbs }
+                .transition(.opacity)
             }
         }
-        .animation(DS.Motion.standard, value: privately)
+        .animation(DS.Motion.standard, value: privateMode)
     }
 
     private var accountPage: some View {
@@ -593,6 +610,12 @@ struct MoveSentence: View {
             // Round-ups (prd §1452): the change, then what the whole send
             // comes to with it (user: "needs to be clear that the 5$ is
             // the total tx").
+            // The Private switch (prd §1554): off, always, on arrival.
+            if verb == .send, receipt == nil, PrivateMove.available {
+                MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))
+                    .padding(.top, DS.Space.s4)
+                    .disabled(stage != nil)
+            }
             if verb == .send, receipt == nil, let plan = roundUpPlan, plan.change != "0" {
                 let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
                 row(nil) {
@@ -1464,54 +1487,33 @@ struct MoveSentence: View {
     private func verbRow(spacing: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
             // A–Z in the reader's language (prd §1547); Swap stays the
-            // verb Move opens on, wherever it stands in the line. Private
-            // (nil, prd §1554) takes its place in the order where the test
-            // sender can move: Sepolia, DEBUG builds, never the default.
-            ForEach((Verb.allCases.filter { $0 != .buy || buyAvailable }.map(Optional.some)
-                     + (PrivateMove.available ? [nil] : []))
-                .sorted { verbName($0).localizedStandardCompare(verbName($1)) == .orderedAscending }, id: \.self) { v in
-                if let v {
-                    Button {
-                        guard v != verb || receipt != nil || privately else { return }
-                        withAnimation(DS.Motion.standard) {
-                            privately = false
-                            verb = v
-                            open = nil
-                            receipt = nil
-                        }
-                        DSHaptic.selection()
-                    } label: {
-                        // A step under the sentence's floor (§1479): the verbs
-                        // name what the sentence does, they are not the sentence.
-                        Text(verbatim: title(v))
-                            .dsText(.heading24)
-                            .foregroundStyle(v == verb && !privately ? DS.textPrimary
-                                             : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
+            // verb Move opens on, wherever it stands in the line.
+            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
+                .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
+                Button {
+                    guard v != verb || receipt != nil || privateMode != nil else { return }
+                    withAnimation(DS.Motion.standard) {
+                        privateMode = nil
+                        verb = v
+                        open = nil
+                        receipt = nil
                     }
-                    .buttonStyle(RowPress())
-                    .disabled(stage != nil || privateMove.acting)
-                    .accessibilityAddTraits(v == verb && !privately ? [.isSelected] : [])
-                } else {
-                    Button {
-                        guard !privately else { return }
-                        withAnimation(DS.Motion.standard) { privately = true; open = nil }
-                        DSHaptic.selection()
-                    } label: {
-                        Text(verbatim: verbName(nil))
-                            .dsText(.heading24)
-                            .foregroundStyle(privately ? DS.textPrimary : DS.textTertiary)
-                    }
-                    .buttonStyle(RowPress())
-                    .disabled(stage != nil)
-                    .accessibilityAddTraits(privately ? [.isSelected] : [])
+                    DSHaptic.selection()
+                } label: {
+                    // A step under the sentence's floor (§1479): the verbs
+                    // name what the sentence does, they are not the sentence.
+                    Text(verbatim: title(v))
+                        .dsText(.heading24)
+                        .foregroundStyle(v == verb ? DS.textPrimary
+                                         : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
+                .buttonStyle(RowPress())
+                .disabled(stage != nil || privateMove.acting)
+                .accessibilityAddTraits(v == verb ? [.isSelected] : [])
             }
         }
         .fixedSize(horizontal: true, vertical: false)
     }
-
-    /// A verb's word, or Private's (nil, prd §1554).
-    private func verbName(_ v: Verb?) -> String { v.map(title) ?? String(localized: "Private") }
 
     private func title(_ v: Verb) -> String {
         switch v {
@@ -2448,6 +2450,13 @@ struct MoveSentence: View {
         // The person the line above goes to leads, said so (§1442h).
         let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
         return VStack(alignment: .leading, spacing: 0) {
+            // Your private balance leads your own (prd §1554): one tap picks
+            // it, never typed. Sepolia, DEBUG builds.
+            if PrivateMove.available, q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
+                listRow(String(localized: "Your private balance"), sub: "Sepolia", symbol: "eye.slash") {
+                    goPrivate(.deposit)
+                }
+            }
             if let above, q.isEmpty {
                 listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
                         face: above.to) {

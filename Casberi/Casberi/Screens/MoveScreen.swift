@@ -37,7 +37,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.moveToPrivate = false }) {
+                      onDismiss: { chrome.movePrivately = nil }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -54,13 +54,16 @@ struct MoveTrayPresenter: ViewModifier {
             NSLog("[Casberi] openMove: raised")
             chrome.moveTray = true
         }
-        // `-moveToPrivate YES`: raise Move on its private sentence, as
-        // Holdings' Private rows do (prd §1554).
+        // `-moveToPrivate YES` raises Send to your private balance, as
+        // Holdings' Private header does; `-movePrivateSend YES` raises Send
+        // with the Private switch on, as a private row does (prd §1554).
         .task {
-            guard UserDefaults.standard.bool(forKey: "moveToPrivate") else { return }
+            let mode: PrivateMove.Mode? = UserDefaults.standard.bool(forKey: "movePrivateSend") ? .send
+                : UserDefaults.standard.bool(forKey: "moveToPrivate") ? .deposit : nil
+            guard let mode else { return }
             try? await Task.sleep(for: .seconds(1))
-            NSLog("[Casberi] moveToPrivate: raised")
-            chrome.moveToPrivate = true
+            NSLog("[Casberi] movePrivately: raised %@", mode == .send ? "send" : "deposit")
+            chrome.movePrivately = mode
             chrome.moveTray = true
         }
         #endif
@@ -97,7 +100,7 @@ struct MoveScreen: View {
     @State private var recoverableOn: [YourAccountOp.Network]?
     /// To private with no account on this phone (prd §1554): the test
     /// sender sends it, so the sentence stands without one.
-    @State private var privateMove = PrivateMove()
+    @State private var privateMove = PrivateMove(mode: .deposit)
 
     #if DEBUG
     /// `-movePreview create|recover|keys|ready` (DEBUG): draw a screen
@@ -161,18 +164,23 @@ struct MoveScreen: View {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
-                             toPrivate: chrome.moveToPrivate)
+                             privately: chrome.movePrivately)
                     .transition(.opacity)
-            } else if chrome.moveToPrivate, PrivateMove.available {
-                // No account yet, so no other verb can be tapped: the
-                // private sentence under its own word alone.
-                MovePrivateSentence(move: privateMove, inTray: inTray) {
-                    Text("Private")
+            } else if let mode = chrome.movePrivately, PrivateMove.available {
+                // No account yet, so no other verb can be tapped: Send's
+                // private sentence under its one word. With no public send
+                // here, the switch off is the deposit, and picking someone
+                // else is the switch on.
+                MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
+                    privateMove.mode = why == .switchOff ? .deposit : .send
+                }) {
+                    Text("Send")
                         .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
                         .frame(minHeight: 44, alignment: .leading)
                         .accessibilityAddTraits(.isHeader)
                 }
+                .onAppear { privateMove.mode = mode }
             } else {
                 before
             }

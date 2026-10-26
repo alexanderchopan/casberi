@@ -54,6 +54,32 @@ final class PrivateMoneyStore {
                            label: String(localized: "Private"))] : []
     }
 
+    /// The approved private money on `chainId`, base units: what a send
+    /// with the Private switch on can spend.
+    func spendable(chainId: Int) -> String { PrivateMoney.spendable(notes, chainId: chainId) }
+
+    /// The notes as the pool holds them (`PrivacyEngine.discover`): an
+    /// unspent note is kept with the approval it had (a new one, change from a
+    /// spend, keeps its deposit's label and so its approval); a note the pool
+    /// no longer holds unspent is gone, unless it was made in the last ten
+    /// minutes and the pool has not indexed it yet.
+    func reconcile(_ found: PrivacyEngineWire.Discovered) {
+        let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0.status) }, uniquingKeysWith: { a, _ in a })
+        let unspent = found.notes.filter { $0.status.uppercased() == "ACTIVE" && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
+        var next: [PrivateMoney.Note] = unspent.map { n in
+            let had = notes.first { $0.commitment.lowercased() == n.commitment.lowercased() }
+            return .init(commitment: n.commitment, label: n.label, labelHash: had?.labelHash ?? "",
+                         symbol: "ETH", amount: PrivateMoney.decimal(hex: n.value), decimals: 18,
+                         chainId: PrivacyNetwork.sepolia.chainId, tx: had?.tx ?? "", at: had?.at ?? Date(),
+                         status: had?.status ?? byLabel[n.label.lowercased()] ?? .waiting)
+        }
+        let recent = Date().addingTimeInterval(-600)
+        next += notes.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
+        notes = next
+        save()
+        NSLog("privateMoney| reconciled | %d notes | spendable %@", notes.count, spendable(chainId: PrivacyNetwork.sepolia.chainId))
+    }
+
     /// The dollars Holdings' rows draw, read when they show.
     func readPrices() async { _ = await walletHolding() }
 

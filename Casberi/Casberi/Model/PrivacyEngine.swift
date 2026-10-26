@@ -189,6 +189,12 @@ final class PrivacyEngine: NSObject {
                        as: Wire.PreparedSpend.self)
     }
 
+    /// Hands a prepared spend to the relayer, which posts it and pays its
+    /// gas (prd §1554); the handle is spent either way.
+    func relay(handle: String) async throws -> Wire.Relayed {
+        try await call(.relay, Wire.Handle(handle: handle), as: Wire.Relayed.self)
+    }
+
     /// One proof on `circuit` with this network's real keys and synthetic
     /// inputs: what a proof costs on this phone, with no funds and no send.
     /// Poseidon(label), decimal: the id 0xBow's ASP files a deposit under.

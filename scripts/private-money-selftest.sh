@@ -54,28 +54,41 @@ use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sende
 awk '/static var available: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Move to private is no longer DEBUG-only"; exit 1; }
 echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only device-only sender"
 
-# The act is Move's, Holdings only shows (prd §1554): the sentence is drawn
-# under Move's verbs, the Private verb only where the sender can move, the
-# tray opens on it from Holdings' rows, and Holdings raises no sheet of its own.
+# Private is Send's, never a verb (prd §1554): "Your private balance" leads
+# Send's recipients, the Private switch stands under Send's sentence (off, and
+# never remembered on: its binding reads false), the verbs are Move's five,
+# Holdings' header and rows open Send, and Holdings raises no sheet of its own.
 SENT="Casberi/Casberi/Screens/MoveSentence.swift"
 MSCREEN="Casberi/Casberi/Screens/MoveScreen.swift"
 MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
 HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
-use "$SENT" 'MovePrivateSentence(move: privateMove, inTray: inTray) { verbs }' "the private sentence is no longer drawn under Move's verbs"
-use "$SENT" '+ (PrivateMove.available ? [nil] : []))' "the Private verb is drawn where the sender cannot move"
-use "$MSCREEN" 'toPrivate: chrome.moveToPrivate)' "Move no longer opens on the private sentence when asked"
-use "$MSCREEN" 'onDismiss: { chrome.moveToPrivate = false }' "a closed Move keeps opening on the private sentence"
-[[ $(grep -c 'chrome.moveToPrivate = true' "$HOLD") == 1 ]] && grep -q 'walletOpenPrivate() } label:' "$HOLD" \
-    || { echo "✗ Holdings' Private rows no longer open Move"; exit 1; }
+use "$SENT" '}) { verbs }' "the private sentence is no longer drawn under Move's verbs"
+use "$SENT" 'listRow(String(localized: "Your private balance"), sub: "Sepolia", symbol: "eye.slash") {' "your private balance is no longer a recipient"
+use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))' "the Private switch is not off on arrival under Send"
+awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .send, receipt == nil, PrivateMove.available {' \
+    || { echo "✗ the Private switch stands somewhere other than Send, or where the sender cannot move"; exit 1; }
+! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
+! grep -q 'PrivateMove.available ? \[nil\]' "$SENT" || { echo "✗ Private is in the verbs row"; exit 1; }
+use "$MPRIV" 'if move.mode == .send, !isDone {' "the switch shows on a deposit, or is gone from a private send"
+use "$MSCREEN" 'privately: chrome.movePrivately)' "Move no longer opens Send privately when asked"
+use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil }' "a closed Move keeps opening privately"
+grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
+    || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 ! grep -q 'feedSheet' "$HOLD" || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
 use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
+use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: live ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
 ! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
+use "Casberi/Casberi/Model/PrivateMove.swift" 'let relayed = try await engine.relay(handle: spend.handle)' "a private send no longer goes through the relayer"
+use "Casberi/Casberi/Model/PrivateMove.swift" 'return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId),' "a private send's amounts are not the approved private balance"
+use "tools/privacy-pools-engine/src/engine.js" 'const r = await s.relayWithdraw(option);' "the engine no longer relays a withdrawal"
+use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped bundle cannot relay — rebuild with tools/privacy-pools-engine/build.mjs"
+use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately,' "private money no longer counts in the Wallet's total"
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens rows count private money twice"
 use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens sheet counts private money twice"
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
-echo "  ok   the act is Move's: under its verbs, opened from Holdings' rows, the address by its tail"
+echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
 echo "  ok   private money counts once: in the total and the box, never in Tokens"
 
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
@@ -133,6 +146,21 @@ check(P.rows(mainnet).first.map { P.rowUSD($0, prices: prices) } == 8, "a mainne
 check(rows.first.map { P.rowUSD($0, prices: prices) } == .some(nil), "a Sepolia row states its quantity")
 check(P.rows([note("a", "1", .approved), onChain(note("b", "1", .approved), 1)]).count == 2, "one row per network")
 check(P.network(11155111) == "Sepolia" && P.network(1) == "Ethereum", "the row's network")
+
+// Sending from it (prd §1554).
+let details = #"{"assets":[{"address":"0xEeee","ticker":"ETH","fixedFeeAmount":"21000","feeBPS":"10"},{"ticker":"USDC","fixedFeeAmount":"21000"}]}"#
+let terms = P.relayerTerms(Data(details.utf8))
+check(terms == P.RelayerTerms(feeBPS: 10, fixed: "21000"), "the relayer's ETH terms (\(String(describing: terms)))")
+check(P.relayerTerms(Data("{}".utf8)) == nil && P.relayerTerms(Data("<html>".utf8)) == nil, "no terms, no fee")
+check(terms.map { P.relayFee("50000000000000", terms: $0) } == "50000021000", "10 bps of 0.00005 ETH plus the fixed part (the trial's 0.00000005)")
+check(terms.map { P.relayFee("1", terms: $0) } == "21001", "a share is rounded up, never to nothing")
+check(P.spendable(notes, chainId: 11155111) == "4000000000000000", "only approved notes are spendable")
+check(P.spendable(notes, chainId: 1) == "0", "another network's notes are not")
+check(P.isAddress("0xEB3e3961008952348445513e418ad6F43C23ca9a") && !P.isAddress("0xEB3e") && !P.isAddress("vitalik.eth"), "an address is 0x and forty hex digits")
+check(P.decimal(hex: "0x38d7ea4c68000") == "1000000000000000" && P.decimal(hex: "0x0") == "0" && P.decimal(hex: "12") == "0", "hex to decimal")
+check(P.activityTitle(figure: "0.001 ETH", to: nil) == "0.001 ETH to your private balance", "moving in, with no verb")
+check(P.activityTitle(figure: "0.001 ETH", to: "...ca9a") == "0.001 ETH to ...ca9a", "a private send, with no verb")
+check(P.isActivity("private:0xab") && !P.isActivity("privacypools:dep:1") && !P.isActivity(nil), "an Activity row is its own ref")
 
 // Amounts.
 check(P.figure("1000000000000000", decimals: 18, symbol: "ETH") == "0.001 ETH", "0.001 ETH (\(P.figure("1000000000000000", decimals: 18, symbol: "ETH")))")
@@ -220,6 +248,8 @@ mutate() {
 mutate "unknown no longer waits" "$PM" 's/case "pending", "unknown": return \.waiting/case "pending": return .waiting/'
 mutate "the ASP is asked by any label" "$PM" 's/guard labelHash\.range\(of: #"\^\[0-9\]\{1,80\}\$"#/guard labelHash.range(of: #".+"#/'
 mutate "a waiting row dates from its newest note" "$PM" 's/min\(had\.since, note\.at\)/max(had.since, note.at)/'
+mutate "a waiting note is spendable" "$PM" 's/notes\.filter \{ \$0\.status == \.approved && \$0\.chainId == chainId/notes.filter { $0.chainId == chainId/'
+mutate "the relayer's share rounds down" "$PM" 's/NSDecimalRound\(&up, &share, 0, \.up\)/NSDecimalRound(\&up, \&share, 0, .down)/'
 mutate "a waiting deposit counts in the total" "$PM" 's/guard note\.status == \.approved, !testnets/guard !testnets/'
 mutate "test money counts in the total" "$PM" 's/guard note\.status == \.approved, !testnets\.contains\(note\.chainId\),/guard note.status == .approved,/'
 mutate "two networks share a row" "$PM" 's/let key = "\\\(k\.rawValue\):\\\(note\.symbol\):\\\(note\.chainId\)"/let key = "\\(k.rawValue):\\(note.symbol)"/'
@@ -231,4 +261,4 @@ mutate "parity 0 is a zero byte" "$TX" 's/\.bytes\(yParity == 0 \? \[\] : \[1\]\
 mutate "r keeps its leading zero" "$TX" 's/\.bytes\(TestnetTx\.stripped\(r\)\)/.bytes(r)/'
 mutate "every request goes to the logs node" "$WIRE" 's/rpcMethods\(body\)\.contains\("eth_getLogs"\)/!rpcMethods(body).isEmpty/'
 mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current head", options: \.caseInsensitive\) != nil/body.isEmpty/'
-echo "  ok   14 mutations"
+echo "  ok   16 mutations"
