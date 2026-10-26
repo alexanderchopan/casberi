@@ -5,8 +5,8 @@ import Testing
 /// **A renamed app's records converge to ONE row under its current name**
 /// (prd §1147): two "Frames Devnet" records drew as two rows in Settings ›
 /// Apps after the seat became Hegotá Frames. That seat is deleted (prd
-/// §1206), so the cases ride the live "Tokens" → "Markets" rename. Pure:
-/// `BridgeStore.converged`,
+/// §1206), and Markets' deletion (prd §1529) emptied `Corpus.renamedSources`,
+/// so the cases seed a rename of their own. Pure: `BridgeStore.converged`,
 /// never a store, whose write would replace the simulator's saved records.
 struct BridgeConvergeTests {
 
@@ -14,17 +14,19 @@ struct BridgeConvergeTests {
         BridgeApp(id: "x", name: name, status: status, statusLine: "", can: [])
     }
 
+    private static func renamed(_ name: String) -> String { name == "Old" ? "New" : name }
+
     @Test func twinsUnderAnOldNameBecomeOneUnderTheNewName() throws {
         let out = try #require(BridgeStore.converged(
-            [Self.app("Tokens"), Self.app("Tokens"), Self.app("GitHub")],
-            current: Corpus.canonicalSource))
-        #expect(out.map(\.name) == ["Markets", "GitHub"])
+            [Self.app("Old"), Self.app("Old"), Self.app("GitHub")],
+            current: Self.renamed))
+        #expect(out.map(\.name) == ["New", "GitHub"])
     }
 
     @Test func aLiveTwinWinsOverAPausedOne() throws {
         let out = try #require(BridgeStore.converged(
-            [Self.app("Markets", .paused), Self.app("Tokens")],
-            current: Corpus.canonicalSource))
+            [Self.app("New", .paused), Self.app("Old")],
+            current: Self.renamed))
         #expect(out.count == 1)
         #expect(out.first?.status == .connected)
     }

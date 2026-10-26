@@ -115,8 +115,9 @@ enum DemoCensus {
 
         // ── Agent: every ask kind the composer can be handed ──────────────
         // Pure composers over the corpus: an empty one is a real gap.
+        // `watchlist` left with Markets (prd §1529): the demo holds no watches.
         let pureKinds = ["wallet", "walletdefi", "walletuniswap", "walletgas",
-                         "walletsafe", "watchlist", "overdue", "upcoming", "throwback",
+                         "walletsafe", "overdue", "upcoming", "throwback",
                          "moneyflow", "spend", "showtag:Release", "showtag:Alert"]
         for kind in pureKinds {
             out.append(Surface(name: "ask.\(kind)", gate: .required) {
