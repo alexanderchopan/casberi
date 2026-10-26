@@ -271,6 +271,18 @@ struct MoveSentence: View {
         ListFormatter.localizedString(byJoining: Op.networks.filter { unread.contains($0.chainId) }.map(\.name))
     }
 
+    /// **TOR, NAMED WHEN IT IS WHY (prd §1542, user, on "Couldn't read Base,
+    /// Ethereum, and Robinhood": "can't read networks why").** Every read
+    /// here leaves by Tor (§1495), so while Tor is still connecting, or could
+    /// not, the networks are not what failed and are not named.
+    private var readFailedWords: String {
+        switch TorStatus.shared.state {
+        case .connecting: String(localized: "Connecting to Tor: try again")
+        case .failed: String(localized: "Couldn't reach Tor: try again")
+        default: String(localized: "Couldn't read \(unreadNames): try again")
+        }
+    }
+
     /// What is left of a holding once the transaction's earlier lines are
     /// taken from it.
     private func left(_ h: Tokens.Held) -> String {
@@ -431,6 +443,10 @@ struct MoveSentence: View {
         }
         .onChange(of: scenePhase) { _, now in
             if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
+        }
+        // Tor connecting late reads what failed again, unasked (prd §1542).
+        .onChange(of: TorStatus.shared.state) { _, now in
+            if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
         .task(id: sweepKey) { await resweep() }
@@ -1647,7 +1663,7 @@ struct MoveSentence: View {
                 DSHaptic.selection()
                 Task { await readHoldings() }
             } label: {
-                Text("Couldn't read \(unreadNames): try again").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                Text(verbatim: readFailedWords).dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
         } else if verb == .sweep {

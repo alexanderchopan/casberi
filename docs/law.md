@@ -241,7 +241,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1679 of 1748 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1680 of 1749 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1541)
@@ -1922,6 +1922,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv…
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
+- §1542 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends…
 
 ## Dead rulings → what replaced them (generated)
 
