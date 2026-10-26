@@ -1658,71 +1658,75 @@ struct MoveSentence: View {
             // displayed. also with a copy button").** The sentence says
             // "…9f12"; the whole address stands here, readable, and the
             // foot's Copy address copies it (prd §1518). No exchange door: it
-            // only copied and opened Coinbase (prd §1484).
-            if let route = elsewhere {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text(verbatim: route.address)
-                        .dsText(.mono12)
-                        .foregroundStyle(DS.textSecondary)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                    // A wrong token sent here can be lost, so the line names
-                    // the one it takes; a swap on the way is said (§83), since
-                    // what lands is set by the price when it lands.
-                    Text(Self.elsewhereLine(route))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+            // only copied and opened Coinbase (prd §1484). One column: `line`
+            // stands in `space`'s ZStack, so two siblings here would draw
+            // over each other.
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                if let route = elsewhere {
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        Text(verbatim: route.address)
+                            .dsText(.mono12)
+                            .foregroundStyle(DS.textSecondary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // A wrong token sent here can be lost, so the line names
+                        // the one it takes; a swap on the way is said (§83), since
+                        // what lands is set by the price when it lands.
+                        Text(Self.elsewhereLine(route))
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else if !fresh, !networkPicked {
+                    // No address under the sentence until its network is picked
+                    // (prd §1486); a route Relay refused still says why.
+                    if let elsewhereFinding {
+                        Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        // The arrival names no one network, so it shows no address to
+                        // copy (prd §1488).
+                        if !fresh {
+                            Text(verbatim: account)
+                                .dsText(.mono12)
+                                .foregroundStyle(DS.textSecondary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                            // The network the sentence names (prd §1486).
+                            Text("Any coin on \(network.name).")
+                                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        // Never an address the account cannot follow (§1442k); once a
+                        // network is picked, the list offered only the ones it can.
+                        if let reach, !YourAccountReach.isAll(reach), fresh || reach.isEmpty {
+                            Text(reach.isEmpty
+                                 ? "Not on any network from this \(ThisDevice.name) yet."
+                                 : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))).")
+                                .dsText(.body17).foregroundStyle(DS.attentionInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if fresh, arrived, emptyEverywhere {
+                            Text("Nothing in it yet.")
+                                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .transition(.opacity)
+                        }
+                        if let elsewhereFinding {
+                            Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
-            } else if !fresh, !networkPicked {
-                // No address under the sentence until its network is picked
-                // (prd §1486); a route Relay refused still says why.
-                if let elsewhereFinding {
-                    Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // The arrival names no one network, so it shows no address to
-                // copy (prd §1488).
-                if !fresh {
-                    Text(verbatim: account)
-                        .dsText(.mono12)
-                        .foregroundStyle(DS.textSecondary)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                    // The network the sentence names (prd §1486).
-                    Text("Any coin on \(network.name).")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // Never an address the account cannot follow (§1442k); once a
-                // network is picked, the list offered only the ones it can.
-                if let reach, !YourAccountReach.isAll(reach), fresh || reach.isEmpty {
-                    Text(reach.isEmpty
-                         ? "Not on any network from this \(ThisDevice.name) yet."
-                         : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))).")
-                        .dsText(.body17).foregroundStyle(DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if fresh, arrived, emptyEverywhere {
-                    Text("Nothing in it yet.")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .transition(.opacity)
-                }
-                if let elsewhereFinding {
-                    Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            }
-            // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
-            // elsewhere sends it all here, each send approved there — §1484's
-            // bar, the transaction filled, never an address to paste. It needs
-            // no network picked, so it stands from the first moment; the
-            // demo's other wallet is made up too, and nothing connects.
-            if elsewhere == nil {
-                DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
-                    ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
+                // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
+                // elsewhere sends it all here, each send approved there — §1484's
+                // bar, the transaction filled, never an address to paste. It needs
+                // no network picked, so it stands from the first moment; the
+                // demo's other wallet is made up too, and nothing connects.
+                if elsewhere == nil {
+                    DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
+                        ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
+                    }
                 }
             }
         } else if let warning = leadWarning {
