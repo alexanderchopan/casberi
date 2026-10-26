@@ -217,6 +217,10 @@ check(aeroRoute.fees == [80], "rounding the words changed the route's fee")
 aeroRoute.fees = [150]
 let two = S.Route(venue: base.venues[0], hops: [S.Hop(from: "a", to: "b", step: 100), S.Hop(from: "b", to: "c", step: 3000)])
 check(S.words(two) == "On Uniswap · 0.01% and 0.3% pool fees", "two pools are not both named: \(S.words(two))")
+// Details' row (prd §1556): the exchange and the fees, one line.
+check(S.brief(tokenRoute) == "Uniswap · 0.3%" && S.brief(two) == "Uniswap · 0.01% + 0.3%"
+      && S.brief(aeroRoute) == "Aerodrome · 0.02%" && S.brief(S.Route(venue: base.venues[1], hops: [S.Hop(from: "a", to: "b", step: 100)])) == "Aerodrome",
+      "Details' swap row is not the exchange and its fees alone: \(S.brief(two))")
 check(S.credit([tokenRoute, tokenRoute]) == "On Uniswap · 0.3% pool fee" && S.credit([tokenRoute, aeroRoute]) == "On Uniswap and Aerodrome"
       && S.credit([]) == nil, "the foot's credit does not name the exchanges")
 check(S.fee(base.venues[4], answer: YourAccount.w(30)) == 3000 && S.fee(base.venues[1], answer: YourAccount.w(80)) == 80,
@@ -371,6 +375,8 @@ mutate "a cut multicall answer reads as whole" "$SWAP" \
   'bytesAt + 32 + length <= data.count else { return nil }' 'length >= 0 else { return nil }'
 mutate "v2's fee is read as millionths" "$SWAP" \
   'let pips = venue.kind == .aerodromeV2 ? n * 100 : n' 'let pips = n'
+mutate "Details' swap row says the whole sentence again" "$SWAP" \
+  'return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")' 'return words(route)'
 mutate "Ethereum swaps with Base's looser slippage" "$SWAP" \
   '        slippageBps: 30)' '        slippageBps: 50)'
 mutate "a pool fee said to four places again" "$SWAP" \

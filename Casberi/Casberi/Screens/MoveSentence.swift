@@ -2237,7 +2237,11 @@ struct MoveSentence: View {
     /// says "24.9 USDC"; this is where the places went.
     private var quotePrint: String? {
         guard let buy, let back = buyTotal else { return nil }
-        return "≈ " + Self.figure(back, decimals: buy.token.decimals) + " " + buy.token.symbol
+        // To another network the token is the one that arrives there, and
+        // Across pays exactly what it quoted: no ≈ (prd §1556).
+        let token = crossBuy ?? buy.token
+        let exact = quote?.across != nil
+        return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals) + " " + token.symbol
     }
 
     /// "$0.004", or "0.004 USDC" when dollars are typed. nil when the token

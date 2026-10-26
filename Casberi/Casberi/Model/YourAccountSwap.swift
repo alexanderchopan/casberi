@@ -697,6 +697,17 @@ enum YourAccountSwap {
         return String(localized: "On \(name) · \(list) pool fees")
     }
 
+    /// **A DETAILS ROW'S VALUE FITS ONE LINE (user, 2026-10-26, prd §1556).**
+    /// The exchange and its pools' fees, nothing else: "Uniswap · 0.01%",
+    /// "Aerodrome · 0.05% + 0.3%", the exchange alone when the fees could not
+    /// be read. The row's name ("Swaps", "Round-up") says what it is.
+    static func brief(_ route: Route) -> String {
+        let name = route.venue.exchange
+        let fees = route.venue.kind == .uniswap ? route.hops.map(\.step) : route.fees
+        guard fees.count == route.hops.count, !fees.isEmpty else { return name }
+        return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")
+    }
+
     /// One line for several swaps: the one route's words, else the
     /// exchanges they use: "On Uniswap and Aerodrome".
     static func credit(_ routes: [Route]) -> String? {

@@ -536,7 +536,10 @@ grep -q 'if ending == .close, inTray { chrome.moveTray = false }' Casberi/Casber
   || { echo "✗ Done no longer closes Move (prd §1501)"; exit 1; }
 grep -q 'case created' "$SENTENCE" && { echo "✗ Move's Created arrival is back beside the walk's Created page (prd §1501, §723)"; exit 1; }
 grep -q 'Self.short($0, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the For word draws the exact quote again — the clause outgrows 52 (prd §1479)"; exit 1; }
-grep -q 'return "≈ " + Self.figure(back, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the print line no longer carries the ≈ and the exact quote (prd §1479, §83)"; exit 1; }
+# The ≈ stands before a pool's quote; Across's output is exact (prd §1556).
+grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals)' "$SENTENCE" \
+  && grep -q 'let exact = quote?.across != nil' "$SENTENCE" \
+  || { echo "✗ the print line no longer carries the ≈ and the exact quote, or drops the ≈ for a pool's quote (prd §1479, §83, §1556)"; exit 1; }
 # The fee after it is the network's alone since §1539: the pool's is in the price (`swapFeePrint`).
 grep -q 'case .swap: \[soldPrint, quotePrint, swapFeePrint\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote or the whole fee (prd §1479, §1509)"; exit 1; }
 
