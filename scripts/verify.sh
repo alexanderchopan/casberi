@@ -2454,6 +2454,10 @@ harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-
 # asked for on a network with no coin to pay, nothing sent to a Relay route it
 # does not take or under its floor, and `transfer` calldata to the word.
 harness "Wallet-sweep self-test" "wallet sweep self-test" "scripts/wallet-sweep-selftest.sh" "the wallet-sweep self-test failed — run scripts/wallet-sweep-selftest.sh"
+# Move › Sweep (prd §1537). What is swapped for ETH: under $1 or $5 only, never
+# ETH, a stranger's token, an unpriced one or round-ups' change; ten at most;
+# a swap returning under half of what it sells stays.
+harness "Dust-sweep self-test" "dust sweep self-test" "scripts/dust-sweep-selftest.sh" "the dust-sweep self-test failed — run scripts/dust-sweep-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is

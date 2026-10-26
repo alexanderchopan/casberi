@@ -57,7 +57,7 @@ struct MoveSentence: View {
     typealias Chain = YourAccountChain
     typealias Tokens = YourAccountTokens
 
-    enum Verb: CaseIterable { case swap, send, receive, buy }
+    enum Verb: CaseIterable { case swap, send, receive, buy, sweep }
     enum Blank: Equatable { case with, buy, to, network, elsewhere, elsewhereCoin, arrives, group, merchant }
     enum Field: Hashable { case amount, search, to }
 
@@ -165,6 +165,19 @@ struct MoveSentence: View {
     @State private var spendNames: [String] = []
     /// After the payment: Bitrefill delivering, said at the foot.
     @State private var delivering = false
+
+    // MARK: - Sweep (prd §1537)
+
+    /// $1 or $5, round-ups' two steps.
+    @State private var sweepUnder = DustSweep.under
+    /// What on the network is swept and what stays, and why; nil until read.
+    @State private var sweepPlan: DustSweep.Plan?
+    /// Relay is pricing the plan's sweeps.
+    @State private var sweepPricing = false
+    /// The swaps Sweep signs, one per swept token, in the plan's order.
+    @State private var sweepItems: [Chain.Item] = []
+    /// What you took out of this sweep, by token id.
+    @State private var sweepLeftOut: Set<String> = []
 
     private func say(_ text: String, failure: Bool = false, seconds: Double = 3, from: String? = nil) {
         let h = Hint(text: text, failure: failure, from: from)
@@ -305,7 +318,7 @@ struct MoveSentence: View {
             // §1438b): it warns, and the verb takes a second tap.
             guard let r = resolved, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
-        case .receive, .buy:
+        case .receive, .buy, .sweep:
             return nil
         }
     }
@@ -346,6 +359,7 @@ struct MoveSentence: View {
         case .send: roundUpPlan?.buy != nil
         case .receive: elsewhere != nil
         case .buy: false
+        case .sweep: true
         }
     }
 
@@ -407,6 +421,7 @@ struct MoveSentence: View {
         .onChange(of: verb) { was, now in
             if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
             if now == .buy { enterBuy() }
+            if now == .sweep { enterSweep() }
             // Back from Receive: what was sent meanwhile is spendable.
             if was == .receive { Task { await readHoldings() } }
             // Details stays open across edits of the sentence, and closes
@@ -418,6 +433,7 @@ struct MoveSentence: View {
             if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
+        .task(id: sweepKey) { await resweep() }
         .task(id: previewKey) { await repreview() }
         .task(id: checkKey) { await recheck() }
         .task(id: to) { await resolve() }
@@ -480,7 +496,7 @@ struct MoveSentence: View {
             // numbered, quieter than the sentence being filled (§1442c) —
             // on Receive and Buy; Swap and Send say it as a sentence of
             // its own (prd §1494).
-            if receipt == nil, verb == .receive || verb == .buy, !keptLines.filter(showsKept).isEmpty {
+            if receipt == nil, verb == .receive || verb == .buy || verb == .sweep, !keptLines.filter(showsKept).isEmpty {
                 kept
                     .padding(.bottom, DS.Space.s4)
             }
@@ -488,8 +504,7 @@ struct MoveSentence: View {
                 if let receipt {
                     receiptClauses(receipt)
                 } else if emptyEverywhere, verb != .receive {
-                    MovePhrase(verb == .swap ? String(localized: "Nothing to swap yet.") : verb == .buy ? String(localized: "Nothing to pay with yet.") : String(localized: "Nothing to send yet."),
-                               ink: DS.textSecondary)
+                    MovePhrase(nothingYet, ink: DS.textSecondary)
                 } else {
                     switch verb {
                     case .swap:
@@ -500,6 +515,7 @@ struct MoveSentence: View {
                         sendClauses(lead: thenWord)
                     case .receive: receiveClauses
                     case .buy: buyClauses
+                    case .sweep: sweepClauses
                     }
                 }
             }
@@ -666,6 +682,261 @@ struct MoveSentence: View {
         let other = verb == .swap ? !keptSends.isEmpty : !keptSwaps.isEmpty
         guard other else { return nil }
         return verb == .swap ? String(localized: "Then swap") : String(localized: "Then send")
+    }
+
+    // MARK: - Sweep (prd §1537)
+
+    /// What the sentence says with nothing to spend anywhere.
+    private var nothingYet: String {
+        switch verb {
+        case .swap: String(localized: "Nothing to swap yet.")
+        case .buy: String(localized: "Nothing to pay with yet.")
+        case .sweep: String(localized: "Nothing to sweep yet.")
+        case .send, .receive: String(localized: "Nothing to send yet.")
+        }
+    }
+
+    /// **SWEEP IS A SENTENCE TOO (prd §1537):** "3 tokens under $1 for
+    /// ≈ 0.0004 ETH on Base." The line is round-ups' own menu, $1 or $5; ETH
+    /// is what comes back, so it is a word, not a choice; the network is the
+    /// sentence's own blank. What is swept and what stays is listed under it.
+    @ViewBuilder private var sweepClauses: some View {
+        MoveClause { word(sweepCountWord, ink: DS.textPrimary) }
+        MoveClause(glue: String(localized: "under")) {
+            Menu {
+                Picker(selection: Binding(get: { sweepUnder }, set: { under in
+                    withAnimation(DS.Motion.standard) { sweepUnder = under }
+                    DustSweep.under = under
+                    DSHaptic.selection()
+                })) {
+                    ForEach(DustSweep.choices, id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
+                } label: { EmptyView() }
+                .pickerStyle(.inline)
+            } label: {
+                MoveWord("$\(sweepUnder)", ink: DS.pickInk).contentTransition(.opacity)
+            }
+            .disabled(stage != nil)
+            .accessibilityLabel(Text("Sweep what is under $\(sweepUnder)"))
+        }
+        MoveClause(glue: String(localized: "for")) {
+            let back = word(sweepBackWord, ink: DS.textPrimary)
+            if sweepPricing {
+                // While Relay prices it, the word breathes, as Swap's does.
+                back.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
+            } else {
+                back
+            }
+        }
+        MoveClause(glue: String(localized: "on")) { networkWord }
+    }
+
+    /// "Everything" until the network is read, then what is swept.
+    private var sweepCountWord: String {
+        guard let plan = sweepPlan else { return String(localized: "Everything") }
+        let swept = sweepPricing ? plan.sweeps.count : sweepItems.count
+        if swept == 0 { return String(localized: "Nothing") }
+        if swept == 1, let only = plan.sweeps.first { return only.symbol }
+        return String(localized: "\(swept) tokens")
+    }
+
+    /// "≈ 0.0004 ETH" once Relay has priced it: short here, exact in Details.
+    private var sweepBackWord: String {
+        let back = DustSweep.total(sweepItems.compactMap { if case .swap(let s) = $0 { s.quote.buyAmount } else { nil } })
+        guard !sweepPricing, DustSweep.isPositive(back) else { return Op.eth.symbol }
+        return "≈ " + Self.short(back, decimals: Op.eth.decimals) + " " + Op.eth.symbol
+    }
+
+    /// Under the sentence: each token, swept or staying and why, then the
+    /// small print and Details. A swept token's tap leaves it out of this
+    /// sweep, and a second tap puts it back; a staying one says why.
+    @ViewBuilder private var sweepLine: some View {
+        if !networkPicked {
+            EmptyView()
+        } else if !YourAccountSwap.supported(network) {
+            Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary)
+        } else if let plan = sweepPlan {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                if plan.rows.isEmpty {
+                    Text("Nothing under $\(sweepUnder) on \(network.name)")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(plan.rows) { row in sweepRow(row) }
+                    }
+                }
+                if offersDetails {
+                    VStack(alignment: .leading, spacing: 0) {
+                        let print = [sweepSoldPrint, swapFeePrint].compactMap { $0 }
+                        detailsToggle(Text(verbatim: print.isEmpty ? "" : print.joined(separator: " · ") + " · ")
+                            .foregroundStyle(DS.textSecondary))
+                        if details { moveDetails }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                if let note = failNote ?? shownPreview?.refusal {
+                    Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        } else if heldBy.isEmpty {
+            Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    private func sweepRow(_ row: DustSweep.Row) -> some View {
+        let h = row.holding
+        let worth = h.usd.map { Self.money($0) }
+        return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? worth,
+                       trailing: row.stay == nil ? nil : worth, mark: h.symbol, dim: row.stay != nil) {
+            switch row.stay {
+            case nil:
+                withAnimation(DS.Motion.standard) { _ = sweepLeftOut.insert(h.id) }
+                DSHaptic.selection()
+            case .leftOut:
+                withAnimation(DS.Motion.standard) { _ = sweepLeftOut.remove(h.id) }
+                DSHaptic.selection()
+            case .some(let stay):
+                say(Self.sweepWhy(stay, h.symbol))
+            }
+        }
+        .disabled(stage != nil)
+        .accessibilityHint(row.stay == nil ? Text("Leaves it out of this sweep")
+                           : row.stay == .leftOut ? Text("Puts it back in this sweep") : Text("Says why it stays"))
+    }
+
+    /// Why a token stays, in the row's grey line.
+    static func sweepWords(_ stay: DustSweep.Stay) -> String {
+        switch stay {
+        case .noPrice: String(localized: "No price")
+        case .notVerified: String(localized: "Not verified by Relay")
+        case .roundUps: String(localized: "Holds your round-ups")
+        case .nextSweep: String(localized: "In the next sweep")
+        case .noRoute: String(localized: "Relay has no route")
+        case .costsMore: String(localized: "Costs more than it returns")
+        case .leftOut: String(localized: "Left out")
+        }
+    }
+
+    /// The same, said in full when the row is tapped.
+    static func sweepWhy(_ stay: DustSweep.Stay, _ symbol: String) -> String {
+        switch stay {
+        case .noPrice: String(localized: "Nothing prices \(symbol), so nothing says it is under the line")
+        case .notVerified: String(localized: "Relay does not verify \(symbol), and selling it would run its own contract")
+        case .roundUps: String(localized: "Your round-ups wait in \(symbol) until they buy")
+        case .nextSweep: String(localized: "Ten tokens a sweep: \(symbol) goes in the next one")
+        case .noRoute: String(localized: "Relay gave no price for \(symbol)")
+        case .costsMore: String(localized: "Relay's fee would take more than half of \(symbol)")
+        case .leftOut: String(localized: "Tap to put \(symbol) back")
+        }
+    }
+
+    /// What the sweep sells, in dollars, for the small print.
+    private var sweepSoldPrint: String? {
+        guard let plan = sweepPlan else { return nil }
+        let ids = Set(sweepItems.compactMap { item -> String? in
+            if case .swap(let s) = item { return s.sell.contract?.lowercased() ?? s.sell.symbol }
+            return nil
+        })
+        let usd = plan.sweeps.filter { ids.contains($0.id) }.compactMap(\.usd).reduce(0, +)
+        return usd > 0 ? String(localized: "\(Self.money(usd)) in all") : nil
+    }
+
+    /// Face ID's words for a sweep: what it sells and what it buys.
+    private func sweepFaceIDWords(_ batch: [Chain.Item]) -> String {
+        batch.count == 1 ? faceIDWords(batch) : String(localized: "Sweep \(batch.count) tokens into ETH")
+    }
+
+    /// Sweep opens on the network list when none is picked (§1534's first
+    /// blank, applied): a sweep is one network's.
+    private func enterSweep() {
+        details = false
+        if !networkPicked, !heldBy.isEmpty {
+            withAnimation(DS.Motion.standard) { open = .network; search = "" }
+        }
+    }
+
+    /// The sweep is read again whenever what it would take changes.
+    private var sweepKey: String {
+        guard verb == .sweep, networkPicked, receipt == nil, let held = heldBy[network.chainId] else { return "" }
+        let holds = held.map { "\($0.id)=\($0.units)" }.sorted().joined(separator: ",")
+        return [String(network.chainId), String(sweepUnder), sweepLeftOut.sorted().joined(separator: ","), holds,
+                String(listedBy[network.chainId]?.count ?? 0)].joined(separator: "|")
+    }
+
+    /// What is under the line, sorted by `DustSweep.plan`, then priced by
+    /// Relay one token at a time, all at once, and judged: a token with no
+    /// quote, or whose ETH is worth less than half of it, stays.
+    private func resweep() async {
+        let key = sweepKey
+        guard !key.isEmpty else {
+            sweepPlan = nil
+            sweepItems = []
+            sweepPricing = false
+            return
+        }
+        let net = network
+        let held = heldBy[net.chainId] ?? []
+        guard YourAccountSwap.supported(net) else {
+            sweepPlan = DustSweep.Plan(sweeps: [], stays: [])
+            sweepItems = []
+            sweepPricing = false
+            return
+        }
+        let listed = listedBy[net.chainId] ?? []
+        let bought = Set(Tokens.remembered(on: net).compactMap { $0.contract?.lowercased() })
+        let dollar = Op.dollar(on: net).contract?.lowercased()
+        let holdings = held.map { h -> DustSweep.Holding in
+            let contract = h.token.contract?.lowercased()
+            let isDollar = contract != nil && contract == dollar
+            // Relay verified it, or a swap here bought it; the dollar is the account's own.
+            let boughtHere = contract.map { bought.contains($0) } ?? false
+            let verified = listed.contains { $0.onList && $0.id == h.id }
+            return DustSweep.Holding(symbol: h.token.symbol, contract: h.token.contract, decimals: h.token.decimals,
+                                     units: h.units, usd: h.usd, trusted: isDollar || boughtHere || verified,
+                                     isDollar: isDollar)
+        }
+        let waiting = RoundUps.setting.on && DustSweep.isPositive(RoundUps.saved(on: net.chainId))
+        let plan = DustSweep.plan(holdings, under: sweepUnder, roundUpsWaiting: waiting, leftOut: sweepLeftOut)
+        withAnimation(DS.Motion.standard) {
+            sweepPlan = plan
+            sweepItems = []
+            sweepPricing = !plan.sweeps.isEmpty
+        }
+        guard !plan.sweeps.isEmpty else { return }
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        let tokens = Dictionary(held.map { ($0.id, $0.token) }, uniquingKeysWith: { first, _ in first })
+        let owner = account
+        var quotes: [String: YourAccountSwap.Quote] = [:]
+        await withTaskGroup(of: (String, YourAccountSwap.Quote?).self) { group in
+            for h in plan.sweeps {
+                guard let token = tokens[h.id] else { continue }
+                let units = h.units, id = h.id
+                group.addTask { @MainActor in
+                    let q = try? await Chain.swapQuote(net, sell: token, buy: Op.eth, amount: units, account: owner)
+                    return (id, q)
+                }
+            }
+            for await (id, q) in group { if let q { quotes[id] = q } }
+        }
+        guard !Task.isCancelled, key == sweepKey else { return }
+        let judged = DustSweep.judged(plan, back: { quotes[$0]?.buyAmount }, ethPrice: ethPrice)
+        let swaps: [Chain.Item] = judged.sweeps.compactMap { h in
+            guard let token = tokens[h.id], let q = quotes[h.id] else { return nil }
+            return .swap(Chain.Swap(network: net, sell: token, buy: Op.eth, amount: h.units, quote: q))
+        }
+        withAnimation(DS.Motion.standard) {
+            sweepPlan = judged
+            sweepItems = swaps
+            sweepPricing = false
+        }
+        #if DEBUG
+        NSLog("moveSweep| %@ under=$%d swept=%d stays=%d", net.name, sweepUnder, swaps.count, judged.stays.count)
+        for row in judged.rows {
+            NSLog("moveSweep| %@ | %@ | %@", row.holding.symbol, row.holding.usd.map { Self.money($0) } ?? "-",
+                  row.stay.map(Self.sweepWords) ?? "swept")
+        }
+        #endif
     }
 
     @ViewBuilder private var receiveClauses: some View {
@@ -861,7 +1132,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap: line.id.hasPrefix("to|")
         case .send: line.id.hasPrefix("for|")
-        case .receive, .buy: true
+        case .receive, .buy, .sweep: true
         }
     }
 
@@ -1066,7 +1337,19 @@ struct MoveSentence: View {
     /// "send swap receive should be its own line user chooses which"). The
     /// sentence under it is what that verb does.
     private var verbs: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+        // Five verbs outgrow a phone's line at this spacing (prd §1537): the
+        // gap narrows first, and past that the line scrolls, never clips.
+        ViewThatFits(in: .horizontal) {
+            verbRow(spacing: DS.Space.s4)
+            verbRow(spacing: DS.Space.s3)
+            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s3) }
+                .scrollIndicators(.hidden)
+        }
+        .frame(minHeight: 44, alignment: .leading)
+    }
+
+    private func verbRow(spacing: CGFloat) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: spacing) {
             ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil else { return }
@@ -1089,7 +1372,7 @@ struct MoveSentence: View {
                 .accessibilityAddTraits(v == verb ? [.isSelected] : [])
             }
         }
-        .frame(minHeight: 44, alignment: .leading)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func title(_ v: Verb) -> String {
@@ -1098,6 +1381,7 @@ struct MoveSentence: View {
         case .send: String(localized: "Send")
         case .receive: String(localized: "Receive")
         case .buy: String(localized: "Buy")
+        case .sweep: String(localized: "Sweep")
         }
     }
 
@@ -1352,6 +1636,8 @@ struct MoveSentence: View {
                 Text("Couldn't read \(unreadNames): try again").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
+        } else if verb == .sweep {
+            sweepLine
         } else if verb == .receive {
             // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
             // address. and somewhere on the page complete address should be
@@ -1451,7 +1737,7 @@ struct MoveSentence: View {
                 case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 }
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
-                case .receive: []
+                case .receive, .sweep: []
                 case .buy: buyPrint
                 }
                 // "$25.00 · Fee up to $0.01 · Details" (prd §1509): the last
@@ -1511,12 +1797,15 @@ struct MoveSentence: View {
     }
 
     /// Details is offered once there is a transaction to show.
-    private var offersDetails: Bool { (verb == .send || verb == .swap) && !all.isEmpty }
+    private var offersDetails: Bool { (verb == .send || verb == .swap || verb == .sweep) && !signing.isEmpty }
+
+    /// What the foot's verb signs: the sentence's lines, or Sweep's swaps.
+    private var signing: [Chain.Item] { verb == .sweep ? sweepItems : all }
 
     /// The red line when this exact operation would fail.
     private var failNote: String? {
-        guard verb == .send || verb == .swap, let p = shownPreview else { return nil }
-        return YourAccountPreview.failLine(p.checked, swap: verb == .swap, network: network.name)
+        guard verb == .send || verb == .swap || verb == .sweep, let p = shownPreview else { return nil }
+        return YourAccountPreview.failLine(p.checked, swap: verb != .send, network: network.name)
     }
 
     // MARK: - Warnings (prd §1509 item 2, §1513)
@@ -1674,9 +1963,9 @@ struct MoveSentence: View {
     }
 
     private var moveDetails: some View {
-        let sends = all.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
+        let sends = signing.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
         let to = sends.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
-        return MoveDetails(preview: shownPreview, swap: verb == .swap, to: to, account: account,
+        return MoveDetails(preview: shownPreview, swap: verb != .send, to: to, account: account,
                            networkFeeUSD: networkFeeUSD, relayFeeUSD: relayFeeUSD, soldUSD: soldDollarsTotal,
                            warnings: shownFindings.map { (warningLine($0), $0.red) }, checkedWith: checkedWith) {
             withAnimation(DS.Motion.standard) { rawOpen = true }
@@ -1726,8 +2015,8 @@ struct MoveSentence: View {
     /// ids (the line being filled is a new value every read), the network
     /// and a round-up's buy.
     private var previewKey: String {
-        guard verb == .send || verb == .swap, receipt == nil, !all.isEmpty else { return "" }
-        let lines = all.map { item -> String in
+        guard verb == .send || verb == .swap || verb == .sweep, receipt == nil, !signing.isEmpty else { return "" }
+        let lines = signing.map { item -> String in
             switch item {
             case .send(let p): "s|\(p.token.contract ?? "eth")|\(p.amount)|\(p.to.lowercased())"
             case .swap(let s): "w|\(s.sell.contract ?? "eth")|\(s.buy.contract ?? "eth")|\(s.amount)"
@@ -1750,7 +2039,7 @@ struct MoveSentence: View {
                 continue
             }
             let roundUp = roundUpPlan?.buy.map { Chain.RoundUpBuy(units: $0, target: RoundUps.setting.target) }
-            let p = await Chain.preview(all, account: account, roundUp: roundUp)
+            let p = await Chain.preview(signing, account: account, roundUp: roundUp)
             guard !Task.isCancelled, key == previewKey else { return }
             withAnimation(DS.Motion.standard) { preview = p; previewFor = key }
             #if DEBUG
@@ -2275,6 +2564,7 @@ struct MoveSentence: View {
         network = n
         with = nil
         buy = nil
+        sweepLeftOut = []
         if !inDollars { amount = "" }
         quote = nil
     }
@@ -2395,7 +2685,7 @@ struct MoveSentence: View {
                     // Nothing to swap, send or pay with: the sentence says so
                     // and offers Receive (prd §1518); no Add, no verb.
                     EmptyView()
-                } else if verb != .buy {
+                } else if verb != .buy && verb != .sweep {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
                         // (§1442f): Add is white when ready, grey when not.
@@ -2480,6 +2770,7 @@ struct MoveSentence: View {
 
     private var footOn: Bool {
         if verb == .buy { return stage == nil && buyReady }
+        if verb == .sweep { return stage == nil && !sweepPricing && !sweepItems.isEmpty && failNote == nil }
         // A transaction the simulation refuses dims its verb (prd §1509).
         return verb == .receive || (stage == nil && !all.isEmpty && failNote == nil)
     }
@@ -2494,6 +2785,9 @@ struct MoveSentence: View {
         }
         if verb == .receive { return String(localized: "Copy address") }
         if verb == .buy { return String(localized: "Buy") }
+        if verb == .sweep {
+            return sweepItems.count < 2 ? String(localized: "Sweep") : String(localized: "Sweep all \(sweepItems.count)")
+        }
         // A warning makes it a second tap (prd §1509 item 2).
         if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
         let batch = all
@@ -2556,7 +2850,7 @@ struct MoveSentence: View {
             if quote == nil { return String(localized: "Waiting for the price") }
         case .send:
             if resolved == nil { return String(localized: "Pick who it goes to") }
-        case .receive, .buy:
+        case .receive, .buy, .sweep:
             break
         }
         return nil
@@ -2645,9 +2939,11 @@ struct MoveSentence: View {
         // The demo's account signs nothing (§1475): it says so, as every demo act does.
         if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         if verb == .buy { buyNow(); return }
-        let batch = all
+        // Sweep signs its own swaps, and leaves the lines Add kept (prd §1537).
+        let sweeping = verb == .sweep
+        let batch = signing
         guard !batch.isEmpty else { return }
-        let reason = faceIDWords(batch)
+        let reason = sweeping ? sweepFaceIDWords(batch) : faceIDWords(batch)
         let net = network
         let roundUp = roundUpPlan
         let target = RoundUps.setting.target
@@ -2677,10 +2973,16 @@ struct MoveSentence: View {
                     for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
                 }
                 withAnimation(DS.Motion.standard) {
-                    items = []
-                    slot = 0
-                    amount = ""
-                    quote = nil
+                    if sweeping {
+                        sweepItems = []
+                        sweepPlan = nil
+                        sweepLeftOut = []
+                    } else {
+                        items = []
+                        slot = 0
+                        amount = ""
+                        quote = nil
+                    }
                     receipt = made
                 }
                 if case .landed = sent.outcome {
@@ -3422,6 +3724,14 @@ struct MoveSentence: View {
         } else if let buyDraft = d.string(forKey: "moveBuyDraft"), !buyDraft.isEmpty {
             verb = .buy
             self.buyDraft(buyDraft)
+        } else if let sweep = d.string(forKey: "moveSweepDraft"), !sweep.isEmpty {
+            // `-moveSweepDraft YES|1|5` (prd §1537): Sweep on Base, at that
+            // line; logs `moveSweep|` once Relay has priced it.
+            verb = .sweep
+            if let under = Int(sweep), DustSweep.choices.contains(under) { sweepUnder = under }
+            switchNetwork(Op.base)
+            open = nil
+            NSLog("moveSweepDraft: under=%d", sweepUnder)
         }
         // `-moveDetails YES|raw` (prd §1509): Details open, or Raw
         // transaction, once the draft has settled its verb.

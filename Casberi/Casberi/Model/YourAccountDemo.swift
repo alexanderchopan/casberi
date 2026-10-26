@@ -67,7 +67,10 @@ enum YourAccountDemo {
         }
         switch net.chainId {
         case Op.base.chainId:
-            return [h(Op.dollar(on: net), "248.40"), h(Op.eth, "0.0842"), h(cbBTC, "0.0011")]
+            // AERO and PEPE2 are the demo's dust (prd §1537): Sweep takes
+            // the first and leaves the second, which Relay does not list.
+            return [h(Op.dollar(on: net), "248.40"), h(Op.eth, "0.0842"), h(cbBTC, "0.0011"),
+                    h(aero, "0.6"), h(pepe2, "200000")]
         case Op.robinhood.chainId:
             return [h(Op.dollar(on: net), "62.00"), h(mag7, "3.2"), h(Op.eth, "0.0031")]
         case Op.ethereum.chainId:
@@ -79,7 +82,9 @@ enum YourAccountDemo {
 
     /// What the swap picker offers in the demo: what it holds, and a few more.
     static func list(_ net: Op.Network) -> [Listed] {
-        var out = held(on: net).map { Listed(token: $0.token, name: name($0.token), onList: true) }
+        // The dust is listed below as Relay lists it: PEPE2 is not verified.
+        var out = held(on: net).filter { $0.token != aero && $0.token != pepe2 }
+            .map { Listed(token: $0.token, name: name($0.token), onList: true) }
         if net.chainId == Op.base.chainId {
             out.append(Listed(token: aero, name: "Aerodrome", onList: true))
             out.append(Listed(token: pepe2, name: "Pepe 2", onList: false))

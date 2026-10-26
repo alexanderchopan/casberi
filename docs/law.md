@@ -153,6 +153,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
+- Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one Relay has not verified unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537).
+
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
 - The co-signer is one vote in an N-of-M Safe and can never spend, because the contract enforces it (§425). It extends to a paired Safe app, a Secure Enclave owner, Safe statements and a recovery guardian. Farcaster signing is excluded (§913).
@@ -239,7 +241,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1674 of 1743 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1675 of 1744 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1915,6 +1917,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486)
 - §1535 — The Wallet page's box follows a scope switch (amends §1403)
 - §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530)
+- §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §…
 
 ## Dead rulings → what replaced them (generated)
 
