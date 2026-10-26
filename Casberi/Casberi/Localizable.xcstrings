@@ -8882,6 +8882,34 @@
         }
       }
     },
+    "%@ of round-ups so far, bought with your next Face ID send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de redondeos hasta ahora, se compra con tu próximo envío con Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの端数%@、次のFace IDでの送金で購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 잔돈 %@, 다음 Face ID 송금 때 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前零钱 %@，在你下一笔面容 ID 转账时买入"
+          }
+        }
+      }
+    },
     "%@ of that was served from cache." : {
       "localizations" : {
         "es" : {
@@ -96449,6 +96477,62 @@
         }
       }
     },
+    "Keeps %@ %@ of round-ups for a send you approve with Face ID" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guarda %1$@ %2$@ de redondeos para un envío que apruebes con Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の%1$@ %2$@はFace IDで承認する送金まで保持します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 %1$@ %2$@은(는) Face ID로 승인하는 송금까지 보관합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将零钱 %1$@ %2$@ 留到你用面容 ID 批准的转账"
+          }
+        }
+      }
+    },
+    "Keeps the round-ups for your next send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guarda los redondeos para tu próximo envío"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数は次の送金まで保持します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 다음 송금까지 보관합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱留到你的下一笔转账"
+          }
+        }
+      }
+    },
     "Keeps this in the transaction and starts the next one" : {
       "localizations" : {
         "es" : {
@@ -147572,6 +147656,34 @@
         }
       }
     },
+    "Round-up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱"
+          }
+        }
+      }
+    },
     "Round-up, toward %@" : {
       "localizations" : {
         "es" : {
@@ -164133,6 +164245,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %5$@ 上将 %1$@ %2$@ 兑换为至少 %3$@ %4$@"
+          }
+        }
+      }
+    },
+    "Swaps %@ %@ of round-ups for at least %@ %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia %1$@ %2$@ de redondeos por al menos %3$@ %4$@ en %5$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%5$@で端数の%1$@ %2$@を最低%3$@ %4$@に交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%5$@에서 잔돈 %1$@ %2$@을(를) 최소 %3$@ %4$@(으)로 교환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %5$@ 上将零钱 %1$@ %2$@ 兑换为至少 %3$@ %4$@"
           }
         }
       }
@@ -222924,6 +223064,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "低于"
+          }
+        }
+      }
+    },
+    "under 0.01%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "menos de 0.01%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0.01%未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0.01% 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于 0.01%"
           }
         }
       }

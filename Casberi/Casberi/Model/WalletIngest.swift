@@ -633,26 +633,48 @@ enum WalletIngest {
         /// The first wallet this pass received qualifying money at (prd §501).
         /// ONE per pass, never one per transfer — see `WalletArrival.pulse`.
         var arrival: String?
+        // Round-ups bought on the exchanges this phone signed (prd §1544), once a pass.
+        var swapBuys = RoundUps.swapBuys
         for key in order {
-            let legs = groups[key]!
-            let sends = legs.filter { !$0.received }
-            let receives = legs.filter { $0.received }
+            var legs = groups[key]!
+            // A ROUND-UP BOUGHT ON THE EXCHANGES (prd §1544) rides the same
+            // transaction as the send it rounded up, so the transaction both
+            // sends and receives: folded as a trade, it would swallow that
+            // send. Its own two legs — this account's dollar in exactly the
+            // buy's amount, and the token it bought — are found by the note
+            // kept before Face ID, landed as legs of their own, and stamped
+            // `.roundUp`; everything else in the transaction lands as if the
+            // buy were not there.
+            var roundUpLegs: [String: RoundUps.Target] = [:]
+            if !swapBuys.isEmpty, let first = legs.first,
+               let hit = RoundUps.swapBuy(legs.map { leg in
+                   RoundUps.Leg(id: leg.ref, received: leg.received, contract: leg.contract, value: leg.value,
+                                at: IngestSupport.isoDate((leg.t["metadata"] as? [String: Any])?["blockTimestamp"]))
+               }, wallet: first.address, network: first.chain.network, buys: swapBuys) {
+                roundUpLegs[hit.sent] = hit.buy.target
+                if let filled = hit.filled { roundUpLegs[filled] = hit.buy.target }
+                swapBuys.removeAll { $0 == hit.buy }
+                RoundUps.spendSwapBuy(hit.buy)
+            }
+            let trade = legs.filter { roundUpLegs[$0.ref] == nil }
+            let sends = trade.filter { !$0.received }
+            let receives = trade.filter { $0.received }
             // Both directions with DIFFERENT assets = a swap (same asset both
             // ways is a wrap/self-route — left per-leg). The largest send and
             // largest receive are the trade; smaller same-hash legs are its fee
-            // dust and fold in silently.
+            // dust and fold in silently. A round-up's own legs still land.
             if let sMax = sends.max(by: { $0.value < $1.value }),
                let rMax = receives.max(by: { $0.value < $1.value }),
                sMax.asset.uppercased() != rMax.asset.uppercased() {
                 let swapRef = "wallet:swap:\(sMax.chain.network):\(sMax.hash)"
-                guard !existing.contains(swapRef),
-                      let thing = swapThing(sent: sMax, received: rMax, ref: swapRef, names: names)
-                else { continue }
-                // A swap names two assets and either can be the spoof — the
-                // received side especially ("Swapped 1 ETH → 4,000 ÚЅDС").
-                WalletSafety.flagSpoofedSymbol(thing, symbols: [sMax.asset, rMax.asset])
-                landed.append(thing)
-                continue
+                if !existing.contains(swapRef),
+                   let thing = swapThing(sent: sMax, received: rMax, ref: swapRef, names: names) {
+                    // A swap names two assets and either can be the spoof — the
+                    // received side especially ("Swapped 1 ETH → 4,000 ÚЅDС").
+                    WalletSafety.flagSpoofedSymbol(thing, symbols: [sMax.asset, rMax.asset])
+                    landed.append(thing)
+                }
+                legs = legs.filter { roundUpLegs[$0.ref] != nil }
             }
             for leg in legs {
                 // A received token/NFT the wallet doesn't actually hold (a junk
@@ -695,6 +717,11 @@ enum WalletIngest {
                 }
                 if let thing = thing(from: leg.t, chain: leg.chain, received: leg.received,
                                      ref: leg.ref, address: leg.address, names: names) {
+                    // The round-up's dollar and the token it bought: kept,
+                    // never spent, never a payment back (prd §1523, §1544).
+                    if let target = roundUpLegs[leg.ref] {
+                        SpendingSource.stampRoundUp(thing, symbol: target.symbol, network: target.network)
+                    }
                     if leg.received {
                         let knownGood = knownGoodByOwner[leg.address.lowercased()] ?? []
                         WalletSafety.flagPoisoning(thing, knownGood: knownGood)
@@ -722,7 +749,7 @@ enum WalletIngest {
                     // Gathered rather than announced, because "really
                     // inserted" is only true after the save below: a landing
                     // that fails to write must not have rained.
-                    if arrival == nil, leg.received, !thing.isFlagged,
+                    if arrival == nil, leg.received, !thing.isFlagged, roundUpLegs[leg.ref] == nil,
                        let usd = leg.pricedUSD, usd >= Self.holdingFloor {
                         arrival = leg.address
                     }

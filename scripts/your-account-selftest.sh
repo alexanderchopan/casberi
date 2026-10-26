@@ -371,6 +371,30 @@ grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casb
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
 grep -q '(c\["vmType"\] as? String) == "evm", (c\["depositAddressEnabled"\] as? Bool) == true' Casberi/Casberi/Model/YourAccountElsewhere.swift || { echo "✗ receiving from another network offers a network Relay takes no keyless deposit address on (prd §1453: EVM only, no Relay key)"; exit 1; }
 grep -q 'WalletWatch.sameAddress(recipient, account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a Relay deposit address is taken without Relay naming the account as the one that gets it (prd §1452, §1453)"; exit 1; }
+# Round-ups on the exchanges (prd §1544, user 2026-10-26): a Face ID send buys
+# a token on its own network through the direct swap; the spend limit's
+# session key never buys on the exchanges and is never widened to (its change
+# keeps counting); Relay is only for a token on another network; an exchange
+# buy is noted before Face ID so its own transaction reads as the buy.
+CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
+grep -q 'if let roundUp = sessionRoundUp(roundUp, on: net) {' "$CHAIN" || { echo "✗ the session key's calls carry a round-up buy on the exchanges (prd §1544: the session is send-only)"; exit 1; }
+grep -q 'let roundUp = sessionRoundUp(roundUp, on: net)' "$CHAIN" || { echo "✗ a session send keeps a round-up it cannot buy (prd §1544)"; exit 1; }
+grep -q 'let roundUp = sessionRoundUp(asked, on: net)' Casberi/Casberi/Model/YourAccountChain+Preview.swift || { echo "✗ the session preview shows a round-up buy the session never makes (prd §1544)"; exit 1; }
+grep -q 'if roundUp.target.onExchanges(from: net.chainId) {' "$CHAIN" || { echo "✗ a round-up on the send's own network is not bought on the exchanges (prd §1544)"; exit 1; }
+grep -q 'let quote = try await swapQuote(net, sell: dollar, buy: buy, amount: roundUp.units, account: account)' "$CHAIN" || { echo "✗ a round-up's exchange buy is not quoted off the pools like a swap (prd §1544)"; exit 1; }
+grep -q 'guard let checked = YourAccountSwap.checked(quote, sell: dollar, amount: roundUp.units, chainId: net.chainId)' "$CHAIN" || { echo "✗ a round-up's exchange buy is signed without the swap's check (prd §1542, §1544)"; exit 1; }
+python3 - "$CHAIN" <<'PY' || { echo "✗ an exchange round-up is not noted before Face ID, so its transaction would read as spending (prd §1544)"; exit 1; }
+import sys
+s = open(sys.argv[1]).read()
+t = s[s.index("static func transact("):]
+t = t[:t.index("static func assemble(")]
+n, o = t.find("RoundUps.noteSwapBuy("), t.find("let outcome = try await operate(")
+sys.exit(0 if 0 <= n < o and "!dryRun" in t[t.rfind("if let roundUp", 0, n):n] else 1)
+PY
+MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
+grep -q 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: !done.roundUpWaits), on: net.chainId)' "$MOVE" || { echo "✗ a send that did not buy empties the round-up count (prd §1544)"; exit 1; }
+grep -q 'return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)' "$MOVE" || { echo "✗ a session send's round-up is counted as bought (prd §1544)"; exit 1; }
+grep -q 'case .send: roundUpPlan?.buy != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)' "$MOVE" || { echo "✗ an exchange round-up still says Relay carries it (prd §1544)"; exit 1; }
 
 # Receive from another network, widened (prd §1470): what they send is every
 # coin Relay bridges from their network, what arrives is your pick, the

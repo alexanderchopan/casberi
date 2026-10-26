@@ -108,8 +108,13 @@ extension YourAccountChain {
                 return p
             }
         }
+        // What assembling wrote, kept for a refusal after it: the bundler
+        // refusing to price the operation still leaves Details the calls in
+        // words, the pools and the simulation's verdict (prd §1544).
+        var written: Assembled?
         do {
             let parts = try await assemble(items, account: account, roundUp: roundUp, renew: route == .bothKeys)
+            written = parts.assembled
             let a = parts.assembled
             let entry: YourAccountOp.Entry = a.deployed ? try await accountEntry(net, account) : .module4337
             // Who signs beside this phone: the Signer over the limit, or the
@@ -140,6 +145,7 @@ extension YourAccountChain {
                            hashKind: .eip712, callData: op.callData,
                            refusal: await short(a.payments, fee: fee, net: net, account: account))
         } catch let failure as Failure {
+            if let written { return empty(written, route: route, refusal: failure.message) }
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],
                            approvals: [], hash: nil, hashKind: .eip712, callData: [], refusal: failure.message)
         } catch {
@@ -153,7 +159,9 @@ extension YourAccountChain {
     /// limit), or any other refusal before Face ID — so both keys sign,
     /// exactly as `MoveSentence.spend` falls back.
     private static func sessionPreview(_ sends: [YourAccountOp.Payment], net: Network, account: String,
-                                       roundUp: RoundUpBuy?) async -> Preview? {
+                                       roundUp asked: RoundUpBuy?) async -> Preview? {
+        // A buy on this network waits for Face ID (prd §1544).
+        let roundUp = sessionRoundUp(asked, on: net)
         guard let (callData, salt) = try? await sessionCall(sends, roundUp: roundUp, account: account),
               let op = try? await sessionBuild(net, account: account, callData: callData, salt: salt) else { return nil }
         let steps: [Step] = sends.compactMap { YourAccountOp.call(for: $0).map { ([$0], nil) } }
@@ -172,6 +180,9 @@ extension YourAccountChain {
             let dollar = YourAccountOp.dollar(on: net)
             words.append(YourAccountPreview.roundUp(YourAccountOp.spoken(roundUp.units, decimals: dollar.decimals), dollar.symbol,
                                                     buys: roundUp.target.symbol, on: roundUp.target.network))
+        } else if let asked {
+            let dollar = YourAccountOp.dollar(on: net)
+            words.append(YourAccountPreview.roundUpKept(YourAccountOp.spoken(asked.units, decimals: dollar.decimals), dollar.symbol))
         }
         words.append(YourAccountPreview.underLimit)
         let fee = op.maxCost.map(String.init)

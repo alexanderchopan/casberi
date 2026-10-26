@@ -152,7 +152,10 @@ enum Spending {
         var feeUSD: Double? = nil
         var network: String? = nil
         /// What a round-up bought with this send (prd §1523): the `.roundUp`
-        /// fact a sent leg to one of Relay's deposit addresses carries.
+        /// fact a sent leg to one of Relay's deposit addresses carries, or
+        /// the dollar leg of a buy on the exchanges (§1544). On a received
+        /// leg, the token that exchange buy brought back in its own
+        /// transaction: never a payment back.
         var roundUp: RoundUp.Bought? = nil
 
         enum Way: Equatable { case sent, received, swap }
@@ -242,18 +245,26 @@ enum Spending {
     /// - **a send the read classified as anything but a send** — a trade
     ///   whose other leg never landed, a deposit into a protocol, a call;
     /// - **a send to machinery** the caller recognised;
-    /// - **a round-up's buy** (prd §1523): the change, paid to Relay for a
-    ///   token you picked, is kept, not spent;
+    /// - **a round-up's buy** (prd §1523): the change, paid to Relay or
+    ///   swapped on the exchanges (§1544) for a token you picked, is kept,
+    ///   not spent. An exchange buy rides the send it rounded up, so its
+    ///   token arrives in that same transaction: that arrival pays nothing
+    ///   back, answers no send, and the read's "trade" for the transaction
+    ///   is the buy's, not the send's;
     /// - **a round trip**: money worth the same (within
     ///   `roundTripTolerance`) arriving at one of your wallets within
     ///   `roundTripWindow`, in a transaction of its own — a cross-chain swap
     ///   or a bridge. Each arrival answers one send at most.
     static func walletSpends(_ moves: [Move], own: Set<String>) -> [Move] {
-        // Transactions that paid one of your wallets something.
-        let paidBack = Set(moves.filter { $0.way != .sent }.map(\.tx))
+        // Transactions whose round-up was bought on the exchanges (prd §1544):
+        // the token it bought came back in the same transaction.
+        let boughtHere = Set(moves.filter { $0.way == .received && $0.roundUp != nil }.map(\.tx))
+        // Transactions that paid one of your wallets something, a round-up's
+        // own token aside.
+        let paidBack = Set(moves.filter { $0.way != .sent && $0.roundUp == nil }.map(\.tx))
         // Money that arrived from outside your own wallets, priced.
         var arrivals: [Move] = moves.filter { m in
-            guard m.way == .received, own.contains(m.wallet),
+            guard m.way == .received, m.roundUp == nil, own.contains(m.wallet),
                   let usd = m.usd, usd.isFinite, usd > 0 else { return false }
             return !(m.counterparty.map(own.contains) ?? false)
         }
@@ -272,7 +283,10 @@ enum Spending {
         // A round-up's buy (prd §1523) takes the token Relay sends back
         // first, so that fill answers no send of yours: the buy rides the
         // same operation as a send, and a $5 send would read as a round trip.
-        for buy in moves where buy.way == .sent && buy.roundUp != nil && own.contains(buy.wallet) {
+        // An exchange buy's token came back in its own transaction, so it
+        // takes nothing.
+        for buy in moves where buy.way == .sent && buy.roundUp != nil && own.contains(buy.wallet)
+            && !boughtHere.contains(buy.tx) {
             guard let usd = buy.usd, usd.isFinite, usd > 0,
                   let taken = nearest(to: buy, usd: usd) else { continue }
             arrivals.remove(at: taken)
@@ -285,7 +299,7 @@ enum Spending {
             if send.machinery { continue }
             if send.roundUp != nil { continue }
             if paidBack.contains(send.tx) { continue }
-            if let op = send.operation, op != "send" { continue }
+            if let op = send.operation, op != "send", !boughtHere.contains(send.tx) { continue }
             // The nearest arrival that answers it, taken so it answers no other.
             if let i = nearest(to: send, usd: usd) {
                 arrivals.remove(at: i)

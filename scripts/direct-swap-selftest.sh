@@ -25,6 +25,13 @@
 #   • A MULTICALL ANSWER MISREAD: a real `aggregate3` answer from Base, read
 #     back to the amounts the independent decoder read.
 #   • AN OPEN-LIST ROW TAKEN ON FAITH: a malformed address or decimals kept.
+#   • A POOL FEE SAID TO FOUR PLACES (prd §1544): rounded to two, trailing
+#     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
+#   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1544): a buy on the send's own
+#     network is the exchanges', never Relay's; the spend limit's session key
+#     never buys on them, and its change keeps counting; an exchange buy is
+#     known by its own transaction — this account's dollar leaving in exactly
+#     the buy's amount, in its window — and nothing else.
 #
 # Pure, local, deterministic — no network, no simulator, no key. Then every
 # guard is proven to catch something: each mutation below breaks the shipped
@@ -190,13 +197,23 @@ check(S.best([S.Priced(route: tieOne[0].route, out: "10"), S.Priced(route: tieOn
 
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
-      && S.percent(pips: 10000) == "1%" && S.percent(pips: 80) == "0.008%" && S.percent(pips: 675) == "0.0675%",
-      "a pool fee is not said as its percentage")
+      && S.percent(pips: 10000) == "1%", "a pool fee is not said as its percentage")
+// Rounded for reading (prd §1544): two places at most, trailing zeros
+// trimmed, under a hundredth of a percent said so; the route keeps the exact fee.
+check(S.percent(pips: 773) == "0.08%" && S.percent(pips: 675) == "0.07%" && S.percent(pips: 3050) == "0.31%"
+      && S.percent(pips: 2999) == "0.3%" && S.percent(pips: 10049) == "1%",
+      "a pool fee is not rounded to two places, zeros trimmed: \(S.percent(pips: 773)), \(S.percent(pips: 675)), \(S.percent(pips: 2999))")
+check(S.percent(pips: 80) == "under 0.01%" && S.percent(pips: 99) == "under 0.01%" && S.percent(pips: 0) == "under 0.01%",
+      "a fee under 0.01% is not said as under it: \(S.percent(pips: 80)), \(S.percent(pips: 99))")
 check(S.words(tokenRoute) == "On Uniswap · 0.3% pool fee", "one Uniswap pool is not said with its tier: \(S.words(tokenRoute))")
 var aeroRoute = S.Route(venue: base.venues[1], hops: [S.Hop(from: "a", to: "b", step: 100)])
 check(S.words(aeroRoute) == "On Aerodrome", "a Slipstream pool whose fee was not read is not the exchange alone")
 aeroRoute.fees = [150]
-check(S.words(aeroRoute) == "On Aerodrome · 0.015% pool fee", "a Slipstream pool's own fee is not said, rather than its spacing")
+check(S.words(aeroRoute) == "On Aerodrome · 0.02% pool fee", "a Slipstream pool's own fee is not said, rather than its spacing: \(S.words(aeroRoute))")
+aeroRoute.fees = [80]
+check(S.words(aeroRoute) == "On Aerodrome · under 0.01% pool fee", "a pool under 0.01% is not said so on the foot: \(S.words(aeroRoute))")
+check(aeroRoute.fees == [80], "rounding the words changed the route's fee")
+aeroRoute.fees = [150]
 let two = S.Route(venue: base.venues[0], hops: [S.Hop(from: "a", to: "b", step: 100), S.Hop(from: "b", to: "c", step: 3000)])
 check(S.words(two) == "On Uniswap · 0.01% and 0.3% pool fees", "two pools are not both named: \(S.words(two))")
 check(S.credit([tokenRoute, tokenRoute]) == "On Uniswap · 0.3% pool fee" && S.credit([tokenRoute, aeroRoute]) == "On Uniswap and Aerodrome"
@@ -214,6 +231,56 @@ check(parsed[8453]?.first?.address == "0x833589fcd6edb6e08f4c7c32d4f71b54bda0291
 check(parsed[10] == nil && parsed[4663]?.first?.logo == nil, "another network's token, or a non-https logo, was kept")
 check(OpenTokenList.search(parsed[8453]!, "usd").count == 1 && OpenTokenList.search(parsed[8453]!, "0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913").count == 1
       && OpenTokenList.search(parsed[8453]!, "aero").isEmpty, "the list's search does not find by symbol, name or address")
+
+// ── Round-ups on the exchanges (prd §1544) ───────────────────────────────
+let ruETH = RoundUps.Target.ethOnBase
+let ruBTC = RoundUps.Target(chainId: 8453, address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", symbol: "cbBTC", decimals: 8, network: "Base")
+let ruMAG7 = RoundUps.Target(chainId: 4663, address: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840", symbol: "MAG7", decimals: 18, network: "Robinhood Chain")
+check(ruETH.onExchanges(from: 8453) && ruBTC.onExchanges(from: 8453) && !ruMAG7.onExchanges(from: 8453) && !ruETH.onExchanges(from: 1),
+      "a round-up on the send's own network is not the exchanges', or one elsewhere is")
+check(!RoundUps.sessionCarries(ruETH, from: 8453) && !RoundUps.sessionCarries(ruBTC, from: 8453) && RoundUps.sessionCarries(ruMAG7, from: 8453),
+      "the session key may buy on the exchanges, or may no longer carry Relay's transfer to another network")
+check(ruETH.contract == nil && ruBTC.contract == "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      "a round-up's token is not the account's own spelling (nil for ETH, the contract lowercased)")
+let ruBuys = RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1)
+let ruUnder = RoundUps.plan(dollarSent: "4300000", saved: "3400000", step: 1)
+check(RoundUps.savedAfter(ruBuys, bought: true) == "0" && RoundUps.savedAfter(ruBuys, bought: false) == "5200000",
+      "a send that did not buy emptied the count, or one that did kept it")
+check(RoundUps.savedAfter(ruUnder, bought: true) == "4100000" && RoundUps.savedAfter(ruUnder, bought: false) == "4100000",
+      "a send under $5 does not count its change either way")
+let ruAt = Date(timeIntervalSince1970: 1_800_000_000)
+let ruMe = "0xaaaa000000000000000000000000000000000001"
+let ruUSDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+let ruNote = RoundUps.SwapBuy(account: ruMe, network: "base-mainnet", dollar: ruUSDC, units: "5200000", target: ruETH, at: ruAt)
+typealias RL = RoundUps.Leg
+func ruLegs(_ late: TimeInterval = 90) -> [RL] {
+    [RL(id: "friend", received: false, contract: ruUSDC, value: 4.3, at: ruAt.addingTimeInterval(late)),
+     RL(id: "pool", received: false, contract: ruUSDC, value: 5.2, at: ruAt.addingTimeInterval(late)),
+     RL(id: "dust", received: true, contract: nil, value: 0.00001, at: ruAt.addingTimeInterval(late)),
+     RL(id: "eth", received: true, contract: nil, value: 0.0022, at: ruAt.addingTimeInterval(late)),
+     RL(id: "usdc-in", received: true, contract: ruUSDC, value: 9, at: ruAt.addingTimeInterval(late))]
+}
+let ruHit = RoundUps.swapBuy(ruLegs(), wallet: ruMe.uppercased().replacingOccurrences(of: "0X", with: "0x"), network: "base-mainnet", buys: [ruNote])
+check(ruHit?.sent == "pool" && ruHit?.filled == "eth" && ruHit?.buy == ruNote,
+      "the buy's dollar leg and the token it bought are not found in its transaction: \(String(describing: ruHit))")
+check(RoundUps.swapBuy(ruLegs().filter { $0.id != "eth" && $0.id != "dust" }, wallet: ruMe, network: "base-mainnet", buys: [ruNote])?.filled == nil
+      && RoundUps.swapBuy(ruLegs().filter { $0.id != "eth" && $0.id != "dust" }, wallet: ruMe, network: "base-mainnet", buys: [ruNote])?.sent == "pool",
+      "a buy whose fill has not landed yet is not still known by its dollar leg")
+check(RoundUps.swapBuy(ruLegs(), wallet: "0xbbbb000000000000000000000000000000000002", network: "base-mainnet", buys: [ruNote]) == nil,
+      "another wallet's send reads as this account's buy")
+check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "eth-mainnet", buys: [ruNote]) == nil, "a send on another network reads as the buy")
+check(RoundUps.swapBuy(ruLegs().filter { $0.id != "pool" }, wallet: ruMe, network: "base-mainnet", buys: [ruNote]) == nil,
+      "a send of another amount reads as the buy")
+check(RoundUps.swapBuy(ruLegs(25 * 3600), wallet: ruMe, network: "base-mainnet", buys: [ruNote]) == nil
+      && RoundUps.swapBuy(ruLegs(-11 * 60), wallet: ruMe, network: "base-mainnet", buys: [ruNote]) == nil,
+      "a send long after the note, or well before it, reads as the buy")
+check(RoundUps.swapBuy(ruLegs(23 * 3600), wallet: ruMe, network: "base-mainnet", buys: [ruNote])?.sent == "pool"
+      && RoundUps.swapBuy(ruLegs(-5 * 60), wallet: ruMe, network: "base-mainnet", buys: [ruNote])?.sent == "pool",
+      "a buy landing inside its window is not known")
+check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: []) == nil, "with nothing noted, a send reads as a buy")
+let ruBTCNote = RoundUps.SwapBuy(account: ruMe, network: "base-mainnet", dollar: ruUSDC, units: "5200000", target: ruBTC, at: ruAt)
+check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [ruBTCNote])?.filled == nil,
+      "ETH that arrived is taken as the cbBTC the buy was for")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
@@ -244,9 +311,11 @@ PY
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
   local swap="$SWAP" list="$LIST"
+  local -a sources=("${SOURCES[@]}")
   [[ "$file" == "$SWAP" ]] && swap="$target"
   [[ "$file" == "$LIST" ]] && list="$target"
-  if ! xcrun swiftc -Onone -o "$TMP/mut" "$swap" "$list" "${SOURCES[@]}" "$TMP/main.swift" 2>/dev/null; then
+  [[ "$file" == "$ROUNDUPS" ]] && sources=("${SOURCES[@]/$ROUNDUPS/$target}")
+  if ! xcrun swiftc -Onone -o "$TMP/mut" "$swap" "$list" "${sources[@]}" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if FIXTURES="$FIXTURES" "$TMP/mut" > /dev/null 2>&1; then
@@ -303,6 +372,22 @@ mutate "v2's fee is read as millionths" "$SWAP" \
   'let pips = venue.kind == .aerodromeV2 ? n * 100 : n' 'let pips = n'
 mutate "Ethereum swaps with Base's looser slippage" "$SWAP" \
   '        slippageBps: 30)' '        slippageBps: 50)'
+mutate "a pool fee said to four places again" "$SWAP" \
+  'NSDecimalRound(&r, &d, 2, .plain)' 'NSDecimalRound(&r, &d, 4, .plain)'
+mutate "a fee under 0.01% said as a rounded number" "$SWAP" \
+  'guard pips >= 100 else { return String(localized: "under 0.01%") }' 'guard pips >= 0 else { return String(localized: "under 0.01%") }'
+mutate "the session key buys on the exchanges" "$ROUNDUPS" \
+  '        !target.onExchanges(from: chainId)' '        true'
+mutate "a send that did not buy empties the count" "$ROUNDUPS" \
+  'bought ? plan.savedAfter : (plan.buy ?? plan.savedAfter)' 'plan.savedAfter'
+mutate "any send of the dollar reads as the buy" "$ROUNDUPS" \
+  'abs(leg.value - want) < 0.000_000_5 else { return false }' 'leg.value > 0 else { return false }'
+mutate "another wallet's send reads as the buy" "$ROUNDUPS" \
+  'for buy in buys where buy.account == w && buy.network == network {' 'for buy in buys where buy.network == network {'
+mutate "a buy's window never closes" "$ROUNDUPS" \
+  'at <= buy.at.addingTimeInterval(swapBuyLate)' 'at <= .distantFuture'
+mutate "any token that arrived is the buy's fill" "$ROUNDUPS" \
+  'legs.filter { $0.received && $0.contract == buy.target.contract }' 'legs.filter { $0.received }'
 mutate "the list keeps a malformed address" "$LIST" \
   's.count == 42 && s.lowercased().hasPrefix("0x")' 's.lowercased().hasPrefix("0x")'
 mutate "the list keeps any decimals" "$LIST" \

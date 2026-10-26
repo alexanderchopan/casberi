@@ -1,30 +1,58 @@
 import Foundation
 
-/// **ROUND-UPS (prd §1452).** Every dollar send from your account rounds up
-/// to the next $1 (or $5), and the change buys a token you pick — ETH on Base
-/// unless you choose another, on any network Relay reaches — once it reaches
-/// $5, with the send that gets it there.
+/// **ROUND-UPS (prd §1452, §1544).** Every dollar send from your account
+/// rounds up to the next $1 (or $5), and the change buys a token you pick —
+/// ETH on Base unless you choose another — once it reaches $5, with the send
+/// that gets it there.
 ///
-/// The change never leaves on its own: it waits in your dollar, counted here,
-/// because a swap costs Relay a flat few cents (measured 2026-10-21: ~$0.03 on
-/// Base, ~$0.07 into Robinhood Chain), so buying each $0.70 would lose a tenth
-/// or more of it. One balance, a running count, a buy at $5.
+/// **How the change buys (prd §1544).** A token on the send's own network is
+/// bought on the exchanges, as Swap buys (§1542): the best of the pinned
+/// pools, the dollar's exact `approve` to that router and one router call,
+/// the minimum written in and the simulation before Face ID. Only a token on
+/// ANOTHER network goes through Relay: a plain `transfer` of the dollar to
+/// Relay's deposit address for the route (`YourAccountChain.depositAddress`).
 ///
-/// The buy is a plain `transfer` of the dollar to Relay's deposit address for
-/// the route (`YourAccountChain.roundUpCall`) — the same call a send is, so a
-/// spend limit's session can carry it too, and no approval is ever granted.
+/// **Who may buy.** A send you approve with Face ID buys. A send the spend
+/// limit's session key signs alone never buys on the exchanges: the session
+/// may only `transfer` the dollar and send ETH through Multicall3 (§1447
+/// item 15), and it is never widened to approve or call a router. Its change
+/// keeps counting (`savedAfter(_:bought:)`) and the buy rides your next Face
+/// ID send. A Relay buy is itself a `transfer`, so the session carries one to
+/// another network as it always did.
+///
+/// **Why the change waits for $5.** Relay charged a flat few cents a buy
+/// (measured 2026-10-21: ~$0.03 on Base), which is why the count began. The
+/// pools charge nothing beside their fee, which is in the price, and a swap's
+/// gas on Base is about a quarter of a cent (§1539): the $5 now keeps a buy
+/// to one swap in several sends, so the network fee stays a sliver of what is
+/// bought — on Ethereum, where a swap's gas is dollars, it is what keeps a
+/// $0.70 buy from costing more than it buys. One balance, a running count, a
+/// buy at $5.
 ///
 /// **What it bought is Spending's Round-ups door (prd §1523)**, never part of
-/// the total: the change was kept, not spent.
+/// the total: the change was kept, not spent. A Relay buy is known by the
+/// deposit address this phone asked for (`noteDeposit`); an exchange buy by
+/// its own transaction — this account's dollar leaving in exactly the buy's
+/// amount, in the hours after it was signed (`noteSwapBuy`, `swapBuy`).
 enum RoundUps {
     /// What the change buys. `address` is Relay's spelling: the zero address
     /// for a network's own coin.
+    ///
+    /// `onExchanges(from:)`: the target is on the send's own network, so the
+    /// pools buy it (§1544); anywhere else Relay does.
     struct Target: Codable, Equatable, Hashable, Sendable {
         var chainId: Int
         var address: String
         var symbol: String
         var decimals: Int
         var network: String
+
+        func onExchanges(from chainId: Int) -> Bool { self.chainId == chainId }
+
+        /// The token as the account holds it: nil for the network's own coin.
+        var contract: String? {
+            address.lowercased() == "0x0000000000000000000000000000000000000000" ? nil : address.lowercased()
+        }
 
         static let ethOnBase = Target(chainId: 8453, address: "0x0000000000000000000000000000000000000000",
                                       symbol: "ETH", decimals: 18, network: "Base")
@@ -85,7 +113,7 @@ enum RoundUps {
 
     // MARK: - The buys (prd §1523)
 
-    /// **RELAY'S DEPOSIT ADDRESSES THIS PHONE PAID A ROUND-UP TO.** Relay
+    /// **RELAY'S DEPOSIT ADDRESSES (a buy on another network) THIS PHONE PAID A ROUND-UP TO.** Relay
     /// hands out a new address per quote, so nothing on chain says a transfer
     /// to one was a round-up's buy: this list does. The landed send to one is
     /// stamped `.roundUp` (`SpendingSource.stampRoundUp`), and the stamp
@@ -146,5 +174,104 @@ enum RoundUps {
             return Plan(change: change, buy: total, savedAfter: "0")
         }
         return Plan(change: change, buy: nil, savedAfter: total)
+    }
+
+    /// What is counted once a send lands: the plan's own when it bought,
+    /// else everything it reached — the session key's send never buys on the
+    /// exchanges, so its change keeps counting toward the next Face ID send.
+    static func savedAfter(_ plan: Plan, bought: Bool) -> String {
+        bought ? plan.savedAfter : (plan.buy ?? plan.savedAfter)
+    }
+
+    /// Whether a send signed by the spend limit's session key may carry the
+    /// buy: only Relay's `transfer`, to a token on another network. A buy on
+    /// the send's own network is a router call the session may not make.
+    static func sessionCarries(_ target: Target, from chainId: Int) -> Bool {
+        !target.onExchanges(from: chainId)
+    }
+
+    // MARK: - An exchange buy, known by its transaction (prd §1544)
+
+    /// **A BUY SIGNED ON THE EXCHANGES.** Kept when Face ID is asked for it,
+    /// before it lands: the account, the network, the dollar and the exact
+    /// amount. The landed transaction whose dollar leg leaves this account in
+    /// exactly that amount, from a few minutes before to a day after, is the
+    /// buy (`swapBuy`), and its leg and the token it bought are stamped
+    /// `.roundUp`; the note is then spent, so it marks one transaction only.
+    /// Device-only, the newest `depositCap`, as the deposit addresses are.
+    struct SwapBuy: Codable, Equatable, Sendable {
+        var account: String
+        /// The network as the Wallet spells it ("base-mainnet").
+        var network: String
+        /// The dollar's contract, lowercased.
+        var dollar: String
+        var units: String
+        var target: Target
+        var at: Date
+    }
+
+    private static let swapBuysKey = "yourAccount.roundUps.swapBuys"
+    /// How far before the note a leg's block time may fall (a clock off),
+    /// and how long after it the buy may land.
+    static let swapBuyEarly: TimeInterval = 10 * 60
+    static let swapBuyLate: TimeInterval = 24 * 60 * 60
+
+    static var swapBuys: [SwapBuy] {
+        UserDefaults.standard.data(forKey: swapBuysKey).flatMap { try? JSONDecoder().decode([SwapBuy].self, from: $0) } ?? []
+    }
+
+    private static func saveSwapBuys(_ list: [SwapBuy]) {
+        if let data = try? JSONEncoder().encode(list) { UserDefaults.standard.set(data, forKey: swapBuysKey) }
+    }
+
+    static func noteSwapBuy(account: String, network: String, dollar: String, units: String, target: Target, at: Date = .now) {
+        guard !YourAccountDemo.isOn, !account.isEmpty, !dollar.isEmpty else { return }
+        let buy = SwapBuy(account: account.lowercased(), network: network, dollar: dollar.lowercased(),
+                          units: units, target: target, at: at)
+        // A second Face ID for the same buy (the first cancelled) is one note.
+        var list = swapBuys.filter { !($0.account == buy.account && $0.network == buy.network && $0.units == buy.units) }
+        list.append(buy)
+        if list.count > depositCap { list.removeFirst(list.count - depositCap) }
+        saveSwapBuys(list)
+    }
+
+    /// The note is spent: it has marked its transaction.
+    static func spendSwapBuy(_ buy: SwapBuy) {
+        saveSwapBuys(swapBuys.filter { $0 != buy })
+    }
+
+    /// One leg of a landed transaction, as the match reads it.
+    struct Leg: Equatable, Sendable {
+        let id: String
+        let received: Bool
+        /// The token's contract, lowercased; nil for the network's own coin.
+        let contract: String?
+        /// In whole tokens, as the read reports it.
+        let value: Double
+        let at: Date?
+    }
+
+    /// **WHICH LEGS OF ONE TRANSACTION ARE AN EXCHANGE BUY.** Among `buys`,
+    /// the first noted for this wallet on this network whose dollar left in
+    /// exactly its amount, inside its window: that sent leg, and the leg of
+    /// the token it bought if the transaction carries one (the largest, if a
+    /// swap of the page bought the same token beside it). nil when none is.
+    static func swapBuy(_ legs: [Leg], wallet: String, network: String, buys: [SwapBuy])
+        -> (buy: SwapBuy, sent: String, filled: String?)? {
+        let w = wallet.lowercased()
+        for buy in buys where buy.account == w && buy.network == network {
+            guard let want = Decimal(string: buy.units).map({ NSDecimalNumber(decimal: $0 / pow(10, dollarDecimals)).doubleValue })
+            else { continue }
+            let sent = legs.first { leg in
+                guard !leg.received, leg.contract == buy.dollar, abs(leg.value - want) < 0.000_000_5 else { return false }
+                guard let at = leg.at else { return true }
+                return at >= buy.at.addingTimeInterval(-swapBuyEarly) && at <= buy.at.addingTimeInterval(swapBuyLate)
+            }
+            guard let sent else { continue }
+            let filled = legs.filter { $0.received && $0.contract == buy.target.contract }
+                .max { $0.value < $1.value }
+            return (buy, sent.id, filled?.id)
+        }
+        return nil
     }
 }

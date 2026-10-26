@@ -189,6 +189,19 @@ enum YourAccountPreview {
              detail: String(localized: "Buys \(target) on \(network)"))
     }
 
+    /// A round-up bought on the send's own network, on the exchanges (prd
+    /// §1544): the swap's own words, said as the round-up it is.
+    /// A send the spend limit's session key signs never buys on the
+    /// exchanges (prd §1544): the change is kept, counted, for the next send
+    /// Face ID approves.
+    static func roundUpKept(_ figure: String, _ symbol: String) -> Step {
+        Step(words: String(localized: "Keeps \(figure) \(symbol) of round-ups for a send you approve with Face ID"))
+    }
+
+    static func roundUpSwap(_ figure: String, _ symbol: String, atLeast: String, _ bought: String, on exchange: String) -> Step {
+        Step(words: String(localized: "Swaps \(figure) \(symbol) of round-ups for at least \(atLeast) \(bought) on \(exchange)"))
+    }
+
     /// Every operation your own keys sign carries the key change
     /// (`YourAccountOp.callData(calls:rotateTo:)`): the shared signer
     /// re-configured to the next Enclave key.
