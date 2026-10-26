@@ -68828,3 +68828,10 @@ Mock: the design canvas "Private money with 0xBow".
 13. **Not measured:** no swap has been signed on chain this way. Uniswap v4-only tokens (§1539 item 3) get "No pool"; v4's quoter is not asked. A route crossing two exchanges (one pool on each) is not tried.
 
 **Mac half.** The same Move code; not walked on the Mac.
+
+## §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537) (user, 2026-10-26, of "Nothing under $1 for ETH on Base." over "Nothing under $1 on Base": "what does this mean on our sweep feature", "'nothing' under 1$?", "as in leave nothing?", then "yes")
+
+1. **The sentence.** With the network read and nothing on it to sweep, Sweep's sentence is "Nothing to sweep on **Base**." (`sweepsNothing`): the count word and its "under $1 for ETH" clauses read as an order to leave nothing, so they go. The network stays the sentence's blank.
+2. **The line.** With no token under the line at all, the line under the sentence is "No tokens under **$1**", the whole line being the $1/$5 menu (`sweepUnderMenu`, shared with the sentence's word), so the person can try $5 from the empty state. A sweep whose rows all stay (unpriced, off the list, left out by a tap) keeps its rows under the new sentence.
+3. **Hook.** `-moveSweepDraft 1@Ethereum` opens Sweep on a named network; Ethereum is the demo's empty sweep (it holds ETH only).
+4. **Seen** on the iPhone 17 Pro simulator, dark: the empty sentence and line on Ethereum. **Not seen:** a sweep whose rows all stay, light mode, the Mac.
