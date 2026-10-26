@@ -1939,7 +1939,7 @@ struct MoveSentence: View {
                 // filled, so they share a row under the sentence (§1442g).
                 if verb != .receive, receipt == nil {
                     HStack(spacing: DS.Space.s4) {
-                        DSShareSlider(percent: shareBinding(with), enabled: stage == nil, tint: DS.textPrimary)
+                        DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
                         unitSwitch
                     }
                 }

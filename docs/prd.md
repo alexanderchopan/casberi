@@ -68964,3 +68964,12 @@ Mock: the design canvas "Private money with 0xBow".
 16. **Not done.** Nothing has been signed or sent on any network this way, testnet included (no funded test sender; Across's testnets were not tried), so the receipt's fill line and a real arrival or refund are not seen. A swap on the receiving network is not built (item 5). A crossing sent from another device is two rows naming Across, not one. Move's print line still says "≈" before an exact Across output. The two code commits name this entry §1552 (main took it first).
 
 **Mac half.** The same Move and Wallet code; not walked on the Mac.
+
+## §1556 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track (retires §1442f's white fill; user, 2026-10-26: "i don't think our slider looks good. it's kind of janky maybe b/c it is white not our pink", then "ok") — BUILT, not yet seen on the simulator
+
+1. **Pink fill, white thumb (`DSShareSlider`, `tint` defaults to `DS.pickInk`; Move no longer passes `DS.textPrimary`).** White on white hid the thumb and its shadow cannot show on black. Pink is still the values' ink: the slider sets the amount, and the amount is pink in the sentence. The system slider's look.
+2. **The thumb is pinned to the finger.** While the finger is down the thumb and the fill follow its position (`dragX`) with no animation; the amount still snaps to a quarter within 3% of one, and the thumb sits on that quarter while it does. Only letting go animates (`.snappy(duration: 0.18)`), settling on the amount set. Every step was animated before, so the thumb trailed the finger.
+3. **The quarters are 4pt dots inside the 6pt track**, covered by the fill past the thumb; they were 12pt stubs standing out of the track.
+4. **Unchanged:** the ticks and the snap haptic, VoiceOver's quarter steps, the 44pt hit area, the thumb growing under the finger.
+
+**Mac half.** The same view; the pointer drags it the same way. Not walked on the Mac.

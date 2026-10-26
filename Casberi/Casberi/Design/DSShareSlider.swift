@@ -11,26 +11,40 @@ import SwiftUI
 struct DSShareSlider: View {
     @Binding var percent: Int
     var enabled = true
-    /// The filled part's ink. Move draws it white, so pink stays the
-    /// values' and the signing verb's (prd §1442f).
+    /// The filled part's ink: the pick's pink, white thumb over it — the
+    /// system slider's look (prd §1556, retiring §1442f's white fill: white on
+    /// white hid the thumb, and the slider sets the amount, which is pink).
     var tint: Color = DS.pickInk
     /// The thumb grows under the finger (§1438b).
     @State private var holding = false
+    /// Where the finger is, while it is down: the thumb and the fill sit
+    /// UNDER it, never animated after it (prd §1556 — the snappy animation on
+    /// every step is what made the thumb trail the finger). Nil at rest.
+    @State private var dragX: CGFloat?
 
     private static let notches = [0, 25, 50, 75, 100]
 
     var body: some View {
         GeometryReader { geo in
             let width = max(geo.size.width, 1)
-            let x = CGFloat(percent) / 100 * width
+            let rest = CGFloat(percent) / 100 * width
+            // A quarter is a detent: within it the thumb sits on the quarter.
+            let x: CGFloat = dragX.map { raw in
+                let p = Int((raw / width * 100).rounded())
+                if let near = Self.notches.first(where: { abs($0 - p) <= 3 }) {
+                    return CGFloat(near) / 100 * width
+                }
+                return min(max(raw, 0), width)
+            } ?? rest
             ZStack(alignment: .leading) {
                 Capsule().fill(DS.fillFaint).frame(height: 6)
-                // The quarters, under the fill: past the thumb they are gone.
+                // The quarters are dots inside the track; past the thumb the
+                // fill covers them.
                 ForEach([25, 50, 75], id: \.self) { n in
-                    Capsule()
+                    Circle()
                         .fill(DS.textTertiary)
-                        .frame(width: 2, height: 12)
-                        .offset(x: CGFloat(n) / 100 * width - 1)
+                        .frame(width: 4, height: 4)
+                        .offset(x: CGFloat(n) / 100 * width - 2)
                 }
                 Capsule().fill(enabled ? tint : DS.textTertiary).frame(width: x, height: 6)
                 Circle()
@@ -47,15 +61,20 @@ struct DSShareSlider: View {
                     .onChanged { value in
                         guard enabled else { return }
                         if !holding { holding = true }
+                        dragX = value.location.x
                         var p = Int((value.location.x / width * 100).rounded())
                         p = min(max(p, 0), 100)
                         if let near = Self.notches.first(where: { abs($0 - p) <= 3 }) { p = near }
                         guard p != percent else { return }
                         // A quarter ticks; all of it lands.
                         if p == 100 { DSHaptic.snap() } else if Self.notches.contains(p) { DSHaptic.selection() }
-                        withAnimation(.snappy(duration: 0.18)) { percent = p }
+                        percent = p
                     }
-                    .onEnded { _ in holding = false }
+                    .onEnded { _ in
+                        holding = false
+                        // Let go: the thumb settles on the amount it set.
+                        withAnimation(.snappy(duration: 0.18)) { dragX = nil }
+                    }
             )
         }
         .frame(height: 44)
