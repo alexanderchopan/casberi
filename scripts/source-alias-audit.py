@@ -329,27 +329,46 @@ def read_all():
             ref_corpus())
 
 
+# The self-test's own rename. §1529 emptied `Corpus.renamedSources` (Markets'
+# Dexscreener → Tokens → Markets chain left with the seat), and every case here
+# had mutated a LIVE entry, so A, B, H and I went dead and C and G stopped
+# firing. The cases now seed one entry of their own into the literal and mutate
+# THAT, so the self-test no longer depends on which renames the tree carries.
+SEED_KEY = "Self-test Old Seat"
+SEED_REF_OLD = "selftestgone:"   # a namespace nothing writes (check I)
+SEED_REF_LIVE = "coin:"          # a namespace the tree writes (check H): `CoinFollow.refPrefix`
+
+
+def seed_rename(thing, key=SEED_KEY, current=None, ref_old=SEED_REF_OLD, ref_current=SEED_REF_LIVE):
+    """`thing` with one `Rename` entry written into `renamedSources`' literal."""
+    m = re.search(r"static let renamedSources:\s*\[String:\s*Rename\]\s*=\s*\[", thing)
+    if not m:
+        return thing
+    entry = (f'\n        "{key}": Rename(current: "{current}", '
+             f'refPrefix: .init(old: "{ref_old}", current: "{ref_current}")),')
+    return thing[:m.end()] + entry + thing[m.end():]
+
+
 def self_test():
     """Every check must be shown to FIRE. A check that cannot fail proves nothing."""
     thing, catalog, shell, resolvers, sweep, corpus = read_all()
+    offers = re.findall(r'Offer\(name:\s*"([^"]+)"', catalog)
+    live = offers[0] if offers else "?"
+    seeded = seed_rename(thing, current=live)
     cases = []
 
     # A — an alias pointing at a name no offer carries.
-    # (Anchored on "Tokens" since §1206 deleted Hegotá Frames, whose
-    # "Frames Devnet" entry these named — as §1038 had deleted the Hegotá UTXO
-    # and Ethrex Hegotá entries the first anchors named, and A–C went silent.)
-    cases.append(("A", (thing.replace('"Tokens": Rename(current: "Markets")',
-                                      '"Tokens": Rename(current: "Markets (old)")', 1),
+    cases.append(("A", (seed_rename(thing, current="No Such Offer"),
                         catalog, shell, resolvers, sweep, corpus)))
     # B — an alias key that is a live offer name.
-    cases.append(("B", (thing.replace('"Tokens": Rename', '"Linear": Rename', 1),
+    cases.append(("B", (seed_rename(thing, key=offers[-1] if offers else "?", current=live),
                         catalog, shell, resolvers, sweep, corpus)))
     # C — an alias key also declared retired.
-    cases.append(("C", (thing.replace('"Kalshi", "Polymarket"',
-                                      '"Tokens", "Polymarket"', 1),
+    cases.append(("C", (seeded.replace("static let retiredSources: Set<String> = [",
+                                       f'static let retiredSources: Set<String> = [\n        "{SEED_KEY}",', 1),
                         catalog, shell, resolvers, sweep, corpus)))
     # D — the wiring deleted from the join.
-    cases.append(("D", (thing,
+    cases.append(("D", (seeded,
                         catalog.replace(
                             "for (old, rename) in Corpus.renamedSources where map[old] == nil { map[old] = rename.current }",
                             "", 1),
@@ -360,34 +379,39 @@ def self_test():
     broken[0] = broken[0].replace(
         '"brand-" + Corpus.canonicalSource(name).lowercased()',
         '"brand-" + name.lowercased()', 1)
-    cases.append(("E", (thing, catalog, shell, broken, sweep, corpus)))
+    cases.append(("E", (seeded, catalog, shell, broken, sweep, corpus)))
     # E2 — the property stops delegating and re-derives the name itself.
     undelegated = list(resolvers)
     undelegated[0] = undelegated[0].replace(
         "        BridgeIconArt.assetName(for: name)",
         '        "brand-" + name.lowercased()', 1)
-    cases.append(("E2", (thing, catalog, shell, undelegated, sweep, corpus)))
+    cases.append(("E2", (seeded, catalog, shell, undelegated, sweep, corpus)))
     # F — the sweep drifts back inside the migration gate.
     moved = shell.replace("                SourceRename.sweep(context: modelContext)\n", "", 1)
     moved = moved.replace("if migrationsStored < migrationsCurrent {",
                           "if migrationsStored < migrationsCurrent {\n                    SourceRename.sweep(context: modelContext)", 1)
-    cases.append(("F", (thing, catalog, moved, resolvers, sweep, corpus)))
+    cases.append(("F", (seeded, catalog, moved, resolvers, sweep, corpus)))
     # G — the pair is declared and the sweep stops applying it. Build 537's own
     #     shape: the source still converges, so the room and the mark are right
     #     and only the ref is wrong, which is the half that renders perfectly.
     gutted = re.sub(
         r"\n *if let prefix = rename\.refPrefix,\n(?:.*\n)*? *\}\n",
         "\n", sweep, count=1)
-    cases.append(("G", (thing, catalog, shell, resolvers, gutted, corpus)))
+    cases.append(("G", (seeded, catalog, shell, resolvers, gutted, corpus)))
     # H — the rewrite targets a namespace nothing writes.
-    cases.append(("H", (thing.replace('current: "tokens:"', 'current: "toknes:"', 1),
+    cases.append(("H", (seed_rename(thing, current=live, ref_current="toknes:"),
                         catalog, shell, resolvers, sweep, corpus)))
     # I — the rewrite takes rows OUT of a namespace that is still live.
-    cases.append(("I", (thing.replace('old: "dexscreener:"', 'old: "wallet:"', 1),
+    cases.append(("I", (seed_rename(thing, current=live, ref_old="wallet:"),
                         catalog, shell, resolvers, sweep, corpus)))
 
     ok = True
-    baseline = (thing, catalog, shell, resolvers, sweep, corpus)
+    baseline = (seeded, catalog, shell, resolvers, sweep, corpus)
+    # The seeded tree must itself be clean, or a case could "fire" on the seed.
+    seed_fails = audit(*baseline)
+    if seed_fails:
+        print(f"  seeded tree: NOT CLEAN — {seed_fails}")
+        ok = False
     for label, args in cases:
         # A MUTATION THAT CHANGED NOTHING IS NOT A PASSING MUTATION — it is one
         # that did not run. Every anchor below is a literal copied out of a
