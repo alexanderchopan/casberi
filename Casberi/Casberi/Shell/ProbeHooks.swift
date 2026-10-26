@@ -3721,6 +3721,37 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-acrossSample YES` (prd §1552) — three swaps to another network as
+        // the Wallet keeps them, one waiting, one filled, one refunded, each
+        // with a made-up transaction no node will find, so Activity's rows
+        // can be seen with nothing sent. Logs `acrossSample|`.
+        Hook(key: "acrossSample") { _, context in
+            Task { @MainActor in
+                guard let account = YourAccountKey.address?.lowercased() else { NSLog("acrossSample| no account"); return }
+                typealias C = YourAccountAcross.Crossing
+                let now = Date()
+                let usdc = YourAccountOp.base.dollar.lowercased()
+                func sample(_ n: Int, _ state: C.State, sold: String, from: Int, to: Int, symbol: String, contract: String?,
+                            decimals: Int, out: String, refund: (String, String), input: String, ago: TimeInterval) -> C {
+                    C(id: "sample-\(n)", account: account, from: from, to: to, sold: sold, symbol: symbol, contract: contract,
+                      decimals: decimals, outputUnits: out, refundContract: refund.0, refundSymbol: refund.1, inputUnits: input,
+                      fillDeadline: Int(now.timeIntervalSince1970 - ago) + (state == .refunded ? -60 : 7_200),
+                      at: now.addingTimeInterval(-ago), tx: "0x" + String(repeating: "\(n)", count: 64),
+                      state: state, settledAt: state == .waiting ? nil : now.addingTimeInterval(-ago + 9))
+                }
+                let weth = YourAccountSwap.ethereum.weth
+                for c in [
+                    sample(1, .waiting, sold: "0.01 ETH", from: 1, to: 8453, symbol: "USDC", contract: usdc, decimals: 6,
+                           out: "24870000", refund: (YourAccountOp.ethereum.dollar.lowercased(), "USDC"), input: "24900000", ago: 5),
+                    sample(2, .filled, sold: "0.02 ETH", from: 1, to: 8453, symbol: "USDC", contract: usdc, decimals: 6,
+                           out: "49700000", refund: (YourAccountOp.ethereum.dollar.lowercased(), "USDC"), input: "49740000", ago: 3_600),
+                    sample(3, .refunded, sold: "0.01 ETH", from: 1, to: 8453, symbol: "ETH", contract: nil, decimals: 18,
+                           out: "9989268712761862", refund: (weth, "WETH"), input: "10000000000000000", ago: 9_000),
+                ] { YourAccountAcross.note(c) }
+                let added = await WalletAcross.sync(context: context)
+                NSLog("acrossSample| %d rows added", added)
+            }
+        },
         // `-yourAccountProbe <network>` — your account's send (prd §1424),
         // run to the bundler's door and no further: the estimate, Safe's
         // module hash, the Enclave's signature, the passkey factory's check.

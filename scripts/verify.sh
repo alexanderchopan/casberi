@@ -2463,6 +2463,11 @@ harness "Dust-sweep self-test" "dust sweep self-test" "scripts/dust-sweep-selfte
 # routers, exact approvals to the router that swaps, the quote less the
 # slippage limit; the best output wins; a real multicall answer read back.
 harness "Direct-swap self-test" "direct swap self-test" "scripts/direct-swap-selftest.sh" "Move's direct swap drifted — run scripts/direct-swap-selftest.sh"
+# Move's swap to another network, through Across (prd §1552). The SpokePool
+# deposit the phone writes, byte for byte against deposits simulated on each
+# network; the account as depositor and recipient, ETH through the handler's
+# message; Across's terms bounded; the relay hash a real pool's; one row.
+harness "Across-swap self-test" "across swap self-test" "scripts/across-swap-selftest.sh" "Move's swap to another network drifted — run scripts/across-swap-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is
