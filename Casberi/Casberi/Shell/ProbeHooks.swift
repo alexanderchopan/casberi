@@ -3721,7 +3721,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-acrossSample YES` (prd §1552) — three swaps to another network as
+        // `-acrossSample YES` (prd §1553) — three swaps to another network as
         // the Wallet keeps them, one waiting, one filled, one refunded, each
         // with a made-up transaction no node will find, so Activity's rows
         // can be seen with nothing sent. Logs `acrossSample|`.

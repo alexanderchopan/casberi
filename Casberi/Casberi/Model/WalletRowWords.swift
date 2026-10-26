@@ -8,7 +8,7 @@ import Foundation
 /// parse it — and the row reads it into the anatomy's three slots instead:
 ///
 /// - **A swap** is the trade as it reads, its verb left to the swap glyph
-///   (prd §1552): "0.0136 ETH for 32.55 USDC", the venue on the line ("On
+///   (prd §1553): "0.0136 ETH for 32.55 USDC", the venue on the line ("On
 ///   Uniswap"), and VoiceOver keeps "Swapped …" (`spoken`). It was §1414's
 ///   pair, "ETH → USDC on Uniswap", with the amounts on either side.
 /// - **A move between your own accounts** names the two accounts
@@ -93,7 +93,7 @@ enum WalletRowWords {
         }
         let inn = leg(rest)
         guard !out.symbol.isEmpty, !inn.symbol.isEmpty else { return nil }
-        // **THE SWAP GLYPH SAYS "SWAPPED" (user, 2026-10-26, prd §1552).** The
+        // **THE SWAP GLYPH SAYS "SWAPPED" (user, 2026-10-26, prd §1553).** The
         // row's name is the trade as it reads, "0.5 ETH for 1,240 USDC", the
         // arrow said as "for"; the venue goes to the line ("On Uniswap").
         // Display only: the stored title keeps "Swapped …", which search,

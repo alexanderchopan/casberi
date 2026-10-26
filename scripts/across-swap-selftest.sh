@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Across self-test (prd §1552) — Move's swap to another network: the phone
+# Across self-test (prd §1553) — Move's swap to another network: the phone
 # asks Across only its fee and writes the SpokePool deposit itself.
 #
 #   Casberi/Casberi/Model/YourAccountAcross.swift   compiled WHOLE and unmodified
@@ -257,8 +257,14 @@ c.state = .filled
 check(X.title(c) == "Swapped 0.01 ETH for USDC" && X.line(c, now: 0) == "Ethereum to Base" && X.figure(c) == "24.87",
       "the filled row's words moved: \(X.title(c)) / \(X.line(c, now: 0)) / \(X.figure(c))")
 c.state = .refunded
-check(X.title(c) == "Refunded 24.9 USDC on Ethereum" && X.line(c, now: 0) == "The swap to Base wasn't filled",
-      "the refunded row's words moved: \(X.title(c))")
+check(X.title(c) == "Refunded 24.9 USDC on Ethereum" && X.line(c, now: 0) == "The swap to Base wasn't filled"
+      && X.figure(c) == "24.90", "the refunded row's words moved: \(X.title(c)) / \(X.figure(c))")
+var whole = c; whole.state = .filled; whole.outputUnits = "49700000"
+check(X.figure(whole) == "49.70", "a dollar loses its cents: \(X.figure(whole))")
+whole.outputUnits = "50000000"
+check(X.figure(whole) == "50.00", "a whole dollar is not said with cents: \(X.figure(whole))")
+var eth = c; eth.decimals = 18; eth.state = .refunded; eth.inputUnits = "10000000000000000"; eth.refundSymbol = "WETH"
+check(X.figure(eth) == "0.01" && X.title(eth) == "Refunded 0.01 WETH on Ethereum", "an ETH refund is not said as WETH")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 

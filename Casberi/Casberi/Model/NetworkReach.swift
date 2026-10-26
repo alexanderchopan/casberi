@@ -512,7 +512,7 @@ enum NetworkReach {
                          // (2026-10-26).
                          "tokens.uniswap.org",
                          // Across's fee for a swap to another network (prd
-                         // §1552): asked only what its relayers charge now,
+                         // §1553): asked only what its relayers charge now,
                          // naming the account as depositor and recipient;
                          // answered through Tor (2026-10-26).
                          "app.across.to",

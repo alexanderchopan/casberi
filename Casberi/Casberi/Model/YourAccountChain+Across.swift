@@ -1,6 +1,6 @@
 import Foundation
 
-/// **A SWAP TO ANOTHER NETWORK, ASKED AND WATCHED (prd §1552).** The one
+/// **A SWAP TO ANOTHER NETWORK, ASKED AND WATCHED (prd §1553).** The one
 /// thing Across is asked is its fee (`suggested-fees`, through the same
 /// funnel and Tor as every read of the account's, measured answering
 /// through Tor); the calls are `YourAccountAcross`'s, written here on the

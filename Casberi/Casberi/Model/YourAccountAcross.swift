@@ -1,6 +1,6 @@
 import Foundation
 
-/// **A SWAP TO ANOTHER NETWORK, THROUGH ACROSS (prd §1552).** Across is a
+/// **A SWAP TO ANOTHER NETWORK, THROUGH ACROSS (prd §1553).** Across is a
 /// bridge whose relayers are anyone (permissionless), whose contracts are
 /// open, and whose refund is the contract's, not a company's promise: a
 /// deposit no relayer fills by its deadline goes back to its depositor on
@@ -440,7 +440,7 @@ enum YourAccountAcross {
         return String(localized: "about \((s + 30) / 60) minutes")
     }
 
-    // MARK: - The crossing the Wallet shows (prd §1552)
+    // MARK: - The crossing the Wallet shows (prd §1553)
 
     /// **ONE ROW PER CROSSING, IN ACTIVITY (user's design, 2026-10-26).** What
     /// this phone sent across, noted before Face ID (device-only, newest
@@ -602,8 +602,14 @@ enum YourAccountAcross {
     }
 
     /// The row's figure: what arrives (or arrived), or what came back.
+    /// The figure alone, as the row's other figures stand ("24.87"); the
+    /// title says the token. A dollar keeps its cents ("49.70").
     static func figure(_ c: Crossing) -> String {
-        if c.state == .refunded { return Op.display(c.inputUnits, decimals: c.decimals) + " " + c.refundSymbol }
-        return Op.display(c.outputUnits, decimals: c.decimals, places: c.decimals == 6 ? 2 : 6)
+        let units = c.state == .refunded ? c.inputUnits : c.outputUnits
+        let shown = Op.display(units, decimals: c.decimals, places: c.decimals == 6 ? 2 : 6)
+        guard c.decimals == 6 else { return shown }
+        let parts = shown.split(separator: ".", omittingEmptySubsequences: false)
+        let cents = parts.count > 1 ? String(parts[1]) : ""
+        return String(parts[0]) + "." + cents + String(repeating: "0", count: max(0, 2 - cents.count))
     }
 }

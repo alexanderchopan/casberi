@@ -5,7 +5,7 @@
 #
 # Every failure reads as a cut row or a wrong word:
 #   • "Swapped 0.0136 ETH → 32.55 USDC on…" — the sentence drawn as the name;
-#     since prd §1552 the row reads "0.0136 ETH for 32.55 USDC", the verb
+#     since prd §1553 the row reads "0.0136 ETH for 32.55 USDC", the verb
 #     the glyph's and VoiceOver's, the venue on the line
 #   • a swap's venue lost, or its verb gone from VoiceOver
 #   • "1 of 2 signatures collected on deposit e t h" — the count as the name,
@@ -38,7 +38,7 @@ func check(_ ok: Bool, _ what: String) {
 typealias W = WalletRowWords.Words
 
 // A swap: the trade as it reads, "for" for the arrow, its verb left to the
-// glyph and kept for VoiceOver, the venue on the line (prd §1552).
+// glyph and kept for VoiceOver, the venue on the line (prd §1553).
 check(WalletRowWords.read("Swapped 0.0136 ETH → 32.55 USDC on Uniswap")
       == W(name: "0.0136 ETH for 32.55 USDC", clause: "On Uniswap",
            spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap"),
@@ -187,7 +187,7 @@ grep -q 'let lead = \[words?.clause, said\].compactMap { $0 }' "$ROWS" \
 grep -q 'else if let figure = words?.figure {' "$ROWS" \
     || fail "BandRow no longer draws the words' figure on the right"
 grep -q '?? words?.spoken' "$ROWS" \
-    || fail "BandRow no longer speaks a swap's verb (prd §1552)"
+    || fail "BandRow no longer speaks a swap's verb (prd §1553)"
 grep -q 'foregroundStyle(words?.stayed == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)' "$ROWS" \
     || fail "BandRow draws a move between your own accounts in the received green (prd §1550)"
 

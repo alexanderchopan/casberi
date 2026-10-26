@@ -373,3 +373,13 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 - Circuits: pinned per network in `PrivacyArtifactPins.swift` (`node pins.mjs`), fetched by CID on first use, kept in Application Support under their hash. **Sepolia verifies SDK 1.0.0's DEV keys**, not the ceremony keys 1.0.1+ ship; mainnet's pins will be the ceremony set.
 - Measured on the iPhone 17 Pro simulator, iOS 27 (a busy Mac, load 10–370): see prd §1544.
 - `privacy-engine-selftest.sh` holds the wire, the network door, testnet-only and the pins.
+
+## Across: Swap to another network (prd §1553, built 2026-10-26)
+
+`-moveSwapDraft "<amount>|<SELL>|<BUY>@<Network>"` drafts a swap whose token arrives on another network (`0.01|ETH|USDC@Ethereum` from Base: swapped on Uniswap, then Across); pair with `-openMove YES -liveChains YES -moveHoldings … -moveSimulateETH <wei> [-moveDetails YES]`. `-acrossSample YES` notes three sample crossings (waiting, filled, refunded) with made-up transactions and writes their Activity rows (`acrossSample|`); open Wallet › Activity to see them.
+
+- The deposit is the phone's (`Model/YourAccountAcross.swift`); Across is asked only `suggested-fees` (`app.across.to`, through Tor). Pins: three SpokePools and the MulticallHandler, each read on chain.
+- ETH goes to the handler with a two-call message (unwrap the fill, pay the account): a SpokePool pays a contract WETH. `arrivalCheck` simulates the message on the receiving network before Face ID; signing is refused without it.
+- A crossing is one Wallet thing, `wallet:across:<id>` (`WalletAcross`), drawn by `AcrossCrossingRow`; `WalletIngest` drops its legs (`YourAccountAcross.take`). The notes are `yourAccount.across.crossings` in UserDefaults (device-only, newest 200).
+- A refund of an ETH crossing comes back as WETH (the pool refunds its wrapped coin).
+- `across-swap-selftest.sh`: vectors simulated on each network, real relay hashes, 21 mutations.

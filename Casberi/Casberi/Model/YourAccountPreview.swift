@@ -161,11 +161,11 @@ enum YourAccountPreview {
         let amount: String
         let route: YourAccountSwap.Route?
         /// A swap to another network: its crossing, for Details' Across
-        /// rows (prd §1552).
+        /// rows (prd §1553).
         var across: YourAccountAcross.Leg? = nil
     }
 
-    /// A swap to another network (prd §1552): "Sends 0.01 ETH to Base
+    /// A swap to another network (prd §1553): "Sends 0.01 ETH to Base
     /// through Across", what arrives and the refund said beneath.
     static func crossing(_ figure: String, _ symbol: String, to network: String, arrives: String, _ bought: String,
                          back origin: String) -> Step {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **A SWAP TO ANOTHER NETWORK, ONE ROW (prd §1552, the user's design).**
+/// **A SWAP TO ANOTHER NETWORK, ONE ROW (prd §1553, the user's design).**
 /// Waiting: an amber clock, "USDC arriving on Base", its line "Swapped 0.01
 /// ETH on Ethereum · now" in the attention ink and what arrives grey on the
 /// right. Filled: the swap glyph, "0.02 ETH for USDC" (the verb is the
@@ -21,7 +21,9 @@ struct AcrossCrossingRow: View {
                       .foregroundStyle(waiting ? DS.attentionInk : DS.textTertiary)) {
             DSGlyphLead(glyph: Self.glyph(state), tint: waiting ? DS.attention : DS.textSecondary)
         } trailing: {
-            if let crossing {
+            // A refund's title carries its amount; a figure beside it would
+            // cut the title (prd §1550's rule: a row never runs off).
+            if let crossing, state != .refunded {
                 Text(verbatim: YourAccountAcross.figure(crossing))
                     .dsText(.price17)
                     .monospacedDigit()

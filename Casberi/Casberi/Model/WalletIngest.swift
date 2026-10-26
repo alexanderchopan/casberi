@@ -569,7 +569,7 @@ enum WalletIngest {
                 guard seenGasTxs.insert(key).inserted else { return nil }
                 return WalletGas.Job(network: leg.chain.network, address: leg.address, hash: leg.hash)
             }
-        // **A SWAP TO ANOTHER NETWORK IS ONE ROW (prd §1552).** Its sending
+        // **A SWAP TO ANOTHER NETWORK IS ONE ROW (prd §1553).** Its sending
         // transaction, its arrival on the other network and its refund are
         // the crossing's own row in Activity (`WalletAcross`), never legs of
         // their own: no stray "Sent to Across" and unexplained receive.
@@ -782,7 +782,7 @@ enum WalletIngest {
             }
         }
 
-        // The crossings' own rows, after the legs above settled them (prd §1552).
+        // The crossings' own rows, after the legs above settled them (prd §1553).
         var added = await WalletAcross.sync(context: context)
         for thing in landed {
             context.insert(thing)
@@ -1275,7 +1275,7 @@ enum WalletIngest {
             ?? acrossLabel(a)
     }
 
-    /// Across's SpokePools and its handler (prd §1552): a crossing another
+    /// Across's SpokePools and its handler (prd §1553): a crossing another
     /// device sent, or one this phone has no note of, still reads as Across's.
     private static func acrossLabel(_ a: String) -> String? {
         YourAccountAcross.isAcross(a) ? "Across" : nil
@@ -1335,7 +1335,7 @@ enum WalletIngest {
             } else if let tacit = Tacit.knownName(for: a) {
                 names[a] = tacit
             } else if YourAccountAcross.isAcross(a) {
-                // Across's SpokePool or handler (prd §1552): a crossing with
+                // Across's SpokePool or handler (prd §1553): a crossing with
                 // no note on this phone still names who carried it.
                 names[a] = "Across"
             } else {
