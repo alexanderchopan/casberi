@@ -68915,3 +68915,12 @@ Mock: the design canvas "Private money with 0xBow".
 4. **The check.** `wallet-row-words-selftest.sh`: three move cases and a nil, two mutations (the move left as a sentence, its figure signed and green), and greps for `WalletIngest`'s title and the row's ink.
 5. **Mac half (§1402).** The same rows.
 6. **Not measured.** Written with no Xcode: not compiled, the harness's Swift half not run.
+
+## §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487; user, 2026-10-26: "how can we make sure also an activity we are using the ENS or the Casberi avatar when appropriate? We shouldn't really need to be using blockies that much") — WRITTEN, NOT YET COMPILED
+
+1. **Why.** A Wallet row's lead (when more than one wallet is watched, so the lead says which) drew `WalletBlockie`, a 5×5 grid seeded off the address, straight from `ShapedRows`. It never asked `WalletFace`, which every other place uses, so the row missed the face you picked for your own account (§1487) and every ENS or World App picture `WalletStore.loadAvatars` resolves.
+2. **The lead is `WalletFace`, circular.** Your account wears `YouFace`; a watched wallet with a picture wears it, crossfading in when it resolves; the rest wear `WalletFace`'s tinted mark — the one face that wallet has everywhere.
+3. **Deleted.** `WalletBlockie` and the `Leader.blockie` case (the lead is `Leader.wallet`); nothing else drew it.
+4. **Not changed.** Which rows draw a wallet face (a Wallet row, two or more wallets watched), and that pictures resolve for watched wallets only: a counterparty you do not watch has no face here.
+5. **Mac half (§1402).** The same rows.
+6. **Not measured.** Written with no Xcode: not compiled, not seen.

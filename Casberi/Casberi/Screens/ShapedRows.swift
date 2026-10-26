@@ -447,9 +447,9 @@ struct BandRow: View {
         return nil
     }
 
-    /// The address a Wallet row draws an identicon for — the visual twin of
-    /// the address label, shown only when more than one wallet is watched.
-    private var identiconAddress: String? {
+    /// The watched wallet a Wallet row wears the face of — the twin of its
+    /// label, shown only when more than one wallet is watched.
+    private var walletFaceAddress: String? {
         guard thing.source == "Wallet", WalletStore.shared.addresses.count > 1,
               let addr = thing.walletAddress, !addr.isEmpty else { return nil }
         return addr
@@ -547,7 +547,8 @@ struct BandRow: View {
     /// One definition; the `Group` below only switches on it.
     private enum Leader: Equatable {
         case avatar(String)
-        case blockie(String)
+        /// A watched wallet's face (`WalletFace`, prd §1551).
+        case wallet(String)
         case initial(String)
         /// A brand the row is ABOUT, wearing its bundled mark (`brandMark`).
         case brand(String)
@@ -600,8 +601,8 @@ struct BandRow: View {
             return .avatar(avatar)
         } else if let mark = brandMark {
             return .brand(mark)
-        } else if let addr = identiconAddress {
-            return .blockie(addr)
+        } else if let addr = walletFaceAddress {
+            return .wallet(addr)
         } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
             return .initial(sender)
         } else if let publisher = publisherIconURL {
@@ -844,8 +845,14 @@ struct BandRow: View {
         case .avatar(let avatar):
             RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                         fallback: thing.source, circular: true)
-        case .blockie(let addr):
-            WalletBlockie(address: addr, size: DS.Face.rowCircle)
+        case .wallet(let addr):
+            // **THE WALLET'S OWN FACE, NEVER A BLOCKIE (prd §1551, user:
+            // "make sure also an activity we are using the ENS or the Casberi
+            // avatar when appropriate").** Your account wears the face you
+            // picked (`YouFace`, §1487), a wallet with an ENS or World App
+            // picture wears it, and the rest wear `WalletFace`'s tinted
+            // mark — the same face the wallet has everywhere else.
+            WalletFace(address: addr, size: DS.Face.rowCircle, circular: true)
         case .initial(let sender):
             SenderInitial(sender: sender, size: DS.Face.rowCircle)
         case .brand(let mark):
@@ -1729,60 +1736,10 @@ struct MusicRow: View {
     }
 }
 
-
-/// A deterministic identicon for a watched wallet address (2026-07-10) — the
-/// visual twin of the address label, so two watched wallets read apart at a
-/// glance when neither has an avatar to show. A pure function of the address:
-/// no network, no asset. A 5-cell grid mirrored down the middle, one hue on a
-/// dark tint of itself, clipped to a circle to match the social avatars.
-struct WalletBlockie: View {
-    let address: String
-    var size: CGFloat = DS.Face.row
-
-    var body: some View {
-        let seed = Self.hash(address)
-        let hue = Double(seed % 360) / 360.0
-        let fg = Color(hue: hue, saturation: 0.60, brightness: 0.85)
-        let bg = Color(hue: hue, saturation: 0.32, brightness: 0.22)
-        Canvas { ctx, canvasSize in
-            let cells = 5
-            let cell = canvasSize.width / CGFloat(cells)
-            var r = seed | 1   // never a zero state
-            func nextOn() -> Bool { r = r &* 6_364_136_223_846_793_005 &+ 1; return (r >> 33) & 1 == 0 }
-            ctx.fill(Path(CGRect(origin: .zero, size: canvasSize)), with: .color(bg))
-            for y in 0..<cells {
-                for x in 0...(cells / 2) where nextOn() {
-                    for col in [x, cells - 1 - x] {
-                        let rect = CGRect(x: CGFloat(col) * cell, y: CGFloat(y) * cell,
-                                          width: cell + 0.5, height: cell + 0.5)
-                        ctx.fill(Path(rect), with: .color(fg))
-                    }
-                }
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        // Identity, not information (prd §299's split): the blockie is the
-        // address drawn as a pattern, and the row beside it already says the
-        // address. Speaking the pattern would be a second, worse rendition of
-        // a name VoiceOver has just read.
-        .accessibilityHidden(true)
-    }
-
-    /// djb2 over the lowercased address — stable per address, spread enough
-    /// that neighbours look different.
-    private static func hash(_ s: String) -> UInt64 {
-        var h: UInt64 = 5381
-        for b in s.lowercased().utf8 { h = (h &* 33) &+ UInt64(b) }
-        return h
-    }
-}
-
-
 /// A mail sender's initial in a colored circle (2026-07-10) — email carries
 /// no avatar, so the letter is the identity, the way Mail apps themselves
 /// draw unknown senders. Hue is a pure function of the sender string (same
-/// trick as WalletBlockie): two senders read apart at a glance, the same
+/// trick as the wallet faces): two senders read apart at a glance, the same
 /// sender is always the same color. No network, nothing stored.
 struct SenderInitial: View {
     let sender: String
@@ -1833,7 +1790,7 @@ struct SenderInitial: View {
         return s.trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
     }
 
-    /// djb2, matching WalletBlockie — stable per sender. Case-insensitive:
+    /// djb2 — stable per sender. Case-insensitive:
     /// "Ana <a@x>" and "ana <a@x>" are the same person, same hue.
     private static func hash(_ s: String) -> UInt64 {
         var h: UInt64 = 5381

@@ -242,7 +242,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1688 of 1757 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1689 of 1758 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1932,6 +1932,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1548 — Your account's keys read until every network answers, and a failed read keeps the last one
 - §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends…
 - §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §14…
+- §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;…
 
 ## Dead rulings → what replaced them (generated)
 
