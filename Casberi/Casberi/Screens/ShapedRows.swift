@@ -447,6 +447,17 @@ struct BandRow: View {
         return nil
     }
 
+    /// **WHO YOU DEALT WITH, WHEN THEY HAVE A FACE (prd §1552, user: "yes,
+    /// show the counterparty's avatar too").** A Wallet row leads with the
+    /// other side when it is your own account or set a picture with its name
+    /// (ENS, else a linked name's); the line still says which wallet. A
+    /// counterparty with no picture leaves the lead to the wallet's face.
+    private var counterpartyFaceAddress: String? {
+        guard thing.source == "Wallet", let cp = thing.counterpartyAddress,
+              ENS.isHexAddress(cp), WalletFace.hasPicture(cp) else { return nil }
+        return cp
+    }
+
     /// The watched wallet a Wallet row wears the face of — the twin of its
     /// label, shown only when more than one wallet is watched.
     private var walletFaceAddress: String? {
@@ -601,7 +612,7 @@ struct BandRow: View {
             return .avatar(avatar)
         } else if let mark = brandMark {
             return .brand(mark)
-        } else if let addr = walletFaceAddress {
+        } else if let addr = counterpartyFaceAddress ?? walletFaceAddress {
             return .wallet(addr)
         } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
             return .initial(sender)

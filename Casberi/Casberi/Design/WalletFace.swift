@@ -46,7 +46,20 @@ struct WalletFace: View {
     }
 
     private var avatarURL: URL? {
-        WalletStore.shared.avatarURL(for: address).flatMap(URL.init(string:))
+        Self.avatar(for: address).flatMap(URL.init(string:))
+    }
+
+    /// A watched wallet's resolved picture, else the one a counterparty set
+    /// with its name (`AddressNames`, prd §1552). Display only: nothing asks.
+    static func avatar(for address: String) -> String? {
+        WalletStore.shared.avatarURL(for: address) ?? AddressNames.shared.avatar(for: address)
+    }
+
+    /// The face says WHO, not just which: yours, or a picture someone set
+    /// (§1552). A row leads with a counterparty only when this holds, so a
+    /// stranger's tinted mark never displaces your own wallet's face.
+    static func hasPicture(_ address: String) -> Bool {
+        YourAccountDemo.isYours(address) || avatar(for: address) != nil
     }
 
     /// **YOUR OWN ACCOUNT WEARS YOUR FACE (prd §1487, user: "shouldn't we
