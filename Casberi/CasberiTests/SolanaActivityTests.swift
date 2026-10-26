@@ -123,16 +123,16 @@ struct SolanaActivityTests {
     @Test func aGrantReadsLikeAnApproval() throws {
         let g = try #require(Self.move(Self.tx(top: [Self.approve(amount: "18446744073709551615")]))?.grants.first)
         #expect(SolanaActivity.grantTitle(g, symbols: [Self.usdc: "USDC"])
-                == "Approved …mCrY to spend unlimited USDC")
+                == "Approved ...mCrY to spend unlimited USDC")
         let capped = try #require(Self.move(Self.tx(top: [Self.approve(checked: true)]))?.grants.first)
         #expect(SolanaActivity.grantTitle(capped, symbols: [Self.usdc: "USDC"])
-                == "Approved …mCrY to spend 250.00 USDC")
+                == "Approved ...mCrY to spend 250.00 USDC")
     }
 
     /// A grant lands even when its token cannot be named.
     @Test func anUnnamedTokenStillTitlesTheGrant() throws {
         let g = try #require(Self.move(Self.tx(top: [Self.approve()]))?.grants.first)
-        #expect(SolanaActivity.grantTitle(g, symbols: [:]).hasSuffix("…Dt1v"))
+        #expect(SolanaActivity.grantTitle(g, symbols: [:]).hasSuffix("...Dt1v"))
     }
 
     @Test func aSolanaGrantWearsTheGrantMark() {

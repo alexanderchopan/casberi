@@ -201,7 +201,7 @@ enum DemoCorpus {
             // inert everywhere except the mark. The swap and the Solana buy
             // stay unstamped, which is correct — both are two-legged.
             Thing(kind: .transaction, title: "Received 500 USDC from sam.eth",
-                  content: "Base · from 0x9f…21", source: "Wallet",
+                  content: "Base · from ...9f21", source: "Wallet",
                   capturedAt: ago(hours: 12), tags: ["Onchain"],
                   provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa2")
                 .stamped { $0.transferDirection = "received" },
@@ -210,7 +210,7 @@ enum DemoCorpus {
                   capturedAt: ago(hours: 30), tags: ["Onchain"],
                   provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa3"),
             Thing(kind: .transaction, title: "Sent 0.2 ETH to cold wallet",
-                  content: "Ethereum · to 0x4d…88", source: "Wallet",
+                  content: "Ethereum · to ...4d88", source: "Wallet",
                   capturedAt: ago(hours: 48), tags: ["Onchain"],
                   provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa4")
                 .stamped { $0.transferDirection = "sent" },

@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// **MOVE TO PRIVATE, THE ACT (prd §1553).** One tap: the private account
+/// **MOVE TO PRIVATE, THE ACT (prd §1554).** One tap: the private account
 /// opens (its seed behind Face ID), the keystore is registered the first time
 /// (two transactions, so the notes can be spent later), the deposit is
 /// proved on the phone and sent, and the note is kept as waiting for

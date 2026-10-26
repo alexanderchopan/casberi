@@ -270,7 +270,7 @@ KNOWN_PROPER: set[str] = {
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
-    # Ethereum's test network, where Move to private runs (prd §1553).
+    # Ethereum's test network, where Move to private runs (prd §1554).
     "Sepolia",
     "Ethrex", "Reown", "WalletConnect", "Visa", "Mastercard", "Metamask", "Delegator",
     # The CHAIN is Hegotá; the SEAT is "Hegotá UTXO" since §629. The rename

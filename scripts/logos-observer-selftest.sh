@@ -312,5 +312,5 @@ extension Data {
 }
 SWIFT
 
-xcrun swiftc -O -o "$TMP/run" "$WIRE" "$NODE" "$TMP/main.swift" 2>"$TMP/err" || { cat "$TMP/err"; echo "✗ compile failed"; exit 1; }
+xcrun swiftc -O -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$NODE" "$TMP/main.swift" 2>"$TMP/err" || { cat "$TMP/err"; echo "✗ compile failed"; exit 1; }
 "$TMP/run" "$FIX"

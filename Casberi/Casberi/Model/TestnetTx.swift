@@ -1,6 +1,6 @@
 import Foundation
 
-/// **A TESTNET TRANSACTION'S BYTES (prd §1553).** EIP-1559 (type 2): the
+/// **A TESTNET TRANSACTION'S BYTES (prd §1554).** EIP-1559 (type 2): the
 /// payload a key signs, and the raw transaction a node takes once signed.
 /// Used by the DEBUG Sepolia sender (`PrivacyTestnetSender`) alone, which is
 /// how Move to private reaches the pool before your account can.

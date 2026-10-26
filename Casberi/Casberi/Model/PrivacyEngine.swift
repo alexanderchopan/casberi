@@ -275,7 +275,7 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
         let text = body["body"] as? String
         if let text { request.httpBody = Data(text.utf8) }
         request.timeoutInterval = 60
-        // Old logs from the node that keeps them (prd §1553); the rest, and a
+        // Old logs from the node that keeps them (prd §1554); the rest, and a
         // range past its head, from the network's own node.
         let network = MainActor.assumeIsolated { PrivacyEngine.shared.network ?? .sepolia }
         let routed = PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl,

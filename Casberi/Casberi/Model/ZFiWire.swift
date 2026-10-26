@@ -308,10 +308,8 @@ enum ZFiWire {
 
     // MARK: - Words on the row
 
-    static func shortAddress(_ a: String) -> String { "…" + a.suffix(4) }
-
     static func symbol(_ token: String, _ tokens: [String: Token]) -> String {
-        token == ether ? etherToken.symbol : tokens[token]?.symbol ?? shortAddress(token)
+        token == ether ? etherToken.symbol : tokens[token]?.symbol ?? AddressTail.short(token)
     }
 
     /// An amount in a token's own units: four significant digits under one,

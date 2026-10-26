@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **MOVE TO PRIVATE IS A MOVE SENTENCE (prd §1553).** Move is the one place
+/// **MOVE TO PRIVATE IS A MOVE SENTENCE (prd §1554).** Move is the one place
 /// money moves, so the private deposit is one more of its sentences, drawn in
 /// its anatomy: the verbs on their own line (`head`, Move's own), then
 ///

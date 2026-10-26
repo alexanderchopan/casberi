@@ -44,7 +44,7 @@ struct MoveSentence: View {
         _privately = State(initialValue: toPrivate && PrivateMove.available)
     }
 
-    /// **TO PRIVATE (prd §1553): the one sentence that is not this account's.**
+    /// **TO PRIVATE (prd §1554): the one sentence that is not this account's.**
     /// Its own page (`MovePrivateSentence`) under these verbs, over the
     /// account's sentence, which stays as it was for the verb picked next.
     @State private var privately = false
@@ -1465,7 +1465,7 @@ struct MoveSentence: View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
             // A–Z in the reader's language (prd §1547); Swap stays the
             // verb Move opens on, wherever it stands in the line. Private
-            // (nil, prd §1553) takes its place in the order where the test
+            // (nil, prd §1554) takes its place in the order where the test
             // sender can move: Sepolia, DEBUG builds, never the default.
             ForEach((Verb.allCases.filter { $0 != .buy || buyAvailable }.map(Optional.some)
                      + (PrivateMove.available ? [nil] : []))
@@ -1510,7 +1510,7 @@ struct MoveSentence: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 
-    /// A verb's word, or Private's (nil, prd §1553).
+    /// A verb's word, or Private's (nil, prd §1554).
     private func verbName(_ v: Verb?) -> String { v.map(title) ?? String(localized: "Private") }
 
     private func title(_ v: Verb) -> String {
@@ -1595,7 +1595,8 @@ struct MoveSentence: View {
 
     private var toWord: some View {
         let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
-            ?? (to.isEmpty ? String(localized: "address") : to)
+            ?? (to.isEmpty ? String(localized: "address")
+                : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
         return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.

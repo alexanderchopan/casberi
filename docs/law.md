@@ -242,7 +242,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1691 of 1760 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1692 of 1761 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -795,7 +795,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §492 — A letter glyph is wrong exactly where the real bridge draws an image
 - §493 — Headers instead of cards, and four slots stop being lists (amended by §943; part superseded by §743)
 - §494 — A catalog seat's Open lands on the thing it advertised (part superseded by §515)
-- §495 — A key event opens to what happened, not to a label (amended by §524; part superseded by §583, §1038)
+- §495 — A key event opens to what happened, not to a label (amended by §524, §1553; part superseded by §583, §1038)
 - §496 — One address book, two rooms — Kind.key, a note field, and where an address was met
 - §497 — The Connected spine leaves the address book
 - §498 — The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a s… (amended by §583)
@@ -1934,7 +1934,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §14…
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
-- §1553 — Move to private on Sepolia: one more Move sentence, and private money in Holdings, counted once (builds §1540 step 2…
+- §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
+- §1554 — Move to private on Sepolia: one more Move sentence, and private money in Holdings, counted once (builds §1540 step 2…
 
 ## Dead rulings → what replaced them (generated)
 

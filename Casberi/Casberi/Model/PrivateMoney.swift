@@ -1,6 +1,6 @@
 import Foundation
 
-/// **MOVE TO PRIVATE, AND WHAT IS PRIVATE (prd §1553).**
+/// **MOVE TO PRIVATE, AND WHAT IS PRIVATE (prd §1554).**
 ///
 /// What the Wallet shows of Privacy Pools v2 (prd §1541): each deposit you
 /// make is a NOTE, kept here by its public parts (commitment, label, the
@@ -116,7 +116,7 @@ enum PrivateMoney {
                        since: $0.kind == .waiting ? $0.since : nil) }
     }
 
-    // MARK: - In the Wallet's number (prd §1553)
+    // MARK: - In the Wallet's number (prd §1554)
 
     /// Private money's one position in the portfolio: one block in the
     /// Holdings box and one share of the total, never folded into the token

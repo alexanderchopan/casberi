@@ -60,7 +60,7 @@ check(Identity.parse(key: "jesse.base.eth")?.kind == .basename, "a basename pars
 check(Identity.parse(key: "nonsense") == nil || Identity.parse(key: "nonsense")?.kind == .worldApp,
       "a bare word is at most a World App name")
 check(Identity.parse(key: "nostr:a1b2c3") == nil, "a deleted kind's key parses as nothing, never a World App name")
-check(Identity.make(.wallet, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045").label == "…6045", "a wallet's label is its tail")
+check(Identity.make(.wallet, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045").label == "...6045", "a wallet's label is its tail")
 check(Identity.make(.bluesky, "jesse").label == "@jesse", "a handle's label wears the @")
 check(Identity.Kind.classify(primaryName: "@vitalik") == nil, "classify: an @ name is a retired Farcaster handle and names nobody (prd §1110)")
 check(Identity.Kind.classify(primaryName: "jesse.base.eth") == .basename, "classify: .base.eth")
@@ -363,7 +363,7 @@ print("✓ addresses self-test: every assertion held")
 SWIFT
 
 echo "addresses self-test — compiling $INDEX and $LINKS whole"
-if ! swiftc -Onone -o "$TMP/run" "$INDEX" "$LINKS" "$SUGGEST" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$INDEX" "$LINKS" "$SUGGEST" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ compile failed:"; sed 's/^/  /' "$TMP/build.log" | head -30; exit 1
 fi
 "$TMP/run" || exit 1
@@ -390,7 +390,7 @@ PY
   if cmp -s "$file" "$target"; then
     echo "  ✗ $name — the mutant is byte-identical to the source"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$target" "${others[@]}" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$target" "${others[@]}" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

@@ -154,8 +154,8 @@ check(apps.first?.lastActiveAt == Date(timeIntervalSince1970: 1719705600), "mill
 let a2 = apps.first { $0.id == "a2" }!
 check(a2.createdAt != nil, "an ISO date reads")
 check(a2.wallets.count == 2, "the same EVM address in two cases is one wallet")
-check(a2.name == PrivyHomeFeed.shortAddress(sol), "a blank name falls back to the wallet, never empty")
-check(PrivyHomeFeed.line(a2) == "\(PrivyHomeFeed.shortAddress(sol)) +1", "two wallets say so on the line")
+check(a2.name == AddressTail.short(sol), "a blank name falls back to the wallet, never empty")
+check(PrivyHomeFeed.line(a2) == "\(AddressTail.short(sol)) +1", "two wallets say so on the line")
 check(PrivyHomeFeed.ref(apps.first!) == "privy:app:a1", "the ref is the app id")
 check(!PrivyHomeFeed.isWalletAddress("person@example.com"), "an email is not address-shaped")
 check(!PrivyHomeFeed.isWalletAddress("0x123"), "a short hex is not an address")
@@ -251,6 +251,6 @@ print(failures == 0 ? "privy-selftest: all checks ✓" : "privy-selftest: \(fail
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-swiftc -O -o "$TMP/run" "$FEED" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+swiftc -O -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$FEED" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { echo "✗ privy-selftest: compile failed"; exit 1; }
 "$TMP/run"

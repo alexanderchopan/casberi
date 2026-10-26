@@ -682,7 +682,7 @@ let outnumbered = NotifyDigest.plan([
 // the rule under test.
 ok(outnumbered.body == "App Review said no · 3 more",
    "what needs you names itself, even outnumbered by money")
-let approval = kinded("a", "Wallet", .approvalGranted, body: "Unlimited USDC to 0x9f…c1", at: at(8), category: "Wallet")
+let approval = kinded("a", "Wallet", .approvalGranted, body: "Unlimited USDC to ...9fc1", at: at(8), category: "Wallet")
 ok(NotifyDigest.plan(paid + [approval])!.body == "New approval · 3 more",
    "an approval that can move your funds leads the money that arrived")
 
@@ -728,7 +728,7 @@ sentBy[0].who = "mira.eth"; sentBy[0].amount = "0.42 ETH"
 let moneyCard = NotifyDigest.card(sentBy)!
 ok(moneyCard.rows.first?.who == "mira.eth" && moneyCard.rows.first?.line == "0.42 ETH · $980",
    "a transfer's card row leads with who sent it, then how much, largest first")
-ok(NotifyDigest.card(paid + [approval])!.rows.first?.line == "Unlimited USDC to 0x9f…c1",
+ok(NotifyDigest.card(paid + [approval])!.rows.first?.line == "Unlimited USDC to ...9fc1",
    "what needs you leads the card too")
 
 // ── the rank (prd §809) ─────────────────────────────────────────────────────

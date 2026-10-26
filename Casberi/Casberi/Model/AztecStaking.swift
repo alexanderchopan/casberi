@@ -505,7 +505,7 @@ enum AztecStaking {
             switch s.via {
             case .direct: via = "direct"
             case .provider(let id): via = "provider \(id)"
-            case .vault(let atp): via = "vault \(AztecStakeWire.shortAddress(atp))"
+            case .vault(let atp): via = "vault \(AddressTail.short(atp, wholeUpTo: 10))"
             }
             return "\(s.attester) | \(s.status) | \(WalletIngest.format(s.amount)) AZTEC | \(via) | "
                 + "\(AztecStakeWire.state(s)) | earned \(s.rewards.map { AztecStakeWire.plain($0) } ?? "unread") | "

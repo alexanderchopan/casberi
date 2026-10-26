@@ -301,7 +301,7 @@ struct AddressesSection: View {
                     lastThing: nil, keywords: [])
         }
         /// Whether the name is a real one or the address's own tail.
-        var isNamed: Bool { !name.hasPrefix("…") }
+        var isNamed: Bool { !AddressTail.isTail(name) }
     }
 
     /// A query worth asking about: a hex address, or a dotted name with no

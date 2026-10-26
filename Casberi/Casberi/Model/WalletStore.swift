@@ -37,13 +37,13 @@ final class WalletStore {
         /// that carries a real stamp is newer.
         var updatedAt: Date? = nil
 
-        /// "…4f4f" — the row form.
+        /// "...4f4f" — the row form.
         var short: String { WalletStore.shortAddress(address) }
 
         var stamp: Date { updatedAt ?? .distantPast }
     }
 
-    /// "…4f4f" — the one address-shortening rule, shared with every surface
+    /// "...4f4f" — the one address-shortening rule, shared with every surface
     /// that shows an address it has no label for.
     ///
     /// TAIL ONLY (2026-08-12, user ruling: "i want any address that is
@@ -105,9 +105,10 @@ final class WalletStore {
     /// ellipsis — NO DOUBLE TRUNCATION.** `0xd889…de…` was the real defect,
     /// an ellipsis arriving twice because two layers each truncated, and
     /// `address-safety-selftest` still counts them: exactly one, never two.
+    /// **THREE DOTS, THE TAIL ONLY** (prd §1553, user 2026-10-26): `...9a0b`,
+    /// spelled by `AddressTail` — the one shortener every surface shares.
     static func shortAddress(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return "…\(address.suffix(4))"
+        AddressTail.short(address)
     }
 
     /// Is `name` a placeholder this app generated, rather than something the
@@ -131,8 +132,8 @@ final class WalletStore {
         // Books written before a spelling change still hold the OLD placeholder,
         // and a placeholder we no longer recognise reads as a name the person
         // typed — so the wallet would stop being offered a real one. Both dead
-        // forms stay listed: the ellipsis-four (to 2026-08-26, prd §483) and the
-        // pre-2026-08-12 head-and-tail.
+        // forms stay listed: the ellipsis-four (to 2026-10-26, prd §495; and to
+        // 2026-08-26, prd §483) and the pre-2026-08-12 head-and-tail.
         if name == "…\(address.suffix(4))" { return true }
         return name == "\(address.prefix(6))…\(address.suffix(4))"
     }

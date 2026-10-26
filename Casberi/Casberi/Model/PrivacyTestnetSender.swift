@@ -3,7 +3,7 @@ import Foundation
 import Security
 import P256K
 
-/// **THE TESTNET SENDER (prd §1553) — DEBUG builds only, Sepolia only.**
+/// **THE TESTNET SENDER (prd §1554) — DEBUG builds only, Sepolia only.**
 ///
 /// Move to private needs something to SEND the deposit. Your account (prd
 /// §1424) is the right sender and the one this becomes: but it runs on Base,

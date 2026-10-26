@@ -207,7 +207,7 @@ check(silent.isStopped && AztecStakeWire.state(silent) == "Missing attestations"
       "three missed in a row: missing attestations, and it asks you")
 var quiet = carried!; quiet.missedStreak = 2
 check(!quiet.isStopped && AztecStakeWire.state(quiet) == "Validating", "two is not yet a stop")
-check(AztecStakeWire.stoppedTitle(silent) == "Your Aztec sequencer …e5f1 stopped attesting", "its row")
+check(AztecStakeWire.stoppedTitle(silent) == "Your Aztec sequencer ...e5f1 stopped attesting", "its row")
 
 print("governance")
 check(AztecStakeWire.count(reply: reply("gov-count.json")) == 5, "five proposals")
@@ -286,7 +286,7 @@ if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
 echo "AztecStakeWire, compiled whole"
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the harness did not compile:"; sed -n '1,30p' "$TMP/build.log"; exit 1
 fi
 STAKE_FIX="$PWD/$FIX" "$TMP/run" || exit 1
@@ -305,7 +305,7 @@ open(p, "w").write(s.replace(f, t, 1))
 PY
   then echo "  ✗ $name — the mutation did not apply"; exit 1; fi
   if cmp -s "$WIRE" "$WORK/AztecStakeWire.swift"; then echo "  ✗ $name — changed nothing"; exit 1; fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/AztecStakeWire.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/AztecStakeWire.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if STAKE_FIX="$PWD/$FIX" "$TMP/mut" > /dev/null 2>&1; then

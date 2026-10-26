@@ -46,9 +46,9 @@ check(W.imitated(paid, sentTo: sent.filter { $0.key == paid }, named: [:], own: 
 
 // The words.
 let day: (Date) -> String = { _ in "Oct 3" }
-let short: (String) -> String = { String($0.prefix(6)) + "…" + String($0.suffix(4)) }
+let short: (String) -> String = { "..." + String($0.suffix(4)) }
 check(W.line(.lookalike(of: paid, name: nil, paid: oct3), short: short, day: day)
-      == "Looks like 0x71c7…49a2, which you paid on Oct 3. They differ in the middle. Check it.", "the lookalike line drifted from the canvas")
+      == "Looks like ...49a2, which you paid on Oct 3. They differ in the middle. Check it.", "the lookalike line drifted from the canvas")
 check(W.line(.scam(address: fake, sources: "x"), short: short, day: day) == "Reported as a scam address.", "the scam line drifted")
 check(W.line(.firstSend, short: short, day: day) == "First send to this address.", "the first-send line drifted")
 check(W.contractLine(token: true, unverified: true, ageDays: 2, neverUsed: true) == "Not on Uniswap's list. Its contract is 2 days old, and you've never used it.",

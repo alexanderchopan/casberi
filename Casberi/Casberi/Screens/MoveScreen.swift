@@ -55,7 +55,7 @@ struct MoveTrayPresenter: ViewModifier {
             chrome.moveTray = true
         }
         // `-moveToPrivate YES`: raise Move on its private sentence, as
-        // Holdings' Private rows do (prd §1553).
+        // Holdings' Private rows do (prd §1554).
         .task {
             guard UserDefaults.standard.bool(forKey: "moveToPrivate") else { return }
             try? await Task.sleep(for: .seconds(1))
@@ -95,7 +95,7 @@ struct MoveScreen: View {
     #endif
     /// Recovering: the networks the recovery key can bring it to (§1442k).
     @State private var recoverableOn: [YourAccountOp.Network]?
-    /// To private with no account on this phone (prd §1553): the test
+    /// To private with no account on this phone (prd §1554): the test
     /// sender sends it, so the sentence stands without one.
     @State private var privateMove = PrivateMove()
 

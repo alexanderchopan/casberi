@@ -158,7 +158,7 @@ check(ZFiWire.symbol(reply: encoded("VISIT x.io")) == nil, "a symbol with a spac
 check(ZFiWire.symbol(reply: encoded("CLAIMREWARDS")) == nil, "a twelve-letter symbol is not drawn")
 check(ZFiWire.decimals(reply: "0x" + ZFiWire.word(18)) == 18 && ZFiWire.decimals(reply: "0x" + ZFiWire.word(77)) == nil,
       "decimals past 36 are not believed")
-check(ZFiWire.symbol(ZFiWire.ether, [:]) == "ETH" && ZFiWire.symbol(stranger, [:]) == "…1111", "ETH by address, an unknown by its tail")
+check(ZFiWire.symbol(ZFiWire.ether, [:]) == "ETH" && ZFiWire.symbol(stranger, [:]) == "...1111", "ETH by address, an unknown by its tail")
 
 print("Tacit")
 let pool = "0x000000c2A20657CE25f2Ba99737933D031AFBEE9"
@@ -175,7 +175,7 @@ if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
 echo "ZFiWire + Tacit, compiled whole"
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$TACIT" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$TACIT" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the harness did not compile:"; sed -n '1,30p' "$TMP/build.log"; exit 1
 fi
 ZFI_FIX="$PWD/$FIX" "$TMP/run" || exit 1
@@ -195,7 +195,7 @@ open(p, "w").write(s.replace(f, t, 1))
 PY
   then echo "  ✗ $name — the mutation did not apply"; exit 1; fi
   if cmp -s "$file" "$target"; then echo "  ✗ $name — changed nothing"; exit 1; fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/ZFiWire.swift" "$WORK/Tacit.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/ZFiWire.swift" "$WORK/Tacit.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if ZFI_FIX="$PWD/$FIX" "$TMP/mut" > /dev/null 2>&1; then
