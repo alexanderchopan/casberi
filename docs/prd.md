@@ -68774,3 +68774,14 @@ Every card's charges already counted in Spending on All. §1480 item 8 deleted C
 **Note.** Aztec v6's npm packages moved scope: `@aztec-labs/*` and `@aztec-foundation/*` (6.0.0); `@aztec/*` stops at 5.2.1.
 
 **Mac half.** None yet: nothing is drawn.
+
+## §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receive from another network (applies §1538's CROPS principle to swaps; supersedes §1440's "Relay, one provider everywhere" for Swap and Sweep; keeps §1453, §1470 for Receive from another network) (user, 2026-10-26: "ya i do'nt know how to get rid of relay"; "in terms of crops"; "ok do that"; "we could keep relay for that") — RULED, not built
+
+**Why.** Relay is one company that can refuse or reroute a swap and sees every route it fills. Measured on Base the same day, read-only (ETH ≈ $2,323): the phone asking Uniswap v3 (QuoterV2, every fee tier and through WETH) and Aerodrome (Slipstream tick spacings 1/50/100/200/2000 and the v2 router) directly matched or beat Relay's quote in 13 of 15 cases, from −0.02% to +0.12%, for ETH↔USDC, USDC→cbBTC, AERO and DEGEN at $20, $200 and $2,000. A direct swap's gas was about $0.0025. Aerodrome gave the best route for larger ETH swaps and for cbBTC, so it is not optional on Base.
+
+**The ruling.**
+1. **Swap and Sweep quote every pool directly on-chain** (Uniswap and Aerodrome on Base, Uniswap on Ethereum) and take the best, through the person's own account; nothing but a network connection is needed, and that may be the person's own node.
+2. **Relay stays for Receive from another network only** (§1453, §1470), named as Relay where it is used. It is never required for the basics: receiving on Base or Ethereum needs only your address. It moves to open, anyone-can-fill intents when those mature.
+3. **Still to measure before building:** tokens that trade only on Uniswap v4 (many Clanker and Zora coins need v4's quoter), and Ethereum mainnet, where front-running needs a tight slippage limit. Simulation before Face ID stays (§1440).
+
+**Mac half.** The same Move code; not walked.
