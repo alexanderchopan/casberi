@@ -68801,3 +68801,9 @@ Every card's charges already counted in Spending on All. §1480 item 8 deleted C
 **Mac half.** None yet: nothing is drawn.
 
 Mock: the design canvas "Private money with 0xBow".
+
+## §1541 — Version 1 of private money also receives at a fresh address and earns on what is private (amends §1540 items 1 and 3) (user, 2026-10-26: "why can't we do receive in v1?"; "also the money they move to prvate can earn yield"; "we can't limit v1 to only payer using privacy pools. so that isn't as good as the fresh address") — RULED, not built
+
+1. **Receive to a fresh address joins version 1.** Receive offers a new address each time; anyone can pay it from any wallet; what lands moves into your private balance. Request privately stays out: it only works when the payer uses Privacy Pools too.
+2. **What is private earns, always on, no setting.** Money moved to private goes into the pool's yield version (Aave: USDC, USDT, ETH on Ethereum; USDC, ETH on Base, read off the relayer 2026-10-26); Holdings shows the current rate, never a promised one.
+3. **Open, decided at build:** how a fresh address pays the gas to move what landed (it holds the payment, not ETH): a paymaster that takes its fee in the received token, or a little ETH sent from your account (which links the two, so not that); and batching several arrivals into one move.
