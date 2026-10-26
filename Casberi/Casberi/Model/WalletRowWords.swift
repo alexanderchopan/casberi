@@ -11,6 +11,9 @@ import Foundation
 ///   Uniswap"), what came in on the right ("+32.55 USDC"), what went out on
 ///   the line ("−0.0136 ETH") — the move row's own grammar (§1090: who, then
 ///   the figure, then the quantity on the line).
+/// - **A move between your own accounts** names the two accounts
+///   ("accountless.eth → You") and puts the amount on the right with no
+///   sign and no colour, because the money stayed yours (§1078, §1550).
 /// - **A Safe row** names the act ("Deposit ETH", "Transfer of 1,500 USDC to
 ///   payroll.eth") and puts the count on the line ("1 of 2 signed"), ahead
 ///   of the clause the seam carried ("your signature is needed"), which
@@ -31,11 +34,40 @@ enum WalletRowWords {
         var clause: String? = nil
         /// What the title's seam said, for the row's own Needs-you trim.
         var qualifier: String? = nil
+        /// The figure is money that stayed yours (a move between your own
+        /// accounts): unsigned, in the primary ink, never the received green.
+        var stayed = false
     }
 
     /// The row's words off a stored title; nil for a title in another shape.
     static func read(_ title: String) -> Words? {
-        swap(title) ?? safe(title)
+        swap(title) ?? safe(title) ?? moved(title)
+    }
+
+    // MARK: - Moves between your own accounts
+
+    /// "Moved <amount> <SYMBOL> · <from> → <to>" (`WalletIngest`'s own-move
+    /// arm; `MovedStage` parses the same). The sentence ran off the row
+    /// ("Moved 0.0002 ETH · accountless.eth →…", user 2026-10-26: "I don't
+    /// like it when it's an activity item that runs off the screen"), so the
+    /// accounts are the name and the amount stands on the right (prd §1550).
+    static func moved(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        let prefix = "Moved "
+        guard seam.name.hasPrefix(prefix),
+              let dot = seam.name.range(of: " · "),
+              let arrow = seam.name.range(of: " → ", range: dot.upperBound..<seam.name.endIndex) else { return nil }
+        let start = seam.name.index(seam.name.startIndex, offsetBy: prefix.count)
+        let what = leg(String(seam.name[start..<dot.lowerBound]))
+        let from = seam.name[dot.upperBound..<arrow.lowerBound].trimmingCharacters(in: .whitespaces)
+        let to = seam.name[arrow.upperBound...].trimmingCharacters(in: .whitespaces)
+        guard !what.symbol.isEmpty, !from.isEmpty, !to.isEmpty else { return nil }
+        // No amount: the symbol alone goes on the line, so the asset is said.
+        return Words(name: "\(from) → \(to)",
+                     figure: what.amount.map { "\($0) \(what.symbol)" },
+                     clause: what.amount == nil ? what.symbol : nil,
+                     qualifier: seam.line,
+                     stayed: true)
     }
 
     // MARK: - Swaps

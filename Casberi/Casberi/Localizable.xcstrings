@@ -64831,6 +64831,34 @@
         }
       }
     },
+    "Connecting to Tor: try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectando con Tor: inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Torに接続中です。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor에 연결하는 중입니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在连接 Tor：请重试"
+          }
+        }
+      }
+    },
     "Connecting to iCloud…" : {
       "localizations" : {
         "es" : {
@@ -68586,6 +68614,34 @@
         }
       }
     },
+    "Couldn't reach Tor: try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Tor: inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Torに接続できませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor에 연결할 수 없습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Tor：请重试"
+          }
+        }
+      }
+    },
     "Couldn't reach Twitch — check your connection." : {
       "localizations" : {
         "es" : {
@@ -69342,6 +69398,34 @@
         }
       }
     },
+    "Couldn't read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み込めませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽을 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取"
+          }
+        }
+      }
+    },
     "Couldn't read %@" : {
       "localizations" : {
         "es" : {
@@ -69456,6 +69540,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 %@：请重试"
+          }
+        }
+      }
+    },
+    "Couldn't read %lld networks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudieron leer %lld redes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のネットワークを読み込めませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "네트워크 %lld개를 읽을 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 %lld 个网络"
           }
         }
       }

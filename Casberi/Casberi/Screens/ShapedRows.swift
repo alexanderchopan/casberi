@@ -746,11 +746,12 @@ struct BandRow: View {
                         .lineLimit(1)
                 } else if let figure = words?.figure {
                     // A swap's incoming leg (prd §1414), in the received ink
-                    // unless the symbol is flagged a look-alike.
+                    // unless the symbol is flagged a look-alike; a move
+                    // between your own accounts in the primary ink (§1550).
                     Text(figure)
                         .dsText(.price17)
                         .monospacedDigit()
-                        .foregroundStyle(thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
+                        .foregroundStyle(words?.stayed == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
                         .lineLimit(1)
                 } else if let figure = titleFigure {
                     Text(figure)
