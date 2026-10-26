@@ -3,6 +3,7 @@
 //   node trial.mjs run       funded path: register, deposit, wait for the ASP, transfer, withdraw
 // Results append to state/results.jsonl. Sepolia only (assertTestnet), and `run` refuses to
 // spend more than MAX_SPEND from account A.
+import { buildPoseidon } from 'circomlibjs';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { createPublicClient, createWalletClient, decodeErrorResult, formatEther, http, keccak256, parseEther, toBytes, toHex } from 'viem';
 import { sepolia } from 'viem/chains';
@@ -144,13 +145,14 @@ const cost = (r) => r.gasUsed * r.effectiveGasPrice;
 
 async function run() {
   const startA = await bal(keys.A.address);
-  if (startA < DEPOSIT + parseEther('0.004')) throw new Error(`A holds ${formatEther(startA)} SepoliaETH; fund ${keys.A.address} with ~0.02 Sepolia ETH first`);
+  if (startA < DEPOSIT + parseEther(process.env.GAS_BUFFER_ETH ?? '0.004')) throw new Error(`A holds ${formatEther(startA)} SepoliaETH; fund ${keys.A.address} with ~0.02 Sepolia ETH first`);
   const spent = () => bal(keys.A.address).then((b) => { if (startA - b > MAX_SPEND) throw new Error('MAX_SPEND exceeded, stopping'); return startA - b; });
   const walletA = createWalletClient({ account: keys.A, chain: sepolia, transport: http(RPC) });
 
   // B needs gas to register its keystore (or a relayed registration); give it a little.
-  if (await bal(keys.B.address) < parseEther('0.0015')) {
-    const h = await walletA.sendTransaction({ to: keys.B.address, value: parseEther('0.002') });
+  const bGas = parseEther(process.env.B_GAS_ETH ?? '0.002');
+  if (await bal(keys.B.address) < (bGas * 3n) / 4n) {
+    const h = await walletA.sendTransaction({ to: keys.B.address, value: bGas });
     await waitTx(h); record('fund.B', { tx: h });
   }
 
@@ -164,8 +166,9 @@ async function run() {
   }
   await spent();
 
-  // Deposit.
+  // Deposit (RESUME=1 picks up an earlier run's deposit instead of making another).
   let t = performance.now();
+  if (process.env.RESUME) return resume(A, B);
   const dep = await A.prepareDeposit({ tokenId: SEPOLIA.eth, value: hex(DEPOSIT) });
   const proveMs = Math.round(performance.now() - t);
   const depRcpt = await A.executeDeposit(dep);
@@ -176,11 +179,12 @@ async function run() {
 
   // ASP approval wait: poll the label until it is in the association set.
   const approvedAt = performance.now();
-  const label = BigInt(dep.pendingNote.label);
+  // The ASP keys a label by its hash, Poseidon(label); the raw label always reads "unknown".
+  const labelHash = await poseidonOf(BigInt(dep.pendingNote.label));
   let status = 'unknown', polls = 0;
   for (;;) {
     polls++;
-    const r = await fetch(`${ASP_URL}/labels/${label.toString()}/status`).then((x) => x.json()).catch(() => ({}));
+    const r = await fetch(`${ASP_URL}/labels/${labelHash}/status`).then((x) => x.json()).catch(() => ({}));
     status = r?.status ?? JSON.stringify(r).slice(0, 80);
     if (/approved|accepted|included/i.test(status)) break;
     if (/reject|declin|denied/i.test(status)) break;
@@ -190,14 +194,32 @@ async function run() {
   const waitMs = Math.round(performance.now() - approvedAt);
   record('asp.approval', { status, waitMs, waitMin: +(waitMs / 60000).toFixed(1), polls });
   if (!/approved|accepted|included/i.test(status)) return;
+  await transferAndWithdraw(A, B, dep.pendingNote.commitment);
+}
 
+const poseidon = await buildPoseidon();
+const poseidonOf = async (x) => poseidon.F.toObject(poseidon([x])).toString();
+
+async function resume(A, B) {
+  const [found] = await timed(() => A.discoverNotes());
+  const notes = (await A.exportAccount()).notes ?? [];
+  const n = notes.find((x) => x.status === NoteStatus.ACTIVE) ?? notes[0];
+  if (!n) { record('resume', { error: 'no note found', discovered: found.length }); return; }
+  const r = await fetch(`${ASP_URL}/labels/${await poseidonOf(BigInt(n.label))}/status`).then((x) => x.json());
+  record('resume', { notes: notes.length, status: r.status, approvedAt: r.timestamp ? new Date(r.timestamp).toISOString() : null });
+  if (r.status !== 'approved') return;
+  await transferAndWithdraw(A, B, n.commitment);
+}
+
+async function transferAndWithdraw(A, B, fallbackCommitment) {
+  let t;
   // Private transfer A -> B via the relayer (transfers are posted by the relayer's signer EOA).
   await A.discoverNotes();
   const { s: Ar } = await sessionFor(keys.A, { processor: SEPOLIA.relayerSigner });
   await Ar.discoverNotes();
   const note = (await Ar.exportAccount()).notes?.find?.((n) => n.status === NoteStatus.ACTIVE) ?? null;
   t = performance.now();
-  const prepT = await Ar.prepareTransfer({ inputCommitments: note ? [note.commitment] : [dep.pendingNote.commitment], amount: hex(TRANSFER), tokenId: SEPOLIA.eth, recipientDiscoveryData: { evmAddress: keys.B.address } });
+  const prepT = await Ar.prepareTransfer({ inputCommitments: note ? [note.commitment] : [fallbackCommitment], amount: hex(TRANSFER), tokenId: SEPOLIA.eth, recipientDiscoveryData: { evmAddress: keys.B.address } });
   const proveT = Math.round(performance.now() - t);
   const opt = prepT.relayOptions[0];
   const tRes = await Ar.relayTransfer(opt);
@@ -217,7 +239,7 @@ async function run() {
   const wR = await A.relayWithdraw(wOpt);
   const wFull = await pub.getTransactionReceipt({ hash: wR.txHash });
   record('withdraw', { amount: formatEther(WITHDRAW), wallMs: Math.round(performance.now() - t), tx: wR.txHash, gasUsed: wFull.gasUsed, relayerPaidEth: formatEther(cost(wFull)), quote: wOpt.selectedQuote.quote, Creceived: formatEther(await bal(keys.C.address)) });
-  record('spent.A', { eth: formatEther(await spent()) });
+  record('balance.A', { eth: formatEther(await bal(keys.A.address)) });
 }
 
 try { await (MODE === 'run' ? run() : prep()); } catch (e) { record('fatal', { error: (e.stack ?? e.message).slice(0, 600) }); process.exitCode = 1; }

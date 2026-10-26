@@ -24,11 +24,11 @@ TESTNET ONLY. This folder evaluates 0xBow's Privacy Pools v2 for Casberi. It is 
 |---|---|---|---|---|---|
 | Session build (SDK) | 0.2–1.3 s | — | — | — | |
 | Note discovery, empty account | 18–58 s | — | — | — | Scans the logs of about 1M blocks over a public RPC. A phone pays this on every cold start unless leaf caches are seeded |
-| Keystore registration | not run | — | 645,138 + 135,292 (auth policy, then viewing key) | — | Gas estimated. A gasless relayed variant exists (EIP-712 `SetAuthPolicy`) |
-| Deposit 0.004 ETH | not run | deposit proof 0.4 s (prepare, including the proof: 1.1–1.5 s) | 928,146 | none | Gas estimated. The depositor does not need to be registered first |
-| ASP approval | not run | — | — | — | Over the last 14 days on Sepolia, the next ASP root followed a deposit after p50 **1.4 min**, p90 2.6 min, max 62 min. That is a lower bound. There were 569 roots for 572 deposits, so Sepolia looks auto-approving |
-| Private transfer (1 in → 2 out) | not run | transact_1x2: 3.0 s with threads, 10.7–19.7 s on one thread | relayer budgets 850,000 | 16,171,000 wei at 19 wei gas | Fee quoted, no proof needed |
-| Relayed withdrawal (0.001 ETH) | not run | transact_1x1: 3.1 s | relayer budgets 1,050,000 | 0.000001 ETH (10 bps) + gas | Fee quoted |
+| Keystore registration | 22–26 s for two txs | — | 645,138 + 135,292 estimated (auth policy, then viewing key) | — | Measured on chain for A and B. A gasless relayed variant exists (EIP-712 `SetAuthPolicy`) |
+| Deposit 0.0002 ETH | ~15 s | prepare + proof 1.4 s | **904,263** | none | Measured. The depositor does not need to be registered first |
+| ASP approval | **3.2 min** | — | — | — | Measured: deposit mined 17:07:48 UTC, approved 17:11:00. Ask by label HASH (`Poseidon(label)`); the raw label always reads `unknown`. Over 14 days the next root followed a deposit after p50 1.4 min, p90 2.6 min, max 62 min |
+| Private transfer (1 in → 2 out) | 124 s | 101 s prepare, almost all the keystore-tree sync over rate-limited RPCs; transact_1x2 alone 3.0 s | **1,538,548** (relayer budgets 850,000) | 16,171,000 wei at 19 wei gas | Measured. The relayer paid the gas; B found the note in 14 s |
+| Relayed withdrawal (0.00005 ETH) | 27 s | transact_1x1: 3.1 s | **1,450,486** (relayer budgets 1,050,000) | 0.00000005 ETH (10 bps) + gas | Measured. The plain address C received exactly 0.00005 ETH |
 | Ragequit | not run | 1.2 s | — | — | |
 | Payment request | 6 ms | — | — | — | Generated locally; no registration needed |
 | Stealth withdrawal | not run | — | — | — | `@0xbow/privacy-pools-v2-sdk/stealth` (ERC-5564, canonical and FluidKey schemes) |
@@ -41,8 +41,8 @@ TESTNET ONLY. This folder evaluates 0xBow's Privacy Pools v2 for Casberi. It is 
 |---|---|
 | Registration | ≈ 0.00078 ETH |
 | Deposit | ≈ 0.00093 ETH |
-| Transfer | ≈ 0.00085 ETH |
-| Withdrawal | ≈ 0.00105 ETH, plus 0.1% |
+| Transfer | ≈ 0.0015 ETH (measured gas) |
+| Withdrawal | ≈ 0.0015 ETH (measured gas), plus 0.1% |
 
 ## Surprises
 
@@ -52,7 +52,10 @@ TESTNET ONLY. This folder evaluates 0xBow's Privacy Pools v2 for Casberi. It is 
    - Workaround here: `manifest-sepolia-dev.json` (the 1.0.0 manifest) and `circuits-cache-sepolia-dev/`. With them, the same deposit estimates at 928k gas.
 2. **The SDK's only default IPFS gateway, `ipfs.io`, is unreliable.** It (and `dweb.link`) now answers some CIDs with a "switching to a service worker gateway" page or a 429. The SDK's sha256 check rejects that page, so only a second gateway saves the fetch (Pinata worked). An app must self-host the circuits, as privacypools.com does under `/artifacts`.
 3. **Registration is about 780k gas**, because the keystore tree is a Poseidon Merkle tree updated on chain. A deposit is about 930k gas.
-4. **Licensing.** The SDK is MIT, but its runtime dependencies `snarkjs` and `circomlibjs` are GPL-3.0. The monorepo, including the circuits, is GPL-3.0 as well.
+4. **The ASP's status endpoint takes the label's hash.** `GET /labels/{id}/status` wants `Poseidon(label)`, which the SDK's types say (`labelHash`), but its own `getLabelStatus` passes whatever it is given. Asked with the raw label, an approved deposit reads `unknown` forever; the first funded run gave up after 60 min for this reason alone.
+5. **The keystore is older than pool 4.** Its first event is block 10,932,354; pool 4 starts at 10,994,884. Scanning from the pool leaves holes at the start of the keystore tree, and the transfer witness fails with `keystoreLeaves.0 … undefined`. The SDK takes one `deploymentBlock` for every contract, so it must be the oldest.
+6. **Real gas runs past the relayer's budget.** The transfer used 1.54M against an 850k budget, the withdrawal 1.45M against 1.05M. The relayer still posted both.
+7. **Licensing.** The SDK is MIT, but its runtime dependencies `snarkjs` and `circomlibjs` are GPL-3.0. The monorepo, including the circuits, is GPL-3.0 as well.
 
 ## Phone feasibility
 
@@ -117,11 +120,12 @@ node prove-bench.mjs 3                     # proving times; SINGLE_THREAD=1 for 
 node asp-cadence.mjs 100000                # ASP root cadence vs deposits, last 100k blocks
 node trial.mjs prep                        # no-funds SDK path; results -> state/results.jsonl
 # fund key A (address printed by keys.mjs) with ~0.02 Sepolia ETH, then:
-node trial.mjs run                         # untested; caps spend at 0.02 ETH
+node rpc-router.mjs &                      # old logs from Tenderly, the rest from PublicNode, 429s retried
+SEPOLIA_RPC=http://127.0.0.1:8547 node trial.mjs run   # caps spend at 0.02 ETH
+SEPOLIA_RPC=http://127.0.0.1:8547 RESUME=1 DEPOSIT_ETH=0 GAS_BUFFER_ETH=0 B_GAS_ETH=0 node trial.mjs run   # transfer + withdraw an earlier deposit
 ```
 
 ## Blockers
 
-- **No Sepolia ETH.** Faucets need a CAPTCHA. Fund `0x0037862F20DC405e456ea88704436b498df1dF39`, then run `node trial.mjs run`. That measures the real ASP wait, the relayed transfer and withdrawal gas, and recipient discovery.
 - **Sepolia uses dev keys.** The SDK's default circuits do not match the Sepolia verifiers; use the dev-key cache (the default in `trial.mjs`; set `CEREMONY=1` to use the ceremony set).
-- **Archive history.** The public RPC (publicnode) intermittently answers `pruned history unavailable` for logs older than about 100k blocks. `asp-cadence.mjs` retries, then skips the chunk.
+- **Archive history.** PublicNode answers `pruned history unavailable` for old logs, and every other free Sepolia RPC tried caps the range or rate-limits; Tenderly's gateway serves the whole range. `rpc-router.mjs` routes `eth_getLogs` there and falls back at the chain head, where Tenderly lags a block. A phone needs the same: an archive-capable RPC or seeded leaf caches.

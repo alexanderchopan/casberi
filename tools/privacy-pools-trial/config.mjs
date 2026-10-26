@@ -17,8 +17,9 @@ export const SEPOLIA = {
   relay: '0x7430cc030d7eb8C83E76cD983996982C8C054204',
   // Relayer signer EOA: the on-chain caller (and so the proof processor) for TRANSFERS.
   relayerSigner: '0x4Ba5fF376865b370790A56276C63e7984DCFf1f7',
-  // Pool 4 in the ASP feed.
-  fromBlock: 10994884n,
+  // Pool 4 in the ASP feed starts at 10994884.
+  // The keystore predates pool 4 (its first event is block 10932354); scanning from the pool alone leaves holes in its tree.
+  fromBlock: 10932354n,
   eth: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
 };
 
