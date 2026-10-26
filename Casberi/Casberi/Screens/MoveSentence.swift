@@ -278,6 +278,18 @@ struct MoveSentence: View {
         ListFormatter.localizedString(byJoining: Op.networks.filter { unread.contains($0.chainId) }.map(\.name))
     }
 
+    /// **TOR, NAMED WHEN IT IS WHY (prd §1549, user, on "Couldn't read Base,
+    /// Ethereum, and Robinhood": "can't read networks why").** Every read
+    /// here leaves by Tor (§1495), so while Tor is still connecting, or could
+    /// not, the networks are not what failed and are not named.
+    private var readFailedWords: String {
+        switch TorStatus.shared.state {
+        case .connecting: String(localized: "Connecting to Tor: try again")
+        case .failed: String(localized: "Couldn't reach Tor: try again")
+        default: String(localized: "Couldn't read \(unreadNames): try again")
+        }
+    }
+
     /// What is left of a holding once the transaction's earlier lines are
     /// taken from it.
     private func left(_ h: Tokens.Held) -> String {
@@ -511,6 +523,10 @@ struct MoveSentence: View {
         }
         .onChange(of: scenePhase) { _, now in
             if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
+        }
+        // Tor connecting late reads what failed again, unasked (prd §1549).
+        .onChange(of: TorStatus.shared.state) { _, now in
+            if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
         .task(id: crossingWatch?.id) { await watchCrossing() }
@@ -1480,7 +1496,8 @@ struct MoveSentence: View {
         ViewThatFits(in: .horizontal) {
             verbRow(spacing: DS.Space.s4)
             verbRow(spacing: DS.Space.s3)
-            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s3) }
+            verbRow(spacing: DS.Space.s2)
+            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s2) }
                 .scrollIndicators(.hidden)
         }
         .frame(minHeight: 44, alignment: .leading)
@@ -1488,7 +1505,10 @@ struct MoveSentence: View {
 
     private func verbRow(spacing: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
-            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }, id: \.self) { v in
+            // A–Z in the reader's language (prd §1547); Swap stays the
+            // verb Move opens on, wherever it stands in the line.
+            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
+                .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil else { return }
                     withAnimation(DS.Motion.standard) {
@@ -1787,7 +1807,7 @@ struct MoveSentence: View {
                 DSHaptic.selection()
                 Task { await readHoldings() }
             } label: {
-                Text("Couldn't read \(unreadNames): try again").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                Text(verbatim: readFailedWords).dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
         } else if verb == .sweep {

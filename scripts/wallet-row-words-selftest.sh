@@ -83,6 +83,19 @@ check(WalletRowWords.read("Fully signed — a rejection is behind 2 earlier tran
       == W(name: "Rejection", clause: "Fully signed · behind 2 earlier transactions"),
       "a blocked row says what it is behind")
 
+// A move between your own accounts (prd §1550): the accounts as the name,
+// the amount on the right, unsigned.
+check(WalletRowWords.read("Moved 0.0002 ETH · accountless.eth → You")
+      == W(name: "accountless.eth → You", figure: "0.0002 ETH", stayed: true),
+      "a move names the two accounts, the amount on the right")
+check(WalletRowWords.read("Moved 14.22 DAI · You → Cold")
+      == W(name: "You → Cold", figure: "14.22 DAI", stayed: true),
+      "either direction reads the same")
+check(WalletRowWords.read("Moved ETH · Main → Cold")
+      == W(name: "Main → Cold", clause: "ETH", stayed: true),
+      "no amount: the symbol goes on the line")
+check(WalletRowWords.read("Moved to Archive")  == nil, "a Moved with no accounts is left alone")
+
 // Anything else is nil: the row keeps its seam.
 for other in ["Received 0.4 ETH from vitalik.eth", "Deposited 0.5 ETH into Aave",
               "Executed after 2h — a transfer went through",
@@ -136,11 +149,19 @@ mutate "VoiceOver loses the verb" \
 mutate "the venue leaves the line" \
     'clause: on.map { "On \($0)" },' \
     'clause: nil,'
+mutate "a move keeps its sentence" \
+    'swap(title) ?? safe(title) ?? moved(title)' \
+    'swap(title) ?? safe(title)'
+mutate "a move's amount signed and green" \
+    '                     stayed: true)' \
+    '                     stayed: false)'
 mutate "the article stays" \
     'act = String(act.dropFirst(article.count))' \
     'act = String(act)'
 
 # The shapes this reads are the ones the bridges write.
+grep -q 'let head = amount.isEmpty ? "Moved \\(asset)" : "Moved \\(amount) \\(asset)"' "$INGEST" && grep -q 'title = "\\(head) · \\(from) → \\(to)"' "$INGEST" \
+    || fail "WalletIngest no longer titles an own move \"Moved <amount> <asset> · <from> → <to>\" — WalletRowWords.moved must follow it"
 grep -q 'let head = "Swapped \\(out) → \\(inn)"' "$INGEST" \
     || fail "WalletIngest no longer titles a swap \"Swapped <out> → <in>\" — WalletRowWords.swap must follow it"
 grep -q 'venue.map { "\\(head) on \\($0)" }' "$INGEST" \
@@ -167,5 +188,7 @@ grep -q 'else if let figure = words?.figure {' "$ROWS" \
     || fail "BandRow no longer draws the words' figure on the right"
 grep -q '?? words?.spoken' "$ROWS" \
     || fail "BandRow no longer speaks a swap's verb (prd §1552)"
+grep -q 'foregroundStyle(words?.stayed == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)' "$ROWS" \
+    || fail "BandRow draws a move between your own accounts in the received green (prd §1550)"
 
 print "✓ wallet-row-words self-test passed"

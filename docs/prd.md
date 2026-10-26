@@ -68879,3 +68879,48 @@ Mock: the design canvas "Private money with 0xBow".
 9. **Not measured.** Written in a cloud session with no Xcode and no device: `TorClient.swift` is not compiled, `verify.sh` was not run, and the harness's Swift half runs only on CI's Mac. The phone's connect time (§1495 item 8), the time from a renew or a reset to a first answer, and whether a second `tor_run_main` holds on iOS are unmeasured. TorClient logs each (`tor: run N connected in …`, `lost its circuits`, `has a circuit again after …`, `back after …`, `reset (…) in …`, `exited`, `ended`; docs/hooks/wallet.md) for the first phone run to record here. The thresholds (5s, 20s, 120s, 30s, three runs) are chosen, not measured.
 
 **Mac half (§1402).** The Mac links no Tor (§1495 item 9): `start` publishes `unavailable`, and no watch, observer or path monitor runs. The row reads "Not on Mac" as before.
+
+## §1547 — Move's verbs read A–Z; Move opens on Swap (amends §1438, §1537) (user, 2026-10-26: "can we alphabetize those titles that are on there, but then make sure that swap is the default whenever you open move") — WRITTEN, NOT YET COMPILED
+
+1. **A–Z.** The verb line sorts by each verb's localized title (`localizedStandardCompare`), so English reads Buy · Receive · Send · Swap · Sweep, and another language reads its own A–Z. Buy still drops out where it is not offered.
+2. **Swap is the default.** Move is a tray, built fresh on every open, and `MoveSentence` opens on `.swap` (unchanged). Two openings keep Receive on purpose: the sentence right after an account is made or brought here (§1442j), and the keys walk's Receive ending (§1501).
+3. **Fit.** `a5f37e5` narrowed the line to an 8pt gap before it scrolls, so all five fit on an iPhone 17 Pro; the order does not change the width.
+4. **Not measured.** Written in a cloud session with no Xcode; not compiled, `verify.sh` not run.
+
+## §1548 — Your account's keys read until every network answers, and a failed read keeps the last one (user, 2026-10-26: "whenever I open the app in account, it always shows reading, but if I tap holdings and then go back, it's there. Why is that? Why can't we fix this?") — WRITTEN, NOT YET COMPILED
+
+1. **Why.** `MoveSecurity` read every network once, when the page appeared (`.task(id: account·roomRevision)`). At launch Tor is still connecting, so `Chain.isDeployed` timed out on every network, nothing answered, `standings` stayed empty and every row said "Reading…". Nothing asked again until the view was rebuilt; Holdings and back rebuilt it, by which time Tor had a circuit.
+2. **Read until answered.** `readUntilAnswered` asks again for the networks that did not answer: after 2s, doubling to every 30s, while the page is on screen. Leaving the page cancels it; a send (`roomRevision`) starts it over on every network.
+3. **A failed read keeps the last one.** *(Superseded by §1549 item 2: a network that does not answer is unread, named, and its standing dropped.)* A network that does not answer keeps its last standing instead of dropping out of Networks, and a read where nothing answers never turns a row back to "Reading…".
+4. **Logs.** `moveSecurity| unread <networks>, again in <pause>` per retry (the word since §1549).
+5. **Mac half (§1402).** The Mac reads without Tor (§1495 item 9); the same loop covers a network that fails there.
+6. **Not measured.** Written in a cloud session with no Xcode; not compiled, `verify.sh` not run, not seen on the phone.
+
+## §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends §1532 item 2, §1496, §1427, §1548 items 3–4; keeps §1495; numbered §1542 on `claude/move-read-failures`, merged 2026-10-26 after main took §1542–§1548) (user, 2026-10-26, on Swap reading "Couldn't read Base, Ethereum, and Robinhood: try again": "can't read networks why"; "is it bc Tor?"; on Security reading "Signs from · Setting up…", "Co-signer · Activates on first move", "Networks · Base and Robinhood": "now it's acting like i haven't activated my account"; after restarting until it read: "do as you recommend")
+
+1. **What happened.** Every read of your account leaves by Tor (§1495). On the phone, a fresh Tor sometimes connects with circuits too slow to answer; restarting picks new ones, and the same nodes answer. §1532's "the phone's connection" was this: the 2s second ask cannot outlast a slow circuit. Security's read then took each failure as an answer: a failed key read (`configuredX`) read as another device signing, which offered "Use on this iPhone" — a key-moving transaction resting on a timeout — and a failed owners read as no recovery key and no co-signer.
+2. **A network answers every read or none.** `MoveSecurity.read` keeps a network only if its deployment, key, owners, threshold and each owner's contract check all answered (and the recovery key's signer, where one is kept); otherwise the network is `unread`. Unread networks are named on the Networks row in the attention ink — "Couldn't read Ethereum", "Couldn't read 2 networks" where it does not fit — with Try again beside it; every other key row says "Couldn't read" (or "Reading…" while asking), the Spend limit row likewise, and no verb stands anywhere on the card (Use on this iPhone, Set up, Finish, Add, Export, the limit's menu). Nothing is noted for the Wallet (the co-signer nudge, the Signers figure, the recovery check) from a read with a gap in it.
+3. **Move names Tor when Tor is why.** Move's failed-read line says "Connecting to Tor: try again" while Tor connects and "Couldn't reach Tor: try again" when it could not; only with Tor up does it name the networks (§1532's words).
+4. **Tor connecting late reads again, unasked.** Both Move and Security read what failed once Tor reports ready; Security also asks its unread networks again on §1548's schedule (2s, doubling to 30s, while the page shows), for a Tor that reads ready over circuits too slow to answer.
+5. **The Networks row says where the account is on chain.** A network your account has not sent on yet (Ethereum, until a first send there) is not on it; that was not a failed read.
+6. **Not changed.** Tor stays always on (§1495). The "$0" in an empty sentence is the amount field's blank, not a balance. **Follow-up, built as §1546:** the Tor row's "On" is the first connect since launch, never re-checked (`TorClient.watch` stops at 100%), and nothing rebuilds circuits when the app returns from the background or restarts a tor thread that exited; both need a phone to measure.
+
+**Mac half.** The same card and sentence; the Mac links no Tor (§1495 item 9), so Move's line there always names the networks.
+
+## §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §1414 to §1078's title; user, 2026-10-26, on "Moved 0.0002 ETH · accountless.eth →…": "how can we make the items and activity shorter? I don't like it when it's an activity item that runs off the screen") — WRITTEN, NOT YET COMPILED
+
+1. **The row.** `WalletRowWords.moved` reads the stored "Moved <amount> <SYMBOL> · <from> → <to>" into the anatomy's slots: the name is "accountless.eth → You", the amount ("0.0002 ETH") stands in the trailing column, and the line keeps the account it belongs to. With no amount, the symbol goes on the line. "Moved" leaves the row as "Swapped" did (§1414): the arrow says it.
+2. **No sign, no colour.** The money stayed yours (§1078): the figure is unsigned and in the primary ink, never the received green (`Words.stayed`).
+3. **The store is unchanged.** The title stays the sentence; `MovedStage`, the sheet and search read it as before.
+4. **The check.** `wallet-row-words-selftest.sh`: three move cases and a nil, two mutations (the move left as a sentence, its figure signed and green), and greps for `WalletIngest`'s title and the row's ink.
+5. **Mac half (§1402).** The same rows.
+6. **Not measured.** Written with no Xcode: not compiled, the harness's Swift half not run.
+
+## §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487; user, 2026-10-26: "how can we make sure also an activity we are using the ENS or the Casberi avatar when appropriate? We shouldn't really need to be using blockies that much") — WRITTEN, NOT YET COMPILED
+
+1. **Why.** A Wallet row's lead (when more than one wallet is watched, so the lead says which) drew `WalletBlockie`, a 5×5 grid seeded off the address, straight from `ShapedRows`. It never asked `WalletFace`, which every other place uses, so the row missed the face you picked for your own account (§1487) and every ENS or World App picture `WalletStore.loadAvatars` resolves.
+2. **The lead is `WalletFace`, circular.** Your account wears `YouFace`; a watched wallet with a picture wears it, crossfading in when it resolves; the rest wear `WalletFace`'s tinted mark — the one face that wallet has everywhere.
+3. **Deleted.** `WalletBlockie` and the `Leader.blockie` case (the lead is `Leader.wallet`); nothing else drew it.
+4. **Not changed.** Which rows draw a wallet face (a Wallet row, two or more wallets watched), and that pictures resolve for watched wallets only: a counterparty you do not watch has no face here.
+5. **Mac half (§1402).** The same rows.
+6. **Not measured.** Written with no Xcode: not compiled, not seen.
