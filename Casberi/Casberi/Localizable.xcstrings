@@ -150584,6 +150584,34 @@
         }
       }
     },
+    "Search or paste an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca o pega una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "検索またはアドレスを貼り付け"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검색하거나 주소 붙여넣기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索或粘贴地址"
+          }
+        }
+      }
+    },
     "Search people" : {
       "localizations" : {
         "es" : {
