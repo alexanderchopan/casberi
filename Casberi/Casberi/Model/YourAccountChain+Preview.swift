@@ -110,7 +110,7 @@ extension YourAccountChain {
         }
         // What assembling wrote, kept for a refusal after it: the bundler
         // refusing to price the operation still leaves Details the calls in
-        // words, the pools and the simulation's verdict (prd §1544).
+        // words, the pools and the simulation's verdict (prd §1545).
         var written: Assembled?
         do {
             let parts = try await assemble(items, account: account, roundUp: roundUp, renew: route == .bothKeys)
@@ -160,7 +160,7 @@ extension YourAccountChain {
     /// exactly as `MoveSentence.spend` falls back.
     private static func sessionPreview(_ sends: [YourAccountOp.Payment], net: Network, account: String,
                                        roundUp asked: RoundUpBuy?) async -> Preview? {
-        // A buy on this network waits for Face ID (prd §1544).
+        // A buy on this network waits for Face ID (prd §1545).
         let roundUp = sessionRoundUp(asked, on: net)
         guard let (callData, salt) = try? await sessionCall(sends, roundUp: roundUp, account: account),
               let op = try? await sessionBuild(net, account: account, callData: callData, salt: salt) else { return nil }

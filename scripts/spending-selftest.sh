@@ -189,7 +189,7 @@ check(spent([buy("r1", 5, at: 0), send("s1", 40, at: 1)]) == ["s1"],
 // and is the buy's, never an answer to a $5 send beside it.
 check(spent([buy("op", 5, at: 0), send("op", 5, at: 0), receipt("fill", 4.97, at: 1, from: "0x5011e4")]) == ["op"],
       "Relay's fill answers the round-up's buy, not the send it rode with")
-// An exchange buy (prd §1544) rides the send in ONE transaction: the token it
+// An exchange buy (prd §1545) rides the send in ONE transaction: the token it
 // bought comes back in that transaction, stamped, and the read calls the
 // whole transaction a trade. The send is still spending.
 func fill(_ tx: String, _ usd: Double, at m: Double) -> M {

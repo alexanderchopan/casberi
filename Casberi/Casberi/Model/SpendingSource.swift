@@ -335,7 +335,7 @@ enum SpendingSource {
             let to = thing.counterpartyAddress?.lowercased()
             let fee = Self.fee(of: thing)
             // A sent leg's stamp is the buy; a received leg's, the token an
-            // exchange buy brought back in the same transaction (prd §1544).
+            // exchange buy brought back in the same transaction (prd §1545).
             let bought = way == .swap ? nil : Self.roundUp(of: thing)
             return Spending.Move(
                 wallet: wallet, tx: tx, way: way,

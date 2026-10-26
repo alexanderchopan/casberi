@@ -633,11 +633,11 @@ enum WalletIngest {
         /// The first wallet this pass received qualifying money at (prd §501).
         /// ONE per pass, never one per transfer — see `WalletArrival.pulse`.
         var arrival: String?
-        // Round-ups bought on the exchanges this phone signed (prd §1544), once a pass.
+        // Round-ups bought on the exchanges this phone signed (prd §1545), once a pass.
         var swapBuys = RoundUps.swapBuys
         for key in order {
             var legs = groups[key]!
-            // A ROUND-UP BOUGHT ON THE EXCHANGES (prd §1544) rides the same
+            // A ROUND-UP BOUGHT ON THE EXCHANGES (prd §1545) rides the same
             // transaction as the send it rounded up, so the transaction both
             // sends and receives: folded as a trade, it would swallow that
             // send. Its own two legs — this account's dollar in exactly the
@@ -718,7 +718,7 @@ enum WalletIngest {
                 if let thing = thing(from: leg.t, chain: leg.chain, received: leg.received,
                                      ref: leg.ref, address: leg.address, names: names) {
                     // The round-up's dollar and the token it bought: kept,
-                    // never spent, never a payment back (prd §1523, §1544).
+                    // never spent, never a payment back (prd §1523, §1545).
                     if let target = roundUpLegs[leg.ref] {
                         SpendingSource.stampRoundUp(thing, symbol: target.symbol, network: target.network)
                     }

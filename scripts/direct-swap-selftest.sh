@@ -25,9 +25,9 @@
 #   • A MULTICALL ANSWER MISREAD: a real `aggregate3` answer from Base, read
 #     back to the amounts the independent decoder read.
 #   • AN OPEN-LIST ROW TAKEN ON FAITH: a malformed address or decimals kept.
-#   • A POOL FEE SAID TO FOUR PLACES (prd §1544): rounded to two, trailing
+#   • A POOL FEE SAID TO FOUR PLACES (prd §1545): rounded to two, trailing
 #     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
-#   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1544): a buy on the send's own
+#   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1545): a buy on the send's own
 #     network is the exchanges', never Relay's; the spend limit's session key
 #     never buys on them, and its change keeps counting; an exchange buy is
 #     known by its own transaction — this account's dollar leaving in exactly
@@ -198,7 +198,7 @@ check(S.best([S.Priced(route: tieOne[0].route, out: "10"), S.Priced(route: tieOn
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
       && S.percent(pips: 10000) == "1%", "a pool fee is not said as its percentage")
-// Rounded for reading (prd §1544): two places at most, trailing zeros
+// Rounded for reading (prd §1545): two places at most, trailing zeros
 // trimmed, under a hundredth of a percent said so; the route keeps the exact fee.
 check(S.percent(pips: 773) == "0.08%" && S.percent(pips: 675) == "0.07%" && S.percent(pips: 3050) == "0.31%"
       && S.percent(pips: 2999) == "0.3%" && S.percent(pips: 10049) == "1%",
@@ -232,7 +232,7 @@ check(parsed[10] == nil && parsed[4663]?.first?.logo == nil, "another network's 
 check(OpenTokenList.search(parsed[8453]!, "usd").count == 1 && OpenTokenList.search(parsed[8453]!, "0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913").count == 1
       && OpenTokenList.search(parsed[8453]!, "aero").isEmpty, "the list's search does not find by symbol, name or address")
 
-// ── Round-ups on the exchanges (prd §1544) ───────────────────────────────
+// ── Round-ups on the exchanges (prd §1545) ───────────────────────────────
 let ruETH = RoundUps.Target.ethOnBase
 let ruBTC = RoundUps.Target(chainId: 8453, address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", symbol: "cbBTC", decimals: 8, network: "Base")
 let ruMAG7 = RoundUps.Target(chainId: 4663, address: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840", symbol: "MAG7", decimals: 18, network: "Robinhood Chain")

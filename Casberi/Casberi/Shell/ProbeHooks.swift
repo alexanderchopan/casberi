@@ -4069,7 +4069,7 @@ enum ProbeHooks {
         // dollar from the account to itself with round-ups as set (prd §1452):
         // the change counted, or bought once the count reaches `RoundUps.buyAt`
         // (on the pools for a token on this network, Relay for one elsewhere,
-        // prd §1544). `-coSignWith` for a both-keys account. Throwaway only.
+        // prd §1545). `-coSignWith` for a both-keys account. Throwaway only.
         Hook(key: "roundUpSendProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("roundUpSend| %@", line) }

@@ -663,7 +663,7 @@ enum YourAccountSwap {
 
     // MARK: - In words
 
-    /// **A POOL FEE, ROUNDED FOR READING (user, 2026-10-26, prd §1544).**
+    /// **A POOL FEE, ROUNDED FOR READING (user, 2026-10-26, prd §1545).**
     /// Millionths as a percentage to at most two places, trailing zeros
     /// trimmed: 3000 → "0.3%", 500 → "0.05%", 773 → "0.08%", 10000 → "1%";
     /// anything below a hundredth of a percent reads "under 0.01%" (80, a

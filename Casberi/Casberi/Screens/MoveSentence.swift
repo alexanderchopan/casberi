@@ -351,7 +351,7 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
-    /// Whether Relay carries this move (prd §1512, §1539, §1544): a send
+    /// Whether Relay carries this move (prd §1512, §1539, §1545): a send
     /// whose round-up buys a token on another network now, money arriving
     /// from another network. A round-up on the send's own network is bought
     /// on the exchanges, through Tor like a swap. Relay refuses
@@ -373,7 +373,7 @@ struct MoveSentence: View {
     /// on both: the foot's credit for a swap or a sweep, in Relay's old
     /// place, with no "powered by". The pool fee is in the price.
     ///
-    /// A send whose round-up buys on the exchanges (prd §1544) says it the
+    /// A send whose round-up buys on the exchanges (prd §1545) says it the
     /// same way, from the preview's own quote: "On Aerodrome · 0.01% pool fee".
     private var exchangeCredit: String? {
         if verb == .send {
@@ -396,7 +396,7 @@ struct MoveSentence: View {
         if let buy = plan.buy {
             let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
             // The spend limit's key signs this send alone and never buys on
-            // the exchanges (prd §1544): the change waits for Face ID.
+            // the exchanges (prd §1545): the change waits for Face ID.
             if shownPreview?.route == .session, !RoundUps.sessionCarries(target, from: network.chainId) {
                 return [String(localized: "\(Self.money(usd)) of round-ups so far, bought with your next Face ID send")]
             }
@@ -3033,7 +3033,7 @@ struct MoveSentence: View {
                 }
                 // The change is counted once the send has landed; a buy
                 // empties the count with it, and a send that did not buy (the
-                // spend limit's key, or no pool, prd §1544) keeps it all.
+                // spend limit's key, or no pool, prd §1545) keeps it all.
                 if let roundUp, case .landed = done.sent.outcome {
                     RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: !done.roundUpWaits), on: net.chainId)
                 }
@@ -3104,7 +3104,7 @@ struct MoveSentence: View {
                     if s == .signing { await signed.mark() }
                     await stage(s)
                 }
-                // The session buys only to another network (prd §1544).
+                // The session buys only to another network (prd §1545).
                 return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)
             } catch let failure as Chain.Failure {
                 // A send the simulation refuses fails on both keys too.

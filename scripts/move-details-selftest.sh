@@ -65,7 +65,7 @@ check(P.feePhrase(usd: nil, wei: "3100000000000", money: money) == "Fee up to 0.
 // what passes through it, in the price, never added to the network's.
 check(YourAccountSwap.percent(pips: 500) == "0.05%" && YourAccountSwap.percent(pips: 773) == "0.08%"
       && YourAccountSwap.percent(pips: 80) == "under 0.01%",
-      "a pool fee is not said as its percentage, rounded (prd §1544)")
+      "a pool fee is not said as its percentage, rounded (prd §1545)")
 
 // ERC-8213's Calldata Digest, its own test vector.
 let transfer = SafeABI.hexBytes("a9059cbb0000000000000000000000004675c7e5baafbffbca748158becba61ef3b0a2630000000000000000000000000000000000000000000000000de0b6b3a7640000")!

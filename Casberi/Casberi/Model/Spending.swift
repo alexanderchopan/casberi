@@ -153,7 +153,7 @@ enum Spending {
         var network: String? = nil
         /// What a round-up bought with this send (prd §1523): the `.roundUp`
         /// fact a sent leg to one of Relay's deposit addresses carries, or
-        /// the dollar leg of a buy on the exchanges (§1544). On a received
+        /// the dollar leg of a buy on the exchanges (§1545). On a received
         /// leg, the token that exchange buy brought back in its own
         /// transaction: never a payment back.
         var roundUp: RoundUp.Bought? = nil
@@ -246,7 +246,7 @@ enum Spending {
     ///   whose other leg never landed, a deposit into a protocol, a call;
     /// - **a send to machinery** the caller recognised;
     /// - **a round-up's buy** (prd §1523): the change, paid to Relay or
-    ///   swapped on the exchanges (§1544) for a token you picked, is kept,
+    ///   swapped on the exchanges (§1545) for a token you picked, is kept,
     ///   not spent. An exchange buy rides the send it rounded up, so its
     ///   token arrives in that same transaction: that arrival pays nothing
     ///   back, answers no send, and the read's "trade" for the transaction
@@ -256,7 +256,7 @@ enum Spending {
     ///   `roundTripWindow`, in a transaction of its own — a cross-chain swap
     ///   or a bridge. Each arrival answers one send at most.
     static func walletSpends(_ moves: [Move], own: Set<String>) -> [Move] {
-        // Transactions whose round-up was bought on the exchanges (prd §1544):
+        // Transactions whose round-up was bought on the exchanges (prd §1545):
         // the token it bought came back in the same transaction.
         let boughtHere = Set(moves.filter { $0.way == .received && $0.roundUp != nil }.map(\.tx))
         // Transactions that paid one of your wallets something, a round-up's

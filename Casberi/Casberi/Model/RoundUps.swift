@@ -1,11 +1,11 @@
 import Foundation
 
-/// **ROUND-UPS (prd §1452, §1544).** Every dollar send from your account
+/// **ROUND-UPS (prd §1452, §1545).** Every dollar send from your account
 /// rounds up to the next $1 (or $5), and the change buys a token you pick —
 /// ETH on Base unless you choose another — once it reaches $5, with the send
 /// that gets it there.
 ///
-/// **How the change buys (prd §1544).** A token on the send's own network is
+/// **How the change buys (prd §1545).** A token on the send's own network is
 /// bought on the exchanges, as Swap buys (§1542): the best of the pinned
 /// pools, the dollar's exact `approve` to that router and one router call,
 /// the minimum written in and the simulation before Face ID. Only a token on
@@ -39,7 +39,7 @@ enum RoundUps {
     /// for a network's own coin.
     ///
     /// `onExchanges(from:)`: the target is on the send's own network, so the
-    /// pools buy it (§1544); anywhere else Relay does.
+    /// pools buy it (§1545); anywhere else Relay does.
     struct Target: Codable, Equatable, Hashable, Sendable {
         var chainId: Int
         var address: String
@@ -190,7 +190,7 @@ enum RoundUps {
         !target.onExchanges(from: chainId)
     }
 
-    // MARK: - An exchange buy, known by its transaction (prd §1544)
+    // MARK: - An exchange buy, known by its transaction (prd §1545)
 
     /// **A BUY SIGNED ON THE EXCHANGES.** Kept when Face ID is asked for it,
     /// before it lands: the account, the network, the dollar and the exact

@@ -190,9 +190,9 @@ enum YourAccountPreview {
     }
 
     /// A round-up bought on the send's own network, on the exchanges (prd
-    /// §1544): the swap's own words, said as the round-up it is.
+    /// §1545): the swap's own words, said as the round-up it is.
     /// A send the spend limit's session key signs never buys on the
-    /// exchanges (prd §1544): the change is kept, counted, for the next send
+    /// exchanges (prd §1545): the change is kept, counted, for the next send
     /// Face ID approves.
     static func roundUpKept(_ figure: String, _ symbol: String) -> Step {
         Step(words: String(localized: "Keeps \(figure) \(symbol) of round-ups for a send you approve with Face ID"))

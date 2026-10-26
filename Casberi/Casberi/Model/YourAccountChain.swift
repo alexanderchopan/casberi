@@ -702,7 +702,7 @@ enum YourAccountChain {
         guard let net = payments.first?.network, let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
-        // The session never buys on the exchanges (prd §1544).
+        // The session never buys on the exchanges (prd §1545).
         let roundUp = sessionRoundUp(roundUp, on: net)
         await stage(.preparing)
         // A preview of these sends on the session key, under a minute old,
@@ -719,7 +719,7 @@ enum YourAccountChain {
                                           pinned: kept?.op, report: report, stage: stage)
     }
 
-    /// **THE SESSION KEY NEVER BUYS ON THE EXCHANGES (prd §1544, user
+    /// **THE SESSION KEY NEVER BUYS ON THE EXCHANGES (prd §1545, user
     /// 2026-10-26).** It may only `transfer` the network's dollar and send
     /// ETH through Multicall3 (§1447 item 15); an `approve` and a router call
     /// are actions it was never given, and it is not widened to take them.
@@ -1367,7 +1367,7 @@ enum YourAccountChain {
         var bought: [String?] = []
         /// The round-up's buy did not go with this send — the session key
         /// signed it alone, or no pool would buy — so its change keeps
-        /// counting (prd §1544).
+        /// counting (prd §1545).
         var roundUpWaits = false
     }
 
@@ -1399,7 +1399,7 @@ enum YourAccountChain {
         let nextKey: (x: [UInt8], y: [UInt8])
         let signer: Signer
         /// A round-up's buy that no pool would make: the send goes, and the
-        /// change keeps counting (prd §1544).
+        /// change keeps counting (prd §1545).
         var roundUpWaits = false
     }
 
@@ -1449,7 +1449,7 @@ enum YourAccountChain {
             try require(a.simulated, on: net, swaps: a.steps.contains { $0.swap != nil })
         }
         let swaps = a.steps.compactMap(\.swap)
-        // An exchange buy is known later by its own transaction (prd §1544):
+        // An exchange buy is known later by its own transaction (prd §1545):
         // kept before Face ID, so a send that lands while the app is away
         // still reads as the buy.
         if let roundUp, !dryRun, !a.roundUpWaits, roundUp.target.onExchanges(from: net.chainId) {
@@ -1545,7 +1545,7 @@ enum YourAccountChain {
                                       to: quote.route?.venue.router ?? account, toName: nil))
             }
         }
-        // Round-ups (prd §1452, §1544): what the change has reached, last,
+        // Round-ups (prd §1452, §1545): what the change has reached, last,
         // its dollars counted with the sends' before any prompt. A token on
         // this network is bought on the exchanges, as Swap buys: quoted off
         // the pools, its calls checked, its approval summed with the rest and
