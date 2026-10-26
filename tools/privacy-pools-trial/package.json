@@ -1,0 +1,17 @@
+{
+  "name": "casberi-privacy-pools-trial",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Testnet-only (Sepolia) measured trial of 0xBow Privacy Pools v2. Evaluation, not app code.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@0xbow/privacy-pools-v2-sdk": "1.0.2",
+    "@zk-kit/lean-imt": "2.2.4",
+    "circomlibjs": "0.1.7",
+    "snarkjs": "0.7.5",
+    "viem": "2.45.3"
+  }
+}
