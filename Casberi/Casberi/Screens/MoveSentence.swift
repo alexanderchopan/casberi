@@ -77,7 +77,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep }
-    enum Blank: Equatable { case with, buy, to, network, elsewhere, elsewhereCoin, arrives, group, merchant }
+    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -106,6 +106,12 @@ struct MoveSentence: View {
     @State private var found: [Int: [Tokens.Listed]] = [:]
     @State private var with: Tokens.Held?
     @State private var buy: Tokens.Listed?
+    /// Where what Swap buys arrives, when that is another network (prd
+    /// §1555): picked from "Get <token> on"; nil is the sending network.
+    @State private var buyOn: Op.Network?
+    /// A swap to another network that landed: its fill is read until it
+    /// arrives (prd §1555).
+    @State private var crossingWatch: YourAccountAcross.Crossing?
     @State private var amount = ""
     /// Dollars first (§1442a, user: "user may want to say a dollar value
     /// before they choose token"): the amount can be typed before anything
@@ -256,7 +262,7 @@ struct MoveSentence: View {
         }
         let past: String
         let lines: [Line]
-        let detail: String
+        var detail: String
         var link: URL? = nil
         var linkName: String? = nil
         /// Said instead of "View on <name>" when the door is not an explorer.
@@ -339,12 +345,48 @@ struct MoveSentence: View {
         return nil
     }
 
+    /// **A SWAP TO ANOTHER NETWORK (prd §1555).** The network what Swap buys
+    /// arrives on, when Across carries it there: only ETH and the network's
+    /// dollar cross. Nil keeps the swap on its own network.
+    private var crossTo: Op.Network? {
+        guard verb == .swap, let on = buyOn, on != network, let buy,
+              let asset = YourAccountAcross.asset(of: buy.token, on: network),
+              YourAccountAcross.carries(asset, from: network.chainId, to: on.chainId) else { return nil }
+        return on
+    }
+
+    /// What arrives there: ETH, or that network's dollar (USDC on Base
+    /// arrives as USDG on Robinhood).
+    private var crossBuy: Op.Token? {
+        guard let on = crossTo, let buy, let asset = YourAccountAcross.asset(of: buy.token, on: network) else { return nil }
+        return YourAccountAcross.token(asset, on: on)
+    }
+
+    /// The token Swap buys could arrive on another network: the sentence's
+    /// last network then opens "Get <token> on" (prd §1555), never a list
+    /// with nothing to pick.
+    private var buyCrosses: Bool {
+        guard verb == .swap, with != nil, items.isEmpty, let buy,
+              let asset = YourAccountAcross.asset(of: buy.token, on: network) else { return false }
+        return destinations(asset).count > 1
+    }
+
+    /// Where `asset` can arrive from this network: this network first, then
+    /// every network of the account's that Across carries it to.
+    private func destinations(_ asset: YourAccountAcross.Asset) -> [Op.Network] {
+        let usable = reach ?? Op.networks
+        return [network] + Op.networks.filter { n in
+            n != network && usable.contains(n) && YourAccountAcross.carries(asset, from: network.chainId, to: n.chainId)
+        }
+    }
+
     private var pendingItem: Chain.Item? {
         guard let with, let units, units != "0", !over else { return nil }
         switch verb {
         case .swap:
             guard let buy, let quote, lockedBuy.map({ $0 == buy.token }) ?? true else { return nil }
-            return .swap(Chain.Swap(network: network, sell: with.token, buy: buy.token, amount: units, quote: quote))
+            return .swap(Chain.Swap(network: network, sell: with.token, buy: crossBuy ?? buy.token, amount: units, quote: quote,
+                                    to: crossTo))
         case .send:
             // A lookalike no longer blocks the line (prd §1509 item 2, amends
             // §1438b): it warns, and the verb takes a second tap.
@@ -412,6 +454,14 @@ struct MoveSentence: View {
             return YourAccountSwap.credit(sold.compactMap(\.route))
         }
         guard verb == .swap || verb == .sweep else { return nil }
+        // **"THROUGH ACROSS · 0.06% FEE · ABOUT 10 SECONDS" (prd §1555).**
+        // A swap to another network: Across's fee, rounded as a pool's is,
+        // and its time; under the pool's words when a token is swapped first.
+        for item in signing {
+            guard case .swap(let s) = item, let leg = s.quote.across else { continue }
+            let across = [YourAccountAcross.words(leg), YourAccountAcross.about(leg.seconds)].compactMap { $0 }.joined(separator: " · ")
+            return s.quote.route.map { YourAccountSwap.words($0) + "\n" + across } ?? across
+        }
         let routes = signing.compactMap { item -> YourAccountSwap.Route? in
             if case .swap(let s) = item { return s.quote.route }
             return nil
@@ -517,6 +567,7 @@ struct MoveSentence: View {
             if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
+        .task(id: crossingWatch?.id) { await watchCrossing() }
         .task(id: sweepKey) { await resweep() }
         .task(id: previewKey) { await repreview() }
         .task(id: checkKey) { await recheck() }
@@ -665,8 +716,16 @@ struct MoveSentence: View {
             case .current: currentSellClauses(glue: glue, trail: join.trail, leads: n == 0 && lead != nil)
             }
         }
-        MoveClause(glue: String(localized: "for")) { buyWord }
-        MoveClause(glue: String(localized: "on")) { networkWord }
+        if let on = crossTo {
+            // "Swap 0.01 ETH on Ethereum for USDC on Base." (prd §1555): both
+            // networks are words, the first the one it leaves.
+            MoveClause(glue: String(localized: "on")) { originWord }
+            MoveClause(glue: String(localized: "for")) { buyWord }
+            MoveClause(glue: String(localized: "on")) { destinationWord(on) }
+        } else {
+            MoveClause(glue: String(localized: "for")) { buyWord }
+            MoveClause(glue: String(localized: "on")) { networkWord }
+        }
     }
 
     /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
@@ -1215,6 +1274,10 @@ struct MoveSentence: View {
                 say(String(localized: "One transaction is one network. Sign this one first"))
                 return
             }
+            if which == .destination, !items.isEmpty {
+                say(String(localized: "A swap to another network goes alone"))
+                return
+            }
             if which == .buy, lockedBuy != nil {
                 say(String(localized: "One token for the whole swap"))
                 return
@@ -1577,8 +1640,9 @@ struct MoveSentence: View {
             let back = buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
             // The whole swap's result, pink like every value; locked by a
             // kept swap (§1442c), a tap says so (§1442g).
-            let word = blank((back ?? "") + buy.token.symbol, ink: DS.pickInk,
-                             .buy, label: Text("For \(buy.token.symbol), change"))
+            let symbol = crossBuy?.symbol ?? buy.token.symbol
+            let word = blank((back ?? "") + symbol, ink: DS.pickInk,
+                             .buy, label: Text("For \(symbol), change"))
             if pricing {
                 // While the pools price it, the word breathes: working, not stuck.
                 word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
@@ -1617,12 +1681,26 @@ struct MoveSentence: View {
 
     private var networkWord: some View {
         Group {
-            if networkPicked {
+            if networkPicked, buyCrosses {
+                // The token could arrive elsewhere: its network is a choice
+                // of where it arrives (prd §1555).
+                blank(network.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(network.name), change"))
+            } else if networkPicked {
                 blank(network.name + ".", ink: DS.pickInk, .network, label: Text("On \(network.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
         }
+    }
+
+    /// The network a swap to another network leaves (prd §1555).
+    private var originWord: some View {
+        blank(network.name, ink: DS.pickInk, .network, label: Text("From \(network.name), change"))
+    }
+
+    /// The network it arrives on: opens "Get <token> on".
+    private func destinationWord(_ on: Op.Network) -> some View {
+        blank(on.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(on.name), change"))
     }
 
     /// A token list's search, its first row: the sentence's word never turns
@@ -1688,6 +1766,7 @@ struct MoveSentence: View {
                             case .buy: buyList
                             case .to: toList
                             case .network: networkList
+                            case .destination: destinationList
                             case .elsewhere: elsewhereList
                             case .elsewhereCoin: elsewhereCoinList
                             case .arrives: arrivesList
@@ -2158,7 +2237,7 @@ struct MoveSentence: View {
         let lines = signing.map { item -> String in
             switch item {
             case .send(let p): "s|\(p.token.contract ?? "eth")|\(p.amount)|\(p.to.lowercased())"
-            case .swap(let s): "w|\(s.sell.contract ?? "eth")|\(s.buy.contract ?? "eth")|\(s.amount)"
+            case .swap(let s): "w|\(s.sell.contract ?? "eth")|\(s.buy.contract ?? "eth")|\(s.amount)|\(s.to?.chainId ?? 0)"
             }
         }
         return ([account, String(network.chainId), roundUpPlan?.buy ?? "-"] + lines).joined(separator: ";")
@@ -2613,6 +2692,26 @@ struct MoveSentence: View {
         }
     }
 
+    /// **"GET USDC ON" (prd §1555, the user's design).** Where what Swap
+    /// buys arrives: this network ("Same network"), or another the account
+    /// is on that Across carries it to. Only ETH and the dollar cross, so a
+    /// token that cannot never opens this list.
+    private var destinationList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let buy, let asset = YourAccountAcross.asset(of: buy.token, on: network) {
+                listHeader(String(localized: "Get \(buy.token.symbol) on"))
+                ForEach(destinations(asset)) { n in
+                    let arrives = YourAccountAcross.token(asset, on: n)
+                    let sub: String? = n == network ? String(localized: "Same network")
+                        : arrives.symbol != buy.token.symbol ? String(localized: "As \(arrives.symbol)") : nil
+                    listRow(n.name, sub: sub, image: Self.networkMark(n), dim: (crossTo ?? network) == n) {
+                        pick { buyOn = n == network ? nil : n }
+                    }
+                }
+            }
+        }
+    }
+
     /// Each network's own mark, from the brand set the Wallet already draws.
     static func networkMark(_ n: Op.Network) -> String? { networkMark(chainId: n.chainId) }
 
@@ -2701,6 +2800,7 @@ struct MoveSentence: View {
         network = n
         with = nil
         buy = nil
+        buyOn = nil
         sweepLeftOut = []
         if !inDollars { amount = "" }
         quote = nil
@@ -3019,6 +3119,13 @@ struct MoveSentence: View {
             say(String(localized: "One transaction sends on one network"), failure: true)
             return
         }
+        // A swap to another network is its transaction alone (prd §1555): the
+        // Wallet shows that transaction as the one crossing.
+        func crosses(_ i: Chain.Item) -> Bool { if case .swap(let s) = i { return s.crosses } else { return false } }
+        if !items.isEmpty, crosses(item) || items.contains(where: crosses) {
+            say(String(localized: "A swap to another network goes alone"), failure: true)
+            return
+        }
         withAnimation(DS.Motion.standard) {
             // **A LIKE SWAP IS ONE SWAP (prd §1494, user: "i made two swaps
             // both eth, which shouldn't show as two").** The same token for
@@ -3071,7 +3178,7 @@ struct MoveSentence: View {
                                       minimumBuy: Op.sum(a.quote.minimumBuy, b.quote.minimumBuy),
                                       route: a.quote.route ?? b.quote.route, calls: [])
         return Chain.Swap(id: a.id, network: a.network, sell: a.sell, buy: a.buy,
-                          amount: Op.sum(a.amount, b.amount), quote: q)
+                          amount: Op.sum(a.amount, b.amount), quote: q, to: a.to)
     }
 
     private func sign() {
@@ -3139,6 +3246,8 @@ struct MoveSentence: View {
                     DSHaptic.success()
                     chrome.rain(sources: ["Wallet"])
                 }
+                // A swap to another network: its arrival is read (prd §1555).
+                if let crossing = done.crossing, crossing.tx != nil { crossingWatch = crossing }
                 await readNetwork()
             } catch let failure as Chain.Failure {
                 stage = nil
@@ -3223,6 +3332,18 @@ struct MoveSentence: View {
         let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
         func amount(_ units: String, _ token: Op.Token) -> String { Self.figure(units, decimals: token.decimals) + " " + token.symbol }
 
+        // **TO ANOTHER NETWORK (prd §1555):** "Swapped 0.01 ETH on Ethereum
+        // for 24.87 USDC on Base." Exactly that arrives — a relayer pays the
+        // deposit's own amount — and the line says it is on its way until the
+        // fill is read.
+        if swaps.count == 1, batch.count == 1, let x = swaps.first, x.crosses, let dest = x.to {
+            let lines = [Line(glue: nil, text: amount(x.amount, x.sell)), Line(glue: String(localized: "on"), text: net.name),
+                         Line(glue: String(localized: "for"), text: amount(x.quote.buyAmount, x.buy)),
+                         Line(glue: String(localized: "on"), text: dest.name + ".")]
+            let waiting = [String(localized: "Arriving on \(dest.name)"), YourAccountAcross.about(x.quote.across?.seconds)]
+            return made(String(localized: "Swapped"), lines, waiting.compactMap { $0 })
+        }
+
         // What each swap paid the account: `bought` is in the batch's order,
         // nil for a send.
         var bought: [String?] = done.bought
@@ -3303,6 +3424,8 @@ struct MoveSentence: View {
         case .send(let p):
             let who = p.toName ?? YourAccount.short(p.to)
             return String(localized: "Send \(Op.spoken(p.amount, decimals: p.token.decimals)) \(p.token.symbol) to \(who)")
+        case .swap(let s) where s.crosses:
+            return String(localized: "Swap \(Op.spoken(s.amount, decimals: s.sell.decimals)) \(s.sell.symbol) on \(s.network.name) for \(Op.spoken(s.quote.minimumBuy, decimals: s.buy.decimals)) \(s.buy.symbol) on \(s.to?.name ?? "")")
         case .swap(let s):
             return String(localized: "Swap \(Op.spoken(s.amount, decimals: s.sell.decimals)) \(s.sell.symbol) for at least \(Op.spoken(s.quote.minimumBuy, decimals: s.buy.decimals)) \(s.buy.symbol)")
         }
@@ -3330,6 +3453,34 @@ struct MoveSentence: View {
         UIPasteboard.general.string = receiveAddress
         DSHaptic.tap()
         say(String(localized: "Address copied"))
+    }
+
+    /// **ARRIVED, READ (prd §1555).** A swap to another network that landed
+    /// is followed until the receiving SpokePool says it was filled — read,
+    /// never assumed — every four seconds for fifteen minutes; then the
+    /// Wallet's Activity row keeps following it.
+    private func watchCrossing() async {
+        guard let c = crossingWatch else { return }
+        let name = YourAccountAcross.networkName(c.to)
+        let until = Date().addingTimeInterval(15 * 60)
+        while !Task.isCancelled, Date() < until {
+            if await Chain.acrossFill(c) == .filled {
+                YourAccountAcross.update(c.id) { x in
+                    if x.state == .waiting { x.state = .filled; x.settledAt = .now }
+                }
+                #if DEBUG
+                NSLog("moveAcross| filled %@ → %@", YourAccountAcross.networkName(c.from), name)
+                #endif
+                if receipt != nil {
+                    withAnimation(DS.Motion.standard) { receipt?.detail = String(localized: "Arrived on \(name)") }
+                }
+                DSHaptic.success()
+                chrome.refreshRooms()
+                crossingWatch = nil
+                return
+            }
+            try? await Task.sleep(for: .seconds(4))
+        }
     }
 
     // MARK: - Reads
@@ -3411,7 +3562,7 @@ struct MoveSentence: View {
     /// The quote is asked again whenever what would be swapped changes.
     private var quoteKey: String {
         guard verb == .swap, let with, let buy else { return "" }
-        return "\(network.chainId)|\(with.id)|\(buy.id)|\(units ?? "")"
+        return "\(network.chainId)|\(with.id)|\(buy.id)|\(units ?? "")|\(crossTo?.chainId ?? 0)"
     }
 
     private func requote() async {
@@ -3422,7 +3573,14 @@ struct MoveSentence: View {
         try? await Task.sleep(for: .milliseconds(500))
         guard !Task.isCancelled else { return }
         do {
-            let q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
+            let q: YourAccountSwap.Quote
+            if let on = crossTo, let arrives = crossBuy {
+                // To another network: Across's fee asked, the calls written
+                // here (prd §1555).
+                q = try await Chain.crossQuote(network, to: on, sell: with.token, buy: arrives, amount: units, account: account)
+            } else {
+                q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
+            }
             guard !Task.isCancelled else { return }
             withAnimation(DS.Motion.standard) { quote = q }
             #if DEBUG
@@ -3908,14 +4066,17 @@ struct MoveSentence: View {
         verb = .swap
         networkPicked = true
         if parts.count > 1, let h = held.first(where: { $0.token.symbol == parts[1] }) { with = h }
-        let buyName = parts.count > 2 ? parts[2] : (with?.token.symbol == "ETH" ? "USDC" : "ETH")
+        // "<BUY>@<Network>": the token arrives on another network (prd §1555).
+        let target = parts.count > 2 ? parts[2].split(separator: "@", maxSplits: 1).map(String.init) : []
+        let buyName = target.first ?? (with?.token.symbol == "ETH" ? "USDC" : "ETH")
+        buyOn = target.count > 1 ? Op.networks.first { $0.name.lowercased() == target[1].lowercased() } : nil
         // The list's own entry first; one it does not carry only by name.
         buy = listed.first { $0.token.symbol == buyName && $0.onList }
             ?? listed.first { $0.token.symbol == buyName }
             ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }
         amount = parts.first ?? ""
         inDollars = false
-        NSLog("moveSwapDraft: %@ %@ for %@", amount, with?.token.symbol ?? "-", buy?.token.symbol ?? "-")
+        NSLog("moveSwapDraft: %@ %@ for %@ on %@", amount, with?.token.symbol ?? "-", buy?.token.symbol ?? "-", buyOn?.name ?? network.name)
     }
 
     /// `-moveRawProbe YES`: what Raw transaction shows, line by line.

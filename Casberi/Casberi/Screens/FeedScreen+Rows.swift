@@ -556,6 +556,9 @@ extension FeedScreen {
             // its own row: its logo, when it was last used, what it holds.
             case .wallet where thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true:
                 PrivyAppRow(thing: thing)
+            // A swap to another network is one row, its state in it (prd §1555).
+            case .wallet where thing.sourceRef?.hasPrefix(YourAccountAcross.refPrefix) == true:
+                AcrossCrossingRow(thing: thing)
             case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             // The same ledger reading for the wallet-riding money rooms
             // (prd §485, 2026-08-26) — one flag, one anatomy. See `Shape.init`.

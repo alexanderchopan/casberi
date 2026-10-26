@@ -569,6 +569,31 @@ enum WalletIngest {
                 guard seenGasTxs.insert(key).inserted else { return nil }
                 return WalletGas.Job(network: leg.chain.network, address: leg.address, hash: leg.hash)
             }
+        // **A SWAP TO ANOTHER NETWORK IS ONE ROW (prd §1555).** Its sending
+        // transaction, its arrival on the other network and its refund are
+        // the crossing's own row in Activity (`WalletAcross`), never legs of
+        // their own: no stray "Sent to Across" and unexplained receive.
+        var crossings = YourAccountAcross.crossings
+        if !crossings.isEmpty {
+            fresh = fresh.filter { leg in
+                guard let chainId = YourAccountOp.network(appName: leg.chain.network)?.chainId else { return true }
+                let at = IngestSupport.isoDate((leg.t["metadata"] as? [String: Any])?["blockTimestamp"])
+                guard let hit = YourAccountAcross.take(ref: leg.ref, hash: leg.hash, received: leg.received,
+                                                       wallet: leg.address, chainId: chainId, contract: leg.contract,
+                                                       from: leg.t["from"] as? String, value: leg.value, at: at,
+                                                       in: crossings) else { return true }
+                if case .settles(let state) = hit.take {
+                    YourAccountAcross.update(hit.id) { x in
+                        x.taken.append(leg.ref)
+                        // Move may have read the fill first; a refund settles it.
+                        if x.state == .waiting || state == .refunded { x.state = state }
+                        x.settledAt = x.settledAt ?? at ?? .now
+                    }
+                    crossings = YourAccountAcross.crossings
+                }
+                return false
+            }
+        }
         // Name the new transfers' counterparties BEFORE landing them — a
         // title is written once, so the name has to be there at write time.
         let names = await counterpartyNames(for: fresh)
@@ -757,7 +782,8 @@ enum WalletIngest {
             }
         }
 
-        var added = 0
+        // The crossings' own rows, after the legs above settled them (prd §1555).
+        var added = await WalletAcross.sync(context: context)
         for thing in landed {
             context.insert(thing)
             SpotlightIndex.index([thing])
@@ -1246,6 +1272,13 @@ enum WalletIngest {
             // before §1539 (pinned from Relay's `/chains`, prd §1440): a
             // grant in the history to one is still Relay's.
             ?? (relaySwapContracts.contains(a) ? "Relay" : nil)
+            ?? acrossLabel(a)
+    }
+
+    /// Across's SpokePools and its handler (prd §1555): a crossing another
+    /// device sent, or one this phone has no note of, still reads as Across's.
+    private static func acrossLabel(_ a: String) -> String? {
+        YourAccountAcross.isAcross(a) ? "Across" : nil
     }
 
     /// Relay's v3 and v3.2 router and approval proxy, the same on every chain
@@ -1301,6 +1334,10 @@ enum WalletIngest {
                 names[a] = zk
             } else if let tacit = Tacit.knownName(for: a) {
                 names[a] = tacit
+            } else if YourAccountAcross.isAcross(a) {
+                // Across's SpokePool or handler (prd §1555): a crossing with
+                // no note on this phone still names who carried it.
+                names[a] = "Across"
             } else {
                 unknown.append(a)
             }

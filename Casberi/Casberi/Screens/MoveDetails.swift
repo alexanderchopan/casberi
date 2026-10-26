@@ -69,12 +69,12 @@ struct MoveDetails: View {
         // A round-up bought on the exchanges with the send (prd §1545): where,
         // its pool fee, and the exact approval it makes, as a swap's are.
         ForEach(Array(exchanges(p).enumerated()), id: \.offset) { _, words in
-            row(String(localized: "Round-up"), words, sub: String(localized: "The pool fee is in the price"))
+            row(String(localized: "Round-up"), words)
         }
         feeRow(p)
         ForEach(Array(p.approvals.enumerated()), id: \.offset) { _, a in
-            row(String(localized: "Approves"), String(localized: "Exactly \(a.figure) \(a.symbol)"),
-                sub: String(localized: "to \(a.spender), used in the same step"))
+            // The spender stays in the value: who may spend is a security fact.
+            row(String(localized: "Approves"), String(localized: "\(a.figure) \(a.symbol) to \(a.spender)"))
         }
     }
 
@@ -82,30 +82,41 @@ struct MoveDetails: View {
     /// with why when the bundler would not estimate it.
     private func feeRow(_ p: YourAccountChain.Preview) -> some View {
         guard let wei = p.feeWei else {
-            return row(String(localized: "Network fee"), String(localized: "Not priced"), sub: p.refusal)
+            return row(String(localized: "Network fee"), String(localized: "Not priced"))
         }
         let coin = "\(Words.coin(wei)) ETH"
         guard let usd = networkFeeUSD else { return row(String(localized: "Network fee"), String(localized: "Up to \(coin)")) }
         let value = usd < 0.01 ? String(localized: "Under a cent") : String(localized: "Up to \(MoveSentence.money(usd))")
-        return row(String(localized: "Network fee"), value, sub: coin)
+        return row(String(localized: "Network fee"), value)
     }
 
     // MARK: - A swap
 
     @ViewBuilder private func swapRows(_ p: YourAccountChain.Preview) -> some View {
-        if case .returnsAtLeast(let units, let token) = p.checked {
+        if let leg = p.sold.compactMap(\.across).first {
+            // **TO ANOTHER NETWORK (prd §1555):** what arrives — exactly
+            // what a relayer pays, so its least — Across's fee, rounded as a
+            // pool's, and its time.
+            let dest = Op.networks.first { $0.chainId == leg.to } ?? p.network
+            let token = YourAccountAcross.token(leg.asset, on: dest)
+            row(String(localized: "You get at least"), "\(MoveSentence.figure(leg.outputAmount, decimals: token.decimals)) \(token.symbol)")
+            row(String(localized: "Across"), String(localized: "\(YourAccountSwap.percent(pips: leg.feePips)) fee"))
+            if let time = YourAccountAcross.time(leg.seconds) {
+                row(String(localized: "Expected time"), time)
+            }
+        } else if case .returnsAtLeast(let units, let token) = p.checked {
             row(String(localized: "You get at least"), "\(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)")
         }
         // Where each swap goes, once per distinct pool: "On Uniswap · 0.05%
         // pool fee". The pool's fee is in the price, so it is never added to
         // the fee below, and there is no one else's fee to add (prd §1539).
         ForEach(Array(exchanges(p).enumerated()), id: \.offset) { _, words in
-            row(String(localized: "Swaps"), words, sub: String(localized: "The pool fee is in the price"))
+            row(String(localized: "Swaps"), words)
         }
         feeRow(p)
         ForEach(Array(p.approvals.enumerated()), id: \.offset) { _, a in
-            row(String(localized: "Approves"), String(localized: "Exactly \(a.figure) \(a.symbol)"),
-                sub: String(localized: "to \(a.spender), used in the same step"))
+            // The spender stays in the value: who may spend is a security fact.
+            row(String(localized: "Approves"), String(localized: "\(a.figure) \(a.symbol) to \(a.spender)"))
         }
     }
 
@@ -128,14 +139,18 @@ struct MoveDetails: View {
         switch p.checked {
         case .lands:
             return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
+        // A swap to another network (prd §1555): what a swap first pays on
+        // this network is a step, not what you get; "You get at least" says that.
+        case .returnsAtLeast where p.sold.contains { $0.across != nil }:
+            return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
         case .returnsAtLeast(let units, let token):
             return row(String(localized: "Checked"),
                        String(localized: "Returns at least \(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)"),
                        ink: DS.confirmInk)
-        case .fails(_, _, let reason):
-            return row(String(localized: "Checked"), String(localized: "Would fail"), sub: reason, ink: DS.destructiveInk)
+        case .fails:
+            return row(String(localized: "Checked"), String(localized: "Would fail"), ink: DS.destructiveInk)
         case .notChecked:
-            return row(String(localized: "Checked"), String(localized: "Not checked"), sub: String(localized: "\(p.network.name) would not simulate it"))
+            return row(String(localized: "Checked"), String(localized: "Not checked"))
         }
     }
 
@@ -166,18 +181,15 @@ struct MoveDetails: View {
 
     /// A name, and its value trailing over its line: the Wallet rows' pitch
     /// (§1482), the body rung.
-    private func row(_ label: String, _ value: String, sub: String? = nil, second: String? = nil,
+    /// **ONE LINE A ROW (user, 2026-10-26, prd §1555):** no subtext under
+    /// any row; a fact worth keeping folds into the value.
+    private func row(_ label: String, _ value: String,
                      ink: Color = DS.textPrimary) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
             Text(verbatim: label).dsText(.body17).foregroundStyle(DS.textSecondary)
             Spacer(minLength: DS.Space.s2)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(verbatim: value).dsText(.body17).foregroundStyle(ink)
-                ForEach([sub, second].compactMap { $0 }, id: \.self) { line in
-                    Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                }
-            }
-            .multilineTextAlignment(.trailing)
+            Text(verbatim: value).dsText(.body17).foregroundStyle(ink)
+                .multilineTextAlignment(.trailing)
             .fixedSize(horizontal: false, vertical: true)
         }
         .walletRowPitch()

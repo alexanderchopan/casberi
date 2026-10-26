@@ -77,7 +77,7 @@ extension YourAccountChain {
                     p.network == q.network && p.token == q.token && p.amount == q.amount
                         && p.to.lowercased() == q.to.lowercased() && p.toName == q.toName
                 case (.swap(let s), .swap(let t)):
-                    s.network == t.network && s.sell == t.sell && s.buy == t.buy && s.amount == t.amount
+                    s.network == t.network && s.sell == t.sell && s.buy == t.buy && s.amount == t.amount && s.to == t.to
                 default:
                     false
                 }
@@ -241,7 +241,7 @@ extension YourAccountChain {
                 words.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol, atLeast: figure(s.quote.minimumBuy, s.buy), s.buy.symbol,
                                         on: venue?.exchange ?? "Uniswap"))
                 least = (least.map { YourAccountOp.sum($0.0, s.quote.minimumBuy) } ?? s.quote.minimumBuy, s.buy)
-                sold.append(Words.Sold(token: s.sell, amount: s.amount, route: s.quote.route))
+                sold.append(Words.Sold(token: s.sell, amount: s.amount, route: s.quote.route, across: s.quote.across))
             }
         }
         words = approvals.map { Words.approve($0.figure, $0.symbol, to: $0.spender) } + words

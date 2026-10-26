@@ -385,3 +385,13 @@ The act is Move's: **Private** takes its A–Z place among Move's verbs (§1547)
 - **The sender is `PrivacyTestnetSender`**, a device-only secp256k1 key in a DEBUG build, because your account (`YourAccount*`) is not on Sepolia (§1441a) and a simulator has no Secure Enclave. It signs through `TestnetTx`, which cannot make a transaction off a testnet. With no Sepolia ETH the sentence says "Fund …xxxx on Sepolia first." and the foot copies the whole address; fund it by hand, never a faucet from a session.
 - The demo reaches nothing: its private sentence stands on a pretended balance and the act says it works once you leave the demo; the store asks no ASP.
 - A deposit logs `privateMove| sent | <hash>`, `privateMove| deposited | <hash> | <amount> | label hash <n> | <s>`, the ASP's answers `privateMoney| asp | <commitment…> | <status>` (every 20 s by the label's Poseidon hash while Holdings or the done sentence shows a waiting note), and `privateMoney| worth | $<usd> | <n> prices`.
+
+## Across: Swap to another network (prd §1555, built 2026-10-26)
+
+`-moveSwapDraft "<amount>|<SELL>|<BUY>@<Network>"` drafts a swap whose token arrives on another network (`0.01|ETH|USDC@Ethereum` from Base: swapped on Uniswap, then Across); pair with `-openMove YES -liveChains YES -moveHoldings … -moveSimulateETH <wei> [-moveDetails YES]`. `-acrossSample YES` notes three sample crossings (waiting, filled, refunded) with made-up transactions and writes their Activity rows (`acrossSample|`); open Wallet › Activity to see them.
+
+- The deposit is the phone's (`Model/YourAccountAcross.swift`); Across is asked only `suggested-fees` (`app.across.to`, through Tor). Pins: three SpokePools and the MulticallHandler, each read on chain.
+- ETH goes to the handler with a two-call message (unwrap the fill, pay the account): a SpokePool pays a contract WETH. `arrivalCheck` simulates the message on the receiving network before Face ID; signing is refused without it.
+- A crossing is one Wallet thing, `wallet:across:<id>` (`WalletAcross`), drawn by `AcrossCrossingRow`; `WalletIngest` drops its legs (`YourAccountAcross.take`). The notes are `yourAccount.across.crossings` in UserDefaults (device-only, newest 200).
+- A refund of an ETH crossing comes back as WETH (the pool refunds its wrapped coin).
+- `across-swap-selftest.sh`: vectors simulated on each network, real relay hashes, 21 mutations.

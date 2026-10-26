@@ -17,6 +17,7 @@ PREVIEW="Casberi/Casberi/Model/YourAccountPreview.swift"
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
 SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
+ACROSS="Casberi/Casberi/Model/YourAccountAcross.swift"
 ADAPTER="Casberi/Casberi/Model/YourAccount7579.swift"
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
@@ -28,7 +29,7 @@ CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
 CHAINPREVIEW="Casberi/Casberi/Model/YourAccountChain+Preview.swift"
 SENTENCE="Casberi/Casberi/Screens/MoveSentence.swift"
 DETAILS="Casberi/Casberi/Screens/MoveDetails.swift"
-for f in "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
+for f in "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
          "$CHAIN" "$CHAINPREVIEW" "$SENTENCE" "$DETAILS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -110,7 +111,7 @@ print(bad == 0 ? "move-details self-test: \(ran) checks ok" : "move-details self
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
-xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
+xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
   "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountPreview.swift does not compile with Foundation and the Safe encoders alone"; exit 1; }
 "$TMP/t" || exit 1

@@ -28,6 +28,7 @@ cd "$(dirname "$0")/.."
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
 SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
+ACROSS="Casberi/Casberi/Model/YourAccountAcross.swift"
 ADAPTER="Casberi/Casberi/Model/YourAccount7579.swift"
 FIXTURES="$PWD/scripts/fixtures/your-account"
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
@@ -307,7 +308,7 @@ enum YourAccountDemo {
     static var roundUps: RoundUps.Setting { RoundUps.Setting() }
 }
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 
@@ -454,7 +455,7 @@ check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: usdt)?.symb
 check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: eth)?.symbol == "USDC", "a network without the coin being sent does not fall back to USDC")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/e" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$ELSEWHERE" "$TMP/elsewhere-stubs.swift" "$TMP/elsewhere/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/e" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$ELSEWHERE" "$TMP/elsewhere-stubs.swift" "$TMP/elsewhere/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountElsewhere.swift does not compile against a stub of the chain (prd §1470)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/e" || { echo "✗ receiving from another network drifted (prd §1470) — see above"; exit 1; }
 grep -q 'Picks what you receive' Casberi/Casberi/Screens/MoveSentence.swift && grep -q 'Picks what they send' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ the receive sentence's two words are not both picks (prd §1470)"; exit 1; }

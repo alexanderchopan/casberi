@@ -242,7 +242,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1692 of 1761 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1693 of 1762 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1936,6 +1936,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
 - §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
 - §1554 — Move to private on Sepolia: one more Move sentence, and private money in Holdings, counted once (builds §1540 step 2…
+- §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives…
 
 ## Dead rulings → what replaced them (generated)
 

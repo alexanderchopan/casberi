@@ -466,7 +466,12 @@ enum YourAccountSwap {
         /// The pools it goes through; nil for the demo's estimate.
         let route: Route?
         /// The calls that do it: an exact approval, then one router call.
+        /// To another network (prd §1555): the swap's calls, if anything is
+        /// swapped first, then the crossing's.
         let calls: [Call]
+        /// The crossing, for a swap whose token is on another network: what
+        /// `buyAmount` arrives through, and Across's terms (prd §1555).
+        var across: YourAccountAcross.Leg? = nil
 
         var exchange: String? { route?.venue.exchange }
     }

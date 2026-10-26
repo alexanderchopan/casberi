@@ -505,7 +505,7 @@ enum NetworkReach {
         // only (`YourAccountOp.networks`, prd §1439a).
         Endpoint(service: "Your account",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what your account holds on Base, Ethereum and Robinhood Chain, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks the exchanges' own contracts for a price through the same public nodes (Uniswap, and Aerodrome on Base), and this phone writes the swap itself, to those exchanges' routers only, for exactly the amount sold; the network's node simulates it and nothing is signed unless you would receive at least the quoted minimum. The tokens it offers come from Uniswap's public token list, downloaded whole once a day. Receiving from another network, or a round-up's buy, asks Relay for the deposit address of that route, refused unless Relay names your account as the one that gets it. A token's picture is fetched from the image address the token list gives for it (CoinGecko's), and a network's from Relay's, carrying nothing about you. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
+                 purpose: "Reads what your account holds on Base, Ethereum and Robinhood Chain, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks the exchanges' own contracts for a price through the same public nodes (Uniswap, and Aerodrome on Base), and this phone writes the swap itself, to those exchanges' routers only, for exactly the amount sold; the network's node simulates it and nothing is signed unless you would receive at least the quoted minimum. The tokens it offers come from Uniswap's public token list, downloaded whole once a day. A swap to another network asks Across what its relayers charge for it, and this phone writes the deposit into Across's own contract itself, your account as the one who gets it and the one any refund goes back to; then it reads the other network to see it arrive. Receiving from another network, or a round-up's buy, asks Relay for the deposit address of that route, refused unless Relay names your account as the one that gets it. A token's picture is fetched from the image address the token list gives for it (CoinGecko's), and a network's from Relay's, carrying nothing about you. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
                  hosts: ["public.pimlico.io", "api.candide.dev",
                          "mainnet.base.org", "base-rpc.publicnode.com",
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
@@ -515,6 +515,11 @@ enum NetworkReach {
                          // naming no wallet; answered through Tor 3 of 3
                          // (2026-10-26).
                          "tokens.uniswap.org",
+                         // Across's fee for a swap to another network (prd
+                         // §1555): asked only what its relayers charge now,
+                         // naming the account as depositor and recipient;
+                         // answered through Tor (2026-10-26).
+                         "app.across.to",
                          // Token pictures the list names (prd §1534, §1542),
                          // fetched only from these, never learned by a request
                          // of their own (`TokenIconBook.listHosts`); a

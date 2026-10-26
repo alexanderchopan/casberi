@@ -40,6 +40,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
+ACROSS="Casberi/Casberi/Model/YourAccountAcross.swift"
 LIST="Casberi/Casberi/Model/OpenTokenList.swift"
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
@@ -284,7 +285,7 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [r
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
-SOURCES=("$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift")
+SOURCES=("$ACROSS" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift")
 echo "direct-swap-selftest: compiling YourAccountSwap.swift and OpenTokenList.swift AS SHIPPED…"
 xcrun swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$SWAP" "$LIST" "${SOURCES[@]}" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountSwap.swift does not compile alone (Foundation and the account's encoders only)"; exit 1; }

@@ -1339,6 +1339,12 @@ enum YourAccountChain {
         let amount: String
         /// The quote the page showed; the pools are asked afresh at signing.
         let quote: YourAccountSwap.Quote
+        /// Where what it buys arrives, when that is another network: Across
+        /// carries it (prd §1555). Nil for a swap on `network` itself.
+        var to: Network? = nil
+
+        /// To another network.
+        var crosses: Bool { to.map { $0 != network } ?? false }
     }
 
     /// One thing in a transaction: a send or a swap (prd §1436, batch swaps).
@@ -1369,6 +1375,8 @@ enum YourAccountChain {
         /// signed it alone, or no pool would buy — so its change keeps
         /// counting (prd §1545).
         var roundUpWaits = false
+        /// A swap to another network it sent (prd §1555), as the Wallet keeps it.
+        var crossing: YourAccountAcross.Crossing? = nil
     }
 
     /// One transaction, assembled and simulated, everything but its gas and
@@ -1401,6 +1409,15 @@ enum YourAccountChain {
         /// A round-up's buy that no pool would make: the send goes, and the
         /// change keeps counting (prd §1545).
         var roundUpWaits = false
+        /// A swap to another network (prd §1555): the note the Wallet keeps,
+        /// and whether ETH was proven to arrive as ETH (nil: not asked, or
+        /// the node would not simulate).
+        var crossing: YourAccountAcross.Crossing? = nil
+        var arrives: Bool? = nil
+
+        /// Whether signing must have a simulation that answered: any swap,
+        /// and any crossing.
+        var mustCheck: Bool { steps.contains { $0.swap != nil } || crossing != nil }
     }
 
     /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1539).** Each swap
@@ -1439,15 +1456,23 @@ enum YourAccountChain {
             // The preview's own calls, checked once more against the state now.
             let again = await check(net, account: account, approvals: Array(held.calls.prefix(held.approvalCount)),
                                     steps: held.steps, symbols: held.symbols)
-            try require(again, on: net, swaps: held.steps.contains { $0.swap != nil })
+            try require(again, on: net, swaps: held.assembled.mustCheck)
             a = held.assembled
             a.simulated = again
             report("signing the preview from \(Int(Date().timeIntervalSince(kept.made)))s ago")
         } else {
             a = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil,
                                    report: report).assembled
-            try require(a.simulated, on: net, swaps: a.steps.contains { $0.swap != nil })
+            try require(a.simulated, on: net, swaps: a.mustCheck)
         }
+        // ETH sent to another network must be proven to arrive as ETH: the
+        // handler's message run on the receiving network (prd §1555).
+        if let crossing = a.crossing, crossing.contract == nil, a.arrives != true {
+            throw Failure(message: String(localized: "Could not check that ETH arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
+        }
+        // The crossing is kept before Face ID, so the Wallet shows it however
+        // the app is left; it gets its transaction once it lands.
+        if let crossing = a.crossing, !dryRun { YourAccountAcross.note(crossing) }
         let swaps = a.steps.compactMap(\.swap)
         // An exchange buy is known later by its own transaction (prd §1545):
         // kept before Face ID, so a send that lands while the app is away
@@ -1471,8 +1496,14 @@ enum YourAccountChain {
         if let renewed = a.renewed, case .landed = outcome { savePlan(renewed, on: net) }
         if let setupPlan = a.setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
         let sent = Sent(outcome: await settle(outcome, net, account, next: a.next, x: a.nextKey.x), network: net)
+        var crossing = a.crossing
+        if var c = crossing, case .landed(let tx, _) = sent.outcome, let tx {
+            c.tx = tx
+            YourAccountAcross.update(c.id) { $0.tx = tx }
+            crossing = c
+        }
         guard case .landed = sent.outcome, !swaps.isEmpty else {
-            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits)
+            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing)
         }
         // A token bought by one swap alone: what actually arrived.
         var bought = a.simulated.paid
@@ -1484,7 +1515,7 @@ enum YourAccountChain {
             let arrived = YourAccountOp.difference(now, then)
             if arrived != "0" { bought[i] = arrived }
         }
-        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits)
+        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing)
     }
 
     /// What `assemble` hands back beside the transaction: how many of its
@@ -1514,8 +1545,67 @@ enum YourAccountChain {
         var stepWords: [Words.Step] = []
         var symbols: [String: String] = [:]
         var sold: [YourAccountPreview.Sold] = []
+        var crossing: YourAccountAcross.Crossing?
+        var arrives: Bool?
         for item in items {
             switch item {
+            case .swap(let s) where s.crosses:
+                // **TO ANOTHER NETWORK, THROUGH ACROSS (prd §1555).** Alone in
+                // its transaction (Move keeps it so), so the Wallet can show
+                // the whole transaction as the one crossing.
+                guard items.count == 1, let dest = s.to else {
+                    throw Failure(message: String(localized: "A swap to another network goes alone"))
+                }
+                let quote = try await crossQuote(net, to: dest, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
+                guard let leg = quote.across else { throw Failure(message: String(localized: "This swap could not be written")) }
+                let crossCount = leg.asset == .eth ? 1 : 2
+                guard quote.calls.count >= crossCount else { throw Failure(message: String(localized: "This swap could not be written")) }
+                let swapCalls = Array(quote.calls.dropLast(crossCount))
+                let crossCalls = Array(quote.calls.suffix(crossCount))
+                let bridged = YourAccountAcross.token(leg.asset, on: net)
+                if let route = quote.route {
+                    // Swapped first into what crosses, by the pools; only the
+                    // swap's minimum crosses, and the simulation holds the
+                    // swap to it.
+                    let first = YourAccountSwap.Quote(sellAmount: s.amount, buyAmount: leg.inputAmount, minimumBuy: leg.inputAmount,
+                                                      route: route, calls: swapCalls)
+                    guard let checked = YourAccountSwap.checked(first, sell: s.sell, amount: s.amount, chainId: net.chainId) else {
+                        throw Failure(message: String(localized: "This swap could not be written"))
+                    }
+                    let calls = checked.calls.compactMap(YourAccountSwap.accountCall)
+                    guard calls.count == checked.calls.count else { throw Failure(message: String(localized: "This swap could not be written")) }
+                    approvals += checked.approvals
+                    steps.append((calls, (bridged, leg.inputAmount)))
+                    stepWords.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol, atLeast: figure(leg.inputAmount, bridged),
+                                                bridged.symbol, on: route.venue.exchange))
+                } else if !swapCalls.isEmpty || s.sell != bridged {
+                    throw Failure(message: String(localized: "This swap could not be written"))
+                }
+                guard let checked = YourAccountAcross.checked(crossCalls, leg: leg, account: account,
+                                                              now: Int(Date().timeIntervalSince1970)) else {
+                    throw Failure(message: String(localized: "Across asked for something other than this swap, so nothing was signed"))
+                }
+                let calls = checked.calls.compactMap(YourAccountSwap.accountCall)
+                guard calls.count == checked.calls.count else { throw Failure(message: String(localized: "This swap could not be written")) }
+                approvals += checked.approvals
+                steps.append((calls, nil))
+                stepWords.append(Words.crossing(figure(leg.inputAmount, bridged), bridged.symbol, to: dest.name,
+                                                arrives: figure(leg.outputAmount, s.buy), s.buy.symbol, back: net.name))
+                sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, route: quote.route, across: leg))
+                if let c = s.sell.contract { symbols[c.lowercased()] = s.sell.symbol }
+                if let c = bridged.contract { symbols[c.lowercased()] = bridged.symbol }
+                payments.append(.init(network: net, token: s.sell, amount: s.amount,
+                                      to: YourAccountAcross.spoke(net.chainId) ?? account, toName: "Across"))
+                let refund = leg.asset == .eth ? (contract: YourAccountSwap.book(net.chainId)?.weth ?? "", symbol: "WETH")
+                                               : (contract: net.dollar.lowercased(), symbol: net.dollarSymbol)
+                crossing = YourAccountAcross.Crossing(
+                    id: UUID().uuidString, account: account.lowercased(), from: net.chainId, to: dest.chainId,
+                    sold: "\(figure(s.amount, s.sell)) \(s.sell.symbol)", symbol: s.buy.symbol,
+                    contract: s.buy.contract?.lowercased(), decimals: s.buy.decimals, outputUnits: leg.outputAmount,
+                    refundContract: refund.contract, refundSymbol: refund.symbol, inputUnits: leg.inputAmount,
+                    fillDeadline: leg.fillDeadline, at: .now)
+                if leg.asset == .eth { arrives = await arrivalCheck(dest, leg: leg, account: account) }
+                report("across: \(leg.inputAmount) \(bridged.symbol) \(net.name)→\(dest.name) out=\(leg.outputAmount) fee=\(leg.feePips)pips arrives=\(arrives.map { String($0) } ?? "-")")
             case .send(let p):
                 guard let call = YourAccountOp.call(for: p) else {
                     throw Failure(message: String(localized: "This send could not be written"))
@@ -1607,9 +1697,14 @@ enum YourAccountChain {
         for call in approvalCalls {
             let contract = call.to.lowercased()
             let token = sold.first { $0.token.contract?.lowercased() == contract }?.token
+                // A dollar a swap bought first, crossing (prd §1555).
+                ?? (contract == net.dollar.lowercased() ? YourAccountOp.dollar(on: net) : nil)
             let units = SafeCalldata.decimal(Array(call.data.suffix(32)))
-            // The spender is the router: named by its exchange.
-            let spender = YourAccountSwap.exchange(ofRouter: SafeABI.hex(Array(call.data[16..<36]))) ?? Words.short(call.to)
+            // The spender is the router, named by its exchange, or Across's
+            // SpokePool (prd §1555).
+            let spenderAddress = SafeABI.hex(Array(call.data[16..<36]))
+            let spender = YourAccountSwap.exchange(ofRouter: spenderAddress)
+                ?? (YourAccountAcross.isSpoke(spenderAddress) ? "Across" : YourAccount.short(spenderAddress))
             approved.append(Words.Approval(figure: token.map { figure(units, $0) } ?? units,
                                            symbol: token?.symbol ?? Words.short(call.to), spender: spender))
         }
@@ -1651,7 +1746,7 @@ enum YourAccountChain {
                                   payments: payments, approvals: approved, sold: sold, steps: steps, simulated: simulated,
                                   deployed: deployed, renewed: renewed, setupPlan: setupPlan, reasonTail: tail,
                                   signerIndex: signerIndex, next: next, nextKey: nextKey, signer: signer,
-                                  roundUpWaits: roundUpWaits)
+                                  roundUpWaits: roundUpWaits, crossing: crossing, arrives: arrives)
         return AssembledParts(assembled: assembled, approvalCount: approvalCalls.count, symbols: symbols)
     }
 

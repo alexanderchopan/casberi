@@ -160,6 +160,17 @@ enum YourAccountPreview {
         let token: Op.Token
         let amount: String
         let route: YourAccountSwap.Route?
+        /// A swap to another network: its crossing, for Details' Across
+        /// rows (prd §1555).
+        var across: YourAccountAcross.Leg? = nil
+    }
+
+    /// A swap to another network (prd §1555): "Sends 0.01 ETH to Base
+    /// through Across", what arrives and the refund said beneath.
+    static func crossing(_ figure: String, _ symbol: String, to network: String, arrives: String, _ bought: String,
+                         back origin: String) -> Step {
+        Step(words: String(localized: "Sends \(figure) \(symbol) to \(network) through Across"),
+             detail: String(localized: "\(arrives) \(bought) arrives there; if no one fills it, it comes back on \(origin)"))
     }
 
     /// An address in a line of words: "...cD09", its tail only (prd §1553),
