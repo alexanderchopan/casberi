@@ -556,7 +556,7 @@ extension FeedScreen {
             // its own row: its logo, when it was last used, what it holds.
             case .wallet where thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true:
                 PrivyAppRow(thing: thing)
-            // A swap to another network is one row, its state in it (prd §1553).
+            // A swap to another network is one row, its state in it (prd §1555).
             case .wallet where thing.sourceRef?.hasPrefix(YourAccountAcross.refPrefix) == true:
                 AcrossCrossingRow(thing: thing)
             case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)

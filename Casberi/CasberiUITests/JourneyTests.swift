@@ -132,7 +132,7 @@ final class JourneyTests: XCTestCase {
         w.tap(w.visible(.button, "label == %@", "Follow an account"), "Follow an account")
         w.focus(w.el(.textField, "placeholderValue == %@", "An address or a name"), "address field")
         w.type("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "type an address")
-        // The row names the address short ("…6045").
+        // The row names the address short ("...6045").
         w.tap(w.el(.button, "label BEGINSWITH %@ AND label ENDSWITH %@", "Follow ", "6045"), "Follow")
         w.see(w.el(.button, "label BEGINSWITH %@ AND label ENDSWITH %@", "Following ", "6045"), "wallet followed")
         w.finish()

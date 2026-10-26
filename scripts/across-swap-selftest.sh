@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Across self-test (prd §1553) — Move's swap to another network: the phone
+# Across self-test (prd §1555) — Move's swap to another network: the phone
 # asks Across only its fee and writes the SpokePool deposit itself.
 #
 #   Casberi/Casberi/Model/YourAccountAcross.swift   compiled WHOLE and unmodified
@@ -268,7 +268,7 @@ check(X.figure(eth) == "0.01" && X.title(eth) == "Refunded 0.01 WETH on Ethereum
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
-SOURCES=("$SWAP" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift")
+SOURCES=("Casberi/Shared/AddressTail.swift" "$SWAP" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift")
 echo "across-swap-selftest: compiling YourAccountAcross.swift AS SHIPPED…"
 xcrun swiftc -Onone -o "$TMP/run" "$ACROSS" "${SOURCES[@]}" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountAcross.swift does not compile alone (Foundation and the account's encoders only)"; exit 1; }

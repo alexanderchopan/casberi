@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// **A SWAP TO ANOTHER NETWORK, AS ONE ROW IN ACTIVITY (prd §1553, the
+/// **A SWAP TO ANOTHER NETWORK, AS ONE ROW IN ACTIVITY (prd §1555, the
 /// user's design).** Each crossing this phone sent (`YourAccountAcross.
 /// crossings`) is one Wallet thing, `wallet:across:<id>`, kept in step with
 /// what is known of it: "USDC arriving on Base" while it waits, "Swapped

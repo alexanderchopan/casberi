@@ -79,7 +79,7 @@ enum RadicleWire {
         /// DID's own tail, which at least differs between two people.
         var display: String {
             if let alias, !alias.isEmpty { return alias }
-            return String(did.suffix(8))
+            return AddressTail.short(did)
         }
     }
 

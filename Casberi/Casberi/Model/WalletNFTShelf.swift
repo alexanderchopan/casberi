@@ -231,7 +231,7 @@ enum WalletNFTShelf {
                             (c["symbol"] as? String)]
                     .compactMap { $0 }
                     .first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
-                    ?? shortAddress(addr)
+                    ?? AddressTail.short(addr, wholeUpTo: 10)
                 let art = IngestSupport.imageURL(
                     (image?["thumbnailUrl"] as? String)
                         ?? (image?["cachedUrl"] as? String)
@@ -268,10 +268,6 @@ enum WalletNFTShelf {
             pageKey = next
         }
         return reached ? out : nil
-    }
-
-    private static func shortAddress(_ a: String) -> String {
-        a.count > 10 ? "…\(a.suffix(4))" : a
     }
 
     // MARK: - The shelf's own narrow read

@@ -278,12 +278,8 @@ enum AztecSignRequest {
     }
 
     /// An address as written (leading zeros kept — they are part of it),
-    /// shortened to its ends: ten characters and eight, wide enough that a
-    /// look-alike address costs a real search.
-    static func short(_ hex: String) -> String {
-        let h = normalized(hex)
-        return h.count > 20 ? "\(h.prefix(10))…\(h.suffix(8))" : h
-    }
+    /// shortened to its tail (prd §1553); the whole of it is the tray's to show.
+    static func short(_ hex: String) -> String { AddressTail.short(normalized(hex), wholeUpTo: 20) }
 
     static func normalized(_ hex: String) -> String { hex.lowercased() }
 

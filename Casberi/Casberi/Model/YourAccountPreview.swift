@@ -161,11 +161,11 @@ enum YourAccountPreview {
         let amount: String
         let route: YourAccountSwap.Route?
         /// A swap to another network: its crossing, for Details' Across
-        /// rows (prd §1553).
+        /// rows (prd §1555).
         var across: YourAccountAcross.Leg? = nil
     }
 
-    /// A swap to another network (prd §1553): "Sends 0.01 ETH to Base
+    /// A swap to another network (prd §1555): "Sends 0.01 ETH to Base
     /// through Across", what arrives and the refund said beneath.
     static func crossing(_ figure: String, _ symbol: String, to network: String, arrives: String, _ bought: String,
                          back origin: String) -> Step {
@@ -173,12 +173,9 @@ enum YourAccountPreview {
              detail: String(localized: "\(arrives) \(bought) arrives there; if no one fills it, it comes back on \(origin)"))
     }
 
-    /// An address in a line of words: "0x1a2B…cD09", its first four and
-    /// last four hex, as Details' To row shows it whole.
-    static func short(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return String(address.prefix(6)) + "…" + String(address.suffix(4))
-    }
+    /// An address in a line of words: "...cD09", its tail only (prd §1553),
+    /// as Details' To row shows it whole.
+    static func short(_ address: String) -> String { AddressTail.short(address) }
 
     static func send(_ figure: String, _ symbol: String, to who: String) -> Step {
         Step(words: String(localized: "Sends \(figure) \(symbol) to \(who)"))

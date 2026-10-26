@@ -897,6 +897,16 @@ step "Title-seam audit"
 "$ROOT/scripts/title-seam-audit.py" || fail "a title carries a separator, or a seam is split by hand — see the output above"
 print -P "%F{green}✓ title-seam audit%f"
 
+# A shortened address is its tail, `...e07a` (prd §1553): one spelling, in
+# `Shared/AddressTail.swift`. A both-ends shortener, a tail spelled by hand
+# or an old-spelling short id in data renders as an ordinary row, so only a
+# check sees it.
+step "Address-tail audit"
+"$ROOT/scripts/address-tail-audit.py" --self-test >/dev/null \
+  || fail "the address-tail audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/address-tail-audit.py" || fail "an address is shortened somewhere other than AddressTail, or at both ends — see the output above"
+print -P "%F{green}✓ address-tail audit%f"
+
 # Every source room's head composes the shared chassis (prd §745). Twenty-two of
 # twenty-six heads were drawn by hand the day their source landed — one anatomy
 # at four gap rungs, two footnote rungs and ten copies of one row — and §495
@@ -1616,6 +1626,11 @@ harness "Own-model self-test" "own-model self-test" "scripts/own-model-selftest.
 # display key finds nothing. Neither has any on-screen symptom — the screen
 # looks exactly as safe as it did before.
 harness "Address-safety self-test" "address-safety self-test" "scripts/address-safety-selftest.sh" "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
+
+# The one shortener (`Shared/AddressTail.swift`, prd §1553): `...xxxx` on every
+# family of id, whole below a caller's floor, and the six forwarders pinned to
+# it; eight mutations, each caught.
+harness "Address-tail self-test" "address-tail self-test" "scripts/address-tail-selftest.sh" "the address-tail self-test failed — run scripts/address-tail-selftest.sh"
 
 # The price surface's honesty rails (2026-08-16). Every failure it catches
 # renders as a perfectly good-looking chart made of real numbers that are about
@@ -2463,7 +2478,7 @@ harness "Dust-sweep self-test" "dust sweep self-test" "scripts/dust-sweep-selfte
 # routers, exact approvals to the router that swaps, the quote less the
 # slippage limit; the best output wins; a real multicall answer read back.
 harness "Direct-swap self-test" "direct swap self-test" "scripts/direct-swap-selftest.sh" "Move's direct swap drifted — run scripts/direct-swap-selftest.sh"
-# Move's swap to another network, through Across (prd §1553). The SpokePool
+# Move's swap to another network, through Across (prd §1555). The SpokePool
 # deposit the phone writes, byte for byte against deposits simulated on each
 # network; the account as depositor and recipient, ETH through the handler's
 # message; Across's terms bounded; the relay hash a real pool's; one row.

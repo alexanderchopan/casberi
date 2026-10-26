@@ -94,7 +94,7 @@ struct MoveDetails: View {
 
     @ViewBuilder private func swapRows(_ p: YourAccountChain.Preview) -> some View {
         if let leg = p.sold.compactMap(\.across).first {
-            // **TO ANOTHER NETWORK (prd §1553):** what arrives — exactly
+            // **TO ANOTHER NETWORK (prd §1555):** what arrives — exactly
             // what a relayer pays, so its least — Across's fee, rounded as a
             // pool's, and its time.
             let dest = Op.networks.first { $0.chainId == leg.to } ?? p.network
@@ -139,7 +139,7 @@ struct MoveDetails: View {
         switch p.checked {
         case .lands:
             return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
-        // A swap to another network (prd §1553): what a swap first pays on
+        // A swap to another network (prd §1555): what a swap first pays on
         // this network is a step, not what you get; "You get at least" says that.
         case .returnsAtLeast where p.sold.contains { $0.across != nil }:
             return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
@@ -181,7 +181,7 @@ struct MoveDetails: View {
 
     /// A name, and its value trailing over its line: the Wallet rows' pitch
     /// (§1482), the body rung.
-    /// **ONE LINE A ROW (user, 2026-10-26, prd §1553):** no subtext under
+    /// **ONE LINE A ROW (user, 2026-10-26, prd §1555):** no subtext under
     /// any row; a fact worth keeping folds into the value.
     private func row(_ label: String, _ value: String,
                      ink: Color = DS.textPrimary) -> some View {

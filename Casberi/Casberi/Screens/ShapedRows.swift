@@ -841,7 +841,7 @@ struct BandRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ThingVoice.rowLabel(for: thing,
                                                 // A swap's drawn name drops its verb for
-                                                // the glyph (prd §1553); VoiceOver keeps it.
+                                                // the glyph (prd §1555); VoiceOver keeps it.
                                                 title: eventClock.map { "\(titleText), \($0)" }
                                                     ?? titleFigure.map { "\(titleText), \($0)" }
                                                     ?? words?.spoken

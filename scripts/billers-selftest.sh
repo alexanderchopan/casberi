@@ -107,7 +107,7 @@ if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   billers, cadence floor, stopped, merge, keys")
 SWIFT
 
-build() { swiftc -Onone -o "$work/run" "$SUBS" "$AWR" "$LEDE" "$INDEX" "$LINKS" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
+build() { swiftc -Onone -o "$work/run" "Casberi/Shared/AddressTail.swift" "$SUBS" "$AWR" "$LEDE" "$INDEX" "$LINKS" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
 
 cp "$SRC" "$work/Billers.swift"
 build "$work/Billers.swift" || { cat "$work/err"; fail "the shipped source does not compile"; }

@@ -4010,7 +4010,7 @@ enum DemoSeedAll {
         out += privyApps.enumerated().map { i, app in
             row(.event, app.0, source: "Privy", ref: "privy:app:demo\(i)",
                 days: app.2, hour: 11) { t in
-                t.content = "0x8f2c…a41\(i)"
+                t.content = "...a41\(i)"
                 t.previewImageURL = art("privy-\(app.1)")
             }
         }
@@ -4494,15 +4494,15 @@ enum DemoSeedAll {
         // bare amounts (LEZ has no unit), the counterparty's short id after
         // the seam. The ref carries a DEMO account id so teardown finds it.
         let logos: [(String, [String], Double)] = [
-            ("Received 150 — from 5nQx…Kf2W", ["Received"], 0.5),
-            ("Sent 40 — to DumJ…hE51", ["Sent"], 2),
+            ("Received 150 — from ...Kf2W", ["Received"], 0.5),
+            ("Sent 40 — to ...hE51", ["Sent"], 2),
             ("Created token ANTV", ["Created"], 4),
         ]
         out += logos.enumerated().map { i, r in
             row(.link, r.0, source: "Logos", ref: "logos:lez:DEMO:\(i)",
                 days: r.2, hour: 13,
                 content: "https://explorer.testnet.lez.logos.co") { t in
-                t.authorHandle = "CbgR…Sr2r"
+                t.authorHandle = "...Sr2r"
                 t.tags = r.1
             }
         }

@@ -509,7 +509,7 @@ enum AztecStakeWire {
     }
 
     static func stoppedTitle(_ stake: Stake) -> String {
-        String(localized: "Your Aztec sequencer \(shortAddress(stake.attester)) stopped attesting")
+        String(localized: "Your Aztec sequencer \(AddressTail.short(stake.attester, wholeUpTo: 10)) stopped attesting")
     }
 
     static func voteTitle(_ p: Proposal, now: Date = .now, testnet: Bool = false) -> String {
@@ -523,10 +523,6 @@ enum AztecStakeWire {
         return open
             ? String(localized: "Aztec proposal \(p.id) is open for votes until \(day(p.closes))")
             : String(localized: "Aztec proposal \(p.id) opens for votes \(day(p.opens))")
-    }
-
-    static func shortAddress(_ a: String) -> String {
-        a.count > 10 ? "…\(a.suffix(4))" : a
     }
 
     /// Whole numbers bare, else at most two decimals, grouped.

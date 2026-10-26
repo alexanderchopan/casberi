@@ -287,7 +287,7 @@ SWIFT
 
 SOURCES=("$ACROSS" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift")
 echo "direct-swap-selftest: compiling YourAccountSwap.swift and OpenTokenList.swift AS SHIPPED…"
-xcrun swiftc -Onone -o "$TMP/run" "$SWAP" "$LIST" "${SOURCES[@]}" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$SWAP" "$LIST" "${SOURCES[@]}" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountSwap.swift does not compile alone (Foundation and the account's encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/run" || { echo "✗ the direct swap drifted — see above"; exit 1; }
 echo "  ok   assertions pass"
@@ -316,7 +316,7 @@ PY
   [[ "$file" == "$SWAP" ]] && swap="$target"
   [[ "$file" == "$LIST" ]] && list="$target"
   [[ "$file" == "$ROUNDUPS" ]] && sources=("${SOURCES[@]/$ROUNDUPS/$target}")
-  if ! xcrun swiftc -Onone -o "$TMP/mut" "$swap" "$list" "${sources[@]}" "$TMP/main.swift" 2>/dev/null; then
+  if ! xcrun swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$swap" "$list" "${sources[@]}" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if FIXTURES="$FIXTURES" "$TMP/mut" > /dev/null 2>&1; then

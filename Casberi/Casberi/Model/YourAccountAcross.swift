@@ -1,6 +1,6 @@
 import Foundation
 
-/// **A SWAP TO ANOTHER NETWORK, THROUGH ACROSS (prd §1553).** Across is a
+/// **A SWAP TO ANOTHER NETWORK, THROUGH ACROSS (prd §1555).** Across is a
 /// bridge whose relayers are anyone (permissionless), whose contracts are
 /// open, and whose refund is the contract's, not a company's promise: a
 /// deposit no relayer fills by its deadline goes back to its depositor on
@@ -440,7 +440,7 @@ enum YourAccountAcross {
         return String(localized: "about \((s + 30) / 60) minutes")
     }
 
-    // MARK: - The crossing the Wallet shows (prd §1553)
+    // MARK: - The crossing the Wallet shows (prd §1555)
 
     /// **ONE ROW PER CROSSING, IN ACTIVITY (user's design, 2026-10-26).** What
     /// this phone sent across, noted before Face ID (device-only, newest

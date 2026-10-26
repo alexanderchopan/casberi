@@ -188,8 +188,9 @@ check(AztecSignRequest.decimal(oneToken) == "1000000000000000000" && AztecSignRe
 check(AztecSignRequest.decimal(AztecPoseidon2.field("0x" + String(repeating: "f", count: 32))!) == "340282366920938463463374607431768211455",
       "the widest u128")
 check(AztecSignRequest.decimal(AztecPoseidon2.field("0x1" + String(repeating: "0", count: 32))!) == nil, "2^128 is not an amount")
-check(AztecSignRequest.short("0x07ba1234567890abcdef00000000000000000000000000000000000000008416") == "0x07ba1234…00008416",
-      "an address keeps its leading zeros and ten and eight characters")
+check(AztecSignRequest.short("0x07ba1234567890abcdef00000000000000000000000000000000000000008416") == "...8416",
+      "an address is its tail, never its ends (prd §1553)")
+check(AztecSignRequest.short("0x07ba") == "0x07ba", "a short value is shown whole")
 check(AztecSignRequest.signatureLine(r: Array(repeating: 1, count: 32), s: Array(repeating: 2, count: 32)).hasPrefix("casberi-aztec-sig:0101"),
       "the line the computer waits for")
 
@@ -197,7 +198,7 @@ if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
 echo "AztecSignRequest, compiled whole"
-if ! swiftc -Onone -o "$TMP/run" "$REQ" "$P2" "$LOG" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$REQ" "$P2" "$LOG" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the harness did not compile:"; sed -n '1,30p' "$TMP/build.log"; exit 1
 fi
 SIGN_FIX="$PWD/$FIX" "$TMP/run" || exit 1
@@ -216,7 +217,7 @@ open(p, "w").write(s.replace(f, t, 1))
 PY
   then echo "  ✗ $name — the mutation did not apply"; exit 1; fi
   if cmp -s "$REQ" "$WORK/AztecSignRequest.swift"; then echo "  ✗ $name — changed nothing"; exit 1; fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/AztecSignRequest.swift" "$P2" "$LOG" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/AztecSignRequest.swift" "$P2" "$LOG" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if SIGN_FIX="$PWD/$FIX" "$TMP/mut" > /dev/null 2>&1; then

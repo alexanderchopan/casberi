@@ -98,7 +98,7 @@ check(!P.Checked.notChecked.fails && P.Checked.fails(call: nil, token: nil, reas
 // The calls in words.
 check(P.rotate(to: 5) == P.Step(words: "Moves your account to a new key", detail: "This iPhone's key 5. The old key stops working."),
       "the key change is not said as the canvas says it")
-check(P.send("25", "USDC", to: P.short("0x1a2B8f0c4E7d9A61b3C5e2F04d8a7B93c6E19cD0")).words == "Sends 25 USDC to 0x1a2B…9cD0",
+check(P.send("25", "USDC", to: P.short("0x1a2B8f0c4E7d9A61b3C5e2F04d8a7B93c6E19cD0")).words == "Sends 25 USDC to ...9cD0",
       "a send's words changed")
 check(P.approve("100", "USDC", to: "Uniswap").words == "Lets Uniswap spend exactly 100 USDC", "an approval is not said as exact")
 check(P.swap("100", "USDC", atLeast: "0.0101", "ETH", on: "Aerodrome").words == "Swaps 100 USDC for at least 0.0101 ETH on Aerodrome",
@@ -111,7 +111,7 @@ print(bad == 0 ? "move-details self-test: \(ran) checks ok" : "move-details self
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
-xcrun swiftc -O -o "$TMP/t" "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
+xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$PREVIEW" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" \
   "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountPreview.swift does not compile with Foundation and the Safe encoders alone"; exit 1; }
 "$TMP/t" || exit 1

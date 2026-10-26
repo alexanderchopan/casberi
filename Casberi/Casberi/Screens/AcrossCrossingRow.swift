@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **A SWAP TO ANOTHER NETWORK, ONE ROW (prd §1553, the user's design).**
+/// **A SWAP TO ANOTHER NETWORK, ONE ROW (prd §1555, the user's design).**
 /// Waiting: an amber clock, "USDC arriving on Base", its line "Swapped 0.01
 /// ETH on Ethereum · now" in the attention ink and what arrives grey on the
 /// right. Filled: the swap glyph, "0.02 ETH for USDC" (the verb is the

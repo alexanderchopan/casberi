@@ -374,7 +374,7 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 - Measured on the iPhone 17 Pro simulator, iOS 27 (a busy Mac, load 10–370): see prd §1544.
 - `privacy-engine-selftest.sh` holds the wire, the network door, testnet-only and the pins.
 
-## Across: Swap to another network (prd §1553, built 2026-10-26)
+## Across: Swap to another network (prd §1555, built 2026-10-26)
 
 `-moveSwapDraft "<amount>|<SELL>|<BUY>@<Network>"` drafts a swap whose token arrives on another network (`0.01|ETH|USDC@Ethereum` from Base: swapped on Uniswap, then Across); pair with `-openMove YES -liveChains YES -moveHoldings … -moveSimulateETH <wei> [-moveDetails YES]`. `-acrossSample YES` notes three sample crossings (waiting, filled, refunded) with made-up transactions and writes their Activity rows (`acrossSample|`); open Wallet › Activity to see them.
 

@@ -1340,7 +1340,7 @@ enum YourAccountChain {
         /// The quote the page showed; the pools are asked afresh at signing.
         let quote: YourAccountSwap.Quote
         /// Where what it buys arrives, when that is another network: Across
-        /// carries it (prd §1553). Nil for a swap on `network` itself.
+        /// carries it (prd §1555). Nil for a swap on `network` itself.
         var to: Network? = nil
 
         /// To another network.
@@ -1375,7 +1375,7 @@ enum YourAccountChain {
         /// signed it alone, or no pool would buy — so its change keeps
         /// counting (prd §1545).
         var roundUpWaits = false
-        /// A swap to another network it sent (prd §1553), as the Wallet keeps it.
+        /// A swap to another network it sent (prd §1555), as the Wallet keeps it.
         var crossing: YourAccountAcross.Crossing? = nil
     }
 
@@ -1409,7 +1409,7 @@ enum YourAccountChain {
         /// A round-up's buy that no pool would make: the send goes, and the
         /// change keeps counting (prd §1545).
         var roundUpWaits = false
-        /// A swap to another network (prd §1553): the note the Wallet keeps,
+        /// A swap to another network (prd §1555): the note the Wallet keeps,
         /// and whether ETH was proven to arrive as ETH (nil: not asked, or
         /// the node would not simulate).
         var crossing: YourAccountAcross.Crossing? = nil
@@ -1466,7 +1466,7 @@ enum YourAccountChain {
             try require(a.simulated, on: net, swaps: a.mustCheck)
         }
         // ETH sent to another network must be proven to arrive as ETH: the
-        // handler's message run on the receiving network (prd §1553).
+        // handler's message run on the receiving network (prd §1555).
         if let crossing = a.crossing, crossing.contract == nil, a.arrives != true {
             throw Failure(message: String(localized: "Could not check that ETH arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
         }
@@ -1550,7 +1550,7 @@ enum YourAccountChain {
         for item in items {
             switch item {
             case .swap(let s) where s.crosses:
-                // **TO ANOTHER NETWORK, THROUGH ACROSS (prd §1553).** Alone in
+                // **TO ANOTHER NETWORK, THROUGH ACROSS (prd §1555).** Alone in
                 // its transaction (Move keeps it so), so the Wallet can show
                 // the whole transaction as the one crossing.
                 guard items.count == 1, let dest = s.to else {
@@ -1697,11 +1697,11 @@ enum YourAccountChain {
         for call in approvalCalls {
             let contract = call.to.lowercased()
             let token = sold.first { $0.token.contract?.lowercased() == contract }?.token
-                // A dollar a swap bought first, crossing (prd §1553).
+                // A dollar a swap bought first, crossing (prd §1555).
                 ?? (contract == net.dollar.lowercased() ? YourAccountOp.dollar(on: net) : nil)
             let units = SafeCalldata.decimal(Array(call.data.suffix(32)))
             // The spender is the router, named by its exchange, or Across's
-            // SpokePool (prd §1553).
+            // SpokePool (prd §1555).
             let spenderAddress = SafeABI.hex(Array(call.data[16..<36]))
             let spender = YourAccountSwap.exchange(ofRouter: spenderAddress)
                 ?? (YourAccountAcross.isSpoke(spenderAddress) ? "Across" : YourAccount.short(spenderAddress))

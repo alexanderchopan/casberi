@@ -216,7 +216,7 @@ enum PrivyHomeFeed {
             seen.insert(id)
             let name = string(record["name"])?.trimmingCharacters(in: .whitespacesAndNewlines)
             out.append(App(id: id,
-                           name: (name?.isEmpty == false ? name : nil) ?? shortAddress(wallets[0].address),
+                           name: (name?.isEmpty == false ? name : nil) ?? AddressTail.short(wallets[0].address),
                            logoURL: string(record["logo_url"]),
                            origin: webOrigin(record["custom_origin"]),
                            createdAt: date(record["created_at"]),
@@ -322,11 +322,6 @@ enum PrivyHomeFeed {
             }
         }
         return out
-    }
-
-    static func shortAddress(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return "…\(address.suffix(4))"
     }
 
     static func ref(_ app: App) -> String { refPrefix + app.id }
@@ -451,7 +446,7 @@ enum PrivyHomeFeed {
     /// The row's line: the wallet, short. Two wallets say so.
     static func line(_ app: App) -> String {
         guard let first = app.wallets.first else { return "" }
-        let short = shortAddress(first.address)
+        let short = AddressTail.short(first.address)
         return app.wallets.count > 1 ? "\(short) +\(app.wallets.count - 1)" : short
     }
 
