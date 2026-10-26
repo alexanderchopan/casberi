@@ -43,6 +43,13 @@ final class AddressNames {
     struct Record: Codable, Equatable {
         var names: [Entry]
         var askedAt: Date
+        /// The picture the address set with its name (ENS first, else a
+        /// linked name's), a plain http(s) URL (prd §1552). Asked only for an
+        /// address that has a name; nil is no picture.
+        var avatar: String? = nil
+        /// When the picture was asked; nil on a record kept before §1552,
+        /// which a pass asks again if it has a name.
+        var avatarAskedAt: Date? = nil
     }
 
     struct Entry: Codable, Equatable, Hashable {
@@ -108,8 +115,18 @@ final class AddressNames {
         names(for: address)?.first?.name
     }
 
+    /// The picture this address set with its name, when one was found — what
+    /// `WalletFace` draws for a counterparty you do not watch (prd §1552).
+    /// Display only, like `rowName`: nothing here asks.
+    func avatar(for address: String) -> String? {
+        records[Self.key(for: address)]?.avatar
+    }
+
+    /// Worth asking again: past `freshness`, or a named address kept before
+    /// pictures were (§1552), whose picture was never asked.
     private func isStale(_ record: Record) -> Bool {
         Date.now.timeIntervalSince(record.askedAt) > Self.freshness
+            || (record.avatarAskedAt == nil && !record.names.isEmpty)
     }
 
     /// Asks for one address unless it was asked recently. Safe to call from
@@ -123,8 +140,13 @@ final class AddressNames {
         asking.insert(key)
         defer { asking.remove(key) }
         let found = await NameResolve.primaryNames(for: address)
+        // The picture rides the name (§1552): asked only when a name was
+        // found, and the name's own read (web3.bio, cached for the launch)
+        // already holds it, so most cost no request of their own.
+        var avatar: String?
+        if !found.isEmpty, ENS.isHexAddress(address) { avatar = await ENS.avatar(for: address) }
         records[key] = Record(names: found.map { Entry(label: $0.label, name: $0.name) },
-                              askedAt: .now)
+                              askedAt: .now, avatar: avatar, avatarAskedAt: .now)
         persist()
     }
 

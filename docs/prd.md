@@ -68924,3 +68924,13 @@ Mock: the design canvas "Private money with 0xBow".
 4. **Not changed.** Which rows draw a wallet face (a Wallet row, two or more wallets watched), and that pictures resolve for watched wallets only: a counterparty you do not watch has no face here.
 5. **Mac half (§1402).** The same rows.
 6. **Not measured.** Written with no Xcode: not compiled, not seen.
+
+## §1552 — A Wallet row leads with who you dealt with, when they have a face (amends §1551 item 4; user, 2026-10-26: "yes, show the counterparty's avatar too") — WRITTEN, NOT YET COMPILED
+
+1. **The lead.** A Wallet row leads with its counterparty when the counterparty is your own account (`YouFace`) or set a picture with its name; the line still names the wallet the row is in. A counterparty with no picture leaves the lead to §1551's wallet face, so a stranger's tinted mark never displaces yours. A protocol's mark still leads its own rows (`brandMark`).
+2. **Where the picture comes from.** `AddressNames` already asks this month's counterparties for their names on a foreground (`ContactIndexSources.recentCounterparties`, twelve a pass, a fortnight's freshness, misses kept). Its record now keeps the picture beside the name (`Record.avatar`): asked only for an address that has a name, through `ENS.avatar`, whose first step reads the web3.bio answer the name already fetched this launch; ensideas is asked only where web3.bio held no picture. A record kept before this ruling with a name is asked once more for its picture.
+3. **Rows ask nothing.** `WalletFace.avatar(for:)` reads `WalletStore`'s watched pictures, then `AddressNames`; `WalletFace.hasPicture` decides the lead. Both are in-memory reads (AddressNames' rule: a read is bought by a foreground or a card, never a row).
+4. **Everywhere a face is drawn.** Every `WalletFace` of a counterparty — a transfer's stage, the sheet — wears the picture too.
+5. **Over Tor** like every wallet read; the demo asks nothing (its counterparties' faces are `WalletStore.seedDemoAvatars`', which now lead their rows).
+6. **Mac half (§1402).** The same rows.
+7. **Not measured.** Written with no Xcode: not compiled, not seen.
