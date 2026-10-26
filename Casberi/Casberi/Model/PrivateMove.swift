@@ -1,0 +1,148 @@
+import Foundation
+import Observation
+
+/// **MOVE TO PRIVATE, THE ACT (prd §1547).** One tap: the private account
+/// opens (its seed behind Face ID), the keystore is registered the first time
+/// (two transactions, so the notes can be spent later), the deposit is
+/// proved on the phone and sent, and the note is kept as waiting for
+/// approval. Sepolia only; in DEBUG builds only, because the sender is the
+/// DEBUG testnet sender (`PrivacyTestnetSender`) until your account sends.
+@MainActor
+@Observable
+final class PrivateMove {
+
+    enum Stage: Equatable {
+        case reading
+        case ready
+        /// The sender holds too little Sepolia ETH; the address to fund.
+        case needsFunds(String)
+        case opening
+        case registering(Int)
+        case proving
+        case sending
+        case done(String)
+        case failed(String)
+    }
+
+    var stage: Stage = .reading
+    /// The sender's Sepolia ETH and the gas a first move keeps back, base units.
+    private(set) var balance: String?
+    private(set) var reserve: String?
+    private(set) var sender: String?
+    var amount = "0.001"
+
+    /// Whether this build can move to private at all.
+    static var available: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
+    var choices: [String] {
+        guard let balance, let reserve else { return [] }
+        return PrivateMoney.choices(balance: balance, reserve: reserve)
+    }
+
+    var busy: Bool {
+        switch stage {
+        case .opening, .registering, .proving, .sending, .reading: true
+        default: false
+        }
+    }
+
+    func read() async {
+        #if DEBUG
+        stage = .reading
+        do {
+            sender = try PrivacyTestnetSender.ensure()
+            let have = try await PrivacyTestnetSender.balance()
+            let price = try await PrivacyTestnetSender.gasPrice()
+            balance = have
+            reserve = PrivateMoney.reserve(gasPrice: price)
+            let options = choices
+            if options.isEmpty {
+                stage = .needsFunds(sender ?? "")
+            } else {
+                if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+                stage = .ready
+            }
+            NSLog("privateMove| read | sender %@ | balance %@ | reserve %@ | %d choices",
+                  sender ?? "-", have, reserve ?? "-", options.count)
+        } catch {
+            stage = .failed(Self.words(error))
+        }
+        #else
+        stage = .failed(String(localized: "Not in this build"))
+        #endif
+    }
+
+    func run() async {
+        #if DEBUG
+        guard let value = PrivateMoney.baseUnits(amount, decimals: 18), let hex = PrivateMoney.hex(value) else { return }
+        let engine = PrivacyEngine.shared
+        let started = Date()
+        do {
+            let owner = try PrivacyTestnetSender.ensure()
+            stage = .opening
+            if !PrivacyPoolsKey.exists() { try PrivacyPoolsKey.create() }
+            var seed = try PrivacyPoolsKey.seed(reason: String(localized: "Move to private"))
+            defer { seed.resetBytes(in: 0..<seed.count) }
+            // Opened every time: the account's owner is the sender, and a
+            // page a probe opened may name another.
+            _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)
+            seed.resetBytes(in: 0..<seed.count)
+            if try await !engine.isRegistered().registered {
+                let registration = try await engine.prepareRegister()
+                for (i, tx) in registration.txs.enumerated() {
+                    stage = .registering(i + 1)
+                    let hash = try await PrivacyTestnetSender.send(tx)
+                    NSLog("privateMove| register %d | %@", i + 1, hash)
+                }
+            }
+            stage = .proving
+            let deposit = try await engine.prepareDeposit(tokenId: PrivateMove.eth, value: hex)
+            NSLog("privateMove| proved | %@ | %d ms", deposit.proofs.map { "\($0.circuit ?? "?") \($0.ms) ms" }.joined(separator: ", "), deposit.ms)
+            stage = .sending
+            for approval in deposit.approvals { _ = try await PrivacyTestnetSender.send(approval) }
+            let hash = try await PrivacyTestnetSender.send(deposit.tx)
+            PrivateMoneyStore.shared.add(.init(commitment: deposit.commitment, label: deposit.label, labelHash: deposit.labelHash,
+                                               symbol: "ETH", amount: value, decimals: 18, chainId: PrivacyNetwork.sepolia.chainId,
+                                               tx: hash, at: Date(), status: .waiting))
+            stage = .done(hash)
+            NSLog("privateMove| deposited | %@ | %@ ETH | label hash %@ | %d s",
+                  hash, amount, deposit.labelHash, Int(Date().timeIntervalSince(started)))
+            await PrivateMoneyStore.shared.refresh(force: true)
+        } catch {
+            stage = .failed(Self.words(error))
+            NSLog("privateMove| failed | %@", String(describing: error))
+        }
+        #endif
+    }
+
+    static let eth = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+
+    /// A failure in the sentence's words: short, and what to do where there is something.
+    static func words(_ error: Error) -> String {
+        if let failure = error as? PrivacyEngineWire.Failure {
+            NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
+            return String(localized: "The private account could not be opened")
+        }
+        #if DEBUG
+        if let failure = error as? PrivacyTestnetSender.Failure {
+            switch failure {
+            case .reverted: return String(localized: "Sepolia refused the move")
+            case .timedOut: return String(localized: "Sepolia has not confirmed it yet")
+            case .refused(let why):
+                NSLog("privateMove| refused | %@", why)
+                return why.localizedCaseInsensitiveContains("insufficient")
+                    ? String(localized: "Not enough Sepolia ETH") : String(localized: "Sepolia refused the move")
+            default: return String(localized: "Sepolia could not be reached")
+            }
+        }
+        #endif
+        if error is PrivacyPoolsKey.Failure { return String(localized: "Face ID did not open the private account") }
+        return String(localized: "Sepolia could not be reached")
+    }
+}

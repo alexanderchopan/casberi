@@ -921,6 +921,7 @@ struct FeedScreen: View {
     @MainActor static var socialProbed = false
     @MainActor static var sectionAddProbed = false
     @MainActor static var walletFollowProbed = false
+    @MainActor static var movePrivateProbed = false
     @MainActor static var subscriptionsProbed = false
     @MainActor static var mailSubscriptionProbed = false
     @MainActor static var followingProbed = false

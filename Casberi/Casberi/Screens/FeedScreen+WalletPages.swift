@@ -317,6 +317,8 @@ extension FeedScreen {
                 walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)),
                                    mask: mask, act: { feedSheet = .walletTokens })
             }
+            // What is private, under the tokens (prd §1547).
+            walletPrivateRows
             if positions > 0 {
                 walletDoor(.positions)
                 ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in
