@@ -1,0 +1,3 @@
+node_modules/
+# Circuit artifacts fetched by `node bench-node.mjs` for the Mac comparison.
+.circuits/

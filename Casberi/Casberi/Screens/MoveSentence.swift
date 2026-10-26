@@ -731,22 +731,21 @@ struct MoveSentence: View {
     /// is what comes back, so it is a word, not a choice; the network is the
     /// sentence's own blank. What is swept and what stays is listed under it.
     @ViewBuilder private var sweepClauses: some View {
+        if sweepsNothing {
+            // An empty sweep says so, never "Nothing under $1 for ETH",
+            // which reads as an order (user: "as in leave nothing?"); the
+            // line under it keeps the $1 menu.
+            MoveClause { word(String(localized: "Nothing to sweep"), ink: DS.textPrimary) }
+            MoveClause(glue: String(localized: "on")) { networkWord }
+        } else {
+            sweepAmountClauses
+        }
+    }
+
+    @ViewBuilder private var sweepAmountClauses: some View {
         MoveClause { word(sweepCountWord, ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "under")) {
-            Menu {
-                Picker(selection: Binding(get: { sweepUnder }, set: { under in
-                    withAnimation(DS.Motion.standard) { sweepUnder = under }
-                    DustSweep.under = under
-                    DSHaptic.selection()
-                })) {
-                    ForEach(DustSweep.choices, id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
-                } label: { EmptyView() }
-                .pickerStyle(.inline)
-            } label: {
-                MoveWord("$\(sweepUnder)", ink: DS.pickInk).contentTransition(.opacity)
-            }
-            .disabled(stage != nil)
-            .accessibilityLabel(Text("Sweep what is under $\(sweepUnder)"))
+            sweepUnderMenu { MoveWord("$\(sweepUnder)", ink: DS.pickInk) }
         }
         MoveClause(glue: String(localized: "for")) {
             let back = word(sweepBackWord, ink: DS.textPrimary)
@@ -760,11 +759,35 @@ struct MoveSentence: View {
         MoveClause(glue: String(localized: "on")) { networkWord }
     }
 
+    /// The line's menu, $1 or $5: the sentence's word and, on an empty
+    /// sweep, the word in the line under it.
+    private func sweepUnderMenu<Label: View>(@ViewBuilder label: () -> Label) -> some View {
+        Menu {
+            Picker(selection: Binding(get: { sweepUnder }, set: { under in
+                withAnimation(DS.Motion.standard) { sweepUnder = under }
+                DustSweep.under = under
+                DSHaptic.selection()
+            })) {
+                ForEach(DustSweep.choices, id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
+            } label: { EmptyView() }
+            .pickerStyle(.inline)
+        } label: {
+            label().contentTransition(.opacity)
+        }
+        .disabled(stage != nil)
+        .accessibilityLabel(Text("Sweep what is under $\(sweepUnder)"))
+    }
+
+    /// The network is read and nothing on it would be swept.
+    private var sweepsNothing: Bool {
+        guard let plan = sweepPlan else { return false }
+        return (sweepPricing ? plan.sweeps.count : sweepItems.count) == 0
+    }
+
     /// "Everything" until the network is read, then what is swept.
     private var sweepCountWord: String {
         guard let plan = sweepPlan else { return String(localized: "Everything") }
         let swept = sweepPricing ? plan.sweeps.count : sweepItems.count
-        if swept == 0 { return String(localized: "Nothing") }
         if swept == 1, let only = plan.sweeps.first { return only.symbol }
         return String(localized: "\(swept) tokens")
     }
@@ -801,8 +824,10 @@ struct MoveSentence: View {
         } else if let plan = sweepPlan {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 if plan.rows.isEmpty {
-                    Text("Nothing under $\(sweepUnder) on \(network.name)")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    sweepUnderMenu {
+                        Text("No tokens under \(Text(verbatim: "$\(sweepUnder)").foregroundStyle(DS.pickInk))")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(plan.rows) { row in sweepRow(row) }
@@ -3782,11 +3807,14 @@ struct MoveSentence: View {
             verb = .buy
             self.buyDraft(buyDraft)
         } else if let sweep = d.string(forKey: "moveSweepDraft"), !sweep.isEmpty {
-            // `-moveSweepDraft YES|1|5` (prd §1537): Sweep on Base, at that
-            // line; logs `moveSweep|` once the pools have priced it.
+            // `-moveSweepDraft YES|1|5[@<network>]` (prd §1537): Sweep on
+            // Base, or the named network, at that line; logs `moveSweep|`
+            // once the pools have priced it.
             verb = .sweep
-            if let under = Int(sweep), DustSweep.choices.contains(under) { sweepUnder = under }
-            switchNetwork(Op.base)
+            let parts = sweep.split(separator: "@", maxSplits: 1).map(String.init)
+            if let under = Int(parts[0]), DustSweep.choices.contains(under) { sweepUnder = under }
+            let named = parts.count > 1 ? Op.networks.first { $0.name.lowercased() == parts[1].lowercased() } : nil
+            switchNetwork(named ?? Op.base)
             open = nil
             NSLog("moveSweepDraft: under=%d", sweepUnder)
         }

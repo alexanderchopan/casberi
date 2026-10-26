@@ -1,0 +1,21 @@
+{
+  "name": "casberi-privacy-pools-engine",
+  "private": true,
+  "version": "0.1.0",
+  "description": "0xBow's Privacy Pools v2 TypeScript SDK (MIT), bundled into one script for the app's hidden web view (prd §1540). Testnet (Sepolia) only for now.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check"
+  },
+  "dependencies": {
+    "@0xbow/privacy-pools-v2-sdk": "1.0.2",
+    "@zk-kit/lean-imt": "2.2.4",
+    "circomlibjs": "0.1.7",
+    "snarkjs": "0.7.5",
+    "viem": "2.45.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

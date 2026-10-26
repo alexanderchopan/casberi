@@ -4124,6 +4124,10 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-privacyEngineProbe load|keys|deposit|discover|bench|spend|all|forget`
+        // — the Privacy Pools engine on Sepolia (prd §1540), headless; logs
+        // `privacyEngine|` lines (`Shell/PrivacyEngineProbe.swift`).
+        Hook(key: "privacyEngineProbe") { raw, _ in PrivacyEngineProbe.run(raw) },
         // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
         // connect time, then Relay's `/chains` over Tor and directly: Relay
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof
