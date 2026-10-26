@@ -68879,3 +68879,10 @@ Mock: the design canvas "Private money with 0xBow".
 9. **Not measured.** Written in a cloud session with no Xcode and no device: `TorClient.swift` is not compiled, `verify.sh` was not run, and the harness's Swift half runs only on CI's Mac. The phone's connect time (§1495 item 8), the time from a renew or a reset to a first answer, and whether a second `tor_run_main` holds on iOS are unmeasured. TorClient logs each (`tor: run N connected in …`, `lost its circuits`, `has a circuit again after …`, `back after …`, `reset (…) in …`, `exited`, `ended`; docs/hooks/wallet.md) for the first phone run to record here. The thresholds (5s, 20s, 120s, 30s, three runs) are chosen, not measured.
 
 **Mac half (§1402).** The Mac links no Tor (§1495 item 9): `start` publishes `unavailable`, and no watch, observer or path monitor runs. The row reads "Not on Mac" as before.
+
+## §1547 — Move's verbs read A–Z; Move opens on Swap (amends §1438, §1537) (user, 2026-10-26: "can we alphabetize those titles that are on there, but then make sure that swap is the default whenever you open move") — WRITTEN, NOT YET COMPILED
+
+1. **A–Z.** The verb line sorts by each verb's localized title (`localizedStandardCompare`), so English reads Buy · Receive · Send · Swap · Sweep, and another language reads its own A–Z. Buy still drops out where it is not offered.
+2. **Swap is the default.** Move is a tray, built fresh on every open, and `MoveSentence` opens on `.swap` (unchanged). Two openings keep Receive on purpose: the sentence right after an account is made or brought here (§1442j), and the keys walk's Receive ending (§1501).
+3. **Fit.** `a5f37e5` narrowed the line to an 8pt gap before it scrolls, so all five fit on an iPhone 17 Pro; the order does not change the width.
+4. **Not measured.** Written in a cloud session with no Xcode; not compiled, `verify.sh` not run.

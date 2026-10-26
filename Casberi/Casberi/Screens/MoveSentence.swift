@@ -1426,7 +1426,10 @@ struct MoveSentence: View {
 
     private func verbRow(spacing: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
-            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }, id: \.self) { v in
+            // A–Z in the reader's language (prd §1547); Swap stays the
+            // verb Move opens on, wherever it stands in the line.
+            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
+                .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil else { return }
                     withAnimation(DS.Motion.standard) {
