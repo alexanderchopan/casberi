@@ -189,7 +189,7 @@ check(AztecSignRequest.decimal(AztecPoseidon2.field("0x" + String(repeating: "f"
       "the widest u128")
 check(AztecSignRequest.decimal(AztecPoseidon2.field("0x1" + String(repeating: "0", count: 32))!) == nil, "2^128 is not an amount")
 check(AztecSignRequest.short("0x07ba1234567890abcdef00000000000000000000000000000000000000008416") == "...8416",
-      "an address is its tail, never its ends (prd §1551)")
+      "an address is its tail, never its ends (prd §1553)")
 check(AztecSignRequest.short("0x07ba") == "0x07ba", "a short value is shown whole")
 check(AztecSignRequest.signatureLine(r: Array(repeating: 1, count: 32), s: Array(repeating: 2, count: 32)).hasPrefix("casberi-aztec-sig:0101"),
       "the line the computer waits for")

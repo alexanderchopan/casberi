@@ -162,7 +162,7 @@ enum YourAccountPreview {
         let route: YourAccountSwap.Route?
     }
 
-    /// An address in a line of words: "...cD09", its tail only (prd §1551),
+    /// An address in a line of words: "...cD09", its tail only (prd §1553),
     /// as Details' To row shows it whole.
     static func short(_ address: String) -> String { AddressTail.short(address) }
 

@@ -278,7 +278,7 @@ enum AztecSignRequest {
     }
 
     /// An address as written (leading zeros kept — they are part of it),
-    /// shortened to its tail (prd §1551); the whole of it is the tray's to show.
+    /// shortened to its tail (prd §1553); the whole of it is the tray's to show.
     static func short(_ hex: String) -> String { AddressTail.short(normalized(hex), wholeUpTo: 20) }
 
     static func normalized(_ hex: String) -> String { hex.lowercased() }

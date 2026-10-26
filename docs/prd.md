@@ -68916,7 +68916,26 @@ Mock: the design canvas "Private money with 0xBow".
 5. **Mac half (§1402).** The same rows.
 6. **Not measured.** Written with no Xcode: not compiled, the harness's Swift half not run.
 
-## §1551 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends (amends §495's `…xxxx`; keeps §483's bare four for a face's glyph) (user rule, 2026-10-26: every shortened address reads "...xxxx"; "0x4b19…e07a" is banned) — BUILT, seen on the simulator
+## §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487; user, 2026-10-26: "how can we make sure also an activity we are using the ENS or the Casberi avatar when appropriate? We shouldn't really need to be using blockies that much") — WRITTEN, NOT YET COMPILED
+
+1. **Why.** A Wallet row's lead (when more than one wallet is watched, so the lead says which) drew `WalletBlockie`, a 5×5 grid seeded off the address, straight from `ShapedRows`. It never asked `WalletFace`, which every other place uses, so the row missed the face you picked for your own account (§1487) and every ENS or World App picture `WalletStore.loadAvatars` resolves.
+2. **The lead is `WalletFace`, circular.** Your account wears `YouFace`; a watched wallet with a picture wears it, crossfading in when it resolves; the rest wear `WalletFace`'s tinted mark — the one face that wallet has everywhere.
+3. **Deleted.** `WalletBlockie` and the `Leader.blockie` case (the lead is `Leader.wallet`); nothing else drew it.
+4. **Not changed.** Which rows draw a wallet face (a Wallet row, two or more wallets watched), and that pictures resolve for watched wallets only: a counterparty you do not watch has no face here.
+5. **Mac half (§1402).** The same rows.
+6. **Not measured.** Written with no Xcode: not compiled, not seen.
+
+## §1552 — A Wallet row leads with who you dealt with, when they have a face (amends §1551 item 4; user, 2026-10-26: "yes, show the counterparty's avatar too") — WRITTEN, NOT YET COMPILED
+
+1. **The lead.** A Wallet row leads with its counterparty when the counterparty is your own account (`YouFace`) or set a picture with its name; the line still names the wallet the row is in. A counterparty with no picture leaves the lead to §1551's wallet face, so a stranger's tinted mark never displaces yours. A protocol's mark still leads its own rows (`brandMark`).
+2. **Where the picture comes from.** `AddressNames` already asks this month's counterparties for their names on a foreground (`ContactIndexSources.recentCounterparties`, twelve a pass, a fortnight's freshness, misses kept). Its record now keeps the picture beside the name (`Record.avatar`): asked only for an address that has a name, through `ENS.avatar`, whose first step reads the web3.bio answer the name already fetched this launch; ensideas is asked only where web3.bio held no picture. A record kept before this ruling with a name is asked once more for its picture.
+3. **Rows ask nothing.** `WalletFace.avatar(for:)` reads `WalletStore`'s watched pictures, then `AddressNames`; `WalletFace.hasPicture` decides the lead. Both are in-memory reads (AddressNames' rule: a read is bought by a foreground or a card, never a row).
+4. **Everywhere a face is drawn.** Every `WalletFace` of a counterparty — a transfer's stage, the sheet — wears the picture too.
+5. **Over Tor** like every wallet read; the demo asks nothing (its counterparties' faces are `WalletStore.seedDemoAvatars`', which now lead their rows).
+6. **Mac half (§1402).** The same rows.
+7. **Not measured.** Written with no Xcode: not compiled, not seen.
+
+## §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends (amends §495's `…xxxx`; keeps §483's bare four for a face's glyph) (user rule, 2026-10-26: every shortened address reads "...xxxx"; "0x4b19…e07a" is banned) — BUILT, seen on the simulator
 
 1. **One shortener.** `AddressTail.short(_:wholeUpTo:)` (`Casberi/Shared/AddressTail.swift`, in every target) draws every short id: EVM, Aztec, Solana, Bitcoin, Logos, Safes and contracts in trays and Details, the book, Move's sentence and preview, notifications and widgets through their payloads. An id no longer than the caller's floor (12 by default) is shown whole. `WalletStore.shortAddress`, `LogosWire.short`, `YourAccount.short`, `YourAccountPreview.short` (was `0x1a2B…cD09`), `AztecWire.short` and `AztecSignRequest.short` (was ten and eight) forward to it; the private copies in `AztecStakeWire`, `PrivyHomeFeed`, `ZFiWire`, `WalletNFTShelf`, `ContactIndex`, `SafeRoomSource`, `MoneyReceiptSource`, `SignerRequestSheet` and `RadicleWire` (a DID's eight) are gone. A transaction hash drawn short takes the same form.
 2. **Names still win.** The fallback is all that changed: a book name, ENS, "your account" come first where the code asked for them.

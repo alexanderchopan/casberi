@@ -506,7 +506,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **Every lead stands in the rows' column (`DSRoomChassis.leadInset`) and ends at `leadGap`** → docs/hooks/design.md · prd §763 · §906
 - **The X room leads with its NEWEST NOTIFICATION, never a year grid (prd §817).** `FeedHeatmap` has no `X` entry. → docs/hooks/design.md · prd §817
 - **One explaining sentence per screen, at most, through `DSFootnote` (prd §748).** A line stays only if it says what the controls cannot; honesty, money, signing, privacy and fix-it lines are kept on purpose. `footnote-audit.py` counts per file, with reasoned allowances → prd §748
-- **A shortened address is its tail, `...e07a`, through `AddressTail.short` only (prd §1551, `address-tail-audit.py`)**
+- **A shortened address is its tail, `...e07a`, through `AddressTail.short` only (prd §1553, `address-tail-audit.py`)**
 - **Two pills, no more (prd §746): `Chip` is a choice, `DSStamp` is a fact, and a verb is a row (`DSDoorRow`, `DSCopyRow`, `RowVerb`).** `ds-template-audit.py` check C fails a capsule drawn behind content outside `Design/` → prd §746
 - **Every room head composes `DSRoomChassis.Head` (prd §745): a lead, notes, blocks, footnotes, one surface and one door.** → docs/hooks/design.md · prd §745
 - **Every chart head draws into `DSRoomChassis.figureHeight` (56pt) and caps at `headRowCap` (8, raised from 3 by §760: `LeadFit` draws as many rows as the box holds); a head with no chart is deleted and the room leads with its newest thing (prd §749, §751).** The models spell the cap literally, and `room-heads-selftest.sh` holds them to it → prd §751 · §760

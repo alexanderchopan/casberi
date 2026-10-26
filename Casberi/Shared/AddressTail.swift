@@ -1,7 +1,7 @@
 import Foundation
 
 /// A shortened address is its TAIL: `...e07a`, three ASCII dots and the last
-/// four characters (user rule, 2026-10-26, prd §1551). Never cut at both ends
+/// four characters (user rule, 2026-10-26, prd §1553). Never cut at both ends
 /// (`0x4b19…e07a` is banned), and never the `…` character.
 ///
 /// The one shortener for every id the app draws short: EVM, Aztec, Solana,

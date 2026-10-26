@@ -1230,7 +1230,7 @@ struct AddressCard: View {
         return primaryNames.first?.name
     }
 
-    /// An auto name is drawn in TODAY's spelling (`...5a20`, prd §1551),
+    /// An auto name is drawn in TODAY's spelling (`...5a20`, prd §1553),
     /// whatever spelling an older build stored.
     private var shownName: String { standingIn ?? (unnamed ? current.short : current.name) }
 

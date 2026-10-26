@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Casberi address-tail self-test — the one shortener (prd §1551, user rule
+# Casberi address-tail self-test — the one shortener (prd §1553, user rule
 # 2026-10-26: "...xxxx", three ASCII dots and the last four, never both ends):
 #
 #   Casberi/Shared/AddressTail.swift   compiled WHOLE and unmodified

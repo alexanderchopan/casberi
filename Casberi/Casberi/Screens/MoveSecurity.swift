@@ -91,7 +91,7 @@ struct MoveSecurity: View {
             row(title: String(localized: "Networks"), value: networksValue,
                 tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
                 short: networksShort,
-                verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { Task { await read() } }))
+                verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
             // Already on, never a choice (prd §1495 item 6, placed by §1496):
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),

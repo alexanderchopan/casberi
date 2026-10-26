@@ -85,7 +85,7 @@ enum YourAccount {
     }
 
     /// `...78D9`: an address is its last four or the whole of it, never cut
-    /// at both ends (prd §495, §1551; user, 2026-10-19: "last four or entire
+    /// at both ends (prd §495, §1553; user, 2026-10-19: "last four or entire
     /// address never front and end truncation").
     static func short(_ address: String) -> String { AddressTail.short(address, wholeUpTo: 4) }
 }

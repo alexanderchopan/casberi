@@ -105,7 +105,7 @@ final class WalletStore {
     /// ellipsis — NO DOUBLE TRUNCATION.** `0xd889…de…` was the real defect,
     /// an ellipsis arriving twice because two layers each truncated, and
     /// `address-safety-selftest` still counts them: exactly one, never two.
-    /// **THREE DOTS, THE TAIL ONLY** (prd §1551, user 2026-10-26): `...9a0b`,
+    /// **THREE DOTS, THE TAIL ONLY** (prd §1553, user 2026-10-26): `...9a0b`,
     /// spelled by `AddressTail` — the one shortener every surface shares.
     static func shortAddress(_ address: String) -> String {
         AddressTail.short(address)

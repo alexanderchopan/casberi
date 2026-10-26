@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A SHORTENED ADDRESS IS ITS TAIL: `...e07a` (prd §1551, user 2026-10-26).
+"""A SHORTENED ADDRESS IS ITS TAIL: `...e07a` (prd §1553, user 2026-10-26).
 
 Three ASCII dots and the last four characters, spelled in ONE place,
 `Casberi/Shared/AddressTail.swift`. Never cut at both ends (`0x4b19…e07a`),

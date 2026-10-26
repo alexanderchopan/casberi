@@ -897,7 +897,7 @@ step "Title-seam audit"
 "$ROOT/scripts/title-seam-audit.py" || fail "a title carries a separator, or a seam is split by hand — see the output above"
 print -P "%F{green}✓ title-seam audit%f"
 
-# A shortened address is its tail, `...e07a` (prd §1551): one spelling, in
+# A shortened address is its tail, `...e07a` (prd §1553): one spelling, in
 # `Shared/AddressTail.swift`. A both-ends shortener, a tail spelled by hand
 # or an old-spelling short id in data renders as an ordinary row, so only a
 # check sees it.
@@ -1627,7 +1627,7 @@ harness "Own-model self-test" "own-model self-test" "scripts/own-model-selftest.
 # looks exactly as safe as it did before.
 harness "Address-safety self-test" "address-safety self-test" "scripts/address-safety-selftest.sh" "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
 
-# The one shortener (`Shared/AddressTail.swift`, prd §1551): `...xxxx` on every
+# The one shortener (`Shared/AddressTail.swift`, prd §1553): `...xxxx` on every
 # family of id, whole below a caller's floor, and the six forwarders pinned to
 # it; eight mutations, each caught.
 harness "Address-tail self-test" "address-tail self-test" "scripts/address-tail-selftest.sh" "the address-tail self-test failed — run scripts/address-tail-selftest.sh"

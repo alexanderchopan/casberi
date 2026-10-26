@@ -476,7 +476,7 @@ final class AddressBook {
     func name(for address: String) -> String? {
         guard let entry = entries[Self.key(for: address)], !entry.name.isEmpty else { return nil }
         // A placeholder stored by an older build (`…44b1`, `0x9a2E…44b1`) is
-        // drawn in today's spelling, never its own (prd §1551).
+        // drawn in today's spelling, never its own (prd §1553).
         return WalletStore.isAutoName(entry.name, for: entry.address) ? entry.short : entry.name
     }
 

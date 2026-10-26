@@ -1553,7 +1553,7 @@ struct MoveSentence: View {
     private var toWord: some View {
         let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
             ?? (to.isEmpty ? String(localized: "address")
-                : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1551)
+                : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
         return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.

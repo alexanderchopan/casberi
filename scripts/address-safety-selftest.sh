@@ -45,7 +45,7 @@ grep -q 'guard (32...44).contains(t.count) else { return false }' \
 TMP=$(mktemp /tmp/address-safety-selftest.XXXXXX).swift
 trap 'rm -f "$TMP"' EXIT
 
-# The shipped shortener itself (prd §1551), then the shims mirroring the
+# The shipped shortener itself (prd §1553), then the shims mirroring the
 # one-liners the guards above pin.
 cat Casberi/Shared/AddressTail.swift > "$TMP"
 cat >> "$TMP" <<'SWIFT'
@@ -183,7 +183,7 @@ expect("short strings don't collide", look("0xabc", "0xdef"), "no")
 // four characters to be a fragment OF, so the ellipsis says "something was
 // cut" where nothing was cut from, and costs a sixth of a 66pt slot to do it.
 //
-// 2026-10-26 (prd §1551): the mark is THREE ASCII DOTS, `...eaed`, and the
+// 2026-10-26 (prd §1553): the mark is THREE ASCII DOTS, `...eaed`, and the
 // `…` character is gone from every short form.
 //
 // Asserted on the SHAPE rather than on a fixture string, so it cannot be
