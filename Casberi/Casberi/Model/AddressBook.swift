@@ -474,8 +474,10 @@ final class AddressBook {
     /// resolver consults first — their word beats ENS, a known-contract table,
     /// and every other source, because it's their record.
     func name(for address: String) -> String? {
-        let name = entries[Self.key(for: address)]?.name
-        return (name?.isEmpty ?? true) ? nil : name
+        guard let entry = entries[Self.key(for: address)], !entry.name.isEmpty else { return nil }
+        // A placeholder stored by an older build (`…44b1`, `0x9a2E…44b1`) is
+        // drawn in today's spelling, never its own (prd §1551).
+        return WalletStore.isAutoName(entry.name, for: entry.address) ? entry.short : entry.name
     }
 
     /// Filtered for the directory's search field — matches the name, any

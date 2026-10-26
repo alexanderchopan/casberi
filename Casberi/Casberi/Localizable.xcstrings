@@ -51255,30 +51255,30 @@
         }
       }
     },
-    "Approve in the wallet holding …%@." : {
+    "Approve in the wallet holding %@." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Aprueba en la billetera que tiene …%@."
+            "value" : "Aprueba en la billetera que tiene %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "…%@ を持つウォレットで承認してください。"
+            "value" : "%@ を持つウォレットで承認してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "…%@이(가) 있는 지갑에서 승인하세요."
+            "value" : "%@이(가) 있는 지갑에서 승인하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "请在持有 …%@ 的钱包中批准。"
+            "value" : "请在持有 %@ 的钱包中批准。"
           }
         }
       }
@@ -150140,30 +150140,30 @@
         }
       }
     },
-    "Scan with …%@ in its wallet, then approve." : {
+    "Scan with %@ in its wallet, then approve." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Escanea con …%@ en su cartera y aprueba."
+            "value" : "Escanea con %@ en su cartera y aprueba."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "…%@ のウォレットでスキャンして承認してください。"
+            "value" : "%@ のウォレットでスキャンして承認してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "…%@의 지갑으로 스캔한 다음 승인하세요."
+            "value" : "%@의 지갑으로 스캔한 다음 승인하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "用 …%@ 的钱包扫描，然后批准。"
+            "value" : "用 %@ 的钱包扫描，然后批准。"
           }
         }
       }

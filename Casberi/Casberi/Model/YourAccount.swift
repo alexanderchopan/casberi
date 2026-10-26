@@ -84,12 +84,8 @@ enum YourAccount {
         return EIP55.checksum("0x" + Keccak256.hexString(Array(digest.suffix(20))))
     }
 
-    /// `…78D9`: an address is its last four or the whole of it, never cut
-    /// at both ends (prd §495, `WalletStore.shortAddress`'s form; user,
-    /// 2026-10-19: "last four or entire address never front and end
-    /// truncation").
-    static func short(_ address: String) -> String {
-        guard address.count > 4 else { return address }
-        return "…" + String(address.suffix(4))
-    }
+    /// `...78D9`: an address is its last four or the whole of it, never cut
+    /// at both ends (prd §495, §1551; user, 2026-10-19: "last four or entire
+    /// address never front and end truncation").
+    static func short(_ address: String) -> String { AddressTail.short(address, wholeUpTo: 4) }
 }

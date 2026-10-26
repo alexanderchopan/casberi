@@ -287,7 +287,7 @@ do {
     let anonymousDID = "did:key:z6MkkPvBfjP4bQmco5Dm7UGsX2ruDBieEHi8n9DVJWX5sTEz"
     check("a Party built with an empty alias shows its DID tail, never a stand-in",
           RadicleWire.Party(did: anonymousDID, alias: "").display
-            == String(anonymousDID.suffix(8)))
+            == "..." + String(anonymousDID.suffix(4)))
 }
 
 // ── the sweep's decision ───────────────────────────────────────────────────
@@ -494,7 +494,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.8x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$SEAM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$SEAM" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the harness did not compile against the shipped RadicleWire:"
   sed -n '1,40p' "$TMP/build.log"
   exit 1
@@ -523,7 +523,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/RadicleWire.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/RadicleWire.swift" "$SEAM" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/RadicleWire.swift" "$SEAM" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

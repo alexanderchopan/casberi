@@ -179,7 +179,7 @@ struct AddressBookRow: View {
     /// "Mum" is never quietly replaced by `0xf00.eth` however true that is,
     /// and nothing here writes to the book at all.
     private var shownName: String {
-        standingIn ?? entry.name
+        standingIn ?? (WalletStore.isAutoName(entry.name, for: entry.address) ? entry.short : entry.name)
     }
 
     /// What the ADDRESS calls itself (prd §597) — its ENS/Wei/Gwei primary
@@ -759,7 +759,7 @@ struct AddressCard: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(current.name)
+                    Text(shownName)
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
@@ -1230,7 +1230,9 @@ struct AddressCard: View {
         return primaryNames.first?.name
     }
 
-    private var shownName: String { standingIn ?? current.name }
+    /// An auto name is drawn in TODAY's spelling (`...5a20`, prd §1551),
+    /// whatever spelling an older build stored.
+    private var shownName: String { standingIn ?? (unnamed ? current.short : current.name) }
 
     /// Whether this card may be renamed at all (prd §498).
     ///

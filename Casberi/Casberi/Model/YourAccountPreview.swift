@@ -162,12 +162,9 @@ enum YourAccountPreview {
         let route: YourAccountSwap.Route?
     }
 
-    /// An address in a line of words: "0x1a2B…cD09", its first four and
-    /// last four hex, as Details' To row shows it whole.
-    static func short(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return String(address.prefix(6)) + "…" + String(address.suffix(4))
-    }
+    /// An address in a line of words: "...cD09", its tail only (prd §1551),
+    /// as Details' To row shows it whole.
+    static func short(_ address: String) -> String { AddressTail.short(address) }
 
     static func send(_ figure: String, _ symbol: String, to who: String) -> Step {
         Step(words: String(localized: "Sends \(figure) \(symbol) to \(who)"))

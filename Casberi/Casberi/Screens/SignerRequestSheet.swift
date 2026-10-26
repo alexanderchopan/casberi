@@ -23,9 +23,9 @@ struct SignerRequestSheet: View {
                height: onPhone ? 420 : 600, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(onPhone
-                     ? (signer.map { String(localized: "Approve in the wallet holding …\(String($0.suffix(4))).") }
+                     ? (signer.map { String(localized: "Approve in the wallet holding \(AddressTail.short($0, wholeUpTo: 4)).") }
                         ?? String(localized: "Approve twice in the wallet you want: connect, then sign."))
-                     : (signer.map { String(localized: "Scan with …\(String($0.suffix(4))) in its wallet, then approve.") }
+                     : (signer.map { String(localized: "Scan with \(AddressTail.short($0, wholeUpTo: 4)) in its wallet, then approve.") }
                         ?? String(localized: "Scan with the wallet you want, then approve twice: connect, then sign.")))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)

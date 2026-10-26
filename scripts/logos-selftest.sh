@@ -162,7 +162,7 @@ check(LogosWire.parseAccountID(String(CBGR.dropLast(3))) == nil, "a truncated id
 check(LogosWire.parseAccountID("0OIl" + CBGR.dropFirst(4)) == nil, "characters outside base58 are refused")
 check(LogosWire.base58Encode(LogosWire.base58Decode(DUMJ)!) == DUMJ, "base58 round-trips")
 check(LogosWire.base58Encode([0, 0, 1]) == "112", "leading zero bytes keep their 1s")
-check(LogosWire.short(CBGR) == "…Sr2r", "the short form is the last four (prd §1375)")
+check(LogosWire.short(CBGR) == "...Sr2r", "the short form is the last four (prd §1375)")
 
 print("a reset, said (prd §1035)")
 let reset = Date(timeIntervalSince1970: 1790779853.687)   // block 2 of the 9-30 chain
@@ -248,15 +248,15 @@ let send = publicTx(program: native, accounts: [from, to], instruction: [0] + u1
 let transfer = LogosWire.block(wrap(send))?.transactions.first
 check(transfer?.paysFee == true && transfer?.signers == 1, "a signed, fee-paying transfer decodes")
 let both = transfer.map { LogosWire.events($0, watched: watched(CBGR, DUMJ)) } ?? []
-check(both.map(\.title) == ["Sent 40 — to …hE51", "Received 40 — from …Sr2r"], "sent and received, each from its own side")
+check(both.map(\.title) == ["Sent 40 — to ...hE51", "Received 40 — from ...Sr2r"], "sent and received, each from its own side")
 check(both.map(\.account) == [CBGR, DUMJ], "each event names the account it is for")
 let one = transfer.map { LogosWire.events($0, watched: watched(DUMJ)) } ?? []
-check(one.map(\.title) == ["Received 40 — from …Sr2r"], "the recipient alone sees only the receipt")
+check(one.map(\.title) == ["Received 40 — from ...Sr2r"], "the recipient alone sees only the receipt")
 check(one.first?.tags == ["Received"], "tagged as state")
 let none = transfer.map { LogosWire.events($0, watched: watched(HOLD)) } ?? [LogosWire.Event(account: "", title: "", tags: [])]
 check(none.isEmpty, "an unwatched transaction lands nothing")
 let big = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + le64(0) + le64(1), fee: true, signers: 1)))?.transactions.first
-check(big.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 18,446,744,073,709,551,616 — from …Sr2r"], "u128: least-significant byte FIRST (the ninth byte is 2^64)")
+check(big.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 18,446,744,073,709,551,616 — from ...Sr2r"], "u128: least-significant byte FIRST (the ninth byte is 2^64)")
 let other = LogosWire.block(wrap(publicTx(program: [UInt8](repeating: 7, count: 32), accounts: [from, to], instruction: [0] + u128(40), fee: true, signers: 1)))?.transactions.first
 check(other.map { LogosWire.events($0, watched: watched(CBGR)).map(\.title) } == ["Used a program"], "another program's call is said, never read as an amount")
 let twice = LogosWire.block(wrap(publicTx(program: [UInt8](repeating: 7, count: 32), accounts: [from, from, to], instruction: [], fee: true, signers: 1)))?.transactions.first
@@ -267,7 +267,7 @@ check(deposit.map { LogosWire.events($0, watched: watched(DUMJ)) }?.isEmpty == t
 // signed is a person's act, fee or none.
 let signedFree = LogosWire.block(wrap(publicTx(program: native, accounts: [from, to], instruction: [0] + u128(40), fee: false, signers: 1)))?.transactions.first
 check(signedFree.map(LogosWire.isSystem) == false, "a signed transaction with no fee is not the network's")
-check(signedFree.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 40 — from …Sr2r"], "and it lands")
+check(signedFree.map { LogosWire.events($0, watched: watched(DUMJ)).map(\.title) } == ["Received 40 — from ...Sr2r"], "and it lands")
 
 var priv: [UInt8] = [1] + le32(1) + from + le32(1) + native + native + le32(2) + [5, 5]   // one public action, one effect
 priv += le32(0)                                                                  // nonces
@@ -407,15 +407,15 @@ func tokenTx(_ ins: [UInt8], _ a: String, _ b: String) -> LogosWire.Transaction 
 }
 let named: [Data: String] = [Data(LogosWire.base58Decode(FIELD_DEF)!): "FIELDTEST"]
 let sentT = LogosWire.events(tokenTx(tTransfer, HOLD43, HOLD5O), watched: watched(HOLD43, HOLD5O), names: named)
-check(sentT.map(\.title) == ["Sent 1,000 FIELDTEST — to …SfwP", "Received 1,000 FIELDTEST — from …R51v"],
+check(sentT.map(\.title) == ["Sent 1,000 FIELDTEST — to ...SfwP", "Received 1,000 FIELDTEST — from ...R51v"],
       "a token transfer names the amount and the token, both sides")
 check(sentT.map(\.tags) == [["Sent"], ["Received"]], "…tagged Sent and Received")
 check(LogosWire.events(tokenTx(tTransfer, HOLD43, HOLD5O), watched: watched(HOLD5O)).map(\.title)
-      == ["Received 1,000 tokens — from …R51v"], "an unread name says tokens, never a guess")
+      == ["Received 1,000 tokens — from ...R51v"], "an unread name says tokens, never a guess")
 check(LogosWire.events(tokenTx(tDefine, FIELD_DEF, HOLD43), watched: watched(HOLD43)).map(\.title)
       == ["Created FIELDTEST — 30,000"], "a definition names itself")
 check(LogosWire.events(tokenTx(tMint, FIELD_DEF, HOLD43), watched: watched(FIELD_DEF, HOLD43), names: named).map(\.title)
-      == ["Minted 500 FIELDTEST — to …R51v", "Received 500 FIELDTEST — minted"], "a mint, from both sides")
+      == ["Minted 500 FIELDTEST — to ...R51v", "Received 500 FIELDTEST — minted"], "a mint, from both sides")
 check(LogosWire.events(tokenTx(tTransfer + [0], HOLD43, HOLD5O), watched: watched(HOLD5O)).map(\.title)
       == ["Used a program"], "an undecodable token call falls back to Used a program")
 
@@ -489,7 +489,7 @@ if failures > 0 { print("✗ \(failures) assertion(s) failed"); exit(1) }
 print("✓ all assertions passed")
 SWIFT
 
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the harness did not compile against the shipped LogosWire:"
   sed -n '1,40p' "$TMP/build.log"
   exit 1
@@ -516,7 +516,7 @@ PY
   if cmp -s "$WIRE" "$WORK/LogosWire.swift"; then
     echo "  ✗ $name — the mutation changed nothing"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/LogosWire.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/LogosWire.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

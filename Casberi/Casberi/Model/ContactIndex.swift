@@ -110,7 +110,7 @@ struct Identity: Hashable, Codable {
     /// What a row's line draws for this identity.
     var label: String {
         switch kind {
-        case .wallet:                    return "…" + body.suffix(4)
+        case .wallet:                    return AddressTail.short(body, wholeUpTo: 4)
         case .bluesky:                   return "@" + body
         case .email, .github, .contact,
              .worldApp, .feed, .biller,
@@ -176,7 +176,7 @@ struct Contact: Identifiable, Equatable {
 
     /// Nobody named this contact and no seat did: its name is a wallet's
     /// tail. It sorts last in the list and never names a transfer row.
-    var isUnnamed: Bool { name.hasPrefix("…") }
+    var isUnnamed: Bool { AddressTail.isTail(name) }
 }
 
 enum ContactIndex {

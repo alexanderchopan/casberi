@@ -87,8 +87,7 @@ enum SafeRoomSource {
         if let known = WalletIngest.knownLabel(for: address) { return known }
         // The same shortening the address book itself uses. Never the raw
         // hash: a 42-character address inside a sentence is not a name.
-        guard address.count > 10 else { return address }
-        return "…\(address.suffix(4))"
+        return AddressTail.short(address, wholeUpTo: 10)
     }
 
     /// What the card opens when there is nothing pending to open.

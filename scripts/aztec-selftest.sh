@@ -209,7 +209,7 @@ if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
 echo "AztecWire, compiled whole"
-if ! swiftc -Onone -o "$TMP/run" "$WIRE" "$P2" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "Casberi/Shared/AddressTail.swift" "$WIRE" "$P2" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the harness did not compile against the shipped AztecWire:"
   sed -n '1,40p' "$TMP/build.log"
   exit 1
@@ -236,7 +236,7 @@ PY
   if cmp -s "$WIRE" "$WORK/AztecWire.swift"; then
     echo "  ✗ $name — the mutation changed nothing"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/AztecWire.swift" "$P2" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "Casberi/Shared/AddressTail.swift" "$WORK/AztecWire.swift" "$P2" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if AZTEC_FIX="$PWD/$FIX" "$TMP/mut" > /dev/null 2>&1; then

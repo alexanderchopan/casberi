@@ -242,7 +242,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1684 of 1753 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1685 of 1754 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -795,7 +795,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §492 — A letter glyph is wrong exactly where the real bridge draws an image
 - §493 — Headers instead of cards, and four slots stop being lists (amended by §943; part superseded by §743)
 - §494 — A catalog seat's Open lands on the thing it advertised (part superseded by §515)
-- §495 — A key event opens to what happened, not to a label (amended by §524; part superseded by §583, §1038)
+- §495 — A key event opens to what happened, not to a label (amended by §524, §1547; part superseded by §583, §1038)
 - §496 — One address book, two rooms — Kind.key, a note field, and where an address was met
 - §497 — The Connected spine leaves the address book
 - §498 — The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a s… (amended by §583)
@@ -1928,6 +1928,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
 - §1546 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new…
+- §1547 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
 
 ## Dead rulings → what replaced them (generated)
 

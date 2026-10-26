@@ -84,12 +84,9 @@ enum LogosWire {
         return text
     }
 
-    /// `…PLw7` — the short form every row and roster line uses: the last
-    /// four, never the head (prd §1375).
-    static func short(_ id: String) -> String {
-        guard id.count > 10 else { return id }
-        return "…\(id.suffix(4))"
-    }
+    /// `...PLw7` — the short form every row and roster line uses: the last
+    /// four, never the head (prd §1375, §1551).
+    static func short(_ id: String) -> String { AddressTail.short(id, wholeUpTo: 10) }
 
     // MARK: - Base58 (Bitcoin alphabet)
 

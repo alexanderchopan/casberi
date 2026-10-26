@@ -151,10 +151,7 @@ enum AztecWire {
         return hex.count == 64 && hex.allSatisfy(\.isHexDigit)
     }
 
-    static func short(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return "…\(address.suffix(4))"
-    }
+    static func short(_ address: String) -> String { AddressTail.short(address) }
 
     struct Missed: Codable, Equatable {
         let streak: Int
