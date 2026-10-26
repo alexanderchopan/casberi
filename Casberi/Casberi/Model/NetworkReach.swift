@@ -452,6 +452,26 @@ enum NetworkReach {
                  hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"],
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
+        // The Privacy Pools engine (prd §1540): 0xBow's SDK in a hidden web
+        // view, Sepolia only for now. The page can reach no host itself (its
+        // Content-Security-Policy); every request it makes is handed to
+        // `PrivacyEngine`, which sends it only to a host listed HERE
+        // (`PrivacyEngineWire.allows`), through the funnel. The Sepolia node
+        // is the Aztec entry's too, which already routes it through Tor.
+        Endpoint(service: "Privacy Pools engine",
+                 reach: .whenConnected(bridge: "0xBow Privacy Pools"),
+                 purpose: "Reads Privacy Pools v2 on the Sepolia testnet for your private balance: the pool's notes and keystore from a public Sepolia node, which deposits 0xBow has approved from its test review service, and its relayer's fees. Carries your account's address and your notes' public commitments, never a key or a note's secret.",
+                 hosts: ["ethereum-sepolia-rpc.publicnode.com", "api-dev.0xbow.io",
+                         "relayer-v2-staging-149184580131.us-east1.run.app"],
+                 throughTor: true),
+        // The circuit files the engine proves with, each fetched once by its
+        // IPFS CID and refused unless it hashes to its pin
+        // (`PrivacyArtifacts`). Public files; the request names no one.
+        Endpoint(service: "Privacy Pools circuits",
+                 reach: .whenConnected(bridge: "0xBow Privacy Pools"),
+                 purpose: "Downloads, once, the public circuit files Privacy Pools proofs are made with (3 to 66 MB each), from public IPFS gateways, and checks each against the fingerprint the app carries before using it.",
+                 hosts: ["gateway.pinata.cloud", "ipfs.io"],
+                 credentialed: false),
         // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under
