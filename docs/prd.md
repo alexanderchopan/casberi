@@ -68906,3 +68906,12 @@ Mock: the design canvas "Private money with 0xBow".
 6. **Not changed.** Tor stays always on (§1495). The "$0" in an empty sentence is the amount field's blank, not a balance. **Follow-up, built as §1546:** the Tor row's "On" is the first connect since launch, never re-checked (`TorClient.watch` stops at 100%), and nothing rebuilds circuits when the app returns from the background or restarts a tor thread that exited; both need a phone to measure.
 
 **Mac half.** The same card and sentence; the Mac links no Tor (§1495 item 9), so Move's line there always names the networks.
+
+## §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §1414 to §1078's title; user, 2026-10-26, on "Moved 0.0002 ETH · accountless.eth →…": "how can we make the items and activity shorter? I don't like it when it's an activity item that runs off the screen") — WRITTEN, NOT YET COMPILED
+
+1. **The row.** `WalletRowWords.moved` reads the stored "Moved <amount> <SYMBOL> · <from> → <to>" into the anatomy's slots: the name is "accountless.eth → You", the amount ("0.0002 ETH") stands in the trailing column, and the line keeps the account it belongs to. With no amount, the symbol goes on the line. "Moved" leaves the row as "Swapped" did (§1414): the arrow says it.
+2. **No sign, no colour.** The money stayed yours (§1078): the figure is unsigned and in the primary ink, never the received green (`Words.stayed`).
+3. **The store is unchanged.** The title stays the sentence; `MovedStage`, the sheet and search read it as before.
+4. **The check.** `wallet-row-words-selftest.sh`: three move cases and a nil, two mutations (the move left as a sentence, its figure signed and green), and greps for `WalletIngest`'s title and the row's ink.
+5. **Mac half (§1402).** The same rows.
+6. **Not measured.** Written with no Xcode: not compiled, the harness's Swift half not run.
