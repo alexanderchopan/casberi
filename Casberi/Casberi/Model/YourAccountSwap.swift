@@ -663,12 +663,16 @@ enum YourAccountSwap {
 
     // MARK: - In words
 
-    /// Millionths as a percentage: 100 → "0.01%", 80 → "0.008%", 3000 →
-    /// "0.3%", 10000 → "1%".
+    /// **A POOL FEE, ROUNDED FOR READING (user, 2026-10-26, prd §1544).**
+    /// Millionths as a percentage to at most two places, trailing zeros
+    /// trimmed: 3000 → "0.3%", 500 → "0.05%", 773 → "0.08%", 10000 → "1%";
+    /// anything below a hundredth of a percent reads "under 0.01%" (80, a
+    /// Slipstream pool's 0.008%). Words only: the route keeps the exact fee.
     static func percent(pips: Int) -> String {
+        guard pips >= 100 else { return String(localized: "under 0.01%") }
         var d = Decimal(pips) / 10_000
         var r = Decimal()
-        NSDecimalRound(&r, &d, 4, .plain)
+        NSDecimalRound(&r, &d, 2, .plain)
         return NSDecimalNumber(decimal: r).stringValue + "%"
     }
 
@@ -676,7 +680,7 @@ enum YourAccountSwap {
     static func on(_ exchange: String) -> String { String(localized: "On \(exchange)") }
 
     /// **THE EXCHANGE THAT DID IT (user ruling, prd §1539).** "On Uniswap ·
-    /// 0.05% pool fee"; through two pools, "On Aerodrome · 0.008% and 0.3%
+    /// 0.05% pool fee"; through two pools, "On Aerodrome · under 0.01% and 0.3%
     /// pool fees"; the exchange alone when the fees could not be read. The
     /// pool fee is part of the price: there is no middleman's fee to add.
     static func words(_ route: Route) -> String {
