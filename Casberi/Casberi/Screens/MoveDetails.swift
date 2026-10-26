@@ -93,7 +93,20 @@ struct MoveDetails: View {
     // MARK: - A swap
 
     @ViewBuilder private func swapRows(_ p: YourAccountChain.Preview) -> some View {
-        if case .returnsAtLeast(let units, let token) = p.checked {
+        if let leg = p.sold.compactMap(\.across).first {
+            // **TO ANOTHER NETWORK (prd §1552):** what arrives — exactly
+            // what a relayer pays, so its least — Across's fee, rounded as a
+            // pool's, and its time.
+            let dest = Op.networks.first { $0.chainId == leg.to } ?? p.network
+            let token = YourAccountAcross.token(leg.asset, on: dest)
+            row(String(localized: "You get at least"), "\(MoveSentence.figure(leg.outputAmount, decimals: token.decimals)) \(token.symbol)",
+                sub: String(localized: "on \(leg.toName)"))
+            row(String(localized: "Across"), String(localized: "\(YourAccountSwap.percent(pips: leg.feePips)) fee"),
+                sub: String(localized: "The fee is in what arrives"))
+            if let time = YourAccountAcross.time(leg.seconds) {
+                row(String(localized: "Expected time"), time)
+            }
+        } else if case .returnsAtLeast(let units, let token) = p.checked {
             row(String(localized: "You get at least"), "\(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)")
         }
         // Where each swap goes, once per distinct pool: "On Uniswap · 0.05%

@@ -871,6 +871,34 @@
         }
       }
     },
+    "%@ %@ arrives there; if no one fills it, it comes back on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Allí llegan %1$@ %2$@; si nadie lo completa, vuelve en %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そこに %1$@ %2$@ が届きます。誰も約定しなければ %3$@ に戻ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그곳에 %1$@ %2$@이(가) 도착합니다. 아무도 체결하지 않으면 %3$@(으)로 돌아옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ 将到达那里；若无人成交，将退回 %3$@"
+          }
+        }
+      }
+    },
     "%@ %@ at %@" : {
       "localizations" : {
         "en" : {
@@ -2868,6 +2896,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 到账"
+          }
+        }
+      }
+    },
+    "%@ arriving on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ llegando a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ が %2$@ に到着中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@에 도착 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 正在到达 %2$@"
           }
         }
       }
@@ -42018,6 +42074,34 @@
         }
       }
     },
+    "A swap to another network goes alone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un cambio a otra red va solo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のネットワークへのスワップは単独で行います"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 네트워크로의 스왑은 단독으로 진행됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到其他网络的兑换需单独进行"
+          }
+        }
+      }
+    },
     "A token approval, a Safe module, a delegate." : {
       "localizations" : {
         "es" : {
@@ -42767,6 +42851,62 @@
         }
       }
     },
+    "About %lld minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Unos %lld minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約%lld分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %lld분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %lld 分钟"
+          }
+        }
+      }
+    },
+    "About %lld seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Unos %lld segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約%lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %lld 秒"
+          }
+        }
+      }
+    },
     "About monthly" : {
       "localizations" : {
         "es" : {
@@ -43300,6 +43440,34 @@
         }
       }
     },
+    "Across" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across"
+          }
+        }
+      }
+    },
     "Across %lld wallets" : {
       "localizations" : {
         "es" : {
@@ -43324,6 +43492,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "共 %lld 个钱包"
+          }
+        }
+      }
+    },
+    "Across asked for something other than this swap, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across pidió algo distinto a este cambio, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across がこのスワップ以外のものを求めたため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across가 이 스왑과 다른 것을 요청해 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 请求的内容与此兑换不符，因此未签署任何内容"
+          }
+        }
+      }
+    },
+    "Across did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across が応答しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 没有响应"
+          }
+        }
+      }
+    },
+    "Across does not carry %@ to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across no lleva %1$@ a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across は %1$@ を %2$@ へ運びません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across는 %1$@을(를) %2$@(으)로 옮기지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 不支持将 %1$@ 转到 %2$@"
+          }
+        }
+      }
+    },
+    "Across does not carry this from %@ to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across no lleva esto de %1$@ a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across は %1$@ から %2$@ へこれを運びません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across는 %1$@에서 %2$@(으)로 이것을 옮기지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 不支持从 %1$@ 到 %2$@ 转移此资产"
           }
         }
       }
@@ -43408,6 +43688,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在你的所有钱包中：创下新高 %@ 📈"
+          }
+        }
+      }
+    },
+    "Across's fee is too high for this amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La comisión de Across es demasiado alta para esta cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この金額には Across の手数料が高すぎます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 금액에는 Across 수수료가 너무 높습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对此金额而言 Across 的手续费过高"
           }
         }
       }
@@ -51952,6 +52260,62 @@
         }
       }
     },
+    "Arrived on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegó a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に到着しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 도착함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已到达 %@"
+          }
+        }
+      }
+    },
+    "Arriving on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegando a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に到着中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 도착 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在到达 %@"
+          }
+        }
+      }
+    },
     "Articles only — NerdWallet's public feed. No sign-in, and nothing here reads your money." : {
       "localizations" : {
         "es" : {
@@ -52032,6 +52396,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "艺人"
+          }
+        }
+      }
+    },
+    "As %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Como %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ として"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(으)로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以 %@ 形式"
           }
         }
       }
@@ -66146,6 +66538,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "成本高于回报"
+          }
+        }
+      }
+    },
+    "Could not check that ETH arrives on %@, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo comprobar que el ETH llegue a %@, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH が %@ に届くことを確認できなかったため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH가 %@에 도착하는지 확인할 수 없어 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法确认 ETH 会到达 %@，因此未签署任何内容"
           }
         }
       }
@@ -80541,6 +80961,34 @@
         }
       }
     },
+    "Expected time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tiempo estimado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所要時間の目安"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "예상 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预计时间"
+          }
+        }
+      }
+    },
     "Expired" : {
       "localizations" : {
         "es" : {
@@ -87337,6 +87785,34 @@
         }
       }
     },
+    "From %@, change" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde %@, cambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ から、変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서, 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 %@，更改"
+          }
+        }
+      }
+    },
     "From %@, written by your %@." : {
       "localizations" : {
         "en" : {
@@ -88869,6 +89345,34 @@
         }
       }
     },
+    "Get %@ on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibir %@ en"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の受け取り先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 받을 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在以下网络获得 %@"
+          }
+        }
+      }
+    },
     "Get Logos Observer" : {
       "localizations" : {
         "es" : {
@@ -88977,6 +89481,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "获取应用"
+          }
+        }
+      }
+    },
+    "Get it on %@, change" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibir en %@, cambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で受け取る、変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 받기, 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 获得，更改"
           }
         }
       }
@@ -105225,6 +105757,34 @@
         }
       }
     },
+    "More than Across carries at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más de lo que Across lleva de una vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across が一度に運べる量を超えています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across가 한 번에 옮길 수 있는 양을 넘습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过 Across 单次可转移的数量"
+          }
+        }
+      }
+    },
     "More than you have" : {
       "localizations" : {
         "es" : {
@@ -115068,6 +115628,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未归入此处"
+          }
+        }
+      }
+    },
+    "Not filled · coming back on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin completar · vuelve en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未約定 · %@ に戻ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체결되지 않음 · %@(으)로 돌아옴"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未成交 · 将退回 %@"
           }
         }
       }
@@ -142727,6 +143315,34 @@
         }
       }
     },
+    "Refunded %@ %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reembolsado %1$@ %2$@ en %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@ で %1$@ %2$@ を返金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@에서 %1$@ %2$@ 환불됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %3$@ 退回 %1$@ %2$@"
+          }
+        }
+      }
+    },
     "Refunded %@." : {
       "localizations" : {
         "es" : {
@@ -148978,6 +149594,34 @@
         }
       }
     },
+    "Same network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Misma red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同じネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "같은 네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同一网络"
+          }
+        }
+      }
+    },
     "Same person?" : {
       "localizations" : {
         "es" : {
@@ -152592,6 +153236,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "向 %3$@ 发送 %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Sends %@ %@ to %@ through Across" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía %1$@ %2$@ a %3$@ a través de Across"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ を Across 経由で %3$@ に送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@을(를) Across를 통해 %3$@(으)로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Across 将 %1$@ %2$@ 发送到 %3$@"
           }
         }
       }
@@ -163997,6 +164669,34 @@
         }
       }
     },
+    "Swap %@ %@ on %@ for %@ %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambiar %1$@ %2$@ en %3$@ por %4$@ %5$@ en %6$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@ の %1$@ %2$@ を %6$@ の %4$@ %5$@ にスワップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@의 %1$@ %2$@을(를) %6$@의 %4$@ %5$@(으)로 스왑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %3$@ 上的 %1$@ %2$@ 兑换为 %6$@ 上的 %4$@ %5$@"
+          }
+        }
+      }
+    },
     "Swap all %lld" : {
       "localizations" : {
         "es" : {
@@ -164133,6 +164833,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已将 %@ 兑换为 %@"
+          }
+        }
+      }
+    },
+    "Swapped %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambiaste %1$@ en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ で %1$@ をスワップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 %1$@ 스왑함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %2$@ 兑换 %1$@"
           }
         }
       }
@@ -169765,6 +170493,34 @@
         }
       }
     },
+    "The fee is in what arrives" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La comisión ya está descontada de lo que llega"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手数料は届く額に含まれています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수수료는 도착하는 금액에 포함되어 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手续费已从到账金额中扣除"
+          }
+        }
+      }
+    },
     "The feeds you pick, plus any repo or person you watch. Watching here is private." : {
       "localizations" : {
         "es" : {
@@ -171645,6 +172401,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每笔交易执行的步骤"
+          }
+        }
+      }
+    },
+    "The swap to %@ wasn't filled" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El cambio a %@ no se completó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ へのスワップは約定しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(으)로의 스왑이 체결되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到 %@ 的兑换未成交"
           }
         }
       }
@@ -176646,6 +177430,34 @@
         }
       }
     },
+    "Through Across · %@ fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de Across · comisión del %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 経由 · 手数料 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 경유 · 수수료 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Across · 手续费 %@"
+          }
+        }
+      }
+    },
     "Through CoW, at the best price its solvers find" : {
       "localizations" : {
         "es" : {
@@ -177679,6 +178491,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "价格太少，无法绘制"
+          }
+        }
+      }
+    },
+    "Too little for Across: at least %@ %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muy poco para Across: al menos %1$@ %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across には少なすぎます: 最低 %1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across에 너무 적습니다: 최소 %1$@ %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金额太少，Across 至少需要 %1$@ %2$@"
           }
         }
       }
@@ -205219,6 +206059,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "约 %@ 天"
+          }
+        }
+      }
+    },
+    "about %lld minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos %lld minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約%lld分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %lld분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %lld 分钟"
+          }
+        }
+      }
+    },
+    "about %lld seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos %lld segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約%lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %lld 秒"
           }
         }
       }

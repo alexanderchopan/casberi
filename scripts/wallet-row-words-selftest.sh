@@ -4,8 +4,10 @@
 # beside `TitleSeam`.
 #
 # Every failure reads as a cut row or a wrong word:
-#   • "Swapped 0.0136 ETH → 32.55 USDC on…" — the sentence drawn as the name
-#   • a swap's figure on the wrong side, or its venue lost
+#   • "Swapped 0.0136 ETH → 32.55 USDC on…" — the sentence drawn as the name;
+#     since prd §1552 the row reads "0.0136 ETH for 32.55 USDC", the verb
+#     the glyph's and VoiceOver's, the venue on the line
+#   • a swap's venue lost, or its verb gone from VoiceOver
 #   • "1 of 2 signatures collected on deposit e t h" — the count as the name,
 #     the act split on every capital
 #   • "Fully signed" as a name, with the act cut on the line
@@ -35,27 +37,31 @@ func check(_ ok: Bool, _ what: String) {
 }
 typealias W = WalletRowWords.Words
 
-// A swap: the pair and the venue as the name, in on the right, out on the line.
+// A swap: the trade as it reads, "for" for the arrow, its verb left to the
+// glyph and kept for VoiceOver, the venue on the line (prd §1552).
 check(WalletRowWords.read("Swapped 0.0136 ETH → 32.55 USDC on Uniswap")
-      == W(name: "ETH → USDC on Uniswap", figure: "+32.55 USDC", clause: "−0.0136 ETH"),
-      "an EVM swap reads pair · venue, in, out")
-check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")
-      == W(name: "USDC → ETH on Uniswap", figure: "+0.4962 ETH", clause: "−1,240 USDC"),
+      == W(name: "0.0136 ETH for 32.55 USDC", clause: "On Uniswap",
+           spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap"),
+      "an EVM swap reads out for in, the venue on the line, the verb spoken")
+check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.name == "1,240 USDC for 0.4962 ETH",
       "a grouped amount stays whole")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")
-      == W(name: "ETH → USDC", figure: "+1,240 USDC", clause: "−0.5 ETH"),
-      "no venue, no ' on '")
+      == W(name: "0.5 ETH for 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      "no venue, no line clause")
 check(WalletRowWords.read("Swapped ETH → USDC")
-      == W(name: "ETH → USDC"),
-      "bare symbols: no figure, no clause")
+      == W(name: "ETH for USDC", spoken: "Swapped ETH for USDC"),
+      "bare symbols")
 check(WalletRowWords.read("Swapped 2 SOL → 310 USDC on Jupiter")
-      == W(name: "SOL → USDC on Jupiter", figure: "+310 USDC", clause: "−2 SOL"),
+      == W(name: "2 SOL for 310 USDC", clause: "On Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
       "a Solana swap reads the same")
-check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.figure == "+160 ÚЅDС",
-      "a look-alike symbol keeps its figure; the row's flag picks the ink")
+check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "0.05 ETH for 160 ÚЅDС",
+      "a look-alike symbol is drawn as it is; the row's flag picks the ink")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC — on Base")
-      == W(name: "ETH → USDC", figure: "+1,240 USDC", clause: "−0.5 ETH", qualifier: "on Base"),
+      == W(name: "0.5 ETH for 1,240 USDC", qualifier: "on Base", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
       "a seam after a swap rides as the qualifier")
+check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("Swapped") == false
+      && WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("→") == false,
+      "the drawn name carries neither the verb nor the arrow")
 
 // A Safe row: the act is the name, the count the line.
 check(WalletRowWords.read("1 of 2 signatures collected on deposit ETH — your signature is needed")
@@ -121,9 +127,15 @@ mutate "split on every capital (the shipped 'deposit e t h')" \
 mutate "a swap keeps its sentence" \
     'swap(title) ?? safe(title)' \
     'safe(title)'
-mutate "the incoming leg lands on the line" \
-    'figure: inn.amount.map { "+\($0) \(inn.symbol)" },' \
-    'figure: nil,'
+mutate "the verb comes back into the drawn name" \
+    'let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"' \
+    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"'
+mutate "VoiceOver loses the verb" \
+    'spoken: "Swapped \(name)" + (on.map { " on \($0)" } ?? ""))' \
+    'spoken: name)'
+mutate "the venue leaves the line" \
+    'clause: on.map { "On \($0)" },' \
+    'clause: nil,'
 mutate "the article stays" \
     'act = String(act.dropFirst(article.count))' \
     'act = String(act)'
@@ -152,6 +164,8 @@ grep -q 'words.map { (name: $0.name, line: $0.qualifier) } ?? TitleSeam.split(ti
 grep -q 'let lead = \[words?.clause, said\].compactMap { $0 }' "$ROWS" \
     || fail "BandRow no longer leads the line with the words' clause"
 grep -q 'else if let figure = words?.figure {' "$ROWS" \
-    || fail "BandRow no longer draws a swap's incoming leg on the right"
+    || fail "BandRow no longer draws the words' figure on the right"
+grep -q '?? words?.spoken' "$ROWS" \
+    || fail "BandRow no longer speaks a swap's verb (prd §1552)"
 
 print "✓ wallet-row-words self-test passed"

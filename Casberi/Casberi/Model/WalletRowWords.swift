@@ -7,10 +7,10 @@ import Foundation
 /// sentence stays in the store — `SwapStage`, `MoneyReceipt` and the sheet
 /// parse it — and the row reads it into the anatomy's three slots instead:
 ///
-/// - **A swap** names the pair, the venue on the name ("ETH → USDC on
-///   Uniswap"), what came in on the right ("+32.55 USDC"), what went out on
-///   the line ("−0.0136 ETH") — the move row's own grammar (§1090: who, then
-///   the figure, then the quantity on the line).
+/// - **A swap** is the trade as it reads, its verb left to the swap glyph
+///   (prd §1552): "0.0136 ETH for 32.55 USDC", the venue on the line ("On
+///   Uniswap"), and VoiceOver keeps "Swapped …" (`spoken`). It was §1414's
+///   pair, "ETH → USDC on Uniswap", with the amounts on either side.
 /// - **A Safe row** names the act ("Deposit ETH", "Transfer of 1,500 USDC to
 ///   payroll.eth") and puts the count on the line ("1 of 2 signed"), ahead
 ///   of the clause the seam carried ("your signature is needed"), which
@@ -31,6 +31,9 @@ enum WalletRowWords {
         var clause: String? = nil
         /// What the title's seam said, for the row's own Needs-you trim.
         var qualifier: String? = nil
+        /// What VoiceOver says for the name, when the drawn name dropped a
+        /// word the glyph carries ("Swapped 0.5 ETH for 1,240 USDC").
+        var spoken: String? = nil
     }
 
     /// The row's words off a stored title; nil for a title in another shape.
@@ -58,12 +61,23 @@ enum WalletRowWords {
         }
         let inn = leg(rest)
         guard !out.symbol.isEmpty, !inn.symbol.isEmpty else { return nil }
-        var name = "\(out.symbol) → \(inn.symbol)"
-        if let venue, !venue.isEmpty { name += " on \(venue)" }
+        // **THE SWAP GLYPH SAYS "SWAPPED" (user, 2026-10-26, prd §1552).** The
+        // row's name is the trade as it reads, "0.5 ETH for 1,240 USDC", the
+        // arrow said as "for"; the venue goes to the line ("On Uniswap").
+        // Display only: the stored title keeps "Swapped …", which search,
+        // `CounterpartyRetitle`, `BalancePrivacy` and the demo read, and
+        // VoiceOver keeps the verb (`spoken`).
+        let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"
+        let on = venue.flatMap { $0.isEmpty ? nil : $0 }
         return Words(name: name,
-                     figure: inn.amount.map { "+\($0) \(inn.symbol)" },
-                     clause: out.amount.map { "−\($0) \(out.symbol)" },
-                     qualifier: seam.line)
+                     clause: on.map { "On \($0)" },
+                     qualifier: seam.line,
+                     spoken: "Swapped \(name)" + (on.map { " on \($0)" } ?? ""))
+    }
+
+    /// "0.5 ETH", or the bare symbol when the title carries no amount.
+    private static func amounted(_ l: (amount: String?, symbol: String)) -> String {
+        l.amount.map { "\($0) \(l.symbol)" } ?? l.symbol
     }
 
     /// "0.0136 ETH" → (0.0136, ETH); "ETH" → (nil, ETH). An amount starts
