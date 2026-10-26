@@ -6846,6 +6846,34 @@
         }
       }
     },
+    "%@ is not on Uniswap's list, and selling it would run its own contract" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no está en la lista de Uniswap, y venderlo ejecutaría su propio contrato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はUniswapのリストになく、売ると独自のコントラクトが実行されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) Uniswap 목록에 없으며, 팔면 자체 컨트랙트가 실행됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 不在 Uniswap 的列表中，卖出它会运行它自己的合约"
+          }
+        }
+      }
+    },
     "%@ is on your Lock Screen" : {
       "localizations" : {
         "es" : {
@@ -59432,34 +59460,6 @@
         }
       }
     },
-    "Casberi none" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi nada"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi 없음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi 无"
-          }
-        }
-      }
-    },
     "Casberi note" : {
       "localizations" : {
         "es" : {
@@ -81779,34 +81779,6 @@
         }
       }
     },
-    "Fee %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comisión %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手数料 %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "수수료 %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手续费 %@"
-          }
-        }
-      }
-    },
     "Fee to revoke" : {
       "localizations" : {
         "es" : {
@@ -81921,34 +81893,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "手续费最多 %1$@ %2$@"
-          }
-        }
-      }
-    },
-    "Fee ≈ %@ %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comisión ≈ %1$@ %2$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手数料 ≈ %1$@ %2$@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "수수료 ≈ %1$@ %2$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手续费 ≈ %1$@ %2$@"
           }
         }
       }
@@ -108078,62 +108022,6 @@
         }
       }
     },
-    "Network under a cent" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Red, menos de un centavo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ネットワーク 1セント未満"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "네트워크 1센트 미만"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "网络费不到一美分"
-          }
-        }
-      }
-    },
-    "Network up to %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Red, hasta %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ネットワーク 最大 %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "네트워크 최대 %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "网络费最多 %@"
-          }
-        }
-      }
-    },
     "Networks" : {
       "localizations" : {
         "es" : {
@@ -112580,6 +112468,90 @@
         }
       }
     },
+    "No pool here trades %@ for ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí ningún pool cambia %@ por ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここには%@をETHに交換するプールがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에는 %@을(를) ETH로 교환하는 풀이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里没有资金池可将 %@ 兑换为 ETH"
+          }
+        }
+      }
+    },
+    "No pool on %@ swaps %@ for %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún pool en %1$@ cambia %2$@ por %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@には%2$@を%3$@に交換するプールがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에는 %2$@을(를) %3$@(으)로 교환하는 풀이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 上没有可将 %2$@ 兑换为 %3$@ 的资金池"
+          }
+        }
+      }
+    },
+    "No pool trades it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún pool lo intercambia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引できるプールがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래하는 풀이 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有资金池交易它"
+          }
+        }
+      }
+    },
     "No positions" : {
       "localizations" : {
         "es" : {
@@ -115436,6 +115408,62 @@
         }
       }
     },
+    "Not on Uniswap's list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está en la lista de Uniswap"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswapのリストにありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswap 목록에 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不在 Uniswap 的列表中"
+          }
+        }
+      }
+    },
+    "Not on Uniswap's list." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está en la lista de Uniswap."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswapのリストにありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswap 목록에 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不在 Uniswap 的列表中。"
+          }
+        }
+      }
+    },
     "Not on any network from this %@ yet." : {
       "localizations" : {
         "es" : {
@@ -116440,62 +116468,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未使用"
-          }
-        }
-      }
-    },
-    "Not verified by Relay" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No verificado por Relay"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Relay による検証なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Relay 미검증"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未经 Relay 验证"
-          }
-        }
-      }
-    },
-    "Not verified by Relay." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No verificado por Relay."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay で確認されていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay에서 확인되지 않았습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未经 Relay 验证。"
           }
         }
       }
@@ -122564,6 +122536,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 %@ 上"
+          }
+        }
+      }
+    },
+    "On %@ · %@ pool fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · comisión del pool %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@で · プール手数料 %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에서 · 풀 수수료 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %1$@ 上 · 资金池手续费 %2$@"
+          }
+        }
+      }
+    },
+    "On %@ · %@ pool fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · comisiones de pool %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@で · プール手数料 %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에서 · 풀 수수료 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %1$@ 上 · 资金池手续费 %2$@"
           }
         }
       }
@@ -132350,30 +132378,30 @@
         }
       }
     },
-    "Pays less than Relay quoted" : {
+    "Pays less than the exchange quoted" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Paga menos de lo que cotizó Relay"
+            "value" : "Paga menos de lo que cotizó el exchange"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Relay の見積もりより少なく支払われます"
+            "value" : "取引所の見積もりより少ない額になります"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Relay 견적보다 적게 지급됩니다"
+            "value" : "거래소 견적보다 적게 지급됩니다"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "支付少于 Relay 的报价"
+            "value" : "支付的少于交易所报价"
           }
         }
       }
@@ -143014,68 +143042,6 @@
         }
       }
     },
-    "Relay %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %@"
-          }
-        }
-      }
-    },
-    "Relay %@ (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Relay %1$@ (%2$@)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %1$@ (%2$@)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %1$@（%2$@）"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %1$@ (%2$@)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay %1$@（%2$@）"
-          }
-        }
-      }
-    },
     "Relay asked for something other than this swap, so nothing was signed" : {
       "localizations" : {
         "es" : {
@@ -143244,34 +143210,6 @@
         }
       }
     },
-    "Relay does not verify %@, and selling it would run its own contract" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay no verifica %@, y venderlo ejecutaría su propio contrato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay は %@ を検証しておらず、売却するとそのトークン自身のコントラクトが実行されます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay는 %@을(를) 검증하지 않으며, 판매하면 자체 컨트랙트가 실행됩니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 未验证 %@，出售它会运行其自身的合约"
-          }
-        }
-      }
-    },
     "Relay doesn't move it" : {
       "localizations" : {
         "es" : {
@@ -143296,62 +143234,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Relay 不支持转移"
-          }
-        }
-      }
-    },
-    "Relay gave no price for %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay no dio precio para %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay は %@ の価格を返しませんでした"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay가 %@의 가격을 제공하지 않았습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 未提供 %@ 的价格"
-          }
-        }
-      }
-    },
-    "Relay has no route" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay no tiene ruta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay にルートがありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay에 경로가 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 没有路由"
           }
         }
       }
@@ -143408,62 +143290,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Relay 未为来自 %2$@ 的 %1$@ 开设地址"
-          }
-        }
-      }
-    },
-    "Relay's fee would take more than half of %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La comisión de Relay se llevaría más de la mitad de %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay の手数料が %@ の半分以上になります"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 수수료가 %@의 절반 이상을 가져갑니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 的手续费将超过 %@ 的一半"
-          }
-        }
-      }
-    },
-    "Relay's route would pay less than it quoted, so nothing was signed" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La ruta de Relay pagaría menos de lo cotizado, así que no se firmó nada"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay のルートは見積もりより少なく支払うため、何も署名していません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 경로가 견적보다 적게 지급하므로 아무것도 서명하지 않았습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Relay 的路由支付会少于报价,因此没有签署任何内容"
           }
         }
       }
@@ -164255,36 +164081,58 @@
         }
       }
     },
-    "Swaps %@ %@ for at least %@ %@ through Relay" : {
+    "Swaps" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Swaps %1$@ %2$@ for at least %3$@ %4$@ through Relay"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Intercambia %1$@ %2$@ por al menos %3$@ %4$@ a través de Relay"
+            "value" : "Intercambio"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Relay 経由で %1$@ %2$@ を最低 %3$@ %4$@ にスワップします"
+            "value" : "スワップ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Relay를 통해 %1$@ %2$@을(를) 최소 %3$@ %4$@(으)로 스왑합니다"
+            "value" : "스왑"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "通过 Relay 将 %1$@ %2$@ 兑换为至少 %3$@ %4$@"
+            "value" : "兑换"
+          }
+        }
+      }
+    },
+    "Swaps %@ %@ for at least %@ %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia %1$@ %2$@ por al menos %3$@ %4$@ en %5$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%5$@で%1$@ %2$@を最低%3$@ %4$@に交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%5$@에서 %1$@ %2$@을(를) 최소 %3$@ %4$@(으)로 교환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %5$@ 上将 %1$@ %2$@ 兑换为至少 %3$@ %4$@"
           }
         }
       }
@@ -169637,6 +169485,34 @@
         }
       }
     },
+    "The exchange would pay less than it quoted, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El exchange pagaría menos de lo que cotizó, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所の支払いが見積もりより少なくなるため、何も署名しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소가 견적보다 적게 지급하므로 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易所支付的会少于报价，因此未签署任何内容"
+          }
+        }
+      }
+    },
     "The expiry check. This transaction could only land in a block made by %@." : {
       "localizations" : {
         "es" : {
@@ -170872,6 +170748,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你认识的人，可查找"
+          }
+        }
+      }
+    },
+    "The pool fee is in the price" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La comisión del pool está incluida en el precio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プール手数料は価格に含まれています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀 수수료는 가격에 포함되어 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "资金池手续费已含在价格中"
+          }
+        }
+      }
+    },
+    "The pools would pay back less than half of what %@ is worth" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los pools devolverían menos de la mitad de lo que vale %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プールから戻る額は%@の価値の半分未満です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀이 돌려주는 금액이 %@ 가치의 절반도 되지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "资金池返还的不到 %@ 价值的一半"
           }
         }
       }
@@ -222992,34 +222924,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "低于"
-          }
-        }
-      }
-    },
-    "under 0.01%" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "menos del 0,01 %"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "0.01%未満"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "0.01% 미만"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "低于 0.01%"
           }
         }
       }

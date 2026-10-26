@@ -55,25 +55,6 @@ enum YourAccountPreview {
         return Op.display(wei, decimals: 18, places: whole.distance(from: whole.index(after: dot), to: first) + 2)
     }
 
-    /// Relay's fee over what is sold, as a percentage: "0.04%". Two places,
-    /// trailing zeros cut; "under 0.01%" for less; nil when nothing is sold
-    /// or Relay charged it in something else.
-    static func relayShare(fee: String, sold: String) -> String? {
-        guard fee != "0", sold != "0", let f = Decimal(string: fee), let s = Decimal(string: sold), s > 0 else { return nil }
-        var share = f / s * 100
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &share, 2, .plain)
-        if rounded == 0 { return String(localized: "under 0.01%") }
-        return NSDecimalNumber(decimal: rounded).stringValue + "%"
-    }
-
-    /// The same share over several sold tokens: Relay's fees and what is
-    /// sold, both in dollars.
-    static func relayShare(feeUSD: Double, soldUSD: Double) -> String? {
-        guard feeUSD > 0, soldUSD > 0 else { return nil }
-        return relayShare(fee: String(format: "%.0f", feeUSD * 1e9), sold: String(format: "%.0f", soldUSD * 1e9))
-    }
-
     // MARK: - ERC-8213
 
     /// The **Calldata Digest** (ERC-8213): `keccak256(uint256(len(calldata))
@@ -165,19 +146,20 @@ enum YourAccountPreview {
         var detail: String? = nil
     }
 
-    /// An approval the operation makes: always exactly what is sold, to
-    /// Relay, used in the same step (§1440).
+    /// An approval the operation makes: always exactly what is sold, to the
+    /// exchange's router that swaps it, used in the same step (§1539).
     struct Approval: Equatable, Sendable {
         let figure: String
         let symbol: String
         let spender: String
     }
 
-    /// What one swap sells, and Relay's fee on it in the sold token.
+    /// What one swap sells, and the pools it goes through (prd §1539): the
+    /// pool fee is in the price, so there is no fee to add.
     struct Sold: Equatable, Sendable {
         let token: Op.Token
         let amount: String
-        let fee: String
+        let route: YourAccountSwap.Route?
     }
 
     /// An address in a line of words: "0x1a2B…cD09", its first four and
@@ -191,15 +173,15 @@ enum YourAccountPreview {
         Step(words: String(localized: "Sends \(figure) \(symbol) to \(who)"))
     }
 
-    /// An approval is always exact (§1440: `YourAccountSwap.checked` refuses
-    /// any other amount), used in the same step.
+    /// An approval is always exact (§1539: `YourAccountSwap.checked` refuses
+    /// any other amount or spender), used in the same step.
     static func approve(_ figure: String, _ symbol: String, to spender: String) -> Step {
         Step(words: String(localized: "Lets \(spender) spend exactly \(figure) \(symbol)"),
              detail: String(localized: "Used in the same step"))
     }
 
-    static func swap(_ figure: String, _ symbol: String, atLeast: String, _ bought: String) -> Step {
-        Step(words: String(localized: "Swaps \(figure) \(symbol) for at least \(atLeast) \(bought) through Relay"))
+    static func swap(_ figure: String, _ symbol: String, atLeast: String, _ bought: String, on exchange: String) -> Step {
+        Step(words: String(localized: "Swaps \(figure) \(symbol) for at least \(atLeast) \(bought) on \(exchange)"))
     }
 
     static func roundUp(_ figure: String, _ symbol: String, buys target: String, on network: String) -> Step {

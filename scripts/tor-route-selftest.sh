@@ -42,10 +42,13 @@ fi
 echo "  ok   the funnel routes through the rule, never fails over, has no bypass, and counts what went through Tor"
 
 # Every move Relay carries says it left Tor (prd §1512): the foot reads one
-# rule, and the rule names the three moves that ask Relay.
+# rule, and the rule names the two moves that still ask Relay. A swap and a
+# sweep go to the pools through the account's own nodes, through Tor (prd
+# §1539, measured 2026-10-26), so they are not Relay's and never say so.
 MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
 use "$MOVE" 'if relayCarries, receipt == nil, !nothingToMove {' "Relay's foot no longer reads relayCarries"
-use "$MOVE" 'case .swap: true' "a swap no longer says Relay carries it"
+use "$MOVE" 'case .swap: false' "a swap says Relay carries it, though it goes to the pools through Tor (prd §1539)"
+use "$MOVE" 'case .sweep: false' "a sweep says Relay carries it, though it goes to the pools through Tor (prd §1539)"
 use "$MOVE" 'case .send: roundUpPlan?.buy != nil' "a round-up that buys no longer says Relay carries it"
 use "$MOVE" 'case .receive: elsewhere != nil' "Receive from another network no longer says Relay carries it"
 if awk '/Text\("Powered by Relay"\)/,/padding\(\.top/' "$MOVE" | grep -q 'not through Tor'; then :; else
@@ -91,6 +94,8 @@ check(way("https://mempool.space/api/address/bc1qar0srrr7xfkvy5l643lydnw9re59gtz
 check(way("https://ethereum-beacon-api.publicnode.com/eth/v1/node/version") == .tor(isolation: "ethereum-beacon-api.publicnode.com"),
       "a wallet host's read naming no wallet shares the host's circuit")
 check(way("https://api.relay.link/quote", body: rpcBody(a)) == .refusesTor, "Relay refuses Tor and is told apart")
+check(way("https://tokens.uniswap.org") == .tor(isolation: "tokens.uniswap.org"),
+      "Uniswap's token list (prd §1542) does not go through Tor, though it answered through it 3 of 3")
 check(way("https://linea.gateway.tenderly.co/", body: rpcBody(a)) == .refusesTor, "a Tenderly gateway refuses Tor")
 check(way("https://rpc.gnosischain.com", body: rpcBody(a)) == .refusesTor, "Gnosis's RPC refuses Tor")
 check(way("https://rpc.plasma.to", body: rpcBody(a)) == .tor(isolation: a.lowercased()),

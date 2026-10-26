@@ -7,7 +7,8 @@ import Foundation
 /// to go in move since it is a money action. we could call it sweep").
 ///
 /// This file picks what is swept and what stays, and why; the swaps are
-/// Move's own (`YourAccountChain.Swap`), quoted by Relay and signed through
+/// Move's own (`YourAccountChain.Swap`), quoted off the pools themselves
+/// (Uniswap, and Aerodrome on Base, prd §1539) and signed through
 /// `YourAccountChain.transact`, which simulates the whole batch before Face
 /// ID and refuses it unless every swap pays its minimum. Pure: amounts are
 /// base-unit decimal strings, so `dust-sweep-selftest.sh` reads it with no
@@ -15,11 +16,11 @@ import Foundation
 ///
 /// - ETH is what comes back, so it is never swept.
 /// - A token with no price stays: nothing says it is under the line.
-/// - A token Relay has not verified stays, unless a swap here bought it:
+/// - A token not on Uniswap's list stays, unless a swap here bought it:
 ///   most dust is sent by strangers, and selling it calls its own contract.
 /// - The network's dollar stays while round-ups count change in it.
-/// - A swap whose ETH is worth less than half of what it sells stays: Relay's
-///   flat fee eats a token worth a few cents.
+/// - A swap whose ETH is worth less than half of what it sells stays: a thin
+///   pool pays back little for a token worth a few cents.
 /// - Ten swaps at most in one sweep; the rest wait for the next.
 /// - A sweep whose network fee is more than the ETH it returns is not signed
 ///   (user: "and yes ethereum too"): on Ethereum the gas outweighs most dust.
@@ -35,7 +36,7 @@ enum DustSweep {
         let units: String
         /// Dollars for all of it; nil when nothing priced it.
         let usd: Double?
-        /// Relay verified it, or a swap from this account bought it.
+        /// On Uniswap's list, or a swap from this account bought it.
         let trusted: Bool
         /// The network's dollar, where round-ups wait.
         let isDollar: Bool
@@ -50,7 +51,7 @@ enum DustSweep {
         case roundUps
         /// Past `maxSwaps`: the next sweep takes it.
         case nextSweep
-        /// Relay gave no route for it.
+        /// No pool trades it for ETH.
         case noRoute
         /// What comes back is worth less than half of it.
         case costsMore
@@ -127,7 +128,7 @@ enum DustSweep {
         return Plan(sweeps: sweeps, stays: stays)
     }
 
-    /// Relay's answers folded in: a token with no quote stays `.noRoute`, one
+    /// The pools' answers folded in: a token with no quote stays `.noRoute`, one
     /// whose ETH is worth less than `leastBack` of it stays `.costsMore`.
     /// `back(id)` is the ETH a quote returns, in wei, nil for no quote;
     /// `ethPrice` nil keeps every quoted token (the simulation still holds

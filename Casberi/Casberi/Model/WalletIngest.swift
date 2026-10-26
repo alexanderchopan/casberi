@@ -1212,10 +1212,21 @@ enum WalletIngest {
             ?? knownContracts[a]
             ?? ZkMoney.knownName(for: a)
             ?? Tacit.knownName(for: a)
-            // Relay's router and approval proxy, pinned from Relay's own
-            // `/chains` for swaps (prd §1440): a grant to one is Relay's.
-            ?? (YourAccountSwap.routers.contains(a) || YourAccountSwap.approvalProxies.contains(a) ? "Relay" : nil)
+            // The exchange routers the account swaps through (prd §1539):
+            // a grant to one is that exchange's.
+            ?? YourAccountSwap.exchange(ofRouter: a)
+            // Relay's router and approval proxy, which swaps went through
+            // before §1539 (pinned from Relay's `/chains`, prd §1440): a
+            // grant in the history to one is still Relay's.
+            ?? (relaySwapContracts.contains(a) ? "Relay" : nil)
     }
+
+    /// Relay's v3 and v3.2 router and approval proxy, the same on every chain
+    /// Relay settles on (its `/chains`, read 2026-10-19).
+    static let relaySwapContracts: Set<String> = [
+        "0xb92fe925dc43a0ecde6c8b1a2709c170ec4fff4f", "0x0729e2a4716d9f7dd17858d5d504426d228697f7",
+        "0xccc88a9d1b4ed6b0eaba998850414b24f1c315be", "0x5567954cd026cebfe486062cb75848e0f1c12e58",
+    ]
 
     /// The other side of a transfer, lowercased hex — who it came from when
     /// received, where it went when sent.

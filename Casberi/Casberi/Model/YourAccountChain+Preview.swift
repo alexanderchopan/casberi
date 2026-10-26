@@ -26,7 +26,7 @@ extension YourAccountChain {
         let checked: YourAccountPreview.Checked
         let words: [YourAccountPreview.Step]
         let approvals: [YourAccountPreview.Approval]
-        /// Each swap's sold amount and Relay's fee, from the quote it signs.
+        /// Each swap's sold amount and its pools, from the quote it signs.
         var sold: [YourAccountPreview.Sold] = []
         let hash: [UInt8]?
         let hashKind: YourAccountPreview.HashKind
@@ -68,7 +68,7 @@ extension YourAccountChain {
         /// The same transaction, whatever ids its lines carry: the sentence's
         /// line being filled is a new value every time it is read. A swap's
         /// quote is not compared — signing a kept preview signs the preview's
-        /// own quote, asked of Relay with it.
+        /// own quote, asked of the pools with it.
         static func same(_ a: [Item], _ b: [Item]) -> Bool {
             guard a.count == b.count else { return false }
             return zip(a, b).allSatisfy { x, y in
@@ -189,7 +189,12 @@ extension YourAccountChain {
     /// `operate`'s own balance rule, said before the tap: ETH for what is
     /// sent and the most the fee can be.
     private static func short(_ payments: [YourAccountOp.Payment], fee: String?, net: Network, account: String) async -> String? {
-        guard let fee, let held = await balance(net, YourAccountOp.eth, of: account) else { return nil }
+        guard let fee, var held = await balance(net, YourAccountOp.eth, of: account) else { return nil }
+        #if DEBUG
+        // `-moveSimulateETH` (prd §1542): the same pretended balance the
+        // simulation runs with, so Details can be seen; `transact` still refuses.
+        if let pretended = simulatedETH { held = pretended }
+        #endif
         let out = payments.filter { $0.token.contract == nil }.reduce("0") { YourAccountOp.sum($0, $1.amount) }
         let need = YourAccountOp.sum(out, fee)
         guard !YourAccountOp.atMost(need, held) else { return nil }
@@ -215,14 +220,17 @@ extension YourAccountChain {
                 if let c = YourAccountOp.call(for: p) { calls.append(c) }
                 words.append(Words.send(figure(p.amount, p.token), p.token.symbol, to: p.toName ?? Words.short(p.to)))
             case .swap(let s):
-                if let contract = s.sell.contract, let proxy = YourAccountSwap.approvalProxies.first,
-                   let approve = YourAccountSwap.approvalCalls([(contract, proxy, s.amount)])?.first {
+                let venue = s.quote.route?.venue
+                if let contract = s.sell.contract, let router = venue?.router,
+                   let approve = YourAccountSwap.approvalCalls([(contract, router, s.amount)])?.first {
                     calls.insert(approve, at: approvals.count)
-                    approvals.append(Words.Approval(figure: figure(s.amount, s.sell), symbol: s.sell.symbol, spender: "Relay"))
+                    approvals.append(Words.Approval(figure: figure(s.amount, s.sell), symbol: s.sell.symbol,
+                                                    spender: venue?.exchange ?? "Uniswap"))
                 }
-                words.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol, atLeast: figure(s.quote.minimumBuy, s.buy), s.buy.symbol))
+                words.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol, atLeast: figure(s.quote.minimumBuy, s.buy), s.buy.symbol,
+                                        on: venue?.exchange ?? "Uniswap"))
                 least = (least.map { YourAccountOp.sum($0.0, s.quote.minimumBuy) } ?? s.quote.minimumBuy, s.buy)
-                sold.append(Words.Sold(token: s.sell, amount: s.amount, fee: YourAccountDemo.relayFee(s.amount)))
+                sold.append(Words.Sold(token: s.sell, amount: s.amount, route: s.quote.route))
             }
         }
         words = approvals.map { Words.approve($0.figure, $0.symbol, to: $0.spender) } + words

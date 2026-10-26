@@ -18,8 +18,8 @@
 # moved inside the packed tuple fails even when both encoders move together.
 # The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
 # the recovery key's two operations (prd §1427) to the spike's landed ones,
-# and a swap's calls (prd §1440) checked against two real Relay quotes, with
-# every way of tampering with them refused. It
+# and a swap's calls (prd §1539) written by the phone and checked, the batch
+# rules held (`direct-swap-selftest.sh` pins the bytes). It
 # also holds Move to every build — no hidden or dormant feature in a release
 # (prd §1435, App Review 2.3.1) — and Base Sepolia to DEBUG always.
 set -euo pipefail
@@ -201,57 +201,41 @@ check(YourAccountOp.dummySignature(owner: recoverySigner) != YourAccountOp.dummy
       "the recovery key's estimate signs as the shared signer")
 check(YourAccount.short(want) == "…29Ce", "an address is its last four or the whole of it (prd §495)")
 
-// Swap, through Relay (prd §1440): two real Relay quotes on Base
-// (2026-10-19), one selling ETH, one selling USDC, read and checked as the
-// phone does — and every way of tampering with them refused.
-func fixture(_ name: String) -> [String: Any] {
-    let url = URL(fileURLWithPath: ProcessInfo.processInfo.environment["FIXTURES"]! + "/" + name)
-    return try! JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
-}
+// Swap, straight to the exchanges (prd §1539, §1542): the phone writes the
+// calls; `direct-swap-selftest.sh` pins them byte for byte against swaps
+// simulated on Base. Here, the batch rules the account relies on: selling
+// ETH is one call carrying exactly the amount, selling a token one exact
+// approval to the router that swaps it, and two sales of one token through
+// one router approve their sum once.
 let usdcBase = YourAccountOp.dollar(on: YourAccountOp.base)
-let ethJSON = fixture("relay-quote-eth-base.json"), usdcJSON = fixture("relay-quote-usdc-base.json")
-let ethQuote = YourAccountSwap.quote(from: ethJSON, chainId: 8453, sell: YourAccountOp.eth)!
-check(ethQuote.sellAmount == "1000000000000000" && ethQuote.minimumBuy == "2367794", "Relay's ETH quote reads its amounts")
-let ethChecked = YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "1000000000000000")
+let book = YourAccountSwap.base
+let me = "0x09930469ea9d645bb4141d94af5f2d02a22d29ce"
+let ethRoute = YourAccountSwap.Route(venue: book.venues[0], hops: [.init(from: book.weth, to: usdcBase.contract!.lowercased(), step: 500)])
+let ethCalls = YourAccountSwap.calls(ethRoute, in: book, sellsETH: true, buysETH: false, amount: "1000000000000000",
+                                     minimum: "2367794", account: me, deadline: 2_000_000_000)!
+let ethQuote = YourAccountSwap.Quote(sellAmount: "1000000000000000", buyAmount: "2380000", minimumBuy: "2367794", route: ethRoute, calls: ethCalls)
+let ethChecked = YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "1000000000000000", chainId: 8453)
 check(ethChecked != nil && ethChecked!.approvals.isEmpty && ethChecked!.calls.count == 1
-      && YourAccountSwap.routers.contains(ethChecked!.calls[0].to) && ethChecked!.calls[0].value == "1000000000000000",
-      "selling ETH is one call to Relay's router carrying exactly the amount sold")
-check(YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "999") == nil, "a quote for another amount is refused")
-check(YourAccountSwap.quote(from: ethJSON, chainId: 1, sell: YourAccountOp.eth) == nil, "a quote for another chain is refused")
-var elsewhere = ethQuote.calls; elsewhere[0] = .init(to: "0x000000000000000000000000000000000000dead", value: elsewhere[0].value, data: elsewhere[0].data)
-check(YourAccountSwap.checked(.init(sellAmount: ethQuote.sellAmount, buyAmount: ethQuote.buyAmount, minimumBuy: ethQuote.minimumBuy,
-                                    fee: "0", requestId: nil, calls: elsewhere), sell: YourAccountOp.eth, amount: "1000000000000000") == nil,
-      "a call to anything but Relay's contracts is refused")
-var more = ethQuote.calls; more[0] = .init(to: more[0].to, value: "2000000000000000", data: more[0].data)
-check(YourAccountSwap.checked(.init(sellAmount: ethQuote.sellAmount, buyAmount: ethQuote.buyAmount, minimumBuy: ethQuote.minimumBuy,
-                                    fee: "0", requestId: nil, calls: more), sell: YourAccountOp.eth, amount: "1000000000000000") == nil,
-      "more ETH than is sold is refused")
-var signed = ethJSON; var steps = signed["steps"] as! [[String: Any]]; steps[0]["kind"] = "signature"; signed["steps"] = steps
-check(YourAccountSwap.quote(from: signed, chainId: 8453, sell: YourAccountOp.eth) == nil, "a step asking for a signature is refused")
-
-let usdcQuote = YourAccountSwap.quote(from: usdcJSON, chainId: 8453, sell: usdcBase)!
-let usdcChecked = YourAccountSwap.checked(usdcQuote, sell: usdcBase, amount: "100000")
+      && YourAccountSwap.routers(8453).contains(ethChecked!.calls[0].to) && ethChecked!.calls[0].value == "1000000000000000",
+      "selling ETH is one call to a pinned router carrying exactly the amount sold")
+check(YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "999", chainId: 8453) == nil, "a quote for another amount is refused")
+check(YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "1000000000000000", chainId: 1) == nil, "a quote for another chain is refused")
+let usdcRoute = YourAccountSwap.Route(venue: book.venues[0], hops: [.init(from: usdcBase.contract!.lowercased(), to: book.weth, step: 500)])
+let usdcCalls = YourAccountSwap.calls(usdcRoute, in: book, sellsETH: false, buysETH: true, amount: "100000",
+                                      minimum: "40000000000000", account: me, deadline: 2_000_000_000)!
+let usdcChecked = YourAccountSwap.checked(.init(sellAmount: "100000", buyAmount: "41000000000000", minimumBuy: "40000000000000",
+                                                route: usdcRoute, calls: usdcCalls), sell: usdcBase, amount: "100000", chainId: 8453)
 check(usdcChecked != nil && usdcChecked!.approvals.count == 1 && usdcChecked!.approvals[0].amount == "100000"
-      && YourAccountSwap.approvalProxies.contains(usdcChecked!.approvals[0].spender)
+      && usdcChecked!.approvals[0].spender == book.venues[0].router
       && usdcChecked!.calls.count == 1 && usdcChecked!.calls[0].value == "0",
-      "selling a token approves exactly the amount sold to Relay's proxy, then one call")
-check(usdcQuote.fee == "59", "Relay's fee in the sold token is read")
-var wider = usdcQuote.calls
-wider[0] = .init(to: wider[0].to, value: "0", data: Array(wider[0].data.prefix(36)) + SafeABI.word(uint256: "100001")!)
-check(YourAccountSwap.checked(.init(sellAmount: "100000", buyAmount: usdcQuote.buyAmount, minimumBuy: usdcQuote.minimumBuy, fee: "0",
-                                    requestId: nil, calls: wider), sell: usdcBase, amount: "100000") == nil,
-      "an approval for more than is sold is refused")
-var stranger = usdcQuote.calls
-stranger[0] = .init(to: stranger[0].to, value: "0", data: YourAccountSwap.approveSelector + YourAccount.w("0x000000000000000000000000000000000000dEaD") + SafeABI.word(uint256: "100000")!)
-check(YourAccountSwap.checked(.init(sellAmount: "100000", buyAmount: usdcQuote.buyAmount, minimumBuy: usdcQuote.minimumBuy, fee: "0",
-                                    requestId: nil, calls: stranger), sell: usdcBase, amount: "100000") == nil,
-      "an approval to anyone but Relay is refused")
+      "selling a token approves exactly the amount sold to the router that swaps it, then one call")
 let summed = YourAccountSwap.approvalCalls([(usdcChecked!.approvals[0].token, usdcChecked!.approvals[0].spender, "100000"),
                                             (usdcChecked!.approvals[0].token, usdcChecked!.approvals[0].spender, "250000")])!
 check(summed.count == 1 && summed[0].data == YourAccountSwap.approveSelector + YourAccount.w(usdcChecked!.approvals[0].spender) + SafeABI.word(uint256: "350000")!,
       "two swaps selling one token approve their sum once (an approval replaces, never adds)")
 check(YourAccountSwap.supported(YourAccountOp.base) && YourAccountSwap.supported(YourAccountOp.ethereum)
-      && !YourAccountSwap.supported(YourAccountOp.baseSepolia), "Relay swaps on every live network the account is on, never a test network")
+      && YourAccountSwap.supported(YourAccountOp.robinhood) && !YourAccountSwap.supported(YourAccountOp.baseSepolia),
+      "the account swaps on every live network it is on, never a test network")
 check(YourAccountOp.networks.filter { !$0.isTest }.allSatisfy(YourAccountSwap.supported),
       "a live network without swaps — send, receive and swap arrive together (prd §1441)")
 check(YourAccountOp.networks.contains { $0.chainId == 4663 } && YourAccountOp.network(appName: "robinhood-mainnet")?.chainId == 4663,
@@ -528,7 +512,7 @@ grep -q 'if ending == .close, inTray { chrome.moveTray = false }' Casberi/Casber
 grep -q 'case created' "$SENTENCE" && { echo "✗ Move's Created arrival is back beside the walk's Created page (prd §1501, §723)"; exit 1; }
 grep -q 'Self.short($0, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the For word draws the exact quote again — the clause outgrows 52 (prd §1479)"; exit 1; }
 grep -q 'return "≈ " + Self.figure(back, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the print line no longer carries the ≈ and the exact quote (prd §1479, §83)"; exit 1; }
-# The fee after it is the network's and Relay's together since §1509 (`swapFeePrint`).
+# The fee after it is the network's alone since §1539: the pool's is in the price (`swapFeePrint`).
 grep -q 'case .swap: \[soldPrint, quotePrint, swapFeePrint\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote or the whole fee (prd §1479, §1509)"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, the sentence is one size that wraps, the create walk ends on Created, and an exported key is kept apart and shown only once it landed"

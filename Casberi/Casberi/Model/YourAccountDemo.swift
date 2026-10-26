@@ -10,7 +10,7 @@ import Foundation
 /// It is never a key. Nothing here can sign, and every act that would send,
 /// swap, buy or change a key says it works once you leave the demo, as the
 /// demo's other acts do (§83: a control that looks live says what it is).
-/// It reaches nothing: holdings, Relay's list and a swap's estimate are read
+/// It reaches nothing: holdings, Uniswap's list and a swap's estimate are read
 /// off the table below, never a node, so the demo's reach ledger stays
 /// empty.
 enum YourAccountDemo {
@@ -42,7 +42,7 @@ enum YourAccountDemo {
     static let cbBTC = Op.Token(symbol: "cbBTC", decimals: 8, contract: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf")
     static let aero = Op.Token(symbol: "AERO", decimals: 18, contract: "0x940181a94A35A4569E4529A3CDfB74e38FD98631")
     static let mag7 = Op.Token(symbol: "MAG7", decimals: 18, contract: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840")
-    /// A token two days old that Relay does not list (prd §1513's demo).
+    /// A token two days old that Uniswap's list does not carry (prd §1513's demo).
     static let pepe2 = Op.Token(symbol: "PEPE2", decimals: 18, contract: "0x9e7ac1d2b3f4e5a6b7c8d9e0f1a2b3c4d5e6f702")
 
     /// One price a whole token, in dollars, for every token the demo names.
@@ -68,7 +68,7 @@ enum YourAccountDemo {
         switch net.chainId {
         case Op.base.chainId:
             // AERO and PEPE2 are the demo's dust (prd §1537): Sweep takes
-            // the first and leaves the second, which Relay does not list.
+            // the first and leaves the second, which Uniswap's list does not carry.
             return [h(Op.dollar(on: net), "248.40"), h(Op.eth, "0.0842"), h(cbBTC, "0.0011"),
                     h(aero, "0.6"), h(pepe2, "200000")]
         case Op.robinhood.chainId:
@@ -82,7 +82,7 @@ enum YourAccountDemo {
 
     /// What the swap picker offers in the demo: what it holds, and a few more.
     static func list(_ net: Op.Network) -> [Listed] {
-        // The dust is listed below as Relay lists it: PEPE2 is not verified.
+        // The dust is listed below as Uniswap's list carries it: PEPE2 is not on it.
         var out = held(on: net).filter { $0.token != aero && $0.token != pepe2 }
             .map { Listed(token: $0.token, name: name($0.token), onList: true) }
         if net.chainId == Op.base.chainId {
@@ -104,8 +104,8 @@ enum YourAccountDemo {
     }
 
     /// A swap's estimate off the table: the sold dollars at the bought price,
-    /// less Relay's usual few tenths of a percent. It carries no calls, and
-    /// the sentence never signs in the demo.
+    /// less a pool's usual few tenths of a percent, on Base's Uniswap 0.05%
+    /// pool. It carries no calls, and the sentence never signs in the demo.
     static func quote(sell: Op.Token, buy: Op.Token, amount: String) -> YourAccountSwap.Quote? {
         guard let sp = price(sell), let bp = price(buy), bp > 0,
               let units = Decimal(string: amount) else { return nil }
@@ -115,9 +115,12 @@ enum YourAccountDemo {
             NSDecimalRound(&r, &v, 0, .down)
             return NSDecimalNumber(decimal: r).stringValue
         }
+        let book = YourAccountSwap.base
+        let hop = YourAccountSwap.Hop(from: sell.contract?.lowercased() ?? book.weth, to: buy.contract?.lowercased() ?? book.weth,
+                                      step: 500)
         return YourAccountSwap.Quote(sellAmount: amount, buyAmount: base(dollars * Decimal(0.997)),
-                                     minimumBuy: base(dollars * Decimal(0.99)), fee: "0",
-                                     requestId: nil, calls: [])
+                                     minimumBuy: base(dollars * Decimal(0.99)),
+                                     route: YourAccountSwap.Route(venue: book.venues[0], hops: [hop]), calls: [])
     }
 
     /// The demo's round-ups: to the next $1, buying ETH on Base.
@@ -155,14 +158,6 @@ enum YourAccountDemo {
         case Op.robinhood.chainId: 4_000_000
         default: 5_000_000
         }
-    }
-
-    /// Relay's usual fee on a swap, four hundredths of a percent of it.
-    static func relayFee(_ sold: String) -> String {
-        guard let units = Decimal(string: sold) else { return "0" }
-        var r = Decimal(), v = units * Decimal(string: "0.0004")!
-        NSDecimalRound(&r, &v, 0, .down)
-        return NSDecimalNumber(decimal: r).stringValue
     }
 
     // MARK: - Warnings (prd §1513)

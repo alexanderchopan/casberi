@@ -12,7 +12,7 @@ import UIKit
 /// The verbs stand on their own line, the picked one bright (§1438a); under
 /// them every blank is a word: the amount, the token you spend, what you
 /// want or who it goes to, the network. Tap a word and its choices open in the space under
-/// the sentence — what you hold, Relay's list, your addresses — and typing only
+/// the sentence — what you hold, Uniswap's list, your addresses — and typing only
 /// narrows them; nothing slides over the page. One grey line says the rest:
 /// the other unit (tap it to type in it), what you have, the fee.
 ///
@@ -80,9 +80,9 @@ struct MoveSentence: View {
     /// The networks this phone can use the account on (§1442k); nil until
     /// read, and every network on the phone that made the account.
     @State private var reach: [Op.Network]?
-    /// Relay's list for each network, read at once.
+    /// Uniswap's token list for each network, read at once (prd §1542).
     @State private var listedBy: [Int: [Tokens.Listed]] = [:]
-    /// Relay's matches for what is typed in For (prd §1440), per network:
+    /// The list's matches for what is typed in For (prd §1542), per network:
     /// every network until one is picked (§1442a).
     @State private var found: [Int: [Tokens.Listed]] = [:]
     @State private var with: Tokens.Held?
@@ -104,7 +104,8 @@ struct MoveSentence: View {
     @State private var slot = 0
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
-    /// Whose words `quoteNote` is ("Relay"), drawn as its mark (§1442n).
+    /// Whose words `quoteNote` is, drawn as its mark (§1442n), when they are
+    /// a service's rather than the app's.
     @State private var quoteFrom: String?
     @State private var stage: Chain.Stage?
     /// What a signed transaction became, said in the sentence's place (§1438b).
@@ -172,7 +173,7 @@ struct MoveSentence: View {
     @State private var sweepUnder = DustSweep.under
     /// What on the network is swept and what stays, and why; nil until read.
     @State private var sweepPlan: DustSweep.Plan?
-    /// Relay is pricing the plan's sweeps.
+    /// The pools are pricing the plan's sweeps.
     @State private var sweepPricing = false
     /// The swaps Sweep signs, one per swept token, in the plan's order.
     @State private var sweepItems: [Chain.Item] = []
@@ -189,7 +190,7 @@ struct MoveSentence: View {
     }
 
     /// A service's mark, in place of its name before its own words (§1442n):
-    /// Relay's star on its white circle, as the swap credit draws it.
+    /// Relay's star on its white circle, as its credit draws it.
     @ViewBuilder static func mark(of service: String) -> some View {
         if service == "Bitrefill" {
             Image("brand-bitrefill")
@@ -350,17 +351,32 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
-    /// Whether Relay carries this move (prd §1512): a swap, a send whose
+    /// Whether Relay carries this move (prd §1512, §1539): a send whose
     /// round-up buys now, money arriving from another network. Relay refuses
-    /// every Tor exit, key or no key, so each says it on the foot.
+    /// every Tor exit, key or no key, so each says it on the foot. A swap and
+    /// a sweep go straight to the pools through the account's own node, so
+    /// through Tor (measured 2026-10-26), and are not Relay's.
     private var relayCarries: Bool {
         switch verb {
-        case .swap: true
+        case .swap: false
         case .send: roundUpPlan?.buy != nil
         case .receive: elsewhere != nil
         case .buy: false
-        case .sweep: true
+        case .sweep: false
         }
+    }
+
+    /// **THE EXCHANGE THAT DOES IT (prd §1539, user ruling).** "On Uniswap ·
+    /// 0.05% pool fee" for one swap, "On Uniswap and Aerodrome" for several
+    /// on both: the foot's credit for a swap or a sweep, in Relay's old
+    /// place, with no "powered by". The pool fee is in the price.
+    private var exchangeCredit: String? {
+        guard verb == .swap || verb == .sweep else { return nil }
+        let routes = signing.compactMap { item -> YourAccountSwap.Route? in
+            if case .swap(let s) = item { return s.quote.route }
+            return nil
+        }
+        return YourAccountSwap.credit(routes)
     }
 
     /// The small print's word on round-ups: what is counted, or that this
@@ -721,7 +737,7 @@ struct MoveSentence: View {
         MoveClause(glue: String(localized: "for")) {
             let back = word(sweepBackWord, ink: DS.textPrimary)
             if sweepPricing {
-                // While Relay prices it, the word breathes, as Swap's does.
+                // While the pools price it, the word breathes, as Swap's does.
                 back.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
             } else {
                 back
@@ -739,7 +755,7 @@ struct MoveSentence: View {
         return String(localized: "\(swept) tokens")
     }
 
-    /// "≈ 0.0004 ETH" once Relay has priced it: short here, exact in Details.
+    /// "≈ 0.0004 ETH" once the pools have priced it: short here, exact in Details.
     private var sweepBackWord: String {
         let back = sweepBack
         guard !sweepPricing, DustSweep.isPositive(back) else { return Op.eth.symbol }
@@ -800,7 +816,13 @@ struct MoveSentence: View {
     private func sweepRow(_ row: DustSweep.Row) -> some View {
         let h = row.holding
         let worth = h.usd.map { Self.money($0) }
-        return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? worth,
+        // A swept token names its exchange (prd §1539): "$0.42 · On Aerodrome".
+        let exchange = sweepItems.lazy.compactMap { item -> String? in
+            guard case .swap(let s) = item, (s.sell.contract?.lowercased() ?? s.sell.symbol) == h.id else { return nil }
+            return s.quote.exchange.map(YourAccountSwap.on)
+        }.first
+        let swept = [worth, exchange].compactMap { $0 }.joined(separator: " · ")
+        return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? (swept.isEmpty ? nil : swept),
                        trailing: row.stay == nil ? nil : worth, mark: h.symbol, dim: row.stay != nil) {
             switch row.stay {
             case nil:
@@ -822,10 +844,10 @@ struct MoveSentence: View {
     static func sweepWords(_ stay: DustSweep.Stay) -> String {
         switch stay {
         case .noPrice: String(localized: "No price")
-        case .notVerified: String(localized: "Not verified by Relay")
+        case .notVerified: String(localized: "Not on Uniswap's list")
         case .roundUps: String(localized: "Holds your round-ups")
         case .nextSweep: String(localized: "In the next sweep")
-        case .noRoute: String(localized: "Relay has no route")
+        case .noRoute: String(localized: "No pool trades it")
         case .costsMore: String(localized: "Costs more than it returns")
         case .leftOut: String(localized: "Left out")
         }
@@ -835,11 +857,11 @@ struct MoveSentence: View {
     static func sweepWhy(_ stay: DustSweep.Stay, _ symbol: String) -> String {
         switch stay {
         case .noPrice: String(localized: "Nothing prices \(symbol), so nothing says it is under the line")
-        case .notVerified: String(localized: "Relay does not verify \(symbol), and selling it would run its own contract")
+        case .notVerified: String(localized: "\(symbol) is not on Uniswap's list, and selling it would run its own contract")
         case .roundUps: String(localized: "Your round-ups wait in \(symbol) until they buy")
         case .nextSweep: String(localized: "Ten tokens a sweep: \(symbol) goes in the next one")
-        case .noRoute: String(localized: "Relay gave no price for \(symbol)")
-        case .costsMore: String(localized: "Relay's fee would take more than half of \(symbol)")
+        case .noRoute: String(localized: "No pool here trades \(symbol) for ETH")
+        case .costsMore: String(localized: "The pools would pay back less than half of what \(symbol) is worth")
         case .leftOut: String(localized: "Tap to put \(symbol) back")
         }
     }
@@ -877,9 +899,9 @@ struct MoveSentence: View {
                 String(listedBy[network.chainId]?.count ?? 0)].joined(separator: "|")
     }
 
-    /// What is under the line, sorted by `DustSweep.plan`, then priced by
-    /// Relay one token at a time, all at once, and judged: a token with no
-    /// quote, or whose ETH is worth less than half of it, stays.
+    /// What is under the line, sorted by `DustSweep.plan`, then priced off
+    /// the pools one token at a time, all at once, and judged: a token with
+    /// no pool, or whose ETH is worth less than half of it, stays.
     private func resweep() async {
         let key = sweepKey
         guard !key.isEmpty else {
@@ -902,7 +924,7 @@ struct MoveSentence: View {
         let holdings = held.map { h -> DustSweep.Holding in
             let contract = h.token.contract?.lowercased()
             let isDollar = contract != nil && contract == dollar
-            // Relay verified it, or a swap here bought it; the dollar is the account's own.
+            // On Uniswap's list, or a swap here bought it; the dollar is the account's own.
             let boughtHere = contract.map { bought.contains($0) } ?? false
             let verified = listed.contains { $0.onList && $0.id == h.id }
             return DustSweep.Holding(symbol: h.token.symbol, contract: h.token.contract, decimals: h.token.decimals,
@@ -1454,7 +1476,7 @@ struct MoveSentence: View {
             let word = blank((back ?? "") + buy.token.symbol, ink: DS.pickInk,
                              .buy, label: Text("For \(buy.token.symbol), change"))
             if pricing {
-                // While Relay prices it, the word breathes: working, not stuck.
+                // While the pools price it, the word breathes: working, not stuck.
                 word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
             } else {
                 word
@@ -1464,7 +1486,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// A swap is being priced: everything is there but Relay's answer.
+    /// A swap is being priced: everything is there but the pools' answer.
     private var pricing: Bool {
         verb == .swap && buy != nil && units != nil && !over && quote == nil && quoteNote == nil
     }
@@ -1746,7 +1768,7 @@ struct MoveSentence: View {
             }
         } else if let with {
             // One line of small print (§1442f): the other unit and the fee.
-            // Relay's credit is the foot's, and the slider, the amount's own
+            // The exchange's credit is the foot's, and the slider, the amount's own
             // control, stands under it here rather than stranded at the foot.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 // Swapping, the other unit is the receipt's column; the fee is
@@ -1984,7 +2006,7 @@ struct MoveSentence: View {
         let sends = signing.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
         let to = sends.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
         return MoveDetails(preview: shownPreview, swap: verb != .send, to: to, account: account,
-                           networkFeeUSD: networkFeeUSD, relayFeeUSD: relayFeeUSD, soldUSD: soldDollarsTotal,
+                           networkFeeUSD: networkFeeUSD,
                            warnings: shownFindings.map { (warningLine($0), $0.red) }, checkedWith: checkedWith) {
             withAnimation(DS.Motion.standard) { rawOpen = true }
             DSHaptic.selection()
@@ -2010,23 +2032,17 @@ struct MoveSentence: View {
         return Op.dollars(wei, decimals: 18, price: price)
     }
 
-    /// Relay's fees from the quotes the preview would sign, in dollars.
-    private var relayFeeUSD: Double? {
-        guard let sold = shownPreview?.sold, !sold.isEmpty else { return nil }
-        let parts = sold.map { s in price(of: s.token).map { Op.dollars(s.fee, decimals: s.token.decimals, price: $0) } }
-        return parts.contains { $0 == nil } ? nil : parts.compactMap { $0 }.reduce(0, +)
-    }
-
     /// A send's fee: "Fee up to $0.01", "Fee under a cent".
     private var sendFeePrint: String? {
         guard let wei = shownPreview?.feeWei else { return nil }
         return YourAccountPreview.feePhrase(usd: networkFeeUSD, wei: wei, money: Self.money)
     }
 
-    /// A swap's fee is the network's and Relay's together (prd §1509 item 2).
+    /// A swap's fee is the network's alone (prd §1539): the pool's fee is in
+    /// the price, and nobody stands between to charge another.
     private var swapFeePrint: String? {
-        guard let network = networkFeeUSD, let relay = relayFeeUSD else { return nil }
-        return YourAccountPreview.feePhrase(usd: network + relay, wei: "0", money: Self.money)
+        guard let wei = shownPreview?.feeWei else { return nil }
+        return YourAccountPreview.feePhrase(usd: networkFeeUSD, wei: wei, money: Self.money)
     }
 
     /// The sentence the preview is of: its lines' contents, never their
@@ -2094,16 +2110,6 @@ struct MoveSentence: View {
             return Self.figure(u, decimals: h.token.decimals) + " " + h.token.symbol
         }
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
-    }
-
-    /// A swap's fee; under a cent it says so rather than a string of zeros.
-    private func feeLine(_ h: Tokens.Held) -> String? {
-        guard verb == .swap, let quote else { return nil }
-        if let price = h.price {
-            let usd = Op.dollars(quote.fee, decimals: h.token.decimals, price: price)
-            return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
-        }
-        return String(localized: "Fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     /// **$ · ETH (§1442d, user: "a user needs to be able to change token
@@ -2313,7 +2319,7 @@ struct MoveSentence: View {
             ForEach(buyRows, id: \.key) { row in
                 let l = row.listed
                 let mine = (heldBy[row.net.chainId] ?? []).first { $0.id == l.id }
-                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay")
+                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
                 listRow(l.token.symbol,
                         sub: networkPicked ? about : [about, row.net.name].compactMap { $0 }.joined(separator: " · "),
                         trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
@@ -2444,8 +2450,9 @@ struct MoveSentence: View {
         }
     }
 
-    /// What you receive (prd §1470): Relay's tokens on your network, as For
-    /// lists them, what you hold first; a search as you type.
+    /// What you receive (prd §1470): the tokens For lists on your network
+    /// (Uniswap's list), what you hold first; a search as you type. Relay
+    /// brings what you pick, and says so if it cannot.
     private var arrivesList: some View {
         let to = network.isTest ? Op.base : network
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
@@ -2453,7 +2460,7 @@ struct MoveSentence: View {
         let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [], shows: majorToken)
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(rows) { l in
-                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay")
+                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
                 listRow(l.token.symbol, sub: about, mark: l.token.symbol, dim: !l.onList || l.token == elsewhere?.arrives) {
                     pick { elsewhereArrives = l.token }
                     if let route = elsewhere, l.token != route.arrives { takeRoute(from: route.from, token: route.token) }
@@ -2462,7 +2469,7 @@ struct MoveSentence: View {
             if rows.isEmpty {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
-                    Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
                 .frame(minHeight: DSFeed.headHeight)
             }
@@ -2733,9 +2740,9 @@ struct MoveSentence: View {
             }
             }
             // Relay's credit signs the foot, small and centred, as Apple
-            // Pay's does (§1442f): a credit, not a fact about this swap.
+            // Pay's does (§1442f): a credit, not a fact about this move.
             // Wherever Relay carries the move, since it is read directly
-            // (§1512).
+            // (§1512): a round-up's buy and Receive from another network.
             if relayCarries, receipt == nil, !nothingToMove {
                 HStack(spacing: DS.Space.s1) {
                     Text("Powered by Relay")
@@ -2752,6 +2759,17 @@ struct MoveSentence: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
+            }
+            // A swap's or a sweep's exchange signs the foot in the same
+            // place (prd §1539): "On Uniswap · 0.05% pool fee". It is a fact
+            // about this swap, so it carries no "powered by".
+            if let exchangeCredit, receipt == nil, !nothingToMove {
+                Text(verbatim: exchangeCredit)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DS.Space.s1)
             }
             // Bitrefill's credit signs Buy's foot the same way (§1473, user:
             // "put bitrefill logo like we do w/ relay").
@@ -2894,7 +2912,7 @@ struct MoveSentence: View {
             // both eth, which shouldn't show as two").** The same token for
             // the same token adds to the line already kept: one clause, one
             // swap signed. Its quote is the two summed for the sentence;
-            // Relay is asked afresh for the whole at signing.
+            // the pools are asked afresh for the whole at signing.
             if case .swap(let new) = item, let at = items.firstIndex(where: {
                 if case .swap(let s) = $0 { return s.sell == new.sell && s.buy == new.buy }
                 return false
@@ -2934,13 +2952,12 @@ struct MoveSentence: View {
 
     /// Two swaps of one token for one token as one: the amounts summed,
     /// the quote's figures summed for the sentence, no calls (signing asks
-    /// Relay for the whole amount, `Chain.transact`).
+    /// the pools for the whole amount, `Chain.transact`).
     static func folded(_ a: Chain.Swap, _ b: Chain.Swap) -> Chain.Swap {
         let q = YourAccountSwap.Quote(sellAmount: Op.sum(a.quote.sellAmount, b.quote.sellAmount),
                                       buyAmount: Op.sum(a.quote.buyAmount, b.quote.buyAmount),
                                       minimumBuy: Op.sum(a.quote.minimumBuy, b.quote.minimumBuy),
-                                      fee: Op.sum(a.quote.fee, b.quote.fee),
-                                      requestId: nil, calls: [])
+                                      route: a.quote.route ?? b.quote.route, calls: [])
         return Chain.Swap(id: a.id, network: a.network, sell: a.sell, buy: a.buy,
                           amount: Op.sum(a.amount, b.amount), quote: q)
     }
@@ -3295,6 +3312,10 @@ struct MoveSentence: View {
             guard !Task.isCancelled else { return }
             withAnimation(DS.Motion.standard) { quote = q }
             #if DEBUG
+            // `moveSwapQuote|` (prd §1542): which pools won, in words and as a route.
+            let hops = q.route?.hops.map { "\($0.from.suffix(6))>\($0.step)>\($0.to.suffix(6))" }.joined(separator: " ") ?? "-"
+            NSLog("moveSwapQuote| %@ %@ %@→%@ | %@ | out=%@ min=%@ | %@ calls=%d", network.name, units, with.token.symbol, buy.token.symbol,
+                  q.route.map(YourAccountSwap.words) ?? "-", q.buyAmount, q.minimumBuy, hops, q.calls.count)
             draftAddsTheSwap()
             #endif
         } catch let failure as Chain.Failure {
@@ -3304,8 +3325,8 @@ struct MoveSentence: View {
         } catch {}
     }
 
-    /// Relay's matches as you type, after a pause, on every network the list
-    /// looks in; a pasted contract is read off each.
+    /// The list's matches as you type, after a pause, on every network the
+    /// list looks in; a pasted contract is read off each.
     private func lookUpPasted() async {
         if open == .merchant { await searchMerchants(); return }
         pasted = [:]
@@ -3712,7 +3733,7 @@ struct MoveSentence: View {
     /// `-moveSwapDraft "<amount>|<SELL>[|<BUY>]"` and `-moveSendDraft
     /// "<amount>|<to>"`: the sentence filled, because a `simctl`-booted
     /// simulator drops typed characters (prd §1424, §1438). Both given: the
-    /// swap is Added once Relay prices it, and the send fills the next sentence.
+    /// swap is Added once the pools price it, and the send fills the next sentence.
     private func draft() {
         let d = UserDefaults.standard
         // `-moveWarnProbe first|lookalike|scam|sanctioned|newContract|fails`
@@ -3746,7 +3767,7 @@ struct MoveSentence: View {
             self.buyDraft(buyDraft)
         } else if let sweep = d.string(forKey: "moveSweepDraft"), !sweep.isEmpty {
             // `-moveSweepDraft YES|1|5` (prd §1537): Sweep on Base, at that
-            // line; logs `moveSweep|` once Relay has priced it.
+            // line; logs `moveSweep|` once the pools have priced it.
             verb = .sweep
             if let under = Int(sweep), DustSweep.choices.contains(under) { sweepUnder = under }
             switchNetwork(Op.base)
@@ -3771,7 +3792,7 @@ struct MoveSentence: View {
         networkPicked = true
         if parts.count > 1, let h = held.first(where: { $0.token.symbol == parts[1] }) { with = h }
         let buyName = parts.count > 2 ? parts[2] : (with?.token.symbol == "ETH" ? "USDC" : "ETH")
-        // Relay's own listing first; one it does not list only by name.
+        // The list's own entry first; one it does not carry only by name.
         buy = listed.first { $0.token.symbol == buyName && $0.onList }
             ?? listed.first { $0.token.symbol == buyName }
             ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }

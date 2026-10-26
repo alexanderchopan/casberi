@@ -61,13 +61,10 @@ check(P.feePhrase(usd: 0.012, wei: "1", money: money) == "Fee up to $0.01", "a f
 check(P.feePhrase(usd: 0.01, wei: "1", money: money) == "Fee up to $0.01", "exactly a cent was said as under one")
 check(P.feePhrase(usd: nil, wei: "3100000000000", money: money) == "Fee up to 0.0000031 ETH", "an unpriced fee did not fall back to the coin")
 
-// Relay's share of what is sold.
-check(P.relayShare(fee: "40000", sold: "100000000") == "0.04%", "Relay's 40000 of 100000000 is not 0.04%")
-check(P.relayShare(fee: "1", sold: "100000000") == "under 0.01%", "a tiny share was not 'under 0.01%'")
-check(P.relayShare(fee: "0", sold: "100000000") == nil, "no fee drew a share")
-check(P.relayShare(fee: "5", sold: "0") == nil, "nothing sold drew a share")
-check(P.relayShare(fee: "250000", sold: "100000000") == "0.25%", "0.25% read wrong")
-check(P.relayShare(feeUSD: 0.04, soldUSD: 100) == "0.04%", "the dollar share is not the units share")
+// The pool's fee, said as the pool charges it (prd §1539): a percentage of
+// what passes through it, in the price, never added to the network's.
+check(YourAccountSwap.percent(pips: 500) == "0.05%" && YourAccountSwap.percent(pips: 80) == "0.008%",
+      "a pool fee is not said as its percentage")
 
 // ERC-8213's Calldata Digest, its own test vector.
 let transfer = SafeABI.hexBytes("a9059cbb0000000000000000000000004675c7e5baafbffbca748158becba61ef3b0a2630000000000000000000000000000000000000000000000000de0b6b3a7640000")!
@@ -101,8 +98,9 @@ check(P.rotate(to: 5) == P.Step(words: "Moves your account to a new key", detail
       "the key change is not said as the canvas says it")
 check(P.send("25", "USDC", to: P.short("0x1a2B8f0c4E7d9A61b3C5e2F04d8a7B93c6E19cD0")).words == "Sends 25 USDC to 0x1a2B…9cD0",
       "a send's words changed")
-check(P.approve("100", "USDC", to: "Relay").words == "Lets Relay spend exactly 100 USDC", "an approval is not said as exact")
-check(P.swap("100", "USDC", atLeast: "0.0101", "ETH").words == "Swaps 100 USDC for at least 0.0101 ETH through Relay", "a swap's words changed")
+check(P.approve("100", "USDC", to: "Uniswap").words == "Lets Uniswap spend exactly 100 USDC", "an approval is not said as exact")
+check(P.swap("100", "USDC", atLeast: "0.0101", "ETH", on: "Aerodrome").words == "Swaps 100 USDC for at least 0.0101 ETH on Aerodrome",
+      "a swap's words do not name the exchange that does it (prd §1539)")
 check(P.short("0x12") == "0x12", "a short string was cut")
 check(P.coin("4100000000000") == "0.0000041" && P.coin("1250000000000000000") == "1.25" && P.coin("0") == "0",
       "the fee in its coin is not two significant figures under one")

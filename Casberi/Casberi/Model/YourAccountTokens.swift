@@ -10,19 +10,19 @@ import Foundation
 /// priced only by that reading (dollars over amount); one it never priced
 /// offers no dollars.
 ///
-/// *For* is Relay's token search (prd §1440): its list for the network
-/// with nothing typed, its matches as you type, each marked verified or not.
-/// A pasted address Relay does not know is read off the chain (`symbol()`,
-/// `decimals()`) and says it is "Not verified by Relay", so a look-alike
-/// never passes as the real one.
+/// *For* is Uniswap's open token list (prd §1542, `OpenTokenList`, was
+/// Relay's search): the network's tokens on it with nothing typed, the ones
+/// matching as you type. A pasted address the list does not carry is read
+/// off the chain (`symbol()`, `decimals()`) and says it is "Not on Uniswap's
+/// list", so a look-alike never passes as the real one.
 enum YourAccountTokens {
     typealias Op = YourAccountOp
 
     struct Listed: Equatable, Identifiable, Sendable {
         let token: Op.Token
         let name: String
-        /// Verified by Relay. One that is not is still offered, and said
-        /// to be not.
+        /// On Uniswap's token list. One that is not is still offered, and
+        /// said to be not.
         let onList: Bool
         var id: String { token.contract?.lowercased() ?? token.symbol }
     }
@@ -37,17 +37,42 @@ enum YourAccountTokens {
         var usd: Double? { price.map { Op.dollars(units, decimals: token.decimals, price: $0) } }
     }
 
-    // MARK: - Relay's search
+    // MARK: - The open list
 
-    @MainActor private static var lists: [Int: (tokens: [Listed], at: Date)] = [:]
+    /// The list's tokens per network, read once a day.
+    @MainActor private static var open: (tokens: [Int: [OpenTokenList.Entry]], at: Date)?
+    /// The one read in flight: three networks asking at once fetch it once.
+    @MainActor private static var reading: Task<[Int: [OpenTokenList.Entry]], Never>?
 
-    /// Relay's tokens on `net` matching `term`, verified first; with nothing
-    /// typed, its list for the network, ETH first, kept an hour. Empty where
-    /// the account does not swap (a test network).
+    /// Uniswap's list, fetched once a day (it is about 860 KB), the
+    /// account's networks only. Empty when it could not be read: For then
+    /// offers what you hold, and typed or pasted contracts read off the chain.
+    @MainActor
+    private static func openList() async -> [Int: [OpenTokenList.Entry]] {
+        if let open, open.at.timeIntervalSinceNow > -86_400, !open.tokens.isEmpty { return open.tokens }
+        if let reading { return await reading.value }
+        let task = Task { @MainActor () -> [Int: [OpenTokenList.Entry]] in
+            guard let url = URL(string: OpenTokenList.url),
+                  let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: "Your account"),
+                  http.statusCode == 200 else { return [:] }
+            let chains = Set(Op.networks.filter { !$0.isTest }.map(\.chainId))
+            return OpenTokenList.parse(data, chains: chains)
+        }
+        reading = task
+        let tokens = await task.value
+        reading = nil
+        guard !tokens.isEmpty else { return open?.tokens ?? [:] }
+        open = (tokens, .now)
+        return tokens
+    }
+
+    /// The list's tokens on `net` matching `term`; with nothing typed, the
+    /// network's whole list, ETH first. Empty where the account does not swap
+    /// (a test network).
     @MainActor
     static func list(_ net: Op.Network, term: String = "") async -> [Listed] {
         guard YourAccountSwap.supported(net) else { return [] }
-        // The demo asks Relay nothing (§1475): its own few tokens.
+        // The demo asks for nothing (§1475): its own few tokens.
         if YourAccountDemo.isOn {
             let q = term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             return YourAccountDemo.list(net).filter {
@@ -55,40 +80,26 @@ enum YourAccountTokens {
             }
         }
         let q = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        if q.isEmpty, let cached = lists[net.chainId], cached.at.timeIntervalSinceNow > -3_600 { return cached.tokens }
-        var seen: Set<String> = []
-        var out: [Listed] = q.isEmpty ? [Listed(token: Op.eth, name: "Ether", onList: true)] : []
-        if q.isEmpty { seen.insert(Op.eth.symbol) }
-        // A verified token's logo goes to the icon book (prd §1534), so its
-        // row draws its picture rather than its initials.
-        var logos: [(symbol: String, url: String)] = []
-        for c in await YourAccountChain.relayCurrencies(net, term: q) {
-            guard let address = c["address"] as? String,
-                  let symbol = c["symbol"] as? String, !symbol.isEmpty, symbol.count <= 16,
-                  let decimals = c["decimals"] as? Int, (0...36).contains(decimals) else { continue }
-            let metadata = c["metadata"] as? [String: Any]
-            let verified = (metadata?["verified"] as? Bool) ?? false
-            if verified, let logo = metadata?["logoURI"] as? String { logos.append((symbol, logo)) }
-            let token: Op.Token
-            if address.lowercased() == YourAccountSwap.native {
-                token = Op.eth
-            } else {
-                guard ENS.isHexAddress(address) else { continue }
-                token = Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
-            }
-            let id = token.contract?.lowercased() ?? token.symbol
-            guard seen.insert(id).inserted else { continue }
-            out.append(Listed(token: token, name: (c["name"] as? String) ?? symbol, onList: verified))
+        let weth = YourAccountSwap.book(net.chainId)?.weth
+        var out: [Listed] = q.isEmpty || "ether".contains(q.lowercased()) || Op.eth.symbol.lowercased().hasPrefix(q.lowercased())
+            ? [Listed(token: Op.eth, name: "Ether", onList: true)] : []
+        let found = OpenTokenList.search(await openList()[net.chainId] ?? [], q).filter { $0.address != weth }
+        for e in found {
+            out.append(Listed(token: Op.Token(symbol: e.symbol, decimals: e.decimals, contract: EIP55.checksum(e.address)),
+                              name: e.name, onList: true))
         }
-        TokenIconBook.fill(logos)
-        // Verified first, each group in Relay's order.
-        out = out.filter(\.onList) + out.filter { !$0.onList }
-        if q.isEmpty, out.count > 1 { lists[net.chainId] = (out, .now) }
+        // A listed token's logo goes to the icon book (prd §1534), so its row
+        // draws its picture rather than its initials: the stablecoins For
+        // offers unasked, and what a search finds. Never the whole list: its
+        // pictures would crowd the holdings' own out of the book, and every
+        // token on it would count as marked (`major`).
+        let pictured = q.isEmpty ? found.filter { stablecoins.contains($0.symbol.uppercased()) } : Array(found.prefix(40))
+        TokenIconBook.fill(pictured.compactMap { e in e.logo.map { (e.symbol, $0) } })
         return out
     }
 
-    /// A pasted contract: CoW's entry when it lists it, else what the chain
-    /// says its symbol and decimals are, marked not on the list.
+    /// A pasted contract: the list's entry when it carries it, else what the
+    /// chain says its symbol and decimals are, marked not on the list.
     @MainActor
     static func lookUp(_ address: String, on net: Op.Network) async -> Listed? {
         guard ENS.isHexAddress(address) else { return nil }
@@ -116,12 +127,12 @@ enum YourAccountTokens {
     ]
 
     /// **ONLY THE TOKENS YOU WOULD KNOW, UNASKED (prd §1532, user: "why don't
-    /// we just show stablecoins, and ones we have icons for").** Relay's list
-    /// for a network runs to hundreds of tokens, most of them with no mark
-    /// and no name anyone recognises. With nothing typed, For offers what
-    /// Relay verified AND is a stablecoin or wears a mark (`marked`, the
-    /// app's own artwork or the icon book). Typed words and a pasted
-    /// contract still reach every token, and what you hold always shows.
+    /// we just show stablecoins, and ones we have icons for").** The list
+    /// for a network runs to hundreds of tokens, many with no name anyone
+    /// recognises. With nothing typed, For offers what is on Uniswap's list
+    /// AND is a stablecoin or wears a mark (`marked`, the app's own artwork
+    /// or the icon book). Typed words and a pasted contract still reach
+    /// every token, and what you hold always shows.
     static func major(_ l: Listed, marked: (String) -> Bool) -> Bool {
         l.onList && (stablecoins.contains(l.token.symbol.uppercased()) || marked(l.token.symbol))
     }
@@ -204,7 +215,7 @@ enum YourAccountTokens {
         // **ONE ROW PER TOKEN (prd §1494, user: "here it is showing USDG
         // twice").** A token is its contract, whatever its spelling: the
         // network's dollar is written checksummed and a remembered buy as
-        // Relay spelled it, so whole-value equality let USDG in twice.
+        // the list spelled it, so whole-value equality let USDG in twice.
         func has(_ token: Op.Token) -> Bool {
             candidates.contains { $0.contract?.lowercased() == token.contract?.lowercased() }
         }
@@ -240,13 +251,13 @@ enum YourAccountTokens {
         if !samples.isEmpty { answered = true }
         #endif
         guard answered else { return nil }
-        // A token the Wallet has not priced asks Relay, so dollars always work.
+        // A token the Wallet has not priced is priced off the pools (prd §1542).
         var priced: [Held] = []
         await withTaskGroup(of: Held.self) { group in
             for h in found {
                 let known = price(h.token)
                 group.addTask {
-                    let p: Double? = if let known { known } else { await YourAccountChain.relayPrice(net, h.token) }
+                    let p: Double? = if let known { known } else { await YourAccountChain.exchangePrice(net, h.token) }
                     return Held(token: h.token, units: h.units, price: p)
                 }
             }
@@ -262,9 +273,9 @@ enum YourAccountTokens {
     /// `-moveHoldings "<chainId>:<SYMBOL>:<amount>[,…]"` (DEBUG): pretend the
     /// account holds these, in place of what it really holds of each, so the sentence's lists, dollars, quotes and Add
     /// can be tried on a simulator with no funded account (user, 2026-10-20:
-    /// "i can't try a batch swap b/c we don't have tokens"). Relay quotes an
-    /// account that cannot pay; the simulation before Face ID refuses to sign
-    /// one, so nothing pretended can leave.
+    /// "i can't try a batch swap b/c we don't have tokens"). The pools quote
+    /// any amount; the simulation before Face ID refuses to sign what the
+    /// account cannot pay, so nothing pretended can leave.
     @MainActor
     private static func sampleHoldings(on net: Op.Network) async -> [Held] {
         guard let spec = UserDefaults.standard.string(forKey: "moveHoldings"), !spec.isEmpty else { return [] }

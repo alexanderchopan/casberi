@@ -500,7 +500,7 @@ enum YourAccountChain {
         let length = plan.windows.first.map { $0.until - $0.from } ?? 0
         guard current == nil || (plan.windows.last?.until ?? 0) - now <= length else { return nil }
         guard let dollars = Int(plan.dollarCap.dropLast(6)) else { return nil }
-        let price = plan.ethCap == "0" ? nil : await relayPrice(net, YourAccountOp.eth)
+        let price = plan.ethCap == "0" ? nil : await exchangePrice(net, YourAccountOp.eth)
         let next = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: max(length / 60, 1))
         // Riding a send, it removes only the period still running.
         let l = try await limitCalls(net, account, next)
@@ -529,7 +529,7 @@ enum YourAccountChain {
         if let owner = choice.signer {
             calls.append(YourAccountOp.addOwnerCall(account: account, owner: owner, threshold: 1))
             if let limit = choice.limit {
-                let price = await relayPrice(net, YourAccountOp.eth)
+                let price = await exchangePrice(net, YourAccountOp.eth)
                 // Six periods, not twelve: opening the account with twelve is
                 // 19.2M gas against the bundler's 15M (measured on Base,
                 // 2026-10-21; user: "One Face ID, 6 periods"). It renews to
@@ -654,7 +654,7 @@ enum YourAccountChain {
                 return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
             }
         }
-        let price = await relayPrice(net, YourAccountOp.eth)
+        let price = await exchangePrice(net, YourAccountOp.eth)
         let plan = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: minutes)
         return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, coSigner: coSigner, requireBoth: true,
                                       report: report, stage: stage)
@@ -664,7 +664,7 @@ enum YourAccountChain {
     /// a change to the keys, so both sign.
     static func changeLimit(on net: Network, dollars: Int, minutes: Int, coSigner: CoSigner, reason: String,
                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        let price = await relayPrice(net, YourAccountOp.eth)
+        let price = await exchangePrice(net, YourAccountOp.eth)
         let plan = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: minutes)
         return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, coSigner: coSigner, stage: stage)
     }
@@ -1073,7 +1073,7 @@ enum YourAccountChain {
         return .landed(transaction: tx, rotated: await rotated(net, account, to: next, x: x))
     }
 
-    // MARK: - Swap, through Relay (prd §1440)
+    // MARK: - Relay, for Receive from another network (prd §1453, §1470)
 
     /// One Relay call, the body kept whatever the status: Relay's refusals
     /// carry their reason (`message`).
@@ -1166,61 +1166,6 @@ enum YourAccountChain {
         return ((json as? [String: Any])?["chains"] as? [[String: Any]]) ?? []
     }
 
-    /// Relay's token search for the sentence's For (prd §1440): its default
-    /// list with nothing typed, matches as you type; verified tokens marked.
-    static func relayCurrencies(_ net: Network, term: String) async -> [[String: Any]] {
-        var body: [String: Any] = ["chainIds": [net.chainId], "limit": 40]
-        if term.isEmpty { body["defaultList"] = true } else { body["term"] = term }
-        return (await relay("currencies/v2", body: body).json as? [[String: Any]]) ?? []
-    }
-
-    /// Relay's dollar price for one whole `token` on `net`, keyless (its
-    /// `currencies/token/price`): the sentence's dollars when the Wallet has
-    /// not read the account yet (user, 2026-10-20: a dollar value typed
-    /// before the token is picked).
-    static func relayPrice(_ net: Network, _ token: YourAccountOp.Token) async -> Double? {
-        let address = YourAccountSwap.currency(token)
-        guard YourAccountSwap.supported(net),
-              let json = await relay("currencies/token/price?address=\(address)&chainId=\(net.chainId)", body: nil).json
-                as? [String: Any],
-              let price = json["price"] as? Double, price > 0, price.isFinite else { return nil }
-        return price
-    }
-
-    private static func relayRefusal(_ json: Any?, _ net: Network) -> Failure {
-        let said = (json as? [String: Any])?["message"] as? String
-        return said.map { Failure(message: $0, from: "Relay") }
-            ?? Failure(message: String(localized: "Relay did not answer on \(net.name)"))
-    }
-
-    /// Relay's price and calls for selling `amount` of `sell` for `buy`, the
-    /// account as sender and receiver, on one network.
-    static func swapQuote(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token,
-                          amount: String, account: String) async throws -> YourAccountSwap.Quote {
-        guard YourAccountSwap.supported(net) else {
-            throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
-        }
-        // The demo's estimate comes off its own prices (§1475), never Relay.
-        if YourAccountDemo.isDemo(account) {
-            guard let q = YourAccountDemo.quote(sell: sell, buy: buy, amount: amount) else {
-                throw Failure(message: String(localized: "No price for this in the demo"))
-            }
-            return q
-        }
-        let body: [String: Any] = [
-            "user": account, "recipient": account,
-            "originChainId": net.chainId, "destinationChainId": net.chainId,
-            "originCurrency": YourAccountSwap.currency(sell), "destinationCurrency": YourAccountSwap.currency(buy),
-            "amount": amount, "tradeType": "EXACT_INPUT",
-        ]
-        let (json, status) = await relay("quote", body: body)
-        guard status == 200, let root = json as? [String: Any],
-              let quote = YourAccountSwap.quote(from: root, chainId: net.chainId, sell: sell) else {
-            throw relayRefusal(json, net)
-        }
-        return quote
-    }
-
     /// One keyless GET, as JSON.
     static func fetchJSON(_ url: String) async -> Any? {
         guard let u = URL(string: url),
@@ -1240,6 +1185,15 @@ enum YourAccountChain {
         return ["from": account, "to": "0xcA11bde05977b3631167028862bE2a173976CA11",
                 "data": SafeABI.hex(YourAccount.sel("getEthBalance(address)") + YourAccount.w(account))]
     }
+
+    #if DEBUG
+    /// `-moveSimulateETH <wei>`: the ETH the simulation pretends the account
+    /// holds (a state override in `check`); nil when not asked.
+    static var simulatedETH: String? {
+        guard let wei = UserDefaults.standard.string(forKey: "moveSimulateETH"), !wei.isEmpty, wei.allSatisfy(\.isNumber) else { return nil }
+        return wei
+    }
+    #endif
 
     /// One step of a transaction: its calls, and for a swap what it buys and
     /// the least it must pay.
@@ -1290,7 +1244,18 @@ enum YourAccountChain {
                 reads.append(nil)
             }
         }
-        let params: [Any] = [["blockStateCalls": [["calls": calls]], "validation": false], "latest"]
+        var block: [String: Any] = ["calls": calls]
+        #if DEBUG
+        // `-moveSimulateETH <wei>` (DEBUG, prd §1542): the simulation runs as
+        // if the account held this much ETH, so a swap's preview can be seen
+        // passing on a simulator with no funded account. A state override
+        // only: nothing is held, and `transact` refuses to sign under it.
+        if let wei = Self.simulatedETH, let word = SafeABI.word(uint256: wei) {
+            let digits = SafeABI.hex(word).dropFirst(2).drop { $0 == "0" }
+            block["stateOverrides"] = [account: ["balance": "0x" + (digits.isEmpty ? "0" : String(digits))]]
+        }
+        #endif
+        let params: [Any] = [["blockStateCalls": [block], "validation": false], "latest"]
         let answer: Any
         do {
             answer = try await rpc(net, "eth_simulateV1", params)
@@ -1325,7 +1290,7 @@ enum YourAccountChain {
             }
             let got = YourAccountOp.difference(after, before)
             guard YourAccountOp.atMost(read.minimum, got) else {
-                return Simulated(checked: .fails(call: nil, token: nil, reason: String(localized: "Pays less than Relay quoted")),
+                return Simulated(checked: .fails(call: nil, token: nil, reason: String(localized: "Pays less than the exchange quoted")),
                                  paysLess: true)
             }
             paid.append(got)
@@ -1345,7 +1310,7 @@ enum YourAccountChain {
         case .notChecked:
             if swaps { throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed")) }
         case .fails:
-            if s.paysLess { throw Failure(message: String(localized: "Relay's route would pay less than it quoted, so nothing was signed"), settled: true) }
+            if s.paysLess { throw Failure(message: String(localized: "The exchange would pay less than it quoted, so nothing was signed"), settled: true) }
             throw Failure(message: String(localized: "This would fail on \(net.name), so nothing was signed"), settled: true)
         case .lands, .returnsAtLeast:
             break
@@ -1359,7 +1324,7 @@ enum YourAccountChain {
         let sell: YourAccountOp.Token
         let buy: YourAccountOp.Token
         let amount: String
-        /// The quote the page showed; Relay is asked afresh at signing.
+        /// The quote the page showed; the pools are asked afresh at signing.
         let quote: YourAccountSwap.Quote
     }
 
@@ -1403,7 +1368,7 @@ enum YourAccountChain {
         var words: [YourAccountPreview.Step]
         let payments: [YourAccountOp.Payment]
         let approvals: [YourAccountPreview.Approval]
-        /// What each swap sells and Relay's fee on it, from the quote signed.
+        /// What each swap sells and where, from the quote signed.
         let sold: [YourAccountPreview.Sold]
         let steps: [Step]
         var simulated: Simulated
@@ -1418,14 +1383,14 @@ enum YourAccountChain {
         let signer: Signer
     }
 
-    /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1440).** Each swap
-    /// is quoted afresh by Relay and its calls checked (`YourAccountSwap.
-    /// checked`: Relay's own contracts, exactly the amount sold); approvals
-    /// go first, once per token for the sum; then the sends and swaps in the
-    /// page's order and the key change. Before Face ID the whole of it is
-    /// simulated (sends too since §1509) and refused unless every call
-    /// succeeds and every swap pays its minimum. Relay settles in the same
-    /// transaction, so a landed operation is a finished swap.
+    /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1539).** Each swap
+    /// is quoted afresh off the pools and its calls checked (`YourAccountSwap.
+    /// checked`: the network's pinned routers, exactly the amount sold);
+    /// approvals go first, once per token for the sum; then the sends and
+    /// swaps in the page's order and the key change. Before Face ID the whole
+    /// of it is simulated (sends too since §1509) and refused unless every
+    /// call succeeds and every swap pays its minimum. The pool settles in the
+    /// same transaction, so a landed operation is a finished swap.
     ///
     /// **WHAT DETAILS SHOWED IS WHAT IS SIGNED (prd §1509).** A preview of
     /// these same items, made under a minute ago on the same route, is signed
@@ -1441,6 +1406,11 @@ enum YourAccountChain {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
+        #if DEBUG
+        if simulatedETH != nil {
+            throw Failure(message: "A pretended balance (-moveSimulateETH) signs nothing")
+        }
+        #endif
         await stage(.preparing)
         let route: Prepared.Signs = coSigner == nil ? .owner : .bothKeys
         let kept = await Prepared.take(items, roundUp: roundUp, route: route)
@@ -1502,7 +1472,7 @@ enum YourAccountChain {
     }
 
     /// The calls of one transaction, simulated, with its words. Every swap
-    /// is quoted afresh by Relay, for the preview as for signing, so a kept
+    /// is quoted afresh off the pools, for the preview as for signing, so a kept
     /// preview's quotes are never older than the preview (`Prepared.lifetime`).
     static func assemble(_ items: [Item], account: String, roundUp: RoundUpBuy?, renew: Bool,
                          report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> AssembledParts {
@@ -1529,8 +1499,8 @@ enum YourAccountChain {
                 if let c = p.token.contract { symbols[c.lowercased()] = p.token.symbol }
             case .swap(let s):
                 let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
-                guard let checked = YourAccountSwap.checked(quote, sell: s.sell, amount: s.amount) else {
-                    throw Failure(message: String(localized: "Relay asked for something other than this swap, so nothing was signed"))
+                guard let checked = YourAccountSwap.checked(quote, sell: s.sell, amount: s.amount, chainId: net.chainId) else {
+                    throw Failure(message: String(localized: "This swap could not be written"))
                 }
                 let calls = checked.calls.compactMap(YourAccountSwap.accountCall)
                 guard calls.count == checked.calls.count else {
@@ -1538,13 +1508,14 @@ enum YourAccountChain {
                 }
                 approvals += checked.approvals
                 steps.append((calls, (s.buy, quote.minimumBuy)))
-                sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, fee: quote.fee))
+                sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, route: quote.route))
                 stepWords.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol,
-                                            atLeast: figure(quote.minimumBuy, s.buy), s.buy.symbol))
+                                            atLeast: figure(quote.minimumBuy, s.buy), s.buy.symbol,
+                                            on: quote.exchange ?? "Uniswap"))
                 if let c = s.sell.contract { symbols[c.lowercased()] = s.sell.symbol }
                 // What leaves the account, for the balance check before any prompt.
                 payments.append(.init(network: net, token: s.sell, amount: s.amount,
-                                      to: YourAccountSwap.routers.first ?? account, toName: nil))
+                                      to: quote.route?.venue.router ?? account, toName: nil))
             }
         }
         guard let approvalCalls = YourAccountSwap.approvalCalls(approvals) else {
@@ -1559,8 +1530,10 @@ enum YourAccountChain {
                 return nil
             }.first
             let units = SafeCalldata.decimal(Array(call.data.suffix(32)))
+            // The spender is the router: named by its exchange.
+            let spender = YourAccountSwap.exchange(ofRouter: SafeABI.hex(Array(call.data[16..<36]))) ?? Words.short(call.to)
             approved.append(Words.Approval(figure: token.map { figure(units, $0) } ?? units,
-                                           symbol: token?.symbol ?? Words.short(call.to), spender: "Relay"))
+                                           symbol: token?.symbol ?? Words.short(call.to), spender: spender))
         }
         // Round-ups (prd §1452): what the change has reached, to Relay's
         // deposit address for the route, last; its dollars counted with the

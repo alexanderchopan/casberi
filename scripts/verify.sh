@@ -2458,6 +2458,11 @@ harness "Wallet-sweep self-test" "wallet sweep self-test" "scripts/wallet-sweep-
 # ETH, a stranger's token, an unpriced one or round-ups' change; ten at most;
 # a swap returning under half of what it sells stays.
 harness "Dust-sweep self-test" "dust sweep self-test" "scripts/dust-sweep-selftest.sh" "the dust-sweep self-test failed — run scripts/dust-sweep-selftest.sh"
+# Move's swaps, straight to the exchanges (prd §1539, §1542). The calls the
+# phone writes, byte for byte against swaps simulated on Base; only pinned
+# routers, exact approvals to the router that swaps, the quote less the
+# slippage limit; the best output wins; a real multicall answer read back.
+harness "Direct-swap self-test" "direct swap self-test" "scripts/direct-swap-selftest.sh" "Move's direct swap drifted — run scripts/direct-swap-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is

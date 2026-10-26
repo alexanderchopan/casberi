@@ -3,8 +3,9 @@ import SwiftUI
 /// **DETAILS, UNDER THE SENTENCE (prd §1509 item 1, canvas figures 2 and
 /// 4).** The rows Move's grey line opens with its last word: for a send the
 /// full address, from, the network fee in its coin, the nonce and what the
-/// simulation found; for a swap the least it returns, the fee split three
-/// ways, the exact approval, the nonce and the simulation. Then one door,
+/// simulation found; for a swap the least it returns, where it swaps and the
+/// pool's fee (prd §1539), the network fee, the exact approval, the nonce and
+/// the simulation. Then one door,
 /// Raw transaction. Nothing here is a control but the door: the sentence
 /// above is still the screen.
 struct MoveDetails: View {
@@ -19,9 +20,6 @@ struct MoveDetails: View {
     let account: String
     /// The network fee's ceiling in dollars at the Wallet's ETH price.
     let networkFeeUSD: Double?
-    /// Relay's fees, and what the swap sells, in dollars.
-    let relayFeeUSD: Double?
-    let soldUSD: Double?
     /// Every warning, in order, each with whether it is red (prd §1509 item
     /// 2: the line shows one, Details lists them all), and what the
     /// addresses were checked against.
@@ -89,20 +87,28 @@ struct MoveDetails: View {
         if case .returnsAtLeast(let units, let token) = p.checked {
             row(String(localized: "You get at least"), "\(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)")
         }
-        if let network = networkFeeUSD, let relay = relayFeeUSD {
-            let total = network + relay
-            let share = soldUSD.flatMap { Words.relayShare(feeUSD: relay, soldUSD: $0) }
-            let networkWords = network < 0.01 ? String(localized: "Network under a cent") : String(localized: "Network up to \(MoveSentence.money(network))")
-            let relayWords = share.map { String(localized: "Relay \(MoveSentence.money(relay)) (\($0))") } ?? String(localized: "Relay \(MoveSentence.money(relay))")
-            row(String(localized: "Fee"), total < 0.01 ? String(localized: "Under a cent") : String(localized: "Up to \(MoveSentence.money(total))"),
-                sub: networkWords + " · " + relayWords, second: String(localized: "Casberi none"))
-        } else {
-            feeRow(p)
+        // Where each swap goes, once per distinct pool: "On Uniswap · 0.05%
+        // pool fee". The pool's fee is in the price, so it is never added to
+        // the fee below, and there is no one else's fee to add (prd §1539).
+        ForEach(Array(exchanges(p).enumerated()), id: \.offset) { _, words in
+            row(String(localized: "Swaps"), words, sub: String(localized: "The pool fee is in the price"))
         }
+        feeRow(p)
         ForEach(Array(p.approvals.enumerated()), id: \.offset) { _, a in
             row(String(localized: "Approves"), String(localized: "Exactly \(a.figure) \(a.symbol)"),
                 sub: String(localized: "to \(a.spender), used in the same step"))
         }
+    }
+
+    /// Each swap's exchange and pool fee, in words, once each.
+    private func exchanges(_ p: YourAccountChain.Preview) -> [String] {
+        var out: [String] = []
+        for s in p.sold {
+            guard let route = s.route else { continue }
+            let words = YourAccountSwap.words(route)
+            if !out.contains(words) { out.append(words) }
+        }
+        return out
     }
 
     // MARK: - What the simulation found

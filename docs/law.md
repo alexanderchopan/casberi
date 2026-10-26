@@ -153,7 +153,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
-- Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one Relay has not verified unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537).
+- Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
+- Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before Face ID as before. The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -207,7 +208,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Device-side guarantees: device-only keys, the credential tripwire, the receipts ledger, clipboard etiquette (§277).
 - "What this app reaches" and "what it reached" are one pushed screen, one row per service, filtered by category (§967).
 - Every hand-off of the corpus to a model passes `AccountReaders` (§639).
-- Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On", Move's swap foot "not through Tor"; the Mac has no Tor yet and says so (§1495).
+- Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On"; a move Relay carries (a round-up's buy, Receive from another network) says "not through Tor" on its foot, a swap no longer does (§1512, §1542); the Mac has no Tor yet and says so (§1495).
 
 ### 18. Mac and iPad
 - The Mac takes its own type scale (`macScale` 0.88). A walked row can be taken with ⌘C, Space or drag (§631).
@@ -241,10 +242,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1679 of 1748 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1680 of 1749 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a, §1541)
+- §3 — Goals (amended by §1103a)
 - §4 — Persona variables (amended by §1126, §1344)
 - §5 — How it works today — Bob (amended by §1208c)
 - §6 — How it works today — Alice (amended by §1113)
@@ -1922,6 +1923,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv…
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces…
 
 ## Dead rulings → what replaced them (generated)
 

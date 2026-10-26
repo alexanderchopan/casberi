@@ -27,7 +27,7 @@ enum MoveWarnings {
         /// with the newest day you paid it, or one you named in the book.
         case lookalike(of: String, name: String?, paid: Date?)
         /// A swap's token or a send's recipient that is a contract: not on
-        /// Relay's list, younger than `newContractDays`, never used by you.
+        /// Uniswap's list, younger than `newContractDays`, never used by you.
         case contract(token: Bool, unverified: Bool, ageDays: Int?, neverUsed: Bool)
         /// You have never sent to this address. A note: the verb stays.
         case firstSend
@@ -96,14 +96,14 @@ enum MoveWarnings {
         }
     }
 
-    /// A contract worth a second look: not on Relay's list, or younger than
+    /// A contract worth a second look: not on Uniswap's list, or younger than
     /// thirty days. "Never used" alone warns about nothing (every first
     /// swap into a well-known token is one); it rides a young contract.
     static func contractLine(token: Bool, unverified: Bool, ageDays: Int?, neverUsed: Bool) -> String? {
         let young = ageDays.map { $0 < newContractDays } ?? false
         guard unverified || young else { return nil }
         var parts: [String] = []
-        if unverified { parts.append(String(localized: "Not verified by Relay.")) }
+        if unverified { parts.append(String(localized: "Not on Uniswap's list.")) }
         if young, let days = ageDays {
             let age = days < 1 ? String(localized: "less than a day old")
                 : days == 1 ? String(localized: "a day old") : String(localized: "\(days) days old")

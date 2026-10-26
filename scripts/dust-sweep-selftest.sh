@@ -7,11 +7,11 @@
 # The failures that cost money or trust, each one silent until it signs:
 #
 #   • A STRANGER'S TOKEN SOLD. Most dust is airdropped, and selling it calls
-#     its own contract: only what Relay verified, or a swap here bought.
+#     its own contract: only what is on Uniswap's list, or a swap here bought.
 #   • ROUND-UPS' CHANGE SWEPT. The change waits in the network's dollar.
 #   • A TOKEN WITH NO PRICE SWEPT. Nothing says it is under the line.
 #   • ETH SOLD FOR ETH. It is what comes back.
-#   • A SWAP THAT RETURNS LESS THAN HALF. Relay's flat fee on a few cents.
+#   • A SWAP THAT RETURNS LESS THAN HALF. A thin pool on a few cents.
 #   • A LINE OTHER THAN $1 OR $5. The setting takes those two only.
 #   • A BATCH PAST TEN SWAPS. The rest wait for the next sweep.
 #
@@ -87,7 +87,7 @@ check(capped.sweeps.count == D.maxSwaps, "ten swaps at most in one sweep")
 check(capped.stays.filter { $0.1 == .nextSweep }.count == 3, "the rest wait for the next sweep")
 check(capped.sweeps.first?.symbol == "T0", "the biggest go first")
 
-// ── Relay's answers ──────────────────────────────────────────────────────
+// ── The pools' answers ──────────────────────────────────────────────────────
 // ETH at $4,000: 0.0001 ETH is $0.40.
 let quotes: [String: String] = [
     usdc.id: "170000000000000",   // $0.68 for $0.70
@@ -118,7 +118,7 @@ check(D.dollars("1000000000000000000", decimals: 18, price: 4_000).map { abs($0 
 check(D.dollars("0x10", decimals: 18, price: 1) == nil, "hex is not base units")
 
 if failures > 0 { print("✗ dust-sweep-selftest: \(failures) failure(s)"); exit(1) }
-print("✓ dust-sweep-selftest: the line, the stays and Relay's answers hold")
+print("✓ dust-sweep-selftest: the line, the stays and the pools' answers hold")
 SWIFT
 
 swiftc -O -o "$TMP/run" "$SWEEP" "$TMP/stubs.swift" "$TMP/main.swift" 2>"$TMP/build.log" \
