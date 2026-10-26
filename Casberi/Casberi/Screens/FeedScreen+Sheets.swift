@@ -64,8 +64,6 @@ extension FeedScreen {
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
         case walletFollow
         case walletTokens
-        /// Move to private (prd §1547), from Holdings' Private rows.
-        case movePrivate
         /// One subscription, by its key (prd §1105).
         case subscription(String)
         /// Track a subscription by hand (prd §1105, the verb since §1117).
@@ -97,7 +95,6 @@ extension FeedScreen {
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
-            case .movePrivate: "movePrivate"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
             case .subscriptionTrack(let app): "subscriptionTrack:\(app)"
@@ -292,7 +289,9 @@ extension FeedScreen {
             if let whole = portfolioUnhidden {
                 let portfolio = whole.hiding(walletHidden)
                 let hidden = whole.positions.filter { walletHidden.contains($0.symbol.uppercased()) }
-                WalletTokensSheet(positions: portfolio.positions, total: portfolio.totalUSD,
+                // Public balances only: private money is its own section (prd §1547).
+                WalletTokensSheet(positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol },
+                                  total: portfolio.totalUSD,
                                   moves: walletHoldingMoves, hidden: hidden) { position in
                     feedSheet = nil
                     Task { @MainActor in
@@ -303,8 +302,6 @@ extension FeedScreen {
                     walletSetHidden(position.symbol, hidden: hide)
                 }
             }
-        case .movePrivate:
-            MovePrivateSheet()
         case .subscription(let id):
             SubscriptionSheet(id: id)
         case .subscriptionAdd:

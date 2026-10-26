@@ -36,7 +36,8 @@ struct MoveTrayPresenter: ViewModifier {
     let context: ModelContext
 
     func body(content: Content) -> some View {
-        content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 })) {
+        content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
+                      onDismiss: { chrome.moveToPrivate = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -51,6 +52,15 @@ struct MoveTrayPresenter: ViewModifier {
             guard UserDefaults.standard.bool(forKey: "openMove") else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] openMove: raised")
+            chrome.moveTray = true
+        }
+        // `-moveToPrivate YES`: raise Move on its private sentence, as
+        // Holdings' Private rows do (prd §1547).
+        .task {
+            guard UserDefaults.standard.bool(forKey: "moveToPrivate") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] moveToPrivate: raised")
+            chrome.moveToPrivate = true
             chrome.moveTray = true
         }
         #endif
@@ -85,6 +95,9 @@ struct MoveScreen: View {
     #endif
     /// Recovering: the networks the recovery key can bring it to (§1442k).
     @State private var recoverableOn: [YourAccountOp.Network]?
+    /// To private with no account on this phone (prd §1547): the test
+    /// sender sends it, so the sentence stands without one.
+    @State private var privateMove = PrivateMove()
 
     #if DEBUG
     /// `-movePreview create|recover|keys|ready` (DEBUG): draw a screen
@@ -147,8 +160,19 @@ struct MoveScreen: View {
             } else if let address {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
-                MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening)
+                MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
+                             toPrivate: chrome.moveToPrivate)
                     .transition(.opacity)
+            } else if chrome.moveToPrivate, PrivateMove.available {
+                // No account yet, so no other verb can be tapped: the
+                // private sentence under its own word alone.
+                MovePrivateSentence(move: privateMove, inTray: inTray) {
+                    Text("Private")
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(minHeight: 44, alignment: .leading)
+                        .accessibilityAddTraits(.isHeader)
+                }
             } else {
                 before
             }

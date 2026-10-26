@@ -35,13 +35,20 @@ struct MoveSentence: View {
     enum Arrival { case broughtHere }
     var arrival: Arrival?
 
-    init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil) {
+    init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil, toPrivate: Bool = false) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
         _verb = State(initialValue: opening ?? (arrival == nil ? .swap : .receive))
         _fresh = State(initialValue: arrival != nil)
+        _privately = State(initialValue: toPrivate && PrivateMove.available)
     }
+
+    /// **TO PRIVATE (prd §1547): the one sentence that is not this account's.**
+    /// Its own page (`MovePrivateSentence`) under these verbs, over the
+    /// account's sentence, which stays as it was for the verb picked next.
+    @State private var privately = false
+    @State private var privateMove = PrivateMove()
 
     /// Still the arrival's sentence: until a verb is picked.
     @State private var fresh = false
@@ -409,6 +416,20 @@ struct MoveSentence: View {
     // MARK: - The page
 
     var body: some View {
+        ZStack {
+            accountPage
+                .opacity(privately ? 0 : 1)
+                .allowsHitTesting(!privately)
+                .accessibilityHidden(privately)
+            if privately {
+                MovePrivateSentence(move: privateMove, inTray: inTray) { verbs }
+                    .transition(.opacity)
+            }
+        }
+        .animation(DS.Motion.standard, value: privately)
+    }
+
+    private var accountPage: some View {
         // The sentence stands at the top and never moves: a blank's choices
         // open under it, down toward the foot (§1442b, user: "it can't extend
         // up and then extend down ... this is just too jittery").
@@ -1427,8 +1448,9 @@ struct MoveSentence: View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
             ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }, id: \.self) { v in
                 Button {
-                    guard v != verb || receipt != nil else { return }
+                    guard v != verb || receipt != nil || privately else { return }
                     withAnimation(DS.Motion.standard) {
+                        privately = false
                         verb = v
                         open = nil
                         receipt = nil
@@ -1439,12 +1461,27 @@ struct MoveSentence: View {
                     // name what the sentence does, they are not the sentence.
                     Text(verbatim: title(v))
                         .dsText(.heading24)
-                        .foregroundStyle(v == verb ? DS.textPrimary
+                        .foregroundStyle(v == verb && !privately ? DS.textPrimary
                                          : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
                 .buttonStyle(RowPress())
+                .disabled(stage != nil || privateMove.acting)
+                .accessibilityAddTraits(v == verb && !privately ? [.isSelected] : [])
+            }
+            // To private (prd §1547): Sepolia, DEBUG builds, never the default.
+            if PrivateMove.available {
+                Button {
+                    guard !privately else { return }
+                    withAnimation(DS.Motion.standard) { privately = true; open = nil }
+                    DSHaptic.selection()
+                } label: {
+                    Text("Private")
+                        .dsText(.heading24)
+                        .foregroundStyle(privately ? DS.textPrimary : DS.textTertiary)
+                }
+                .buttonStyle(RowPress())
                 .disabled(stage != nil)
-                .accessibilityAddTraits(v == verb ? [.isSelected] : [])
+                .accessibilityAddTraits(privately ? [.isSelected] : [])
             }
         }
         .fixedSize(horizontal: true, vertical: false)

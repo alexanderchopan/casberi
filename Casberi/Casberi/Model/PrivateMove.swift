@@ -16,7 +16,10 @@ final class PrivateMove {
         case ready
         /// The sender holds too little Sepolia ETH; the address to fund.
         case needsFunds(String)
+        /// Face ID, for the private account's seed.
         case opening
+        /// The engine opening the account and reading the pool.
+        case preparing
         case registering(Int)
         case proving
         case sending
@@ -40,6 +43,9 @@ final class PrivateMove {
         #endif
     }
 
+    /// What the sender holds, as a number ("0.0412").
+    var held: String? { balance.flatMap { PrivateMoney.number($0, decimals: 18) } }
+
     var choices: [String] {
         guard let balance, let reserve else { return [] }
         return PrivateMoney.choices(balance: balance, reserve: reserve)
@@ -47,17 +53,31 @@ final class PrivateMove {
 
     var busy: Bool {
         switch stage {
-        case .opening, .registering, .proving, .sending, .reading: true
+        case .opening, .preparing, .registering, .proving, .sending, .reading: true
         default: false
         }
     }
 
+    /// Past the tap: Move's verbs wait for it to finish.
+    var acting: Bool { busy && stage != .reading }
+
     func read() async {
         #if DEBUG
+        // The demo reaches nothing (§217): its sentence stands on a pretended
+        // balance, and the act says it works once you leave the demo.
+        if DemoMode.isActive {
+            balance = "50000000000000000"
+            reserve = "0"
+            stage = .ready
+            return
+        }
         stage = .reading
         do {
             sender = try PrivacyTestnetSender.ensure()
-            let have = try await PrivacyTestnetSender.balance()
+            var have = try await PrivacyTestnetSender.balance()
+            // `-movePrivateBalance <wei>`: the sentence as if the sender held
+            // that much, so it can be seen with no funds; `run` refuses.
+            if let pretend = Self.pretend { have = pretend }
             let price = try await PrivacyTestnetSender.gasPrice()
             balance = have
             reserve = PrivateMoney.reserve(gasPrice: price)
@@ -78,8 +98,23 @@ final class PrivateMove {
         #endif
     }
 
+    #if DEBUG
+    static var pretend: String? {
+        UserDefaults.standard.string(forKey: "movePrivateBalance").flatMap { $0.allSatisfy(\.isNumber) && !$0.isEmpty ? $0 : nil }
+    }
+    #endif
+
     func run() async {
         #if DEBUG
+        if DemoMode.isActive {
+            stage = .failed(YourAccountDemo.actsLater)
+            return
+        }
+        if Self.pretend != nil {
+            stage = .failed(String(localized: "Not enough Sepolia ETH"))
+            NSLog("privateMove| refused | -movePrivateBalance is a pretended balance")
+            return
+        }
         guard let value = PrivateMoney.baseUnits(amount, decimals: 18), let hex = PrivateMoney.hex(value) else { return }
         let engine = PrivacyEngine.shared
         let started = Date()
@@ -89,6 +124,7 @@ final class PrivateMove {
             if !PrivacyPoolsKey.exists() { try PrivacyPoolsKey.create() }
             var seed = try PrivacyPoolsKey.seed(reason: String(localized: "Move to private"))
             defer { seed.resetBytes(in: 0..<seed.count) }
+            stage = .preparing
             // Opened every time: the account's owner is the sender, and a
             // page a probe opened may name another.
             _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)

@@ -80,7 +80,12 @@ struct WalletPortfolio: Equatable {
     static func isVenue(_ holderID: String) -> Bool {
         holderID == validatorHolderID || ExchangeBridge.Venue(rawValue: holderID) != nil
             || holderID.hasPrefix(WalletCash.holderPrefix) || holderID.hasPrefix(privyHolderPrefix)
+            || holderID == privateHolderID
     }
+
+    /// Private money's holder (`PrivateMoney.holderID`, prd §1547): a place,
+    /// not a wallet, and not an app either.
+    static let privateHolderID = "private"
 
     static let privyHolderPrefix = "privy:"
 

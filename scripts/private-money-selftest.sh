@@ -13,7 +13,8 @@
 #     the long-length head is used), and no transaction for a non-testnet;
 #   - where the engine's node requests go: logs to the node that keeps them,
 #     back to the network's own node past its head, a 429 waited out.
-# It also asserts the USE: the store asks by `labelHash`, the engine's door
+# It also asserts the USE: the act is Move's sentence and Holdings' rows its
+# door (no sheet of Holdings' own), the address drawn by its tail; the store asks by `labelHash`, the engine's door
 # routes before it sends, the deposit is kept with the engine's label hash,
 # Sepolia's first block is the keystore's, the sender is DEBUG-only and its
 # key device-only, and the bundle carries the label hash. Mutations prove the
@@ -53,6 +54,31 @@ use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sende
 awk '/static var available: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Move to private is no longer DEBUG-only"; exit 1; }
 echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only device-only sender"
 
+# The act is Move's, Holdings only shows (prd §1547): the sentence is drawn
+# under Move's verbs, the Private verb only where the sender can move, the
+# tray opens on it from Holdings' rows, and Holdings raises no sheet of its own.
+SENT="Casberi/Casberi/Screens/MoveSentence.swift"
+MSCREEN="Casberi/Casberi/Screens/MoveScreen.swift"
+MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
+HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
+use "$SENT" 'MovePrivateSentence(move: privateMove, inTray: inTray) { verbs }' "the private sentence is no longer drawn under Move's verbs"
+awk '/To private \(prd §1547\)/,/accessibilityAddTraits\(privately/' "$SENT" | grep -q 'if PrivateMove.available {' \
+    || { echo "✗ the Private verb is drawn where the sender cannot move"; exit 1; }
+use "$MSCREEN" 'toPrivate: chrome.moveToPrivate)' "Move no longer opens on the private sentence when asked"
+use "$MSCREEN" 'onDismiss: { chrome.moveToPrivate = false }' "a closed Move keeps opening on the private sentence"
+[[ $(grep -c 'chrome.moveToPrivate = true' "$HOLD") == 1 ]] && grep -q 'walletOpenPrivate() } label:' "$HOLD" \
+    || { echo "✗ Holdings' Private rows no longer open Move"; exit 1; }
+! grep -q 'feedSheet' "$HOLD" || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
+[[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
+use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
+! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
+use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately,' "private money no longer counts in the Wallet's total"
+use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens rows count private money twice"
+use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens sheet counts private money twice"
+use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
+echo "  ok   the act is Move's: under its verbs, opened from Holdings' rows, the address by its tail"
+echo "  ok   private money counts once: in the total and the box, never in Tokens"
+
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/main.swift" <<'SWIFT'
@@ -84,7 +110,7 @@ let notes = [note("a", "1000000000000000", .approved), note("b", "30000000000000
              note("c", "1000000000000000", .waiting, t1), note("d", "500000000000000", .needsProof, t0),
              note("e", "2000000000000000", .rejected), note("f", "7", .approved, t0, "USDC")]
 let rows = P.rows(notes)
-check(rows.map(\.id) == ["0:ETH", "0:USDC", "1:ETH", "2:ETH"], "private first, then waiting, then refused, A–Z within (\(rows.map(\.id)))")
+check(rows.map(\.id) == ["0:ETH:11155111", "0:USDC:11155111", "1:ETH:11155111", "2:ETH:11155111"], "private first, then waiting, then refused, A–Z within (\(rows.map(\.id)))")
 check(rows.first?.amount == "4000000000000000", "a token's private notes are summed")
 check(rows[2].amount == "1500000000000000" && rows[2].since == t0, "a waiting row sums its notes and dates from the oldest")
 check(rows[0].since == nil, "a private row has no since")
@@ -92,6 +118,22 @@ check(rows[0].title == "ETH, private" && rows[2].title == "ETH, moving in" && ro
 check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a zero or unreadable amount draws nothing")
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
 check(P.held(notes, symbol: "ETH") == Decimal(string: "4000000000000000"), "held counts approved notes only")
+
+// In the Wallet's number (prd §1547): approved notes on a network with value, once.
+func onChain(_ n: P.Note, _ chain: Int) -> P.Note {
+    .init(commitment: n.commitment, label: n.label, labelHash: n.labelHash, symbol: n.symbol, amount: n.amount, decimals: n.decimals,
+          chainId: chain, tx: n.tx, at: n.at, status: n.status)
+}
+let mainnet = notes.map { onChain($0, 1) }
+let prices = ["eth": 2000.0, "usdc": 1.0]
+check(abs(P.worthUSD(mainnet, prices: prices) - 8) < 1e-9, "approved mainnet notes are worth their price (\(P.worthUSD(mainnet, prices: prices)))")
+check(P.worthUSD(notes, prices: prices) == 0, "Sepolia's notes count nothing")
+check(P.worthUSD([onChain(note("w", "1000000000000000", .waiting), 1)], prices: prices) == 0, "a deposit waiting for approval counts nothing yet")
+check(P.worthUSD(mainnet, prices: ["usdc": 1]) < 1e-9, "a token with no price counts nothing")
+check(P.rows(mainnet).first.map { P.rowUSD($0, prices: prices) } == 8, "a mainnet row's dollars")
+check(rows.first.map { P.rowUSD($0, prices: prices) } == .some(nil), "a Sepolia row states its quantity")
+check(P.rows([note("a", "1", .approved), onChain(note("b", "1", .approved), 1)]).count == 2, "one row per network")
+check(P.network(11155111) == "Sepolia" && P.network(1) == "Ethereum", "the row's network")
 
 // Amounts.
 check(P.figure("1000000000000000", decimals: 18, symbol: "ETH") == "0.001 ETH", "0.001 ETH (\(P.figure("1000000000000000", decimals: 18, symbol: "ETH")))")
@@ -179,6 +221,9 @@ mutate() {
 mutate "unknown no longer waits" "$PM" 's/case "pending", "unknown": return \.waiting/case "pending": return .waiting/'
 mutate "the ASP is asked by any label" "$PM" 's/guard labelHash\.range\(of: #"\^\[0-9\]\{1,80\}\$"#/guard labelHash.range(of: #".+"#/'
 mutate "a waiting row dates from its newest note" "$PM" 's/min\(had\.since, note\.at\)/max(had.since, note.at)/'
+mutate "a waiting deposit counts in the total" "$PM" 's/guard note\.status == \.approved, !testnets/guard !testnets/'
+mutate "test money counts in the total" "$PM" 's/guard note\.status == \.approved, !testnets\.contains\(note\.chainId\),/guard note.status == .approved,/'
+mutate "two networks share a row" "$PM" 's/let key = "\\\(k\.rawValue\):\\\(note\.symbol\):\\\(note\.chainId\)"/let key = "\\(k.rawValue):\\(note.symbol)"/'
 mutate "more places than the token has" "$PM" 's/guard fraction\.count <= decimals else \{ return nil \}\n//'
 mutate "the reserve forgets the price can double" "$PM" 's/plain\(gasBudget \* price \* 2\)/plain(gasBudget * price)/'
 mutate "any chain gets a transaction" "$TX" 's/guard TestnetTx\.testnets\.contains\(chainId\) else \{ return nil \}\n//'
@@ -187,4 +232,4 @@ mutate "parity 0 is a zero byte" "$TX" 's/\.bytes\(yParity == 0 \? \[\] : \[1\]\
 mutate "r keeps its leading zero" "$TX" 's/\.bytes\(TestnetTx\.stripped\(r\)\)/.bytes(r)/'
 mutate "every request goes to the logs node" "$WIRE" 's/rpcMethods\(body\)\.contains\("eth_getLogs"\)/!rpcMethods(body).isEmpty/'
 mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current head", options: \.caseInsensitive\) != nil/body.isEmpty/'
-echo "  ok   11 mutations"
+echo "  ok   14 mutations"

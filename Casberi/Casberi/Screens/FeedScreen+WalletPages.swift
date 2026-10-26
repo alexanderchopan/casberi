@@ -275,7 +275,10 @@ extension FeedScreen {
         let rest = holders.filter { $0.address != you?.address }
         return (you,
                 rest.filter { !WalletPortfolio.isVenue($0.address) },
-                rest.filter { WalletPortfolio.isVenue($0.address) && $0.usd > 0 })
+                // Private money is a place but no app's (prd §1547): it is
+                // its own section and block, never an Apps row.
+                rest.filter { WalletPortfolio.isVenue($0.address) && $0.usd > 0
+                    && $0.address != WalletPortfolio.privateHolderID })
     }
 
     /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503, §1536).** The
@@ -288,7 +291,8 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let groups = walletHolderGroups
         let appAccounts = walletAccountRows(all)
-        let tokens = portfolioShown?.positions ?? []
+        // Public balances only: private money is its own section (prd §1547).
+        let tokens = (portfolioShown?.positions ?? []).filter { $0.symbol != PrivateMoney.walletSymbol }
         // Every token hidden still leaves the door, to the Hidden row.
         let anyHidden = portfolioUnhidden?.positions.contains { walletHidden.contains($0.symbol.uppercased()) } ?? false
         let positions = walletPositionCount

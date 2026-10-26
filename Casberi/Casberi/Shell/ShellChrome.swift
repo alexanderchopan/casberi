@@ -230,6 +230,9 @@ final class ShellChrome {
     var roomsTray = false
     /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
     var moveTray = false
+    /// Move opens on its private sentence (prd §1547): Holdings' Private
+    /// rows are its door. Cleared when the tray closes.
+    var moveToPrivate = false
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: SettingsFace?

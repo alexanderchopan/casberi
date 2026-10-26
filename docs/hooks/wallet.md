@@ -373,3 +373,13 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 - Circuits: pinned per network in `PrivacyArtifactPins.swift` (`node pins.mjs`), fetched by CID on first use, kept in Application Support under their hash. **Sepolia verifies SDK 1.0.0's DEV keys**, not the ceremony keys 1.0.1+ ship; mainnet's pins will be the ceremony set.
 - Measured on the iPhone 17 Pro simulator, iOS 27 (a busy Mac, load 10–370): see prd §1544.
 - `privacy-engine-selftest.sh` holds the wire, the network door, testnet-only and the pins.
+
+## Move to private and Holdings' Private rows (prd §1547, Sepolia, DEBUG)
+
+The act is Move's: a sixth word on its verbs line, **Private**, drawn only where `PrivateMove.available` (DEBUG builds), opens `Screens/MovePrivate.swift`'s sentence, "Move 0.001 ETH to private on Sepolia.", over the account's sentence (`MoveSentence.privately`, the account's page kept underneath). Holdings only shows: a "Private" head and one row per token and state (`PrivateMoney.rows`), every one a door that opens Move on that sentence (`ShellChrome.moveToPrivate`, cleared when the tray closes). With no account on the phone (a simulator has no Secure Enclave), Move still opens the private sentence when asked, under the one word Private.
+
+- `-moveToPrivate YES` — raise Move on the private sentence (as Holdings' rows do); logs `movePrivate: <stage>`. `-movePrivateAmount 0.001` picks a ladder step; `-movePrivateGo YES` taps the act once the sentence is ready.
+- `-privateMoneySample YES|clear` — two notes no pool holds (one approved, one waiting) so Holdings' rows can be looked at with no funds; `-openRoom Wallet -openSection holdings` lands there.
+- `-privacySenderForget YES` — drop the DEBUG Sepolia sender's key and address.
+- **The sender is `PrivacyTestnetSender`**, a device-only secp256k1 key in a DEBUG build, because your account (`YourAccount*`) is not on Sepolia (§1441a) and a simulator has no Secure Enclave. It signs through `TestnetTx`, which cannot make a transaction off a testnet. With no Sepolia ETH the sentence says "Send Sepolia ETH to …xxxx first." and the foot copies the whole address; fund it by hand, never a faucet from a session.
+- A deposit logs `privateMove| sent | <hash>`, `privateMove| deposited | <hash> | <amount> | label hash <n> | <s>`, and the ASP's answers `privateMoney| asp | <commitment…> | <status>` (asked every 20 s by the label's Poseidon hash, while Holdings or the done sentence shows a waiting note).

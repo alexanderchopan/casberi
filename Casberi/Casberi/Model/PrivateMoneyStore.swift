@@ -15,6 +15,9 @@ final class PrivateMoneyStore {
     private static let key = "privateMoney.notes.v1"
 
     private(set) var notes: [PrivateMoney.Note]
+    /// USD per unit by lower-cased symbol, for notes on a network whose coins
+    /// have value (`MainnetPrices`); never asked for test money.
+    private(set) var prices: [String: Double] = [:]
     @ObservationIgnored private var asked: Date = .distantPast
 
     private init() {
@@ -35,9 +38,28 @@ final class PrivateMoneyStore {
         DefaultsWrite.set(data, forKey: Self.key)
     }
 
+    /// **PRIVATE MONEY COUNTS IN THE WALLET (prd §1547).** Its one place in
+    /// the combined read: approved notes on a network whose coins have value,
+    /// in dollars, as a venue named Private (`PrivateMoney.walletSymbol`), so
+    /// the box draws one block for it and the total counts it once. A deposit
+    /// waiting for approval counts once approved; Sepolia's counts nothing.
+    func walletHolding() async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
+        let real = notes.filter { $0.status == .approved && !PrivateMoney.testnets.contains($0.chainId) }
+        guard !real.isEmpty else { return [] }
+        let found = await MainnetPrices.prices(for: real.map(\.symbol))
+        if found != prices { prices = found }
+        let usd = PrivateMoney.worthUSD(notes, prices: found)
+        NSLog("privateMoney| worth | $%.2f | %d prices", usd, found.count)
+        return usd > 0 ? [(symbol: PrivateMoney.walletSymbol, usd: usd, holderID: PrivateMoney.holderID,
+                           label: String(localized: "Private"))] : []
+    }
+
+    /// The dollars Holdings' rows draw, read when they show.
+    func readPrices() async { _ = await walletHolding() }
+
     /// Asks the ASP about every note still waiting.
     func refresh(force: Bool = false) async {
-        guard PrivateMoney.anyWaiting(notes), force || Date().timeIntervalSince(asked) > 20 else { return }
+        guard !DemoMode.isActive, PrivateMoney.anyWaiting(notes), force || Date().timeIntervalSince(asked) > 20 else { return }
         asked = Date()
         // A sample note's hash is "0": nothing to ask.
         for note in notes where PrivateMoney.kind(note.status) == .waiting && note.labelHash != "0" {
@@ -52,8 +74,10 @@ final class PrivateMoneyStore {
     }
 
     #if DEBUG
-    /// `-privateMoneySample YES|clear`: two notes no pool holds — one
-    /// approved, one waiting — so Holdings can be looked at with no funds.
+    /// `-privateMoneySample YES|mainnet|clear`: two notes no pool holds — one
+    /// approved, one waiting — so Holdings can be looked at with no funds;
+    /// `mainnet` lays them on Ethereum, so the box's Private block and the
+    /// total can be seen too (Sepolia's count nothing).
     func sample(_ raw: String) {
         if raw == "clear" {
             notes = []
@@ -61,11 +85,12 @@ final class PrivateMoneyStore {
             return
         }
         let now = Date()
+        let chain = raw == "mainnet" ? 1 : PrivacyNetwork.sepolia.chainId
         notes = [
             .init(commitment: "0xsample-approved", label: "0x1", labelHash: "0", symbol: "ETH", amount: "4000000000000000",
-                  decimals: 18, chainId: PrivacyNetwork.sepolia.chainId, tx: "0x", at: now.addingTimeInterval(-86_400), status: .approved),
+                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-86_400), status: .approved),
             .init(commitment: "0xsample-waiting", label: "0x2", labelHash: "0", symbol: "ETH", amount: "1000000000000000",
-                  decimals: 18, chainId: PrivacyNetwork.sepolia.chainId, tx: "0x", at: now.addingTimeInterval(-120), status: .waiting),
+                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-120), status: .waiting),
         ]
         save()
         NSLog("privateMoney| sample | %d rows", rows.count)

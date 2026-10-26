@@ -70,12 +70,14 @@ enum PrivateMoney {
         enum Kind: Int, Equatable { case held, waiting, refused }
         let kind: Kind
         let symbol: String
+        /// The network its notes are on: a row is one token in one state on one network.
+        let chainId: Int
         /// Base units, decimal: the sum of its notes.
         let amount: String
         let decimals: Int
         /// The oldest note in a waiting row: since when.
         let since: Date?
-        var id: String { "\(kind.rawValue):\(symbol)" }
+        var id: String { "\(kind.rawValue):\(symbol):\(chainId)" }
 
         var title: String {
             switch kind {
@@ -94,24 +96,68 @@ enum PrivateMoney {
         }
     }
 
-    /// One row per token and state: what is private first, then what is
-    /// waiting, then what was refused; tokens A–Z within each.
+    /// One row per token, state and network: what is private first, then
+    /// what is waiting, then what was refused; tokens A–Z within each.
     static func rows(_ notes: [Note]) -> [Row] {
-        var sums: [String: (kind: Row.Kind, symbol: String, sum: Decimal, decimals: Int, since: Date)] = [:]
+        var sums: [String: (kind: Row.Kind, symbol: String, chain: Int, sum: Decimal, decimals: Int, since: Date)] = [:]
         for note in notes {
             guard let value = Decimal(string: note.amount), value > 0 else { continue }
             let k = kind(note.status)
-            let key = "\(k.rawValue):\(note.symbol)"
+            let key = "\(k.rawValue):\(note.symbol):\(note.chainId)"
             if let had = sums[key] {
-                sums[key] = (k, note.symbol, had.sum + value, note.decimals, min(had.since, note.at))
+                sums[key] = (k, note.symbol, note.chainId, had.sum + value, note.decimals, min(had.since, note.at))
             } else {
-                sums[key] = (k, note.symbol, value, note.decimals, note.at)
+                sums[key] = (k, note.symbol, note.chainId, value, note.decimals, note.at)
             }
         }
         return sums.values
-            .sorted { ($0.kind.rawValue, $0.symbol) < ($1.kind.rawValue, $1.symbol) }
-            .map { Row(kind: $0.kind, symbol: $0.symbol, amount: plain($0.sum), decimals: $0.decimals,
+            .sorted { ($0.kind.rawValue, $0.symbol, $0.chain) < ($1.kind.rawValue, $1.symbol, $1.chain) }
+            .map { Row(kind: $0.kind, symbol: $0.symbol, chainId: $0.chain, amount: plain($0.sum), decimals: $0.decimals,
                        since: $0.kind == .waiting ? $0.since : nil) }
+    }
+
+    // MARK: - In the Wallet's number (prd §1547)
+
+    /// Private money's one position in the portfolio: one block in the
+    /// Holdings box and one share of the total, never folded into the token
+    /// it is, so the Tokens rows (public balances) count nothing twice.
+    static let walletSymbol = "Private"
+    /// Its holder in the portfolio: a place, not a wallet and not an app
+    /// (`WalletPortfolio.privateHolderID` spells the same word).
+    static let holderID = "private"
+
+    /// Networks whose coins have no value: their notes count nothing in the
+    /// total (test money states its quantity, never dollars, §949).
+    static let testnets: Set<Int> = [11_155_111]
+
+    static func network(_ chainId: Int) -> String {
+        switch chainId {
+        case 1: "Ethereum"
+        case 8453: "Base"
+        case 11_155_111: "Sepolia"
+        default: "Chain \(chainId)"
+        }
+    }
+
+    /// What the private notes are worth in dollars at `prices` (USD per unit,
+    /// by lower-cased symbol): APPROVED notes only — a deposit waiting for
+    /// approval is not spendable yet, so it counts once approved — and never
+    /// a test network's. A token with no price counts nothing.
+    static func worthUSD(_ notes: [Note], prices: [String: Double]) -> Double {
+        notes.reduce(0) { sum, note in
+            guard note.status == .approved, !testnets.contains(note.chainId),
+                  let price = prices[note.symbol.lowercased()], let units = Decimal(string: note.amount) else { return sum }
+            let whole = NSDecimalNumber(decimal: units / pow10(note.decimals)).doubleValue
+            return sum + whole * price
+        }
+    }
+
+    /// One row's dollars, or nil where it states its quantity instead (test
+    /// money, or a token with no price).
+    static func rowUSD(_ row: Row, prices: [String: Double]) -> Double? {
+        guard !testnets.contains(row.chainId), let price = prices[row.symbol.lowercased()],
+              let units = Decimal(string: row.amount) else { return nil }
+        return NSDecimalNumber(decimal: units / pow10(row.decimals)).doubleValue * price
     }
 
     /// The private total per token, approved notes only.
@@ -130,10 +176,14 @@ enum PrivateMoney {
     /// "0.001 ETH": base units at the token's decimals, at most six places,
     /// no trailing zeros.
     static func figure(_ amount: String, decimals: Int, symbol: String) -> String {
-        guard let units = Decimal(string: amount) else { return symbol }
-        let whole = units / pow10(decimals)
-        let shown = whole.formatted(.number.precision(.fractionLength(0...6)))
+        guard let shown = number(amount, decimals: decimals) else { return symbol }
         return "\(shown) \(symbol)"
+    }
+
+    /// The figure's number alone ("0.0412").
+    static func number(_ amount: String, decimals: Int) -> String? {
+        guard let units = Decimal(string: amount) else { return nil }
+        return (units / pow10(decimals)).formatted(.number.precision(.fractionLength(0...6)))
     }
 
     /// A decimal amount ("0.001") in base units, decimal; nil for anything
