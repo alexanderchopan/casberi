@@ -373,7 +373,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **Gnosis Pay is deleted (prd §1318)**; Gnosis Chain stays (`GnosisChainRPC`)
 - `-metamaskCardProbe` `-plasmaOneProbe` — MetaMask Card (§857b, §860) and Plasma One, settled once a day so a row is a DAY → docs/hooks/wallet.md · prd §857 · §1311 · §222
 - `-bitcoinProbe <address | xpub/zpub/descriptor>` — one Bitcoin address or a whole WALLET (prd §1097): the gap-limit walk, change counted home, dust tagged, reuse reconciled, a waiting send stamped; a pasted `xprv` is refused and never stored. A host gets 20s of wall clock per page (mempool.space trickles busy addresses) → prd §1097 · §226 · §227
-- `-torProbe YES|fail` — iOS wallet reads via Tor, a circuit per wallet → docs/hooks/wallet.md · prd §1495
+- `-torProbe YES|fail` — iOS wallet reads via Tor, a circuit per wallet, watched while it runs (`tor-health-selftest.sh`) → docs/hooks/wallet.md · prd §1495 · §1546
 - `-lightningConnect "<nostr+walletconnect://…>"|forget` — the Lightning seat (prd §1098): Nostr Wallet Connect, kept only if the connection cannot pay (`get_info`, else the kind-13194 info event), NIP-04, settled payments only, balance into the total as BTC; redacted from the probe log → prd §1098
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Solana reads forward from a cursor, takes v1 transactions (`maxSupportedTransactionVersion: 1`; 0 dropped 18% of mainnet), lands SPL delegates as `wallet:sol-approval:` grants (still standing, never `WalletPrepare`'s), and resolves `.sol` through web3.bio (Bonfida's proxy is dead) (prd §1096)** → prd §1096

@@ -4142,8 +4142,10 @@ enum ProbeHooks {
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof
         // the request left by Tor. Then a wallet read through the funnel
         // (MEV Blocker's chain id), and how many of that host's receipts went
-        // through Tor. `-torProbe fail` stands the failed state up for the
-        // Needs you door. Logs `torProbe|` lines.
+        // through Tor. `-torProbe fail` stands the failed state up, until the
+        // watch's next poll if tor runs (prd §1546). Logs `torProbe|` lines;
+        // TorClient's own `tor:` lines carry the connect, lost, back and reset
+        // times a phone run measures.
         Hook(key: "torProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("torProbe| %@", line) }
