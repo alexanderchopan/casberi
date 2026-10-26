@@ -3,3 +3,5 @@ state.json
 pxe/
 home/
 *.log
+package-lock.json
+state*.json
