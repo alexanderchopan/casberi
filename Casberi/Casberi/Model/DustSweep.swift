@@ -21,6 +21,8 @@ import Foundation
 /// - A swap whose ETH is worth less than half of what it sells stays: Relay's
 ///   flat fee eats a token worth a few cents.
 /// - Ten swaps at most in one sweep; the rest wait for the next.
+/// - A sweep whose network fee is more than the ETH it returns is not signed
+///   (user: "and yes ethereum too"): on Ethereum the gas outweighs most dust.
 enum DustSweep {
 
     /// One token the account holds on the network being swept.
@@ -143,6 +145,14 @@ enum DustSweep {
             sweeps.append(h)
         }
         return Plan(sweeps: sweeps, stays: stays)
+    }
+
+    /// Whether the whole sweep is worth its network fee: the ETH back is
+    /// worth more than the fee. Either figure unknown signs, and the
+    /// simulation still holds each swap to its minimum.
+    static func worthSigning(backUSD: Double?, feeUSD: Double?) -> Bool {
+        guard let backUSD, let feeUSD else { return true }
+        return feeUSD < backUSD
     }
 
     /// The ETH a sweep returns, summed: what the sentence says comes back.

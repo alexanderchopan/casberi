@@ -741,9 +741,23 @@ struct MoveSentence: View {
 
     /// "≈ 0.0004 ETH" once Relay has priced it: short here, exact in Details.
     private var sweepBackWord: String {
-        let back = DustSweep.total(sweepItems.compactMap { if case .swap(let s) = $0 { s.quote.buyAmount } else { nil } })
+        let back = sweepBack
         guard !sweepPricing, DustSweep.isPositive(back) else { return Op.eth.symbol }
         return "≈ " + Self.short(back, decimals: Op.eth.decimals) + " " + Op.eth.symbol
+    }
+
+    /// The ETH the sweep's quotes return, in wei.
+    private var sweepBack: String {
+        DustSweep.total(sweepItems.compactMap { if case .swap(let s) = $0 { s.quote.buyAmount } else { nil } })
+    }
+
+    /// The network's fee is more than the sweep returns (user: "and yes
+    /// ethereum too"): said under the rows, and the verb dims.
+    private var sweepFeeNote: String? {
+        guard verb == .sweep, !sweepItems.isEmpty, let fee = networkFeeUSD else { return nil }
+        let back = ethPrice.flatMap { DustSweep.dollars(sweepBack, decimals: Op.eth.decimals, price: $0) }
+        guard !DustSweep.worthSigning(backUSD: back, feeUSD: fee) else { return nil }
+        return String(localized: "\(network.name)'s fee, \(Self.money(fee)), is more than this sweep returns")
     }
 
     /// Under the sentence: each token, swept or staying and why, then the
@@ -773,7 +787,7 @@ struct MoveSentence: View {
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
-                if let note = failNote ?? shownPreview?.refusal {
+                if let note = failNote ?? shownPreview?.refusal ?? sweepFeeNote {
                     Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2770,7 +2784,9 @@ struct MoveSentence: View {
 
     private var footOn: Bool {
         if verb == .buy { return stage == nil && buyReady }
-        if verb == .sweep { return stage == nil && !sweepPricing && !sweepItems.isEmpty && failNote == nil }
+        if verb == .sweep {
+            return stage == nil && !sweepPricing && !sweepItems.isEmpty && failNote == nil && sweepFeeNote == nil
+        }
         // A transaction the simulation refuses dims its verb (prd §1509).
         return verb == .receive || (stage == nil && !all.isEmpty && failNote == nil)
     }

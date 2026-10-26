@@ -103,6 +103,12 @@ check(unpriced.sweeps.map(\.symbol) == ["USDC", "AERO"], "no ETH price keeps eve
 let zero = D.judged(one, back: { _ in "0" }, ethPrice: 4_000)
 check(zero.sweeps.isEmpty, "a quote of nothing is no route")
 
+// ── The network fee (Ethereum) ───────────────────────────────────────────
+check(D.worthSigning(backUSD: 1.20, feeUSD: 0.03), "Base: a few cents of gas for a dollar back signs")
+check(!D.worthSigning(backUSD: 1.20, feeUSD: 2.40), "Ethereum: gas over what comes back does not sign")
+check(!D.worthSigning(backUSD: 1.0, feeUSD: 1.0), "a fee equal to what comes back does not sign")
+check(D.worthSigning(backUSD: nil, feeUSD: 2.40) && D.worthSigning(backUSD: 1.0, feeUSD: nil), "an unknown figure signs")
+
 // ── Base units ───────────────────────────────────────────────────────────
 check(D.total(["170000000000000", "50000000000000"]) == "220000000000000", "the ETH back sums exactly")
 check(D.total([]) == "0", "nothing back is zero")
