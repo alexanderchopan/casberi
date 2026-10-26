@@ -374,7 +374,7 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 - Measured on the iPhone 17 Pro simulator, iOS 27 (a busy Mac, load 10–370): see prd §1544.
 - `privacy-engine-selftest.sh` holds the wire, the network door, testnet-only and the pins.
 
-## Move to private and Holdings' Private rows (prd §1547, Sepolia, DEBUG)
+## Move to private and Holdings' Private rows (prd §1552, Sepolia, DEBUG)
 
 The act is Move's: a sixth word on its verbs line, **Private**, drawn only where `PrivateMove.available` (DEBUG builds), opens `Screens/MovePrivate.swift`'s sentence, "Move 0.001 ETH to private on Sepolia.", over the account's sentence (`MoveSentence.privately`, the account's page kept underneath). Holdings only shows: a "Private" head and one row per token and state (`PrivateMoney.rows`), every one a door that opens Move on that sentence (`ShellChrome.moveToPrivate`, cleared when the tray closes). With no account on the phone (a simulator has no Secure Enclave), Move still opens the private sentence when asked, under the one word Private.
 

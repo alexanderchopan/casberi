@@ -298,7 +298,7 @@ struct HoldingsTreemap: View {
             VStack(alignment: .leading, spacing: 0) {
                 if showsMark {
                     if tile.id == PrivateMoney.walletSymbol {
-                        // Private money is one block, marked by its eye (prd §1547).
+                        // Private money is one block, marked by its eye (prd §1552).
                         Image(systemName: "eye.slash")
                             .resizable()
                             .scaledToFit()

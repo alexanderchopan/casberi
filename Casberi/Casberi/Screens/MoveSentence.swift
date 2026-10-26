@@ -44,7 +44,7 @@ struct MoveSentence: View {
         _privately = State(initialValue: toPrivate && PrivateMove.available)
     }
 
-    /// **TO PRIVATE (prd §1547): the one sentence that is not this account's.**
+    /// **TO PRIVATE (prd §1552): the one sentence that is not this account's.**
     /// Its own page (`MovePrivateSentence`) under these verbs, over the
     /// account's sentence, which stays as it was for the verb picked next.
     @State private var privately = false
@@ -1464,48 +1464,54 @@ struct MoveSentence: View {
     private func verbRow(spacing: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
             // A–Z in the reader's language (prd §1547); Swap stays the
-            // verb Move opens on, wherever it stands in the line.
-            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
-                .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
-                Button {
-                    guard v != verb || receipt != nil || privately else { return }
-                    withAnimation(DS.Motion.standard) {
-                        privately = false
-                        verb = v
-                        open = nil
-                        receipt = nil
+            // verb Move opens on, wherever it stands in the line. Private
+            // (nil, prd §1552) takes its place in the order where the test
+            // sender can move: Sepolia, DEBUG builds, never the default.
+            ForEach((Verb.allCases.filter { $0 != .buy || buyAvailable }.map(Optional.some)
+                     + (PrivateMove.available ? [nil] : []))
+                .sorted { verbName($0).localizedStandardCompare(verbName($1)) == .orderedAscending }, id: \.self) { v in
+                if let v {
+                    Button {
+                        guard v != verb || receipt != nil || privately else { return }
+                        withAnimation(DS.Motion.standard) {
+                            privately = false
+                            verb = v
+                            open = nil
+                            receipt = nil
+                        }
+                        DSHaptic.selection()
+                    } label: {
+                        // A step under the sentence's floor (§1479): the verbs
+                        // name what the sentence does, they are not the sentence.
+                        Text(verbatim: title(v))
+                            .dsText(.heading24)
+                            .foregroundStyle(v == verb && !privately ? DS.textPrimary
+                                             : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                     }
-                    DSHaptic.selection()
-                } label: {
-                    // A step under the sentence's floor (§1479): the verbs
-                    // name what the sentence does, they are not the sentence.
-                    Text(verbatim: title(v))
-                        .dsText(.heading24)
-                        .foregroundStyle(v == verb && !privately ? DS.textPrimary
-                                         : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
+                    .buttonStyle(RowPress())
+                    .disabled(stage != nil || privateMove.acting)
+                    .accessibilityAddTraits(v == verb && !privately ? [.isSelected] : [])
+                } else {
+                    Button {
+                        guard !privately else { return }
+                        withAnimation(DS.Motion.standard) { privately = true; open = nil }
+                        DSHaptic.selection()
+                    } label: {
+                        Text(verbatim: verbName(nil))
+                            .dsText(.heading24)
+                            .foregroundStyle(privately ? DS.textPrimary : DS.textTertiary)
+                    }
+                    .buttonStyle(RowPress())
+                    .disabled(stage != nil)
+                    .accessibilityAddTraits(privately ? [.isSelected] : [])
                 }
-                .buttonStyle(RowPress())
-                .disabled(stage != nil || privateMove.acting)
-                .accessibilityAddTraits(v == verb && !privately ? [.isSelected] : [])
-            }
-            // To private (prd §1547): Sepolia, DEBUG builds, never the default.
-            if PrivateMove.available {
-                Button {
-                    guard !privately else { return }
-                    withAnimation(DS.Motion.standard) { privately = true; open = nil }
-                    DSHaptic.selection()
-                } label: {
-                    Text("Private")
-                        .dsText(.heading24)
-                        .foregroundStyle(privately ? DS.textPrimary : DS.textTertiary)
-                }
-                .buttonStyle(RowPress())
-                .disabled(stage != nil)
-                .accessibilityAddTraits(privately ? [.isSelected] : [])
             }
         }
         .fixedSize(horizontal: true, vertical: false)
     }
+
+    /// A verb's word, or Private's (nil, prd §1552).
+    private func verbName(_ v: Verb?) -> String { v.map(title) ?? String(localized: "Private") }
 
     private func title(_ v: Verb) -> String {
         switch v {

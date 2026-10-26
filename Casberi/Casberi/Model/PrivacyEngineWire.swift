@@ -126,7 +126,7 @@ enum PrivacyEngineWire {
         let commitment: String
         let label: String
         /// Poseidon(label), decimal: what 0xBow's ASP files the deposit
-        /// under (prd §1547). The raw label reads `unknown` forever.
+        /// under (prd §1552). The raw label reads `unknown` forever.
         let labelHash: String
         let ms: Int
         let proofs: [Proof]
@@ -171,7 +171,7 @@ enum PrivacyEngineWire {
         let zkeyBytes: Int
     }
 
-    // MARK: - Where a node request goes (prd §1547)
+    // MARK: - Where a node request goes (prd §1552)
 
     /// The JSON-RPC methods a request body names: one object or a batch.
     static func rpcMethods(_ body: String?) -> [String] {
@@ -260,10 +260,10 @@ struct PrivacyNetwork: Codable, Equatable {
         // The KEYSTORE's first block, not pool 4's (10,994,884): the SDK
         // takes one `deploymentBlock` for every contract, and the keystore
         // is older; scanning from the pool leaves holes in its tree and a
-        // spend's witness fails (`keystoreLeaves.0 undefined`, prd §1547).
+        // spend's witness fails (`keystoreLeaves.0 undefined`, prd §1552).
         fromBlock: 10_932_354)
 
-    /// The node old logs come from (prd §1547): PublicNode answers "pruned
+    /// The node old logs come from (prd §1552): PublicNode answers "pruned
     /// history unavailable" for the keystore's first blocks, and every other
     /// free Sepolia node tried caps the range or rate-limits; Tenderly's
     /// gateway served the whole range (measured 2026-10-26). It lags the

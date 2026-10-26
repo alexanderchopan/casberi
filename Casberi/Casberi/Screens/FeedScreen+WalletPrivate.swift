@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **PRIVATE, IN HOLDINGS (prd §1547).** Under Tokens, Holdings only SHOWS
+/// **PRIVATE, IN HOLDINGS (prd §1552).** Under Tokens, Holdings only SHOWS
 /// what is private: a head naming it with its total, then one row per token,
 /// state and network off the notes Move to private kept (`PrivateMoney.rows`)
 /// — "ETH, private" over its network ("Sepolia"; the ruling's "<rate>% on
@@ -45,7 +45,7 @@ extension FeedScreen {
         return PrivateMoney.figure(only.amount, decimals: only.decimals, symbol: only.symbol)
     }
 
-    /// Opens Move on its private sentence (prd §1547).
+    /// Opens Move on its private sentence (prd §1552).
     private func walletOpenPrivate() {
         DSHaptic.selection()
         chrome.moveToPrivate = true

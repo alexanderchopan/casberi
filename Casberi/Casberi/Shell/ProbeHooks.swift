@@ -4131,7 +4131,7 @@ enum ProbeHooks {
         // `-privateMoneySample YES|clear` — two sample private notes (one
         // approved, one waiting) for Holdings' Private rows, no funds needed;
         // `-privacySenderForget YES` drops the DEBUG Sepolia sender's key
-        // (prd §1547). Logs `privateMoney|`.
+        // (prd §1552). Logs `privateMoney|`.
         Hook(key: "privateMoneySample") { raw, _ in PrivateMoneyStore.shared.sample(raw) },
         Hook(key: "privacySenderForget") { _, _ in
             PrivacyTestnetSender.forget()
