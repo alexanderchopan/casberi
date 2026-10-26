@@ -115,7 +115,7 @@ struct MoveSecurity: View {
         }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
-        .task(id: "\(account)·\(chrome.roomRevision)") { await read() }
+        .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
         .task {
             #if DEBUG
             // `-moveOutsideDraft "<address>"`: the outside key's field open and
@@ -433,7 +433,30 @@ struct MoveSecurity: View {
 
     // MARK: - Reading
 
-    private func read() async {
+    /// **READ UNTIL EVERY NETWORK ANSWERS (prd §1548, user: "whenever I open
+    /// the app in account, it always shows reading, but if I tap holdings and
+    /// then go back, it's there").** At launch Tor is still connecting, so the
+    /// first read's requests time out, nothing answers, and the page said
+    /// "Reading…" until a remount read again. The networks that did not
+    /// answer are asked again — 2s, then doubling to every 30s — for as long
+    /// as the page is on screen; leaving it cancels the loop.
+    private func readUntilAnswered() async {
+        var pending = Op.networks
+        var pause: Duration = .seconds(2)
+        while !Task.isCancelled {
+            pending = await read(pending)
+            guard !pending.isEmpty else { return }
+            NSLog("moveSecurity| unanswered %@, again in %@", pending.map(\.name).joined(separator: ","), "\(pause)")
+            try? await Task.sleep(for: pause)
+            pause = min(pause * 2, .seconds(30))
+        }
+    }
+
+    /// Reads `nets` and returns the ones that did not answer. A network that
+    /// answers replaces its standing; one that does not keeps the last one
+    /// read, so a failed read never turns a row back to "Reading…".
+    @discardableResult
+    private func read(_ nets: [Op.Network] = Op.networks) async -> [Op.Network] {
         // The demo's account (§1475): every network on, its key here, the
         // recovery key and a Signer on, the limit standing — read off no node,
         // and nothing of it noted for this phone's own account.
@@ -446,14 +469,14 @@ struct MoveSecurity: View {
                                 outside: [YourAccountDemo.signer], exported: [], threshold: 2,
                                 limit: .on(plan, current: plan.window(at: now)))
             }
-            return
+            return []
         }
         let recovery = YourAccountRecovery.publicKey(for: account)
         hasRecoveryKey = recovery != nil
         let signer = try? await recovery.asyncMap { try await Chain.recoverySigner(x: $0.x, y: $0.y) }
         var found: [Standing] = []
         await withTaskGroup(of: Standing?.self) { group in
-            for net in Op.networks {
+            for net in nets {
                 group.addTask {
                     guard let deployed = try? await Chain.isDeployed(net, account) else { return nil }
                     guard deployed else {
@@ -497,6 +520,12 @@ struct MoveSecurity: View {
             }
             for await s in group { if let s { found.append(s) } }
         }
+        let answered = Set(found.map(\.network.chainId))
+        let unanswered = nets.filter { !answered.contains($0.chainId) }
+        // Nothing answered and nothing was read before: the rows stay
+        // "Reading…" and the loop asks again.
+        if found.isEmpty, standings.isEmpty { return unanswered }
+        found += standings.filter { !answered.contains($0.network.chainId) }
         let order = Op.networks.map(\.chainId)
         standings = found.sorted { (order.firstIndex(of: $0.network.chainId) ?? 0) < (order.firstIndex(of: $1.network.chainId) ?? 0) }
         // The Wallet's Needs you asks for an outside key until every network
@@ -519,6 +548,7 @@ struct MoveSecurity: View {
             if let amount = UserDefaults.standard.string(forKey: "spendLimitAmount") { amountText = amount }
         }
         #endif
+        return unanswered
     }
 
     /// How many keys a send needs on `net`, then the limit that implies: one

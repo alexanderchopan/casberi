@@ -68886,3 +68886,12 @@ Mock: the design canvas "Private money with 0xBow".
 2. **Swap is the default.** Move is a tray, built fresh on every open, and `MoveSentence` opens on `.swap` (unchanged). Two openings keep Receive on purpose: the sentence right after an account is made or brought here (§1442j), and the keys walk's Receive ending (§1501).
 3. **Fit.** `a5f37e5` narrowed the line to an 8pt gap before it scrolls, so all five fit on an iPhone 17 Pro; the order does not change the width.
 4. **Not measured.** Written in a cloud session with no Xcode; not compiled, `verify.sh` not run.
+
+## §1548 — Your account's keys read until every network answers, and a failed read keeps the last one (user, 2026-10-26: "whenever I open the app in account, it always shows reading, but if I tap holdings and then go back, it's there. Why is that? Why can't we fix this?") — WRITTEN, NOT YET COMPILED
+
+1. **Why.** `MoveSecurity` read every network once, when the page appeared (`.task(id: account·roomRevision)`). At launch Tor is still connecting, so `Chain.isDeployed` timed out on every network, nothing answered, `standings` stayed empty and every row said "Reading…". Nothing asked again until the view was rebuilt; Holdings and back rebuilt it, by which time Tor had a circuit.
+2. **Read until answered.** `readUntilAnswered` asks again for the networks that did not answer: after 2s, doubling to every 30s, while the page is on screen. Leaving the page cancels it; a send (`roomRevision`) starts it over on every network.
+3. **A failed read keeps the last one.** A network that does not answer keeps its last standing instead of dropping out of Networks, and a read where nothing answers never turns a row back to "Reading…".
+4. **Logs.** `moveSecurity| unanswered <networks>, again in <pause>` per retry.
+5. **Mac half (§1402).** The Mac reads without Tor (§1495 item 9); the same loop covers a network that fails there.
+6. **Not measured.** Written in a cloud session with no Xcode; not compiled, `verify.sh` not run, not seen on the phone.
