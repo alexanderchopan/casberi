@@ -353,6 +353,9 @@ extension FeedScreen {
             defer { holdingsReads -= 1 }
             let reading = await WalletIngest.portfolioReading(scopeTo: scope)
             var read = reading.read
+            #if DEBUG
+            NSLog("[Casberi] walletHoldings| asked=%@ now=%@ total=%.0f", scope ?? "all", selectedWallet ?? "all", read?.portfolio.totalUSD ?? -1)
+            #endif
             // The scope may have moved while the read was in flight — a late
             // answer for a wallet we've since left must not paint (the same
             // guard `loadWalletLive` keeps).

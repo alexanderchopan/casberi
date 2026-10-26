@@ -68722,3 +68722,9 @@ Every card's charges already counted in Spending on All. §1480 item 8 deleted C
 4. **Send's recipients wear faces.** A person is `WalletFace` (ENS avatar, else its tinted mark); a book entry named for a company the app has a logo for (Uniswap, Coinbase, Stripe, Bitrefill, Peer) wears the logo. "Same as above" and a typed address that resolved wear the face too.
 5. **The sweep sheet's rows wear their tokens' marks** (`ReceiveFromWalletSheet`), dimmed with the words for what stays behind.
 6. **The first list opens itself.** When Swap or Send lands with money to spend and nothing picked, the token list (With) opens, keyboard down. It shows what you hold and picks nothing, so §1438c stands: nothing is chosen for you; the sentence's first step is in view.
+
+## §1535 — The Wallet page's box follows a scope switch (amends §1403) (user, 2026-10-25, walking the Wallet: "make sure its easy to get back to places"; measured on the walk)
+
+1. **The defect.** On the phone's Wallet page, switching the account (Yours → Everything, or a followed wallet → the Wallet tab) left the box on the old account's figure: $2K, then $12K, over Everything's own line and "+$1,921", while the holdings read for Everything had landed $33,246 (logged, `walletHoldings|`). The box is a `List` row, and a `List` row's content is not rebuilt when only the total moves; §1403 keyed the Mac pane's box on its total for this reason and left the page on a fixed id, trusting its landing to remount it. A scope switch is not a landing.
+2. **The fix.** The page's row is keyed on its total too (`"walletChrome:" + total`), as the pane's is: a landed total is a new row. Measured after: Yours $2K, Everything $33K.
+3. **A debug line** logs each holdings read (`walletHoldings| asked= now= total=`), DEBUG only.

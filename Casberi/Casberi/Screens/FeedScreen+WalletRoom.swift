@@ -290,7 +290,11 @@ extension FeedScreen {
             // never caught by this because its landing and pull remount the
             // row for other reasons; the pane's instance keys the row on the
             // one value the box exists to show, so a landed total is a new row.
-            .id(roomBoxPlace == .paneBox ? "paneBalance:\(portfolioShown?.totalUSD ?? 0)" : "walletChrome")
+            // **THE PAGE TOO (prd §1535, measured 2026-10-25):** a scope switch
+            // (Yours → Everything, a followed wallet → the Wallet tab) remounts
+            // nothing, so the page's crown kept the account's $2K over
+            // Everything's line while the read had landed $33K (logged).
+            .id((roomBoxPlace == .paneBox ? "paneBalance:" : "walletChrome:") + "\(portfolioShown?.totalUSD ?? 0)")
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
             // Where a launch opens the Wallet: Yours, unless you last chose
