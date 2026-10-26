@@ -38,6 +38,10 @@ struct MoveSecurity: View {
     }
 
     @State private var standings: [Standing] = []
+    /// The networks a read failed on, any read: named, never dropped, and
+    /// nothing is offered until they answer (prd §1549).
+    @State private var unread: [Op.Network] = []
+    @State private var reading = false
     @State private var hasRecoveryKey = false
     /// The row acting and what its verb says meanwhile; every other row's
     /// verb waits, in its own word.
@@ -85,7 +89,9 @@ struct MoveSecurity: View {
                 })
             if addingOutside { outsideField }
             row(title: String(localized: "Networks"), value: networksValue,
-                short: live.count > 1 ? String(localized: "\(live.count) networks") : nil, verb: nil)
+                tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
+                short: networksShort,
+                verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { Task { await read() } }))
             // Already on, never a choice (prd §1495 item 6, placed by §1496):
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
@@ -115,7 +121,11 @@ struct MoveSecurity: View {
         }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
-        .task(id: "\(account)·\(chrome.roomRevision)") { await read() }
+        .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
+        // Tor connecting late reads what failed again, unasked (prd §1549).
+        .onChange(of: TorStatus.shared.state) { _, now in
+            if case .ready = now, !unread.isEmpty, !reading { Task { await read(unread) } }
+        }
         .task {
             #if DEBUG
             // `-moveOutsideDraft "<address>"`: the outside key's field open and
@@ -348,13 +358,31 @@ struct MoveSecurity: View {
     private var live: [Standing] { standings.filter(\.deployed) }
 
     private func names(_ list: [Standing]) -> String {
-        list.map(\.network.name).formatted(.list(type: .and))
+        names(list.map(\.network))
+    }
+
+    private func names(_ list: [Op.Network]) -> String {
+        list.map(\.name).formatted(.list(type: .and))
+    }
+
+    /// **A READ THAT FAILED IS NOT A FACT (prd §1549, user, on a Keys card
+    /// reading "Signs from · Use on this iPhone" and "Activates on first
+    /// move" for an account this phone made: "now it's acting like i haven't
+    /// activated my account").** Every key row says what every network
+    /// answered, so until each one has answered every read, the rows say
+    /// "Reading…" or "Couldn't read" and offer nothing: a failed key read
+    /// had offered to move the account's key here, a transaction resting on
+    /// a timeout. nil once every network answered.
+    private var unsettled: String? {
+        if !unread.isEmpty { return reading ? String(localized: "Reading…") : String(localized: "Couldn't read") }
+        if standings.isEmpty { return String(localized: "Reading…") }
+        return nil
     }
 
     /// Who signs: this device, your other one, or both — the fact alone (the
     /// key index and "a new key with every send" read as technical, §1496).
     private var deviceValue: String {
-        if standings.isEmpty { return String(localized: "Reading…") }
+        if let unsettled { return unsettled }
         let here = live.filter { $0.keyIndex != nil }
         let elsewhere = live.filter { $0.keyIndex == nil }
         if live.isEmpty || elsewhere.isEmpty { return ThisDevice.title }
@@ -366,7 +394,7 @@ struct MoveSecurity: View {
     private var movable: [Standing] {
         live.filter { $0.keyIndex == nil && $0.recovery == .added }
     }
-    private var canMoveHere: Bool { hasRecoveryKey && !movable.isEmpty }
+    private var canMoveHere: Bool { unsettled == nil && hasRecoveryKey && !movable.isEmpty }
 
     /// Where the recovery key is still missing: every network the account
     /// can be on, created where it is not there yet (prd §1427: both at once,
@@ -414,7 +442,7 @@ struct MoveSecurity: View {
     /// rides the first send there); "Not yet on …" in amber where this phone
     /// can still put it (Finish stands beside); nothing beside Set up.
     private var recoveryValue: (text: String?, tone: Color) {
-        if standings.isEmpty { return (String(localized: "Reading…"), DS.textSecondary) }
+        if let unsettled { return (unsettled, DS.textSecondary) }
         let on = standings.filter { $0.recovery == .added }
         if !recoveryTargets.isEmpty, !on.isEmpty {
             return (String(localized: "Not yet on \(names(recoveryTargets))"), DS.attentionInk)
@@ -427,13 +455,35 @@ struct MoveSecurity: View {
     }
 
     private var recoveryVerb: String? {
-        guard !standings.isEmpty, !recoveryTargets.isEmpty else { return nil }
+        guard unsettled == nil, !recoveryTargets.isEmpty else { return nil }
         return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Set up")
     }
 
     // MARK: - Reading
 
-    private func read() async {
+    /// **READ UNTIL EVERY NETWORK ANSWERS (prd §1548, §1549; user: "whenever
+    /// I open the app in account, it always shows reading, but if I tap
+    /// holdings and then go back, it's there").** At launch Tor is still
+    /// connecting, so the first read times out and nothing asked again until
+    /// a remount. The unread networks are asked again — 2s, then doubling to
+    /// every 30s — for as long as the page is on screen; leaving it cancels
+    /// the loop. Tor reporting ready asks at once (the `onChange` above); this
+    /// covers a Tor that reads ready over circuits too slow to answer.
+    private func readUntilAnswered() async {
+        await read()
+        var pause: Duration = .seconds(2)
+        while !Task.isCancelled, !unread.isEmpty {
+            NSLog("moveSecurity| unread %@, again in %@", unread.map(\.name).joined(separator: ","), "\(pause)")
+            try? await Task.sleep(for: pause)
+            guard !Task.isCancelled, !unread.isEmpty else { return }
+            if !reading { await read(unread) }
+            pause = min(pause * 2, .seconds(30))
+        }
+    }
+
+    /// Reads `nets` and returns the ones that did not answer (§1549).
+    @discardableResult
+    private func read(_ nets: [Op.Network] = Op.networks) async -> [Op.Network] {
         // The demo's account (§1475): every network on, its key here, the
         // recovery key and a Signer on, the limit standing — read off no node,
         // and nothing of it noted for this phone's own account.
@@ -446,20 +496,30 @@ struct MoveSecurity: View {
                                 outside: [YourAccountDemo.signer], exported: [], threshold: 2,
                                 limit: .on(plan, current: plan.window(at: now)))
             }
-            return
+            return []
         }
         let recovery = YourAccountRecovery.publicKey(for: account)
         hasRecoveryKey = recovery != nil
+        reading = true
+        defer { reading = false }
         let signer = try? await recovery.asyncMap { try await Chain.recoverySigner(x: $0.x, y: $0.y) }
+        // A recovery key whose signer could not be read leaves its standing
+        // unknown on every network it could be on (§1549).
+        let signerUnread = recovery != nil && signer == nil
         var found: [Standing] = []
-        await withTaskGroup(of: Standing?.self) { group in
-            for net in Op.networks {
+        var failed: Set<Int> = []
+        // Each network answers a Standing, or nil when ANY of its reads
+        // failed (§1549): a failed key read is not another device signing,
+        // a failed owners read is not a missing recovery key or co-signer.
+        await withTaskGroup(of: (Int, Standing?).self) { group in
+            for net in nets {
                 group.addTask {
-                    guard let deployed = try? await Chain.isDeployed(net, account) else { return nil }
+                    guard let deployed = try? await Chain.isDeployed(net, account) else { return (net.chainId, nil) }
                     guard deployed else {
-                        return Standing(network: net, deployed: false, keyIndex: nil, recovery: .notThere, outside: [],
-                                        exported: [], threshold: nil, limit: nil)
+                        return (net.chainId, Standing(network: net, deployed: false, keyIndex: nil, recovery: .notThere,
+                                                      outside: [], exported: [], threshold: nil, limit: nil))
                     }
+                    guard !signerUnread else { return (net.chainId, nil) }
                     // **ASKED AT ONCE, EACH ONCE.** Every read here went one
                     // after another over Tor (~1–2s each), and the recovery
                     // state and the limit asked the code, the owners and the
@@ -469,46 +529,62 @@ struct MoveSecurity: View {
                     async let configured = Chain.configuredX(net, account)
                     async let ownersRead = Chain.owners(net, account)
                     async let spending = Self.spending(net, account)
-                    var index: Int?
+                    let x: [UInt8]?
+                    do { x = try await configured } catch { return (net.chainId, nil) }
+                    let all: [String]
+                    do { all = try await ownersRead } catch { return (net.chainId, nil) }
                     // This phone's only if it can still sign with it.
-                    if let x = try? await configured,
-                       let i = YourAccountKey.index(matchingX: x), YourAccountKey.holds(i) {
+                    var index: Int?
+                    if let x, let i = YourAccountKey.index(matchingX: x), YourAccountKey.holds(i) {
                         index = i
                     }
-                    let all = try? await ownersRead
                     var state: Chain.RecoveryState = .missing
-                    if let signer, let all {
+                    if let signer {
                         state = all.contains { $0.caseInsensitiveCompare(signer) == .orderedSame } ? .added : .missing
                     }
                     var exported: [String] = []
                     var asked: [String] = []
-                    for owner in all ?? [] where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+                    for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
                         if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }
                         else { asked.append(owner) }
                     }
-                    let plain = await IngestSupport.boundedGather(asked, maxConcurrent: 6) {
-                        (try? await Chain.isContract(net, $0)) == false
+                    let isContract = await IngestSupport.boundedGather(asked, maxConcurrent: 6) {
+                        try? await Chain.isContract(net, $0)
                     }
-                    let outside = zip(asked, plain).filter { $0.1 }.map { $0.0 }
+                    guard !isContract.contains(where: { $0 == nil }) else { return (net.chainId, nil) }
+                    let outside = zip(asked, isContract).filter { $0.1 == false }.map { $0.0 }
                     let (threshold, limit) = await spending
-                    return Standing(network: net, deployed: deployed, keyIndex: index, recovery: state, outside: outside,
-                                    exported: exported, threshold: threshold, limit: limit)
+                    guard threshold != nil else { return (net.chainId, nil) }
+                    return (net.chainId, Standing(network: net, deployed: deployed, keyIndex: index, recovery: state,
+                                                  outside: outside, exported: exported, threshold: threshold, limit: limit))
                 }
             }
-            for await s in group { if let s { found.append(s) } }
+            for await (id, s) in group {
+                if let s { found.append(s) } else { failed.insert(id) }
+            }
         }
+        // A network not asked this time keeps what it last said, read or
+        // unread; one asked that failed drops its standing (§1549).
+        let asked = Set(nets.map(\.chainId))
+        let wasUnread = Set(unread.map(\.chainId))
+        found += standings.filter { !asked.contains($0.network.chainId) }
         let order = Op.networks.map(\.chainId)
         standings = found.sorted { (order.firstIndex(of: $0.network.chainId) ?? 0) < (order.firstIndex(of: $1.network.chainId) ?? 0) }
-        // The Wallet's Needs you asks for an outside key until every network
-        // the account is on has one (prd §1432); an exported key is one
-        // (prd §1493: the same way out, held in another wallet).
-        let live = standings.filter(\.deployed)
-        YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty || !$0.exported.isEmpty })
-        // The box's Signers figure (prd §1462): distinct keys across the networks.
-        YourAccountFacts.noteSigners(Set(live.flatMap(\.outside).map { $0.lowercased() }).count)
-        // And for the recovery key where money sits (prd §1442m), so Finish
-        // clears the nudge as soon as it lands.
-        await YourAccountProtection.check(force: true)
+        unread = Op.networks.filter { failed.contains($0.chainId) || (!asked.contains($0.chainId) && wasUnread.contains($0.chainId)) }
+        // Nothing is noted for the Wallet from a read with a gap in it: the
+        // nudges and the Signers figure wait for every network (§1549).
+        if unread.isEmpty {
+            // The Wallet's Needs you asks for an outside key until every network
+            // the account is on has one (prd §1432); an exported key is one
+            // (prd §1493: the same way out, held in another wallet).
+            let live = standings.filter(\.deployed)
+            YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty || !$0.exported.isEmpty })
+            // The box's Signers figure (prd §1462): distinct keys across the networks.
+            YourAccountFacts.noteSigners(Set(live.flatMap(\.outside).map { $0.lowercased() }).count)
+            // And for the recovery key where money sits (prd §1442m), so Finish
+            // clears the nudge as soon as it lands.
+            await YourAccountProtection.check(force: true)
+        }
         #if DEBUG
         NSLog("spendLimit| %@", standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\(plan(of: $0) == nil ? "off" : "on")" }.joined(separator: ","))
         // `-spendLimitOpen YES`: the sentence open, as the switch turned on
@@ -519,6 +595,7 @@ struct MoveSecurity: View {
             if let amount = UserDefaults.standard.string(forKey: "spendLimitAmount") { amountText = amount }
         }
         #endif
+        return nets.filter { failed.contains($0.chainId) }
     }
 
     /// How many keys a send needs on `net`, then the limit that implies: one
@@ -579,7 +656,10 @@ struct MoveSecurity: View {
     /// keeps its own copy of the account — with what it comes to in all said
     /// beside it.
     @ViewBuilder private var spendLimit: some View {
-        if limitNetworks.isEmpty, let limit = setup?.limit, !unopened.isEmpty {
+        if !unread.isEmpty, let unsettled {
+            // Neither on nor off until every network answered (§1549).
+            row(title: String(localized: "Spend limit"), value: unsettled, verb: nil)
+        } else if limitNetworks.isEmpty, let limit = setup?.limit, !unopened.isEmpty {
             // Chosen at Create, landing with the first send (prd §1457).
             row(title: String(localized: "Spend limit"),
                 value: String(localized: "\(MoveSentence.money(Double(limit.dollars))) a \(LimitPeriod.of(seconds: limit.minutes * 60).word)"),
@@ -883,7 +963,7 @@ struct MoveSecurity: View {
     /// §1499; user: "it connects, but it doesn't sign"), and never "Waiting",
     /// which reads as waiting on the wallet to sign.
     private var outsideValue: (text: String?, tone: Color) {
-        if standings.isEmpty { return (String(localized: "Reading…"), DS.textSecondary) }
+        if let unsettled { return (unsettled, DS.textSecondary) }
         let keys = Set(live.flatMap(\.outside).map { $0.lowercased() })
         let who: String
         if let one = keys.first {
@@ -900,14 +980,23 @@ struct MoveSecurity: View {
         return (who, DS.textSecondary)
     }
 
-    /// The networks the account is on, said once (§1496).
+    /// The networks the account is on, said once (§1496); the ones that did
+    /// not answer, by name, in their place (§1549).
     private var networksValue: String {
+        if !unread.isEmpty {
+            return reading ? String(localized: "Reading…") : String(localized: "Couldn't read \(names(unread))")
+        }
         if standings.isEmpty { return String(localized: "Reading…") }
         return live.isEmpty ? String(localized: "None yet") : names(live)
     }
 
+    private var networksShort: String? {
+        if !unread.isEmpty { return unread.count > 1 && !reading ? String(localized: "Couldn't read \(unread.count) networks") : nil }
+        return live.count > 1 ? String(localized: "\(live.count) networks") : nil
+    }
+
     private var outsideVerb: String? {
-        guard !standings.isEmpty else { return nil }
+        guard unsettled == nil else { return nil }
         if outsideOwner == nil { return String(localized: "Add") }
         return outsideTargets.isEmpty ? nil : String(localized: "Finish")
     }
@@ -1031,13 +1120,13 @@ struct MoveSecurity: View {
     /// The exported key's short address once one is out; nothing beside
     /// Export; "None" where there is nothing to export yet.
     private var exportValue: String? {
-        if standings.isEmpty { return String(localized: "Reading…") }
+        if let unsettled { return unsettled }
         if let key = exportedKey { return YourAccount.short(key) }
         return exportTargets.isEmpty ? String(localized: "None") : nil
     }
 
     private var exportVerb: String? {
-        guard !standings.isEmpty else { return nil }
+        guard unsettled == nil else { return nil }
         if exportedKey != nil { return String(localized: "Remove") }
         return exportTargets.isEmpty ? nil : String(localized: "Export")
     }
