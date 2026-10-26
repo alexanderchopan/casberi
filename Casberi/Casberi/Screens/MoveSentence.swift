@@ -1417,7 +1417,8 @@ struct MoveSentence: View {
         ViewThatFits(in: .horizontal) {
             verbRow(spacing: DS.Space.s4)
             verbRow(spacing: DS.Space.s3)
-            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s3) }
+            verbRow(spacing: DS.Space.s2)
+            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s2) }
                 .scrollIndicators(.hidden)
         }
         .frame(minHeight: 44, alignment: .leading)
