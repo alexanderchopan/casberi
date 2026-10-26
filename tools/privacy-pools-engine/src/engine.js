@@ -78,7 +78,7 @@ async function poseidon() {
 }
 
 // Poseidon(label) as a decimal string: the id 0xBow's ASP files a deposit
-// under (`/labels/<id>/status`), never the label itself (prd §1552).
+// under (`/labels/<id>/status`), never the label itself (prd §1553).
 async function labelHashOf(label) {
   return BigInt((await poseidon()).hash([hex(label)])).toString(10);
 }
@@ -224,7 +224,7 @@ const methods = {
       commitment: r.pendingNote.commitment,
       label: hex(r.pendingNote.label),
       // The ASP keys a deposit by Poseidon(label), in decimal; asked with the
-      // raw label it reads `unknown` forever (prd §1552).
+      // raw label it reads `unknown` forever (prd §1553).
       labelHash: await labelHashOf(r.pendingNote.label),
       ms: Math.round(now() - t),
       proofs,

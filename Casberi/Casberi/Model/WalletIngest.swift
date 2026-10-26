@@ -2179,12 +2179,11 @@ enum WalletIngest {
         // all on an exchange still has one, and returning nil would paint the
         // empty state over a balance we successfully read. Privy is the one
         // that may not stand alone.
-        // Private money (prd §1552): your own, approved, on a network whose
+        // Private money (prd §1553): your own, approved, on a network whose
         // coins have value; one block, never folded into the token it is. It
         // may stand alone only where no wallet went unread.
         let privately = combined ? await PrivateMoneyStore.shared.walletHolding() : []
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty
-                || (!privately.isEmpty && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || (!privately.isEmpty && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
                                              venues: cash + privy + privately,

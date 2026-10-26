@@ -1,5 +1,5 @@
 #!/bin/zsh
-# private-money-selftest.sh — Move to private and the private rows (prd §1552).
+# private-money-selftest.sh — Move to private and the private rows (prd §1553).
 #
 # Compiles the pure halves WHOLE and drives them:
 #   - the ASP's answer: pending and unknown are waiting, approved, rejected,
@@ -54,7 +54,7 @@ use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sende
 awk '/static var available: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Move to private is no longer DEBUG-only"; exit 1; }
 echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only device-only sender"
 
-# The act is Move's, Holdings only shows (prd §1552): the sentence is drawn
+# The act is Move's, Holdings only shows (prd §1553): the sentence is drawn
 # under Move's verbs, the Private verb only where the sender can move, the
 # tray opens on it from Holdings' rows, and Holdings raises no sheet of its own.
 SENT="Casberi/Casberi/Screens/MoveSentence.swift"
@@ -118,7 +118,7 @@ check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
 check(P.held(notes, symbol: "ETH") == Decimal(string: "4000000000000000"), "held counts approved notes only")
 
-// In the Wallet's number (prd §1552): approved notes on a network with value, once.
+// In the Wallet's number (prd §1553): approved notes on a network with value, once.
 func onChain(_ n: P.Note, _ chain: Int) -> P.Note {
     .init(commitment: n.commitment, label: n.label, labelHash: n.labelHash, symbol: n.symbol, amount: n.amount, decimals: n.decimals,
           chainId: chain, tx: n.tx, at: n.at, status: n.status)

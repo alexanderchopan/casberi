@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// **YOUR PRIVATE NOTES, AND WHAT THE ASP SAYS OF THEM (prd §1552).**
+/// **YOUR PRIVATE NOTES, AND WHAT THE ASP SAYS OF THEM (prd §1553).**
 ///
 /// Each deposit Move to private makes is kept here by its public parts
 /// (`PrivateMoney.Note`); Holdings draws `PrivateMoney.rows` off them. A note
@@ -38,7 +38,7 @@ final class PrivateMoneyStore {
         DefaultsWrite.set(data, forKey: Self.key)
     }
 
-    /// **PRIVATE MONEY COUNTS IN THE WALLET (prd §1552).** Its one place in
+    /// **PRIVATE MONEY COUNTS IN THE WALLET (prd §1553).** Its one place in
     /// the combined read: approved notes on a network whose coins have value,
     /// in dollars, as a venue named Private (`PrivateMoney.walletSymbol`), so
     /// the box draws one block for it and the total counts it once. A deposit

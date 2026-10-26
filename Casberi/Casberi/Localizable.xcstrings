@@ -127524,34 +127524,6 @@
         }
       }
     },
-    "Opens Move to private" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abre Mover a privado"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "「非公開に移す」を開きます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "비공개로 옮기기를 엽니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "打开“转为私密”"
-          }
-        }
-      }
-    },
     "Opens a new note in Casberi." : {
       "localizations" : {
         "es" : {
@@ -127688,6 +127660,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开其页面"
+          }
+        }
+      }
+    },
+    "Opens moving money to private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre mover dinero a privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開への移動を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 옮기기를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开转为私密"
           }
         }
       }

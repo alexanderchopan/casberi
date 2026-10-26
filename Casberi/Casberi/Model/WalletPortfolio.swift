@@ -83,7 +83,7 @@ struct WalletPortfolio: Equatable {
             || holderID == privateHolderID
     }
 
-    /// Private money's holder (`PrivateMoney.holderID`, prd §1552): a place,
+    /// Private money's holder (`PrivateMoney.holderID`, prd §1553): a place,
     /// not a wallet, and not an app either.
     static let privateHolderID = "private"
 
