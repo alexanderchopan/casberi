@@ -68785,3 +68785,19 @@ Every card's charges already counted in Spending on All. §1480 item 8 deleted C
 3. **Still to measure before building:** tokens that trade only on Uniswap v4 (many Clanker and Zora coins need v4's quoter), and Ethereum mainnet, where front-running needs a tight slippage limit. Simulation before Face ID stays (§1440).
 
 **Mac half.** The same Move code; not walked.
+
+## §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Waiting for approval, round-ups (supersedes §1538's choice of Aztec and its "no gatekeeper" for private money; amends §207, §1048's read-only Privacy Pools, §1452's round-ups; keeps §1539) (user, 2026-10-26: "i want to just go w/ 0xbow"; "we hvae to do typescript first b/c i don't wanna use an alpha that is closed ssource"; of 0xBow's depositFor, "no i don't want this extra feature that is just cumbersome and too many settings"; of private by default, "i guess private by default isn't good") — RULED, not built
+
+**Why.** Aztec is measured and works on its v6 testnet (`tools/aztec-account`, a private send in 14 s, a private exit claimable after about 24 minutes), but it is Alpha, Ethereum only, and its phone engine is unbuilt. Privacy Pools v2 is live on seven networks with payments, a private balance and yield already built. The cost, accepted here, is 0xBow's approval service: every deposit waits for its approval before it can be spent privately and can be refused (then taken back publicly).
+
+**The ruling.**
+1. **Version 1 is four things:** Move to private (a private balance in Holdings); Send privately, one Private switch on Send, from that balance to any address (you are hidden; the amount and recipient are public); Waiting for approval, a Needs you row while 0xBow reviews a deposit, with Take it back if refused; round-ups collect and move to private together at $20 or weekly (deposits stay separate notes in v2, so many small ones would fragment a send).
+2. **Private is never the default:** with 0xBow, private by default would put its approval on every dollar.
+3. **Not now:** depositFor (paying into someone's private balance), Request privately, Receive to a fresh address.
+4. **The phone uses 0xBow's open TypeScript SDK** (MIT, `github.com/0xbow-io/privacy-pools-v2-monorepo`) in a web view, keys in the Keychain behind Face ID (v2 takes a software key, not a Secure Enclave one). Their Rust SDK is an unreleased alpha and closed: not used until it is open source.
+5. **Ethereum first** (about 150 depositors, $384K held on 2026-10-26); Base's pool (about 30, $2.9K) is too small to hide in yet.
+6. Aztec is parked, not deleted: `tools/aztec-account` stays measured on v6.
+
+**Mac half.** None yet: nothing is drawn.
+
+Mock: the design canvas "Private money with 0xBow".
