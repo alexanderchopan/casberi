@@ -9,7 +9,7 @@ import SwiftUI
 /// that cannot turn off would be the fake control §83 bans. Where Tor
 /// cannot connect, the wallets wait on their last readings, stamped (prd
 /// §825), and the row says so. The state is tor's answer of the last few
-/// seconds (prd §1544): a connected tor with no working circuit reads
+/// seconds (prd §1546): a connected tor with no working circuit reads
 /// "Connecting", and one without for 45s "Can't connect". The proof is What this app reaches, which
 /// counts per service what actually went through Tor.
 enum TorFact {

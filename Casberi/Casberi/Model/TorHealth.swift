@@ -7,7 +7,7 @@ enum TorState: Equatable, Sendable {
     case unavailable
     case idle
     /// Bootstrapping at this percent; `connecting(100)` is a connected tor
-    /// with no working circuit, building one (prd §1544).
+    /// with no working circuit, building one (prd §1546).
     case connecting(Int)
     case ready(seconds: Double)
     /// Could not connect within `TorHealth.connectWait`, lost its circuits
@@ -15,7 +15,7 @@ enum TorState: Equatable, Sendable {
     case failed
 }
 
-/// **TOR, WATCHED AFTER IT CONNECTS (prd §1544).** The pure half of
+/// **TOR, WATCHED AFTER IT CONNECTS (prd §1546).** The pure half of
 /// `TorClient`: what tor's answers mean, what the Wallet is told, and when
 /// the client renews circuits, resets tor's connections or runs tor again.
 ///

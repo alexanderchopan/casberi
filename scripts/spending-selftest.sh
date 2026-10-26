@@ -189,6 +189,22 @@ check(spent([buy("r1", 5, at: 0), send("s1", 40, at: 1)]) == ["s1"],
 // and is the buy's, never an answer to a $5 send beside it.
 check(spent([buy("op", 5, at: 0), send("op", 5, at: 0), receipt("fill", 4.97, at: 1, from: "0x5011e4")]) == ["op"],
       "Relay's fill answers the round-up's buy, not the send it rode with")
+// An exchange buy (prd §1545) rides the send in ONE transaction: the token it
+// bought comes back in that transaction, stamped, and the read calls the
+// whole transaction a trade. The send is still spending.
+func fill(_ tx: String, _ usd: Double, at m: Double) -> M {
+    M(wallet: mine, tx: tx, way: .received, usd: usd, at: at(m), counterparty: "0x2626664c", roundUp: eth)
+}
+check(spent([buy("x", 5.20, at: 0), send("x", 4.30, at: 0, operation: "trade"), fill("x", 5.18, at: 0)]) == ["x"],
+      "a send riding an exchange round-up read as a trade: the buy's token, or the buy's trade, took it")
+check(spent([buy("x", 5, at: 0), fill("x", 5, at: 0), send("z", 5, at: 1)]) == ["z"],
+      "an exchange round-up's token answered a $5 send beside it as a round trip")
+check(spent([buy("x", 5, at: 0), fill("x", 5, at: 0), send("y", 5, at: 1), receipt("back", 5, at: 2)]).isEmpty,
+      "an exchange buy took an arrival its own transaction already answered, so a real round trip counted")
+check(spent([buy("x", 5.20, at: 0), send("x", 4.30, at: 0, operation: "trade"), receipt("x", 9, at: 0)]).isEmpty,
+      "a transaction that also paid you something other than the round-up's token counted its send")
+check(Spending.walletRoundUps([buy("x", 5.20, at: 0), fill("x", 5.18, at: 0)], own: own).map(\.usd) == [5.20],
+      "an exchange buy is not one round-up, or its token is counted as one")
 let buys = Spending.walletRoundUps([buy("r1", 5, at: 0), buy("r1", 5, at: 0), buy("r2", 5.20, at: 1),
                                     buy("r3", 5, at: 2, wallet: unfollowed), buy("r4", nil, at: 3),
                                     buy("r5", 5, at: 4, way: .received), send("s1", 40, at: 5)], own: own)
@@ -243,7 +259,11 @@ mutate() {
   print "  ok   catches  $why"
 }
 mutate "a trade's send counts"            's/if paidBack\.contains\(send\.tx\) \{ continue \}//'
-mutate "the read's classification ignored" 's/if let op = send\.operation, op != "send" \{ continue \}//'
+mutate "the read's classification ignored" 's/if let op = send\.operation, op != "send", !boughtHere\.contains\(send\.tx\) \{ continue \}//'
+mutate "an exchange round-up's token reads as paid back" 's/\$0\.way != \.sent && \$0\.roundUp == nil/\$0.way != .sent/'
+mutate "an exchange round-up's token answers a send"    's/guard m\.way == \.received, m\.roundUp == nil, own/guard m.way == .received, own/'
+mutate "an exchange buy takes another arrival"          's/\n            && !boughtHere\.contains\(buy\.tx\) \{/ {/'
+mutate "the buy's trade hides the send it rode with"    's/op != "send", !boughtHere\.contains\(send\.tx\)/op != "send"/'
 mutate "a round trip counts"              's/arrivals\.remove\(at: i\)\n                continue/arrivals.remove(at: i)/'
 mutate "an unfollowed wallet counts"      's/guard own\.contains\(send\.wallet\) else \{ continue \}//'
 mutate "own moves count"                  's/if let to = send\.counterparty, own\.contains\(to\) \{ continue \}//'

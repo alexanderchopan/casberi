@@ -66,7 +66,16 @@ struct MoveDetails: View {
             .walletRowPitch()
         }
         row(String(localized: "From"), String(localized: "Your account \(YourAccount.short(account))"))
+        // A round-up bought on the exchanges with the send (prd §1545): where,
+        // its pool fee, and the exact approval it makes, as a swap's are.
+        ForEach(Array(exchanges(p).enumerated()), id: \.offset) { _, words in
+            row(String(localized: "Round-up"), words, sub: String(localized: "The pool fee is in the price"))
+        }
         feeRow(p)
+        ForEach(Array(p.approvals.enumerated()), id: \.offset) { _, a in
+            row(String(localized: "Approves"), String(localized: "Exactly \(a.figure) \(a.symbol)"),
+                sub: String(localized: "to \(a.spender), used in the same step"))
+        }
     }
 
     /// The network fee, its ceiling in dollars over the coin; "Not priced"

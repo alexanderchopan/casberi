@@ -351,15 +351,17 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
-    /// Whether Relay carries this move (prd §1512, §1539): a send whose
-    /// round-up buys now, money arriving from another network. Relay refuses
+    /// Whether Relay carries this move (prd §1512, §1539, §1545): a send
+    /// whose round-up buys a token on another network now, money arriving
+    /// from another network. A round-up on the send's own network is bought
+    /// on the exchanges, through Tor like a swap. Relay refuses
     /// every Tor exit, key or no key, so each says it on the foot. A swap and
     /// a sweep go straight to the pools through the account's own node, so
     /// through Tor (measured 2026-10-26), and are not Relay's.
     private var relayCarries: Bool {
         switch verb {
         case .swap: false
-        case .send: roundUpPlan?.buy != nil
+        case .send: roundUpPlan?.buy != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)
         case .receive: elsewhere != nil
         case .buy: false
         case .sweep: false
@@ -370,7 +372,14 @@ struct MoveSentence: View {
     /// 0.05% pool fee" for one swap, "On Uniswap and Aerodrome" for several
     /// on both: the foot's credit for a swap or a sweep, in Relay's old
     /// place, with no "powered by". The pool fee is in the price.
+    ///
+    /// A send whose round-up buys on the exchanges (prd §1545) says it the
+    /// same way, from the preview's own quote: "On Aerodrome · 0.01% pool fee".
     private var exchangeCredit: String? {
+        if verb == .send {
+            guard roundUpPlan?.buy != nil, let sold = shownPreview?.sold else { return nil }
+            return YourAccountSwap.credit(sold.compactMap(\.route))
+        }
         guard verb == .swap || verb == .sweep else { return nil }
         let routes = signing.compactMap { item -> YourAccountSwap.Route? in
             if case .swap(let s) = item { return s.quote.route }
@@ -386,6 +395,11 @@ struct MoveSentence: View {
         let target = RoundUps.setting.target
         if let buy = plan.buy {
             let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
+            // The spend limit's key signs this send alone and never buys on
+            // the exchanges (prd §1545): the change waits for Face ID.
+            if shownPreview?.route == .session, !RoundUps.sessionCarries(target, from: network.chainId) {
+                return [String(localized: "\(Self.money(usd)) of round-ups so far, bought with your next Face ID send")]
+            }
             return [String(localized: "\(Self.money(usd)) of round-ups buys \(target.symbol) on \(target.network)")]
         }
         let usd = Op.dollars(plan.savedAfter, decimals: RoundUps.dollarDecimals, price: 1)
@@ -3018,9 +3032,10 @@ struct MoveSentence: View {
                     await MainActor.run { stage = s }
                 }
                 // The change is counted once the send has landed; a buy
-                // empties the count with it.
+                // empties the count with it, and a send that did not buy (the
+                // spend limit's key, or no pool, prd §1545) keeps it all.
                 if let roundUp, case .landed = done.sent.outcome {
-                    RoundUps.setSaved(roundUp.savedAfter, on: net.chainId)
+                    RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: !done.roundUpWaits), on: net.chainId)
                 }
                 let sent = done.sent
                 stage = nil
@@ -3089,7 +3104,8 @@ struct MoveSentence: View {
                     if s == .signing { await signed.mark() }
                     await stage(s)
                 }
-                return Chain.Transacted(sent: sent)
+                // The session buys only to another network (prd §1545).
+                return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)
             } catch let failure as Chain.Failure {
                 // A send the simulation refuses fails on both keys too.
                 guard await !signed.value, !failure.settled else { throw failure }

@@ -334,7 +334,9 @@ enum SpendingSource {
             let tx = thing.content.isEmpty ? (thing.sourceRef ?? thing.id.uuidString) : thing.content.lowercased()
             let to = thing.counterpartyAddress?.lowercased()
             let fee = Self.fee(of: thing)
-            let bought = way == .sent ? Self.roundUp(of: thing) : nil
+            // A sent leg's stamp is the buy; a received leg's, the token an
+            // exchange buy brought back in the same transaction (prd §1545).
+            let bought = way == .swap ? nil : Self.roundUp(of: thing)
             return Spending.Move(
                 wallet: wallet, tx: tx, way: way,
                 usd: thing.transferUSD, at: thing.capturedAt,
@@ -414,7 +416,7 @@ enum SpendingSource {
         return (fact.label, fact.value)
     }
 
-    /// Stamps a sent leg whose counterparty is a deposit address this phone
+    /// Stamps a sent leg whose counterparty is a Relay deposit address this phone
     /// paid a round-up to (`RoundUps.depositTargets()`, read once by the
     /// caller), once. Returns whether the thing changed.
     @discardableResult

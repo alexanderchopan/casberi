@@ -187,6 +187,17 @@ Licensed under the Apache License, Version 2.0, below.
 
 By Reown, Inc. Licensed under the Apache License, Version 2.0, below.
 
+# Privacy Pools engine
+
+The app's Privacy Pools engine (privacy-engine.js) bundles, unmodified:
+
+- Privacy Pools v2 SDK (@0xbow/privacy-pools-v2-sdk 1.0.2). Copyright (c) 2025-2026 0xbow. MIT License.
+- snarkjs 0.7.5, circomlibjs 0.1.7, ffjavascript, wasmcurves, wasmbuilder, fastfile and r1csfile, by iden3. GNU General Public License, version 3.
+- viem 2.45.3 and ox, by wevm. MIT License.
+- zod, @noble/curves, @noble/hashes, @noble/ciphers, @zk-kit/lean-imt, @ethereumjs/rlp, multiformats, buffer, bfj, js-sha3, blake2b-wasm and logplease. MIT License. ejs. Apache License, Version 2.0, below.
+
+The licence notices of each are kept at the end of privacy-engine.js. Its exact sources and build are in tools/privacy-pools-engine in Casberi's source.
+
 # ERC-7730 clear-signing registry
 
 The Ethereum Foundation's registry of how contract calls read, bundled in the app. Dedicated to the public domain under CC0 1.0.

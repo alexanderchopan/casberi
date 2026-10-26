@@ -208,7 +208,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Device-side guarantees: device-only keys, the credential tripwire, the receipts ledger, clipboard etiquette (§277).
 - "What this app reaches" and "what it reached" are one pushed screen, one row per service, filtered by category (§967).
 - Every hand-off of the corpus to a model passes `AccountReaders` (§639).
-- Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On"; a move Relay carries (a round-up's buy, Receive from another network) says "not through Tor" on its foot, a swap no longer does (§1512, §1542); the Mac has no Tor yet and says so (§1495). The row's word is tor's answer of the last five seconds: no circuit is "Connecting", 45s without one "Can't connect"; a return after 30s away renews circuits, a new network or 20s without a circuit (then every two minutes) resets tor's connections, and a tor that exits runs again, three runs a process (§1544).
+- Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On"; a move Relay carries (a round-up's buy, Receive from another network) says "not through Tor" on its foot, a swap no longer does (§1512, §1542); the Mac has no Tor yet and says so (§1495). The row's word is tor's answer of the last five seconds: no circuit is "Connecting", 45s without one "Can't connect"; a return after 30s away renews circuits, a new network or 20s without a circuit (then every two minutes) resets tor's connections, and a tor that exits runs again, three runs a process (§1546). The row's word is tor's answer of the last five seconds: no circuit is "Connecting", 45s without one "Can't connect"; a return after 30s away renews circuits, a new network or 20s without a circuit (then every two minutes) resets tor's connections, and a tor that exits runs again, three runs a process (§1544).
 
 ### 18. Mac and iPad
 - The Mac takes its own type scale (`macScale` 0.88). A walked row can be taken with ⌘C, Space or drag (§631).
@@ -242,7 +242,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1682 of 1751 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1684 of 1753 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1876,7 +1876,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1492 — One account with nothing on Home says so (amends §1491)
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
-- §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1544)
+- §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546)
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
@@ -1925,7 +1925,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
 - §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces…
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
-- §1544 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new…
+- §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
+- §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
+- §1546 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new…
 
 ## Dead rulings → what replaced them (generated)
 

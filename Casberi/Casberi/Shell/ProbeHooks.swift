@@ -4067,8 +4067,9 @@ enum ProbeHooks {
         },
         // `-roundUpSendProbe "<network>|<dollar units>"` — that much of the
         // dollar from the account to itself with round-ups as set (prd §1452):
-        // the change counted, or bought through Relay once the count reaches
-        // `RoundUps.buyAt`. `-coSignWith` for a both-keys account. Throwaway only.
+        // the change counted, or bought once the count reaches `RoundUps.buyAt`
+        // (on the pools for a token on this network, Relay for one elsewhere,
+        // prd §1545). `-coSignWith` for a both-keys account. Throwaway only.
         Hook(key: "roundUpSendProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("roundUpSend| %@", line) }
@@ -4087,7 +4088,7 @@ enum ProbeHooks {
                     let done = try await YourAccountChain.transact([.send(payment)], reason: "Probe: a send with a round-up", coSigner: coSigner,
                                                                   roundUp: plan.buy.map { YourAccountChain.RoundUpBuy(units: $0, target: setting.target) },
                                                                   report: { line in NSLog("roundUpSend| %@", line) }) { stage in log("stage=\(stage)") }
-                    if case .landed = done.sent.outcome { RoundUps.setSaved(plan.savedAfter, on: net.chainId) }
+                    if case .landed = done.sent.outcome { RoundUps.setSaved(RoundUps.savedAfter(plan, bought: !done.roundUpWaits), on: net.chainId) }
                     log("result=\(done.sent.outcome) saved=\(RoundUps.saved(on: net.chainId))")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")
@@ -4123,13 +4124,17 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-privacyEngineProbe load|keys|deposit|discover|bench|spend|all|forget`
+        // — the Privacy Pools engine on Sepolia (prd §1540), headless; logs
+        // `privacyEngine|` lines (`Shell/PrivacyEngineProbe.swift`).
+        Hook(key: "privacyEngineProbe") { raw, _ in PrivacyEngineProbe.run(raw) },
         // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
         // connect time, then Relay's `/chains` over Tor and directly: Relay
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof
         // the request left by Tor. Then a wallet read through the funnel
         // (MEV Blocker's chain id), and how many of that host's receipts went
         // through Tor. `-torProbe fail` stands the failed state up, until the
-        // watch's next poll if tor runs (prd §1544). Logs `torProbe|` lines;
+        // watch's next poll if tor runs (prd §1546). Logs `torProbe|` lines;
         // TorClient's own `tor:` lines carry the connect, lost, back and reset
         // times a phone run measures.
         Hook(key: "torProbe") { raw, _ in

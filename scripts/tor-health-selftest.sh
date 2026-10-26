@@ -1,5 +1,5 @@
 #!/bin/zsh
-# tor-health-selftest.sh — Tor watched after it connects (prd §1544).
+# tor-health-selftest.sh — Tor watched after it connects (prd §1546).
 #
 # On the phone, Move's and Security's reads failed for minutes while the Tor
 # row read "On": the watch stopped at 100% bootstrap, nothing happened when the

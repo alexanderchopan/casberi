@@ -6,7 +6,7 @@ import TorShim
 import UIKit
 #endif
 
-/// **TOR, IN THE APP (prd §1495, §1544).** tor runs on a thread of its own and
+/// **TOR, IN THE APP (prd §1495, §1546).** tor runs on a thread of its own and
 /// answers on a SOCKS port on 127.0.0.1. The app owns its control socket, so
 /// tor stops when the app does and needs no password. This file polls it: how
 /// far it has connected and which port it listens on, then, for as long as it
@@ -158,7 +158,7 @@ final class TorClient: @unchecked Sendable {
     }
 
     /// A run ended (`tor_run_main` returned): nothing points at its port any
-    /// more, and the next request starts the next run (prd §1544).
+    /// more, and the next request starts the next run (prd §1546).
     private func ended(run: Int) {
         lock.lock()
         let dropped = Array(sessions.values)
@@ -222,7 +222,7 @@ final class TorClient: @unchecked Sendable {
     /// Wallet states; polling goes on, so a late connection still lands.
     /// Then, for as long as the run lasts, asks every `TorHealth.pollEvery`
     /// whether tor has a working circuit and publishes what it says (prd
-    /// §1544). Closing our end of the socket when the watch ends stops tor if
+    /// §1546). Closing our end of the socket when the watch ends stops tor if
     /// it still runs (an owning controller), so a run is never left unwatched.
     private func watch(fd: Int32, run: Int) {
         defer { closeControl(fd) }
@@ -502,7 +502,7 @@ final class TorClient: @unchecked Sendable {
 }
 
 /// What the Wallet draws about Tor, observed on the main actor. It follows
-/// tor for the life of the run (prd §1544), so "On" is tor's answer of the
+/// tor for the life of the run (prd §1546), so "On" is tor's answer of the
 /// last few seconds, not the first connect's.
 @MainActor @Observable
 final class TorStatus {

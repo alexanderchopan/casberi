@@ -702,6 +702,8 @@ enum YourAccountChain {
         guard let net = payments.first?.network, let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
+        // The session never buys on the exchanges (prd §1545).
+        let roundUp = sessionRoundUp(roundUp, on: net)
         await stage(.preparing)
         // A preview of these sends on the session key, under a minute old,
         // is signed as it stands (prd §1509).
@@ -717,8 +719,19 @@ enum YourAccountChain {
                                           pinned: kept?.op, report: report, stage: stage)
     }
 
-    /// The session key's calls for these sends (and a round-up's buy), and
-    /// the salt of the window that holds now.
+    /// **THE SESSION KEY NEVER BUYS ON THE EXCHANGES (prd §1545, user
+    /// 2026-10-26).** It may only `transfer` the network's dollar and send
+    /// ETH through Multicall3 (§1447 item 15); an `approve` and a router call
+    /// are actions it was never given, and it is not widened to take them.
+    /// So a round-up's buy rides the session only to another network, as
+    /// Relay's `transfer`; a buy on this network waits, its change counted,
+    /// for the next send you approve with Face ID.
+    static func sessionRoundUp(_ roundUp: RoundUpBuy?, on net: Network) -> RoundUpBuy? {
+        roundUp.flatMap { RoundUps.sessionCarries($0.target, from: net.chainId) ? $0 : nil }
+    }
+
+    /// The session key's calls for these sends (and a round-up's buy to
+    /// another network), and the salt of the window that holds now.
     static func sessionCall(_ payments: [YourAccountOp.Payment], roundUp: RoundUpBuy?, account: String) async throws
         -> (callData: [UInt8], salt: [UInt8]) {
         guard let net = payments.first?.network, payments.allSatisfy({ $0.network == net }),
@@ -732,7 +745,7 @@ enum YourAccountChain {
             }
             calls.append(call)
         }
-        if let roundUp {
+        if let roundUp = sessionRoundUp(roundUp, on: net) {
             let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
                                                    amount: roundUp.units, account: account)
             // So the landed send to it reads as this buy (prd §1523).
@@ -1352,6 +1365,10 @@ enum YourAccountChain {
         /// send): measured after landing when one swap bought that token,
         /// else the simulation's figure.
         var bought: [String?] = []
+        /// The round-up's buy did not go with this send — the session key
+        /// signed it alone, or no pool would buy — so its change keeps
+        /// counting (prd §1545).
+        var roundUpWaits = false
     }
 
     /// One transaction, assembled and simulated, everything but its gas and
@@ -1381,6 +1398,9 @@ enum YourAccountChain {
         let next: Int
         let nextKey: (x: [UInt8], y: [UInt8])
         let signer: Signer
+        /// A round-up's buy that no pool would make: the send goes, and the
+        /// change keeps counting (prd §1545).
+        var roundUpWaits = false
     }
 
     /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1539).** Each swap
@@ -1429,6 +1449,13 @@ enum YourAccountChain {
             try require(a.simulated, on: net, swaps: a.steps.contains { $0.swap != nil })
         }
         let swaps = a.steps.compactMap(\.swap)
+        // An exchange buy is known later by its own transaction (prd §1545):
+        // kept before Face ID, so a send that lands while the app is away
+        // still reads as the buy.
+        if let roundUp, !dryRun, !a.roundUpWaits, roundUp.target.onExchanges(from: net.chainId) {
+            RoundUps.noteSwapBuy(account: account, network: YourAccountOp.appName(net) ?? net.name, dollar: net.dollar, units: roundUp.units,
+                                 target: roundUp.target)
+        }
         report("simulated: \(a.simulated.paid.compactMap { $0 }.joined(separator: ", "))")
 
         // What the bought tokens hold now, to measure what landed.
@@ -1445,7 +1472,7 @@ enum YourAccountChain {
         if let setupPlan = a.setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
         let sent = Sent(outcome: await settle(outcome, net, account, next: a.next, x: a.nextKey.x), network: net)
         guard case .landed = sent.outcome, !swaps.isEmpty else {
-            return Transacted(sent: sent, bought: a.simulated.paid)
+            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits)
         }
         // A token bought by one swap alone: what actually arrived.
         var bought = a.simulated.paid
@@ -1457,7 +1484,7 @@ enum YourAccountChain {
             let arrived = YourAccountOp.difference(now, then)
             if arrived != "0" { bought[i] = arrived }
         }
-        return Transacted(sent: sent, bought: bought)
+        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits)
     }
 
     /// What `assemble` hands back beside the transaction: how many of its
@@ -1518,6 +1545,60 @@ enum YourAccountChain {
                                       to: quote.route?.venue.router ?? account, toName: nil))
             }
         }
+        // Round-ups (prd §1452, §1545): what the change has reached, last,
+        // its dollars counted with the sends' before any prompt. A token on
+        // this network is bought on the exchanges, as Swap buys: quoted off
+        // the pools, its calls checked, its approval summed with the rest and
+        // its minimum held by the simulation. A token on another network is a
+        // transfer to Relay's deposit address for the route. When no pool
+        // will buy it, the send goes and the change keeps counting.
+        var roundUpWaits = false
+        if let roundUp {
+            let dollar = YourAccountOp.dollar(on: net)
+            symbols[net.dollar.lowercased()] = dollar.symbol
+            if roundUp.target.onExchanges(from: net.chainId) {
+                let buy = YourAccountOp.Token(symbol: roundUp.target.symbol, decimals: roundUp.target.decimals,
+                                              contract: roundUp.target.contract)
+                do {
+                    let quote = try await swapQuote(net, sell: dollar, buy: buy, amount: roundUp.units, account: account)
+                    guard let checked = YourAccountSwap.checked(quote, sell: dollar, amount: roundUp.units, chainId: net.chainId)
+                    else { throw Failure(message: String(localized: "This swap could not be written")) }
+                    let calls = checked.calls.compactMap(YourAccountSwap.accountCall)
+                    guard calls.count == checked.calls.count else {
+                        throw Failure(message: String(localized: "This swap could not be written"))
+                    }
+                    approvals += checked.approvals
+                    steps.append((calls, (buy, quote.minimumBuy)))
+                    sold.append(YourAccountPreview.Sold(token: dollar, amount: roundUp.units, route: quote.route))
+                    stepWords.append(Words.roundUpSwap(figure(roundUp.units, dollar), dollar.symbol,
+                                                       atLeast: figure(quote.minimumBuy, buy), buy.symbol,
+                                                       on: quote.exchange ?? "Uniswap"))
+                    payments.append(.init(network: net, token: dollar, amount: roundUp.units,
+                                          to: quote.route?.venue.router ?? account, toName: nil))
+                    report("roundUp: \(roundUp.units) swapped for \(roundUp.target.symbol) on \(quote.exchange ?? "?")")
+                } catch let failure as Failure {
+                    roundUpWaits = true
+                    stepWords.append(Words.Step(words: String(localized: "Keeps the round-ups for your next send"),
+                                                detail: failure.message))
+                    report("roundUp: waits, \(failure.message)")
+                }
+            } else {
+                let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
+                                                       amount: roundUp.units, account: account)
+                // So the landed send to it reads as this buy, never as spending (prd §1523).
+                RoundUps.noteDeposit(deposit.address, target: roundUp.target)
+                let payment = YourAccountOp.Payment(network: net, token: dollar, amount: roundUp.units,
+                                                    to: deposit.address, toName: "Relay")
+                guard let call = YourAccountOp.call(for: payment) else {
+                    throw Failure(message: String(localized: "This send could not be written"))
+                }
+                payments.append(payment)
+                steps.append(([call], nil))
+                stepWords.append(Words.roundUp(figure(roundUp.units, dollar), dollar.symbol,
+                                               buys: roundUp.target.symbol, on: roundUp.target.network))
+                report("roundUp: \(roundUp.units) to \(deposit.address) for \(roundUp.target.symbol) on \(roundUp.target.network)")
+            }
+        }
         guard let approvalCalls = YourAccountSwap.approvalCalls(approvals) else {
             throw Failure(message: String(localized: "This swap could not be written"))
         }
@@ -1525,36 +1606,12 @@ enum YourAccountChain {
         var approved: [Words.Approval] = []
         for call in approvalCalls {
             let contract = call.to.lowercased()
-            let token = items.compactMap { item -> YourAccountOp.Token? in
-                if case .swap(let s) = item, s.sell.contract?.lowercased() == contract { return s.sell }
-                return nil
-            }.first
+            let token = sold.first { $0.token.contract?.lowercased() == contract }?.token
             let units = SafeCalldata.decimal(Array(call.data.suffix(32)))
             // The spender is the router: named by its exchange.
             let spender = YourAccountSwap.exchange(ofRouter: SafeABI.hex(Array(call.data[16..<36]))) ?? Words.short(call.to)
             approved.append(Words.Approval(figure: token.map { figure(units, $0) } ?? units,
                                            symbol: token?.symbol ?? Words.short(call.to), spender: spender))
-        }
-        // Round-ups (prd §1452): what the change has reached, to Relay's
-        // deposit address for the route, last; its dollars counted with the
-        // sends' before any prompt.
-        if let roundUp {
-            let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
-                                                   amount: roundUp.units, account: account)
-            // So the landed send to it reads as this buy, never as spending (prd §1523).
-            RoundUps.noteDeposit(deposit.address, target: roundUp.target)
-            let dollar = YourAccountOp.dollar(on: net)
-            let payment = YourAccountOp.Payment(network: net, token: dollar, amount: roundUp.units,
-                                                to: deposit.address, toName: "Relay")
-            guard let call = YourAccountOp.call(for: payment) else {
-                throw Failure(message: String(localized: "This send could not be written"))
-            }
-            payments.append(payment)
-            steps.append(([call], nil))
-            stepWords.append(Words.roundUp(figure(roundUp.units, dollar), dollar.symbol,
-                                           buys: roundUp.target.symbol, on: roundUp.target.network))
-            symbols[net.dollar.lowercased()] = dollar.symbol
-            report("roundUp: \(roundUp.units) to \(deposit.address) for \(roundUp.target.symbol) on \(roundUp.target.network)")
         }
         var calls = approvalCalls + steps.flatMap(\.calls)
         var words = approved.map { Words.approve($0.figure, $0.symbol, to: $0.spender) } + stepWords
@@ -1593,7 +1650,8 @@ enum YourAccountChain {
         let assembled = Assembled(items: items, net: net, account: account, calls: calls, words: words,
                                   payments: payments, approvals: approved, sold: sold, steps: steps, simulated: simulated,
                                   deployed: deployed, renewed: renewed, setupPlan: setupPlan, reasonTail: tail,
-                                  signerIndex: signerIndex, next: next, nextKey: nextKey, signer: signer)
+                                  signerIndex: signerIndex, next: next, nextKey: nextKey, signer: signer,
+                                  roundUpWaits: roundUpWaits)
         return AssembledParts(assembled: assembled, approvalCount: approvalCalls.count, symbols: symbols)
     }
 

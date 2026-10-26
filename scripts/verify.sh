@@ -2887,10 +2887,11 @@ harness "Alchemy brake self-test" "a 429 holds every Alchemy request, then lets 
 # up as a locked-out session days later, and a fallback to a direct read is
 # invisible by design. The rule, its use in the funnel, and no failover.
 harness "Tor route self-test" "wallets through Tor on their own circuits, refusers and Feed apps direct, 4 mutations" "scripts/tor-route-selftest.sh" "the tor route self-test failed — run scripts/tor-route-selftest.sh"
-# Tor after it connects (prd §1544): a watch that stops at 100% reads "On" for
+# Tor after it connects (prd §1546): a watch that stops at 100% reads "On" for
 # the life of the process over circuits that died minutes ago, and a tor that
 # exited leaves every request at a dead port. Both look like a slow network.
 harness "Tor health self-test" "the watch keeps asking, a return renews, a new network resets, an ended run runs again, 7 mutations" "scripts/tor-health-selftest.sh" "the tor health self-test failed — run scripts/tor-health-selftest.sh"
+harness "Privacy engine self-test" "the wire, the network door, testnet only, 27 pinned circuits, 6 mutations" "scripts/privacy-engine-selftest.sh" "the privacy engine self-test failed — run scripts/privacy-engine-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
