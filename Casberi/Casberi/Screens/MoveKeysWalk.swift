@@ -136,9 +136,9 @@ struct MoveKeysWalk: View {
                         }
                     }
                 }
-                // Each coin counts apart (prd §1455): without it the sentence
-                // promises a total the account does not keep.
-                MoveWord(String(localized: "of each coin"))
+                // One total for every coin on every network, kept by this
+                // phone (prd §1569, retiring §1455's "of each coin").
+                MoveWord(String(localized: "in all"))
                 MoveClause(glue: String(localized: "a")) {
                     Menu {
                         ForEach(Period.allCases, id: \.self) { p in

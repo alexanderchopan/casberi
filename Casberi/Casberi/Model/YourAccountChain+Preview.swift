@@ -104,7 +104,10 @@ extension YourAccountChain {
         var route: Prepared.Signs = .owner
         if case .on = (try? await limitState(net, account)) ?? .off {
             route = .bothKeys
-            if sends.count == items.count, let p = await sessionPreview(sends, net: net, account: account, roundUp: roundUp) {
+            // Over the total across every network (prd §1569), both keys,
+            // as `sessionSend` will say.
+            if sends.count == items.count, await underTotal(sends, roundUp: sessionRoundUp(roundUp, on: net), on: net) != nil,
+               let p = await sessionPreview(sends, net: net, account: account, roundUp: roundUp) {
                 return p
             }
         }

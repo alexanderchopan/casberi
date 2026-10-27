@@ -687,7 +687,11 @@ enum YourAccountChain {
         let outcome = try await operate(net, account: account, deployed: true, calls: calls,
                                         rotateTo: nextKey, payments: [], signer: device, coSigner: coSigner,
                                         reason: reason, stage: stage)
-        if case .landed = outcome { UserDefaults.standard.removeObject(forKey: planKey(net)) }
+        if case .landed = outcome {
+            UserDefaults.standard.removeObject(forKey: planKey(net))
+            // Off everywhere: the total has nothing left to count (prd §1569).
+            if YourAccountOp.networks.allSatisfy({ plan($0) == nil }) { SpendTotal.forget() }
+        }
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
@@ -705,6 +709,11 @@ enum YourAccountChain {
         // The session never buys on the exchanges (prd §1545).
         let roundUp = sessionRoundUp(roundUp, on: net)
         await stage(.preparing)
+        // The total across every network (prd §1569), asked before anything
+        // is signed: over it, both keys, as a send the chain refuses.
+        guard let worth = await underTotal(payments, roundUp: roundUp, on: net) else {
+            throw Failure(message: String(localized: "Over your limit"))
+        }
         // A preview of these sends on the session key, under a minute old,
         // is signed as it stands (prd §1509).
         let kept = await Prepared.take(payments.map(Item.send), roundUp: roundUp, route: .session)
@@ -715,8 +724,41 @@ enum YourAccountChain {
         let symbols = Dictionary(payments.compactMap { p in p.token.contract.map { ($0.lowercased(), p.token.symbol) } },
                                  uniquingKeysWith: { a, _ in a })
         try require(await check(net, account: account, approvals: [], steps: steps, symbols: symbols), on: net, swaps: false)
-        return try await sessionOperation(net, account: account, callData: callData, salt: salt, reason: reason,
-                                          pinned: kept?.op, report: report, stage: stage)
+        let sent = try await sessionOperation(net, account: account, callData: callData, salt: salt, reason: reason,
+                                              pinned: kept?.op, report: report, stage: stage)
+        // Landed or on its way, it counts: a send not yet seen may land.
+        SpendTotal.record(.init(chainId: net.chainId, dollars: worth, at: Int(Date().timeIntervalSince1970)))
+        return sent
+    }
+
+    // MARK: - The spend limit, in all (prd §1569)
+
+    /// The limit across every network: the period that holds now and the
+    /// amount, read off the plans this phone set. nil while no plan has a
+    /// period holding now.
+    static func total(at now: Int = Int(Date().timeIntervalSince1970)) -> (period: SpendTotal.Period, cap: Double)? {
+        let plans = YourAccountOp.networks.compactMap(plan)
+        let current = plans.compactMap { $0.window(at: now) }.map { SpendTotal.Period(from: $0.from, until: $0.until) }
+        // Every network is set to the same amount; mid-change, the smaller.
+        guard let period = SpendTotal.period(current: current, at: now),
+              let cap = plans.filter({ $0.window(at: now) != nil }).compactMap({ Double($0.dollarCap).map { $0 / 1e6 } }).min()
+        else { return nil }
+        return (period, cap)
+    }
+
+    /// What these sends are worth, when they fit the total; nil when they do
+    /// not, or their worth could not be read (ETH with no price), so both
+    /// keys sign. Only the network's dollar and ETH are counted: anything
+    /// else the session cannot carry at all.
+    static func underTotal(_ payments: [YourAccountOp.Payment], roundUp: RoundUpBuy?, on net: Network) async -> Double? {
+        guard payments.allSatisfy({ $0.token.contract.map { WalletWatch.sameAddress($0, net.dollar) } ?? true }) else { return nil }
+        let dollars = payments.filter { $0.token.contract != nil }.map(\.amount) + (roundUp.map { [$0.units] } ?? [])
+        let wei = payments.filter { $0.token.contract == nil }.map(\.amount)
+        let price = wei.isEmpty ? nil : await exchangePrice(net, YourAccountOp.eth)
+        guard let (period, cap) = total(),
+              let worth = SpendTotal.worth(dollarUnits: dollars, wei: wei, ethPrice: price),
+              SpendTotal.fits(worth, cap: cap, spends: SpendTotal.spends, in: period) else { return nil }
+        return worth
     }
 
     /// **THE SESSION KEY NEVER BUYS ON THE EXCHANGES (prd §1545, user

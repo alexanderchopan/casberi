@@ -2647,6 +2647,9 @@ harness "Wallet spending" "spending" "scripts/spending-selftest.sh" "the spendin
 # The rating ask (prd §1477): Apple's sheet only for someone using the app on
 # their own things, on four different days, once per version — never the demo.
 harness "Rating ask" "rating ask" "scripts/rating-ask-selftest.sh" "the rating ask self-test failed — run scripts/rating-ask-selftest.sh"
+# The spend limit in all (prd §1569): one total for ETH and the dollar on
+# every network, kept by the phone — no chain can see another's spending.
+harness "Spend total" "spend total" "scripts/spend-total-selftest.sh" "the spend total self-test failed — run scripts/spend-total-selftest.sh"
 
 # Buy, Move's fourth verb (prd §1473): Bitrefill's accountless door — the fold
 # of its forty category slugs, the sign-in message the server took byte for

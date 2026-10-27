@@ -842,8 +842,8 @@ struct MoveSecurity: View {
     /// The amount, as Move says things (§1438): the glue in the gutter, the
     /// value large, pink while it can be changed. This card's two sentences
     /// (the limit and Round-ups) share ONE gutter, so their values stand in
-    /// one column; "of each coin" is a line of the sentence as the keys
-    /// walk says it, not glue.
+    /// one column; "in all" (prd §1569: one total across every network) is
+    /// a line of the sentence as the keys walk says it, not glue.
     private var limitSentence: some View {
         let gutter = Self.sentenceGutter
         return VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -872,7 +872,7 @@ struct MoveSecurity: View {
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(verbatim: " ").dsText(.body17).frame(width: gutter, alignment: .leading)
-                Text("of each coin").dsText(.heading28).foregroundStyle(DS.textPrimary)
+                Text("in all").dsText(.heading28).foregroundStyle(DS.textPrimary)
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text("a").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)
@@ -897,17 +897,12 @@ struct MoveSecurity: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
-    /// Where it applies, and what that comes to in all (user: "each token is
-    /// separate, this applies to eth and base, for a total of 1k").
+    /// Where it applies: one total, ETH and dollars together, on every
+    /// network (prd §1569, retiring §1455's "count apart on each network").
     private var limitFootnote: String {
         // Short, as the user asked ("these helper texts could be clearer and
         // more concise").
-        let targets = (limited + notYet).count
-        guard let n = amountDollars else {
-            return String(localized: "Over it, \(signerShort) signs too. ETH and dollars count apart on each network.")
-        }
-        let total = MoveSentence.money(Double(n * 2 * max(targets, 1)))
-        return String(localized: "Over it, \(signerShort) signs too. ETH and dollars count apart on each network: up to \(total) in all.")
+        String(localized: "Over it, \(signerShort) signs too. One total for ETH and dollars on every network.")
     }
 
     /// The Signer every one of these networks shares, for one scan (prd
