@@ -866,7 +866,7 @@ struct MoveSecurity: View {
                 }
                 Spacer(minLength: DS.Space.s2)
                 Button { setLimit() } label: {
-                    Text(working?.row == "limit" ? working!.label : String(localized: "Set"))
+                    Text("Set")
                         .dsText(.body17)
                         .foregroundStyle(amountDollars == nil || working != nil ? DS.textTertiary : DS.pickInk)
                         .frame(minHeight: 44)
@@ -891,6 +891,16 @@ struct MoveSecurity: View {
                         .contentTransition(.opacity)
                 }
                 .accessibilityLabel(Text("How often it starts again"))
+            }
+            // What it waits on stands under the sentence, after what was
+            // asked (user: "that should be under the Month. so it's not
+            // jammed"), never beside the amount.
+            if working?.row == "limit" {
+                Text(verbatim: working!.label)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .padding(.leading, gutter + DS.Space.s2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
             }
             Text(limitFootnote)
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
