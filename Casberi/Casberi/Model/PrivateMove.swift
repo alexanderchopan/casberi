@@ -296,7 +296,15 @@ final class PrivateMove {
             }
             guard mine == reads else { return }
             let options = self.options
-            guard !options.isEmpty else { stage = quote.failure(on: network).map(Stage.failed) ?? .nothingPrivate; return }
+            // Nothing private yet is said as that, never as the relayer's
+            // silence (user, with nothing deposited: "0xBow's relayer did not
+            // answer"): the quote only matters for what there is to send.
+            guard !options.isEmpty else {
+                let store = PrivateMoneyStore.shared
+                let nothing = store.spendable(chainId: network.chainId) == "0" && store.spendable(chainId: network.chainId, symbol: "USDC") == "0"
+                stage = nothing ? .nothingPrivate : (quote.failure(on: network).map(Stage.failed) ?? .nothingPrivate)
+                return
+            }
             if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) {
                 let first = options[min(2, options.count - 1)]
                 pick(first.amount, of: first.symbol)
