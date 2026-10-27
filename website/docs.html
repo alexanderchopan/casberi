@@ -611,10 +611,10 @@
     <div class="pager"><a href="#wallet"><span>Next</span>Wallet →</a></div>
 
     <h3 id="wallet">Wallet</h3>
-    <p>The Wallet is every account you have and follow, added up. Follow an account from its <b>+</b> or from <b>Following</b>: an address, ENS, <code>.sol</code> or basename. Or connect a wallet app or an exchange.</p>
+    <p>The Wallet is every account you have and follow, added up. Follow an account from its <b>+</b>: an address, ENS, <code>.sol</code> or basename. Or connect a wallet app or an exchange.</p>
     <p><strong>Following is read-only.</strong> The connection asks for zero permissions, so following an account can never trade or move funds. Name as many accounts as you like; follow up to five.</p>
-    <p>The Wallet is four tiles. <b>Home</b> leads with your balance and its line, then its doors: <b>Your account</b>, <b>Following</b>, <b>Needs you</b> (every ask, from every page), <b>Permissions</b> (approvals and delegations — who can spend from you) and <b>Threats</b> (address poisoning, fake tokens, fake transfers). <b>Activity</b> is every transaction, by day. <b>Holdings</b> is what the money is: whose it is — You, Following, Apps — then Tokens, Positions and NFTs; its doors show their top three. A loan says how far the price can fall. <b>Spending</b> is the week or the month against the last one to the same day, behind four doors: <b>Subscriptions</b>, <b>Places</b>, <b>Fees</b> (what your sends paid the network) and <b>Round-ups</b> (what your change bought). Fees and round-ups stay out of the total.</p>
-    <p>Once you have an account of your own, every box carries one switch, <b>Yours · Everything</b>: your account alone, or everything you follow added up. Flip it on one tile and every tile follows.</p>
+    <p>The Wallet is four tiles. <b>Home</b> leads with your balance and its line, then its doors: <b>Account</b> (your account’s keys and settings), <b>Needs you</b> (every ask, from every page), <b>Permissions</b> (approvals and delegations — who can spend from you) and <b>Threats</b> (address poisoning, fake tokens, fake transfers). <b>Activity</b> is every transaction, by day. <b>Holdings</b> is what the money is: on All, the apps that made you a wallet, then Tokens, Positions and NFTs; its doors show their top three. A loan says how far the price can fall. <b>Spending</b> is the week or the month against the last one to the same day, behind four doors: <b>Subscriptions</b>, <b>Places</b>, <b>Fees</b> (what your sends paid the network) and <b>Round-ups</b> (what your change bought). Fees and round-ups stay out of the total.</p>
+    <p>Every box carries one switch, <b>Yours · Following · All</b>, whenever there are two to choose: your account alone, the accounts you follow, or everything added up. Flip it on one tile and every tile follows.</p>
     <p>An approval you once gave an app is one tap from a cancellation Casberi prepares. Your own wallet app does the signing — or, for your Casberi account, <b>Revoke</b> takes it back right there.</p>
     <p>If you make this device an owner of a Safe, tapping Sign sends that one signature to Safe’s own service after Face ID. It can never execute a transaction on its own.</p>
     <details class="more">
@@ -633,7 +633,7 @@
       <li><b>A spend limit</b>, with a co-signer: moves over an amount of each coin a month need the co-signer too. Getting your account back needs it too.</li>
       <li><b>Round-ups.</b> Each send, swap or gift card rounds up to the next $1 or $5, and once the change reaches $5 it buys ETH, or a token you pick, with the move that gets it there.</li>
     </ol>
-    <p>Its page, Wallet › Your account, holds the <b>Keys</b> — This iPhone, Recovery key, Co-signer, Networks, Tor, Private key — and <b>Spending</b>: Spend limit and Round-ups. This device’s key changes with every send.</p>
+    <p>Its page, Wallet › Account, holds the <b>Keys</b> — This iPhone, Recovery key, Co-signer, Networks, Tor, Private key — and <b>Spending</b>: Spend limit and Round-ups. This device’s key changes with every send.</p>
     <p>The change waits in your dollar, counted per network. A token on the same network is bought on Uniswap or Aerodrome; one on another network, through Relay. A send signed under your spend limit can’t buy, so its change waits for your next move. A swap buys only when it sells your dollar, and a gift card’s change is counted once it’s paid. What the change bought is in Spending, under Round-ups.</p>
     <p>Once a month, Needs you asks you to <b>check your recovery key</b>: Face ID and a test signature, no fee, nothing sent, and a page saying the networks where it works. <b>Export</b> creates a new private key, adds it as an owner and shows it once, so the account opens in another wallet without Casberi. <b>Nodes</b> reads your account from your own node, each address checked against its network first.</p>
     <div class="pager"><a href="#move"><span>Next</span>Move →</a></div>
@@ -695,7 +695,7 @@
     </details>
     <details>
       <summary>My account shows no balance</summary>
-      <p>Give the first read a moment, then pull to refresh. Check the address in the Wallet under Following. Naming an account is free; following is capped at five.</p>
+      <p>Give the first read a moment, then pull to refresh. Pick Following on the Wallet’s switch and check the address. Naming an account is free; following is capped at five.</p>
     </details>
     <details>
       <summary>My wallets aren’t refreshing</summary>
@@ -718,7 +718,7 @@
     <p class="part-eyebrow">Questions</p>
     <h2>Questions, answered</h2>
     <details><summary>Do I need an account?</summary><p>No. There’s nothing to sign up for — Casberi works the moment it’s installed.</p></details>
-    <details><summary>Where do my things live?</summary><p>In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: <strong>Delete things</strong> wipes your data (this iPhone and iCloud), <strong>Delete access</strong> removes every token and key Casberi holds.</p></details>
+    <details><summary>Where do my things live?</summary><p>In a database on your device. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: <strong>Delete things</strong> wipes your data (this device and iCloud), <strong>Delete access</strong> removes every token and key Casberi holds.</p></details>
     <details><summary>What does it cost?</summary><p>It’s free on the App Store.</p></details>
     <details><summary>What do I need to run it?</summary><p>An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server.</p></details>
     <details><summary>Does Casberi hold my money?</summary><p>No. Your account is a Safe that only your keys can move: this device’s key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi.</p></details>
@@ -844,7 +844,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Do I need an account?","acceptedAnswer":{"@type":"Answer","text":"No. There is nothing to sign up for — Casberi works the moment it is installed."}},
-{"@type":"Question","name":"Where do my things live?","acceptedAnswer":{"@type":"Answer","text":"In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds."}},
+{"@type":"Question","name":"Where do my things live?","acceptedAnswer":{"@type":"Answer","text":"In a database on your device. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this device and iCloud); Delete access removes every token and key Casberi holds."}},
 {"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"It is free on the App Store."}},
 {"@type":"Question","name":"What do I need to run it?","acceptedAnswer":{"@type":"Answer","text":"An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server."}},
 {"@type":"Question","name":"Does Casberi hold my money?","acceptedAnswer":{"@type":"Answer","text":"No. Your account is a Safe that only your keys can move: this device’s key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi."}},
