@@ -3,8 +3,9 @@ import SwiftUI
 /// **PRIVATE, IN HOLDINGS (prd §1554).** Under Tokens, Holdings only SHOWS
 /// what is private: a head naming it with its total, then one row per token,
 /// state and network off the notes Move to private kept (`PrivateMoney.rows`)
-/// — "ETH, private" over its network ("Sepolia"; the ruling's "<rate>% on
-/// Aave" once a pool earns, not built: Sepolia has no Aave), "ETH, moving in" with the amber clock and
+/// — "ETH, private" over "1.0% on Aave" where it earns (Ethereum's yield
+/// pools, the rate read live, prd §1563) or its network ("Sepolia", which has
+/// no Aave), "ETH, moving in" with the amber clock and
 /// "Waiting for approval", "ETH, not approved". The Tokens rows above are
 /// public balances only; the box counts approved private money as one
 /// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`).
@@ -12,8 +13,8 @@ import SwiftUI
 /// opens Send to your private balance; a row opens Send with the Private
 /// switch on. Private is never the default.
 ///
-/// Sepolia only for now. The section stands where there is a note to show,
-/// or, in a DEBUG build whose test sender can move (`PrivateMove.available`),
+/// The section stands where there is a note to show, or, in a build that can
+/// move to private (`PrivateMove.available`: Ethereum, or Sepolia in DEBUG),
 /// as the head alone — the door with nothing behind it yet.
 extension FeedScreen {
 
@@ -28,6 +29,7 @@ extension FeedScreen {
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
+                        await store.readYield()
                         #if DEBUG
                         // A new phone finds its private money again here
                         // (prd §1562): each root's notes from the pool, its
@@ -110,7 +112,8 @@ extension FeedScreen {
         let figure = mask ?? PrivateMoney.rowUSD(row, prices: prices).map(WalletValue.money)
             ?? PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)
         let (glyph, hue, state, stateInk): (String?, Color, String, Color) = switch row.kind {
-        case .held: (nil, DS.textSecondary, PrivateMoney.network(row.chainId), DS.textSecondary)
+        // What earns says so, the rate read live (prd §1563); else the network.
+        case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldLine(row) ?? PrivateMoney.network(row.chainId), DS.textSecondary)
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
@@ -212,7 +215,7 @@ struct WalletPrivateAsks: View {
             guard !working else { return }
             if ask.canTakeBack {
                 confirming = ask
-            } else if !ask.note.tx.isEmpty, let link = URL(string: "https://sepolia.etherscan.io/tx/" + ask.note.tx) {
+            } else if !ask.note.tx.isEmpty, let link = URL(string: PrivateMoney.explorerTx(ask.note.tx, chainId: ask.note.chainId)) {
                 openURL(link)
             }
         } leading: {

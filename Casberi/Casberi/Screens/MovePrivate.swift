@@ -145,18 +145,19 @@ struct MovePrivateSentence<Head: View>: View {
     @ViewBuilder private var sentence: some View {
         switch move.stage {
         case .reading:
-            MovePhrase(String(localized: "Reading Sepolia…"), ink: DS.textSecondary)
+            MovePhrase(move.onEthereum ? String(localized: "Reading Ethereum…") : String(localized: "Reading Sepolia…"), ink: DS.textSecondary)
         case .needsFunds(let address):
             MoveClause(glue: String(localized: "Fund")) {
                 Button { copy(address) } label: { MoveWord(YourAccount.short(address), ink: DS.pickInk) }
                     .buttonStyle(RowPress())
-                    .accessibilityLabel(Text("This build's test account, \(address)"))
+                    .accessibilityLabel(move.onEthereum ? Text("Your account, \(address)") : Text("This build's test account, \(address)"))
                     .accessibilityHint(Text("Copies the address"))
             }
-            MovePhrase(String(localized: "Sepolia"), glue: String(localized: "on"))
+            MovePhrase(move.network.name, glue: String(localized: "on"))
             MovePhrase(String(localized: "first."))
         case .nothingPrivate:
-            MovePhrase(String(localized: "Nothing private to send on Sepolia yet."), ink: DS.textSecondary)
+            MovePhrase(move.onEthereum ? String(localized: "Nothing private to send on Ethereum yet.")
+                       : String(localized: "Nothing private to send on Sepolia yet."), ink: DS.textSecondary)
         default:
             // Ready, working, done or refused: the sentence stands as written
             // (past tense once done), and the foot or the line says the rest.
@@ -176,7 +177,7 @@ struct MovePrivateSentence<Head: View>: View {
                            ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
             }
             MoveClause(glue: String(localized: "to")) { recipientWord }
-            MovePhrase(String(localized: "Sepolia."), glue: String(localized: "on"))
+            MovePhrase(move.onEthereum ? String(localized: "Ethereum.") : String(localized: "Sepolia."), glue: String(localized: "on"))
         }
     }
 
@@ -219,8 +220,15 @@ struct MovePrivateSentence<Head: View>: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else if let held = move.held {
-                Text("\(held) test ETH in this build's account")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                if move.onEthereum {
+                    // What moves in earns (prd §1563): the rate, read live, or nothing.
+                    Text(verbatim: [String(localized: "\(held) ETH in your account"), store.ethereumYieldLine].compactMap { $0 }
+                        .joined(separator: " · "))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                } else {
+                    Text("\(held) test ETH in this build's account")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
         case .nothingPrivate:
             Button {
@@ -241,7 +249,7 @@ struct MovePrivateSentence<Head: View>: View {
                         .foregroundStyle(note?.status == .approved ? DS.confirmInk
                                          : note?.status == .rejected ? DS.destructiveInk : DS.attentionInk)
                 }
-                if let link = URL(string: "https://sepolia.etherscan.io/tx/" + hash) {
+                if let link = URL(string: PrivateMoney.explorerTx(hash, chainId: move.network.chainId)) {
                     let explorer = "Etherscan"
                     Button { openURL(link) } label: {
                         Text("View on \(explorer)").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
@@ -258,7 +266,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// withdrawal measured 27 s on Sepolia, the proof a few more).
     private var sendLine: String {
         // A Sepolia fee is a few hundred-millionths: it keeps its digits.
-        let fee = move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: 12) }
+        let fee = move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }
         let parts = [fee.map { String(localized: "\($0) ETH relayer fee") }, String(localized: "about a minute")]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
@@ -397,7 +405,8 @@ struct MovePrivateSentence<Head: View>: View {
         case .registering(let n): String(localized: "Setting up, \(n) of 2…")
         case .proving: String(localized: "Proving…")
         case .sending:
-            move.mode == .send ? String(localized: "Sending…") : String(localized: "Waiting for Sepolia…")
+            move.mode == .send ? String(localized: "Sending…")
+                : move.onEthereum ? String(localized: "Waiting for Ethereum…") : String(localized: "Waiting for Sepolia…")
         default: String(localized: "Send")
         }
     }
@@ -419,7 +428,7 @@ struct MovePrivateSentence<Head: View>: View {
     private func land(_ hash: String) {
         let title = PrivateMoney.activityTitle(figure: figure,
                                                to: move.mode == .send ? move.recipient.map(YourAccount.short) : nil)
-        PrivateActivity.land(hash: hash, title: title, context: context)
+        PrivateActivity.land(hash: hash, title: title, chainId: move.network.chainId, context: context)
         chrome.refreshRooms()
     }
 

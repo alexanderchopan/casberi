@@ -25,8 +25,9 @@ import WebKit
 /// registration and a deposit (with its proof), find your notes and the
 /// private balance, and prepare a private transfer or a withdrawal to an
 /// address (with their proofs). It SENDS nothing: a prepared transaction is
-/// for your account to send, a later step. Sepolia only
-/// (`PrivacyNetwork.check`). Nothing is persisted: notes live in the page.
+/// for your account to send (on Ethereum, prd §1563: Face ID; on Sepolia,
+/// the DEBUG test sender). Sepolia and Ethereum only (`PrivacyNetwork.check`).
+/// Nothing is persisted: notes live in the page.
 @MainActor
 final class PrivacyEngine: NSObject {
 
@@ -201,6 +202,13 @@ final class PrivacyEngine: NSObject {
         try await call(.prepareRagequit, Wire.Ragequit(commitment: commitment), as: Wire.PreparedRagequit.self)
     }
 
+    /// Into a yield pool (prd §1563): a deposit of at most `budget` (0x-hex
+    /// base units, fees included) of `tokenId` (ETH or USDC), proved, for
+    /// your account to send. Nothing is sent here.
+    func prepareYieldDeposit(tokenId: String, budget: String) async throws -> Wire.PreparedYieldDeposit {
+        try await call(.prepareYieldDeposit, Wire.YieldDeposit(tokenId: tokenId, budget: budget), as: Wire.PreparedYieldDeposit.self)
+    }
+
     /// One proof on `circuit` with this network's real keys and synthetic
     /// inputs: what a proof costs on this phone, with no funds and no send.
     /// Poseidon(label), decimal: the id 0xBow's ASP files a deposit under.
@@ -290,10 +298,9 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
         // Old logs from the node that keeps them (prd §1554); the rest, and a
         // range past its head, from the network's own node.
         let network = MainActor.assumeIsolated { PrivacyEngine.shared.network ?? .sepolia }
-        let routed = PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl,
-                                              logsUrl: PrivacyNetwork.sepoliaLogsUrl)
+        let routed = network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url
         Task { @MainActor in
-            guard let (data, http) = await Self.send(request, to: routed, fallback: url) else {
+            guard let (data, http) = await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl) else {
                 replyHandler(nil, "no answer from \(url.host ?? "?")")
                 return
             }
@@ -310,7 +317,7 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
     /// to `fallback` when that node has not reached the head yet; a free
     /// node's 429 is waited out, a few times, before it is an answer.
     @MainActor
-    private static func send(_ request: URLRequest, to url: URL, fallback: URL) async -> (Data, HTTPURLResponse)? {
+    private static func send(_ request: URLRequest, to url: URL, fallback: URL, relayerUrl: String) async -> (Data, HTTPURLResponse)? {
         var request = request
         request.url = url
         var unanswered = 0
@@ -322,7 +329,7 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
                 // requests get two more circuits before they are an outage;
                 // they never leave Tor (prd §1554).
                 unanswered += 1
-                let relayer = url.host?.lowercased() == URL(string: PrivacyNetwork.sepolia.relayerUrl)?.host?.lowercased()
+                let relayer = url.host?.lowercased() == URL(string: relayerUrl)?.host?.lowercased()
                 NSLog("privacyEngine| no answer | %@ | try %d", url.host ?? "?", unanswered)
                 if relayer, unanswered < 3 { continue }
                 return nil

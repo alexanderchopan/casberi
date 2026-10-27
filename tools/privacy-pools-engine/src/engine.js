@@ -9,12 +9,15 @@
 // keys derived from it, note secrets and prepared proofs stay in this page's
 // memory (`prepared`, the sessions) and die with it. Nothing is persisted.
 //
-// Testnet only: `open` refuses any chain but Sepolia (11155111), here and in
-// Swift (`PrivacyNetwork.check`).
+// Two networks: Sepolia (11155111, the DEBUG build's test money) and Ethereum
+// (1, prd §1563: your private balance, earning on Aave through 0xBow's yield
+// pools). `open` refuses any other chain, here and in Swift
+// (`PrivacyNetwork.check`). Nothing here signs: a prepared transaction goes
+// back to Swift, which has your account send it with Face ID.
 import './net.js';
 import {
-  CryptoService, KeystoreManager, NoteManager, NoteStatus, PoolSessionBuilder, PoseidonHashService,
-  ProofService, ViemRPCInteractor, APP_IDENTIFIER,
+  AddressSchema, CryptoService, HTTPClient, KeystoreManager, NoteManager, NoteStatus, PoolSessionBuilder, PoseidonHashService,
+  ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER,
 } from '@0xbow/privacy-pools-v2-sdk';
 import { syntheticInputs } from './synthetic.js';
 import * as snarkjs from 'snarkjs';
@@ -22,7 +25,7 @@ import { getAddress } from 'viem';
 
 const SDK_VERSION = '1.0.2';
 const SNARKJS_VERSION = '0.7.5';
-const TESTNETS = new Set([11155111]);
+const NETWORKS = new Set([11155111, 1]);
 const enc = new TextEncoder();
 const now = () => performance.now();
 const hex = (n) => `0x${BigInt(n).toString(16)}`;
@@ -130,8 +133,36 @@ async function session(route) {
     .withNoteManager(account.notes)
     .withCircuitArtifacts(artifacts)
     .withProofService(new ProofService({ circuitArtifacts: artifacts, groth16Prover: timedProver }, { logger: log }));
+  // 0xBow's yield pools (prd §1563): what is private earns on Aave. Each
+  // share token (ppETH, ppUSDC) has its router, which wraps on the way in
+  // and unwraps on the way out; ppETH's takes and pays native ETH.
+  const yields = yieldDeployments(n);
+  if (yields.length) builder.withYieldDeployments(yields);
   account.sessions[route] = await builder.create();
   return account.sessions[route];
+}
+
+function yieldDeployments(n) {
+  return (n.yield ?? []).map((y) => ({
+    ppRouter: y.router, zap: y.zap, ppUSDC: y.share, ppUSDCDecimals: y.shareDecimals,
+    underlying: y.underlying, underlyingDecimals: y.underlyingDecimals, underlyingSymbol: y.symbol,
+    nativeMode: y.native === true, apyLabel: 'Aave',
+  }));
+}
+
+// The yield pool serving a token: its share, or its underlying (USDC), or
+// ETH for ppETH (whose router takes native ETH).
+function yieldPool(tokenId) {
+  const key = String(tokenId).toLowerCase();
+  return (account.network.yield ?? []).find((y) => y.share.toLowerCase() === key || y.underlying.toLowerCase() === key
+    || (y.native === true && key === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'));
+}
+
+function relayerInfo(route) {
+  const n = account.network;
+  return { name: 'relayer', url: n.relayerUrl, address: n.relayerAddress,
+    processorAddress: route === 'transfer' ? n.transferProcessor : n.withdrawProcessor,
+    chainId: n.chainId, chainType: 'evm', status: 'active' };
 }
 
 function publicTx(tx) {
@@ -158,6 +189,47 @@ function inputsFor(tokenId, amount) {
   return picked;
 }
 
+// A withdrawal from the yield pool, relayed (prd §1563): `amount` is what the
+// recipient should get in the token (ETH or USDC, base units). It is turned
+// into shares at today's rate, the relayer quotes its fee in shares and signs
+// the payout, and the proof binds the router as the processor, so the router
+// unwraps the shares and pays the recipient the token (native ETH for
+// ppETH). The relayer posts it and pays the gas; `relay` hands it over.
+async function prepareYieldWithdraw({ tokenId, amount, recipient }) {
+  proofs = [];
+  const t = now();
+  const pool = yieldPool(tokenId);
+  const s = await session('withdraw');
+  const y = s.yieldFor(pool.share);
+  if (!y) throw Object.assign(new Error(`the session has no yield pool for ${pool.share}`), { name: 'NoYieldPool' });
+  // previewDeposit rounds down: one share more, so the recipient's ETH is
+  // never a wei short of what the sentence said.
+  const shares = (await y.deposit.sharesForUnderlying(BigInt(amount))) + 1n;
+  const relayer = relayerInfo('withdraw');
+  const quote = await account.relayer.getWithdrawalQuote(relayer, {
+    asset: pool.share, commit: true, recipient: getAddress(recipient.toLowerCase()), extraGas: false, amount: hex(shares),
+  });
+  const amountSent = BigInt(quote.amountSent);
+  const r = await y.withdraw.prepareYieldWithdrawRelay({
+    inputCommitments: inputsFor(pool.share, amountSent),
+    // The whole release, the relayer's fee in it: the router pays the fee
+    // out of the shares (the proof's own fee is zero on this route).
+    amount: amountSent,
+    amountOut: amountSent,
+    recipient: getAddress(recipient.toLowerCase()),
+    signedFeeCommitment: quote.feeCommitment,
+    extraGas: false,
+  });
+  return {
+    handle: keep({ kind: 'yieldWithdraw', relayer, result: r }),
+    fee: { feeAmount: hex(BigInt(quote.feeAmount)), amountSent: hex(amountSent), amountReceived: hex(BigInt(quote.amountReceived)),
+      gasPrice: hex(BigInt(quote.gasPrice)), txCost: hex(BigInt(quote.txCost)), minUnderlyingOut: hex(r.minUnderlyingOut),
+      quotedUnderlyingOut: hex(r.quotedUnderlyingOut) },
+    ms: Math.round(now() - t),
+    proofs,
+  };
+}
+
 // ---------------------------------------------------------------- the methods
 const methods = {
   async info() {
@@ -172,7 +244,7 @@ const methods = {
   },
 
   async open({ seed, revocableKeyIndex = '0x0', owner, network }) {
-    if (!TESTNETS.has(Number(network?.chainId))) throw Object.assign(new Error(`chain ${network?.chainId} is not a testnet this engine serves`), { name: 'NotTestnet' });
+    if (!NETWORKS.has(Number(network?.chainId))) throw Object.assign(new Error(`chain ${network?.chainId} is not a network this engine serves`), { name: 'NotServed' });
     const t = now();
     const keys = deriveKeys(seed, revocableKeyIndex);
     const keysMs = Math.round(now() - t);
@@ -186,6 +258,9 @@ const methods = {
       notes: new NoteManager({}, { logger: logger('notes') }),
       sessions: {},
     };
+    // The relayer, asked directly for a yield withdrawal's quote and handed
+    // its proof (prd §1563): the SDK's own interactor and schemas.
+    account.relayer = new RelayerInteractor({ relayers: [relayerInfo('withdraw')], httpClient: new HTTPClient(), addressSchema: AddressSchema }, { logger: logger('relayer') });
     prepared.clear();
     const s = now();
     await session('withdraw');
@@ -231,6 +306,38 @@ const methods = {
     };
   },
 
+  // Into the yield pool (prd §1563): what is private earns on Aave. `budget`
+  // is the most of the token (ETH or USDC, base units) the deposit may
+  // spend, the pool's vetting fee and the router's buffer included; the
+  // shares are sized to fit it (`sizeSharesForBudget`). For ETH the router
+  // takes the budget as the transaction's value and refunds what it did not
+  // use; for a token the approvals come back too. Nothing is sent here.
+  async prepareYieldDeposit({ tokenId, budget }) {
+    proofs = [];
+    const t = now();
+    const pool = yieldPool(tokenId);
+    if (!pool) throw Object.assign(new Error(`no yield pool for ${tokenId}`), { name: 'NoYieldPool' });
+    const s = await session('withdraw');
+    const y = s.yieldFor(pool.share);
+    if (!y) throw Object.assign(new Error(`the session has no yield pool for ${pool.share}`), { name: 'NoYieldPool' });
+    const sized = await y.deposit.sizeSharesForBudget(BigInt(budget));
+    const r = await y.deposit.prepareYieldDeposit({ value: sized.shares, maxUnderlyingIn: sized.maxUnderlyingIn });
+    return {
+      handle: keep({ kind: 'deposit', result: r }),
+      tx: publicTx(r.depositTx),
+      approvals: (r.approvalTxs ?? []).map(publicTx),
+      commitment: r.pendingNote.commitment,
+      label: hex(r.pendingNote.label),
+      labelHash: await labelHashOf(r.pendingNote.label),
+      share: pool.share,
+      shares: hex(r.sharesValue),
+      underlyingNeeded: hex(r.underlyingNeeded),
+      maxUnderlyingIn: hex(r.maxUnderlyingIn),
+      ms: Math.round(now() - t),
+      proofs,
+    };
+  },
+
   async labelHash({ label }) {
     return { labelHash: await labelHashOf(BigInt(label)) };
   },
@@ -256,6 +363,7 @@ const methods = {
   },
 
   async prepareWithdraw({ tokenId, amount, recipient }) {
+    if (yieldPool(tokenId)) return prepareYieldWithdraw({ tokenId, amount, recipient });
     proofs = [];
     const t = now();
     const s = await session('withdraw');
@@ -292,9 +400,13 @@ const methods = {
   // tap cannot post one proof twice. Returns the transaction's hash.
   async relay({ handle }) {
     const p = prepared.get(handle);
-    if (!p || (p.kind !== 'withdraw' && p.kind !== 'transfer')) throw Object.assign(new Error('nothing prepared under that handle'), { name: 'NoPrepared' });
+    if (!p || !['withdraw', 'transfer', 'yieldWithdraw'].includes(p.kind)) throw Object.assign(new Error('nothing prepared under that handle'), { name: 'NoPrepared' });
     prepared.delete(handle);
     const t = now();
+    if (p.kind === 'yieldWithdraw') {
+      const tx = await account.relayer.relayWithdrawal(p.relayer, p.result.relayParams);
+      return { tx, ms: Math.round(now() - t) };
+    }
     const s = await session(p.kind);
     if (p.kind === 'withdraw') {
       const option = p.result.relayerOptions?.[0];

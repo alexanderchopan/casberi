@@ -42,14 +42,40 @@ enum PrivateMoney {
         /// The private root whose account holds it (`PrivateRoot.id`, prd
         /// §1562); nil for the device-only account notes were made in before.
         var root: String? = nil
+        /// The yield pool's share token the note holds (prd §1563): then
+        /// `amount` is SHARES at `decimals` (18), and what it is worth in
+        /// `symbol` is `worth(_:rates:)`. Nil for a plain note (Sepolia).
+        var share: String? = nil
         var id: String { commitment }
+    }
+
+    /// What a note is worth in its token, base units at the token's own
+    /// decimals: a plain note its amount; a yield note its shares at the
+    /// share's live exchange rate (`rates`, by lower-cased share: the
+    /// token's units per whole share), so the yield earned is in the value.
+    /// Before a rate is read, the shares themselves at their decimals — never
+    /// more than the note holds, since a share only rises.
+    static func worth(_ note: Note, rates: [String: String]) -> (amount: String, decimals: Int) {
+        guard let share = note.share, let pool = PrivacyNetwork.forChain(note.chainId)?.yieldPool(for: share),
+              let rate = rates[share.lowercased()],
+              let value = PrivateYield.underlying(shares: note.amount, exchangeRate: rate, shareDecimals: pool.shareDecimals)
+        else {
+            guard note.share != nil, let pool = PrivacyNetwork.forChain(note.chainId)?.yieldPool(for: note.share ?? ""),
+                  pool.underlyingDecimals < pool.shareDecimals,
+                  let units = Decimal(string: note.amount) else { return (note.amount, note.decimals) }
+            // USDC's shares have 18 places and USDC 6: the shares as USDC,
+            // at the token's decimals, until the rate is read.
+            return (plain(units / pow10(pool.shareDecimals - pool.underlyingDecimals)), pool.underlyingDecimals)
+        }
+        return (value, pool.underlyingDecimals)
     }
 
     /// What one account holds approved on `chainId`, by account: a private
     /// send spends from one account (one withdrawal cannot join two).
-    static func spendableByAccount(_ notes: [Note], chainId: Int, symbol: String = "ETH") -> [(root: String?, amount: String)] {
+    static func spendableByAccount(_ notes: [Note], chainId: Int, symbol: String = "ETH",
+                                   rates: [String: String] = [:]) -> [(root: String?, amount: String)] {
         let roots = notes.map(\.root).reduce(into: [String?]()) { if !$0.contains($1) { $0.append($1) } }
-        return roots.map { r in (r, spendable(notes.filter { $0.root == r }, chainId: chainId, symbol: symbol)) }
+        return roots.map { r in (r, spendable(notes.filter { $0.root == r }, chainId: chainId, symbol: symbol, rates: rates)) }
     }
 
     /// The ASP's answer, or nil when it is not one (a page, an error): an
@@ -113,16 +139,17 @@ enum PrivateMoney {
 
     /// One row per token, state and network: what is private first, then
     /// what is waiting, then what was refused; tokens A–Z within each.
-    static func rows(_ notes: [Note]) -> [Row] {
+    static func rows(_ notes: [Note], rates: [String: String] = [:]) -> [Row] {
         var sums: [String: (kind: Row.Kind, symbol: String, chain: Int, sum: Decimal, decimals: Int, since: Date)] = [:]
         for note in notes {
-            guard let value = Decimal(string: note.amount), value > 0 else { continue }
+            let w = worth(note, rates: rates)
+            guard let value = Decimal(string: w.amount), value > 0 else { continue }
             let k = kind(note.status)
             let key = "\(k.rawValue):\(note.symbol):\(note.chainId)"
             if let had = sums[key] {
-                sums[key] = (k, note.symbol, note.chainId, had.sum + value, note.decimals, min(had.since, note.at))
+                sums[key] = (k, note.symbol, note.chainId, had.sum + value, w.decimals, min(had.since, note.at))
             } else {
-                sums[key] = (k, note.symbol, note.chainId, value, note.decimals, note.at)
+                sums[key] = (k, note.symbol, note.chainId, value, w.decimals, note.at)
             }
         }
         return sums.values
@@ -145,6 +172,11 @@ enum PrivateMoney {
     /// total (test money states its quantity, never dollars, §949).
     static let testnets: Set<Int> = [11_155_111]
 
+    /// A private move's transaction on its network's Etherscan.
+    static func explorerTx(_ hash: String, chainId: Int) -> String {
+        (chainId == 1 ? "https://etherscan.io/tx/" : "https://sepolia.etherscan.io/tx/") + hash
+    }
+
     static func network(_ chainId: Int) -> String {
         switch chainId {
         case 1: "Ethereum"
@@ -158,11 +190,12 @@ enum PrivateMoney {
     /// by lower-cased symbol): APPROVED notes only — a deposit waiting for
     /// approval is not spendable yet, so it counts once approved — and never
     /// a test network's. A token with no price counts nothing.
-    static func worthUSD(_ notes: [Note], prices: [String: Double]) -> Double {
+    static func worthUSD(_ notes: [Note], prices: [String: Double], rates: [String: String] = [:]) -> Double {
         notes.reduce(0) { sum, note in
+            let w = worth(note, rates: rates)
             guard note.status == .approved, !testnets.contains(note.chainId),
-                  let price = prices[note.symbol.lowercased()], let units = Decimal(string: note.amount) else { return sum }
-            let whole = NSDecimalNumber(decimal: units / pow10(note.decimals)).doubleValue
+                  let price = prices[note.symbol.lowercased()], let units = Decimal(string: w.amount) else { return sum }
+            let whole = NSDecimalNumber(decimal: units / pow10(w.decimals)).doubleValue
             return sum + whole * price
         }
     }
@@ -199,7 +232,12 @@ enum PrivateMoney {
         let kind: Kind
         let canTakeBack: Bool
         var id: String { note.commitment }
-        var figure: String { PrivateMoney.figure(note.amount, decimals: note.decimals, symbol: note.symbol) }
+        /// In the token: a yield note's shares at the share's own decimals
+        /// (USDC's 18 shown as USDC), never more than it is worth.
+        var figure: String {
+            let w = PrivateMoney.worth(note, rates: [:])
+            return PrivateMoney.figure(w.amount, decimals: w.decimals, symbol: note.symbol)
+        }
 
         var title: String {
             switch kind {
@@ -295,11 +333,19 @@ enum PrivateMoney {
     /// move and still pay the gas (`reserve`, base units).
     static let ladder = ["0.00001", "0.00005", "0.0001", "0.0005", "0.001", "0.005", "0.01", "0.05"]
 
-    static func choices(balance: String, reserve: String, decimals: Int = 18) -> [String] {
-        guard let have = Decimal(string: balance), let keep = Decimal(string: reserve) else { return [] }
+    /// On Ethereum (prd §1563): money, not test money — from the pool's
+    /// smallest deposit (0.004 ETH, `Entrypoint.assets`) up.
+    static let mainnetLadder = ["0.001", "0.005", "0.01", "0.025", "0.05", "0.1", "0.25", "0.5", "1"]
+
+    /// The amounts on `ladder` the balance covers with `reserve` kept back,
+    /// none under `minimum` (base units: the pool's smallest deposit).
+    static func choices(balance: String, reserve: String, decimals: Int = 18,
+                        ladder: [String] = ladder, minimum: String = "0") -> [String] {
+        guard let have = Decimal(string: balance), let keep = Decimal(string: reserve),
+              let floor = Decimal(string: minimum) else { return [] }
         return ladder.filter { step in
             guard let units = baseUnits(step, decimals: decimals).flatMap({ Decimal(string: $0) }) else { return false }
-            return units + keep <= have
+            return units + keep <= have && units >= floor
         }
     }
 
@@ -386,9 +432,9 @@ enum PrivateMoney {
 
     /// What the approved notes on `chainId` hold, base units: the private
     /// money a send can spend. A note waiting for approval is not spendable.
-    static func spendable(_ notes: [Note], chainId: Int, symbol: String = "ETH") -> String {
+    static func spendable(_ notes: [Note], chainId: Int, symbol: String = "ETH", rates: [String: String] = [:]) -> String {
         plain(notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }
-            .compactMap { Decimal(string: $0.amount) }.reduce(0, +))
+            .compactMap { Decimal(string: worth($0, rates: rates).amount) }.reduce(0, +))
     }
 
     private static func pow10(_ n: Int) -> Decimal {

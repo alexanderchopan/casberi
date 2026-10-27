@@ -1801,6 +1801,50 @@ enum YourAccountChain {
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
+    // MARK: - Private money's contract calls (prd §1563)
+
+    /// **YOUR ACCOUNT SENDS PRIVATE MONEY'S CALLS ON ETHEREUM.** The keystore
+    /// registration (the account is the owner of its private account), a
+    /// yield deposit (a token's approval, then the router), or Take it back
+    /// (the ragequit, which the pool lets only the owner send, then the zap
+    /// that turns the shares back into the token): each list in ONE
+    /// operation, signed with Face ID, the key change with it. Before Face
+    /// ID the calls run against the real state as the account
+    /// (`eth_simulateV1`, as `check` runs every send) and nothing is signed
+    /// unless every call succeeds — a node that will not simulate signs
+    /// nothing either. `value` is decimal wei.
+    static func privateCalls(_ list: [(to: String, data: String, value: String)], on net: Network, reason: String,
+                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        var calls: [YourAccountOp.Call] = []
+        for c in list {
+            guard SafeABI.word(address: c.to) != nil, let data = SafeABI.hexBytes(c.data),
+                  let value = SafeABI.word(uint256: c.value) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            calls.append(.init(operation: 0, to: c.to, value: value, data: data))
+        }
+        guard !calls.isEmpty else { throw Failure(message: String(localized: "This send could not be written")) }
+        await stage(.preparing)
+        let simulated = await check(net, account: account, approvals: [], steps: [(calls: calls, swap: nil)])
+        if case .notChecked = simulated.checked {
+            throw Failure(message: String(localized: "\(net.name) could not check this, so nothing was signed"))
+        }
+        try require(simulated, on: net, swaps: false)
+        let deployed = try await isDeployed(net, account)
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: deployed)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device,
+                                        reason: reason, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
     // MARK: - One operation, end to end
 
     /// Build, price, check, hash, sign, verify, send and follow one

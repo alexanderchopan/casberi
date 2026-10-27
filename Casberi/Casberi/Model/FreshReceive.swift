@@ -318,11 +318,11 @@ final class FreshReceive {
 /// door; once per transaction.
 enum PrivateActivity {
     @MainActor
-    static func land(hash: String, title: String, context: ModelContext) {
+    static func land(hash: String, title: String, chainId: Int = PrivacyNetwork.sepolia.chainId, context: ModelContext) {
         let ref = PrivateMoney.activityPrefix + hash.lowercased()
         let existing = (try? context.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref }))) ?? 0
         guard existing == 0 else { return }
-        let thing = Thing(kind: .link, title: title, content: "https://sepolia.etherscan.io/tx/" + hash,
+        let thing = Thing(kind: .link, title: title, content: PrivateMoney.explorerTx(hash, chainId: chainId),
                           source: "Wallet", capturedAt: .now, sourceRef: ref)
         context.insert(thing)
         try? context.save()

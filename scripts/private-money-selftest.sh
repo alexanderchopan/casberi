@@ -46,10 +46,10 @@ done
 echo "private-money self-test"
 
 use() { grep -qF -- "$2" "$1" || { echo "✗ $3"; exit 1; } }
-use "$STORE" 'PrivateMoney.statusURL(aspUrl: PrivacyNetwork.sepolia.aspUrl, labelHash: note.labelHash)' "the store no longer asks the ASP by the label's hash"
+use "$STORE" 'let url = PrivateMoney.statusURL(aspUrl: network.aspUrl, labelHash: note.labelHash),' "the store no longer asks the note's own network's ASP by the label's hash"
 use "$MOVE" 'labelHash: deposit.labelHash' "a deposit is no longer kept with the engine's label hash"
-use "$ENGINE" 'let routed = PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl,' "the engine's door no longer routes log reads"
-use "$ENGINE" 'await Self.send(request, to: routed, fallback: url)' "the engine's door no longer sends the routed request"
+use "$ENGINE" 'let routed = network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url' "the engine's door no longer routes log reads"
+use "$ENGINE" 'await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl)' "the engine's door no longer sends the routed request"
 use "$WIRE" 'fromBlock: 10_932_354)' "Sepolia's first block is no longer the keystore's (10,932,354)"
 use "$ENGJS" 'labelHash: await labelHashOf(r.pendingNote.label),' "the engine no longer returns a deposit's label hash"
 use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with tools/privacy-pools-engine/build.mjs"
@@ -57,7 +57,8 @@ use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with
 ! grep -q "SecItemAdd" "$SENDER" || { echo "✗ the testnet sender makes a device-only key again (prd §1562: it is the root's owner)"; exit 1; }
 use "$SENDER" "return try PrivateAccount.ownerAddress(try PrivateRootKey.ensure())" "the testnet sender is no longer the private root's owner"
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sender no longer builds through TestnetTx's testnet guard"
-awk '/static var available: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Move to private is no longer DEBUG-only"; exit 1; }
+use "$MOVE" 'static var available: Bool { PrivacyNetwork.current(debugAsks: debugNetwork) != nil }' "Move to private no longer follows the network this build serves"
+awk '/static var freshAvailable: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Receive to a fresh address is offered outside DEBUG (it has no mainnet signer)"; exit 1; }
 echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only sender owned by the root"
 
 # One root for private money (prd §1562): in iCloud Keychain, synchronizable,
@@ -112,7 +113,7 @@ MSCREEN="Casberi/Casberi/Screens/MoveScreen.swift"
 MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
 HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbs }' "the private sentence is no longer drawn under Move's verbs"
-use "$SENT" 'listRow(String(localized: "Your private balance"), sub: "Sepolia", symbol: "eye.slash") {' "your private balance is no longer a recipient"
+use "$SENT" 'listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {' "your private balance is no longer a recipient"
 use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))' "the Private switch is not off on arrival under Send"
 awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .send, receipt == nil, PrivateMove.available {' \
     || { echo "✗ the Private switch stands somewhere other than Send, or where the sender cannot move"; exit 1; }
@@ -129,7 +130,7 @@ use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the addres
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: live ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
 ! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
 use "Casberi/Casberi/Model/PrivateMove.swift" 'let relayed = try await engine.relay(handle: spend.handle)' "a private send no longer goes through the relayer"
-use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId)' "a private send's amounts are not the approved private balance"
+use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shared.spendable(chainId: network.chainId)' "a private send's amounts are not the approved private balance"
 use "tools/privacy-pools-engine/src/engine.js" 'const r = await s.relayWithdraw(option);' "the engine no longer relays a withdrawal"
 use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped bundle cannot relay — rebuild with tools/privacy-pools-engine/build.mjs"
 use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
@@ -193,7 +194,7 @@ FRESHM="Casberi/Casberi/Model/FreshReceive.swift"
 FRESHK="Casberi/Casberi/Model/FreshAddressKey.swift"
 FRESHV="Casberi/Casberi/Screens/MoveFreshReceive.swift"
 use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))' "Receive's Private switch is not off on arrival"
-awk '/set: \{ if \$0 \{ goFresh\(\) \} \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.available {' \
+awk '/set: \{ if \$0 \{ goFresh\(\) \} \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.freshAvailable {' \
     || { echo "✗ Receive's Private switch stands somewhere other than your own account's Receive"; exit 1; }
 use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
 use "$FRESHV" 'Text(verbatim: copied ? String(localized: "Copied") : YourAccount.short(address))' "the fresh address is no longer drawn by its tail"
@@ -220,6 +221,54 @@ echo "  ok   a fresh address: Receive's switch, its tail and code, your own depo
 ! grep -rq 'privateMark' Casberi/Casberi || { echo "✗ private money has a colour of its own again"; exit 1; }
 use "$MPRIV" 'DSToggleRow(title: Text("Private"), isOn: $isOn)' "the Private switch is tinted apart from every other switch"
 echo "  ok   private money counts once: in the total and the box, never in Tokens; marked in the app's pink"
+
+# ETHEREUM (prd §1563): your account sends, Face ID signs, and nothing is
+# signed before it is simulated; the owner is your account; every deposit
+# earns (the token's own yield pool and router, at most the budget); Take it
+# back is the ragequit FROM your account (the pool lets only the owner) with
+# the zap after it; a relayed send asks for the device owner; the row's
+# rate is read live; the DEBUG test sender is never used; no step hides
+# behind DEBUG (the kill switch is the one way off); every mainnet move was
+# run against mainnet in simulation, with five mutations caught.
+TMP0=$(mktemp /tmp/private-money-chain.XXXXXX)
+ETH="Casberi/Casberi/Model/PrivateOnEthereum.swift"
+YIELD="Casberi/Casberi/Model/PrivateYield.swift"
+CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
+SIMREC="tools/privacy-pools-engine/mainnet-sim.json"
+for f in "$ETH" "$YIELD" "$CHAIN" "$SIMREC"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
+! grep -q '#if DEBUG' "$ETH" "$YIELD" || { echo "✗ a mainnet step is DEBUG-only (it must ship; the kill switch is the way off)"; exit 1; }
+! grep -q 'PrivacyTestnetSender\|TestnetTx' "$ETH" || { echo "✗ the DEBUG test sender reaches mainnet"; exit 1; }
+use "$ETH" 'static var owner: String? { YourAccountKey.address }' "the owner on Ethereum is no longer your account"
+use "$ETH" '_ = try await PrivacyEngine.shared.open(seed: seed, owner: owner, network: network)' "the private account no longer opens with your account as its owner"
+use "$ETH" 'guard PrivateMainnet.on else { throw PrivacyNetwork.Refusal.notServed(network.chainId) }' "Ethereum opens with the kill switch off"
+use "$ETH" 'guard tx.to.lowercased() == network.keystore.lowercased() else { throw Failure.notOwner }' "the registration may call something other than the keystore"
+use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "a deposit may go somewhere other than its token's yield router"
+use "$ETH" 'carried <= most else { throw Failure.noPool }' "a deposit may carry more than its budget"
+use "$ETH" 'guard quit.recipient.lowercased() == owner.lowercased() else { throw Failure.notOwner }' "a ragequit paying someone other than your account is signed"
+use "$ETH" 'try await open(account, reason: String(localized: "Send from your private balance"))' "a relayed send no longer asks for the device owner"
+use "$ETH" 'let sent = try await YourAccountChain.privateCalls(calls, on: accountNetwork,' "a deposit or Take it back no longer goes through your account"
+awk '/static func privateCalls\(/,/^    }$/' "$CHAIN" > "$TMP0"
+grep -q 'throw Failure(message: String(localized: "\\(net.name) could not check this, so nothing was signed"))' "$TMP0" || { echo "✗ a private call no node would simulate is signed"; exit 1; }
+sim=$(grep -n 'let simulated = await check(net, account: account' "$TMP0" | cut -d: -f1)
+req=$(grep -n 'try require(simulated, on: net, swaps: false)' "$TMP0" | cut -d: -f1)
+op=$(grep -n 'let outcome = try await operate(' "$TMP0" | cut -d: -f1)
+[[ -n "$sim" && -n "$req" && -n "$op" && "$sim" -lt "$req" && "$req" -lt "$op" ]] || { echo "✗ a private call is signed before its simulation is required to land"; exit 1; }
+use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldLine(row) ?? PrivateMoney.network(row.chainId), DS.textSecondary)' "a private row no longer says its rate"
+use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
+! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
+use "$TAKE" 'let (hash, figure) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
+python3 -I - "$SIMREC" <<'PY' || { echo "✗ the mainnet simulation record is not four landed moves"; exit 1; }
+import json, sys
+r = json.load(open(sys.argv[1]))
+s = r["scenarios"]
+assert r.get("mutation") is None
+assert all(s[k]["ok"] for k in ("eth", "usdc", "ragequit", "withdraw")), s
+assert int(s["ragequit"]["ethBack"]) >= int(s["eth"]["spentWei"]) * 999 // 1000, "Take it back returns the deposit"
+assert int(s["withdraw"]["received"]) == int(s["withdraw"]["amount"]), "the recipient gets the amount"
+assert s["withdraw"]["processor"].lower() == "0x77613d670bb9fd48a9898d0eac8ebf21b566f960", "the router is the withdrawal's processor"
+PY
+rm -f "$TMP0"
+echo "  ok   Ethereum: your account sends what was simulated, owns and takes back; every deposit earns; the rate read live"
 
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -470,12 +519,56 @@ let byAccount = P.spendableByAccount(notes + [r1n], chainId: 11155111)
 check(byAccount.count == 2 && byAccount.first { $0.root == nil }?.amount == "4000000000000000"
       && byAccount.first { $0.root == "r1" }?.amount == "5000000000000000", "approved money by account (\(byAccount))")
 
+// Ethereum earns (prd §1563): the rate, the worth, the line, Take it back's calls.
+typealias Y = PrivateYield
+let measured = Y.apy(liquidityRateRay: "12967460578352220962271503", feeBps: 2000)   // ppETH, read 2026-10-26
+check(measured.map { abs($0 - 0.010442) < 0.00001 } == true, "Aave's 1.3052% less the share's 20% is 1.0442% (\(String(describing: measured)))")
+check(Y.apy(liquidityRateRay: "36825976994563936832332265", feeBps: 2000).map { abs($0 - 0.030010) < 0.00001 } == true, "ppUSDC: 3.0010%")
+check(Y.apy(liquidityRateRay: "12967460578352220962271503", feeBps: 0).map { abs($0 - 0.013052) < 0.00001 } == true, "no fee: Aave's own")
+check(Y.apy(liquidityRateRay: "x", feeBps: 2000) == nil && Y.apy(liquidityRateRay: "1", feeBps: 10_001) == nil
+      && Y.apy(liquidityRateRay: "2000000000000000000000000000", feeBps: 0) == nil, "an unreadable rate, a fee past 100% or a rate past 100% is no rate")
+check(Y.line(apy: measured) == "1.0% on Aave", "the line: \(String(describing: Y.line(apy: measured)))")
+check(Y.line(apy: nil) == nil && Y.line(apy: 0) == nil, "no rate, no line")
+check(Y.liquidityRate(reserveData: "0x" + String(repeating: "0", count: 64) + String(repeating: "0", count: 63) + "1"
+      + String(repeating: "0", count: 63) + "7") == "7", "the reserve's third word is the supply rate")
+check(Y.reserveDataCall(underlying: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2") == "0x35ea6a75000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "getReserveData(WETH)")
+// Worth: mainnet-sim's own deposit, at the rate read that day.
+check(Y.underlying(shares: "9987480271160279", exchangeRate: "1001252552889022892", shareDecimals: 18) == "9999990118427979",
+      "0.009987 ppETH is 0.00999999 ETH (\(String(describing: Y.underlying(shares: "9987480271160279", exchangeRate: "1001252552889022892", shareDecimals: 18))))")
+check(Y.underlying(shares: "19907525330476718936", exchangeRate: "1004644", shareDecimals: 18) == "19999975", "19.9 ppUSDC is 19.999975 USDC")
+let ppETH = PrivacyNetwork.ethereum.yield[0], ppUSDC = PrivacyNetwork.ethereum.yield[1]
+var yn = note("y", "9987480271160279", .approved); yn = P.Note(commitment: "y", label: "0x1", labelHash: "1", symbol: "ETH", amount: "9987480271160279",
+    decimals: 18, chainId: 1, tx: "0x", at: t0, status: .approved, share: ppETH.share)
+let un = P.Note(commitment: "u", label: "0x2", labelHash: "2", symbol: "USDC", amount: "19907525330476718936", decimals: 18, chainId: 1,
+    tx: "0x", at: t0, status: .approved, share: ppUSDC.share)
+let rates = [ppETH.share.lowercased(): "1001252552889022892", ppUSDC.share.lowercased(): "1004644"]
+check(P.worth(yn, rates: rates) == ("9999990118427979", 18), "a ppETH note is worth its ETH at the rate")
+check(P.worth(un, rates: rates) == ("19999975", 6), "a ppUSDC note is worth its USDC, at USDC's decimals")
+check(P.worth(un, rates: [:]) == ("19907525", 6), "before the rate: the shares as USDC, never more than it is worth")
+check(P.worth(yn, rates: [:]) == ("9987480271160279", 18), "before the rate: the ETH shares themselves")
+let yrows = P.rows([yn, un], rates: rates)
+check(yrows.map(\.symbol) == ["ETH", "USDC"] && yrows[1].amount == "19999975" && yrows[1].decimals == 6, "rows draw what the shares are worth")
+check(P.spendable([yn], chainId: 1, rates: rates) == "9999990118427979", "spendable is the token, yield included")
+check(abs(P.worthUSD([un], prices: ["usdc": 1], rates: rates) - 19.999975) < 0.000001, "the total counts the worth")
+// Take it back on a yield pool: approve the zap, redeem to the token, unwrap ETH.
+let tb = Y.takeBackCalls(pool: ppETH, shares: "9987480271160279", owner: "0x746dA2D4849B90571be2974454b3b712a5eb9d3F", worth: "9999990118427979")
+check(tb?.count == 3 && tb?[0].to == ppETH.share && tb?[0].data.hasPrefix("0x095ea7b3") == true && tb?[0].data.contains(ppETH.zap.dropFirst(2).lowercased()) == true,
+      "first the share approves the zap")
+check(tb?[1].to == ppETH.zap && tb?[1].data.hasPrefix("0x7aa6a9fd") == true && tb?[1].data.hasSuffix("746da2d4849b90571be2974454b3b712a5eb9d3f") == true,
+      "then the zap redeems to the account")
+check(tb?[2].to == ppETH.underlying && tb?[2].data == "0x2e1a7d4d" + Y.uint("9999990118427979")!, "then WETH unwraps what the shares were worth")
+check(Y.takeBackCalls(pool: ppUSDC, shares: "1", owner: "0x746dA2D4849B90571be2974454b3b712a5eb9d3F", worth: "1")?.count == 2, "USDC needs no unwrap")
+check(Y.uint("255") == String(repeating: "0", count: 62) + "ff" && Y.uint("-1") == nil && Y.uint("") == nil, "one word")
+// What Move offers on Ethereum: from the pool's smallest deposit up.
+check(P.choices(balance: "100000000000000000", reserve: "1000000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000")
+      == ["0.005", "0.01", "0.025", "0.05"], "Ethereum's amounts start at the pool's smallest deposit")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
 SWIFT
 
 compile_and_run() {
-    swiftc -Onone "$1" "$2" "$3" "$4" "$5" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
+    swiftc -Onone "$1" "$2" "$3" "$4" "$5" "${6:-$YIELD}" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
         || { head -20 "$TMP/err"; return 2; }
     "$TMP/run"
 }
@@ -487,16 +580,17 @@ mutate() {
     cp "$file" "$TMP/mut.swift"
     perl -0pi -e "$perl_expr" "$TMP/mut.swift"
     if cmp -s "$file" "$TMP/mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
-    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH" root="$ROOT"
+    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH" root="$ROOT" yld="$YIELD"
     case "$file" in
         "$PM") pm="$TMP/mut.swift" ;;
         "$TX") tx="$TMP/mut.swift" ;;
         "$WIRE") wire="$TMP/mut.swift" ;;
         "$FRESH") fresh="$TMP/mut.swift" ;;
         "$ROOT") root="$TMP/mut.swift" ;;
+        "$YIELD") yld="$TMP/mut.swift" ;;
     esac
     local ok
-    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" "$root" >/dev/null 2>&1 && echo y || echo n)
+    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" "$root" "$yld" >/dev/null 2>&1 && echo y || echo n)
     [[ "$ok" == n ]] || { echo "✗ SURVIVED  $name"; exit 1; }
     echo "  ok   catches  $name"
 }
@@ -543,6 +637,12 @@ mutate "a moved address is waiting again" "$ROOT" 's/guard let s = byIndex\[i\],
 mutate "Receive shows a used address" "$ROOT" 's/        out\.append\(\(last \+ 1, \.waiting\)\)\n//'
 mutate "the migration forgets the relayer's fee" "$ROOT" 's/let amount = held - fee\n/let amount = held\n/'
 mutate "money on the device-only account needs nothing" "$ROOT" 's/if deviceOnlyHolds \{ return \.deviceOnly \}/if deviceOnlyHolds, !iCloud { return .deviceOnly }/'
-mutate "one send spends two accounts" "$PM" 's/spendable\(notes\.filter \{ \$0\.root == r \}, chainId: chainId, symbol: symbol\)/spendable(notes, chainId: chainId, symbol: symbol)/'
+mutate "one send spends two accounts" "$PM" 's/spendable\(notes\.filter \{ \$0\.root == r \}, chainId: chainId, symbol: symbol, rates: rates\)/spendable(notes, chainId: chainId, symbol: symbol, rates: rates)/'
 mutate "each root shares one count" "$FRESH" 's/entries\.filter \{ \$0\.root == root \}\.map/entries.map/'
-echo "  ok   45 mutations"
+mutate "the rate forgets the share's fee" "$YIELD" 's/return gross \* \(1 - Double\(feeBps\) \/ 10_000\)/return gross/'
+mutate "the worth forgets the share's decimals" "$YIELD" 's/for _ in 0\.\.<shareDecimals \{ scale \*= 10 \}/for _ in 0..<(shareDecimals - 1) { scale *= 10 }/'
+mutate "Take it back leaves WETH" "$YIELD" 's/if pool\.native \{ calls\.append\(\(pool\.underlying, "0x2e1a7d4d" \+ worthWord\)\) \}//'
+mutate "USDC's shares count as 18-place USDC" "$PM" 's/pool\.underlyingDecimals < pool\.shareDecimals,/pool.underlyingDecimals > 99,/'
+mutate "Ethereum offers less than the pool takes" "$PM" 's/return units \+ keep <= have && units >= floor/return units + keep <= have/'
+mutate "a rate past 100% is a rate" "$YIELD" 's/guard apr < 1 else \{ return nil \}//'
+echo "  ok   51 mutations"

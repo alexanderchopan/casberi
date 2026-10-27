@@ -190,7 +190,7 @@ struct MoveScreen: View {
                         .accessibilityAddTraits(.isHeader)
                 }
                 .onAppear { privateMove.mode = mode }
-            } else if chrome.moveFreshReceive, PrivateMove.available {
+            } else if chrome.moveFreshReceive, PrivateMove.freshAvailable {
                 // No account yet: Receive's fresh address under its one
                 // word (prd §1560). It never needs your account.
                 MoveFreshSentence(inTray: inTray, leave: { chrome.moveFreshReceive = false }) {
