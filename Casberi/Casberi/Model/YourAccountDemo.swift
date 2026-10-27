@@ -132,7 +132,7 @@ enum YourAccountDemo {
                          signers: 1, roundUpStep: 1, roundUpSymbol: "ETH")
     }
 
-    /// The demo's plan, for Your account's rows: $100 of each coin a month.
+    /// The demo's plan, for Your account's rows: $100 a month in all (prd §1569).
     static func plan(on net: Op.Network) -> YourAccount7579.Plan {
         YourAccountChain.limitPlan(on: net, dollars: 100, ethPrice: price(Op.eth),
                                    minutes: MoveSecurity.LimitPeriod.month.minutes)
