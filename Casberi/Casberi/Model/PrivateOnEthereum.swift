@@ -213,6 +213,43 @@ enum PrivateOnEthereum {
         let figure: String
     }
 
+    /// **SAVED FROM ETH WHEN THERE IS NO USDC (user, 2026-10-27: "if someone
+    /// doesn't have usdc do we swap it for them?").** `units` of the dollar,
+    /// at ETH's price, into ppETH: the deposit carries the ETH itself, no
+    /// swap. Nil price: no ride.
+    static func roundUpsRideInETH(units: String, ethPrice: Double) async throws -> Ride {
+        guard let pool = network.yield.first(where: { $0.native }), ethPrice > 0,
+              let usd = Decimal(string: units).map({ $0 / pow(10, RoundUps.dollarDecimals) }) else { throw Failure.noPool }
+        var wei = usd / Decimal(ethPrice) * pow(10, 18), rounded = Decimal()
+        NSDecimalRound(&rounded, &wei, 0, .down)
+        let budget = NSDecimalNumber(decimal: rounded).stringValue
+        guard let hex = PrivateMoney.hex(budget) else { throw Failure.noPool }
+        let account = try PrivateRootKey.ensure()
+        let (calls, d) = try await PrivacyEngine.exclusive {
+            _ = try await open(account, reason: nil)
+            let engine = PrivacyEngine.shared
+            var calls: [(to: String, data: String, value: String)] = []
+            if try await !engine.isRegistered().registered {
+                for tx in try await engine.prepareRegister().txs {
+                    guard tx.to.lowercased() == network.keystore.lowercased() else { throw Failure.notOwner }
+                    calls.append((tx.to, tx.data, PrivateMoney.decimal(hex: tx.value)))
+                }
+            }
+            return (calls, try await engine.prepareYieldDeposit(tokenId: PrivateMove.eth, budget: hex))
+        }
+        // The router of ppETH, carrying at most the budget in ETH.
+        guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),
+              let carried = Decimal(string: PrivateMoney.decimal(hex: d.tx.value)), carried <= rounded else { throw Failure.noPool }
+        var all = calls
+        for a in d.approvals { all.append((a.to, a.data, PrivateMoney.decimal(hex: a.value))) }
+        all.append((d.tx.to, d.tx.data, PrivateMoney.decimal(hex: d.tx.value)))
+        let note = PrivateMoney.Note(commitment: d.commitment, label: d.label, labelHash: d.labelHash, symbol: pool.symbol,
+                                     amount: PrivateMoney.decimal(hex: d.shares), decimals: pool.shareDecimals, chainId: network.chainId,
+                                     tx: "", at: Date(), status: .waiting, root: account, share: pool.share)
+        return Ride(calls: all, keep: note,
+                    figure: PrivateMoney.figure(PrivateMoney.decimal(hex: d.underlyingNeeded), decimals: pool.underlyingDecimals, symbol: pool.symbol))
+    }
+
     static func roundUpsRide(units: String) async throws -> Ride {
         guard let pool = network.yield.first(where: { !$0.native }), let hex = PrivateMoney.hex(units) else { throw Failure.noPool }
         let account = try PrivateRootKey.ensure()

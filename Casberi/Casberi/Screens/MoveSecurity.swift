@@ -385,14 +385,23 @@ struct MoveSecurity: View {
         Task {
             defer { roundUpsSaving = false }
             do {
-                // Paid from your USDC on Ethereum: short of it, say what to add.
+                // From your USDC on Ethereum; short of it, from your ETH there
+                // (ppETH, no swap); short of both, say what to add.
                 let net = PrivateOnEthereum.accountNetwork
-                if let held = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account), !YourAccountOp.atMost(units, held) {
-                    let short = WalletValue.money(YourAccountOp.dollars(YourAccountOp.difference(units, held), decimals: RoundUps.dollarDecimals, price: 1))
-                    chrome.flash(String(localized: "Add \(short) of USDC on Ethereum to save it"), tone: .neutral, seconds: 6)
+                let usdc = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account) ?? "0"
+                let ride: PrivateOnEthereum.Ride
+                if YourAccountOp.atMost(units, usdc) {
+                    ride = try await PrivateOnEthereum.roundUpsRide(units: units)
+                } else if let price = await Chain.exchangePrice(net, YourAccountOp.eth), price > 0,
+                          let eth = await Chain.balance(net, YourAccountOp.eth, of: account),
+                          let have = Decimal(string: eth), let usd = Decimal(string: units),
+                          // Room for the fee besides: a fifth more than the deposit.
+                          have * Decimal(price) / pow(10, 18) >= usd / pow(10, RoundUps.dollarDecimals) * Decimal(1.2) {
+                    ride = try await PrivateOnEthereum.roundUpsRideInETH(units: units, ethPrice: price)
+                } else {
+                    chrome.flash(String(localized: "Add \(usd) of USDC or ETH on Ethereum to save it"), tone: .neutral, seconds: 6)
                     return
                 }
-                let ride = try await PrivateOnEthereum.roundUpsRide(units: units)
                 let sent = try await Chain.privateCalls(ride.calls, on: PrivateOnEthereum.accountNetwork,
                                                         reason: String(localized: "Save \(usd) of round-ups")) { _ in }
                 switch sent.outcome {

@@ -45210,6 +45210,34 @@
         }
       }
     },
+    "Add %@ of USDC or ETH on Ethereum to save it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade %@ de USDC o ETH en Ethereum para guardarlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存するにはEthereumに%@のUSDCかETHを追加してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장하려면 Ethereum에 USDC 또는 ETH %@를 추가하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ethereum 上添加 %@ 的 USDC 或 ETH 以存入"
+          }
+        }
+      }
+    },
     "Add %lld" : {
       "localizations" : {
         "es" : {
