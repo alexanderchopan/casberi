@@ -4606,6 +4606,40 @@ struct MoveClause<Value: View>: View {
     }
 }
 
+/// A clause whose value is words, laid out WORD BY WORD beside its glue:
+/// one wider than the line wraps at the margin, never under its own first
+/// word (user, on "to your private / ␣balance": "if it wraps it should be
+/// smart enough to know a space isn't needed"). A nested phrase wrapped
+/// inside itself, so its second line kept the glue's indent. With `action`,
+/// every word is the one control, VoiceOver reading it once.
+struct MoveWordsClause: View {
+    var glue: String? = nil
+    var glueInk: Color = DS.textPrimary
+    let words: String
+    var ink: Color = DS.textPrimary
+    var action: (() -> Void)? = nil
+    var hint: Text? = nil
+    @Environment(\.moveRung) private var rung
+    var body: some View {
+        let list = words.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        MoveClauseLayout(spacing: rung.size * MoveSentence.wordSpace) {
+            if let glue { MoveWord(glue, ink: glueInk) }
+            ForEach(Array(list.enumerated()), id: \.offset) { i, word in
+                if let action {
+                    Button(action: action) { MoveWord(word, ink: ink) }
+                        .buttonStyle(RowPress())
+                        .accessibilityLabel(Text(verbatim: words))
+                        .accessibilityHint(hint ?? Text(verbatim: ""))
+                        .accessibilityHidden(i > 0)
+                } else {
+                    MoveWord(word, ink: ink).accessibilityHidden(i > 0)
+                        .accessibilityLabel(Text(verbatim: words))
+                }
+            }
+        }
+    }
+}
+
 /// A phrase as clauses: split at its commas (each kept on its piece), an
 /// "and" or "or" riding the piece after it, so a line never ends on one.
 struct MovePhrase: View {
@@ -4622,9 +4656,8 @@ struct MovePhrase: View {
     var body: some View {
         let pieces = Self.pieces(text)
         ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
-            MoveClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink) {
-                MoveWord(piece.words, ink: ink)
-            }
+            MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
+                            words: piece.words, ink: ink)
             .layoutValue(key: FlowBreak.self, value: breaks && i == 0)
         }
     }

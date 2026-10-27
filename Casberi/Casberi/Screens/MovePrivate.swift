@@ -186,7 +186,14 @@ struct MovePrivateSentence<Head: View>: View {
                 MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"),
                            ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
             }
-            MoveClause(glue: String(localized: "to")) { recipientWord }
+            if move.mode == .deposit {
+                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
+                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                action: { if move.stage == .ready { leave(.pickRecipient) } },
+                                hint: Text("Picks who it goes to"))
+            } else {
+                MoveClause(glue: String(localized: "to")) { recipientWord }
+            }
             MovePhrase(move.onEthereum ? String(localized: "Ethereum.") : String(localized: "Sepolia."), glue: String(localized: "on"))
         }
     }
