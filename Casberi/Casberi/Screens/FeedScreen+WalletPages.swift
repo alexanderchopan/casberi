@@ -156,7 +156,7 @@ extension FeedScreen {
         return nil
     }
 
-    /// Private money is yours (prd §1560): its asks stand on All and with
+    /// Private money is yours (prd §1561): its asks stand on All and with
     /// your account picked, never on another account's or Following's.
     var walletShowsPrivate: Bool {
         if walletOnAll { return true }
@@ -174,7 +174,7 @@ extension FeedScreen {
         let nudges = (onAll && OutsideKeyNudge.shown ? 1 : 0) + (onAll && RecoveryKeyNudge.shown ? 1 : 0)
             + (onAll && RecoveryCheckNudge.shown ? 1 : 0)
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil }.count : 0
-        // A deposit waiting for 0xBow's approval, or refused (prd §1560).
+        // A deposit waiting for 0xBow's approval, or refused (prd §1561).
         let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks().count : 0
         return rows + walletSignatureWarnings.count + nudges + cards + deposits
     }
@@ -245,7 +245,7 @@ extension FeedScreen {
         // whatever Home shows (it did under the deleted Spending list).
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
         // A deposit's approval is asked here too, so Needs you's count is
-        // the ASP's latest when Home stands (prd §1560; spaced 20 s).
+        // the ASP's latest when Home stands (prd §1561; spaced 20 s).
         .task { await PrivateMoneyStore.shared.refresh() }
     }
 
@@ -604,7 +604,7 @@ extension FeedScreen {
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil } : []
         if walletNeedsCount(upcoming: upcoming) == 0 { walletSkeletonRowsSection }
         walletSignaturesSection
-        // Money of yours waiting on 0xBow, or refused (prd §1560).
+        // Money of yours waiting on 0xBow, or refused (prd §1561).
         if walletShowsPrivate { WalletPrivateAsks() }
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }

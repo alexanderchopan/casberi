@@ -76,7 +76,7 @@ enum PrivacyEngineWire {
         let label: String
     }
 
-    /// One note to take back (prd §1560), by its commitment.
+    /// One note to take back (prd §1561), by its commitment.
     struct Ragequit: Encodable, Equatable {
         let commitment: String
     }
@@ -178,7 +178,7 @@ enum PrivacyEngineWire {
         let ms: Int
     }
 
-    /// A ragequit, proved (prd §1560): the transaction for the account's
+    /// A ragequit, proved (prd §1561): the transaction for the account's
     /// owner to sign, the whole note's value and where the circuit sends it.
     struct PreparedRagequit: Decodable, Equatable {
         let handle: String

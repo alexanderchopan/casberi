@@ -64,7 +64,7 @@ enum RoundUps {
         var step = 1
         var target = Target.ethOnBase
         /// The change moves into your private balance instead of buying
-        /// `target` (prd §1560). Off unless picked; nil reads as off, so a
+        /// `target` (prd §1561). Off unless picked; nil reads as off, so a
         /// setting kept before it decodes as it was.
         var toPrivate: Bool? = nil
 
@@ -108,7 +108,7 @@ enum RoundUps {
         return String(Int64(micro))
     }
 
-    // MARK: - Into your private balance (prd §1560)
+    // MARK: - Into your private balance (prd §1561)
 
     /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the networks
     /// this build has a private pool it can deposit into. Sepolia in a DEBUG

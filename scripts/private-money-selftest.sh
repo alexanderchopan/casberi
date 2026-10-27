@@ -93,7 +93,7 @@ use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens rows count private money twice"
 use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens sheet counts private money twice"
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
-# Needs you and Take it back (prd §1560): the rows stand on Needs you's page
+# Needs you and Take it back (prd §1561): the rows stand on Needs you's page
 # and in its count, the act is a word in a push row behind a dialog, the
 # ragequit is proved, checked against the chain BEFORE it is signed, and pays
 # the owner; discovery keeps a deposit waiting or refused.
@@ -114,19 +114,28 @@ use "$TAKE" 'PrivateMoneyStore.shared.remove(commitment: note.commitment)' "a ta
 use "$STORE" 'let unspent = found.notes.filter { ["ACTIVE", "PENDING", "REJECTED"].contains($0.status.uppercased())' "discovery drops a deposit waiting or refused"
 echo "  ok   Needs you: the deposits counted and drawn, Take it back a word behind a dialog, simulated before it is signed"
 
-# Round-ups into your private balance (prd §1560): offered only where a
+# Round-ups into your private balance (prd §1561): offered only where a
 # pool is, a send elsewhere sets nothing aside, the batch rides a deposit you
 # confirmed, and its Activity row has no verb.
 SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
 use "$SEC" 'ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in' "the private target is offered where there is no pool"
 use "$SEC" 'Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }' "the private target is no longer its words and the eye"
-use "$SENT" 'guard verb == .send, RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
+use "$SENT" 'guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
 [[ -n "$mv" && -n "$dn" && "$mv" -lt "$dn" ]] || { echo "✗ due round-ups no longer ride the deposit you confirmed"; exit 1; }
 use "$MOVE" 'PrivateActivity.land(hash: hash, title: PrivateMoney.roundUpsTitle(figure: figure), context: context)' "moved round-ups land no Activity row"
 use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: chain), at: RoundUps.privateMoveAt),' "round-ups move per send, not together"
+# Swaps and Buy round up (prd §1561): the swap's plan reads what it sells,
+# a wrap and an unpriced token never; the buy rides only what can carry it;
+# a Buy counts its change once paid.
+use "$SENT" 'return s.quote.wrap == nil ? soldDollars(s) : nil' "a swap's round-up no longer reads what it sells, or rounds up a wrap"
+use "$SENT" 'guard RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "a swap or a Buy carries a buy it cannot pay"
+use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
+use "$SENT" 'if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }' "a paid Buy's change is not counted"
+use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint' "a swap's small print says nothing of its round-up"
 echo "  ok   round-ups to private: offered only on Sepolia, moved together on a deposit you confirmed"
+echo "  ok   swaps and Buy round up: what is sold, carried only where the dollar pays, a Buy counted"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
 
 # Receive to a fresh address (prd §1560): Receive's Private switch, off on
@@ -162,7 +171,11 @@ use "$FRESHK" 'kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisD
 use "$FRESHK" 'kSecAttrSynchronizable as String: false,' "the fresh addresses' root may sync"
 use "$HOLD" 'await FreshReceive.shared.check(context: modelContext)' "Holdings no longer looks at the fresh addresses"
 echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, a device-only root"
-echo "  ok   private money counts once: in the total and the box, never in Tokens"
+# No lime (prd §1561, user: "why not the one we already use our pink"):
+# private money is marked in the app's pink, and the token is gone.
+! grep -rq 'privateMark' Casberi/Casberi || { echo "✗ private money has a colour of its own again"; exit 1; }
+use "$MPRIV" 'DSToggleRow(title: Text("Private"), isOn: $isOn)' "the Private switch is tinted apart from every other switch"
+echo "  ok   private money counts once: in the total and the box, never in Tokens; marked in the app's pink"
 
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -199,14 +212,14 @@ let rows = P.rows(notes)
 check(rows.map(\.id) == ["0:ETH:11155111", "0:USDC:11155111", "1:ETH:11155111", "2:ETH:11155111"], "private first, then waiting, then refused, A–Z within (\(rows.map(\.id)))")
 check(rows.first?.amount == "4000000000000000", "a token's private notes are summed")
 check(rows[2].amount == "1500000000000000" && rows[2].since == t0, "a waiting row sums its notes and dates from the oldest")
-check(rows[3].amount == "2500000000000000", "poi_required is not approved either: drawn with the refused (prd §1560)")
+check(rows[3].amount == "2500000000000000", "poi_required is not approved either: drawn with the refused (prd §1561)")
 check(rows[0].since == nil, "a private row has no since")
 check(rows[0].title == "ETH, private" && rows[2].title == "ETH, moving in" && rows[3].title == "ETH, not approved", "the rows' names")
 check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a zero or unreadable amount draws nothing")
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
 check(P.anyWaiting([note("p", "1", .needsProof)]) && !P.anyWaiting([note("r", "1", .rejected)]), "poi_required is asked again, rejected is not")
 
-// Needs you (prd §1560): every deposit not approved, refused first, oldest
+// Needs you (prd §1561): every deposit not approved, refused first, oldest
 // first; Take it back on a refusal, and on a deposit waiting past a week.
 let now0 = t1.addingTimeInterval(3600)
 let asks = P.asks(notes, now: now0)
@@ -228,7 +241,7 @@ func since(_ now: Date) -> String {
 check(since(at.addingTimeInterval(3 * 3600)) == "Since 2:14 PM", "today's wait says its time (\(since(at.addingTimeInterval(3 * 3600))))")
 check(since(at.addingTimeInterval(86_400)) == "Since Oct 26", "an older wait says its day (\(since(at.addingTimeInterval(86_400))))")
 check(P.takenBackTitle(figure: "0.0001 ETH", to: "...DeBb") == "0.0001 ETH back to ...DeBb", "a taken-back deposit's Activity row, with no verb")
-check(P.roundUpsTitle(figure: "0.00012 ETH") == "0.00012 ETH round-ups to your private balance", "round-ups moved in, with no verb")
+check(P.roundUpsTitle(figure: "0.00012 ETH") == "0.00012 ETH round-ups to private", "round-ups moved in, with no verb")
 check(P.held(notes, symbol: "ETH") == Decimal(string: "4000000000000000"), "held counts approved notes only")
 
 // In the Wallet's number (prd §1554): approved notes on a network with value, once.

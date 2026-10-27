@@ -255,7 +255,7 @@ final class PrivateMove {
                                                tx: hash, at: Date(), status: .waiting))
             NSLog("privateMove| deposited | %@ | %@ ETH | label hash %@ | %d s",
                   hash, amount, deposit.labelHash, Int(Date().timeIntervalSince(started)))
-            // Round-ups due on Sepolia ride the send you confirmed (prd §1560).
+            // Round-ups due on Sepolia ride the send you confirmed (prd §1561).
             await Self.moveRoundUps(engine: engine, context: context)
             stage = .done(hash)
             await PrivateMoneyStore.shared.refresh(force: true)
@@ -271,7 +271,7 @@ final class PrivateMove {
     /// Where a move lands its Activity row; the sentence sets it.
     @ObservationIgnored var context: ModelContext?
 
-    // MARK: - Round-ups into your private balance (prd §1560)
+    // MARK: - Round-ups into your private balance (prd §1561)
 
     /// **THE CHANGE MOVES TOGETHER.** When round-ups move privately and what
     /// is counted on Sepolia has reached `RoundUps.privateMoveAt`, a send the

@@ -4169,11 +4169,11 @@ enum ProbeHooks {
             NSLog("privateMoney| sender forgotten")
         },
         // `-privateNeedsSample "waiting,rejected,proof,overdue"` — Needs you's
-        // deposit rows with no deposit behind them, never kept (prd §1560): a
+        // deposit rows with no deposit behind them, never kept (prd §1561): a
         // refusal cannot be forced on Sepolia. Logs `privateMoney|`.
         Hook(key: "privateNeedsSample") { raw, _ in PrivateMoneyStore.shared.sampleAsks(raw) },
         // `-privateTakeBackProbe "<commitment prefix>|newest"` — Take it back
-        // on a REAL note, headless, whatever the ASP said (prd §1560): the
+        // on a REAL note, headless, whatever the ASP said (prd §1561): the
         // ragequit proved, simulated, signed by the Sepolia sender. Logs
         // `privateTakeBack|`. Moves test money; Sepolia only.
         Hook(key: "privateTakeBackProbe") { raw, context in
@@ -4191,7 +4191,7 @@ enum ProbeHooks {
         },
         // `-roundUpsPrivate "on|<wei counted on Sepolia>"` — round-ups set to
         // move into your private balance, as the Security menu sets them, and
-        // the change counted there (prd §1560): nothing sends publicly on
+        // the change counted there (prd §1561): nothing sends publicly on
         // Sepolia, so the count stands for the sends'. `off` picks the token
         // again. `-roundUpsPrivateMove YES` moves it now (Face ID, the batch's
         // deposit, its Activity row). Logs `roundUpsPrivate|`.

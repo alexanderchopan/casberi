@@ -426,7 +426,7 @@ struct MoveSentence: View {
     /// in it is the dollar.
     private var roundUpPlan: RoundUps.Plan? {
         let setting = RoundUps.setting
-        // Moving privately, a network with no pool sets nothing aside (prd §1560).
+        // Moving privately, a network with no pool sets nothing aside (prd §1561).
         guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }
         let dollar = Op.dollar(on: network)
         let sent: String

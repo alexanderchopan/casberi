@@ -27,7 +27,7 @@ final class PrivateMoneyStore {
 
     var rows: [PrivateMoney.Row] { PrivateMoney.rows(notes) }
 
-    /// What Wallet › Needs you shows (prd §1560): every deposit the ASP has
+    /// What Wallet › Needs you shows (prd §1561): every deposit the ASP has
     /// not approved, and in a DEBUG build the samples `-privateNeedsSample`
     /// stood up, which are never kept.
     func asks(now: Date = .now) -> [PrivateMoney.Ask] {
@@ -44,7 +44,7 @@ final class PrivateMoneyStore {
         save()
     }
 
-    /// A note taken back (prd §1560): it left the pool, so it leaves here.
+    /// A note taken back (prd §1561): it left the pool, so it leaves here.
     func remove(commitment: String) {
         notes.removeAll { $0.commitment.lowercased() == commitment.lowercased() }
         samples.removeAll { $0.commitment.lowercased() == commitment.lowercased() }
@@ -85,7 +85,7 @@ final class PrivateMoneyStore {
         let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0.status) }, uniquingKeysWith: { a, _ in a })
         // Unspent is ACTIVE, and a deposit the ASP has not approved (PENDING)
         // or refused (REJECTED): both still hold their money, and Needs you
-        // asks about them (prd §1560). SPENT and EXITED are gone.
+        // asks about them (prd §1561). SPENT and EXITED are gone.
         let unspent = found.notes.filter { ["ACTIVE", "PENDING", "REJECTED"].contains($0.status.uppercased())
             && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
         var next: [PrivateMoney.Note] = unspent.map { n in
@@ -129,7 +129,7 @@ final class PrivateMoneyStore {
 
     #if DEBUG
     /// `-privateNeedsSample "waiting,rejected,overdue"`: Needs you's rows with
-    /// no deposit behind them (prd §1560) — a refusal cannot be forced on
+    /// no deposit behind them (prd §1561) — a refusal cannot be forced on
     /// Sepolia. Drawn in Needs you only and never saved; Take it back on one
     /// says it is a sample.
     func sampleAsks(_ raw: String) {

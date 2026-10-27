@@ -287,7 +287,7 @@ let ruBTCNote = RoundUps.SwapBuy(account: ruMe, network: "base-mainnet", dollar:
 check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [ruBTCNote])?.filled == nil,
       "ETH that arrived is taken as the cbBTC the buy was for")
 
-// ── Round-ups into your private balance (prd §1560) ───────────────────────
+// ── Round-ups into your private balance (prd §1561) ───────────────────────
 // Only where a pool is: a send elsewhere sets nothing aside for it; the
 // change moves together at the threshold, never per send; a deposit is a
 // contract call, so the spend limit's session key never carries one.
@@ -309,6 +309,20 @@ check(RoundUps.privateMove(saved: "90000000000000", at: "100000000000000") == ni
 check(RoundUps.privateMove(saved: "0", at: "0") == nil && RoundUps.privateMove(saved: "x", at: "1") == nil, "nothing moves nothing")
 let ruKept = try! JSONDecoder().decode(RoundUps.Setting.self, from: JSONEncoder().encode(RoundUps.Setting(on: true, step: 5)))
 check(ruKept.toPrivate == nil && !RoundUps.movesPrivately(ruKept, pools: ruPools), "a setting kept before moving privately decodes as private")
+
+// ── Swaps and Buy round up too (prd §1561) ────────────────────────────────
+// A swap rounds up the dollar value of what it sells; it carries the buy only
+// when it sells the dollar (the buy spends the dollar); a Buy only counts.
+check(RoundUps.carriesBuy(.send) && RoundUps.carriesBuy(.swap(sellsDollar: true)), "a send or a dollar swap does not carry the buy")
+check(!RoundUps.carriesBuy(.swap(sellsDollar: false)), "a swap of ETH carries a buy that spends a dollar it may not hold")
+check(!RoundUps.carriesBuy(.buy), "a Bitrefill purchase carries a call of ours")
+check(RoundUps.soldUnits(usd: 3.40, wrap: false) == "3400000" && RoundUps.soldUnits(usd: 12.3456789, wrap: false) == "12345678",
+      "what a swap sells is not its dollars in the dollar's units")
+check(RoundUps.soldUnits(usd: 3.40, wrap: true) == nil, "WETH to ETH rounds up")
+check(RoundUps.soldUnits(usd: nil, wrap: false) == nil && RoundUps.soldUnits(usd: 0, wrap: false) == nil
+      && RoundUps.soldUnits(usd: .nan, wrap: false) == nil, "a token with no price rounds up")
+let ruSwap = RoundUps.plan(dollarSent: RoundUps.soldUnits(usd: 41.38, wrap: false)!, saved: "0", step: 1)
+check(ruSwap.change == "620000" && ruSwap.buy == nil && ruSwap.savedAfter == "620000", "a $41.38 swap does not set aside $0.62")
 
 // ── WETH and ETH, one for one (prd §1559) ─────────────────────────────────
 // Every vector written by the independent encoder and simulated from the
@@ -497,6 +511,14 @@ mutate "a mainnet send sets change aside for private" "$ROUNDUPS" \
   'setting.on && (!movesPrivately(setting, pools: pools) || pools.contains(chainId))' 'setting.on'
 mutate "a shipped build offers the private target" "$ROUNDUPS" \
   $'#else\n        []' $'#else\n        [11_155_111]'
+mutate "a swap of ETH carries the buy" "$ROUNDUPS" \
+  'case .swap(let sellsDollar): sellsDollar' 'case .swap: true'
+mutate "a Bitrefill purchase carries the buy" "$ROUNDUPS" \
+  $'        case .buy: false\n        }' $'        case .buy: true\n        }'
+mutate "a wrap rounds up" "$ROUNDUPS" \
+  'guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }' 'guard let usd, usd.isFinite, usd > 0 else { return nil }'
+mutate "a swap's dollars are counted in cents" "$ROUNDUPS" \
+  'let micro = (usd * 1_000_000).rounded(.down)' 'let micro = (usd * 100).rounded(.down)'
 mutate "the list keeps a malformed address" "$LIST" \
   's.count == 42 && s.lowercased().hasPrefix("0x")' 's.lowercased().hasPrefix("0x")'
 mutate "the list keeps any decimals" "$LIST" \

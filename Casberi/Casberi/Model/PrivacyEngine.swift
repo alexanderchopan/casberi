@@ -195,7 +195,7 @@ final class PrivacyEngine: NSObject {
         try await call(.relay, Wire.Handle(handle: handle), as: Wire.Relayed.self)
     }
 
-    /// Take it back (prd §1560): a ragequit of one whole note to the account's
+    /// Take it back (prd §1561): a ragequit of one whole note to the account's
     /// owner, proof included, for the owner to sign. `discover` first.
     func prepareRagequit(commitment: String) async throws -> Wire.PreparedRagequit {
         try await call(.prepareRagequit, Wire.Ragequit(commitment: commitment), as: Wire.PreparedRagequit.self)

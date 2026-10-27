@@ -259,7 +259,7 @@ struct MoveSecurity: View {
                             }
                         }
                     }
-                    // **OR YOUR PRIVATE BALANCE (prd §1560)**, a word beside
+                    // **OR YOUR PRIVATE BALANCE (prd §1561)**, a word beside
                     // the tokens, only where this build has a pool to move the
                     // change into: Sepolia in a DEBUG build, none on mainnet.
                     ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in
@@ -331,7 +331,7 @@ struct MoveSecurity: View {
     /// $3.40 send sets aside, and when that buys. Security and the keys walk
     /// say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
-        // Private: where it runs, and that it moves together (prd §1560).
+        // Private: where it runs, and that it moves together (prd §1561).
         if setting.movesPrivately, let chain = RoundUps.privatePools.sorted().first {
             let at = PrivateMoney.figure(RoundUps.privateMoveAt, decimals: 18, symbol: "ETH")
             return String(localized: "Round-ups on \(PrivateMoney.network(chain)) move to your private balance together, once \(at) is set aside.")

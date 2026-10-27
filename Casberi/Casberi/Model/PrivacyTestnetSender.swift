@@ -137,7 +137,7 @@ enum PrivacyTestnetSender {
 
     /// Runs one prepared transaction from the sender against the latest
     /// block without sending it (`eth_call`): a call that would revert throws
-    /// `.refused` here, before anything is signed (prd §1560).
+    /// `.refused` here, before anything is signed (prd §1561).
     static func simulate(_ prepared: PrivacyEngineWire.Tx) async throws {
         let from = try ensure()
         let call: [String: Any] = ["from": from, "to": prepared.to, "data": prepared.data, "value": prepared.value]

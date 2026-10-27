@@ -393,9 +393,9 @@ n, o = t.find("RoundUps.noteSwapBuy("), t.find("let outcome = try await operate(
 sys.exit(0 if 0 <= n < o and "!dryRun" in t[t.rfind("if let roundUp", 0, n):n] else 1)
 PY
 MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
-grep -q 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: !done.roundUpWaits), on: net.chainId)' "$MOVE" || { echo "✗ a send that did not buy empties the round-up count (prd §1545)"; exit 1; }
+grep -q 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)' "$MOVE" || { echo "✗ a send that did not buy empties the round-up count (prd §1545)"; exit 1; }
 grep -q 'return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)' "$MOVE" || { echo "✗ a session send's round-up is counted as bought (prd §1545)"; exit 1; }
-grep -q 'case .send: roundUpPlan?.buy != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)' "$MOVE" || { echo "✗ an exchange round-up still says Relay carries it (prd §1545)"; exit 1; }
+grep -q 'case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)' "$MOVE" || { echo "✗ an exchange round-up still says Relay carries it (prd §1545)"; exit 1; }
 
 # Receive from another network, widened (prd §1470): what they send is every
 # coin Relay bridges from their network, what arrives is your pick, the

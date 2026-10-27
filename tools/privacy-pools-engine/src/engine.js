@@ -264,7 +264,7 @@ const methods = {
     return { handle: keep({ kind: 'withdraw', result: r }), fee: option ? JSON.parse(JSON.stringify(option.selectedQuote?.quote ?? null, (_, v) => (typeof v === 'bigint' ? hex(v) : v))) : null, ms: Math.round(now() - t), proofs };
   },
 
-  // Take it back (prd §1560): the ragequit, a public exit of one whole note
+  // Take it back (prd §1561): the ragequit, a public exit of one whole note
   // to the address that owns the account (the circuit fixes the recipient).
   // It needs no approval from 0xBow, so it is the way back for a deposit
   // the ASP refused or never answered. `discover` must have run, so the note

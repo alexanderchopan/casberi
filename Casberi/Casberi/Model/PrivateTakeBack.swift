@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SwiftData
 
-/// **TAKE IT BACK (prd §1560).** A deposit 0xBow's ASP refused (or wants a
+/// **TAKE IT BACK (prd §1561).** A deposit 0xBow's ASP refused (or wants a
 /// proof for, or has left waiting past a week) comes back the public way: the
 /// pool's ragequit, which needs no approval. The circuit fixes where it goes —
 /// the address that owns the private account, the one the deposit came from —

@@ -146,7 +146,7 @@ extension FeedScreen {
     }
 }
 
-/// **WAITING FOR APPROVAL, IN NEEDS YOU (prd §1560).** One row per deposit
+/// **WAITING FOR APPROVAL, IN NEEDS YOU (prd §1561).** One row per deposit
 /// 0xBow's ASP has not approved, as the board drew it: the amber clock,
 /// "0.0001 ETH waiting for approval", "Since 2:14 PM"; it leaves when
 /// approved. Refused (or `poi_required`), the row turns red — "0.0001 ETH not

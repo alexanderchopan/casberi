@@ -88,7 +88,7 @@ enum PrivateMoney {
         }
     }
 
-    /// `poi_required` is not approved either (prd §1560): 0xBow wants a proof
+    /// `poi_required` is not approved either (prd §1561): 0xBow wants a proof
     /// this app cannot give, so it is drawn as refused, and asked again.
     static func kind(_ status: Status) -> Row.Kind {
         switch status {
@@ -176,7 +176,7 @@ enum PrivateMoney {
         notes.contains { asksASP($0.status) }
     }
 
-    // MARK: - Needs you (prd §1560)
+    // MARK: - Needs you (prd §1561)
 
     /// A deposit Wallet › Needs you shows: waiting for 0xBow's approval (the
     /// amber clock, "Since 2:14 PM"), or not approved (red), whose act is Take
@@ -230,9 +230,9 @@ enum PrivateMoney {
         String(localized: "\(figure) back to \(owner)")
     }
 
-    /// Round-ups moved in together (prd §1560), with no verb.
+    /// Round-ups moved in together (prd §1561), with no verb.
     static func roundUpsTitle(figure: String) -> String {
-        String(localized: "\(figure) round-ups to your private balance")
+        String(localized: "\(figure) round-ups to private")
     }
 
     // MARK: - Amounts
