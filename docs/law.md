@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1708 of 1777 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1709 of 1778 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1835,7 +1835,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1449 — Robinhood Chain leaves the account (amends §1441, §1441a) (amended by §1454)
 - §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed
 - §1451 — Day and Notes stand in the rooms tray, in the Feed's order
-- §1452 — Round-ups: each dollar send rounds up, the change buys a token you pick (amended by §1465)
+- §1452 — Round-ups: each dollar send rounds up, the change buys a token you pick (amended by §1465, §1571)
 - §1453 — Receive from another network: Relay's deposit address for the route (amended by §1484, §1486)
 - §1454 — Robinhood Chain comes back to the account with every feature
 - §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458, §1570)
@@ -1944,16 +1944,17 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567)
-- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568)
+- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571)
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's…
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu…
-- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568)
+- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the…
+- §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they…
 
 ## Dead rulings → what replaced them (generated)
 

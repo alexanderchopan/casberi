@@ -69185,3 +69185,11 @@ Mock: the design canvas "Private money with 0xBow".
 4. **Measured first:** Base read one key under "$100 a month" while Ethereum and Robinhood read two; the row never said so (its Finish sat in a menu). The tray names every network's state.
 5. **Create asks the same yes/no (879):** "Require your co-signer for every send and swap." with Require or Later; a limit an older build chose counts as required, and the opening operation sets both keys with no allowance. The session-send path stays only for accounts whose allowance has not been removed yet.
 6. **Round-ups open in a tray (879, user: "same for roundups"):** one sentence, "Round up to the next $1 and buy ETH on Base.", its pink words the choices, the target in Move's glass box (tokens by network, then your private balance), the switch at the foot.
+
+## §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they reach the pool's minimum (amends §1452, §1561, §1567) (user, 2026-10-27: "why don't we make the private default. b/c that has the yield", "basically make the feature round ups in eth", "yes") — RULED, not built
+
+1. **One sentence, two choices:** "Round up to the next $1, saved as ETH in your private balance." The switch and $1/$5; the token list and "buy ETH on Base" go.
+2. **Counted on every network, moved once:** each send's change is counted wherever it is sent; at the pool's smallest deposit (about $10, 0.004 ETH, read live) the next send carries it into 0xBow's ppETH pool as one deposit, earning on Aave. One deposit is one review (§1567), never one per send.
+3. **From Base and Robinhood it crosses on the way in:** 0xBow's v2 SDK carries a deposit from another network (its `sourceChain` path, through Relay, which refuses Tor, so the move says "not through Tor", §1512).
+4. **Why not per send:** the pool refuses a deposit under its minimum, and each deposit waits on 0xBow's approval.
+5. **Until it is built** the shipped Round-ups stand (§1452, §1567).
