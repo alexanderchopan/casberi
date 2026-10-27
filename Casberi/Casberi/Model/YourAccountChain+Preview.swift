@@ -230,6 +230,14 @@ extension YourAccountChain {
             case .send(let p):
                 if let c = YourAccountOp.call(for: p) { calls.append(c) }
                 words.append(Words.send(figure(p.amount, p.token), p.token.symbol, to: p.toName ?? Words.short(p.to)))
+            case .swap(let s) where s.quote.wrap != nil:
+                // WETH and ETH one for one (prd §1559): the one call, its words.
+                if let w = s.quote.wrap {
+                    calls += s.quote.calls.compactMap(YourAccountSwap.accountCall)
+                    words.append(Words.wrap(w, figure(s.amount, s.sell)))
+                    least = (least.map { YourAccountOp.sum($0.0, s.amount) } ?? s.amount, s.buy)
+                    sold.append(Words.Sold(token: s.sell, amount: s.amount, route: nil, wrap: w))
+                }
             case .swap(let s):
                 let venue = s.quote.route?.venue
                 if let contract = s.sell.contract, let router = venue?.router,

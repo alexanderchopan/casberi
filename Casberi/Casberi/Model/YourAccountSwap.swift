@@ -472,8 +472,113 @@ enum YourAccountSwap {
         /// The crossing, for a swap whose token is on another network: what
         /// `buyAmount` arrives through, and Across's terms (prd §1555).
         var across: YourAccountAcross.Leg? = nil
+        /// WETH and ETH on one network: the network's own WETH contract,
+        /// one for one, no pool (prd §1559).
+        var wrap: Wrap? = nil
 
         var exchange: String? { route?.venue.exchange }
+    }
+
+    // MARK: - WETH and ETH, one for one (prd §1559)
+
+    /// **WETH IS ETH, WRAPPED.** No pool trades a token for itself, so WETH
+    /// for ETH found no route ("No pool … swaps WETH for ETH") and a refund
+    /// that came back as WETH (§1556) could not be ETH again. Now it is one
+    /// for one, exactly what is sold, no fee but the network's:
+    ///
+    /// - **ETH for WETH** is the network's WETH's own `deposit()`, the amount
+    ///   sent with it.
+    /// - **WETH for ETH** cannot be WETH's own `withdraw`: it pays out with a
+    ///   2,300-gas `transfer`, and a Safe's proxy takes more than that unless
+    ///   its code is already warm — measured 2026-10-26, a `withdraw` straight
+    ///   to a real SafeL2 1.4.1 proxy reverts on Base and Ethereum (and on
+    ///   Robinhood with the proxy in place), so the simulation before Face ID
+    ///   would refuse every unwrap. So the WETH goes to the network's pinned
+    ///   SwapRouter02 and its `unwrapWETH9(amount, account)` withdraws it and
+    ///   pays the account with a full-gas call, in the same transaction (one
+    ///   MultiSend: the second call failing undoes the first). The router
+    ///   takes no fee for it. Simulated from a cold Safe on all three
+    ///   networks: the account gains exactly the amount.
+    enum Wrap: String, Equatable, Sendable {
+        /// WETH for ETH: through the router's `unwrapWETH9`.
+        case unwrap
+        /// ETH for WETH: `deposit()`, the amount sent with it.
+        case wrap
+    }
+
+    /// Whether selling `sell` for `buy` on `chainId` is a wrap or an unwrap
+    /// of the network's own WETH; nil for anything else.
+    static func wrap(sell: Op.Token, buy: Op.Token, chainId: Int) -> Wrap? {
+        guard let weth = book(chainId)?.weth else { return nil }
+        let s = sell.contract?.lowercased(), b = buy.contract?.lowercased()
+        if s == weth, b == nil { return .unwrap }
+        if s == nil, b == weth { return .wrap }
+        return nil
+    }
+
+    /// The network's Uniswap SwapRouter02: the one that unwraps.
+    static func unwrapper(_ chainId: Int) -> String? {
+        book(chainId)?.venues.first { $0.kind == .uniswap }?.router
+    }
+
+    static let depositSelector: [UInt8] = [0xd0, 0xe3, 0x0d, 0xb0]
+    static let transferSelector: [UInt8] = [0xa9, 0x05, 0x9c, 0xbb]
+    static let unwrapSelector: [UInt8] = [0x49, 0x40, 0x4b, 0x7c]
+
+    /// The calls: `deposit()` with the amount; or the WETH's `transfer` of
+    /// exactly the amount to the router, then `unwrapWETH9(amount, account)`.
+    static func wrapCalls(_ w: Wrap, amount: String, account: String, chainId: Int) -> [Call]? {
+        guard let weth = book(chainId)?.weth, isPositive(amount), let units = SafeABI.word(uint256: amount),
+              SafeABI.word(address: account) != nil else { return nil }
+        switch w {
+        case .wrap:
+            return [Call(to: weth, value: amount, data: depositSelector)]
+        case .unwrap:
+            guard let router = unwrapper(chainId) else { return nil }
+            return [Call(to: weth, value: "0", data: transferSelector + YourAccount.w(router) + units),
+                    Call(to: router, value: "0", data: unwrapSelector + units + YourAccount.w(account))]
+        }
+    }
+
+    /// The quote: what is sold comes back, exactly.
+    static func wrapQuote(_ w: Wrap, amount: String, account: String, chainId: Int) -> Quote? {
+        guard let calls = wrapCalls(w, amount: amount, account: account, chainId: chainId) else { return nil }
+        return Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil, calls: calls, wrap: w)
+    }
+
+    /// **NOTHING SIGNED BUT THESE CALLS.** A wrap is exactly one `deposit()`
+    /// to the network's pinned WETH sending exactly the amount; an unwrap is
+    /// exactly the pinned WETH's `transfer` of exactly the amount to the
+    /// network's pinned SwapRouter02, then that router's `unwrapWETH9` of
+    /// exactly the amount to the account, neither sending ETH. No approval.
+    /// nil otherwise.
+    static func checkedWrap(_ quote: Quote, sell: Op.Token, buy: Op.Token, amount: String, account: String,
+                            chainId: Int) -> [Call]? {
+        guard let w = wrap(sell: sell, buy: buy, chainId: chainId), quote.wrap == w, quote.sellAmount == amount,
+              quote.buyAmount == amount, quote.minimumBuy == amount,
+              let weth = book(chainId)?.weth, let units = SafeABI.word(uint256: amount),
+              SafeABI.word(address: account) != nil else { return nil }
+        let calls = quote.calls
+        switch w {
+        case .wrap:
+            guard calls.count == 1, calls[0].to.lowercased() == weth, calls[0].value == amount,
+                  calls[0].data == depositSelector else { return nil }
+        case .unwrap:
+            guard let router = unwrapper(chainId), calls.count == 2,
+                  calls[0].to.lowercased() == weth, calls[0].value == "0",
+                  calls[0].data == transferSelector + YourAccount.w(router) + units,
+                  calls[1].to.lowercased() == router, calls[1].value == "0",
+                  calls[1].data == unwrapSelector + units + YourAccount.w(account) else { return nil }
+        }
+        return calls
+    }
+
+    /// "Unwraps WETH · no fee": the foot's words, and Details'.
+    static func words(_ w: Wrap) -> String {
+        switch w {
+        case .unwrap: String(localized: "Unwraps WETH · no fee")
+        case .wrap: String(localized: "Wraps ETH · no fee")
+        }
     }
 
     static let approveSelector: [UInt8] = [0x09, 0x5e, 0xa7, 0xb3]

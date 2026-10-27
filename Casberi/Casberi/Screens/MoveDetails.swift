@@ -125,8 +125,8 @@ struct MoveDetails: View {
     private func exchanges(_ p: YourAccountChain.Preview) -> [String] {
         var out: [String] = []
         for s in p.sold {
-            guard let route = s.route else { continue }
-            let words = YourAccountSwap.brief(route)
+            // A wrap or an unwrap says so, no pool (prd §1559).
+            guard let words = s.wrap.map(YourAccountSwap.words) ?? s.route.map(YourAccountSwap.brief) else { continue }
             if !out.contains(words) { out.append(words) }
         }
         return out

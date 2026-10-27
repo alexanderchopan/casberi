@@ -1614,6 +1614,24 @@ enum YourAccountChain {
                 steps.append(([call], nil))
                 stepWords.append(Words.send(figure(p.amount, p.token), p.token.symbol, to: p.toName ?? Words.short(p.to)))
                 if let c = p.token.contract { symbols[c.lowercased()] = p.token.symbol }
+            case .swap(let s) where YourAccountSwap.wrap(sell: s.sell, buy: s.buy, chainId: net.chainId) != nil:
+                // **WETH AND ETH, ONE FOR ONE (prd §1559).** One call to the
+                // network's WETH, checked; the simulation holds it to exactly
+                // what is sold coming back.
+                let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
+                guard let w = quote.wrap,
+                      let checked = YourAccountSwap.checkedWrap(quote, sell: s.sell, buy: s.buy, amount: s.amount,
+                                                                account: account, chainId: net.chainId) else {
+                    throw Failure(message: String(localized: "This swap could not be written"))
+                }
+                let calls = checked.compactMap(YourAccountSwap.accountCall)
+                guard calls.count == checked.count else { throw Failure(message: String(localized: "This swap could not be written")) }
+                steps.append((calls, (s.buy, s.amount)))
+                sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, route: nil, wrap: w))
+                stepWords.append(Words.wrap(w, figure(s.amount, s.sell)))
+                if let c = s.sell.contract { symbols[c.lowercased()] = s.sell.symbol }
+                if let c = s.buy.contract { symbols[c.lowercased()] = s.buy.symbol }
+                payments.append(.init(network: net, token: s.sell, amount: s.amount, to: checked[0].to, toName: nil))
             case .swap(let s):
                 let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
                 guard let checked = YourAccountSwap.checked(quote, sell: s.sell, amount: s.amount, chainId: net.chainId) else {

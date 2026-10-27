@@ -163,6 +163,18 @@ enum YourAccountPreview {
         /// A swap to another network: its crossing, for Details' Across
         /// rows (prd §1555).
         var across: YourAccountAcross.Leg? = nil
+        /// WETH and ETH one for one through the network's WETH (prd §1559).
+        var wrap: YourAccountSwap.Wrap? = nil
+    }
+
+    /// "Unwraps 0.01 WETH for 0.01 ETH" (prd §1559): one for one, the
+    /// network's WETH contract, no pool.
+    static func wrap(_ w: YourAccountSwap.Wrap, _ figure: String) -> Step {
+        switch w {
+        case .unwrap: Step(words: String(localized: "Unwraps \(figure) WETH for \(figure) ETH"),
+                           detail: String(localized: "Through Uniswap's router, which pays the ETH out in full"))
+        case .wrap: Step(words: String(localized: "Wraps \(figure) ETH for \(figure) WETH"))
+        }
     }
 
     /// A swap to another network (prd §1555): "Sends 0.01 ETH to Base
