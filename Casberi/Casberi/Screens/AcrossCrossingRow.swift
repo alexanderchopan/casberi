@@ -11,7 +11,13 @@ import SwiftUI
 struct AcrossCrossingRow: View {
     let thing: Thing
 
+    // A leaf body re-evaluates on the model's own observation: a deleted
+    // Thing must not be read (ThingRowKeying.swift, swiftdata-liveness-audit).
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         let crossing = WalletAcross.crossing(of: thing)
         let state = crossing?.state ?? .filled
         let waiting = state == .waiting
