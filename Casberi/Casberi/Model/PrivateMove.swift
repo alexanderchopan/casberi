@@ -299,7 +299,7 @@ final class PrivateMove {
                                                symbol: "ETH", amount: batch, decimals: 18, chainId: chain,
                                                tx: hash, at: Date(), status: .waiting))
             let figure = PrivateMoney.figure(batch, decimals: 18, symbol: "ETH")
-            PrivateActivity.land(PrivateMoney.roundUpsTitle(figure: figure), hash: hash, context: context)
+            if let context { PrivateActivity.land(hash: hash, title: PrivateMoney.roundUpsTitle(figure: figure), context: context) }
             NSLog("roundUpsPrivate| moved | %@ | %@ wei | label hash %@", hash, batch, deposit.labelHash)
             return hash
         } catch {

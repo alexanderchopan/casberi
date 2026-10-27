@@ -85,6 +85,13 @@ enum TestnetTx {
         }
     }
 
+    /// The tip and the fee cap a testnet send offers: at least 1 wei of tip,
+    /// and room for the price to double before it lands.
+    static func fees(gasPrice: UInt64, tip: UInt64) -> (tip: UInt64, maxFee: UInt64) {
+        let t = max(tip, 1)
+        return (t, max(gasPrice * 2, t) + t)
+    }
+
     // MARK: - Bytes
 
     static func minimal(_ n: UInt64) -> [UInt8] {

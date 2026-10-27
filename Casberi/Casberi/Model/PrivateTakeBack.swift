@@ -90,7 +90,7 @@ final class PrivateTakeBack {
             PrivateMoneyStore.shared.remove(commitment: note.commitment)
             stages[id] = nil
             let figure = PrivateMoney.figure(PrivateMoney.decimal(hex: quit.value), decimals: 18, symbol: "ETH")
-            PrivateActivity.land(PrivateMoney.takenBackTitle(figure: figure, to: YourAccount.short(owner)), hash: hash, context: context)
+            if let context { PrivateActivity.land(hash: hash, title: PrivateMoney.takenBackTitle(figure: figure, to: YourAccount.short(owner)), context: context) }
             NSLog("privateTakeBack| landed | %@ | %@ | %d s", hash, figure, Int(Date().timeIntervalSince(started)))
             return hash
         } catch {
@@ -104,21 +104,4 @@ final class PrivateTakeBack {
         #endif
     }
 
-}
-
-/// One Activity row for a private move, by its transaction (prd §1554 item
-/// 7): the eye-slash lead (`private:` ref), the words with no verb, Etherscan
-/// its door.
-@MainActor
-enum PrivateActivity {
-    static func land(_ title: String, hash: String, context: ModelContext?) {
-        guard let context else { return }
-        let ref = PrivateMoney.activityPrefix + hash.lowercased()
-        let existing = (try? context.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref }))) ?? 0
-        guard existing == 0 else { return }
-        context.insert(Thing(kind: .link, title: title, content: "https://sepolia.etherscan.io/tx/" + hash,
-                             source: "Wallet", capturedAt: .now, sourceRef: ref))
-        try? context.save()
-        NSLog("privateMove| landed | %@", title)
-    }
 }

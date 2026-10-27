@@ -37,7 +37,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil }) {
+                      onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -64,6 +64,15 @@ struct MoveTrayPresenter: ViewModifier {
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] movePrivately: raised %@", mode == .send ? "send" : "deposit")
             chrome.movePrivately = mode
+            chrome.moveTray = true
+        }
+        // `-moveFreshReceive YES` raises Receive with its Private switch on: a
+        // fresh address (prd §1560).
+        .task {
+            guard UserDefaults.standard.bool(forKey: "moveFreshReceive") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] moveFreshReceive: raised")
+            chrome.moveFreshReceive = true
             chrome.moveTray = true
         }
         #endif
@@ -164,7 +173,7 @@ struct MoveScreen: View {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
-                             privately: chrome.movePrivately)
+                             privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive)
                     .transition(.opacity)
             } else if let mode = chrome.movePrivately, PrivateMove.available {
                 // No account yet, so no other verb can be tapped: Send's
@@ -181,6 +190,16 @@ struct MoveScreen: View {
                         .accessibilityAddTraits(.isHeader)
                 }
                 .onAppear { privateMove.mode = mode }
+            } else if chrome.moveFreshReceive, PrivateMove.available {
+                // No account yet: Receive's fresh address under its one
+                // word (prd §1560). It never needs your account.
+                MoveFreshSentence(inTray: inTray, leave: { chrome.moveFreshReceive = false }) {
+                    Text("Receive")
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(minHeight: 44, alignment: .leading)
+                        .accessibilityAddTraits(.isHeader)
+                }
             } else {
                 before
             }

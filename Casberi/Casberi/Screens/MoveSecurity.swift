@@ -224,7 +224,7 @@ struct MoveSecurity: View {
                 Toggle(isOn: Binding(get: { roundUps.on }, set: { on in
                     withAnimation(DS.Motion.standard) { roundUps.on = on }
                     RoundUps.setting = roundUps
-                })) { Text("Round up each send") }
+                })) { Text("Round up sends, swaps and buys") }
                 if roundUps.on {
                     Picker(selection: Binding(get: { roundUps.step }, set: { step in
                         withAnimation(DS.Motion.standard) { roundUps.step = step }

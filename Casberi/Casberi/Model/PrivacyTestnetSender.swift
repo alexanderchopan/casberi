@@ -151,18 +151,25 @@ enum PrivacyTestnetSender {
         let from = try ensure()
         let call: [String: Any] = ["from": from, "to": prepared.to, "data": prepared.data, "value": prepared.value]
         let estimate = Int(hexToDecimal(try await rpc("eth_estimateGas", [call]) as? String ?? "0x0")) ?? 0
-        let gas = max(estimate * 5 / 4, gasFloor)
-        let nonce = try await rpc("eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
         let price = UInt64(hexToDecimal(try await rpc("eth_gasPrice", []) as? String ?? "0x0")) ?? 0
         let tipRaw = (try? await rpc("eth_maxPriorityFeePerGas", [])) as? String
-        let tip = max(UInt64(hexToDecimal(tipRaw ?? "0x0")) ?? 0, 1)
-        let maxFee = max(price * 2, tip) + tip
+        let fees = TestnetTx.fees(gasPrice: price, tip: UInt64(hexToDecimal(tipRaw ?? "0x0")) ?? 0)
+        return try await send(prepared, key: try read(), from: from, gas: max(estimate * 5 / 4, gasFloor),
+                              tip: fees.tip, maxFee: fees.maxFee)
+    }
+
+    /// Signs `prepared` with `key` as `from` at exactly this gas and these
+    /// fees, sends it and waits for it to land; returns its hash. The fresh
+    /// addresses send through here (prd §1560), their fees fixed before the
+    /// deposit's value was planned. Refuses anything off Sepolia.
+    static func send(_ prepared: PrivacyEngineWire.Tx, key: P256K.Recovery.PrivateKey, from: String,
+                     gas: Int, tip: UInt64, maxFee: UInt64) async throws -> String {
+        let nonce = try await rpc("eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
         guard let tx = TestnetTx.Tx(chainId: network.chainId, nonce: nonce,
                                     maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
                                     maxFeePerGas: "0x" + String(maxFee, radix: 16),
                                     gas: "0x" + String(gas, radix: 16), to: prepared.to,
                                     value: prepared.value, data: prepared.data) else { throw Failure.curve }
-        let key = try read()
         let signature = try key.signature(for: HashDigest(tx.signingHash))
         let compact = try signature.compactRepresentation
         let rs = [UInt8](compact.signature)

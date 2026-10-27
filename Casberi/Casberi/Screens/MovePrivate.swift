@@ -172,7 +172,8 @@ struct MovePrivateSentence<Head: View>: View {
                 .accessibilityHint(Text("Picks how much"))
             }
             if move.mode == .send {
-                MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"))
+                MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"),
+                           ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
             }
             MoveClause(glue: String(localized: "to")) { recipientWord }
             MovePhrase(String(localized: "Sepolia."), glue: String(localized: "on"))
@@ -416,17 +417,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// One Activity row for the move, by its transaction: the eye-slash
     /// lead, the words with no verb, Etherscan its door.
     private func land(_ hash: String) {
-        let ref = PrivateMoney.activityPrefix + hash.lowercased()
-        let existing = (try? context.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref }))) ?? 0
-        guard existing == 0 else { return }
         let title = PrivateMoney.activityTitle(figure: figure,
                                                to: move.mode == .send ? move.recipient.map(YourAccount.short) : nil)
-        let thing = Thing(kind: .link, title: title, content: "https://sepolia.etherscan.io/tx/" + hash,
-                          source: "Wallet", capturedAt: .now, sourceRef: ref)
-        context.insert(thing)
-        try? context.save()
+        PrivateActivity.land(hash: hash, title: title, context: context)
         chrome.refreshRooms()
-        NSLog("privateMove| landed | %@", title)
     }
 
     private func copy(_ address: String) {
@@ -442,7 +436,7 @@ enum MovePrivateLeave { case switchOff, pickRecipient }
 
 /// **THE PRIVATE SWITCH (prd §1554).** Under Send's sentence: the eye-slash,
 /// "Private", an iOS switch. Off by default and never remembered on: each
-/// Send starts public. Lime when on, as the Holdings box marks private money.
+/// Send starts public. The app's pink when on, as every switch (prd §1561).
 struct MovePrivateSwitch: View {
     @Binding var isOn: Bool
 
@@ -450,9 +444,9 @@ struct MovePrivateSwitch: View {
         HStack(alignment: .center, spacing: DS.Space.s3) {
             Image(systemName: "eye.slash")
                 .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(isOn ? DS.privateMark : DS.textTertiary)
+                .foregroundStyle(isOn ? DS.pickInk : DS.textTertiary)
                 .accessibilityHidden(true)
-            DSToggleRow(title: Text("Private"), isOn: $isOn, tint: DS.privateMark)
+            DSToggleRow(title: Text("Private"), isOn: $isOn)
         }
         .frame(minHeight: 52)
         .animation(DS.Motion.standard, value: isOn)

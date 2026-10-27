@@ -2900,6 +2900,90 @@
         }
       }
     },
+    "%@ arrived, moving in…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegaron %@, pasándolos…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が届きました。移動中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 도착, 옮기는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已到账，正在转入…"
+          }
+        }
+      }
+    },
+    "%@ arrived, not moved yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegaron %@, aún sin mover"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が届きました。まだ移していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 도착, 아직 옮기지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已到账，尚未转入"
+          }
+        }
+      }
+    },
+    "%@ arrived, too little to move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegaron %@, demasiado poco para mover"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が届きましたが、移すには少なすぎます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 도착, 옮기기에는 너무 적음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已到账，金额太少无法转入"
+          }
+        }
+      }
+    },
     "%@ arrives" : {
       "localizations" : {
         "es" : {
@@ -8458,6 +8542,34 @@
         }
       }
     },
+    "%@ moving in · Waiting for approval" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ entrando · Esperando aprobación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 移動中 · 承認待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 들어오는 중 · 승인 대기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 正在转入 · 等待批准"
+          }
+        }
+      }
+    },
     "%@ needs %lld of its %lld owners, so every one of them is load-bearing. If this phone is lost or its Face ID is re-enrolled, that Safe can never be signed for again — and its owners can't be changed either, because that takes a signature too. Add one more owner." : {
       "localizations" : {
         "es" : {
@@ -8600,6 +8712,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 个 nonce 密钥，各自独立发送"
+          }
+        }
+      }
+    },
+    "%@ not approved" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no aprobados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は承認されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 승인되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 未获批准"
           }
         }
       }
@@ -10150,6 +10290,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 对此的定价为 %lld%% — 相差 %lld 个百分点。"
+          }
+        }
+      }
+    },
+    "%@ private now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ya son privados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は非公開になりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 이제 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已转为私密"
           }
         }
       }
@@ -33049,6 +33217,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "0x、Solana 或 Bitcoin 地址，或 casberi.eth 之类的名称。"
+          }
+        }
+      }
+    },
+    "0xBow's relayer did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El relayer de 0xBow no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow のリレイヤーが応答しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 릴레이어가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 的中继器没有响应"
           }
         }
       }
@@ -63644,6 +63840,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "CoW 表示：%@"
+          }
+        }
+      }
+    },
+    "Code for the new address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Código de la dirección nueva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアドレスのコード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 주소의 코드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新地址的二维码"
           }
         }
       }
@@ -107007,6 +107231,34 @@
         }
       }
     },
+    "Move what you received to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasar lo recibido a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取った分を非公開残高に移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받은 금액을 비공개 잔액으로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将收到的款项转入你的私密余额"
+          }
+        }
+      }
+    },
     "Move your account to this iPhone on %@" : {
       "localizations" : {
         "es" : {
@@ -113246,6 +113498,34 @@
         }
       }
     },
+    "No new address could be made" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo crear una dirección nueva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアドレスを作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 주소를 만들 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法创建新地址"
+          }
+        }
+      }
+    },
     "No new blocks, so nothing sent now can land until it resumes." : {
       "localizations" : {
         "es" : {
@@ -114508,6 +114788,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有代币"
+          }
+        }
+      }
+    },
+    "No tokens under %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún token por debajo de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 未満のトークンはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 미만 토큰 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有低于 %@ 的代币"
           }
         }
       }
@@ -122138,6 +122446,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还没有可兑换的。"
+          }
+        }
+      }
+    },
+    "Nothing to sweep" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada que barrer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スイープするものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스윕할 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有可清扫的"
           }
         }
       }
@@ -172257,6 +172593,34 @@
         }
       }
     },
+    "The move did not match what arrived" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El movimiento no coincidía con lo recibido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動が受け取った額と一致しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동이 받은 금액과 일치하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转移与到账金额不符"
+          }
+        }
+      }
+    },
     "The names you filed in the address book stay." : {
       "localizations" : {
         "es" : {
@@ -172365,6 +172729,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "网络拒绝了此操作：%@"
+          }
+        }
+      }
+    },
+    "The new address, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La dirección nueva, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアドレス、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 주소, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新地址，%@"
           }
         }
       }
@@ -220014,6 +220406,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "私密"
+          }
+        }
+      }
+    },
+    "privately." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密地。"
           }
         }
       }

@@ -12,7 +12,11 @@
 #     serialisation (unsigned, signed with each parity, a 70-byte payload so
 #     the long-length head is used), and no transaction for a non-testnet;
 #   - where the engine's node requests go: logs to the node that keeps them,
-#     back to the network's own node past its head, a 429 waited out.
+#     back to the network's own node past its head, a 429 waited out;
+#   - a fresh address (prd §1560): its keys against Node's HMAC, the next
+#     index never reused, which are watched, the deposit planned out of what
+#     arrived (its gas and 0xBow's vetting fee), too little to move, the
+#     prepared deposit checked against the plan, the Entrypoint's terms.
 # It also asserts the USE: the act is Move's sentence and Holdings' rows its
 # door (no sheet of Holdings' own), the address drawn by its tail; the store asks by `labelHash`, the engine's door
 # routes before it sends, the deposit is kept with the engine's label hash,
@@ -32,9 +36,10 @@ STORE="Casberi/Casberi/Model/PrivateMoneyStore.swift"
 MOVE="Casberi/Casberi/Model/PrivateMove.swift"
 SENDER="Casberi/Casberi/Model/PrivacyTestnetSender.swift"
 ENGINE="Casberi/Casberi/Model/PrivacyEngine.swift"
+FRESH="Casberi/Casberi/Model/FreshAddress.swift"
 ENGJS="tools/privacy-pools-engine/src/engine.js"
 BUNDLE="Casberi/Casberi/Resources/privacy-engine.js"
-for f in "$PM" "$TX" "$KECCAK" "$WIRE" "$ART" "$PINS" "$REACH" "$STORE" "$MOVE" "$SENDER" "$ENGINE" "$ENGJS" "$BUNDLE"; do
+for f in "$PM" "$TX" "$FRESH" "$KECCAK" "$WIRE" "$ART" "$PINS" "$REACH" "$STORE" "$MOVE" "$SENDER" "$ENGINE" "$ENGJS" "$BUNDLE"; do
     [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 echo "private-money self-test"
@@ -70,8 +75,8 @@ awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}'
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
 ! grep -q 'PrivateMove.available ? \[nil\]' "$SENT" || { echo "✗ Private is in the verbs row"; exit 1; }
 use "$MPRIV" 'if move.mode == .send, !isDone {' "the switch shows on a deposit, or is gone from a private send"
-use "$MSCREEN" 'privately: chrome.movePrivately)' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil }' "a closed Move keeps opening privately"
+use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive)' "Move no longer opens Send privately when asked"
+use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false }' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 ! grep -q 'feedSheet' "$HOLD" || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
@@ -119,10 +124,44 @@ use "$SENT" 'guard verb == .send, RoundUps.applies(setting, on: network.chainId)
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
 [[ -n "$mv" && -n "$dn" && "$mv" -lt "$dn" ]] || { echo "✗ due round-ups no longer ride the deposit you confirmed"; exit 1; }
-use "$MOVE" 'PrivateActivity.land(PrivateMoney.roundUpsTitle(figure: figure), hash: hash, context: context)' "moved round-ups land no Activity row"
+use "$MOVE" 'PrivateActivity.land(hash: hash, title: PrivateMoney.roundUpsTitle(figure: figure), context: context)' "moved round-ups land no Activity row"
 use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: chain), at: RoundUps.privateMoveAt),' "round-ups move per send, not together"
 echo "  ok   round-ups to private: offered only on Sepolia, moved together on a deposit you confirmed"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
+
+# Receive to a fresh address (prd §1560): Receive's Private switch, off on
+# arrival and only on your own account's Receive; the fresh sentence draws
+# the address by its tail with the code carrying it whole on Sepolia, New
+# address grey and Share pink; the move is an ordinary deposit for your own
+# account (never depositFor), checked against the plan and the gas budget,
+# signed by the fresh address's own key and sent from it; its root is
+# DEBUG-only and device-only; Holdings looks too.
+FRESHM="Casberi/Casberi/Model/FreshReceive.swift"
+FRESHK="Casberi/Casberi/Model/FreshAddressKey.swift"
+FRESHV="Casberi/Casberi/Screens/MoveFreshReceive.swift"
+use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))' "Receive's Private switch is not off on arrival"
+awk '/set: \{ if \$0 \{ goFresh\(\) \} \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.available {' \
+    || { echo "✗ Receive's Private switch stands somewhere other than your own account's Receive"; exit 1; }
+use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
+use "$FRESHV" 'Text(verbatim: copied ? String(localized: "Copied") : YourAccount.short(address))' "the fresh address is no longer drawn by its tail"
+use "$FRESHV" 'SignerRequestSheet.code("ethereum:\(address)@\(PrivacyNetwork.sepolia.chainId)")' "the code no longer carries the whole address on Sepolia"
+use "$FRESHV" 'Text("New address").dsText(.heading24).foregroundStyle(DS.textSecondary)' "New address is not the foot's grey word"
+use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
+use "$FRESHV" 'MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))' "the fresh sentence's switch no longer leaves when turned off"
+! grep -qE 'prefix\([0-9]+\)' "$FRESHV" || { echo "✗ the fresh sentence draws an address's head"; exit 1; }
+use "$FRESHM" 'let deposit = try await engine.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
+! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
+use "$FRESHM" 'FreshAddress.matches(to: deposit.tx.to, value: deposit.tx.value, plan: plan, entrypoint: network.entrypoint)' "a fresh move is no longer checked against its plan"
+use "$FRESHM" 'guard estimate > 0, estimate <= FreshAddress.gasBudget else' "a fresh move is no longer held to its gas budget"
+use "$FRESHM" 'key: try FreshAddressKey.key(entry.index), from: entry.address,' "a fresh move is no longer signed by the fresh address itself"
+use "$FRESHM" 'gas: FreshAddress.gasBudget, tip: fees.tip, maxFee: fees.maxFee)' "a fresh move no longer sends at the fees it was planned with"
+use "$FRESHM" 'if case .failed = entry.state, !force { continue }' "a failed fresh move asks Face ID every 15 s"
+use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId, nonce: nonce,' "a fresh key no longer signs through TestnetTx's testnet guard"
+[[ $(head -1 "$FRESHK") == "#if DEBUG" && $(tail -1 "$FRESHK") == "#endif" ]] || { echo "✗ the fresh addresses' root is not DEBUG-only"; exit 1; }
+use "$FRESHK" 'kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,' "the fresh addresses' root is not device-only"
+use "$FRESHK" 'kSecAttrSynchronizable as String: false,' "the fresh addresses' root may sync"
+use "$HOLD" 'await FreshReceive.shared.check(context: modelContext)' "Holdings no longer looks at the fresh addresses"
+echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, a device-only root"
 echo "  ok   private money counts once: in the total and the box, never in Tokens"
 
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
@@ -278,16 +317,64 @@ let engine = NetworkReach.endpoint(forService: "Privacy Pools engine")
 check(engine.map { W.allows(URL(string: logs + "/")!, declared: $0.hosts) } == true, "the logs node is declared for the engine")
 check(engine?.refusesTor.contains("sepolia.gateway.tenderly.co") == true, "the logs node is listed as refusing Tor")
 
+// Receive to a fresh address (prd §1560).
+typealias F = FreshAddress
+let root = (0..<32).map { UInt8($0) }
+func hexs(_ b: [UInt8]?) -> String { b.map { $0.map { String(format: "%02x", $0) }.joined() } ?? "nil" }
+// Node's HMAC-SHA256 over the same message; viem names the addresses
+// 0xA9DF8B0f78AfBE9bddfC89984C49EBC6b7ce3073, 0xA95f85e7…5077, 0xF25a6861…84FC.
+check(hexs(F.key(root: root, index: 0)) == "509aaeef20ef6d071e0970e8bc2e4a3f11292a99d990439c44958ceaff1f26c5", "address 0's key is Node's")
+check(hexs(F.key(root: root, index: 1)) == "7c947401fc56e518b433bdf6f07dff2cee21e0e132f89706d31b1b3c1ab71971", "address 1's key is Node's")
+check(hexs(F.key(root: root, index: 7)) == "d23263a05a3d4b6a6ff04393f339c335ce30bd47cfab6cd39dcaab040ecbfd57", "address 7's key is Node's")
+check(F.key(root: Array(root.prefix(31)), index: 0) == nil, "a root that is not 32 bytes makes nothing")
+check(!F.isScalar(F.curveOrder) && !F.isScalar([UInt8](repeating: 0, count: 32)) && !F.isScalar([1]), "n, zero and a short key are not keys")
+check(F.isScalar(Array(F.curveOrder.dropLast()) + [0x40]) && F.isScalar([UInt8](repeating: 0, count: 31) + [1]), "n − 1 and 1 are keys")
+func entry(_ i: UInt32, _ s: F.State = .waiting) -> F.Entry { .init(index: i, address: "0x\(i)", made: t0, state: s) }
+check(F.nextIndex([]) == 0 && F.nextIndex([entry(0), entry(7), entry(1)]) == 8, "the next address is one past the highest, never reused")
+let book = (0..<12).map { entry(UInt32($0)) } + [entry(12, .moving(amount: "5"))]
+check(F.watched(book).map(\.index) == [11, 10, 9, 8, 7, 6, 5, 4], "the newest eight are watched, a move under way is not (\(F.watched(book).map(\.index)))")
+// The plan: what arrived, less the most its gas can cost, less the vetting fee.
+let p0 = F.plan(balance: "100000000000000", maxFee: "42", vettingBPS: 0, minimum: "1")
+check(p0 == F.Plan(value: "99999947500000", msgValue: "99999947500000", reserve: "52500000"), "0.0001 ETH at 42 wei a gas (\(String(describing: p0)))")
+let p1 = F.plan(balance: "100000000000000", maxFee: "42", vettingBPS: 100, minimum: "1")
+check(p1 == F.Plan(value: "99009849009900", msgValue: "99999947499999", reserve: "52500000"), "a 1% vetting fee fits under what arrived (\(String(describing: p1)))")
+check(F.plan(balance: "104999999", maxFee: "42", vettingBPS: 0, minimum: "1") == nil, "gas costing more than what moves moves nothing")
+check(F.plan(balance: "105000000", maxFee: "42", vettingBPS: 0, minimum: "1")?.value == "52500000", "gas costing what moves moves it")
+check(F.plan(balance: "100000000000000", maxFee: "42", vettingBPS: 0, minimum: "100000000000000") == nil, "below the pool's minimum moves nothing")
+check(F.plan(balance: "100", maxFee: "42", vettingBPS: 0, minimum: "1") == nil, "less than the gas moves nothing")
+check(F.plan(balance: "100000000000000", maxFee: "42", vettingBPS: 10_001, minimum: "1") == nil, "a fee past 100% is refused")
+if let p0 {
+    check(F.matches(to: "0xEB3e3961008952348445513e418ad6F43C23ca9a", value: "0x5af30d5929e0", plan: p0,
+                    entrypoint: "0xeb3e3961008952348445513e418ad6f43c23ca9a"), "the prepared deposit is the planned one")
+    check(!F.matches(to: "0xEB3e3961008952348445513e418ad6F43C23ca9a", value: "0x5af3107a4000", plan: p0,
+                     entrypoint: "0xEB3e3961008952348445513e418ad6F43C23ca9a"), "a deposit carrying another value is refused")
+    check(!F.matches(to: "0x09b94d3127019298757A6ceeB7911922085f7C01", value: "0x5af30d5929e0", plan: p0,
+                     entrypoint: "0xEB3e3961008952348445513e418ad6F43C23ca9a"), "a deposit to anything but the Entrypoint is refused")
+    check(F.decide(entry(0), balance: "100000000000000", plan: p0) == .move(p0), "paid enough, it moves")
+}
+check(F.decide(entry(0), balance: "104999999", plan: nil) == .tooLittle, "paid too little, it says so")
+check(F.decide(entry(0, .moved(amount: "1", tx: "0x")), balance: "12000000", plan: nil) == .nothing, "a move's dust never says too little")
+check(F.decide(entry(0), balance: "0", plan: nil) == .nothing, "nothing arrived")
+// The pool's terms, read off the Entrypoint (Sepolia's answers, 2026-10-26).
+check(F.assetsCall(token: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") == "0xf11b8188000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "assets(ETH)'s call")
+check(F.assetsCall(token: "0xEeee") == nil, "no call for a short address")
+let w = { (n: String) in String(repeating: "0", count: 64 - n.count) + n }
+check(F.assetConfig("0x" + w("1") + w("1") + w("0") + String(repeating: "f", count: 64)) == F.AssetConfig(enabled: true, minimum: "1", vettingBPS: 0), "ETH on Sepolia: on, 1 wei, no fee")
+check(F.assetConfig("0x" + w("1") + w("1") + w("64") + String(repeating: "f", count: 64))?.vettingBPS == 100, "USDC on Sepolia: 1%")
+check(F.assetConfig("0x" + w("0") + w("1") + w("0") + w("0"))?.enabled == false, "an asset switched off")
+check(F.assetConfig("0x" + w("1") + w("1")) == nil && F.assetConfig("nope") == nil, "a short answer is no terms")
+check(TestnetTx.fees(gasPrice: 21, tip: 0) == (1, 43) && TestnetTx.fees(gasPrice: 21, tip: 5) == (5, 47), "the fee cap leaves the price room to double")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
 SWIFT
 
 compile_and_run() {
-    swiftc -Onone "$1" "$2" "$3" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
+    swiftc -Onone "$1" "$2" "$3" "$4" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
         || { head -20 "$TMP/err"; return 2; }
     "$TMP/run"
 }
-compile_and_run "$PM" "$TX" "$WIRE" || { echo "✗ Move to private's rules fail their own self-test"; exit 1; }
+compile_and_run "$PM" "$TX" "$WIRE" "$FRESH" || { echo "✗ Move to private's rules fail their own self-test"; exit 1; }
 echo "  ok   the ASP's answer, the rows, amounts, viem's bytes and the node routes"
 
 mutate() {
@@ -295,14 +382,15 @@ mutate() {
     cp "$file" "$TMP/mut.swift"
     perl -0pi -e "$perl_expr" "$TMP/mut.swift"
     if cmp -s "$file" "$TMP/mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
-    local pm="$PM" tx="$TX" wire="$WIRE"
+    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH"
     case "$file" in
         "$PM") pm="$TMP/mut.swift" ;;
         "$TX") tx="$TMP/mut.swift" ;;
         "$WIRE") wire="$TMP/mut.swift" ;;
+        "$FRESH") fresh="$TMP/mut.swift" ;;
     esac
     local ok
-    ok=$(compile_and_run "$pm" "$tx" "$wire" >/dev/null 2>&1 && echo y || echo n)
+    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" >/dev/null 2>&1 && echo y || echo n)
     [[ "$ok" == n ]] || { echo "✗ SURVIVED  $name"; exit 1; }
     echo "  ok   catches  $name"
 }
@@ -328,4 +416,15 @@ mutate "parity 0 is a zero byte" "$TX" 's/\.bytes\(yParity == 0 \? \[\] : \[1\]\
 mutate "r keeps its leading zero" "$TX" 's/\.bytes\(TestnetTx\.stripped\(r\)\)/.bytes(r)/'
 mutate "every request goes to the logs node" "$WIRE" 's/rpcMethods\(body\)\.contains\("eth_getLogs"\)/!rpcMethods(body).isEmpty/'
 mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current head", options: \.caseInsensitive\) != nil/body.isEmpty/'
-echo "  ok   22 mutations"
+mutate "the fee cap forgets the price can double" "$TX" 's/max\(gasPrice \* 2, t\) \+ t/max(gasPrice, t) + t/'
+mutate "the fresh key ignores its index" "$FRESH" 's/let message = domain \+ bigEndian\(index\) \+ bigEndian\(counter\)/let message = domain + bigEndian(counter)/'
+mutate "a fresh key may be n or more" "$FRESH" 's/ && k\.lexicographicallyPrecedes\(curveOrder\)//'
+mutate "a fresh address is reused" "$FRESH" 's/entries\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/entries.map(\\.index).max()/'
+mutate "a move under way is asked again" "$FRESH" 's/entries\.filter \{ if case \.moving = \$0\.state \{ false \} else \{ true \} \}/entries/'
+mutate "the gas is not taken out of what arrived" "$FRESH" 's/let spare = have - reserve/let spare = have/'
+mutate "the vetting fee is not left room for" "$FRESH" 's/Decimal\(10_000 \+ vettingBPS\)/Decimal(10_000)/'
+mutate "gas may cost more than what moves" "$FRESH" 's/value >= max\(floor, reserve, 1\)/value >= max(floor, 1)/'
+mutate "a move's dust says too little" "$FRESH" 's/        default: return \.nothing\n        \}\n    \}/        default: return .tooLittle\n        }\n    }/'
+mutate "the prepared deposit is not checked against the plan" "$FRESH" 's/ && PrivateMoney\.decimal\(hex: value\) == plan\.msgValue//'
+mutate "the vetting fee is read from the wrong word" "$FRESH" 's/guard let bps = Int\(word\(2\)\)/guard let bps = Int(word(1))/'
+echo "  ok   33 mutations"

@@ -73,6 +73,41 @@ enum RoundUps {
         var movesPrivately: Bool { RoundUps.movesPrivately(self, pools: RoundUps.privatePools) }
     }
 
+    // MARK: - Swaps and Buy round up too (prd §1561)
+
+    /// What rounds up, and whether its own transaction can carry the buy.
+    enum Act: Equatable, Sendable {
+        /// Dollars sent: the transaction carries the buy (§1452).
+        case send
+        /// A swap: the dollar value of what is sold rounds up. Its Face ID
+        /// transaction carries the buy only when what it sells is the
+        /// network's dollar — the buy spends the dollar, which a swap of ETH
+        /// may leave the account without; otherwise the change counts and is
+        /// bought by the next send or dollar swap.
+        case swap(sellsDollar: Bool)
+        /// A Bitrefill purchase: paid by a signed authorisation Bitrefill
+        /// submits (§1473), so no call of ours rides it; it only counts.
+        case buy
+    }
+
+    static func carriesBuy(_ act: Act) -> Bool {
+        switch act {
+        case .send: true
+        case .swap(let sellsDollar): sellsDollar
+        case .buy: false
+        }
+    }
+
+    /// The dollar value of what a swap sells (or a Buy pays), in the
+    /// dollar's units, so it rounds up as dollars sent do. nil — no round-up
+    /// — for a token with no price and for WETH⇄ETH (one for one, no trade).
+    static func soldUnits(usd: Double?, wrap: Bool) -> String? {
+        guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }
+        let micro = (usd * 1_000_000).rounded(.down)
+        guard micro >= 1, micro < 1e15 else { return nil }
+        return String(Int64(micro))
+    }
+
     // MARK: - Into your private balance (prd §1560)
 
     /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the networks
