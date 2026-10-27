@@ -1377,6 +1377,8 @@ enum YourAccountChain {
         var roundUpWaits = false
         /// A swap to another network it sent (prd §1555), as the Wallet keeps it.
         var crossing: YourAccountAcross.Crossing? = nil
+        /// Round-ups into your private balance rode this operation (prd §1565).
+        var rode = false
     }
 
     /// One transaction, assembled and simulated, everything but its gas and
@@ -1435,6 +1437,7 @@ enum YourAccountChain {
     /// run once more; anything older is assembled and priced afresh.
     static func transact(_ items: [Item], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
                          roundUp: RoundUpBuy? = nil, renew: Bool = false,
+                         ride: [(to: String, data: String, value: String)] = [],
                          report: @escaping @Sendable (String) -> Void = { _ in },
                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
         guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else {
@@ -1450,9 +1453,12 @@ enum YourAccountChain {
         #endif
         await stage(.preparing)
         let route: Prepared.Signs = coSigner == nil ? .owner : .bothKeys
-        let kept = await Prepared.take(items, roundUp: roundUp, route: route)
+        // A riding deposit makes a different operation from the preview's.
+        let kept = ride.isEmpty ? await Prepared.take(items, roundUp: roundUp, route: route) : nil
         var a: Assembled
+        var approvalCount = 0
         if let kept, let held = kept.assembled {
+            approvalCount = held.approvalCount
             // The preview's own calls, checked once more against the state now.
             let again = await check(net, account: account, approvals: Array(held.calls.prefix(held.approvalCount)),
                                     steps: held.steps, symbols: held.symbols)
@@ -1461,9 +1467,33 @@ enum YourAccountChain {
             a.simulated = again
             report("signing the preview from \(Int(Date().timeIntervalSince(kept.made)))s ago")
         } else {
-            a = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil,
-                                   report: report).assembled
+            let parts = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil, report: report)
+            a = parts.assembled
+            approvalCount = parts.approvalCount
             try require(a.simulated, on: net, swaps: a.mustCheck)
+        }
+        // **ROUND-UPS INTO YOUR PRIVATE BALANCE RIDE THIS OPERATION (prd
+        // §1565).** The batch's calls (the keystore the first time, USDC's
+        // approval, ppUSDC's router) join the send's in ONE Face ID
+        // operation, and the whole of it is simulated again with them before
+        // anything is signed; a node that will not simulate signs nothing.
+        if !ride.isEmpty {
+            var extra: [YourAccountOp.Call] = []
+            for c in ride {
+                guard SafeABI.word(address: c.to) != nil, let data = SafeABI.hexBytes(c.data),
+                      let value = SafeABI.word(uint256: c.value) else {
+                    throw Failure(message: String(localized: "This send could not be written"))
+                }
+                extra.append(.init(operation: 0, to: c.to, value: value, data: data))
+            }
+            let withRide = await check(net, account: account, approvals: Array(a.calls.prefix(approvalCount)),
+                                       steps: a.steps + [(calls: Array(a.calls.dropFirst(approvalCount + a.steps.reduce(0) { $0 + $1.calls.count })) + extra, swap: nil)])
+            if case .notChecked = withRide.checked {
+                throw Failure(message: String(localized: "\(net.name) could not check this, so nothing was signed"))
+            }
+            try require(withRide, on: net, swaps: a.mustCheck)
+            a.calls += extra
+            report("a private round-up rides: \(extra.count) calls")
         }
         // ETH sent to another network must be proven to arrive as ETH: the
         // handler's message run on the receiving network (prd §1555).
@@ -1503,7 +1533,7 @@ enum YourAccountChain {
             crossing = c
         }
         guard case .landed = sent.outcome, !swaps.isEmpty else {
-            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing)
+            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: !ride.isEmpty)
         }
         // A token bought by one swap alone: what actually arrived.
         var bought = a.simulated.paid
@@ -1515,7 +1545,7 @@ enum YourAccountChain {
             let arrived = YourAccountOp.difference(now, then)
             if arrived != "0" { bought[i] = arrived }
         }
-        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing)
+        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: !ride.isEmpty)
     }
 
     /// What `assemble` hands back beside the transaction: how many of its

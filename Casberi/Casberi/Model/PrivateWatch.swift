@@ -44,13 +44,11 @@ enum PrivateWatchTask {
     /// private could change: a fresh address, or a deposit waiting.
     @MainActor
     static func schedule() {
-        #if DEBUG
         guard PrivateMove.available, !DemoMode.isActive,
               !FreshReceive.shared.entries.isEmpty || PrivateMoney.anyWaiting(PrivateMoneyStore.shared.notes) else { return }
         let request = BGAppRefreshTaskRequest(identifier: taskID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         try? BGTaskScheduler.shared.submit(request)
-        #endif
     }
 
     private static func handle(_ task: BGAppRefreshTask) {
@@ -58,11 +56,9 @@ enum PrivateWatchTask {
         let done = Once()
         let work = Task { @MainActor in
             var ok = true
-            #if DEBUG
             if let context = SharedStore.live?.mainContext {
                 ok = await PrivateWatch.run(context: context, budget: budget, why: "background")
             }
-            #endif
             await WalletBackgroundRefresh.runNotifySweep()
             done.run { task.setTaskCompleted(success: ok && !Task.isCancelled) }
         }
@@ -85,8 +81,11 @@ enum PrivateWatchTask {
     }
 }
 
-#if DEBUG
-/// The watch's one pass, shared by the background task and its probe.
+/// The watch's one pass, shared by the background task and its probe. In
+/// every build since prd §1565: on Ethereum it asks the ASP about every
+/// waiting deposit and moves what a fresh address was paid (ETH, its gas out
+/// of what arrived); a USDC payment that needs your private ETH for its gas
+/// waits for you to look, since that spends private money and asks for you.
 @MainActor
 enum PrivateWatch {
 
@@ -139,6 +138,7 @@ enum PrivateWatch {
         return !Task.isCancelled
     }
 
+    #if DEBUG
     /// `-privateRecoveryProbe`: each root by its public id (never its
     /// bytes), its owner, the notes by account, the fresh book by root.
     static func logState() {
@@ -158,6 +158,7 @@ enum PrivateWatch {
                   YourAccount.short(e.address), String(describing: e.state))
         }
     }
+    #endif
 
     private static func isReady(_ state: TorState) -> Bool {
         if case .ready = state { return true }
@@ -169,16 +170,31 @@ enum PrivateWatch {
     /// events read with its keys, the notes kept, their approval asked.
     static func restoreNotes() async {
         let store = PrivateMoneyStore.shared
-        for (root, _) in PrivateRootKey.roots() where !PrivateRootKey.found(root) {
+        guard let network = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) else { return }
+        let pending = PrivateRootKey.roots().filter { !PrivateRootKey.found($0.id) }
+        // "Restoring your private balance" (prd §1565) only where something
+        // comes back: a root this phone did not make.
+        let restoring = pending.contains { !PrivateRootKey.madeHere($0.id) }
+        if restoring { store.beginRestore() }
+        defer { if restoring { store.endRestore() } }
+        for (root, _) in pending {
             guard !Task.isCancelled else { return }
             let started = Date()
             do {
-                try await PrivateAccount.open(root, reason: nil)
+                if network.isTest {
+                    #if DEBUG
+                    try await PrivateAccount.open(root, reason: nil)
+                    #endif
+                } else {
+                    // On Ethereum the owner is your account: none, nothing to find yet.
+                    guard PrivateOnEthereum.owner != nil else { continue }
+                    try await PrivateOnEthereum.open(root, reason: nil)
+                }
                 let found = try await PrivacyEngine.shared.discover()
-                store.reconcile(found, root: root)
+                store.reconcile(found, root: root, network: network)
                 await store.fillLabelHashes()
                 PrivateRootKey.markFound(root)
-                NSLog("privateWatch| notes | %@ | %d found | %d unspent | %d s", root, found.notes.count,
+                NSLog("privateWatch| notes | %@ | %@ | %d found | %d unspent | %d s", network.name, root, found.notes.count,
                       store.notes.filter { $0.root == root }.count, Int(Date().timeIntervalSince(started)))
             } catch {
                 NSLog("privateWatch| notes | %@ | failed | %@", root, String(describing: error))
@@ -187,6 +203,8 @@ enum PrivateWatch {
         await store.refresh(force: true)
     }
 }
+
+#if DEBUG
 
 /// **MOVING THE DEVICE-ONLY ACCOUNT IN (prd §1562).** What the account made
 /// before the root holds, approved, is withdrawn through 0xBow's relayer to a

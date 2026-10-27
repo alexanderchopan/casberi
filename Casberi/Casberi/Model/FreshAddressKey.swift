@@ -43,18 +43,11 @@ enum FreshAddressKey {
         return [UInt8](data)
     }
 
-    /// The fresh root of private root `root` (nil: the device-only one).
-    private static func freshRoot(_ root: String?) throws -> [UInt8] {
-        guard let root else { return try legacyRoot() }
-        guard var privateRoot = PrivateRootKey.root(root) else { throw Failure.noRoot }
-        defer { for i in privateRoot.indices { privateRoot[i] = 0 } }
-        guard let fresh = PrivateRoot.derive(privateRoot, .freshAddresses) else { throw Failure.curve }
-        return fresh
-    }
-
-    /// Address `index`'s signing key under `root`.
+    /// Address `index`'s signing key under `root`: the private root's
+    /// through `FreshSigner` (shipping, prd §1565), else the device-only root's.
     static func key(_ index: UInt32, root: String?) throws -> P256K.Recovery.PrivateKey {
-        var fresh = try freshRoot(root)
+        if let root { return try FreshSigner.key(index, root: root) }
+        var fresh = try legacyRoot()
         defer { for i in fresh.indices { fresh[i] = 0 } }
         guard let k = FreshAddress.key(root: fresh, index: index) else { throw Failure.curve }
         return try P256K.Recovery.PrivateKey(dataRepresentation: Data(k), format: .uncompressed)
@@ -62,6 +55,7 @@ enum FreshAddressKey {
 
     /// Address `index` under `root`, checksummed.
     static func address(_ index: UInt32, root: String?) throws -> String {
+        if let root { return try FreshSigner.address(index, root: root) }
         let k = try key(index, root: root)
         guard let made = SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation)) else {
             throw Failure.curve

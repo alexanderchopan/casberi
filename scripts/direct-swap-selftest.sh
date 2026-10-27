@@ -294,7 +294,18 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [r
 var ruPriv = RoundUps.Setting(on: true)
 ruPriv.toPrivate = true
 let ruPools: Set<Int> = [11155111]
-check(RoundUps.privatePools.isEmpty, "a shipped build offers the private target with no pool to move into")
+check(RoundUps.privatePools == [1], "a shipped build offers private round-ups somewhere other than Ethereum (prd §1565)")
+// On Ethereum the change is dollars, moved as USDC into ppUSDC once it reaches
+// $5 and the pool's smallest deposit, read live; unread, it keeps counting.
+check(RoundUps.privateMoveAt(on: 1, poolMinimum: "10046461") == "10046461", "Ethereum's round-ups move under ppUSDC's minimum")
+check(RoundUps.privateMoveAt(on: 1, poolMinimum: "1000000") == "5000000", "Ethereum's round-ups move under $5")
+check(RoundUps.privateMoveAt(on: 1, poolMinimum: nil) == nil, "round-ups move before the pool's minimum is read")
+check(RoundUps.privateMoveAt(on: 11155111, poolMinimum: nil) == RoundUps.privateMoveAt, "a test network's threshold is not its coin's")
+let ruEth = RoundUps.privatePlan(dollarSent: "4300000", saved: "9900000", step: 1, threshold: "10046461")
+check(ruEth.change == "700000" && ruEth.buy == "10600000" && ruEth.savedAfter == "0", "a $4.30 send that reaches the minimum does not move the whole count")
+let ruEthWait = RoundUps.privatePlan(dollarSent: "4300000", saved: "2000000", step: 1, threshold: "10046461")
+check(ruEthWait.buy == nil && ruEthWait.savedAfter == "2700000", "the change moves before the minimum (one deposit a send)")
+check(RoundUps.privatePlan(dollarSent: "4300000", saved: "99000000", step: 1, threshold: nil).buy == nil, "it moves with no minimum read")
 check(RoundUps.movesPrivately(ruPriv, pools: ruPools) && !RoundUps.movesPrivately(ruPriv, pools: [])
       && !RoundUps.movesPrivately(RoundUps.Setting(on: true), pools: ruPools), "moving privately is the pick, where a pool is")
 check(RoundUps.applies(ruPriv, on: 11155111, pools: ruPools) && !RoundUps.applies(ruPriv, on: 8453, pools: ruPools),
@@ -509,8 +520,12 @@ mutate "the change moves into private per send" "$ROUNDUPS" \
   'have > 0, let need = Decimal(string: threshold), have >= need else' 'have > 0, let need = Decimal(string: threshold), need >= 0 else'
 mutate "a mainnet send sets change aside for private" "$ROUNDUPS" \
   'setting.on && (!movesPrivately(setting, pools: pools) || pools.contains(chainId))' 'setting.on'
-mutate "a shipped build offers the private target" "$ROUNDUPS" \
-  $'#else\n        []' $'#else\n        [11_155_111]'
+mutate "a shipped build offers private round-ups off Ethereum" "$ROUNDUPS" \
+  $'#else\n        [ethereumPool]' $'#else\n        [ethereumPool, 8453]'
+mutate "Ethereum's round-ups move under the pool's minimum" "$ROUNDUPS" \
+  'return NSDecimalNumber(decimal: max(floor, five)).stringValue' 'return NSDecimalNumber(decimal: five).stringValue'
+mutate "Ethereum's round-ups move per send" "$ROUNDUPS" \
+  'if let threshold, YourAccountOp.atMost(threshold, total) {' 'if threshold != nil {'
 mutate "a swap of ETH carries the buy" "$ROUNDUPS" \
   'case .swap(let sellsDollar): sellsDollar' 'case .swap: true'
 mutate "a Bitrefill purchase carries the buy" "$ROUNDUPS" \

@@ -337,6 +337,30 @@ enum PrivateMoney {
     /// smallest deposit (0.004 ETH, `Entrypoint.assets`) up.
     static let mainnetLadder = ["0.001", "0.005", "0.01", "0.025", "0.05", "0.1", "0.25", "0.5", "1"]
 
+    /// USDC on Ethereum (prd §1565): ppUSDC's smallest deposit is 10 shares
+    /// (about $10.05 at the rate read 2026-10-26), so the ladder starts there
+    /// and the minimum, read live, takes out a step it does not cover.
+    static let usdcLadder = ["10", "20", "50", "100", "250", "500", "1000", "2500"]
+
+    // MARK: - Balance to balance (prd §1565)
+
+    /// `Keystore.viewingKeys(address)`: the public viewing key an owner
+    /// registered, or zero for an address with no private account.
+    static func viewingKeyCall(owner: String) -> String? {
+        guard isAddress(owner) else { return nil }
+        return "0x03bb850a" + String(repeating: "0", count: 24) + owner.dropFirst(2).lowercased()
+    }
+
+    /// Whether the keystore's answer names a viewing key: a whole word, not
+    /// zero. A zero key is no private account (the SDK refuses one, and
+    /// encrypting to it would be readable by anyone); an unreadable answer is
+    /// not one either, so the send pays out publicly.
+    static func hasViewingKey(_ answer: String?) -> Bool {
+        guard let answer, answer.hasPrefix("0x") else { return false }
+        let body = answer.dropFirst(2)
+        return body.count == 64 && body.allSatisfy(\.isHexDigit) && body.contains { $0 != "0" }
+    }
+
     /// The amounts on `ladder` the balance covers with `reserve` kept back,
     /// none under `minimum` (base units: the pool's smallest deposit).
     static func choices(balance: String, reserve: String, decimals: Int = 18,

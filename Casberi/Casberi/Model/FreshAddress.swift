@@ -73,7 +73,15 @@ enum FreshAddress {
         /// The private root it comes from (`PrivateRoot.id`, prd §1562); nil
         /// for the device-only root an address made before it came from.
         var root: String? = nil
+        /// The network it was shown for (prd §1565); nil for Sepolia, where
+        /// every address made before was.
+        var chainId: Int? = nil
+        /// What its state counts, by symbol (prd §1565: USDC arrives too);
+        /// nil for ETH.
+        var symbol: String? = nil
         var id: String { "\(root ?? PrivateRoot.legacy):\(index)" }
+        var network: Int { chainId ?? 11_155_111 }
+        var token: String { symbol ?? "ETH" }
     }
 
     enum State: Codable, Equatable {
@@ -87,6 +95,9 @@ enum FreshAddress {
         case tooLittle(amount: String)
         /// The move failed; the next look tries again.
         case failed(amount: String)
+        /// A token arrived and the address holds no ETH to move it; your
+        /// private ETH is too little to pay its gas (prd §1565).
+        case needsGas(amount: String)
     }
 
     /// The next address's index under `root`: one past its highest, so none
@@ -156,6 +167,70 @@ enum FreshAddress {
     /// exactly the planned value. Checked before the fresh key signs.
     static func matches(to: String, value: String, plan: Plan, entrypoint: String) -> Bool {
         to.lowercased() == entrypoint.lowercased() && PrivateMoney.decimal(hex: value) == plan.msgValue
+    }
+
+    // MARK: - On Ethereum: into the yield pool, its gas out of what arrived (prd §1565)
+
+    /// The smallest budget the pool takes, in the token: its minimum (in
+    /// shares, `Entrypoint.assets`) at today's rate, rounded up, plus the
+    /// router's own headroom (1 ppm of the budget) and its supply buffer.
+    static func minimumBudget(minimumShares: String, exchangeRate: String, shareDecimals: Int) -> String? {
+        guard let shares = Decimal(string: minimumShares), let rate = Decimal(string: exchangeRate), shares >= 0, rate > 0,
+              (0...36).contains(shareDecimals) else { return nil }
+        var scale = Decimal(1)
+        for _ in 0..<shareDecimals { scale *= 10 }
+        var worth = shares * rate / scale, up = Decimal()
+        NSDecimalRound(&up, &worth, 0, .up)
+        var headroom = up / 1_000_000, roomUp = Decimal()
+        NSDecimalRound(&roomUp, &headroom, 0, .up)
+        return PrivateMoney.plain(up + roomUp + 10)
+    }
+
+    /// An ETH deposit through ppETH's router, sent by the fresh address: the
+    /// most it may spend (what arrived less the most its gas can cost at
+    /// `maxFee`), the router refunding what it does not use. Nil — "too
+    /// little to move" — under the pool's smallest deposit, or when the gas
+    /// could cost more than what moves.
+    struct YieldPlan: Equatable {
+        let budget: String
+        let reserve: String
+    }
+
+    static func yieldPlan(balance: String, maxFee: String, minimumBudget: String, gas: Int = gasBudget) -> YieldPlan? {
+        guard let have = Decimal(string: balance), let fee = Decimal(string: maxFee), let floor = Decimal(string: minimumBudget),
+              gas > 0 else { return nil }
+        let reserve = Decimal(gas) * fee
+        let budget = have - reserve
+        guard budget >= max(floor, reserve, 1) else { return nil }
+        return YieldPlan(budget: PrivateMoney.plain(budget), reserve: PrivateMoney.plain(reserve))
+    }
+
+    /// Below this, what arrived is too little to move: the pool's smallest
+    /// deposit plus the gas kept back — computed from the pool's terms and
+    /// today's fees, never a constant (≈ 0.0041 ETH on 2026-10-26 at 0.05
+    /// gwei: 0.004 shares at 1.00125, plus 1.25M gas at twice the price).
+    static func tooLittleBelow(minimumBudget: String, maxFee: String, gas: Int = gasBudget) -> String? {
+        guard let floor = Decimal(string: minimumBudget), let fee = Decimal(string: maxFee) else { return nil }
+        let reserve = Decimal(gas) * fee
+        return PrivateMoney.plain(max(floor, reserve) + reserve)
+    }
+
+    /// The prepared yield deposit is the one planned: to the token's own
+    /// router, no approvals for ETH, carrying no more than the budget.
+    static func matchesYield(to: String, value: String, approvals: Int, budget: String, pool: PrivacyNetwork.YieldPool) -> Bool {
+        guard to.lowercased() == pool.router.lowercased(), let most = Decimal(string: budget),
+              let carried = Decimal(string: PrivateMoney.decimal(hex: value)) else { return false }
+        return pool.native ? (approvals == 0 && carried <= most && carried > 0) : carried == 0
+    }
+
+    /// **A TOKEN AT A FRESH ADDRESS (prd §1565): its gas.** A fresh address
+    /// paid USDC holds no ETH to move it. Its approval and deposit cost at
+    /// most `need` at `maxFee`; what it already holds counts. The shortfall
+    /// is what your private ETH pays it, relayed (no link to your account).
+    static func tokenGas(ethHeld: String, maxFee: String) -> (need: String, shortfall: String)? {
+        guard let held = Decimal(string: ethHeld), let fee = Decimal(string: maxFee) else { return nil }
+        let need = Decimal(FreshTx.approveGas + gasBudget) * fee
+        return (PrivateMoney.plain(need), PrivateMoney.plain(max(need - held, 0)))
     }
 
     // MARK: - The pool's terms for a token (`Entrypoint.assets`)

@@ -6,11 +6,14 @@
 cd "${0:A:h}"
 WRITE_RECORD=1 node mainnet-sim.mjs || { echo "MAINNET SIM FAILED"; exit 1; }
 tmp=$(mktemp)
-for m in devkeys value proof notowner recipient; do
+for m in devkeys value proof notowner recipient freshgas usdcgas transferto; do
   case $m in
     devkeys|value|proof) s=eth ;;
     notowner) s=ragequit ;;
     recipient) s=withdraw ;;
+    freshgas) s=fresh ;;
+    usdcgas) s=freshusdc ;;
+    transferto) s=transfer ;;
   esac
   if node mainnet-sim.mjs $s --mutate $m > $tmp 2>&1; then
     echo "mutation $m: caught ($(grep -m1 FAILED $tmp | cut -c1-160))"
@@ -19,4 +22,4 @@ for m in devkeys value proof notowner recipient; do
   fi
 done
 rm -f $tmp
-echo "mainnet simulation: every move lands; 5 of 5 mutations caught"
+echo "mainnet simulation: every move lands; 8 of 8 mutations caught"

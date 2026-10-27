@@ -308,10 +308,11 @@ struct MoveSecurity: View {
                             }
                         }
                     }
-                    // **OR YOUR PRIVATE BALANCE (prd §1561)**, a word beside
-                    // the tokens, only where this build has a pool to move the
-                    // change into: Sepolia in a DEBUG build, none on mainnet.
-                    ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in
+                    // **OR YOUR PRIVATE BALANCE (prd §1561, §1565)**, a word
+                    // beside the tokens, only where this build has a pool to
+                    // move the change into: Ethereum (ppUSDC), or Sepolia in
+                    // a DEBUG build; none with the kill switch off.
+                    ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in
                         Section(PrivateMoney.network(chain)) {
                             Toggle(isOn: Binding(get: { roundUps.movesPrivately }, set: { on in
                                 guard on else { return }
@@ -336,6 +337,11 @@ struct MoveSecurity: View {
         }
         .walletRowPitch()
         .task {
+            // Where round-ups move privately on Ethereum: the pool's smallest
+            // deposit, read live for the sentence below (prd §1565).
+            if RoundUps.privatePools.contains(RoundUps.ethereumPool), PrivateMove.available {
+                await PrivateMoneyStore.shared.readYield(including: .ethereum)
+            }
             guard roundUpChoices.isEmpty else { return }
             var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
             for net in YourAccountOp.networks {
@@ -382,6 +388,15 @@ struct MoveSecurity: View {
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
         // Private: where it runs, and that it moves together (prd §1561).
         if setting.movesPrivately, let chain = RoundUps.privatePools.sorted().first {
+            // On Ethereum the change is dollars, moved as USDC once it reaches
+            // the pool's smallest deposit, read live (prd §1565).
+            if chain == RoundUps.ethereumPool {
+                guard let at = RoundUps.privateMoveAt(on: chain, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) else {
+                    return String(localized: "Round-ups on Ethereum move to your private balance together, once the pool's smallest deposit is set aside.")
+                }
+                let usd = YourAccountOp.dollars(at, decimals: RoundUps.dollarDecimals, price: 1)
+                return String(localized: "Round-ups on Ethereum move to your private balance together, once \(WalletValue.money(usd)) is set aside.")
+            }
             let at = PrivateMoney.figure(RoundUps.privateMoveAt, decimals: 18, symbol: "ETH")
             return String(localized: "Round-ups on \(PrivateMoney.network(chain)) move to your private balance together, once \(at) is set aside.")
         }

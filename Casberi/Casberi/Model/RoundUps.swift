@@ -110,17 +110,47 @@ enum RoundUps {
 
     // MARK: - Into your private balance (prd §1561)
 
-    /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the networks
-    /// this build has a private pool it can deposit into. Sepolia in a DEBUG
-    /// build (the app's pool is Sepolia's, its sender DEBUG-only, prd §1554);
-    /// none in a shipped one. So on Base, Ethereum and Robinhood the choice is
-    /// never offered (no dead control, prd §83).
+    /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the network
+    /// this build keeps private money on (prd §1565): Ethereum in every
+    /// build (0xBow's pool 1, ppUSDC), or in a DEBUG build Sepolia unless
+    /// launched with `-privateNetwork ethereum` — the same choice
+    /// `PrivacyNetwork.current` makes. On Base and Robinhood the choice is
+    /// never offered (no dead control, prd §83); the kill switch
+    /// (`PrivateMainnet.on`) takes Ethereum away where it is offered
+    /// (`MoveSecurity`, `MoveSentence`).
     static var privatePools: Set<Int> {
         #if DEBUG
-        [11_155_111]
+        UserDefaults.standard.string(forKey: "privateNetwork") == "ethereum" ? [ethereumPool] : [11_155_111]
         #else
-        []
+        [ethereumPool]
         #endif
+    }
+
+    /// Ethereum's chain id: the one network with value where round-ups move
+    /// into your private balance, as USDC into ppUSDC (prd §1565).
+    static let ethereumPool = 1
+
+    /// When the change moves on Ethereum, in the dollar's units: everything
+    /// counted once it reaches $5 AND the pool's smallest deposit in USDC
+    /// (`poolMinimum`, read live: about $10.05 on 2026-10-26), never per
+    /// send. Nil before the minimum is read: the change keeps counting.
+    /// A test network's threshold is its coin's (`privateMoveAt`).
+    static func privateMoveAt(on chainId: Int, poolMinimum: String?) -> String? {
+        guard chainId == ethereumPool else { return privateMoveAt }
+        guard let floor = poolMinimum.flatMap({ Decimal(string: $0) }), floor > 0, let five = Decimal(string: buyAt) else { return nil }
+        return NSDecimalNumber(decimal: max(floor, five)).stringValue
+    }
+
+    /// One send's round-up moving privately on Ethereum: the change, and —
+    /// once the count reaches `threshold` with it — everything counted, to
+    /// move into your private balance now (the plan's `buy`).
+    static func privatePlan(dollarSent units: String, saved: String, step: Int, threshold: String?) -> Plan {
+        let change = change(units, step: step)
+        let total = YourAccountOp.sum(saved, change)
+        if let threshold, YourAccountOp.atMost(threshold, total) {
+            return Plan(change: change, buy: total, savedAfter: "0")
+        }
+        return Plan(change: change, buy: nil, savedAfter: total)
     }
 
     /// Whether a send on `chainId` rounds up at all: on, and when the change

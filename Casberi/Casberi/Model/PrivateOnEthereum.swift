@@ -126,20 +126,74 @@ enum PrivateOnEthereum {
 
     /// Sends `amount` (base units of the token) from the root's approved
     /// private balance to `to`, through 0xBow's relayer, which posts it and
-    /// pays the gas for a fee taken in shares; the router pays `to` the
-    /// token (native ETH for ETH). Asks for the device owner first. Returns
-    /// the relayer's transaction hash.
-    static func send(token: String, amount: String, to: String) async throws -> String {
+    /// pays the gas for a fee taken in shares. To a plain address the router
+    /// pays the token out (native ETH for ETH); to an address whose owner has
+    /// a private account of their own (`balanceToBalance`, prd §1565) it is
+    /// a transfer inside the pool, balance to balance, nothing paid out.
+    /// Asks for the device owner first. Returns the relayer's transaction hash.
+    static func send(token: String, amount: String, to: String, balanceToBalance: Bool = false,
+                     reason: String = String(localized: "Send from your private balance")) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
-        try await open(account, reason: String(localized: "Send from your private balance"))
+        try await open(account, reason: reason)
         let engine = PrivacyEngine.shared
         PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
-        let spend = try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
+        let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)
+            : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
         let relayed = try await engine.relay(handle: spend.handle)
-        NSLog("privateEthereum| relayed | %@ | %@ to %@", relayed.tx, amount, YourAccount.short(to))
+        NSLog("privateEthereum| relayed | %@ | %@ | %@ to %@", balanceToBalance ? "balance to balance" : "paid out", relayed.tx, amount, YourAccount.short(to))
         if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after, root: account, network: network) }
         return relayed.tx
+    }
+
+    // MARK: - Balance to balance (prd §1565)
+
+    /// Whether `owner` has a private account of its own on `net`: a viewing
+    /// key registered in the keystore. Read with no account open (one
+    /// `eth_call` through the engine's door); an unreadable answer is no.
+    static func hasPrivateAccount(_ owner: String, on net: PrivacyNetwork) async -> Bool {
+        guard let data = PrivateMoney.viewingKeyCall(owner: owner) else { return false }
+        let answer = try? await PrivateRPC.call(net, "eth_call", [["to": net.keystore, "data": data], "latest"]) as? String
+        return PrivateMoney.hasViewingKey(answer)
+    }
+
+    // MARK: - Round-ups into your private balance (prd §1565)
+
+    /// The deposit a Face ID operation on Ethereum carries for round-ups:
+    /// `units` of USDC into ppUSDC for the root's account, the registration
+    /// with it the first time, the approval and the router's deposit — as
+    /// calls for your account's operation, the send's own beside them. The
+    /// deposit is proved now; kept (`keep`) only once the operation lands.
+    struct Ride {
+        let calls: [(to: String, data: String, value: String)]
+        let keep: PrivateMoney.Note
+        let figure: String
+    }
+
+    static func roundUpsRide(units: String) async throws -> Ride {
+        guard let pool = network.yield.first(where: { !$0.native }), let hex = PrivateMoney.hex(units) else { throw Failure.noPool }
+        let account = try PrivateRootKey.ensure()
+        _ = try await open(account, reason: nil)
+        let engine = PrivacyEngine.shared
+        var calls: [(to: String, data: String, value: String)] = []
+        if try await !engine.isRegistered().registered {
+            for tx in try await engine.prepareRegister().txs {
+                guard tx.to.lowercased() == network.keystore.lowercased() else { throw Failure.notOwner }
+                calls.append((tx.to, tx.data, PrivateMoney.decimal(hex: tx.value)))
+            }
+        }
+        let d = try await engine.prepareYieldDeposit(tokenId: pool.underlying, budget: hex)
+        guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),
+              PrivateMoney.decimal(hex: d.tx.value) == "0",
+              let most = Decimal(string: PrivateMoney.decimal(hex: d.maxUnderlyingIn)), let budget = Decimal(string: units),
+              most <= budget else { throw Failure.noPool }
+        for a in d.approvals { calls.append((a.to, a.data, PrivateMoney.decimal(hex: a.value))) }
+        calls.append((d.tx.to, d.tx.data, "0"))
+        let note = PrivateMoney.Note(commitment: d.commitment, label: d.label, labelHash: d.labelHash, symbol: pool.symbol,
+                                     amount: PrivateMoney.decimal(hex: d.shares), decimals: pool.shareDecimals, chainId: network.chainId,
+                                     tx: "", at: Date(), status: .waiting, root: account, share: pool.share)
+        return Ride(calls: calls, keep: note,
+                    figure: PrivateMoney.figure(PrivateMoney.decimal(hex: d.underlyingNeeded), decimals: pool.underlyingDecimals, symbol: pool.symbol))
     }
 
     // MARK: - Take it back

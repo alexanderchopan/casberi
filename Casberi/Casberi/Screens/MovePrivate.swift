@@ -102,6 +102,12 @@ struct MovePrivateSentence<Head: View>: View {
             }
             #endif
         }
+        // Switch on, whether the recipient holds a private account of their
+        // own: then it goes balance to balance (prd §1565).
+        .task(id: move.recipient) {
+            guard move.mode == .send else { return }
+            await move.checkRecipient()
+        }
         // Done, the move lands in Activity as its own row (prd §1554).
         .onChange(of: doneHash) { _, hash in
             guard let hash else { return }
@@ -132,7 +138,7 @@ struct MovePrivateSentence<Head: View>: View {
     }
 
     private var figure: String {
-        PrivateMoney.figure(PrivateMoney.baseUnits(move.amount, decimals: 18) ?? "0", decimals: 18, symbol: "ETH")
+        PrivateMoney.figure(PrivateMoney.baseUnits(move.amount, decimals: move.decimals) ?? "0", decimals: move.decimals, symbol: move.symbol)
     }
 
     /// Ready to act: an amount, and switch on, an address.
@@ -222,7 +228,10 @@ struct MovePrivateSentence<Head: View>: View {
             } else if let held = move.held {
                 if move.onEthereum {
                     // What moves in earns (prd §1563): the rate, read live, or nothing.
-                    Text(verbatim: [String(localized: "\(held) ETH in your account"), store.ethereumYieldLine].compactMap { $0 }
+                    let have = move.symbol == "USDC"
+                        ? move.usdcBalance.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }.map { String(localized: "\($0) in your account") }
+                        : String(localized: "\(held) ETH in your account")
+                    Text(verbatim: [have, store.yieldLine(symbol: move.symbol)].compactMap { $0 }
                         .joined(separator: " · "))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 } else {
@@ -265,9 +274,16 @@ struct MovePrivateSentence<Head: View>: View {
     /// Switch on: the relayer's fee and about how long (the relayed
     /// withdrawal measured 27 s on Sepolia, the proof a few more).
     private var sendLine: String {
+        // To someone with a private account of their own, it stays private:
+        // balance to balance (prd §1565), nothing paid out.
+        if move.balanceToBalance == true {
+            return [String(localized: "To their private balance"), String(localized: "about a minute")].joined(separator: " · ")
+        }
         // A Sepolia fee is a few hundred-millionths: it keeps its digits.
-        let fee = move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }
-        let parts = [fee.map { String(localized: "\($0) ETH relayer fee") }, String(localized: "about a minute")]
+        let fee: String? = move.symbol == "USDC"
+            ? move.fee.map { String(localized: "\(PrivateMoney.figure($0, decimals: 6, symbol: "USDC")) relayer fee") }
+            : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { String(localized: "\($0) ETH relayer fee") }
+        let parts = [fee, String(localized: "about a minute")]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -302,21 +318,27 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// The amounts the money can cover: the test account's after the gas a
     /// first deposit takes, or switch on, the approved private balance.
+    /// ETH's amounts, then on Ethereum USDC's (prd §1565): picking one picks
+    /// its token too, so the sentence names it.
     private var amounts: some View {
-        ForEach(move.choices, id: \.self) { step in
-            let shown = PrivateMoney.figure(PrivateMoney.baseUnits(step, decimals: 18) ?? "0", decimals: 18, symbol: "ETH")
+        ForEach(move.options.map { "\($0.symbol) \($0.amount)" }, id: \.self) { key in
+            let parts = key.split(separator: " ").map(String.init)
+            let (token, step) = (parts[0], parts[1])
+            let places = token == "USDC" ? 6 : 18
+            let shown = PrivateMoney.figure(PrivateMoney.baseUnits(step, decimals: places) ?? "0", decimals: places, symbol: token)
+            let picked = step == move.amount && token == move.symbol
             Button {
                 withAnimation(DS.Motion.standard) {
-                    move.amount = step
+                    move.pick(step, of: token)
                     open = nil
                 }
                 DSHaptic.selection()
             } label: {
                 HStack(spacing: DS.Space.s3) {
-                    AssetMark(name: "ETH", size: DS.Face.list)
+                    AssetMark(name: token, size: DS.Face.list)
                     Text(verbatim: shown)
                         .dsText(.body17)
-                        .foregroundStyle(step == move.amount ? DS.textSecondary : DS.textPrimary)
+                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
                         .monospacedDigit()
                     Spacer(minLength: DS.Space.s2)
                 }
@@ -324,7 +346,7 @@ struct MovePrivateSentence<Head: View>: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
-            .accessibilityAddTraits(step == move.amount ? [.isSelected] : [])
+            .accessibilityAddTraits(picked ? [.isSelected] : [])
         }
     }
 

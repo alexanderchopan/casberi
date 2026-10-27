@@ -58,7 +58,10 @@ use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with
 use "$SENDER" "return try PrivateAccount.ownerAddress(try PrivateRootKey.ensure())" "the testnet sender is no longer the private root's owner"
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sender no longer builds through TestnetTx's testnet guard"
 use "$MOVE" 'static var available: Bool { PrivacyNetwork.current(debugAsks: debugNetwork) != nil }' "Move to private no longer follows the network this build serves"
-awk '/static var freshAvailable: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Receive to a fresh address is offered outside DEBUG (it has no mainnet signer)"; exit 1; }
+# Receive to a fresh address on Ethereum (prd §1565): wherever private money
+# is, with your account on the phone as the note's owner.
+awk '/static var freshAvailable: Bool/,/^    }$/' "$MOVE" | grep -q 'return network.isTest || PrivateOnEthereum.owner != nil' \
+    || { echo "✗ Receive to a fresh address is offered on Ethereum with no account to own the note"; exit 1; }
 echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only sender owned by the root"
 
 # One root for private money (prd §1562): in iCloud Keychain, synchronizable,
@@ -86,8 +89,8 @@ use "$MOVE" 'try await PrivateAccount.open(account, reason: String(localized: "S
 use "$MOVE" 'let account = try PrivateRootKey.ensure()' "a deposit no longer goes to the root's account"
 use "$FRESHM" 'try await PrivateAccount.open(account, reason: nil)' "a fresh move asks for you (it cannot run in the background)"
 use "$FRESHM" 'while let batch = PrivateRoot.nextBatch(seen) {' "a new phone no longer walks the fresh addresses back"
-use "$FRESHM" 'async let nonce = PrivacyTestnetSender.rpc("eth_getTransactionCount", [address, "latest"])' "the walk no longer asks whether an address moved"
-use "$WATCH" 'store.reconcile(found, root: root)' "a new phone no longer keeps the notes it found"
+use "$FRESHM" 'async let nonce = PrivateRPC.decimal(network, "eth_getTransactionCount", [address, "latest"])' "the walk no longer asks whether an address moved"
+use "$WATCH" 'store.reconcile(found, root: root, network: network)' "a new phone no longer keeps the notes it found"
 use "$WATCH" 'await store.fillLabelHashes()' "a note found again is never asked about its approval"
 use "$WATCH" 'let spend = try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to.address)' "the device-only account's money is no longer withdrawn"
 use "$WATCH" 'guard let to = FreshReceive.shared.unusedCurrent() else' "the device-only account's money no longer goes to an unused fresh address of the root"
@@ -163,7 +166,7 @@ echo "  ok   Needs you: the deposits counted and drawn, Take it back a word behi
 # pool is, a send elsewhere sets nothing aside, the batch rides a deposit you
 # confirmed, and its Activity row has no verb.
 SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
-use "$SEC" 'ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in' "the private target is offered where there is no pool"
+use "$SEC" 'ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in' "the private target is offered where there is no pool, or with the kill switch off"
 use "$SEC" 'Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }' "the private target is no longer its words and the eye"
 use "$SENT" 'guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
@@ -175,11 +178,11 @@ use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: c
 # a wrap and an unpriced token never; the buy rides only what can carry it;
 # a Buy counts its change once paid.
 use "$SENT" 'return s.quote.wrap == nil ? soldDollars(s) : nil' "a swap's round-up no longer reads what it sells, or rounds up a wrap"
-use "$SENT" 'guard RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "a swap or a Buy carries a buy it cannot pay"
+use "$SENT" 'guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "a swap or a Buy carries a buy it cannot pay"
 use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
 use "$SENT" 'if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }' "a paid Buy's change is not counted"
 use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint' "a swap's small print says nothing of its round-up"
-echo "  ok   round-ups to private: offered only on Sepolia, moved together on a deposit you confirmed"
+echo "  ok   round-ups to private: offered where a pool is (Ethereum; Sepolia in DEBUG), moved together on a deposit you confirmed"
 echo "  ok   swaps and Buy round up: what is sold, carried only where the dollar pays, a Buy counted"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
 
@@ -198,7 +201,7 @@ awk '/set: \{ if \$0 \{ goFresh\(\) \} \}/{print prev} {prev=$0}' "$SENT" | grep
     || { echo "✗ Receive's Private switch stands somewhere other than your own account's Receive"; exit 1; }
 use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
 use "$FRESHV" 'Text(verbatim: copied ? String(localized: "Copied") : YourAccount.short(address))' "the fresh address is no longer drawn by its tail"
-use "$FRESHV" 'SignerRequestSheet.code("ethereum:\(address)@\(PrivacyNetwork.sepolia.chainId)")' "the code no longer carries the whole address on Sepolia"
+use "$FRESHV" 'SignerRequestSheet.code("ethereum:\(address)@\(network.chainId)")' "the code no longer carries the whole address on its network"
 use "$FRESHV" 'Text("New address").dsText(.heading24).foregroundStyle(DS.textSecondary)' "New address is not the foot's grey word"
 use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
 use "$FRESHV" 'MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))' "the fresh sentence's switch no longer leaves when turned off"
@@ -213,9 +216,70 @@ use "$FRESHM" 'if case .failed = entry.state, !force { continue }' "a failed fre
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId, nonce: nonce,' "a fresh key no longer signs through TestnetTx's testnet guard"
 [[ $(head -1 "$FRESHK") == "#if DEBUG" && $(tail -1 "$FRESHK") == "#endif" ]] || { echo "✗ the fresh addresses' root is not DEBUG-only"; exit 1; }
 ! grep -q "SecItemAdd" "$FRESHK" || { echo "✗ the fresh addresses make a device-only root again (prd §1562)"; exit 1; }
-use "$FRESHK" "guard let fresh = PrivateRoot.derive(privateRoot, .freshAddresses) else" "the fresh addresses no longer come from the private root"
+use "Casberi/Casberi/Model/FreshSigner.swift" "guard var fresh = PrivateRoot.derive(privateRoot, .freshAddresses) else" "the fresh addresses no longer come from the private root"
+use "$FRESHK" "if let root { return try FreshSigner.key(index, root: root) }" "a root's fresh key is made somewhere other than FreshSigner"
 use "$HOLD" 'await FreshReceive.shared.check(context: modelContext)' "Holdings no longer looks at the fresh addresses"
 echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, its root the private root"
+
+# ── prd §1565: every gap closed on Ethereum ────────────────────────────────
+# Receive privately on Ethereum: the fresh key, from the root, signs only what
+# FreshTx can make (a router's deposit, a token's approval of its router);
+# the deposit is checked against the plan and its gas budget before it signs;
+# "too little" is computed from the pool and today's fees; a USDC payment's gas
+# comes from your private ETH only while you look, and only when it covers it.
+FSIGN="Casberi/Casberi/Model/FreshSigner.swift"
+FTX="Casberi/Casberi/Model/FreshTx.swift"
+ETH="Casberi/Casberi/Model/PrivateOnEthereum.swift"
+CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
+TMPF=$(mktemp /tmp/private-money-fresh.XXXXXX)
+for f in "$FSIGN" "$FTX"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
+! grep -q '#if DEBUG' "$FSIGN" "$FTX" || { echo "✗ the fresh addresses' mainnet signer is DEBUG-only (it must ship)"; exit 1; }
+use "$FSIGN" 'guard let tx = FreshTx.Tx(network: network, nonce: nonce,' "a fresh key signs something FreshTx did not make"
+! grep -q 'TestnetTx.Tx(\|PrivacyTestnetSender' "$FSIGN" || { echo "✗ the mainnet fresh signer goes through the testnet sender"; exit 1; }
+use "$FSIGN" 'guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {' "a fresh key signs as another address"
+use "$FRESHM" 'guard FreshAddress.matchesYield(to: d.tx.to, value: d.tx.value, approvals: d.approvals.count, budget: plan.budget, pool: pool) else {' "a fresh deposit on Ethereum is not checked against its plan"
+use "$FRESHM" 'let plan = FreshAddress.yieldPlan(balance: balance, maxFee: String(fees.maxFee), minimumBudget: floor)' "too little to move on Ethereum is not the pool's minimum plus today's gas"
+awk '/private func moveEthereum\(/,/^    }$/' "$FRESHM" > "$TMPF"
+est=$(grep -n 'guard estimate > 0, estimate <= FreshAddress.gasBudget else' "$TMPF" | cut -d: -f1)
+snd=$(grep -n 'let hash = try await FreshSigner.send(' "$TMPF" | cut -d: -f1)
+[[ -n "$est" && -n "$snd" && "$est" -lt "$snd" ]] || { echo "✗ a fresh deposit on Ethereum is signed before its gas is estimated within the budget"; exit 1; }
+grep -q 'from: entry.address, network: network, gas: FreshAddress.gasBudget,' "$TMPF" || { echo "✗ a fresh deposit on Ethereum is not sent from the fresh address at its planned gas"; exit 1; }
+grep -q 'try await PrivateOnEthereum.open(account, reason: nil)' "$TMPF" || { echo "✗ a fresh move on Ethereum asks for you (it runs in the background)"; exit 1; }
+use "$FRESHM" 'guard interactive, spendable >= cost else {' "a USDC payment's gas is paid from private ETH in the background, or beyond what it holds"
+use "$FRESHM" 'reason: String(localized: "Move \(symbol) to private"))' "paying a USDC payment's gas from private money does not ask for you"
+use "$FRESHM" 'set(entry.id, .needsGas(amount: held), symbol: symbol)' "USDC with no gas and too little private ETH says nothing"
+use "$FRESHV" 'arrived; needs a little private ETH to move' "the line no longer says a USDC payment needs private ETH"
+! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
+# USDC in Move's sentence; balance to balance; round-ups riding a Face ID
+# operation, simulated whole before signing; the watch in every build; the
+# restoring line.
+use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: PrivateMoney.usdcLadder, minimum: usdcMinimum)' "USDC's amounts do not start at the pool's minimum"
+use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)' "a private send on Ethereum ignores the token or the recipient's private account"
+use "$ETH" 'let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)' "balance to balance is not a transfer inside the pool"
+use "$ETH" 'return PrivateMoney.hasViewingKey(answer)' "a recipient's private account is not read off the keystore"
+use "$MPRIV" 'if move.balanceToBalance == true {' "the line does not say a send goes balance to balance"
+use "$ENGJS" "recipientDiscoveryData: { evmAddress: getAddress(recipient.toLowerCase()) } });" "the engine's transfer finds the recipient some other way than the keystore"
+! grep -q 'allowOutOfBandFallback' "$ENGJS" || { echo "✗ the engine falls back to secrets the app would have to deliver"; exit 1; }
+use "$BUNDLE" 'sharesForUnderlying' "the shipped bundle cannot transfer on a yield pool — rebuild with tools/privacy-pools-engine/build.mjs"
+awk '/static func transact\(_ items:/,/^    }$/' "$CHAIN" > "$TMPF"
+ride=$(grep -n 'let withRide = await check(net, account: account' "$TMPF" | cut -d: -f1)
+rreq=$(grep -n 'try require(withRide, on: net, swaps: a.mustCheck)' "$TMPF" | cut -d: -f1)
+rop=$(grep -n 'let outcome = try await operate(' "$TMPF" | cut -d: -f1)
+[[ -n "$ride" && -n "$rreq" && -n "$rop" && "$ride" -lt "$rreq" && "$rreq" -lt "$rop" ]] || { echo "✗ round-ups riding an operation are signed before the whole is simulated"; exit 1; }
+grep -q 'let kept = ride.isEmpty ? await Prepared.take(' "$TMPF" || { echo "✗ a riding deposit signs the preview's operation without it"; exit 1; }
+use "$SENT" 'let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,' "round-ups into private no longer ride the Face ID operation"
+use "$SENT" 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)' "round-ups that did not ride are emptied"
+use "$SENT" 'guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "private round-ups also buy a token"
+use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "round-ups ride a deposit to something other than ppUSDC's router"
+awk '/static func schedule\(\)/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch is scheduled in DEBUG builds only"; exit 1; }
+awk '/private static func handle\(/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch's pass runs in DEBUG builds only"; exit 1; }
+awk '/static func restoreNotes\(\)/,/^    }$/' "$WATCH" | grep -q 'try await PrivateOnEthereum.open(root, reason: nil)' || { echo "✗ a new phone does not find its notes on Ethereum"; exit 1; }
+use "$HOLD" 'Text("Restoring your private balance")' "a new phone's restore says nothing in Holdings"
+use "$HOLD" 'if store.restoring {' "the restoring line is not tied to the restore"
+grep -q 'store.beginRestore()' "$WATCH" && grep -q 'store.beginRestore()' "$FRESHM" || { echo "✗ a restore does not mark itself"; exit 1; }
+! grep -q 'ProgressView' "$HOLD" || { echo "✗ Holdings draws a spinner for private money"; exit 1; }
+rm -f "$TMPF"
+echo "  ok   Ethereum, every gap: fresh addresses sign their own deposit, USDC, balance to balance, round-ups ride, the watch, restoring"
 # No lime (prd §1561, user: "why not the one we already use our pink"):
 # private money is marked in the app's pink, and the token is gone.
 ! grep -rq 'privateMark' Casberi/Casberi || { echo "✗ private money has a colour of its own again"; exit 1; }
@@ -245,7 +309,8 @@ use "$ETH" 'guard tx.to.lowercased() == network.keystore.lowercased() else { thr
 use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "a deposit may go somewhere other than its token's yield router"
 use "$ETH" 'carried <= most else { throw Failure.noPool }' "a deposit may carry more than its budget"
 use "$ETH" 'guard quit.recipient.lowercased() == owner.lowercased() else { throw Failure.notOwner }' "a ragequit paying someone other than your account is signed"
-use "$ETH" 'try await open(account, reason: String(localized: "Send from your private balance"))' "a relayed send no longer asks for the device owner"
+use "$ETH" 'reason: String = String(localized: "Send from your private balance")) async throws -> String {' "a relayed send no longer asks for the device owner"
+awk '/static func send\(token: String/,/^    }$/' "$ETH" | grep -q 'try await open(account, reason: reason)' || { echo "✗ a relayed send opens without asking for the device owner"; exit 1; }
 use "$ETH" 'let sent = try await YourAccountChain.privateCalls(calls, on: accountNetwork,' "a deposit or Take it back no longer goes through your account"
 awk '/static func privateCalls\(/,/^    }$/' "$CHAIN" > "$TMP0"
 grep -q 'throw Failure(message: String(localized: "\\(net.name) could not check this, so nothing was signed"))' "$TMP0" || { echo "✗ a private call no node would simulate is signed"; exit 1; }
@@ -257,12 +322,20 @@ use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldL
 use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
 ! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
 use "$TAKE" 'let (hash, figure) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
-python3 -I - "$SIMREC" <<'PY' || { echo "✗ the mainnet simulation record is not four landed moves"; exit 1; }
+python3 -I - "$SIMREC" <<'PY' || { echo "✗ the mainnet simulation record is not nine landed moves"; exit 1; }
 import json, sys
 r = json.load(open(sys.argv[1]))
 s = r["scenarios"]
 assert r.get("mutation") is None
-assert all(s[k]["ok"] for k in ("eth", "usdc", "ragequit", "withdraw")), s
+assert all(s[k]["ok"] for k in ("eth", "usdc", "ragequit", "withdraw", "fresh", "transfer", "usdcsend", "freshusdc", "roundups")), s
+f = s["fresh"]
+assert int(f["paid"]) > int(f["threshold"]) == int(f["minUnderlying"]) + int(f["reserve"]), "the fresh deposit was not planned from the minimum and the gas"
+assert int(f["dust"]) >= 0 and f["validatedGas"] <= 1250000, "the fresh address could not pay its gas"
+assert s["transfer"]["refusedUnregistered"] == "RecipientViewingKeyUnregistered" and int(s["transfer"]["sharesToB"]) > 0, "balance to balance"
+assert int(s["usdcsend"]["received"]) >= int(s["usdcsend"]["amount"]), "private USDC paid out"
+assert int(s["freshusdc"]["gasPaidWei"]) >= int(s["freshusdc"]["needWei"]), "private ETH paid the fresh address's gas"
+assert all(g <= 1250000 for g in s["freshusdc"]["gas"]), "the fresh address's USDC moves fit their gas"
+assert int(s["roundups"]["batch"]) >= int(s["roundups"]["minUnderlying"]), "round-ups moved under the pool's minimum"
 assert int(s["ragequit"]["ethBack"]) >= int(s["eth"]["spentWei"]) * 999 // 1000, "Take it back returns the deposit"
 assert int(s["withdraw"]["received"]) == int(s["withdraw"]["amount"]), "the recipient gets the amount"
 assert s["withdraw"]["processor"].lower() == "0x77613d670bb9fd48a9898d0eac8ebf21b566f960", "the router is the withdrawal's processor"
@@ -563,12 +636,76 @@ check(Y.uint("255") == String(repeating: "0", count: 62) + "ff" && Y.uint("-1") 
 check(P.choices(balance: "100000000000000000", reserve: "1000000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000")
       == ["0.005", "0.01", "0.025", "0.05"], "Ethereum's amounts start at the pool's smallest deposit")
 
+// ── prd §1565 ──────────────────────────────────────────────────────────────
+// A fresh address's own transaction on Ethereum, against viem 2.45.3: the
+// ppETH router's deposit (unsigned, its hash, signed with parity 1) and a
+// USDC approval of ppUSDC's router.
+let eth = PrivacyNetwork.ethereum, ppRouter = ppETH.router
+let depData = "0x31c09bb4" + String(repeating: "ab", count: 66)
+let ftx = FreshTx.Tx(network: eth, nonce: "0x3", maxPriorityFeePerGas: "0x143", maxFeePerGas: "0x4983e9a", gas: "0x1312d0",
+                     to: ppRouter, value: "0xef8f7d83b18d4", data: depData)
+check(ftx.map { TestnetTx.hex($0.unsigned) } == "0x02f87401038201438404983e9a831312d09477613d670bb9fd48a9898d0eac8ebf21b566f960870ef8f7d83b18d4b846" + String(depData.dropFirst(2)) + "c0",
+      "a fresh deposit's payload on Ethereum is viem's")
+check(ftx.map { TestnetTx.hex($0.signingHash) } == "0x4e32c41c3db6491bee9ada43eee180cb6b0d7e2d2915f10db685a7ad51f65c83", "its signing hash is viem's")
+check(ftx?.signed(yParity: 1, r: r1, s: s1).map(TestnetTx.hex) == "0x02f8b601038201438404983e9a831312d09477613d670bb9fd48a9898d0eac8ebf21b566f960870ef8f7d83b18d4b846" + String(depData.dropFirst(2)) + "c0019f" + String(repeating: "11", count: 31) + "a0" + String(repeating: "22", count: 32),
+      "signed, it is viem's")
+let usdcApprove = FreshTx.approval(pool: ppUSDC, amount: "25000000")
+check(usdcApprove?.to == ppUSDC.underlying && usdcApprove.flatMap { FreshTx.Tx(network: eth, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x4983e9a", gas: "0x13880", to: $0.to, value: "0x0", data: $0.data) }.map { TestnetTx.hex($0.unsigned) }
+      == "0x02f8690180018404983e9a8301388094a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4880b844095ea7b3000000000000000000000000e76e793d776c1e207ad7a7fa7c57d27420d8511000000000000000000000000000000000000000000000000000000000017d7840c0",
+      "a fresh address's USDC approval of ppUSDC's router is viem's")
+// Nothing else can be made: no payment, no other call, no other chain.
+func made(_ to: String, _ data: String, _ value: String, _ net: PrivacyNetwork = eth) -> Bool {
+    FreshTx.Tx(network: net, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x5208", to: to, value: value, data: data) != nil
+}
+check(!made("0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", "0x", "0x1"), "a fresh key pays someone")
+check(!made(ppRouter, depData, "0x1", PrivacyNetwork.sepolia), "a fresh key signs on a test network through FreshTx")
+var testnetWithPools = PrivacyNetwork.sepolia
+testnetWithPools.yield = eth.yield
+check(!made(ppRouter, depData, "0x1", testnetWithPools), "a test network's chain id is signed for by FreshTx")
+check(!made(ppRouter, "0x12345678" + String(repeating: "ab", count: 66), "0x1"), "a fresh key calls the router's other functions")
+check(!made(ppRouter, depData, "0x0"), "a native deposit carries no ETH")
+check(!made(ppUSDC.router, "0xc63148e8" + String(repeating: "ab", count: 66), "0x1") && made(ppUSDC.router, "0xc63148e8" + String(repeating: "ab", count: 66), "0x0"),
+      "a token deposit carries ETH, or the token router's deposit is refused")
+let otherSpender = "0x095ea7b3" + String(repeating: "0", count: 24) + "4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030" + String(repeating: "0", count: 63) + "1"
+check(!made(ppUSDC.underlying, otherSpender, "0x0"), "a fresh key approves anyone but its token's router")
+check(usdcApprove.map { !made($0.to, $0.data, "0x1") } == true, "an approval carries ETH")
+check(!made(ppUSDC.underlying, "0xa9059cbb" + String(repeating: "0", count: 128), "0x0"), "a fresh key transfers USDC away")
+check(!made(ppETH.share, depData, "0x1"), "a fresh key calls the share")
+// "Too little to move", computed from the pool and today's fees (the mainnet
+// simulation's numbers: 0.004 ppETH at 1.001254 and 0.048 gwei, cap 0.096).
+let floorETH = F.minimumBudget(minimumShares: "4000000000000000", exchangeRate: "1001254019271464000", shareDecimals: 18)
+check(floorETH == "4005020082101944", "ppETH's smallest budget: the minimum at the rate, the router's headroom (\(String(describing: floorETH)))")
+check(F.minimumBudget(minimumShares: "10000000000000000000", exchangeRate: "1004644", shareDecimals: 18) == "10046461", "ppUSDC's: about $10.05")
+check(F.tooLittleBelow(minimumBudget: "4005020082101944", maxFee: "95972657") == "4124985903351944", "too little below 0.004125 ETH that day")
+check(F.yieldPlan(balance: "4124985903351943", maxFee: "95972657", minimumBudget: "4005020082101944") == nil, "a wei under the threshold moves")
+check(F.yieldPlan(balance: "4331231026453544", maxFee: "95972657", minimumBudget: "4005020082101944")
+      == F.YieldPlan(budget: "4211265205203544", reserve: "119965821250000"), "the budget is what arrived less the gas at the cap (the simulation's)")
+check(F.yieldPlan(balance: "200000000000000", maxFee: "95972657", minimumBudget: "1") == nil, "gas costing more than what moves moves it")
+check(F.matchesYield(to: ppRouter, value: "0xef61f969c7258", approvals: 0, budget: "4211265205203544", pool: ppETH), "the planned deposit matches")
+check(!F.matchesYield(to: ppRouter, value: "0xef61f969c7258", approvals: 0, budget: "4211265205203543", pool: ppETH), "a deposit carrying more than the budget matches")
+check(!F.matchesYield(to: ppUSDC.router, value: "0x1", approvals: 0, budget: "10", pool: ppETH), "a deposit to another router matches")
+check(!F.matchesYield(to: ppRouter, value: "0x1", approvals: 1, budget: "10", pool: ppETH), "an ETH deposit with an approval matches")
+check(!F.matchesYield(to: ppUSDC.router, value: "0x1", approvals: 1, budget: "10", pool: ppUSDC), "a USDC deposit carrying ETH matches")
+let gasNeed = F.tokenGas(ethHeld: "0", maxFee: "95972657")
+check(gasNeed?.need == "127643633810000" && gasNeed?.shortfall == "127643633810000", "a USDC move's gas: the approval and the deposit at the cap")
+check(F.tokenGas(ethHeld: "200000000000000", maxFee: "95972657")?.shortfall == "0", "ETH already there pays it")
+check(F.tokenGas(ethHeld: "27643633810000", maxFee: "95972657")?.shortfall == "100000000000000", "private ETH pays only the shortfall")
+// USDC's amounts start at the pool's minimum.
+check(P.choices(balance: "25000000", reserve: "0", decimals: 6, ladder: P.usdcLadder, minimum: "10046461") == ["20"],
+      "10 USDC is under ppUSDC's minimum; 20 of 25 is offered")
+// Balance to balance: the keystore's viewing key.
+check(P.viewingKeyCall(owner: "0x38db9f602274AFB7c9c87E2942C43c0781A3BC82") == "0x03bb850a00000000000000000000000038db9f602274afb7c9c87e2942c43c0781a3bc82",
+      "viewingKeys(owner)'s call")
+check(P.hasViewingKey("0xe53c39d8d674804fdef03da07227977ef56bccba73635f619e0be3f553a76f5c"), "B's registered key on Sepolia is a private account")
+check(!P.hasViewingKey("0x" + String(repeating: "0", count: 64)) && !P.hasViewingKey("0x") && !P.hasViewingKey(nil) && !P.hasViewingKey("0x12"),
+      "a zero, empty or unreadable key is a private account")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
 SWIFT
 
 compile_and_run() {
-    swiftc -Onone "$1" "$2" "$3" "$4" "$5" "${6:-$YIELD}" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
+    swiftc -Onone "$1" "$2" "$3" "$4" "$5" "${6:-$YIELD}" "${7:-$FTX}" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
         || { head -20 "$TMP/err"; return 2; }
     "$TMP/run"
 }
@@ -580,8 +717,9 @@ mutate() {
     cp "$file" "$TMP/mut.swift"
     perl -0pi -e "$perl_expr" "$TMP/mut.swift"
     if cmp -s "$file" "$TMP/mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
-    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH" root="$ROOT" yld="$YIELD"
+    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH" root="$ROOT" yld="$YIELD" ftx="$FTX"
     case "$file" in
+        "$FTX") ftx="$TMP/mut.swift" ;;
         "$PM") pm="$TMP/mut.swift" ;;
         "$TX") tx="$TMP/mut.swift" ;;
         "$WIRE") wire="$TMP/mut.swift" ;;
@@ -590,7 +728,7 @@ mutate() {
         "$YIELD") yld="$TMP/mut.swift" ;;
     esac
     local ok
-    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" "$root" "$yld" >/dev/null 2>&1 && echo y || echo n)
+    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" "$root" "$yld" "$ftx" >/dev/null 2>&1 && echo y || echo n)
     [[ "$ok" == n ]] || { echo "✗ SURVIVED  $name"; exit 1; }
     echo "  ok   catches  $name"
 }
@@ -645,4 +783,15 @@ mutate "Take it back leaves WETH" "$YIELD" 's/if pool\.native \{ calls\.append\(
 mutate "USDC's shares count as 18-place USDC" "$PM" 's/pool\.underlyingDecimals < pool\.shareDecimals,/pool.underlyingDecimals > 99,/'
 mutate "Ethereum offers less than the pool takes" "$PM" 's/return units \+ keep <= have && units >= floor/return units + keep <= have/'
 mutate "a rate past 100% is a rate" "$YIELD" 's/guard apr < 1 else \{ return nil \}//'
-echo "  ok   51 mutations"
+# prd §1565
+mutate "a fresh key may make any transaction" "$FTX" 's/guard FreshTx\.allowed\(to: to, data: data, value: value, network: network\) else \{ return nil \}//'
+mutate "a fresh key approves any spender" "$FTX" 's/return spender == String\(repeating: "0", count: 24\) \+ pool\.router\.dropFirst\(2\)\.lowercased\(\)/return true/'
+mutate "a fresh key signs on a test network" "$FTX" 's/guard !network\.isTest, PrivateMoney/guard PrivateMoney/'
+mutate "a native deposit may carry nothing" "$FTX" 's/d\.hasPrefix\(nativeDeposit\) && !carried\.isEmpty/d.hasPrefix(nativeDeposit)/'
+mutate "the fresh gas is not kept back on Ethereum" "$FRESH" 's/let budget = have - reserve\n/let budget = have\n/'
+mutate "too little forgets the pool's minimum" "$FRESH" 's/guard budget >= max\(floor, reserve, 1\) else/guard budget >= max(reserve, 1) else/'
+mutate "the minimum forgets the rate" "$FRESH" 's/var worth = shares \* rate \/ scale, up = Decimal\(\)/var worth = shares, up = Decimal()/'
+mutate "a USDC move's gas forgets the approval" "$FRESH" 's/Decimal\(FreshTx\.approveGas \+ gasBudget\) \* fee/Decimal(gasBudget) * fee/'
+mutate "a zero viewing key is a private account" "$PM" 's/ && body\.contains \{ \$0 != "0" \}//'
+mutate "a deposit carrying more than its budget matches" "$FRESH" 's/approvals == 0 && carried <= most && carried > 0/approvals == 0 \&\& carried > 0/'
+echo "  ok   61 mutations"

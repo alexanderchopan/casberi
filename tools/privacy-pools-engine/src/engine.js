@@ -353,11 +353,29 @@ const methods = {
     return { notes, balances: Object.entries(balances).map(([tokenId, value]) => ({ tokenId, value })), ms: Math.round(now() - t) };
   },
 
+  // Balance to balance (prd §1565): the recipient's own private account,
+  // found by its owner's address in the keystore. The SDK reads the
+  // recipient's viewing key there and refuses an address with none
+  // (`RecipientViewingKeyUnregistered`), never falling back to secrets the
+  // app would have to deliver. On a yield pool (Ethereum) the note holds
+  // SHARES: `amount` is what the recipient should hold in the token, turned
+  // into shares at today's rate (one more, so it is never a wei short).
+  // 0xBow's relayer posts it and pays the gas for a fee from the change.
   async prepareTransfer({ tokenId, amount, recipient }) {
     proofs = [];
     const t = now();
     const s = await session('transfer');
-    const r = await s.prepareTransfer({ inputCommitments: inputsFor(tokenId, amount), amount, tokenId, recipientDiscoveryData: { evmAddress: recipient } });
+    let token = tokenId;
+    let value = BigInt(amount);
+    const pool = yieldPool(tokenId);
+    if (pool) {
+      const y = (await session('withdraw')).yieldFor(pool.share);
+      if (!y) throw Object.assign(new Error(`the session has no yield pool for ${pool.share}`), { name: 'NoYieldPool' });
+      token = pool.share;
+      value = (await y.deposit.sharesForUnderlying(value)) + 1n;
+    }
+    const r = await s.prepareTransfer({ inputCommitments: inputsFor(token, value), amount: hex(value), tokenId: token,
+      recipientDiscoveryData: { evmAddress: getAddress(recipient.toLowerCase()) } });
     const option = r.relayOptions?.[0];
     return { handle: keep({ kind: 'transfer', result: r }), fee: option ? JSON.parse(JSON.stringify(option.selectedQuote.quote, (_, v) => (typeof v === 'bigint' ? hex(v) : v))) : null, ms: Math.round(now() - t), proofs };
   },

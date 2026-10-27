@@ -23,8 +23,33 @@ final class PrivateMoneyStore {
     /// share. Never kept: a launch reads them again.
     private(set) var rates: [String: String] = [:]
     private(set) var apys: [String: Double] = [:]
+    /// Each yield pool's smallest deposit in its token, read live with the
+    /// rate (prd §1565), by lower-cased share.
+    private(set) var minimums: [String: String] = [:]
+
+    /// Where round-ups on Ethereum move: ppUSDC's smallest deposit in USDC
+    /// units, once read (prd §1565).
+    var roundUpsMinimum: String? {
+        PrivacyNetwork.ethereum.yield.first { !$0.native }.flatMap { minimums[$0.share.lowercased()] }
+    }
     @ObservationIgnored private var asked: Date = .distantPast
     @ObservationIgnored private var yieldRead: Date = .distantPast
+
+    /// **RESTORING YOUR PRIVATE BALANCE (prd §1565).** True while a new
+    /// phone finds a root's notes or walks its fresh addresses back (prd
+    /// §1562): Holdings' Private header says so in one line, never a page.
+    private(set) var restoring = false
+    @ObservationIgnored private var restores = 0
+
+    func beginRestore() {
+        restores += 1
+        if !restoring { restoring = true }
+    }
+
+    func endRestore() {
+        restores = max(restores - 1, 0)
+        if restores == 0, restoring { restoring = false }
+    }
 
     private init() {
         notes = UserDefaults.standard.data(forKey: Self.key)
@@ -41,8 +66,11 @@ final class PrivateMoneyStore {
     }
 
     /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.
-    var ethereumYieldLine: String? {
-        guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == "ETH" }) else { return nil }
+    var ethereumYieldLine: String? { yieldLine(symbol: "ETH") }
+
+    /// A token's rate on Ethereum (ETH or USDC, prd §1565), or nil.
+    func yieldLine(symbol: String) -> String? {
+        guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == symbol }) else { return nil }
         return PrivateYield.line(apy: apys[pool.share.lowercased()])
     }
 
@@ -59,7 +87,17 @@ final class PrivateMoneyStore {
             for pool in network.yield {
                 let key = pool.share.lowercased()
                 if let rate = await Self.call(network, to: pool.share, data: PrivateYield.exchangeRateCall).flatMap({ PrivateYield.word($0, 0) }),
-                   rate != "0" { rates[key] = rate }
+                   rate != "0" {
+                    rates[key] = rate
+                    // The pool's smallest deposit in the token, at this rate
+                    // (prd §1565: round-ups move once they reach it).
+                    if let call = FreshAddress.assetsCall(token: pool.share),
+                       let config = await Self.call(network, to: network.entrypoint, data: call).flatMap(FreshAddress.assetConfig),
+                       config.enabled,
+                       let floor = FreshAddress.minimumBudget(minimumShares: config.minimum, exchangeRate: rate, shareDecimals: pool.shareDecimals) {
+                        minimums[key] = floor
+                    }
+                }
                 guard let fee = await Self.call(network, to: pool.share, data: PrivateYield.feeBpsCall).flatMap({ PrivateYield.word($0, 0) }).flatMap(Int.init),
                       let reserve = PrivateYield.reserveDataCall(underlying: pool.underlying),
                       let ray = await Self.call(network, to: PrivateYield.aavePool, data: reserve).flatMap(PrivateYield.liquidityRate),

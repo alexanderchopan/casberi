@@ -30,13 +30,12 @@ extension FeedScreen {
                         await store.refresh()
                         await store.readPrices()
                         await store.readYield()
-                        #if DEBUG
                         // A new phone finds its private money again here
-                        // (prd §1562): each root's notes from the pool, its
-                        // fresh addresses walked back. Once per root.
+                        // (prd §1562, every build since §1565): each root's
+                        // notes from the pool, its fresh addresses walked
+                        // back. Once per root; the line says so meanwhile.
                         await PrivateWatch.restoreNotes()
                         await FreshReceive.shared.restore()
-                        #endif
                         // What a fresh address was paid moves in from here
                         // too (prd §1560): its row appears as "moving in".
                         await FreshReceive.shared.check(context: modelContext)
@@ -47,6 +46,17 @@ extension FeedScreen {
                             await store.refresh()
                         }
                     }
+                // One line while a new phone rebuilds it (prd §1565): never
+                // a spinner page, gone when done.
+                if store.restoring {
+                    Text("Restoring your private balance")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.leading, DSRoomChassis.headGlyph + DSRoomChassis.headGap)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .walletListRow()
+                        .transition(.opacity)
+                }
                 ForEach(rows) { row in
                     walletPrivateRow(row, mask: mask, prices: store.prices)
                 }

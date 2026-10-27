@@ -37,7 +37,7 @@ struct MoveFreshSentence<Head: View>: View {
                     .padding(.bottom, DS.Space.s4)
                 MoveFlow {
                     MovePhrase(String(localized: "Receive"))
-                    MovePhrase(String(localized: "Sepolia"), glue: String(localized: "on"))
+                    MovePhrase(network.name, glue: String(localized: "on"))
                     MovePhrase(String(localized: "privately."), ink: DS.pickInk)
                 }
                 MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))
@@ -81,11 +81,14 @@ struct MoveFreshSentence<Head: View>: View {
         }
     }
 
-    /// The address as a code (EIP-681, naming Sepolia, so a wallet that
-    /// reads it pays on the right network) and by its tail.
+    /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1565).
+    private var network: PrivacyNetwork { book.network ?? .ethereum }
+
+    /// The address as a code (EIP-681, naming its network, so a wallet that
+    /// reads it pays on the right one) and by its tail.
     private func code(_ address: String) -> some View {
         VStack(spacing: DS.Space.s4) {
-            if let image = SignerRequestSheet.code("ethereum:\(address)@\(PrivacyNetwork.sepolia.chainId)") {
+            if let image = SignerRequestSheet.code("ethereum:\(address)@\(network.chainId)") {
                 Image(uiImage: image)
                     .interpolation(.none)
                     .resizable()
@@ -120,14 +123,14 @@ struct MoveFreshSentence<Head: View>: View {
         } else if let failure = book.failure {
             Text(verbatim: failure).dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
-        } else if let entry, let said = words(entry.state) {
+        } else if let entry, let said = words(entry.state, symbol: entry.token) {
             Text(verbatim: said.0).dsText(.body17).foregroundStyle(said.1)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func words(_ state: FreshAddress.State) -> (String, Color)? {
-        func figure(_ amount: String) -> String { PrivateMoney.figure(amount, decimals: 18, symbol: "ETH") }
+    private func words(_ state: FreshAddress.State, symbol: String) -> (String, Color)? {
+        func figure(_ amount: String) -> String { PrivateMoney.figure(amount, decimals: symbol == "USDC" ? 6 : 18, symbol: symbol) }
         switch state {
         case .waiting:
             return nil
@@ -143,6 +146,9 @@ struct MoveFreshSentence<Head: View>: View {
             return (String(localized: "\(figure(amount)) arrived, too little to move"), DS.textSecondary)
         case .failed(let amount):
             return (String(localized: "\(figure(amount)) arrived, not moved yet"), DS.attentionInk)
+        // USDC with no ETH for its gas, and too little private ETH to pay it (prd §1565).
+        case .needsGas(let amount):
+            return (String(localized: "\(figure(amount)) arrived; needs a little private ETH to move"), DS.attentionInk)
         }
     }
 

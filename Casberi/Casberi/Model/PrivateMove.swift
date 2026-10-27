@@ -75,6 +75,16 @@ final class PrivateMove {
     /// the pool's smallest deposit.
     private(set) var quotedFee: String?
     private(set) var minimum: String?
+    /// USDC on Ethereum (prd §1565): what your account holds, the pool's
+    /// smallest deposit in USDC (read live), and the relayer's fee on a send.
+    private(set) var usdcBalance: String?
+    private(set) var usdcMinimum: String?
+    private(set) var usdcFee: String?
+    /// The token the amount is in: "ETH", or on Ethereum "USDC" (prd §1565).
+    var symbol = "ETH"
+    /// Switch on: the recipient has a private account of their own, so the
+    /// send goes balance to balance (prd §1565); nil while it is asked.
+    private(set) var balanceToBalance: Bool?
     /// The sender's Sepolia ETH and the gas a first move keeps back, base units.
     private(set) var balance: String?
     private(set) var reserve: String?
@@ -85,19 +95,66 @@ final class PrivateMove {
     /// kill switch is off; Sepolia in a DEBUG build.
     static var available: Bool { PrivacyNetwork.current(debugAsks: debugNetwork) != nil }
 
-    /// Receive to a fresh address (prd §1560): Sepolia in a DEBUG build only.
-    /// Not on Ethereum (prd §1563): a fresh address's deposit is signed by
-    /// its own key, and that signer exists for testnets only (`TestnetTx`).
+    /// Receive to a fresh address (prd §1560, §1565): wherever private money
+    /// is — Ethereum in every build (the fresh key signs its own deposit
+    /// through `FreshSigner`, which can make nothing but a router's deposit
+    /// or its approval), Sepolia in a DEBUG one. On Ethereum the note's
+    /// owner is your account, so there must be one on the phone.
     static var freshAvailable: Bool {
-        #if DEBUG
-        PrivacyNetwork.current(debugAsks: debugNetwork)?.isTest == true
-        #else
-        false
-        #endif
+        guard let network = PrivacyNetwork.current(debugAsks: debugNetwork) else { return false }
+        return network.isTest || PrivateOnEthereum.owner != nil
     }
 
     /// What the sender holds, as a number ("0.0412").
     var held: String? { balance.flatMap { PrivateMoney.number($0, decimals: 18) } }
+
+    /// The amount's token decimals: 18 for ETH, 6 for USDC.
+    var decimals: Int { symbol == "USDC" ? 6 : 18 }
+
+    /// The token the engine is asked for: ETH's sentinel, or USDC's contract.
+    var tokenId: String {
+        symbol == "USDC" ? (network.yield.first { !$0.native }?.underlying ?? Self.eth) : Self.eth
+    }
+
+    /// USDC's amounts on Ethereum (prd §1565): into your private balance,
+    /// what your account holds in USDC from the pool's smallest deposit up
+    /// (its gas is ETH, held back from ETH's); from it, what is approved
+    /// after the relayer's fee.
+    var usdcChoices: [String] {
+        guard onEthereum else { return [] }
+        switch mode {
+        case .deposit:
+            guard let usdcBalance, let usdcMinimum, let balance, let reserve,
+                  (Decimal(string: balance) ?? 0) >= (Decimal(string: reserve) ?? 1) else { return [] }
+            return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: PrivateMoney.usdcLadder, minimum: usdcMinimum)
+        case .send:
+            guard let usdcFee else { return [] }
+            return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC"),
+                                        reserve: usdcFee, decimals: 6, ladder: PrivateMoney.usdcLadder)
+        }
+    }
+
+    /// Every amount the sentence offers, ETH's then USDC's.
+    var options: [(symbol: String, amount: String)] {
+        choices.map { ("ETH", $0) } + usdcChoices.map { ("USDC", $0) }
+    }
+
+    /// Picks `step` of `token` (the glass box's row).
+    func pick(_ step: String, of token: String) {
+        symbol = token
+        amount = step
+    }
+
+    /// Switch on, a new recipient: asks the keystore whether they hold a
+    /// private account (prd §1565), so the line can say where it goes.
+    func checkRecipient() async {
+        guard let to = recipient, PrivateMoney.isAddress(to), !DemoMode.isActive else { balanceToBalance = nil; return }
+        balanceToBalance = nil
+        let has = await PrivateOnEthereum.hasPrivateAccount(to, on: network)
+        guard recipient == to else { return }
+        balanceToBalance = has
+        NSLog("privateMove| recipient | %@ | %@", YourAccount.short(to), has ? "has a private account" : "no private account")
+    }
 
     var choices: [String] {
         switch mode {
@@ -122,7 +179,7 @@ final class PrivateMove {
 
     /// The relayer's fee on this amount, base units, once its terms are read.
     var fee: String? {
-        if onEthereum { return quotedFee }
+        if onEthereum { return symbol == "USDC" ? usdcFee : quotedFee }
         guard let terms, let value = PrivateMoney.baseUnits(amount, decimals: 18) else { return nil }
         return PrivateMoney.relayFee(value, terms: terms)
     }
@@ -231,10 +288,17 @@ final class PrivateMove {
         if mode == .send {
             await PrivateMoneyStore.shared.readYield()
             if let pool { quotedFee = await Self.relayerFee(pool, network: network, to: recipient ?? account) }
+            if let usdcPool = network.yield.first(where: { !$0.native }),
+               PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC") != "0" {
+                usdcFee = await Self.relayerFee(usdcPool, network: network, to: recipient ?? account)
+            }
             guard mine == reads else { return }
-            let options = choices
+            let options = self.options
             guard !options.isEmpty else { stage = quotedFee == nil ? .failed(String(localized: "0xBow's relayer did not answer")) : .nothingPrivate; return }
-            if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+            if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) {
+                let first = options[min(2, options.count - 1)]
+                pick(first.amount, of: first.symbol)
+            }
             stage = .ready
             NSLog("privateMove| ethereum send read | %d choices | fee %@ wei", options.count, quotedFee ?? "-")
             return
@@ -243,7 +307,10 @@ final class PrivateMove {
         async let held = YourAccountChain.balance(net, YourAccountOp.eth, of: account)
         async let price = try? YourAccountChain.rpc(net, "eth_gasPrice", []) as? String
         async let terms = pool != nil ? PrivateOnEthereum.terms(pool!) : nil
-        let (have, gas, config, _) = await (held, price, terms, rates)
+        let usdcPool = network.yield.first { !$0.native }
+        async let usdcHeld = YourAccountChain.balance(net, YourAccountOp.dollar(on: net), of: account)
+        async let usdcFloor = usdcPool != nil ? Self.minimumBudget(usdcPool!) : nil
+        let (have, gas, config, _, dollars, floor) = await (held, price, terms, rates, usdcHeld, usdcFloor)
         guard mine == reads else { return }
         guard let have, let gas, let config, config.enabled else {
             stage = .failed(String(localized: "Ethereum could not be reached"))
@@ -252,15 +319,25 @@ final class PrivateMove {
         balance = have
         reserve = PrivateMoney.reserve(gasPrice: PrivateMoney.decimal(hex: gas))
         minimum = config.minimum
-        let options = choices
+        usdcBalance = dollars
+        usdcMinimum = floor
+        let options = self.options
         if options.isEmpty {
             stage = .needsFunds(account)
         } else {
-            if !options.contains(amount) { amount = options[0] }
+            if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) { pick(options[0].amount, of: options[0].symbol) }
             stage = .ready
         }
         NSLog("privateMove| ethereum read | %@ | balance %@ | reserve %@ | minimum %@ | %d choices",
               YourAccount.short(account), have, reserve ?? "-", config.minimum, options.count)
+    }
+
+    /// A yield pool's smallest deposit in its token, read live (prd §1565).
+    static func minimumBudget(_ pool: PrivacyNetwork.YieldPool) async -> String? {
+        guard let config = await PrivateOnEthereum.terms(pool), config.enabled,
+              let answer = await PrivateOnEthereum.ethCall(to: pool.share, data: PrivateYield.exchangeRateCall),
+              let rate = PrivateYield.word(answer, 0), rate != "0" else { return nil }
+        return FreshAddress.minimumBudget(minimumShares: config.minimum, exchangeRate: rate, shareDecimals: pool.shareDecimals)
     }
 
     /// The relayer's fee for a withdrawal from `pool`, in ETH base units:
@@ -296,17 +373,18 @@ final class PrivateMove {
             stage = .failed(YourAccountDemo.actsLater)
             return
         }
-        guard let value = PrivateMoney.baseUnits(amount, decimals: 18) else { return }
+        guard let value = PrivateMoney.baseUnits(amount, decimals: decimals) else { return }
+        let token = tokenId
         let started = Date()
         do {
             if mode == .send {
                 guard let to = recipient, PrivateMoney.isAddress(to) else { return }
                 stage = .opening
-                let hash = try await PrivateOnEthereum.send(token: Self.eth, amount: value, to: to)
+                let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)
                 stage = .done(hash)
             } else {
                 stage = .preparing
-                let hash = try await PrivateOnEthereum.deposit(token: Self.eth, budget: value, context: nil, stage: { [weak self] s in
+                let hash = try await PrivateOnEthereum.deposit(token: token, budget: value, context: nil, stage: { [weak self] s in
                     await MainActor.run {
                         switch s {
                         case .preparing: self?.stage = .preparing
@@ -318,7 +396,8 @@ final class PrivateMove {
                 stage = .done(hash)
                 await PrivateMoneyStore.shared.refresh(force: true)
             }
-            NSLog("privateMove| ethereum | %@ | %@ ETH | %d s", mode == .send ? "sent" : "deposited", amount, Int(Date().timeIntervalSince(started)))
+            NSLog("privateMove| ethereum | %@ | %@ %@ | %d s", mode == .send ? (balanceToBalance == true ? "balance to balance" : "sent") : "deposited",
+                  amount, symbol, Int(Date().timeIntervalSince(started)))
         } catch {
             stage = .failed(Self.words(error, network: network))
             NSLog("privateMove| ethereum failed | %@", String(describing: error))
@@ -351,12 +430,16 @@ final class PrivateMove {
             let found = try await engine.discover()
             PrivateMoneyStore.shared.reconcile(found, root: account == PrivateRoot.legacy ? nil : account)
             stage = .proving
-            let spend = try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to)
-            NSLog("privateMove| proved withdraw | %d ms", spend.ms)
+            // Balance to balance when they hold a private account (prd §1565),
+            // else paid out to the address.
+            let spend = balanceToBalance == true ? try await engine.prepareTransfer(tokenId: PrivateMove.eth, amount: hex, to: to)
+                : try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to)
+            NSLog("privateMove| proved %@ | %d ms", balanceToBalance == true ? "transfer" : "withdraw", spend.ms)
             stage = .sending
             let relayed = try await engine.relay(handle: spend.handle)
             stage = .done(relayed.tx)
-            NSLog("privateMove| relayed | %@ | %@ ETH | %d s", relayed.tx, amount, Int(Date().timeIntervalSince(started)))
+            NSLog("privateMove| relayed | %@ | %@ | %@ ETH | %d s", balanceToBalance == true ? "balance to balance" : "paid out",
+                  relayed.tx, amount, Int(Date().timeIntervalSince(started)))
             if let after = try? await engine.discover() {
                 PrivateMoneyStore.shared.reconcile(after, root: account == PrivateRoot.legacy ? nil : account)
             }

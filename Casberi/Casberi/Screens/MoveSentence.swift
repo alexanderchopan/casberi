@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import UIKit
 
 /// **MOVE IS A SENTENCE YOU FILL IN (prd §1438)**, from the 2026-10-19 canvas
@@ -451,7 +452,29 @@ struct MoveSentence: View {
             return nil
         }
         guard sent != "0" else { return nil }
+        // Into your private balance on Ethereum (prd §1565): its own count,
+        // moving together once it reaches the pool's smallest deposit.
+        if privateRoundUps {
+            return RoundUps.privatePlan(dollarSent: sent, saved: RoundUps.privateSaved(on: network.chainId), step: setting.step,
+                                        threshold: RoundUps.privateMoveAt(on: network.chainId, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum))
+        }
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
+    }
+
+    /// Round-ups move into your private balance here (prd §1565): picked,
+    /// on Ethereum, with private money on (the kill switch) and your
+    /// account its owner.
+    private var privateRoundUps: Bool {
+        RoundUps.setting.movesPrivately && !network.isTest && network.chainId == RoundUps.ethereumPool
+            && PrivateMove.available && PrivateOnEthereum.owner != nil
+    }
+
+    /// What this Face ID operation carries into your private balance: the
+    /// whole count once it is due, when this act can spend the dollar (a
+    /// send of it, a swap selling it), as the buy rides (prd §1545, §1561).
+    private var privateRide: String? {
+        guard privateRoundUps, RoundUps.carriesBuy(roundUpAct) else { return nil }
+        return roundUpPlan?.buy
     }
 
     /// What rounds up here, for whether its transaction carries the buy.
@@ -471,7 +494,7 @@ struct MoveSentence: View {
     /// The buy this transaction carries: the plan's, when the count reached
     /// it and this act can carry it (prd §1561).
     private var roundUpCarried: Chain.RoundUpBuy? {
-        guard RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }
+        guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }
         return Chain.RoundUpBuy(units: units, target: RoundUps.setting.target)
     }
 
@@ -529,6 +552,16 @@ struct MoveSentence: View {
     private var roundUpPrint: [String] {
         guard let plan = roundUpPlan else { return [] }
         let target = RoundUps.setting.target
+        if privateRoundUps {
+            if let due = plan.buy {
+                let usd = Op.dollars(due, decimals: RoundUps.dollarDecimals, price: 1)
+                return privateRide != nil
+                    ? [String(localized: "\(Self.money(usd)) of round-ups moves to your private balance")]
+                    : [String(localized: "\(Self.money(usd)) of round-ups so far, moved with your next send of \(Op.dollar(on: network).symbol)")]
+            }
+            let usd = Op.dollars(plan.savedAfter, decimals: RoundUps.dollarDecimals, price: 1)
+            return [String(localized: "\(Self.money(usd)) of round-ups so far, for your private balance")]
+        }
         // A swap of another token, or a Buy, cannot carry the buy (prd §1561).
         if let buy = plan.buy, !RoundUps.carriesBuy(roundUpAct) {
             let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
@@ -3284,19 +3317,38 @@ struct MoveSentence: View {
         let net = network
         let roundUp = roundUpPlan
         let carried = roundUpCarried
+        let toPrivate = privateRoundUps
+        let rideUnits = privateRide
         stage = .preparing
         Task {
             do {
                 let buy = carried
-                let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, reason: reason,
+                // Round-ups due into your private balance (prd §1565): the
+                // deposit proved now and carried by this operation; one that
+                // cannot be written keeps counting, and the send goes alone.
+                var ride: PrivateOnEthereum.Ride?
+                if let rideUnits {
+                    do { ride = try await PrivateOnEthereum.roundUpsRide(units: rideUnits) } catch {
+                        NSLog("roundUpsPrivate| kept counting | %@", String(describing: error))
+                    }
+                }
+                let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
                                                 said: { line in await MainActor.run { say(line) } }) { s in
                     await MainActor.run { stage = s }
                 }
                 // The change is counted once the send has landed; a buy
                 // empties the count with it, and a send that did not buy (the
                 // spend limit's key, or no pool, prd §1545) keeps it all.
-                if let roundUp, case .landed = done.sent.outcome {
-                    RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)
+                if let roundUp, case .landed(let tx, _) = done.sent.outcome {
+                    if toPrivate {
+                        // The pool's minimum, read again for the next send's threshold.
+                        Task { await PrivateMoneyStore.shared.readYield(including: .ethereum) }
+                        let moved = ride != nil && done.rode
+                        RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)
+                        if moved, let ride, let tx { Self.landPrivateRoundUps(ride, tx: tx, context: context) }
+                    } else {
+                        RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)
+                    }
                 }
                 let sent = done.sent
                 stage = nil
@@ -3354,10 +3406,11 @@ struct MoveSentence: View {
     /// wallet is asked through the Signer sheet. A refusal before Face ID sends
     /// nothing, so asking both keys next pays nothing twice.
     static func spend(_ batch: [Chain.Item], on net: Op.Network, account: String, roundUp: Chain.RoundUpBuy?,
+                      ride: [(to: String, data: String, value: String)] = [],
                       reason: String, said: @escaping @Sendable (String) async -> Void,
                       stage: @escaping @Sendable (Chain.Stage) async -> Void) async throws -> Chain.Transacted {
         guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
-            return try await Chain.transact(batch, reason: reason, roundUp: roundUp, stage: stage)
+            return try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
         }
         let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
         if sends.count == batch.count {
@@ -3382,7 +3435,19 @@ struct MoveSentence: View {
             throw Chain.Failure(message: String(localized: "Add a signer first: over the limit, a send waits on it"))
         }
         return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
-                                        roundUp: roundUp, renew: true, stage: stage)
+                                        roundUp: roundUp, renew: true, ride: ride, stage: stage)
+    }
+
+    /// Round-ups that rode a landed operation (prd §1565): the note kept
+    /// waiting for approval, its Activity row with no verb.
+    @MainActor
+    static func landPrivateRoundUps(_ ride: PrivateOnEthereum.Ride, tx: String, context: ModelContext) {
+        let n = ride.keep
+        PrivateMoneyStore.shared.add(.init(commitment: n.commitment, label: n.label, labelHash: n.labelHash, symbol: n.symbol,
+                                           amount: n.amount, decimals: n.decimals, chainId: n.chainId, tx: tx, at: Date(),
+                                           status: .waiting, root: n.root, share: n.share))
+        PrivateActivity.land(hash: tx, title: PrivateMoney.roundUpsTitle(figure: ride.figure), chainId: n.chainId, context: context)
+        NSLog("roundUpsPrivate| moved | %@ | %@", tx, ride.figure)
     }
 
     /// Whether Face ID was reached, read across the send's tasks.
