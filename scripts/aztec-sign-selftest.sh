@@ -25,7 +25,7 @@ REQ="Casberi/Casberi/Model/AztecSignRequest.swift"
 LOG="Casberi/Casberi/Model/AztecSignedLog.swift"
 P2="Casberi/Casberi/Model/AztecPoseidon2.swift"
 FIX="scripts/fixtures/aztec/sign-request-v5.json"
-# The v6.0.0 testnet's own (prd §AZ6): a token deploy the simulator's key
+# The v6.0.0 testnet's own (prd §1565): a token deploy the simulator's key
 # signed through `tools/aztec-signer once --sim`, mined at block 7652
 # (tx 0x0d3575e6…a2e9), the sponsored fee payer on v6 paying.
 FIX6="scripts/fixtures/aztec/sign-request-v6.json"
@@ -71,7 +71,7 @@ check(AztecSignRequest.digest(real.messageHash)?.count == 32, "the digest is 32 
 check(AztecSignRequest.digest(real.messageHash) != AztecPoseidon2.field(real.messageHash).map { Array($0) },
       "the digest is sha256 of the hash, never the hash")
 
-print("a real request on the v6.0.0 testnet (prd §AZ6)")
+print("a real request on the v6.0.0 testnet (prd §1565)")
 let v6 = try! JSONDecoder().decode(AztecSignRequest.Request.self,
                                    from: Data(contentsOf: URL(fileURLWithPath: ProcessInfo.processInfo.environment["SIGN_FIX6"]!)))
 check(AztecSignRequest.outerHash(v6) == v6.messageHash, "the hash rebuilt from its three calls is the one v6 aztec.js asked for")
@@ -127,13 +127,13 @@ func onVersion(_ v: Int, chain: String = "0x" + String(11_155_111, radix: 16)) -
     let hash = AztecSignRequest.outerHash(with { $0["version"] = hex; $0["chainId"] = chain })!
     return with { $0["version"] = hex; $0["chainId"] = chain; $0["messageHash"] = hash }
 }
-check(AztecSignRequest.check(onVersion(679_261_766)) == .sign(network: "Aztec testnet (v6)"), "v6.0.0's rollup is known (prd §AZ6)")
+check(AztecSignRequest.check(onVersion(679_261_766)) == .sign(network: "Aztec testnet (v6)"), "v6.0.0's rollup is known (prd §1565)")
 check(AztecSignRequest.check(onVersion(3_409_706_519)) == .refused("This request names a rollup that is not one of Aztec's testnets."),
       "a release candidate no node answers any more is refused with no live reading")
 let mainnetFirst = onVersion(2_934_756_905)
 check(AztecSignRequest.check(mainnetFirst, live: .init(rollupVersion: 2_934_756_905, l1ChainID: 11_155_111))
       == .refused("This request names a rollup that is not one of Aztec's testnets."),
-      "every rollup mainnet's Registry lists is refused, even vouched for (prd §AZ6)")
+      "every rollup mainnet's Registry lists is refused, even vouched for (prd §1565)")
 let moved = onVersion(1_234_567)
 check(AztecSignRequest.check(moved) == .refused("This request names a rollup that is not one of Aztec's testnets."),
       "an unknown rollup is refused with no live reading")

@@ -36,7 +36,7 @@ enum AztecWire {
     /// The value that names a chain (FramesNetwork's rule, prd §962): its
     /// Aztec node, its explorer, and the Ethereum node its Rollup lives on.
     /// The testnet is Aztec's CURRENT one (v6.0.0, rollup version 679261766,
-    /// read 2026-10-26, prd §AZ6; the v5 host the getting-started page names
+    /// read 2026-10-26, prd §1565; the v5 host the getting-started page names
     /// is the previous testnet). The node names its own Rollup, and that is
     /// the testnet Registry's canonical one on Sepolia, so nothing L1 is pinned.
     /// Both Aztec hosts are dRPC's public endpoints, which refuse a batch of
