@@ -561,25 +561,16 @@ enum YourAccountChain {
             let signer = try await recoverySigner(x: key.x, y: key.y)
             calls += YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer, threshold: 1)
         }
-        var plan: YourAccount7579.Plan?
         if let owner = choice.signer {
             calls.append(YourAccountOp.addOwnerCall(account: account, owner: owner, threshold: 1))
-            if let limit = choice.limit {
-                let price = await exchangePrice(net, YourAccountOp.eth)
-                // Six periods, not twelve: opening the account with twelve is
-                // 19.2M gas against the bundler's 15M (measured on Base,
-                // 2026-10-21; user: "One Face ID, 6 periods"). It renews to
-                // twelve with a send both keys sign.
-                let next = limitPlan(on: net, dollars: limit.dollars, ethPrice: price, minutes: limit.minutes,
-                                     count: YourAccountSetup.firstPeriods)
-                calls += YourAccount7579.installCalls(account: account)
-                calls += try await limitCalls(net, account, next).calls
+            // Required at Create (prd §1570): both keys, last, while this
+            // phone alone still signs. No allowance: it is retired.
+            if choice.required {
                 calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
                                                 data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
-                plan = next
             }
         }
-        return calls.isEmpty ? nil : (calls, plan)
+        return calls.isEmpty ? nil : (calls, nil)
     }
 
     static func savePlan(_ plan: YourAccount7579.Plan, on net: Network) {

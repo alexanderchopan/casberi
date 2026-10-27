@@ -58,6 +58,8 @@ struct MoveSecurity: View {
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
+    @State private var roundUpsTray = false
+    @State private var roundUpsPicking = false
     /// Whether private money is on this phone alone (prd §1562), read in a
     /// task: the Keychain and the store, never in a body.
     @State private var privateBackup: PrivateRoot.Backup = .fine
@@ -135,6 +137,7 @@ struct MoveSecurity: View {
         .sheet(isPresented: Binding(get: { coSignerTray != nil }, set: { shown in
             if !shown { coSignerTray = nil; if !coSignerWalking { coSignerSteps = [:] } }
         })) { coSignerTraySheet }
+        .sheet(isPresented: $roundUpsTray) { roundUpsTraySheet }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
@@ -272,65 +275,13 @@ struct MoveSecurity: View {
     /// the tokens with their marks (prd §1452, §1496). The sentence under it
     /// says the one thing the word cannot: when the change is spent.
     @ViewBuilder private var roundUpsRow: some View {
-        HStack(spacing: DS.Space.s3) {
-            Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            Menu {
-                Toggle(isOn: Binding(get: { roundUps.on }, set: { on in
-                    withAnimation(DS.Motion.standard) { roundUps.on = on }
-                    RoundUps.setting = roundUps
-                })) { Text("Round up sends, swaps and buys") }
-                if roundUps.on {
-                    Picker(selection: Binding(get: { roundUps.step }, set: { step in
-                        withAnimation(DS.Motion.standard) { roundUps.step = step }
-                        RoundUps.setting = roundUps
-                    })) {
-                        ForEach([1, 5], id: \.self) { step in
-                            Text("To the next $\(step)").tag(step)
-                        }
-                    } label: { EmptyView() }
-                    .pickerStyle(.inline)
-                    // A section per network, named (Base's ETH is not
-                    // Ethereum's), each token a toggle: it ticks the pick and
-                    // keeps its mark.
-                    ForEach(roundUpChoices, id: \.network.chainId) { group in
-                        Section(group.network.name) {
-                            ForEach(group.tokens) { listed in
-                                let target = Self.target(listed, on: group.network)
-                                Toggle(isOn: Binding(get: { roundUps.target == target && !roundUps.movesPrivately }, set: { on in
-                                    guard on else { return }
-                                    withAnimation(DS.Motion.standard) {
-                                        roundUps.target = target
-                                        roundUps.toPrivate = nil
-                                    }
-                                    RoundUps.setting = roundUps
-                                })) {
-                                    Label {
-                                        Text(verbatim: listed.token.symbol)
-                                    } icon: {
-                                        Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // **OR YOUR PRIVATE BALANCE (prd §1561, §1567)**, a word
-                    // beside the tokens, only where this build has a pool to
-                    // move the change into: Ethereum (ppUSDC), or Sepolia in
-                    // a DEBUG build; none with the kill switch off.
-                    ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in
-                        Section(PrivateMoney.network(chain)) {
-                            Toggle(isOn: Binding(get: { roundUps.movesPrivately }, set: { on in
-                                guard on else { return }
-                                withAnimation(DS.Motion.standard) { roundUps.toPrivate = true }
-                                RoundUps.setting = roundUps
-                            })) {
-                                Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }
-                            }
-                        }
-                    }
-                }
-            } label: {
+        Button {
+            roundUpsPicking = false
+            roundUpsTray = true
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
                 Text(verbatim: roundUpWord)
                     .dsText(.body17)
                     .foregroundStyle(DS.pickInk)
@@ -338,10 +289,11 @@ struct MoveSecurity: View {
                     .lineLimit(1)
                     .frame(minHeight: 44)
             }
-            .layoutPriority(1)
-            .accessibilityLabel(Text("Round-ups, \(roundUpWord)"))
+            .contentShape(Rectangle())
         }
+        .buttonStyle(RowPress())
         .walletRowPitch()
+        .accessibilityLabel(Text("Round-ups, \(roundUpWord)"))
         .task {
             // Where round-ups move privately on Ethereum: the pool's smallest
             // deposit, read live for the sentence below (prd §1567).
@@ -378,6 +330,132 @@ struct MoveSecurity: View {
                 .padding(.bottom, DS.Space.s2)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         }
+    }
+
+    private func saveRoundUps(_ change: (inout RoundUps.Setting) -> Void) {
+        withAnimation(DS.Motion.standard) { change(&roundUps) }
+        RoundUps.setting = roundUps
+    }
+
+    /// **ROUND-UPS IN A TRAY (user, 2026-10-27: "same for roundups").** One
+    /// sentence, Move's way: its pink words are the choices, the target's in
+    /// the glass box Move opens (tokens by network, then your private
+    /// balance); the example under it; the switch at the foot.
+    @ViewBuilder private var roundUpsTraySheet: some View {
+        DSTray(title: String(localized: "Round-ups"), height: 640, detents: [.height(640), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    MoveFlow {
+                        MoveWord(String(localized: "Round up"))
+                        MoveClause(glue: String(localized: "to the next")) {
+                            Menu {
+                                Picker(selection: Binding(get: { roundUps.step }, set: { step in saveRoundUps { $0.step = step } })) {
+                                    ForEach([1, 5], id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
+                                } label: { EmptyView() }
+                                .pickerStyle(.inline)
+                            } label: {
+                                MoveWord("$\(roundUps.step)", ink: DS.pickInk).contentTransition(.opacity)
+                            }
+                            .accessibilityLabel(Text("Round up to"))
+                        }
+                        if roundUps.movesPrivately {
+                            MoveClause(glue: String(localized: "and move it to")) {
+                                Button { togglePicking() } label: {
+                                    MoveWord(String(localized: "your private balance."), ink: DS.pickInk)
+                                }
+                                .buttonStyle(RowPress())
+                            }
+                        } else {
+                            MoveClause(glue: String(localized: "and buy")) {
+                                Button { togglePicking() } label: { MoveWord(roundUps.target.symbol, ink: DS.pickInk) }
+                                    .buttonStyle(RowPress())
+                            }
+                            MoveClause(glue: String(localized: "on")) {
+                                Button { togglePicking() } label: { MoveWord(roundUps.target.network + ".", ink: DS.pickInk) }
+                                    .buttonStyle(RowPress())
+                            }
+                        }
+                    }
+                    .opacity(roundUps.on ? 1 : 0.4)
+                    if roundUpsPicking { roundUpTargets }
+                    Text(verbatim: Self.roundUpsExample(roundUps))
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .opacity(roundUps.on ? 1 : 0.4)
+                    HStack {
+                        Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Spacer()
+                        Toggle(isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0.on = on } })) {
+                            Text("Round up sends, swaps and buys")
+                        }
+                        .labelsHidden()
+                        .tint(DS.pickInk)
+                    }
+                    .frame(minHeight: 44)
+                    .padding(.top, DS.Space.s4)
+                }
+                .padding(.vertical, DS.Space.s4)
+            }
+        }
+    }
+
+    private func togglePicking() {
+        withAnimation(DS.Motion.standard) { roundUpsPicking.toggle() }
+        DSHaptic.selection()
+    }
+
+    /// What the change buys, in the glass box Move opens its choices in: a
+    /// section per network, named, each token with its mark; then your
+    /// private balance where this build has a pool for it (prd §1561, §1567).
+    private var roundUpTargets: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(roundUpChoices, id: \.network.chainId) { group in
+                Text(verbatim: group.network.name)
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s2)
+                ForEach(group.tokens) { listed in
+                    let target = Self.target(listed, on: group.network)
+                    targetRow(listed.token.symbol,
+                              mark: Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil)),
+                              picked: roundUps.target == target && !roundUps.movesPrivately) {
+                        saveRoundUps { $0.target = target; $0.toPrivate = nil }
+                    }
+                }
+            }
+            ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in
+                Text(verbatim: PrivateMoney.network(chain))
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s2)
+                targetRow(String(localized: "Your private balance"), mark: Image(systemName: "eye.slash"),
+                          picked: roundUps.movesPrivately) {
+                    saveRoundUps { $0.toPrivate = true }
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .padding(.horizontal, DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsGlass(cornerRadius: RoomsTray.radius)
+    }
+
+    private func targetRow(_ word: String, mark: Image, picked: Bool, pick: @escaping () -> Void) -> some View {
+        Button {
+            pick()
+            withAnimation(DS.Motion.standard) { roundUpsPicking = false }
+            DSHaptic.selection()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                mark.resizable().scaledToFit().frame(width: 24, height: 24).foregroundStyle(DS.textSecondary)
+                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                if picked {
+                    Image(systemName: "checkmark").dsGlyph(.body, weight: .semibold).foregroundStyle(DS.pickInk)
+                }
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
     }
 
     /// "To next $1, buys ETH", or Off. "To next" because a bare "$1" read

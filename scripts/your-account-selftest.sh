@@ -483,10 +483,10 @@ grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.thre
 # (while this phone alone still signs), and Create walks through them.
 CH=Casberi/Casberi/Model/YourAccountChain.swift
 grep -q 'if !deployed, let setup = try await setupCalls(net, account)' "$CH" || { echo "✗ the keys chosen at Create ride an operation on a network the account is already on (prd §1457)"; exit 1; }
-awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/installCalls/{c=NR}/limitCalls/{d=NR}/changeThreshold/{e=NR}END{exit !(a<b && b<c && c<d && d<e)}' \
-  || { echo "✗ setupCalls no longer adds recovery, Signer, adapter, sessions, then both keys last (prd §1457)"; exit 1; }
+awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/changeThreshold/{e=NR}/installCalls|limitCalls/{x=1}END{exit !(a<b && b<e && !x)}' \
+  || { echo "✗ setupCalls no longer adds recovery, the co-signer, then both keys last, with no allowance (prd §1457, §1570)"; exit 1; }
 grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ a spend limit chosen at Create can stand with no Signer to sign over it (prd §1457)"; exit 1; }
-grep -q 'count: YourAccountSetup.firstPeriods)' Casberi/Casberi/Model/YourAccountChain.swift && grep -Eq 'static let firstPeriods = [1-6]$' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ the opening operation sets up more than six limit periods: twelve is 19.2M gas against the bundler's 15M (prd §1461)"; exit 1; }
+awk '/static func setupCalls/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'limitPlan' && { echo "✗ the opening operation sets up an allowance again — the co-signer is required or not (prd §1570)"; exit 1; }
 # A bundler's refusal reaches the person in the app's words (prd §1461 item 4).
 grep -q 'last = worded(error, on: net)' Casberi/Casberi/Model/YourAccountChain.swift && grep -q 'lower.contains("max gas")' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a bundler's raw refusal (\"UserOperation max gas … is larger than\") reaches the person (prd §1461 item 4)"; exit 1; }
 # Security's box is nine, three across, the figure centered over its word (prd §1462):

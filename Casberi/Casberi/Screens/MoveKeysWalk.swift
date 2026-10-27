@@ -27,12 +27,9 @@ struct MoveKeysWalk: View {
     @State private var choice = YourAccountSetup.Choice()
     @State private var connecting = false
     @State private var note: String?
-    @State private var amountText = ""
-    @State private var period: Period = .month
     @State private var roundUps = RoundUps.Setting(on: true)
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
-    @FocusState private var amountFocused: Bool
 
     init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery,
          done: @escaping (Ending) -> Void) {
@@ -47,8 +44,7 @@ struct MoveKeysWalk: View {
         if inert {
             // The preview draws every key chosen.
             _choice = State(initialValue: .init(recovery: true, signer: "0x2F60D2BB84Eb8df6951F7215ef035eF052BA2725",
-                                                limitDollars: 100, limitMinutes: Period.month.minutes))
-            _amountText = State(initialValue: "100")
+                                                requiresCoSigner: true))
         }
         #endif
     }
@@ -116,48 +112,14 @@ struct MoveKeysWalk: View {
             }
             // Its own job, never the recovery key's; and when it lands —
             // connecting signs nothing (prd §1499).
-            small(String(localized: "Co-signs swaps, private moves and sends over your spend limit. Activates on your first move."))
+            small(String(localized: "Once required, it approves every send and swap. Activates on your first move."))
         case .limit:
+            // One switch, never an amount (prd §1570): required or not.
             MoveFlow {
-                MoveWord(String(localized: "Require a co-signer"))
-                MoveWord(String(localized: "for moves"))
-                MoveClause(glue: String(localized: "over")) {
-                    MoveRungReader { rung in
-                        HStack(alignment: .firstTextBaseline, spacing: 0) {
-                            Text(verbatim: "$").dsText(rung).foregroundStyle(DS.pickInk)
-                            TextField("100", text: $amountText)
-                                .keyboardType(.numberPad)
-                                .focused($amountFocused)
-                                .dsText(rung)
-                                .foregroundStyle(DS.pickInk)
-                                .tint(DS.pickInk)
-                                .fixedSize()
-                                .accessibilityLabel(Text("Dollars"))
-                        }
-                    }
-                }
-                // Each coin counts apart (prd §1455): without it the sentence
-                // promises a total the account does not keep.
-                MoveWord(String(localized: "of each coin"))
-                MoveClause(glue: String(localized: "a")) {
-                    Menu {
-                        ForEach(Period.allCases, id: \.self) { p in
-                            Button { withAnimation(DS.Motion.standard) { period = p } } label: {
-                                if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
-                            }
-                        }
-                    } label: {
-                        MoveWord(period.word + ".", ink: DS.pickInk)
-                            .contentTransition(.opacity)
-                    }
-                    .accessibilityLabel(Text("How often it starts again"))
-                }
+                MoveWord(String(localized: "Require your co-signer"))
+                MoveClause(glue: String(localized: "for")) { MoveWord(String(localized: "every send and swap."), ink: DS.pickInk) }
             }
-            // With the limit on, everything but a send under it needs the
-            // co-signer (prd §1456), said where the limit is set (user: "the
-            // fact that it requires a signer for a 'not plain send' is
-            // something user should be aware of").
-            small(String(localized: "Swaps, private moves and getting your account back need it too."))
+            small(String(localized: "You can turn it off later in Account. Getting your account back needs it too."))
         case .roundUps:
             MoveFlow {
                 MoveWord(String(localized: "Round up each move"))
@@ -291,7 +253,7 @@ struct MoveKeysWalk: View {
         switch step {
         case .recovery: String(localized: "Add")
         case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
-        case .limit: String(localized: "Set")
+        case .limit: String(localized: "Require")
         case .roundUps: String(localized: "Turn on")
         case .created: String(localized: "Done")
         }
@@ -300,16 +262,9 @@ struct MoveKeysWalk: View {
     private var verbEnabled: Bool {
         switch step {
         case .signer: !connecting
-        case .limit: amountDollars != nil
+        case .limit: true
         default: true
         }
-    }
-
-    /// Whole dollars, one or more.
-    private var amountDollars: Int? {
-        let text = amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "$", with: "")
-        guard let n = Int(text), n >= 1, n <= 1_000_000 else { return nil }
-        return n
     }
 
     private func act() {
@@ -352,10 +307,7 @@ struct MoveKeysWalk: View {
                 }
             }
         case .limit:
-            guard let n = amountDollars else { return }
-            amountFocused = false
-            choice.limitDollars = n
-            choice.limitMinutes = period.minutes
+            choice.requiresCoSigner = true
             DSHaptic.success()
             advance()
         case .roundUps:
@@ -381,15 +333,9 @@ struct MoveKeysWalk: View {
         }
         #if DEBUG
         NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@ roundUps=%@", next.rawValue, choice.recovery ? "yes" : "no",
-              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none",
+              choice.signer ?? "none", choice.required ? "required" : "none",
               RoundUps.setting.on ? "\(RoundUps.setting.step)/\(RoundUps.setting.target.symbol)" : "off")
         #endif
         withAnimation(DS.Motion.standard) { step = next }
-        if next == .limit {
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(300))
-                amountFocused = true
-            }
-        }
     }
 }

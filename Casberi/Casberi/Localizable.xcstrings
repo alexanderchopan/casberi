@@ -126080,6 +126080,34 @@
         }
       }
     },
+    "Once required, it approves every send and swap. Activates on your first move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una vez obligatorio, aprueba cada envío e intercambio. Se activa en tu primer movimiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "必須にすると、すべての送金とスワップを承認します。最初の移動で有効になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "필수로 하면 모든 송금과 스왑을 승인합니다. 첫 이동 때 활성화됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设为必需后，它会批准每次发送和兑换。在你第一次转移时启用。"
+          }
+        }
+      }
+    },
     "Onchain" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -148768,6 +148796,34 @@
         }
       }
     },
+    "Require" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "必須にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "필수로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要求"
+          }
+        }
+      }
+    },
     "Require a co-signer" : {
       "localizations" : {
         "es" : {
@@ -148876,6 +148932,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "要求共同签名者"
+          }
+        }
+      }
+    },
+    "Require your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exige tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を必須に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 필수로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要求你的共同签名者"
           }
         }
       }
@@ -150536,6 +150620,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "轮换"
+          }
+        }
+      }
+    },
+    "Round up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondea"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向上取整"
           }
         }
       }
@@ -198605,6 +198717,34 @@
         }
       }
     },
+    "You can turn it off later in Account. Getting your account back needs it too." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puedes desactivarlo después en Cuenta. Recuperar tu cuenta también lo necesita."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "後でアカウントでオフにできます。アカウントの復旧にも必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나중에 계정에서 끌 수 있습니다. 계정 복구에도 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你之后可以在账户中关闭它。找回账户也需要它。"
+          }
+        }
+      }
+    },
     "You declined on GitHub — nothing was connected." : {
       "localizations" : {
         "es" : {
@@ -210645,6 +210785,34 @@
         }
       }
     },
+    "and move it to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "y muévelo a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そして移す先は"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그리고 옮길 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "并转入"
+          }
+        }
+      }
+    },
     "and your keys" : {
       "localizations" : {
         "es" : {
@@ -213595,6 +213763,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "所有节点均返回 %@，且没有可读取的内容"
+          }
+        }
+      }
+    },
+    "every send and swap." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cada envío e intercambio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての送金とスワップ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 송금과 스왑."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送和兑换。"
           }
         }
       }
@@ -229675,6 +229871,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的私密余额"
+          }
+        }
+      }
+    },
+    "your private balance." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu saldo privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密余额。"
           }
         }
       }

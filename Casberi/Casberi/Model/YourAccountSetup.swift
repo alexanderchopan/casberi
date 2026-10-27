@@ -12,6 +12,11 @@ enum YourAccountSetup {
         var signer: String?
         var limitDollars: Int?
         var limitMinutes: Int?
+        /// Every send and swap needs the co-signer (prd §1570). A limit
+        /// chosen by an older build counts as this: the allowance is retired.
+        var requiresCoSigner: Bool?
+
+        var required: Bool { signer != nil && (requiresCoSigner == true || limit != nil) }
 
         var limit: (dollars: Int, minutes: Int)? {
             guard signer != nil, let limitDollars, limitDollars > 0, let limitMinutes, limitMinutes > 0 else { return nil }
