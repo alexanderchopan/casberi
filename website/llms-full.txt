@@ -30,43 +30,6 @@ Last updated: October 26, 2026
 
 - Make it yours — Your name and photo, Feed order, widgets, theme, notifications, and where your data lives.
 
-## About — what Casberi is, and why
-
-### The short version
-
-Connect your apps and everything lands in one private feed on your device — no Casberi account, ever. Five tabs: the Feed is what's happening, the Wallet is what you have, Move is what you do with it, Library is your apps and you, and Search finds anything. If you want one, Casberi makes you an account of your own that only your keys can move. Widgets put your notes, your wallet or your feed on the Home Screen, and Spotlight finds any thing by what it says.
-
-### The situation
-
-Everything you do creates something — a note, a link, a screenshot, a plan. Each one lands in a different app. The more apps you use, the more places you have to look, and the harder it gets to find and use your own stuff. AI assistants were supposed to help, but each one is another app, with its own history and its own settings. That just adds to the pile.
-
-### Who it's for
-
-**Casual users — built for you first.** Your iPhone is your computer. You use a lot of apps — Notes, Calendar, Reminders, Messages — and maybe one AI app. You don't want to set anything up. You shouldn't have to.
-
-**Power users — same app, more reach.** You run AI agents that work for you — a coding agent on your laptop, jobs on a server. Your phone is how you check on them. You get the same app, with more kinds of things and connections, plus approvals.
-
-### Goals, problems, solutions
-
-Casberi is one assistant that works across your apps — not another app that runs separate from them. Everything you make becomes a thing in one feed. Goal by goal:
-
-- Stay mobile. Problem: everything takes copy-paste — to finish anything, you copy, switch apps, and paste, and if agents do your work, your phone can't reach them at all. Solution: captures become outcomes — a saved thing carries its next step; an event can go on your calendar, a task can become a reminder, right from the thing.
-- Capture things. Problem: saving scatters your stuff — where something ends up depends on how you saved it. Solution: one home for your things, and capture in one gesture — save from anywhere in one step, no folder to pick, no title to type; connected apps and machines send their things in on their own.
-- Organize things. Problem: organizing never ends — keeping things tidy means doing the same filing in every app, forever. Solution: one home for your things. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.
-- Find things. Problem: finding means remembering which app holds the thing. Solution: find by what it is — one search covers everything, and you get the thing itself, not the chat it was buried in. Power users can also search by which agent, run, or machine made it.
-- Do things. Problem: nothing gets finished — an assistant's answer still has to be moved into the real app by hand. Solution: apps are bridges — Apple apps connect through iOS itself, services with a login or a pasted token, agents and machines with a key. And approvals carry context: the exact command, who's asking, what it touches; approve or deny with one tap.
-- Set up once. Problem: setup doesn't stick. Solution: setup adds up — Casberi is useful before you set up anything, asks for permissions only when they unlock something, and keeps secrets only in the Keychain. It follows iOS in type, motion, and touch.
-- One assistant. Problem: every AI app starts from zero. Solution: not another AI app — Casberi looks and feels like an organizer, not a chatbot. No memory panel. Your agents are apps in Library, and their work shows up in your feed.
-- Stay aware. Problem: you don't find out — what you saved doesn't speak up, and agents finish or fail in silence. Solution: status arrives in your feed — run finished, run failed, scheduled job died — even something that should have arrived but didn't.
-
-### Your things stay yours
-
-Casberi is a native app — iPhone, iPad, and Mac. Your things live in a database on your device — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Connected apps reach their own services straight from your device — nothing routes through a Casberi server. Casberi never holds your money: your account answers only to your keys.
-
-### What's deliberately not here
-
-Some things are missing on purpose. No to-do tab — you act on a thing where the thing is. No chatbot persona — results, not a character. No streaks, goals, or guilt mechanics. No custody — Casberi never holds your money, and following an account can never move it. No contract of our own — your account is a Safe, built from Safe's own contracts. No fee from Casberi — a swap shows the network's fee and the pool's, or Across's; Casberi's is none.
-
 ## How to use — the whole app
 
 ### Just connect
