@@ -69210,3 +69210,13 @@ ENSv2 activated on mainnet on 2026-10-27. Measured that day: the `.eth` BaseRegi
 2. **web3.bio is the only resolver.** ensideas answers ENS's test name `ur.integration-tests.eth` with `0x1111…`, the outdated-resolver answer; web3.bio answers `0x2222…`. A fallback that can name the wrong address is worse than none, so forward, reverse and avatar reads go to web3.bio alone and `api.ensideas.com` leaves `NetworkReach`. The heartbeat checks web3.bio still resolves through ENSv2.
 3. **Renew is ENS's own app until the stablecoin renewal is built.** `ETHRenewerV1.renew(tuple,address)` is paid in an approved stablecoin, so §540's ETH transaction now reverts after the person pays gas. `ENSRenew.prepares` is off: an expiring or in-grace name's sheet shows one row, "Renew on ENS" (`ENSRenewDoor`), under the title that already states the deadline: no price, term or transaction to copy.
 4. **Not yet:** the stablecoin renewal through `ETHRenewerV1` (tuple shape and accepted tokens to measure), and the expiry of a name its owner moved to v2 (its v1 token goes to the Graveyard; whether the v1 expiry still moves is unmeasured).
+
+## §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §1571 item 3, amends §1572 item 3) (user, 2026-10-27: "yes do phase b", "ship it") — RULED, built in 881, not yet proven on mainnet
+
+1. **One operation where the money is.** Approve the network's dollar to Across's SpokePool, then its deposit with a message; on Ethereum the MulticallHandler approves the ppUSDC router for exactly the budget, runs the deposit this phone proved (`prepareBridgedYieldDeposit`, the SDK's `prepareYieldSwapDeposit` at 500 ppm headroom, no approvals), and drains what is left to the account (`PrivateBridge`, `private-bridge-selftest.sh`).
+2. **The note is yours whoever pays:** the proof binds the note data, never the sender; ragequit pays the proof's owner (read on Sourcify: PoolVault lines 104–107, 208).
+3. **A failed deposit refunds where it left:** the message names no fallback recipient, so the fill reverts and Across refunds the account on its own network.
+4. **Across is paid half again its quoted fee** (0xBow's `ACROSS_RELAYER_GAS_HEADROOM_BPS`); a fee past Across's 5% ceiling is refused.
+5. **Order in Save now:** USDC on Ethereum, then Base or Robinhood's dollar (bridged), then ETH on Ethereum (ppETH); a send on Base or Robinhood carries the save itself when the count is due. The words drop "on Ethereum".
+6. **Registration stays on Ethereum:** an account not yet registered there is told "Make one private deposit on Ethereum first".
+7. **Unproven:** a real fill. A waiting note whose bridge refunded has no follow-up yet.

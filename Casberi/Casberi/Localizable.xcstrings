@@ -104620,6 +104620,34 @@
         }
       }
     },
+    "Make one private deposit on Ethereum first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Haz primero un depósito privado en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まずEthereumでプライベート入金を1回行ってください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 Ethereum에서 비공개 입금을 한 번 하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先在 Ethereum 上进行一次私密存入"
+          }
+        }
+      }
+    },
     "Make this phone a signer" : {
       "localizations" : {
         "es" : {
@@ -152792,6 +152820,34 @@
         }
       }
     },
+    "Save now, or it saves automatically with your next send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guárdalo ahora, o se guardará automáticamente con tu próximo envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ保存するか、次の送金で自動的に保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 저장하거나, 다음 송금 때 자동으로 저장됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即存入，或在你下一次发送时自动存入。"
+          }
+        }
+      }
+    },
     "Save one in Casberi" : {
       "localizations" : {
         "es" : {
@@ -163897,6 +163953,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "花 $3.40，就存下 60¢。累计约 %@ 后，会在你下一次在 Ethereum 上发送时转入你的私密余额。"
+          }
+        }
+      }
+    },
+    "Spend $3.40 and 60¢ is saved. Once about %@ adds up, it moves into your private balance with your next send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gasta $3.40 y se guardan 60¢. Cuando se acumulen unos %@, pasa a tu saldo privado con tu próximo envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40使うと60¢が保存されます。約%@たまると、次の送金でプライベート残高に移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40를 쓰면 60¢가 저장됩니다. 약 %@가 모이면 다음 송금 때 비공개 잔액으로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "花 $3.40，就存下 60¢。累计约 %@ 后，会在你下一次发送时转入你的私密余额。"
           }
         }
       }

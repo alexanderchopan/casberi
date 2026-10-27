@@ -17,7 +17,7 @@
 import './net.js';
 import {
   AddressSchema, CryptoService, HTTPClient, KeystoreManager, NoteManager, NoteStatus, PoolSessionBuilder, PoseidonHashService,
-  ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER,
+  ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER, prepareYieldSwapDeposit,
 } from '@0xbow/privacy-pools-v2-sdk';
 import { syntheticInputs } from './synthetic.js';
 import * as snarkjs from 'snarkjs';
@@ -323,6 +323,33 @@ const methods = {
   // shares are sized to fit it (`sizeSharesForBudget`). For ETH the router
   // takes the budget as the transaction's value and refunds what it did not
   // use; for a token the approvals come back too. Nothing is sent here.
+  // A yield deposit funded from another network (prd §1574): the bridge's
+  // handler pays the router on Ethereum, so no wallet approvals come back,
+  // and it is sized with the 500 ppm headroom the SDK's own cross-chain path
+  // uses, so the share price may drift while the bridge fills. The note is
+  // the session's own: ownership is the proof's owner, never the payer.
+  async prepareBridgedYieldDeposit({ tokenId, budget }) {
+    proofs = [];
+    const t = now();
+    const pool = yieldPool(tokenId);
+    if (!pool) throw Object.assign(new Error(`no yield pool for ${tokenId}`), { name: 'NoYieldPool' });
+    const s = await session('withdraw');
+    const y = s.yieldFor(pool.share);
+    if (!y) throw Object.assign(new Error(`the session has no yield pool for ${pool.share}`), { name: 'NoYieldPool' });
+    const r = await prepareYieldSwapDeposit(y, BigInt(budget), 500n);
+    if (!r.pendingNote?.isOwned) throw Object.assign(new Error('a bridged deposit came back not owned by this session'), { name: 'NotOwned' });
+    return {
+      tx: publicTx(r.depositTx),
+      commitment: r.pendingNote.commitment,
+      label: hex(r.pendingNote.label),
+      labelHash: await labelHashOf(r.pendingNote.label),
+      share: pool.share,
+      shares: hex(r.pendingNote.value),
+      ms: Math.round(now() - t),
+      proofs,
+    };
+  },
+
   async prepareYieldDeposit({ tokenId, budget }) {
     proofs = [];
     const t = now();

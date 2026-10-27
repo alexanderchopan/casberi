@@ -16,7 +16,7 @@ enum PrivacyEngineWire {
     enum Method: String, CaseIterable {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
         case discover, prepareTransfer, prepareWithdraw, bench, labelHash, relay
-        case prepareRagequit, prepareYieldDeposit
+        case prepareRagequit, prepareYieldDeposit, prepareBridgedYieldDeposit
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -160,6 +160,19 @@ enum PrivacyEngineWire {
         let shares: String
         let underlyingNeeded: String
         let maxUnderlyingIn: String
+        let ms: Int
+        let proofs: [Proof]
+    }
+
+    /// A yield deposit a bridge's handler pays on Ethereum (prd §1574): the
+    /// router's call alone, no approvals, sized with the bridge's headroom.
+    struct PreparedBridgedDeposit: Decodable, Equatable {
+        let tx: Tx
+        let commitment: String
+        let label: String
+        let labelHash: String
+        let share: String
+        let shares: String
         let ms: Int
         let proofs: [Proof]
     }

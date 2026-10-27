@@ -224,6 +224,10 @@ final class PrivacyEngine: NSObject {
         try await call(.prepareYieldDeposit, Wire.YieldDeposit(tokenId: tokenId, budget: budget), as: Wire.PreparedYieldDeposit.self)
     }
 
+    func prepareBridgedYieldDeposit(tokenId: String, budget: String) async throws -> Wire.PreparedBridgedDeposit {
+        try await call(.prepareBridgedYieldDeposit, Wire.YieldDeposit(tokenId: tokenId, budget: budget), as: Wire.PreparedBridgedDeposit.self)
+    }
+
     /// One proof on `circuit` with this network's real keys and synthetic
     /// inputs: what a proof costs on this phone, with no funds and no send.
     /// Poseidon(label), decimal: the id 0xBow's ASP files a deposit under.

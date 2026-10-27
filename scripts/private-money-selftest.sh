@@ -998,7 +998,8 @@ use "$FRESHM" 'if !(await allowanceCovers(pool, owner: entry.address, amount: mo
 use "$FRESHM" 'switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool: usdcPool != nil) {' "a fresh address's USDC still decides for its ETH (finding 4)"
 # 7: a private target counts on Ethereum whatever is available, and rides only where it can move.
 awk '/private var privateRoundUps: Bool \{/,/^    }$/' "$SENT" | grep -q 'PrivateMove.available\|owner != nil' && { echo "✗ a private target with private money unavailable falls back to a public buy (finding 7)"; exit 1; }
-awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit,' \
-    || { echo "✗ round-ups ride where private money is not available (finding 7)"; exit 1; }
+awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'let here = RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit' \
+    && awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'PrivateBridge.carries(from: network.chainId) && RoundUps.privatePools.contains(RoundUps.ethereumPool)' \
+    || { echo "✗ round-ups ride where private money is not available, here or bridged (finding 7, prd §1574)"; exit 1; }
 echo "  ok   the review's fixes in use: kept before sent, followed past two minutes, reserved, the gas paid once, ETH apart from USDC, never public"
 echo "  ok   74 mutations"

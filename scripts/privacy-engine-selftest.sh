@@ -126,7 +126,7 @@ check((try? W.decode(W.Registered.self, from: "not json")) == nil, "a reply that
 let openJSON = (try? W.encode(W.Open(seed: "0x" + String(repeating: "ab", count: 32), revocableKeyIndex: "0x0", owner: "0x01", network: .sepolia))) ?? ""
 check(openJSON.contains(#""chainId":11155111"#) && openJSON.contains(#""withdrawProcessor":"0x7430cc030d7eb8C83E76cD983996982C8C054204""#),
       "open carries the network the page checks")
-check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit"],
+check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit", "prepareBridgedYieldDeposit"],
       "the methods are the page's")
 
 // The network door.

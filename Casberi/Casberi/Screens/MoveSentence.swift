@@ -526,7 +526,11 @@ struct MoveSentence: View {
     /// only where private money is available now (`privateRoute`'s
     /// `.deposit`: the kill switch on, your account the owner).
     private var privateRide: String? {
-        guard privateRoundUps, RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit,
+        // On Ethereum, the deposit itself; on Base or Robinhood, bridged into
+        // the pool on the way in (prd §1574).
+        let here = RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit
+        let bridged = PrivateBridge.carries(from: network.chainId) && RoundUps.privatePools.contains(RoundUps.ethereumPool)
+        guard privateRoundUps, here || bridged,
               PrivateMove.available, PrivateOnEthereum.owner != nil, RoundUps.carriesBuy(roundUpAct) else { return nil }
         return roundUpPlan?.buy
     }
@@ -3447,7 +3451,11 @@ struct MoveSentence: View {
                 // cannot be written keeps counting, and the send goes alone.
                 var ride: PrivateOnEthereum.Ride?
                 if let rideUnits {
-                    do { ride = try await PrivateOnEthereum.roundUpsRide(units: rideUnits) } catch {
+                    do {
+                        ride = net.chainId == RoundUps.ethereumPool
+                            ? try await PrivateOnEthereum.roundUpsRide(units: rideUnits)
+                            : try await PrivateBridge.ride(budget: rideUnits, from: net, account: account)
+                    } catch {
                         NSLog("roundUpsPrivate| kept counting | %@", String(describing: error))
                     }
                 }

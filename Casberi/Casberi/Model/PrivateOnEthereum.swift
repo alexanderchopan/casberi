@@ -211,6 +211,33 @@ enum PrivateOnEthereum {
         let calls: [(to: String, data: String, value: String)]
         let keep: PrivateMoney.Note
         let figure: String
+        /// What the network it leaves from spends, a bridged ride's input
+        /// (prd §1574): the budget and Across's fee; nil on Ethereum.
+        var spends: String? = nil
+    }
+
+    /// **A DEPOSIT A BRIDGE PAYS (prd §1574):** the ppUSDC router's call for
+    /// `budget` of USDC arriving on Ethereum, proved now with the bridge's
+    /// headroom, no approvals. An account not registered on Ethereum is told
+    /// so: the keystore takes its viewing key only from the account itself.
+    static func bridgedDeposit(budget: String) async throws
+        -> (router: String, data: [UInt8], note: PrivateMoney.Note, figure: String) {
+        guard let pool = network.yield.first(where: { !$0.native }), let hex = PrivateMoney.hex(budget) else { throw Failure.noPool }
+        let account = try PrivateRootKey.ensure()
+        let d = try await PrivacyEngine.exclusive {
+            _ = try await open(account, reason: nil)
+            let engine = PrivacyEngine.shared
+            guard try await engine.isRegistered().registered else {
+                throw YourAccountChain.Failure(message: String(localized: "Make one private deposit on Ethereum first"))
+            }
+            return try await engine.prepareBridgedYieldDeposit(tokenId: pool.underlying, budget: hex)
+        }
+        guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),
+              PrivateMoney.decimal(hex: d.tx.value) == "0", let data = SafeABI.hexBytes(d.tx.data) else { throw Failure.noPool }
+        let note = PrivateMoney.Note(commitment: d.commitment, label: d.label, labelHash: d.labelHash, symbol: pool.symbol,
+                                     amount: PrivateMoney.decimal(hex: d.shares), decimals: pool.shareDecimals, chainId: network.chainId,
+                                     tx: "", at: Date(), status: .waiting, root: account, share: pool.share)
+        return (pool.router, data, note, PrivateMoney.figure(budget, decimals: pool.underlyingDecimals, symbol: pool.symbol))
     }
 
     /// **SAVED FROM ETH WHEN THERE IS NO USDC (user, 2026-10-27: "if someone

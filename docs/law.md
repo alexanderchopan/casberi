@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1711 of 1780 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1712 of 1781 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1957,6 +1957,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum…
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
+- §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157…
 
 ## Dead rulings → what replaced them (generated)
 

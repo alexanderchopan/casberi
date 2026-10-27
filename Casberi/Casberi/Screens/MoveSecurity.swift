@@ -310,7 +310,7 @@ struct MoveSecurity: View {
             }
         }
         if roundUps.on {
-            Text(roundUpsReady ? String(localized: "Save now, or it saves automatically with your next send on Ethereum.")
+            Text(roundUpsReady ? String(localized: "Save now, or it saves automatically with your next send.")
                                : Self.roundUpsExample(roundUps))
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -366,6 +366,18 @@ struct MoveSecurity: View {
         return String(localized: "\(usd) to save")
     }
 
+    /// The network a bridged save leaves from (prd §1574): Base or
+    /// Robinhood, whichever holds its dollar for the save and Across's fee.
+    static func bridgeSource(units: String, account: String) async -> YourAccountOp.Network? {
+        guard let need = Decimal(string: units) else { return nil }
+        for net in YourAccountOp.networks where !net.isTest && PrivateBridge.carries(from: net.chainId) {
+            guard let held = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account),
+                  let have = Decimal(string: held), have >= need * Decimal(1.05) else { continue }
+            return net
+        }
+        return nil
+    }
+
     /// Enough is counted to move into your private balance (prd §1572).
     private var roundUpsReady: Bool {
         guard roundUps.on, let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool,
@@ -387,11 +399,18 @@ struct MoveSecurity: View {
             do {
                 // From your USDC on Ethereum; short of it, from your ETH there
                 // (ppETH, no swap); short of both, say what to add.
-                let net = PrivateOnEthereum.accountNetwork
+                var net = PrivateOnEthereum.accountNetwork
                 let usdc = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account) ?? "0"
                 let ride: PrivateOnEthereum.Ride
+                // From Base or Robinhood, bridged into the pool on the way in
+                // (prd §1574): the network holding the dollar, with Across's
+                // fee besides (a twentieth more covers it).
+                let bridgedFrom = await Self.bridgeSource(units: units, account: account)
                 if YourAccountOp.atMost(units, usdc) {
                     ride = try await PrivateOnEthereum.roundUpsRide(units: units)
+                } else if let from = bridgedFrom {
+                    net = from
+                    ride = try await PrivateBridge.ride(budget: units, from: from, account: account)
                 } else if let price = await Chain.exchangePrice(net, YourAccountOp.eth), price > 0,
                           let eth = await Chain.balance(net, YourAccountOp.eth, of: account),
                           let have = Decimal(string: eth), let usd = Decimal(string: units),
@@ -402,7 +421,7 @@ struct MoveSecurity: View {
                     chrome.flash(String(localized: "Add \(usd) of USDC or ETH on Ethereum to save it"), tone: .neutral, seconds: 6)
                     return
                 }
-                let sent = try await Chain.privateCalls(ride.calls, on: PrivateOnEthereum.accountNetwork,
+                let sent = try await Chain.privateCalls(ride.calls, on: net,
                                                         reason: String(localized: "Save \(usd) of round-ups")) { _ in }
                 switch sent.outcome {
                 case .landed(let tx, _):
@@ -431,7 +450,7 @@ struct MoveSecurity: View {
         // saved, and when it moves, the threshold read live.
         let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum)
             .map { WalletValue.money(YourAccountOp.dollars($0, decimals: RoundUps.dollarDecimals, price: 1)) } ?? "$10"
-        return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send on Ethereum.")
+        return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send.")
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,
