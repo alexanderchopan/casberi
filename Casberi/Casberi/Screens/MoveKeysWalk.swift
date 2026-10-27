@@ -28,8 +28,6 @@ struct MoveKeysWalk: View {
     @State private var connecting = false
     @State private var note: String?
     @State private var roundUps = RoundUps.Setting(on: true)
-    @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
-    @State private var roundUpMarks: [String: UIImage] = [:]
 
     init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery,
          done: @escaping (Ending) -> Void) {
@@ -121,28 +119,12 @@ struct MoveKeysWalk: View {
             }
             small(String(localized: "You can turn it off later in Account. Getting your account back needs it too."))
         case .roundUps:
+            // One switch (prd §1572): spare change, saved privately.
             MoveFlow {
-                MoveWord(String(localized: "Round up each move"))
-                MoveClause(glue: String(localized: "to the next")) {
-                    Menu {
-                        Picker(selection: $roundUps.step) {
-                            ForEach([1, 5], id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
-                        } label: { EmptyView() }
-                        .pickerStyle(.inline)
-                    } label: {
-                        MoveWord("$\(roundUps.step)", ink: DS.pickInk).contentTransition(.opacity)
-                    }
-                    .accessibilityLabel(Text("Round up to"))
-                }
-                MoveClause(glue: String(localized: "and buy")) {
-                    Menu { tokenMenu } label: {
-                        MoveWord(roundUps.target.symbol + ".", ink: DS.pickInk).contentTransition(.opacity)
-                    }
-                    .accessibilityLabel(Text("What the change buys"))
-                }
+                MoveWord(String(localized: "Save your spare change"))
+                MoveClause(glue: String(localized: "in your")) { MoveWord(String(localized: "private balance."), ink: DS.pickInk) }
             }
-            .task { await loadRoundUpChoices() }
-            small(MoveSecurity.roundUpsExample(roundUps))
+            small(String(localized: "Your spare change is saved privately in dollars, and earns interest."))
         case .created:
             MoveFlow {
                 MoveWord(String(localized: "Created"), ink: DS.textSecondary)
@@ -165,46 +147,6 @@ struct MoveKeysWalk: View {
         return networks.count == 3
             ? String(localized: "Use \(short) on these three. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
             : String(localized: "Use \(short) on these networks. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
-    }
-
-    /// A section per network, named (Base's ETH is not Ethereum's), each
-    /// token a toggle that ticks the pick and keeps its mark — Security's
-    /// Round-ups menu (prd §1452).
-    @ViewBuilder private var tokenMenu: some View {
-        ForEach(roundUpChoices, id: \.network.chainId) { group in
-            Section(group.network.name) {
-                ForEach(group.tokens) { listed in
-                    let target = MoveSecurity.target(listed, on: group.network)
-                    Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
-                        guard on else { return }
-                        withAnimation(DS.Motion.standard) { roundUps.target = target }
-                    })) {
-                        Label {
-                            Text(verbatim: listed.token.symbol)
-                        } icon: {
-                            Image(uiImage: roundUpMarks[listed.token.symbol] ?? MoveSecurity.menuMark(listed.token.symbol, image: nil))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func loadRoundUpChoices() async {
-        guard roundUpChoices.isEmpty else { return }
-        var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
-        for net in YourAccountOp.networks {
-            let listed = await YourAccountTokens.list(net).filter(\.onList)
-            // The dollar itself is what the change already is.
-            let picks = listed.filter { $0.token != YourAccountOp.dollar(on: net) }.prefix(10)
-            if !picks.isEmpty { groups.append((net, Array(picks))) }
-        }
-        roundUpChoices = groups
-        var marks: [String: UIImage] = [:]
-        for symbol in Set(groups.flatMap { $0.tokens.map(\.token.symbol) }) {
-            marks[symbol] = MoveSecurity.menuMark(symbol, image: BrandMark.image(for: symbol))
-        }
-        roundUpMarks = marks
     }
 
     private func copyAddress() {
@@ -311,7 +253,7 @@ struct MoveKeysWalk: View {
             DSHaptic.success()
             advance()
         case .roundUps:
-            if !inert { RoundUps.setting = roundUps }
+            if !inert { RoundUps.setting = roundUps.simple }
             DSHaptic.success()
             advance()
         case .created:

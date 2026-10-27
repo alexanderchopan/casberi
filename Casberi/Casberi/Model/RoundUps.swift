@@ -74,6 +74,17 @@ enum RoundUps {
         /// the note — it keeps counting and buys nothing (`privateRoute`
         /// says `.waits`), never `target` instead.
         var movesPrivately: Bool { RoundUps.movesPrivately(self, chains: RoundUps.privateChains) }
+
+        /// **ONE SWITCH (prd §1572, user: "we are offering too many choices
+        /// to a user"):** on is the next dollar, into your private balance;
+        /// the step and the token are no longer choices. A setting kept by
+        /// an older build reads this way too.
+        var simple: Setting {
+            var s = self
+            s.step = 1
+            s.toPrivate = true
+            return s
+        }
     }
 
     // MARK: - Swaps and Buy round up too (prd §1561)
@@ -177,7 +188,16 @@ enum RoundUps {
     /// nothing aside for a balance it cannot reach. On the private network it
     /// counts whether or not private money is available now (finding 7).
     static func applies(_ setting: Setting, on chainId: Int, chains: Set<Int> = privateChains) -> Bool {
-        setting.on && (!movesPrivately(setting, chains: chains) || chains.contains(chainId))
+        // **COUNTED ON EVERY NETWORK (prd §1572):** a send on Base or
+        // Robinhood counts toward the private balance too, on Ethereum's
+        // count (`privateCount`); it moves with a send on Ethereum.
+        setting.on
+    }
+
+    /// The count a private round-up on `chainId` adds to: Ethereum's, for
+    /// every network with value (prd §1572); a test network keeps its own.
+    static func privateCount(for chainId: Int, chains: Set<Int> = privateChains) -> Int {
+        chains.contains(chainId) ? chainId : ethereumPool
     }
 
     static func movesPrivately(_ setting: Setting, chains: Set<Int>) -> Bool {
@@ -299,7 +319,7 @@ enum RoundUps {
     static var setting: Setting {
         get {
             if YourAccountDemo.isOn { return YourAccountDemo.roundUps }
-            return UserDefaults.standard.data(forKey: settingKey).flatMap { try? JSONDecoder().decode(Setting.self, from: $0) } ?? Setting()
+            return (UserDefaults.standard.data(forKey: settingKey).flatMap { try? JSONDecoder().decode(Setting.self, from: $0) } ?? Setting()).simple
         }
         set {
             // The demo's round-ups are its own (prd §1475): a change there

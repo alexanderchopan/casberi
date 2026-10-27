@@ -69193,3 +69193,11 @@ Mock: the design canvas "Private money with 0xBow".
 3. **From Base and Robinhood it crosses on the way in:** 0xBow's v2 SDK carries a deposit from another network (its `sourceChain` path, through Relay, which refuses Tor, so the move says "not through Tor", §1512).
 4. **Why not per send:** the pool refuses a deposit under its minimum, and each deposit waits on 0xBow's approval.
 5. **Until it is built** the shipped Round-ups stand (§1452, §1567).
+
+## §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum or with Save now (amends §1571, §1452, §1561, §1567) (user, 2026-10-27: "we are offering too many choices to a user", "explain this shorter", "can't we do this simply?", "ok great") — RULED, built in 880
+
+1. **One switch, no other choice.** "Your spare change is saved privately in dollars, and earns interest." The step is the next dollar; the token, the network and public-or-private are gone (`Setting.simple`; an older setting reads this way). §1571's ETH is set aside: dollars reuse the shipped ppUSDC ride, no swap.
+2. **Counted on every network** into Ethereum's count (`RoundUps.privateCount`); the change is a count, never money set aside, so the row says "$6.20 to save", never "saved" (user: "so it won't say 0 if they spend their money before?").
+3. **Moved on Ethereum:** the send that tips the count past the pool's minimum carries it (§1567's ride); else, ready, the row says "$10.40 to save · Save now" and "Save now, or it saves automatically with your next send on Ethereum." Save now is one Face ID from your USDC on Ethereum; short of it, "Add $X of USDC on Ethereum to save it".
+4. **Create's round-ups step** is the same sentence: "Save your spare change in your private balance."
+5. **Not yet:** saving from Base or Robinhood without an Ethereum send (§1571 item 3), and a Needs-you row for "ready".

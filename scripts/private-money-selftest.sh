@@ -166,8 +166,9 @@ echo "  ok   Needs you: the deposits counted and drawn, Take it back a word behi
 # pool is, a send elsewhere sets nothing aside, the batch rides a deposit you
 # confirmed, and its Activity row has no verb.
 SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
-use "$SEC" 'ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in' "the private target is offered where there is no pool, or with the kill switch off"
-use "$SEC" 'Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }' "the private target is no longer its words and the eye"
+# One switch (prd §1572): nothing to pick; Save now only where it can move.
+use "$SEC" 'guard !roundUpsSaving, roundUpsReady, PrivateMove.available, PrivateOnEthereum.owner != nil else { return }' "Save now runs where private money cannot take it (the kill switch off, no owner)"
+use "$SEC" 'Text("Your spare change is saved privately in dollars, and earns interest.")' "the round-ups tray no longer says what the one switch does (prd §1572)"
 use "$SENT" 'guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
@@ -182,7 +183,7 @@ use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.
 use "$SENT" 'let bought = !toPrivate && buy != nil && !done.roundUpWaits' "a send or swap that did not carry the buy empties the count"
 use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: bought), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
 use "$SENT" 'if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }' "a paid Buy's change is not counted"
-use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint' "a swap's small print says nothing of its round-up"
+use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpPlan?.buy != nil ? roundUpPrint : [])' "a swap's small print says nothing of the round-up it carries (the row above says the rest, user: \"below the fold\")"
 echo "  ok   round-ups to private: offered where a pool is (Ethereum; Sepolia in DEBUG), moved together on a deposit you confirmed"
 echo "  ok   swaps and Buy round up: what is sold, carried only where the dollar pays, a Buy counted"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
@@ -276,7 +277,7 @@ grep -q 'rode: rode)' "$TMPF" || { echo "✗ a dropped ride still reads as ridde
 awk '/static func rideVerdict\(_ ride:/,/^    }$/' "$CHAIN" | grep -q 'let verdict = RoundUps.rideVerdict(written: true, checked: checked)' || { echo "✗ the ride's verdict is not RoundUps.rideVerdict's"; exit 1; }
 grep -q 'let kept = ride.isEmpty ? await Prepared.take(' "$TMPF" || { echo "✗ a riding deposit signs the preview's operation without it"; exit 1; }
 use "$SENT" 'try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,' "round-ups into private no longer ride the Face ID operation"
-use "$SENT" 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)' "round-ups that did not ride are emptied"
+use "$SENT" 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: RoundUps.privateCount(for: net.chainId))' "round-ups that did not ride are emptied, or counted off Ethereum's count (prd §1572)"
 use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),' "private round-ups also buy a token"
 use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "round-ups ride a deposit to something other than ppUSDC's router"
 awk '/static func schedule\(\)/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch is scheduled in DEBUG builds only"; exit 1; }
@@ -982,7 +983,7 @@ use "$WATCH" 'if left() > 15 { await findNotes(context: context) }' "the backgro
 awk '/static func findNotes\(context: ModelContext\?, force: Bool = false\) async \{/,/^    }$/' "$WATCH" | grep -q 'await PrivatePending.shared.resolve(context: context)' \
     || { echo "✗ what was sent and not seen is never asked about (finding 2)"; exit 1; }
 # 3: a ride on its way empties the count and reserves it; failed, the reserve comes back.
-awk '/case \.pending:/,/case \.dryRun:/' "$SENT" | grep -q 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)' \
+awk '/case \.pending:/,/case \.dryRun:/' "$SENT" | grep -q 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: RoundUps.privateCount(for: net.chainId))' \
     || { echo "✗ a ride still on its way leaves the count whole: the next send rides it again (finding 3)"; exit 1; }
 use "$SENT" 'reserved: RoundUps.reserve(roundUp), toPrivate: toPrivate))' "a ride on its way reserves nothing (finding 3)"
 use "$PEND" 'RoundUps.setPrivateSaved(RoundUps.released(reserved, onto: RoundUps.privateSaved(on: op.chainId)), on: op.chainId)' "a failed ride's round-ups never come back (finding 3)"

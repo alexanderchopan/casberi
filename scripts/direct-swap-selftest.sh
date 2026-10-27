@@ -319,8 +319,12 @@ check(ruEthWait.buy == nil && ruEthWait.savedAfter == "2700000", "the change mov
 check(RoundUps.privatePlan(dollarSent: "4300000", saved: "99000000", step: 1, threshold: nil).buy == nil, "it moves with no minimum read")
 check(RoundUps.movesPrivately(ruPriv, chains: ruPools) && !RoundUps.movesPrivately(ruPriv, chains: [])
       && !RoundUps.movesPrivately(RoundUps.Setting(on: true), chains: ruPools), "moving privately is the pick, where a pool is")
-check(RoundUps.applies(ruPriv, on: 11155111, chains: ruPools) && !RoundUps.applies(ruPriv, on: 8453, chains: ruPools),
-      "moving privately, a send on a network with no pool still sets change aside")
+// Counted on every network (prd §1572): a Base send counts on Ethereum's count.
+check(RoundUps.applies(ruPriv, on: 11155111, chains: ruPools) && RoundUps.applies(ruPriv, on: 8453, chains: ruPools),
+      "moving privately, a send on a network with no pool no longer counts (prd §1572)")
+check(RoundUps.privateCount(for: 8453, chains: [1]) == 1 && RoundUps.privateCount(for: 4663, chains: [1]) == 1
+      && RoundUps.privateCount(for: 11155111, chains: [11155111]) == 11155111,
+      "a send off Ethereum counts somewhere other than Ethereum's count (prd §1572)")
 check(RoundUps.applies(RoundUps.Setting(on: true), on: 8453, chains: ruPools) && !RoundUps.applies(RoundUps.Setting(), on: 8453, chains: ruPools),
       "buying a token, round-ups run as they did")
 check(RoundUps.privateRoute(on: 11155111, bySession: false, pools: ruPools, chains: ruPools) == .deposit, "a Face ID send does not carry the deposit")
@@ -331,7 +335,8 @@ check(RoundUps.privateRoute(on: 8453, bySession: false, pools: ruPools, chains: 
 // buy — and off Ethereum sets nothing aside.
 check(RoundUps.applies(ruPriv, on: 1, chains: [1]) && RoundUps.privateRoute(on: 1, bySession: false, pools: [], chains: [1]) == .waits,
       "a private target with private money unavailable stops counting, or moves")
-check(!RoundUps.applies(ruPriv, on: 8453, chains: [1]), "a private target with private money unavailable rounds up a Base send (a public buy)")
+check(RoundUps.privateRoute(on: 8453, bySession: false, pools: [], chains: [1]) == .notHere,
+      "a Base send carries a private deposit, though only Ethereum has the pool (prd §1572)")
 // With no account on the phone (or the kill switch off) private money is not
 // available: the kept target still reads as private, never as its token.
 YourAccountKey.stubbed = nil
@@ -553,8 +558,8 @@ mutate "a send the session key signs carries the private deposit" "$ROUNDUPS" \
   'return bySession ? .waits : .deposit' 'return .deposit'
 mutate "the change moves into private per send" "$ROUNDUPS" \
   'have > 0, let need = Decimal(string: threshold), have >= need else' 'have > 0, let need = Decimal(string: threshold), need >= 0 else'
-mutate "a mainnet send sets change aside for private" "$ROUNDUPS" \
-  'setting.on && (!movesPrivately(setting, chains: chains) || chains.contains(chainId))' 'setting.on'
+mutate "a Base send counts on its own count, never Ethereum's (prd §1572)" "$ROUNDUPS" \
+  'chains.contains(chainId) ? chainId : ethereumPool' 'chainId'
 mutate "private money ignores the kill switch (finding 7)" "$ROUNDUPS" \
   'chains.filter { $0 != ethereumPool || (mainnetOn && owner) }' 'chains.filter { $0 != ethereumPool || owner }'
 mutate "private money ignores the owner (finding 7)" "$ROUNDUPS" \

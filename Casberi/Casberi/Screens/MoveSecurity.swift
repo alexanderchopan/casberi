@@ -56,10 +56,8 @@ struct MoveSecurity: View {
     @State private var coSignerSteps: [Int: CoSignerStep] = [:]
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
-    @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
-    @State private var roundUpMarks: [String: UIImage] = [:]
     @State private var roundUpsTray = false
-    @State private var roundUpsPicking = false
+    @State private var roundUpsSaving = false
     /// Whether private money is on this phone alone (prd §1562), read in a
     /// task: the Keychain and the store, never in a body.
     @State private var privateBackup: PrivateRoot.Backup = .fine
@@ -276,7 +274,6 @@ struct MoveSecurity: View {
     /// says the one thing the word cannot: when the change is spent.
     @ViewBuilder private var roundUpsRow: some View {
         Button {
-            roundUpsPicking = false
             roundUpsTray = true
         } label: {
             HStack(spacing: DS.Space.s3) {
@@ -284,10 +281,21 @@ struct MoveSecurity: View {
                 Spacer(minLength: DS.Space.s2)
                 Text(verbatim: roundUpWord)
                     .dsText(.body17)
-                    .foregroundStyle(DS.pickInk)
+                    .foregroundStyle(roundUpsReady ? DS.textSecondary : DS.pickInk)
                     .contentTransition(.opacity)
                     .lineLimit(1)
                     .frame(minHeight: 44)
+                if roundUpsReady {
+                    Button { saveRoundUpsNow() } label: {
+                        Text(roundUpsSaving ? String(localized: "Saving…") : String(localized: "Save now"))
+                            .dsText(.body17)
+                            .foregroundStyle(roundUpsSaving ? DS.textTertiary : DS.pickInk)
+                            .lineLimit(1).fixedSize()
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(RowPress())
+                    .disabled(roundUpsSaving)
+                }
             }
             .contentShape(Rectangle())
         }
@@ -300,31 +308,10 @@ struct MoveSecurity: View {
             if RoundUps.privatePools.contains(RoundUps.ethereumPool), PrivateMove.available {
                 await PrivateMoneyStore.shared.readYield(including: .ethereum)
             }
-            guard roundUpChoices.isEmpty else { return }
-            var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
-            for net in YourAccountOp.networks {
-                let listed = await YourAccountTokens.list(net).filter(\.onList)
-                // The dollar itself is what the change already is.
-                let picks = listed.filter { $0.token != YourAccountOp.dollar(on: net) }.prefix(10)
-                if !picks.isEmpty { groups.append((net, Array(picks))) }
-            }
-            roundUpChoices = groups
-            // A menu draws a picture it already has, never one it waits on:
-            // the bundled mark, else the one the holdings read named, else a
-            // monogram, each made before the menu can open.
-            var marks: [String: UIImage] = [:]
-            for symbol in Set(groups.flatMap { $0.tokens.map(\.token.symbol) }) {
-                var picture = BrandMark.image(for: symbol)
-                if picture == nil, !DemoMode.isActive, let url = TokenIconBook.url(for: symbol),
-                   case .image(let ui, _) = await RemoteImageLoader.load(urlString: url, targetSide: 72) {
-                    picture = ui
-                }
-                marks[symbol] = Self.menuMark(symbol, image: picture)
-            }
-            roundUpMarks = marks
         }
         if roundUps.on {
-            Text(verbatim: Self.roundUpsExample(roundUps))
+            Text(roundUpsReady ? String(localized: "Save now, or it saves automatically with your next send on Ethereum.")
+                               : Self.roundUpsExample(roundUps))
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, DS.Space.s2)
@@ -342,153 +329,100 @@ struct MoveSecurity: View {
     /// the glass box Move opens (tokens by network, then your private
     /// balance); the example under it; the switch at the foot.
     @ViewBuilder private var roundUpsTraySheet: some View {
-        DSTray(title: String(localized: "Round-ups"), height: 640, detents: [.height(640), .large]) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    MoveFlow {
-                        MoveWord(String(localized: "Round up"))
-                        MoveClause(glue: String(localized: "to the next")) {
-                            Menu {
-                                Picker(selection: Binding(get: { roundUps.step }, set: { step in saveRoundUps { $0.step = step } })) {
-                                    ForEach([1, 5], id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
-                                } label: { EmptyView() }
-                                .pickerStyle(.inline)
-                            } label: {
-                                MoveWord("$\(roundUps.step)", ink: DS.pickInk).contentTransition(.opacity)
-                            }
-                            .accessibilityLabel(Text("Round up to"))
-                        }
-                        if roundUps.movesPrivately {
-                            MoveClause(glue: String(localized: "and move it to")) {
-                                Button { togglePicking() } label: {
-                                    MoveWord(String(localized: "your private balance."), ink: DS.pickInk)
-                                }
-                                .buttonStyle(RowPress())
-                            }
-                        } else {
-                            MoveClause(glue: String(localized: "and buy")) {
-                                Button { togglePicking() } label: { MoveWord(roundUps.target.symbol, ink: DS.pickInk) }
-                                    .buttonStyle(RowPress())
-                            }
-                            MoveClause(glue: String(localized: "on")) {
-                                Button { togglePicking() } label: { MoveWord(roundUps.target.network + ".", ink: DS.pickInk) }
-                                    .buttonStyle(RowPress())
-                            }
-                        }
-                    }
-                    .opacity(roundUps.on ? 1 : 0.4)
-                    if roundUpsPicking { roundUpTargets }
-                    Text(verbatim: Self.roundUpsExample(roundUps))
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .opacity(roundUps.on ? 1 : 0.4)
-                    HStack {
-                        Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        Toggle(isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0.on = on } })) {
-                            Text("Round up sends, swaps and buys")
-                        }
-                        .labelsHidden()
-                        .tint(DS.pickInk)
-                    }
-                    .frame(minHeight: 44)
-                    .padding(.top, DS.Space.s4)
-                }
-                .padding(.vertical, DS.Space.s4)
-            }
-        }
-    }
-
-    private func togglePicking() {
-        withAnimation(DS.Motion.standard) { roundUpsPicking.toggle() }
-        DSHaptic.selection()
-    }
-
-    /// What the change buys, in the glass box Move opens its choices in: a
-    /// section per network, named, each token with its mark; then your
-    /// private balance where this build has a pool for it (prd §1561, §1567).
-    private var roundUpTargets: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(roundUpChoices, id: \.network.chainId) { group in
-                Text(verbatim: group.network.name)
+        DSTray(title: String(localized: "Round-ups"), height: 420) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text("Your spare change is saved privately in dollars, and earns interest.")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: Self.roundUpsExample(roundUps))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s2)
-                ForEach(group.tokens) { listed in
-                    let target = Self.target(listed, on: group.network)
-                    targetRow(listed.token.symbol,
-                              mark: Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil)),
-                              picked: roundUps.target == target && !roundUps.movesPrivately) {
-                        saveRoundUps { $0.target = target; $0.toPrivate = nil }
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Toggle(isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0 = $0.simple; $0.on = on } })) {
+                        Text("Round-ups")
                     }
+                    .labelsHidden()
+                    .tint(DS.pickInk)
                 }
+                .frame(minHeight: 44)
+                .padding(.top, DS.Space.s4)
+                Spacer(minLength: 0)
             }
-            ForEach(RoundUps.privatePools.filter { PrivacyNetwork.forChain($0) != nil }.sorted(), id: \.self) { chain in
-                Text(verbatim: PrivateMoney.network(chain))
-                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s2)
-                targetRow(String(localized: "Your private balance"), mark: Image(systemName: "eye.slash"),
-                          picked: roundUps.movesPrivately) {
-                    saveRoundUps { $0.toPrivate = true }
-                }
-            }
+            .padding(.vertical, DS.Space.s4)
         }
-        .padding(.vertical, DS.Space.s2)
-        .padding(.horizontal, DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsGlass(cornerRadius: RoomsTray.radius)
     }
 
-    private func targetRow(_ word: String, mark: Image, picked: Bool, pick: @escaping () -> Void) -> some View {
-        Button {
-            pick()
-            withAnimation(DS.Motion.standard) { roundUpsPicking = false }
-            DSHaptic.selection()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                mark.resizable().scaledToFit().frame(width: 24, height: 24).foregroundStyle(DS.textSecondary)
-                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: DS.Space.s2)
-                if picked {
-                    Image(systemName: "checkmark").dsGlyph(.body, weight: .semibold).foregroundStyle(DS.pickInk)
-                }
-            }
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-    }
-
-    /// "To next $1, buys ETH", or Off. "To next" because a bare "$1" read
-    /// as the amount each send adds.
+    /// On or Off: the one choice (prd §1572).
     private var roundUpWord: String {
         guard roundUps.on else { return String(localized: "Off") }
-        if roundUps.movesPrivately { return String(localized: "Moves to private") }
-        return String(localized: "To next $\(roundUps.step), buys \(roundUps.target.symbol)")
+        let saved = RoundUps.privateSaved(on: RoundUps.ethereumPool)
+        guard saved != "0" else { return String(localized: "On") }
+        let usd = WalletValue.money(YourAccountOp.dollars(saved, decimals: RoundUps.dollarDecimals, price: 1))
+        // "To save", never "saved": it is a count, not money set aside, so
+        // spending the USDC does not empty it (user: "so it won't say 0 if
+        // they spend their money before?").
+        return String(localized: "\(usd) to save")
+    }
+
+    /// Enough is counted to move into your private balance (prd §1572).
+    private var roundUpsReady: Bool {
+        guard roundUps.on, let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool,
+                                                            poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) else { return false }
+        return RoundUps.privateMove(saved: RoundUps.privateSaved(on: RoundUps.ethereumPool), at: at) != nil
+    }
+
+    /// **SAVE NOW (prd §1572, user: "it's too bad it happens on next
+    /// send"):** what is counted, into your private balance with one Face
+    /// ID, from your USDC on Ethereum; a send there would carry it anyway.
+    private func saveRoundUpsNow() {
+        if demoSays() { return }
+        guard !roundUpsSaving, roundUpsReady, PrivateMove.available, PrivateOnEthereum.owner != nil else { return }
+        let units = RoundUps.privateSaved(on: RoundUps.ethereumPool)
+        let usd = WalletValue.money(YourAccountOp.dollars(units, decimals: RoundUps.dollarDecimals, price: 1))
+        roundUpsSaving = true
+        Task {
+            defer { roundUpsSaving = false }
+            do {
+                // Paid from your USDC on Ethereum: short of it, say what to add.
+                let net = PrivateOnEthereum.accountNetwork
+                if let held = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account), !YourAccountOp.atMost(units, held) {
+                    let short = WalletValue.money(YourAccountOp.dollars(YourAccountOp.difference(units, held), decimals: RoundUps.dollarDecimals, price: 1))
+                    chrome.flash(String(localized: "Add \(short) of USDC on Ethereum to save it"), tone: .neutral, seconds: 6)
+                    return
+                }
+                let ride = try await PrivateOnEthereum.roundUpsRide(units: units)
+                let sent = try await Chain.privateCalls(ride.calls, on: PrivateOnEthereum.accountNetwork,
+                                                        reason: String(localized: "Save \(usd) of round-ups")) { _ in }
+                switch sent.outcome {
+                case .landed(let tx, _):
+                    MoveSentence.landPrivateRoundUps(ride, tx: tx, context: modelContext)
+                case .pending:
+                    MoveSentence.landPrivateRoundUps(ride, tx: nil, context: nil)
+                case .dryRun:
+                    return
+                }
+                RoundUps.setPrivateSaved("0", on: RoundUps.ethereumPool)
+                await PrivateMoneyStore.shared.refresh(force: true)
+                chrome.flash(String(localized: "\(usd) saved to your private balance"), tone: .success)
+            } catch let failure as Chain.Failure {
+                chrome.flash(failure.message, tone: .failure, seconds: 6)
+            } catch {
+                chrome.flash(PrivateMove.words(error, network: .ethereum), tone: .failure, seconds: 6)
+            }
+        }
     }
 
     /// A worked send, because "the next $1" read as a $1 round-up: what a
     /// $3.40 send sets aside, and when that buys. Security and the keys walk
     /// say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
-        // Private: where it runs, and that it moves together (prd §1561).
-        // Where the change counts for your private balance, whether or not
-        // private money can take it now (it never buys instead, finding 7).
-        if setting.movesPrivately, let chain = RoundUps.privateChains.sorted().first {
-            // On Ethereum the change is dollars, moved as USDC once it reaches
-            // the pool's smallest deposit, read live (prd §1567).
-            if chain == RoundUps.ethereumPool {
-                guard let at = RoundUps.privateMoveAt(on: chain, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) else {
-                    return String(localized: "Round-ups on Ethereum move to your private balance together, once the pool's smallest deposit is set aside.")
-                }
-                let usd = YourAccountOp.dollars(at, decimals: RoundUps.dollarDecimals, price: 1)
-                return String(localized: "Round-ups on Ethereum move to your private balance together, once \(WalletValue.money(usd)) is set aside.")
-            }
-            let at = PrivateMoney.figure(RoundUps.privateMoveAt, decimals: 18, symbol: "ETH")
-            return String(localized: "Round-ups on \(PrivateMoney.network(chain)) move to your private balance together, once \(at) is set aside.")
-        }
-        return setting.step == 5
-            ? String(localized: "A $3.40 send rounds up to $5, setting aside $1.60. When $5 is set aside, it buys \(setting.target.symbol).")
-            : String(localized: "A $3.40 send rounds up to $4, setting aside $0.60. When $5 is set aside, it buys \(setting.target.symbol).")
+        // **ONE SENTENCE (prd §1572, user: "explain this shorter"):** what is
+        // saved, and when it moves, the threshold read live.
+        let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum)
+            .map { WalletValue.money(YourAccountOp.dollars($0, decimals: RoundUps.dollarDecimals, price: 1)) } ?? "$10"
+        return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send on Ethereum.")
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,

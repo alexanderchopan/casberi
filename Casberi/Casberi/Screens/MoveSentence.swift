@@ -504,8 +504,9 @@ struct MoveSentence: View {
         // Into your private balance on Ethereum (prd §1567): its own count,
         // moving together once it reaches the pool's smallest deposit.
         if privateRoundUps {
-            return RoundUps.privatePlan(dollarSent: sent, saved: RoundUps.privateSaved(on: network.chainId), step: setting.step,
-                                        threshold: RoundUps.privateMoveAt(on: network.chainId, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum))
+            let count = RoundUps.privateCount(for: network.chainId)
+            return RoundUps.privatePlan(dollarSent: sent, saved: RoundUps.privateSaved(on: count), step: setting.step,
+                                        threshold: RoundUps.privateMoveAt(on: count, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum))
         }
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
@@ -516,7 +517,7 @@ struct MoveSentence: View {
     /// no account to own the note, the change keeps counting on its own
     /// count and nothing is bought — a private target never goes public.
     private var privateRoundUps: Bool {
-        RoundUps.setting.movesPrivately && !network.isTest && network.chainId == RoundUps.ethereumPool
+        RoundUps.setting.movesPrivately && !network.isTest
     }
 
     /// What this Face ID operation carries into your private balance: the
@@ -3476,7 +3477,7 @@ struct MoveSentence: View {
                         if toPrivate {
                             // The pool's minimum, read again for the next send's threshold.
                             Task { await PrivateMoneyStore.shared.readYield(including: .ethereum) }
-                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)
+                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: RoundUps.privateCount(for: net.chainId))
                             // Landed with no transaction named (the nonce moved):
                             // the note is still kept; its row waits for a hash.
                             if moved, let ride { Self.landPrivateRoundUps(ride, tx: tx, context: context) }
@@ -3486,7 +3487,7 @@ struct MoveSentence: View {
                     case .pending:
                         guard moved || bought, let id = followed.id else { break }
                         if toPrivate {
-                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)
+                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: RoundUps.privateCount(for: net.chainId))
                             if let ride { Self.landPrivateRoundUps(ride, tx: nil, context: nil) }
                         } else {
                             RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)

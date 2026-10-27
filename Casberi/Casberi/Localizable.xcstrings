@@ -11138,6 +11138,34 @@
         }
       }
     },
+    "%@ saved to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ guardados en tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をプライベート残高に保存しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@를 비공개 잔액에 저장했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已将 %@ 存入你的私密余额"
+          }
+        }
+      }
+    },
     "%@ saves" : {
       "localizations" : {
         "es" : {
@@ -12696,6 +12724,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "可印制 %@"
+          }
+        }
+      }
+    },
+    "%@ to save" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ por guardar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存予定 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장할 금액 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待存 %@"
           }
         }
       }
@@ -45122,6 +45178,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 %2$@ 上将 %1$@ 添加为密钥"
+          }
+        }
+      }
+    },
+    "Add %@ of USDC on Ethereum to save it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade %@ de USDC en Ethereum para guardarlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存するにはEthereumに%@のUSDCを追加してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장하려면 Ethereum에 USDC %@를 추가하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ethereum 上添加 %@ 的 USDC 以存入"
           }
         }
       }
@@ -152512,6 +152596,34 @@
         }
       }
     },
+    "Save %@ of round-ups" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardar %@ de redondeos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "切り上げ分%@を保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "올림 금액 %@ 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存入 %@ 的零钱"
+          }
+        }
+      }
+    },
     "Save %lld" : {
       "localizations" : {
         "es" : {
@@ -152592,6 +152704,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "存为笔记"
+          }
+        }
+      }
+    },
+    "Save now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardar ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即存入"
+          }
+        }
+      }
+    },
+    "Save now, or it saves automatically with your next send on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guárdalo ahora, o se guardará automáticamente con tu próximo envío en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ保存するか、Ethereumでの次の送金で自動的に保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 저장하거나, Ethereum에서 다음에 송금할 때 자동으로 저장됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即存入，或在你下一次在 Ethereum 上发送时自动存入。"
           }
         }
       }
@@ -152677,6 +152845,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存到 Casberi"
+          }
+        }
+      }
+    },
+    "Save your spare change" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guarda tu cambio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おつりを保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈을 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存下你的零钱"
           }
         }
       }
@@ -153104,6 +153300,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在保存你的 %@ 存档"
+          }
+        }
+      }
+    },
+    "Saving…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在存入…"
           }
         }
       }
@@ -163617,6 +163841,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "说话"
+          }
+        }
+      }
+    },
+    "Spend $3.40 and 60¢ is saved. Once about %@ adds up, it moves into your private balance with your next send on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gasta $3.40 y se guardan 60¢. Cuando se acumulen unos %@, pasa a tu saldo privado con tu próximo envío en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40使うと60¢が保存されます。約%@たまると、Ethereumでの次の送金でプライベート残高に移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40를 쓰면 60¢가 저장됩니다. 약 %@가 모이면 Ethereum에서 다음 송금 때 비공개 잔액으로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "花 $3.40，就存下 60¢。累计约 %@ 后，会在你下一次在 Ethereum 上发送时转入你的私密余额。"
           }
         }
       }
@@ -206944,6 +207196,34 @@
         }
       }
     },
+    "Your spare change is saved privately in dollars, and earns interest." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cambio se guarda en privado en dólares y genera intereses."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おつりはドルでプライベートに保存され、利息がつきます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 달러로 비공개 저장되며 이자가 붙습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的零钱会以美元私密存起来，并赚取利息。"
+          }
+        }
+      }
+    },
     "Your spending, this month" : {
       "localizations" : {
         "es" : {
@@ -215937,6 +216217,34 @@
         }
       }
     },
+    "in your" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en tu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "당신의"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到你的"
+          }
+        }
+      }
+    },
     "in your contacts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -222478,6 +222786,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "私密"
+          }
+        }
+      }
+    },
+    "private balance." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "saldo privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高に。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액에."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密余额。"
           }
         }
       }

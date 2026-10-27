@@ -579,8 +579,8 @@ wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" '$0.depositId = $0.de
   "a note's deposit id is never kept, so its fill is never met off chain"
 wire "Casberi/Casberi/Screens/MoveDetails.swift" 'if let words = s.across.flatMap(YourAccountAcross.arrivalBrief), !out.contains(words) { out.append(words) }' \
   "Details does not name the swap on the receiving network"
-wire "Casberi/Casberi/Screens/MoveSentence.swift" 'if verb == .swap, let on = buyOn, on != network {' \
-  "For does not offer the receiving network's list"
+wire "Casberi/Casberi/Screens/MoveSentence.swift" 'buyOn = row.net == network ? nil : row.net' \
+  "For does not offer the receiving networks' tokens, picked where they arrive"
 wire "$CHAIN" 'var mustCheck: Bool { steps.contains { $0.swap != nil } || crossing != nil }' \
   "a crossing signs with no simulation that answered"
 wire "$CHAIN" 'guard items.count == 1, let dest = s.to else {' "a crossing is batched with other moves"
