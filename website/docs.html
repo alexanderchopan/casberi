@@ -381,7 +381,7 @@
       <a href="#about"><span>2</span>About</a>
       <a href="#how-to-use"><span>3</span>How to use</a>
     </div>
-    <p class="updated">Last updated October 25, 2026</p>
+    <p class="updated">Last updated October 26, 2026</p>
   </header>
 
   <!-- ================= FEATURES AT A GLANCE ================= -->
@@ -412,7 +412,7 @@
       <h4>Take action</h4>
       <div class="glance-grid">
         <a class="glance" href="#account"><b>An account of your own</b><span>No phrase to write down. A recovery key in iCloud Keychain, and a co-signer if you want one.</span></a>
-        <a class="glance" href="#move"><b>Move money</b><span>Send, swap, receive or buy a gift card. Face ID approves every move.</span></a>
+        <a class="glance" href="#move"><b>Move money</b><span>Swap, send, receive, sweep or buy a gift card. Face ID approves every move.</span></a>
         <a class="glance" href="#capture"><b>Save and find anything</b><span>Share from any app or take a screenshot. Search finds it by what it says.</span></a>
       </div>
     </div>
@@ -531,7 +531,7 @@
       <li><strong>No streaks, goals, or guilt mechanics.</strong></li>
       <li><strong>No custody.</strong> Casberi never holds your money, and following an account can never move it.</li>
       <li><strong>No contract of our own.</strong> Your account is a Safe, built from Safe’s own contracts.</li>
-      <li><strong>No fee from Casberi.</strong> A swap shows the network’s fee and Relay’s; Casberi’s is none.</li>
+      <li><strong>No fee from Casberi.</strong> A swap shows the network’s fee and the pool’s, or Across’s; Casberi’s is none.</li>
     </ul>
   </section>
 
@@ -631,21 +631,26 @@
       <li><b>A recovery key in iCloud Keychain.</b> If you lose this device, your account opens on another.</li>
       <li><b>A co-signer in another wallet</b>, if you want one. That wallet signs once to prove it can, and co-signs any move over your spend limit.</li>
       <li><b>A spend limit</b>, with a co-signer: moves over an amount of each coin a month need the co-signer too. Getting your account back needs it too.</li>
-      <li><b>Round-ups.</b> Each send of your dollar rounds up to the next $1 or $5, and once the change reaches $5 it buys ETH, or a token you pick, with the send that gets it there.</li>
+      <li><b>Round-ups.</b> Each send, swap or gift card rounds up to the next $1 or $5, and once the change reaches $5 it buys ETH, or a token you pick, with the move that gets it there.</li>
     </ol>
     <p>Its page, Wallet › Your account, holds the <b>Keys</b> — This iPhone, Recovery key, Co-signer, Networks, Tor, Private key — and <b>Spending</b>: Spend limit and Round-ups. This device’s key changes with every send.</p>
+    <p>The change waits in your dollar, counted per network. A token on the same network is bought on Uniswap or Aerodrome; one on another network, through Relay. A send signed under your spend limit can’t buy, so its change waits for your next move. A swap buys only when it sells your dollar, and a gift card’s change is counted once it’s paid. What the change bought is in Spending, under Round-ups.</p>
     <p>Once a month, Needs you asks you to <b>check your recovery key</b>: Face ID and a test signature, no fee, nothing sent, and a page saying the networks where it works. <b>Export</b> creates a new private key, adds it as an owner and shows it once, so the account opens in another wallet without Casberi. <b>Nodes</b> reads your account from your own node, each address checked against its network first.</p>
     <div class="pager"><a href="#move"><span>Next</span>Move →</a></div>
 
     <h3 id="move">Move</h3>
-    <p>Move rises as a tray over wherever you are. You say what you want as a sentence and fill in its blanks. Pick a verb:</p>
+    <p>Move rises as a tray over wherever you are. You say what you want as a sentence and fill in its blanks; the slider under it sets the amount. Move opens on Swap. Pick a verb:</p>
     <ul>
-      <li><b>Send</b> an amount of a token to an address or a name, on a network. <b>Add</b> puts another in the same transaction.</li>
-      <li><b>Swap</b> one token for another, through Relay.</li>
-      <li><b>Receive</b> picks its network and copies your address. Someone on another network can send a coin Relay bridges, and it lands as the one you pick. <b>From another wallet</b> connects a wallet of yours, and you approve each send into your account there.</li>
       <li><b>Buy</b> a gift card from Bitrefill, by category and merchant, paid from your account in USDC on Base.</li>
+      <li><b>Receive</b> picks its network and copies your address. Someone on another network can send a coin Relay bridges, and it lands as the one you pick. <b>From another wallet</b> connects a wallet of yours, and you approve each send into your account there.</li>
+      <li><b>Send</b> an amount of a token to an address or a name, on a network. <b>Add</b> puts another in the same transaction.</li>
+      <li><b>Swap</b> one token for another, on one network or across two.</li>
+      <li><b>Sweep</b> swaps every token under $1, or $5, on one network for ETH, in one transaction.</li>
     </ul>
-    <p>Before Face ID asks, the grey line says the most the fee can be. <b>Details</b> shows the whole move — who it goes to, the fee, what a swap returns at least — and whether this exact move was simulated and lands as written. What it showed is what Face ID signs.</p>
+    <p><strong>Swap goes straight to the exchanges.</strong> Your phone asks every Uniswap pool on Base, Ethereum and Robinhood, and Aerodrome’s on Base, takes the best price, and writes the swap itself. No aggregator stands in between. The foot names the exchange and its pool fee — “On Uniswap · 0.05% pool fee” — and the pool fee is in the price. The swap is refused before Face ID unless you get at least the quote less 0.5%, or 0.3% on Ethereum. The tokens come from Uniswap’s list, and a pasted contract works too. WETH and ETH swap one for one, with no pool and no fee but the network’s. With a spend limit on, every swap needs your co-signer too.</p>
+    <p><strong>To another network,</strong> pick the network for what you get. The swap crosses through Across: ETH arrives as ETH, and USDC as USDC (USDG on Robinhood); anything else is swapped into one of them first, in the same transaction. The foot says Across’s fee and about how long it takes. Your phone writes the deposit into Across’s own contract and reads the other network until it arrives, and Activity shows the crossing as one row. If no relayer fills it in time, Across’s contract refunds it on the network it left — ETH comes back as WETH, which Swap turns back into ETH.</p>
+    <p><strong>Sweep</strong> lists every token on the network worth less than the line, priced off the pools, ten at a time. What stays is listed under it, with why: no price, not on Uniswap’s list (most dust is sent by strangers), it holds your round-ups, no pool trades it, or it would return less than half of what it’s worth. Tap a row to leave it out. One Face ID signs the lot, and a sweep whose network fee is more than it returns isn’t signed.</p>
+    <p>Before Face ID asks, the grey line says the most the fee can be. <b>Details</b> shows the whole move, one line a row — who it goes to, the fee, the exchange and its pool fee, what you get at least — and whether this exact move was simulated and lands as written. What it showed is what Face ID signs.</p>
     <p>A warning takes the grey line’s place: this would fail, the address is sanctioned (OFAC) or reported (GoPlus), it looks like an address you’ve paid, it’s a new contract, or it’s your first send there. On a warning the verb reads <b>Send anyway</b>: the first tap arms it, the second signs.</p>
     <div class="pager"><a href="#notes"><span>Next</span>Notes →</a></div>
 
@@ -668,7 +673,7 @@
 
     <h3 id="privacy">Privacy and Tor</h3>
     <p>There is no Casberi server and no analytics. Your apps are read straight from your device.</p>
-    <p>On iPhone and iPad, every request that names a wallet — yours or one you follow — goes through Tor, always, with one circuit per wallet. No service learns where you are, or that the wallets you look at are one person’s. The Feed’s apps never go through Tor. A few services refuse Tor and are read directly, among them Relay, so a swap says “not through Tor”. The Mac has no Tor yet, and says so.</p>
+    <p>On iPhone and iPad, every request that names a wallet — yours or one you follow — goes through Tor, always, with one circuit per wallet. No service learns where you are, or that the wallets you look at are one person’s. The Feed’s apps never go through Tor. Swaps, sweeps and Across go through Tor. A few services refuse Tor and are read directly: Relay, GeckoTerminal, and the public nodes of Tenderly, Optimism, Gnosis Chain and Plasma. So Receive from another network, and a round-up bought on another network, say “not through Tor”. The Mac has no Tor yet, and says so.</p>
     <p><b>What this app reaches</b>, in Casberi’s settings under Data, lists every service Casberi can reach and what it actually reached, by category, including how much went through Tor and which services refuse it.</p>
     <div class="pager"><a href="#settings"><span>Next</span>Your options →</a></div>
 
@@ -717,7 +722,7 @@
     <details><summary>What does it cost?</summary><p>It’s free on the App Store.</p></details>
     <details><summary>What do I need to run it?</summary><p>An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server.</p></details>
     <details><summary>Does Casberi hold my money?</summary><p>No. Your account is a Safe that only your keys can move: this device’s key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi.</p></details>
-    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; over your spend limit, your co-signer signs too, and a round-up buys only inside a send you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions.</p></details>
+    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; over your spend limit, your co-signer signs too, and a round-up buys only inside a move you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions.</p></details>
   </section>
 
   <div class="doc-cta">
@@ -843,7 +848,7 @@
 {"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"It is free on the App Store."}},
 {"@type":"Question","name":"What do I need to run it?","acceptedAnswer":{"@type":"Answer","text":"An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server."}},
 {"@type":"Question","name":"Does Casberi hold my money?","acceptedAnswer":{"@type":"Answer","text":"No. Your account is a Safe that only your keys can move: this device’s key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi."}},
-{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; over your spend limit, your co-signer signs too, and a round-up buys only inside a send you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions."}}
+{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; over your spend limit, your co-signer signs too, and a round-up buys only inside a move you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions."}}
 ]}
 </script>
 </body>
