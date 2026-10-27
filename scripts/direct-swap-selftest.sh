@@ -286,6 +286,65 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: []
 let ruBTCNote = RoundUps.SwapBuy(account: ruMe, network: "base-mainnet", dollar: ruUSDC, units: "5200000", target: ruBTC, at: ruAt)
 check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [ruBTCNote])?.filled == nil,
       "ETH that arrived is taken as the cbBTC the buy was for")
+
+// ── WETH and ETH, one for one (prd §1559) ─────────────────────────────────
+// Every vector written by the independent encoder and simulated from the
+// account made a real SafeL2 proxy: deposit() wraps; the WETH's transfer to
+// SwapRouter02 and its unwrapWETH9 unwrap, paying exactly the amount — and
+// a direct withdraw from the same cold Safe reverts, which is why.
+let wrapFixture = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: dir + "/wrap.json"))) as! [String: Any]
+let wrapAccount = wrapFixture["account"] as! String
+func wcalls(_ list: Any?) -> [S.Call] {
+    (list as! [[String: Any]]).map { S.Call(to: $0["to"] as! String, value: $0["value"] as! String, data: SafeABI.hexBytes($0["data"] as! String)!) }
+}
+for v in wrapFixture["vectors"] as! [[String: Any]] {
+    let chain = v["chainId"] as! Int, amount = v["amount"] as! String
+    let weth = YourAccountOp.Token(symbol: "WETH", decimals: 18, contract: S.book(chain)!.weth)
+    check((v["statuses"] as! [String]).allSatisfy { $0 == "0x1" } && v["ethGained"] as? String == amount
+          && v["wethGained"] as? String == amount && v["directWithdrawStatus"] as? String == "0x0",
+          "the wrap vectors on \(chain) were not simulated as the fixture says")
+    let unwrap = wcalls(v["unwrap"]), wrapped = wcalls(v["wrap"])
+    check(S.wrap(sell: weth, buy: YourAccountOp.eth, chainId: chain) == .unwrap && S.wrap(sell: YourAccountOp.eth, buy: weth, chainId: chain) == .wrap,
+          "WETH and ETH on \(chain) are not a wrap and an unwrap")
+    check(S.wrapCalls(.unwrap, amount: amount, account: wrapAccount, chainId: chain) == unwrap,
+          "the unwrap on \(chain) is not the independent encoder's bytes")
+    check(S.wrapCalls(.wrap, amount: amount, account: wrapAccount, chainId: chain) == wrapped,
+          "the wrap on \(chain) is not the independent encoder's bytes")
+    let uq = S.wrapQuote(.unwrap, amount: amount, account: wrapAccount, chainId: chain)!
+    check(uq.buyAmount == amount && uq.minimumBuy == amount && uq.route == nil && uq.wrap == .unwrap,
+          "an unwrap is not exactly what is sold, one for one")
+    check(S.checkedWrap(uq, sell: weth, buy: YourAccountOp.eth, amount: amount, account: wrapAccount, chainId: chain) == unwrap,
+          "the check refuses the simulated unwrap on \(chain)")
+    let wq = S.wrapQuote(.wrap, amount: amount, account: wrapAccount, chainId: chain)!
+    check(S.checkedWrap(wq, sell: YourAccountOp.eth, buy: weth, amount: amount, account: wrapAccount, chainId: chain) == wrapped,
+          "the check refuses the simulated wrap on \(chain)")
+    // Tampered, each refused.
+    func refused(_ q: S.Quote, _ sell: YourAccountOp.Token, _ buy: YourAccountOp.Token, _ what: String) {
+        check(S.checkedWrap(q, sell: sell, buy: buy, amount: amount, account: wrapAccount, chainId: chain) == nil, "taken: \(what) on \(chain)")
+    }
+    var q = uq; q = S.Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil,
+                            calls: [unwrap[0], S.Call(to: unwrap[1].to, value: "0", data: Array(unwrap[1].data.prefix(36)) + YourAccount.w("0x1111111111111111111111111111111111111111"))], wrap: .unwrap)
+    refused(q, weth, YourAccountOp.eth, "an unwrap paying someone else")
+    q = S.Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil,
+                calls: [S.Call(to: unwrap[0].to, value: "0", data: Array(unwrap[0].data.prefix(16)) + Array(YourAccount.w("0x1111111111111111111111111111111111111111").suffix(20)) + Array(unwrap[0].data.suffix(32))), unwrap[1]], wrap: .unwrap)
+    refused(q, weth, YourAccountOp.eth, "the WETH sent to an unpinned contract")
+    q = S.Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil, calls: [unwrap[1]], wrap: .unwrap)
+    refused(q, weth, YourAccountOp.eth, "an unwrap of WETH never sent to the router")
+    q = S.Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil,
+                calls: [unwrap[0], S.Call(to: unwrap[1].to, value: "1", data: unwrap[1].data)], wrap: .unwrap)
+    refused(q, weth, YourAccountOp.eth, "ETH sent with an unwrap")
+    q = S.Quote(sellAmount: amount, buyAmount: amount, minimumBuy: amount, route: nil,
+                calls: [S.Call(to: wrapped[0].to, value: "1", data: wrapped[0].data)], wrap: .wrap)
+    refused(q, YourAccountOp.eth, weth, "a wrap sending another amount")
+    refused(wq, YourAccountOp.eth, YourAccountOp.dollar(on: S.book(chain)!.chainId == 1 ? YourAccountOp.ethereum : YourAccountOp.base), "a wrap for another token")
+    refused(S.Quote(sellAmount: amount, buyAmount: "1", minimumBuy: "1", route: nil, calls: unwrap, wrap: .unwrap), weth, YourAccountOp.eth,
+            "an unwrap promising less than is sold")
+}
+check(S.wrap(sell: YourAccountOp.dollar(on: YourAccountOp.base), buy: YourAccountOp.eth, chainId: 8453) == nil
+      && S.wrap(sell: YourAccountOp.Token(symbol: "WETH", decimals: 18, contract: S.ethereum.weth), buy: YourAccountOp.eth, chainId: 8453) == nil,
+      "a token other than this network's WETH is wrapped")
+check(S.words(S.Wrap.unwrap) == "Unwraps WETH · no fee" && S.words(S.Wrap.wrap) == "Wraps ETH · no fee", "the wrap's words moved")
+check(S.unwrapper(8453) == base.venues[0].router, "the unwrap does not go through Base's pinned SwapRouter02")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
@@ -375,6 +434,18 @@ mutate "a cut multicall answer reads as whole" "$SWAP" \
   'bytesAt + 32 + length <= data.count else { return nil }' 'length >= 0 else { return nil }'
 mutate "v2's fee is read as millionths" "$SWAP" \
   'let pips = venue.kind == .aerodromeV2 ? n * 100 : n' 'let pips = n'
+mutate "the unwrap pays the router, not the account" "$SWAP" \
+  'Call(to: router, value: "0", data: unwrapSelector + units + YourAccount.w(account))]' 'Call(to: router, value: "0", data: unwrapSelector + units + YourAccount.w(router))]'
+mutate "the check takes an unwrap to anyone" "$SWAP" \
+  'calls[1].data == unwrapSelector + units + YourAccount.w(account) else { return nil }' 'calls[1].data.starts(with: unwrapSelector) else { return nil }'
+mutate "the unwrap is WETH's own withdraw (a Safe refuses its 2,300-gas transfer)" "$SWAP" \
+  'return [Call(to: weth, value: "0", data: transferSelector + YourAccount.w(router) + units),' 'return [Call(to: weth, value: "0", data: [0x2e, 0x1a, 0x7d, 0x4d] + units),'
+mutate "the wrap sends no ETH" "$SWAP" \
+  'return [Call(to: weth, value: amount, data: depositSelector)]' 'return [Call(to: weth, value: "0", data: depositSelector)]'
+mutate "the check takes a wrap promising less than is sold" "$SWAP" \
+  'quote.buyAmount == amount, quote.minimumBuy == amount,' 'quote.buyAmount.count > 0,'
+mutate "any token reads as this network's WETH" "$SWAP" \
+  'if s == weth, b == nil { return .unwrap }' 'if s != nil, b == nil { return .unwrap }'
 mutate "Details' swap row says the whole sentence again" "$SWAP" \
   'return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")' 'return words(route)'
 mutate "Ethereum swaps with Base's looser slippage" "$SWAP" \
