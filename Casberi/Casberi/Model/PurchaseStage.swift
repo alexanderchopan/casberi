@@ -331,7 +331,7 @@ enum PurchaseStage {
 
     private static func receiptRungs(_ row: Row) -> [Rung] {
         var out: [Rung] = []
-        if row.source == "Privacy" {
+        if row.source == "Privacy.com" {
             out.append(Rung(key: word("Card"), value: word("Your Privacy card")))
         }
         out.append(Rung(key: word("When"), value: stamp(row.capturedAt), dim: true))
@@ -464,7 +464,7 @@ enum PurchaseStage {
     /// The word under the dial's first disc.
     static func destination(_ row: Row) -> String? {
         switch row.source {
-        case "Privacy":         return word("Privacy")
+        case "Privacy.com":     return word("Privacy.com")
         case "Bitrefill":       return word("Bitrefill")
         case "Open Food Facts": return word("Full entry")
         default:                return nil

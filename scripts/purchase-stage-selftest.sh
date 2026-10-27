@@ -61,7 +61,7 @@ func row(_ source: String, ref: String? = nil, kind: String = "transaction",
 }
 
 // 1 ── The fork. A ref this app wrote decides it, never the price alone.
-let privacy = row("Privacy", ref: "privacy:txn:abc", title: "Netflix.com · $12.99",
+let privacy = row("Privacy.com", ref: "privacy:txn:abc", title: "Netflix.com · $12.99",
                   tags: ["Card", "Settled"], price: 12.99, currency: "USD",
                   merchant: "Netflix.com")
 eq("privacy.archetype", PurchaseStage.archetype(privacy)?.rawValue, "receipt")
@@ -103,13 +103,13 @@ eq("privacy.subject", rp.subject, "Netflix.com")
 eq("privacy.face", rp.face.rawValue, "money")
 ok("privacy.amount.formatted", (rp.amount ?? "").contains("12.99"))
 eq("privacy.state", rp.state?.word, "Settled")
-eq("privacy.destination", rp.destination, "Privacy")
+eq("privacy.destination", rp.destination, "Privacy.com")
 ok("privacy.no.seller.row", rp.seller == nil)   // the merchant IS the subject
 
 // 4 ── A row landed before its bridge stamped the merchant keeps its title.
 // Mildly redundant, never wrong — the trade this file makes everywhere.
 eq("privacy.legacy.subject",
-   PurchaseStage.reading(row("Privacy", ref: "privacy:txn:old",
+   PurchaseStage.reading(row("Privacy.com", ref: "privacy:txn:old",
                              title: "Netflix.com · $12.99", price: 12.99,
                              currency: "USD"))!.subject,
    "Netflix.com · $12.99")
@@ -117,12 +117,12 @@ eq("privacy.legacy.subject",
 // 5 ── SETTLED vs AUTHORIZED (the §317 lesson). Absence says nothing — never
 // "Settled" by default, which is the fake status the design law bans.
 eq("privacy.pending",
-   PurchaseStage.reading(row("Privacy", ref: "privacy:txn:p", title: "Blue Bottle · $6.00",
+   PurchaseStage.reading(row("Privacy.com", ref: "privacy:txn:p", title: "Blue Bottle · $6.00",
                              tags: ["Card", "Pending"], price: 6, currency: "USD",
                              merchant: "Blue Bottle"))!.state?.word,
    "Not settled yet")
 ok("privacy.unknown.silent",
-   PurchaseStage.reading(row("Privacy", ref: "privacy:txn:u", title: "x · $1.00",
+   PurchaseStage.reading(row("Privacy.com", ref: "privacy:txn:u", title: "x · $1.00",
                              tags: ["Card"], price: 1, currency: "USD"))!.state == nil)
 eq("applewallet.refund.tone",
    PurchaseStage.reading(row("Apple Wallet", ref: "applewallet:txn:1", title: "Refund",
@@ -148,7 +148,7 @@ ok("order.isNotRefill", !PurchaseStage.isRefill(
 // 7 ── A receipt with no amount is not a receipt. Falls back to the generic
 // sheet rather than drawing a hero with a hole in it.
 ok("receipt.needs.amount",
-   PurchaseStage.reading(row("Privacy", ref: "privacy:txn:z",
+   PurchaseStage.reading(row("Privacy.com", ref: "privacy:txn:z",
                              title: "Netflix.com", merchant: "Netflix.com")) == nil)
 
 // 8 ── THE PROVENANCE SENTENCE — the finding that started the pass. The old

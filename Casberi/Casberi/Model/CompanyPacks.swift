@@ -92,7 +92,7 @@ enum CompanyPacks {
             "Plasma One": coin("Plasma", "XPL", "xpl-plasma"),
             "NerdWallet": ("NerdWallet", .stock("NRDS")),
             "Peer": own("Peer"),
-            "Privacy": own("Privacy.com"),
+            "Privacy.com": own("Privacy.com"),
             "Privy": own("Privy"),
             "Railgun": coin("Railgun", "RAIL", "rail-railgun"),
             "Rocket Money": ("Rocket Companies", .stock("RKT")),
