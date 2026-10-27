@@ -6,10 +6,10 @@ import SwiftUI
 ///
 ///     Receive on Sepolia privately.
 ///
-/// over the switch (on, off returns to Receive), then the newest fresh
-/// address as a code and by its tail ("...e07a", a tap copies the whole),
-/// one line only when there is something to say (what arrived, moving in,
-/// waiting for approval), and the foot: "New address" grey at the leading
+/// over the switch (on, off returns to Receive), one line only when there is
+/// something to say (what arrived, moving in, waiting for approval), then
+/// the newest fresh address as a code and by its tail ("...e07a", a tap
+/// copies the whole), and the foot: "New address" grey at the leading
 /// edge, "Share" pink at the trailing. No helper text.
 ///
 /// While it shows, every fresh address is looked at every 15 s
@@ -43,12 +43,14 @@ struct MoveFreshSentence<Head: View>: View {
                 MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))
                     .padding(.top, DS.Space.s4)
                     .disabled(moving)
+                // The line stands over the code, where it is seen: under
+                // it, a phone's foot covers it until scrolled.
+                line
+                    .padding(.top, DS.Space.s2)
                 if let entry {
                     code(entry.address)
-                        .padding(.top, DS.Space.s6)
+                        .padding(.top, DS.Space.s4)
                 }
-                line
-                    .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -66,10 +68,15 @@ struct MoveFreshSentence<Head: View>: View {
             #endif
             // Opened, every address is looked at at once (a failed move is
             // tried again); then every 15 s while the sentence shows.
+            // The ASP is asked too, so "Waiting for approval" turns to
+            // "private now" here as it does in Holdings (the store spaces
+            // its asks 20 s).
             await book.check(context: context, force: true)
+            await PrivateMoneyStore.shared.refresh(force: true)
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 await book.check(context: context)
+                await PrivateMoneyStore.shared.refresh()
             }
         }
     }
@@ -83,7 +90,7 @@ struct MoveFreshSentence<Head: View>: View {
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 196, height: 196)
+                    .frame(width: 156, height: 156)
                     .padding(DS.Space.s3)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
                     .accessibilityLabel(Text("Code for the new address"))
