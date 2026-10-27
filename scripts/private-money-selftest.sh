@@ -58,7 +58,7 @@ use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with
 use "$SENDER" "return try PrivateAccount.ownerAddress(try PrivateRootKey.ensure())" "the testnet sender is no longer the private root's owner"
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sender no longer builds through TestnetTx's testnet guard"
 use "$MOVE" 'static var available: Bool { PrivacyNetwork.current(debugAsks: debugNetwork) != nil }' "Move to private no longer follows the network this build serves"
-# Receive to a fresh address on Ethereum (prd §1565): wherever private money
+# Receive to a fresh address on Ethereum (prd §1567): wherever private money
 # is, with your account on the phone as the note's owner.
 awk '/static var freshAvailable: Bool/,/^    }$/' "$MOVE" | grep -q 'return network.isTest || PrivateOnEthereum.owner != nil' \
     || { echo "✗ Receive to a fresh address is offered on Ethereum with no account to own the note"; exit 1; }
@@ -221,7 +221,7 @@ use "$FRESHK" "if let root { return try FreshSigner.key(index, root: root) }" "a
 use "$HOLD" 'await FreshReceive.shared.check(context: modelContext)' "Holdings no longer looks at the fresh addresses"
 echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, its root the private root"
 
-# ── prd §1565: every gap closed on Ethereum ────────────────────────────────
+# ── prd §1567: every gap closed on Ethereum ────────────────────────────────
 # Receive privately on Ethereum: the fresh key, from the root, signs only what
 # FreshTx can make (a router's deposit, a token's approval of its router);
 # the deposit is checked against the plan and its gas budget before it signs;
@@ -257,6 +257,8 @@ use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", dec
 use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)' "a private send on Ethereum ignores the token or the recipient's private account"
 use "$ETH" 'let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)' "balance to balance is not a transfer inside the pool"
 use "$ETH" 'return PrivateMoney.hasViewingKey(answer)' "a recipient's private account is not read off the keystore"
+awk '/static func hasPrivateAccount\(/,/^    }$/' "$ETH" | grep -q 'return nil' || { echo "✗ an unanswered keystore read is taken for no private account (it would pay out publicly)"; exit 1; }
+awk '/    func run\(\) async \{/,/^    }$/' "$MOVE" | grep -q 'guard balanceToBalance != nil else {' || { echo "✗ a private send runs without knowing where it goes"; exit 1; }
 use "$MPRIV" 'if move.balanceToBalance == true {' "the line does not say a send goes balance to balance"
 use "$ENGJS" "recipientDiscoveryData: { evmAddress: getAddress(recipient.toLowerCase()) } });" "the engine's transfer finds the recipient some other way than the keystore"
 ! grep -q 'allowOutOfBandFallback' "$ENGJS" || { echo "✗ the engine falls back to secrets the app would have to deliver"; exit 1; }
@@ -636,7 +638,7 @@ check(Y.uint("255") == String(repeating: "0", count: 62) + "ff" && Y.uint("-1") 
 check(P.choices(balance: "100000000000000000", reserve: "1000000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000")
       == ["0.005", "0.01", "0.025", "0.05"], "Ethereum's amounts start at the pool's smallest deposit")
 
-// ── prd §1565 ──────────────────────────────────────────────────────────────
+// ── prd §1567 ──────────────────────────────────────────────────────────────
 // A fresh address's own transaction on Ethereum, against viem 2.45.3: the
 // ppETH router's deposit (unsigned, its hash, signed with parity 1) and a
 // USDC approval of ppUSDC's router.
@@ -783,7 +785,7 @@ mutate "Take it back leaves WETH" "$YIELD" 's/if pool\.native \{ calls\.append\(
 mutate "USDC's shares count as 18-place USDC" "$PM" 's/pool\.underlyingDecimals < pool\.shareDecimals,/pool.underlyingDecimals > 99,/'
 mutate "Ethereum offers less than the pool takes" "$PM" 's/return units \+ keep <= have && units >= floor/return units + keep <= have/'
 mutate "a rate past 100% is a rate" "$YIELD" 's/guard apr < 1 else \{ return nil \}//'
-# prd §1565
+# prd §1567
 mutate "a fresh key may make any transaction" "$FTX" 's/guard FreshTx\.allowed\(to: to, data: data, value: value, network: network\) else \{ return nil \}//'
 mutate "a fresh key approves any spender" "$FTX" 's/return spender == String\(repeating: "0", count: 24\) \+ pool\.router\.dropFirst\(2\)\.lowercased\(\)/return true/'
 mutate "a fresh key signs on a test network" "$FTX" 's/guard !network\.isTest, PrivateMoney/guard PrivateMoney/'

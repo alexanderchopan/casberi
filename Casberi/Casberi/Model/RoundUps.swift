@@ -111,7 +111,7 @@ enum RoundUps {
     // MARK: - Into your private balance (prd §1561)
 
     /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the network
-    /// this build keeps private money on (prd §1565): Ethereum in every
+    /// this build keeps private money on (prd §1567): Ethereum in every
     /// build (0xBow's pool 1, ppUSDC), or in a DEBUG build Sepolia unless
     /// launched with `-privateNetwork ethereum` — the same choice
     /// `PrivacyNetwork.current` makes. On Base and Robinhood the choice is
@@ -127,7 +127,7 @@ enum RoundUps {
     }
 
     /// Ethereum's chain id: the one network with value where round-ups move
-    /// into your private balance, as USDC into ppUSDC (prd §1565).
+    /// into your private balance, as USDC into ppUSDC (prd §1567).
     static let ethereumPool = 1
 
     /// When the change moves on Ethereum, in the dollar's units: everything

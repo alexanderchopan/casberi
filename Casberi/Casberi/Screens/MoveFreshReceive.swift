@@ -81,7 +81,7 @@ struct MoveFreshSentence<Head: View>: View {
         }
     }
 
-    /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1565).
+    /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1567).
     private var network: PrivacyNetwork { book.network ?? .ethereum }
 
     /// The address as a code (EIP-681, naming its network, so a wallet that
@@ -146,7 +146,7 @@ struct MoveFreshSentence<Head: View>: View {
             return (String(localized: "\(figure(amount)) arrived, too little to move"), DS.textSecondary)
         case .failed(let amount):
             return (String(localized: "\(figure(amount)) arrived, not moved yet"), DS.attentionInk)
-        // USDC with no ETH for its gas, and too little private ETH to pay it (prd §1565).
+        // USDC with no ETH for its gas, and too little private ETH to pay it (prd §1567).
         case .needsGas(let amount):
             return (String(localized: "\(figure(amount)) arrived; needs a little private ETH to move"), DS.attentionInk)
         }

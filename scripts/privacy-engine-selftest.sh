@@ -77,7 +77,7 @@ use "$WIRE" 'static var served: Set<Int> { PrivateMainnet.on ? testnets.union([1
 use "$BUNDLE" "engineNet" "the shipped bundle has no network door — rebuild with tools/privacy-pools-engine/build.mjs"
 use "$BUNDLE" "11155111" "the shipped bundle has no network guard — rebuild"
 use "$BUNDLE" "prepareYieldDeposit" "the shipped bundle cannot deposit into a yield pool — rebuild"
-# Balance to balance on a yield pool (prd §1565): the transfer moves SHARES,
+# Balance to balance on a yield pool (prd §1567): the transfer moves SHARES,
 # sized from the token's amount at today's rate, to the recipient the
 # keystore names — never secrets the app would have to deliver.
 use "$ENGJS" "value = (await y.deposit.sharesForUnderlying(value)) + 1n;" "a transfer on a yield pool is not sized in shares"

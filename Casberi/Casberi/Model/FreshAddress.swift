@@ -73,10 +73,10 @@ enum FreshAddress {
         /// The private root it comes from (`PrivateRoot.id`, prd §1562); nil
         /// for the device-only root an address made before it came from.
         var root: String? = nil
-        /// The network it was shown for (prd §1565); nil for Sepolia, where
+        /// The network it was shown for (prd §1567); nil for Sepolia, where
         /// every address made before was.
         var chainId: Int? = nil
-        /// What its state counts, by symbol (prd §1565: USDC arrives too);
+        /// What its state counts, by symbol (prd §1567: USDC arrives too);
         /// nil for ETH.
         var symbol: String? = nil
         var id: String { "\(root ?? PrivateRoot.legacy):\(index)" }
@@ -96,7 +96,7 @@ enum FreshAddress {
         /// The move failed; the next look tries again.
         case failed(amount: String)
         /// A token arrived and the address holds no ETH to move it; your
-        /// private ETH is too little to pay its gas (prd §1565).
+        /// private ETH is too little to pay its gas (prd §1567).
         case needsGas(amount: String)
     }
 
@@ -169,7 +169,7 @@ enum FreshAddress {
         to.lowercased() == entrypoint.lowercased() && PrivateMoney.decimal(hex: value) == plan.msgValue
     }
 
-    // MARK: - On Ethereum: into the yield pool, its gas out of what arrived (prd §1565)
+    // MARK: - On Ethereum: into the yield pool, its gas out of what arrived (prd §1567)
 
     /// The smallest budget the pool takes, in the token: its minimum (in
     /// shares, `Entrypoint.assets`) at today's rate, rounded up, plus the
@@ -223,7 +223,7 @@ enum FreshAddress {
         return pool.native ? (approvals == 0 && carried <= most && carried > 0) : carried == 0
     }
 
-    /// **A TOKEN AT A FRESH ADDRESS (prd §1565): its gas.** A fresh address
+    /// **A TOKEN AT A FRESH ADDRESS (prd §1567): its gas.** A fresh address
     /// paid USDC holds no ETH to move it. Its approval and deposit cost at
     /// most `need` at `maxFee`; what it already holds counts. The shortfall
     /// is what your private ETH pays it, relayed (no link to your account).

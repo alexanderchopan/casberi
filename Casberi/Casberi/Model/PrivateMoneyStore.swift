@@ -24,18 +24,18 @@ final class PrivateMoneyStore {
     private(set) var rates: [String: String] = [:]
     private(set) var apys: [String: Double] = [:]
     /// Each yield pool's smallest deposit in its token, read live with the
-    /// rate (prd §1565), by lower-cased share.
+    /// rate (prd §1567), by lower-cased share.
     private(set) var minimums: [String: String] = [:]
 
     /// Where round-ups on Ethereum move: ppUSDC's smallest deposit in USDC
-    /// units, once read (prd §1565).
+    /// units, once read (prd §1567).
     var roundUpsMinimum: String? {
         PrivacyNetwork.ethereum.yield.first { !$0.native }.flatMap { minimums[$0.share.lowercased()] }
     }
     @ObservationIgnored private var asked: Date = .distantPast
     @ObservationIgnored private var yieldRead: Date = .distantPast
 
-    /// **RESTORING YOUR PRIVATE BALANCE (prd §1565).** True while a new
+    /// **RESTORING YOUR PRIVATE BALANCE (prd §1567).** True while a new
     /// phone finds a root's notes or walks its fresh addresses back (prd
     /// §1562): Holdings' Private header says so in one line, never a page.
     private(set) var restoring = false
@@ -68,7 +68,7 @@ final class PrivateMoneyStore {
     /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.
     var ethereumYieldLine: String? { yieldLine(symbol: "ETH") }
 
-    /// A token's rate on Ethereum (ETH or USDC, prd §1565), or nil.
+    /// A token's rate on Ethereum (ETH or USDC, prd §1567), or nil.
     func yieldLine(symbol: String) -> String? {
         guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == symbol }) else { return nil }
         return PrivateYield.line(apy: apys[pool.share.lowercased()])
@@ -90,7 +90,7 @@ final class PrivateMoneyStore {
                    rate != "0" {
                     rates[key] = rate
                     // The pool's smallest deposit in the token, at this rate
-                    // (prd §1565: round-ups move once they reach it).
+                    // (prd §1567: round-ups move once they reach it).
                     if let call = FreshAddress.assetsCall(token: pool.share),
                        let config = await Self.call(network, to: network.entrypoint, data: call).flatMap(FreshAddress.assetConfig),
                        config.enabled,

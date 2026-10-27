@@ -95,6 +95,7 @@ struct MovePrivateSentence<Head: View>: View {
             if move.mode == .send, move.recipient == nil,
                let to = UserDefaults.standard.string(forKey: "movePrivateTo"), PrivateMoney.isAddress(to) {
                 move.recipient = to
+                await move.checkRecipient()
             }
             NSLog("[Casberi] movePrivate: %@ %@", move.mode == .send ? "send" : "deposit", String(describing: move.stage))
             if UserDefaults.standard.bool(forKey: "movePrivateGo"), move.stage == .ready, ready {
@@ -103,7 +104,7 @@ struct MovePrivateSentence<Head: View>: View {
             #endif
         }
         // Switch on, whether the recipient holds a private account of their
-        // own: then it goes balance to balance (prd §1565).
+        // own: then it goes balance to balance (prd §1567).
         .task(id: move.recipient) {
             guard move.mode == .send else { return }
             await move.checkRecipient()
@@ -275,7 +276,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// withdrawal measured 27 s on Sepolia, the proof a few more).
     private var sendLine: String {
         // To someone with a private account of their own, it stays private:
-        // balance to balance (prd §1565), nothing paid out.
+        // balance to balance (prd §1567), nothing paid out.
         if move.balanceToBalance == true {
             return [String(localized: "To their private balance"), String(localized: "about a minute")].joined(separator: " · ")
         }
@@ -318,7 +319,7 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// The amounts the money can cover: the test account's after the gas a
     /// first deposit takes, or switch on, the approved private balance.
-    /// ETH's amounts, then on Ethereum USDC's (prd §1565): picking one picks
+    /// ETH's amounts, then on Ethereum USDC's (prd §1567): picking one picks
     /// its token too, so the sentence names it.
     private var amounts: some View {
         ForEach(move.options.map { "\($0.symbol) \($0.amount)" }, id: \.self) { key in

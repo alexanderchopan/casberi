@@ -44,7 +44,7 @@ enum FreshAddressKey {
     }
 
     /// Address `index`'s signing key under `root`: the private root's
-    /// through `FreshSigner` (shipping, prd §1565), else the device-only root's.
+    /// through `FreshSigner` (shipping, prd §1567), else the device-only root's.
     static func key(_ index: UInt32, root: String?) throws -> P256K.Recovery.PrivateKey {
         if let root { return try FreshSigner.key(index, root: root) }
         var fresh = try legacyRoot()

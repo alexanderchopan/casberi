@@ -308,7 +308,7 @@ struct MoveSecurity: View {
                             }
                         }
                     }
-                    // **OR YOUR PRIVATE BALANCE (prd §1561, §1565)**, a word
+                    // **OR YOUR PRIVATE BALANCE (prd §1561, §1567)**, a word
                     // beside the tokens, only where this build has a pool to
                     // move the change into: Ethereum (ppUSDC), or Sepolia in
                     // a DEBUG build; none with the kill switch off.
@@ -338,7 +338,7 @@ struct MoveSecurity: View {
         .walletRowPitch()
         .task {
             // Where round-ups move privately on Ethereum: the pool's smallest
-            // deposit, read live for the sentence below (prd §1565).
+            // deposit, read live for the sentence below (prd §1567).
             if RoundUps.privatePools.contains(RoundUps.ethereumPool), PrivateMove.available {
                 await PrivateMoneyStore.shared.readYield(including: .ethereum)
             }
@@ -389,7 +389,7 @@ struct MoveSecurity: View {
         // Private: where it runs, and that it moves together (prd §1561).
         if setting.movesPrivately, let chain = RoundUps.privatePools.sorted().first {
             // On Ethereum the change is dollars, moved as USDC once it reaches
-            // the pool's smallest deposit, read live (prd §1565).
+            // the pool's smallest deposit, read live (prd §1567).
             if chain == RoundUps.ethereumPool {
                 guard let at = RoundUps.privateMoveAt(on: chain, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) else {
                     return String(localized: "Round-ups on Ethereum move to your private balance together, once the pool's smallest deposit is set aside.")

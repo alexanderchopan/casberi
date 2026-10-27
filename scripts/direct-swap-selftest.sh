@@ -294,7 +294,7 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [r
 var ruPriv = RoundUps.Setting(on: true)
 ruPriv.toPrivate = true
 let ruPools: Set<Int> = [11155111]
-check(RoundUps.privatePools == [1], "a shipped build offers private round-ups somewhere other than Ethereum (prd §1565)")
+check(RoundUps.privatePools == [1], "a shipped build offers private round-ups somewhere other than Ethereum (prd §1567)")
 // On Ethereum the change is dollars, moved as USDC into ppUSDC once it reaches
 // $5 and the pool's smallest deposit, read live; unread, it keeps counting.
 check(RoundUps.privateMoveAt(on: 1, poolMinimum: "10046461") == "10046461", "Ethereum's round-ups move under ppUSDC's minimum")

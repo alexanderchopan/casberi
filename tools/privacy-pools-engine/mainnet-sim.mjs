@@ -596,7 +596,7 @@ for (const name of SCENARIOS) {
     }
 
     if (name === 'fresh') {
-      // RECEIVE PRIVATELY ON ETHEREUM (prd §1565): a stranger pays a fresh
+      // RECEIVE PRIVATELY ON ETHEREUM (prd §1567): a stranger pays a fresh
       // address; the fresh address — its key derived from the private root,
       // holding nothing but what it was paid — deposits it into ppETH for the
       // account, its gas out of what arrived. The account is registered first
@@ -649,7 +649,7 @@ for (const name of SCENARIOS) {
       say(`  validated as a node takes a signed one (gas ${BigInt(vc.gasUsed)}), then LANDS: ${gasUsed} gas; ${left - gasUsed * f.maxFee} wei of dust stays; the account found it (${note.status})`);
     }
     if (name === 'transfer') {
-      // BALANCE TO BALANCE (prd §1565): A's private ETH to B's private
+      // BALANCE TO BALANCE (prd §1567): A's private ETH to B's private
       // account, found by B's owner address in the keystore; 0xBow's relayer
       // posts PoolVault.transact; B finds the note. An address with no
       // private account is refused, so the app pays it out publicly instead.
@@ -682,7 +682,7 @@ for (const name of SCENARIOS) {
       say(`  B found ${got} shares (${foundB.notes.length} note(s)); an address with no private account: ${refused}`);
     }
     if (name === 'usdcsend') {
-      // SEND PRIVATELY FROM PRIVATE USDC (prd §1565): 20 USDC into ppUSDC,
+      // SEND PRIVATELY FROM PRIVATE USDC (prd §1567): 20 USDC into ppUSDC,
       // approved (stood in for), then 10 USDC to a plain address, relayed:
       // the router pays USDC.
       await newFork(account, { usdc: 50_000_000n });
@@ -701,7 +701,7 @@ for (const name of SCENARIOS) {
       say(`  relayed USDC LANDS: the recipient got ${got} USDC units (asked ${amount}); fee ${BigInt(w.fee.feeAmount)} ppUSDC shares; gas ${BigInt(block.calls[0].gasUsed)}`);
     }
     if (name === 'freshusdc') {
-      // PRIVATE USDC TO A FRESH ADDRESS, NO GATEKEEPER (prd §1565): USDC
+      // PRIVATE USDC TO A FRESH ADDRESS, NO GATEKEEPER (prd §1567): USDC
       // arrives at a fresh address that holds no ETH. The private balance
       // pays its gas: a relayed private withdrawal of just enough ETH from
       // private ETH to the fresh address (nothing links it to the account),
@@ -744,7 +744,7 @@ for (const name of SCENARIOS) {
       say(`  validated (gas ${gas.join(' + ')}), then LANDS: ${BigInt(y.shares)} ppUSDC shares for the account (${note.status})`);
     }
     if (name === 'roundups') {
-      // ROUND-UPS INTO PRIVATE ON ETHEREUM (prd §1565): a send of USDC you
+      // ROUND-UPS INTO PRIVATE ON ETHEREUM (prd §1567): a send of USDC you
       // approve with Face ID carries the batch — everything counted, once it
       // reaches the pool's smallest deposit — into ppUSDC, in ONE operation.
       await newFork(account, { usdc: 100_000_000n });

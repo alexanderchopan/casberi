@@ -82,7 +82,7 @@ enum PrivateWatchTask {
 }
 
 /// The watch's one pass, shared by the background task and its probe. In
-/// every build since prd §1565: on Ethereum it asks the ASP about every
+/// every build since prd §1567: on Ethereum it asks the ASP about every
 /// waiting deposit and moves what a fresh address was paid (ETH, its gas out
 /// of what arrived); a USDC payment that needs your private ETH for its gas
 /// waits for you to look, since that spends private money and asks for you.
@@ -172,7 +172,7 @@ enum PrivateWatch {
         let store = PrivateMoneyStore.shared
         guard let network = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) else { return }
         let pending = PrivateRootKey.roots().filter { !PrivateRootKey.found($0.id) }
-        // "Restoring your private balance" (prd §1565) only where something
+        // "Restoring your private balance" (prd §1567) only where something
         // comes back: a root this phone did not make.
         let restoring = pending.contains { !PrivateRootKey.madeHere($0.id) }
         if restoring { store.beginRestore() }

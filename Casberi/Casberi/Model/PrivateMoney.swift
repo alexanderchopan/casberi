@@ -337,12 +337,12 @@ enum PrivateMoney {
     /// smallest deposit (0.004 ETH, `Entrypoint.assets`) up.
     static let mainnetLadder = ["0.001", "0.005", "0.01", "0.025", "0.05", "0.1", "0.25", "0.5", "1"]
 
-    /// USDC on Ethereum (prd §1565): ppUSDC's smallest deposit is 10 shares
+    /// USDC on Ethereum (prd §1567): ppUSDC's smallest deposit is 10 shares
     /// (about $10.05 at the rate read 2026-10-26), so the ladder starts there
     /// and the minimum, read live, takes out a step it does not cover.
     static let usdcLadder = ["10", "20", "50", "100", "250", "500", "1000", "2500"]
 
-    // MARK: - Balance to balance (prd §1565)
+    // MARK: - Balance to balance (prd §1567)
 
     /// `Keystore.viewingKeys(address)`: the public viewing key an owner
     /// registered, or zero for an address with no private account.

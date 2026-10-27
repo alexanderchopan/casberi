@@ -27,7 +27,7 @@ import SwiftData
 /// order, until twenty in a row were never used (`PrivateRoot.nextBatch`);
 /// what was paid and never moved is moved by the next look.
 ///
-/// **On Ethereum (prd §1565)** the same, in every build: what arrives goes
+/// **On Ethereum (prd §1567)** the same, in every build: what arrives goes
 /// into ppETH (earning, §1563), its gas out of what arrived, the address's
 /// key from the private root signing its own deposit (`FreshSigner`, only
 /// a router's deposit or a token's approval of its router); USDC moves too,
@@ -40,7 +40,7 @@ final class FreshReceive {
 
     private static let key = "freshAddresses.v1"
     /// The roots whose addresses this phone has walked (prd §1562), by
-    /// "root" on Sepolia and "root:chain" elsewhere (prd §1565).
+    /// "root" on Sepolia and "root:chain" elsewhere (prd §1567).
     private static let walkedKey = "freshAddresses.walked.v1"
 
     private(set) var entries: [FreshAddress.Entry]
@@ -68,7 +68,7 @@ final class FreshReceive {
     }
 
     /// Where Receive shows a fresh address now: Ethereum, or in a DEBUG
-    /// build Sepolia unless `-privateNetwork ethereum` (prd §1565). Nil with
+    /// build Sepolia unless `-privateNetwork ethereum` (prd §1567). Nil with
     /// the kill switch off.
     var network: PrivacyNetwork? { PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) }
 
@@ -127,7 +127,7 @@ final class FreshReceive {
     /// One look at every watched address; a move for each that was paid
     /// enough. At most every 15 s unless `force`. `force` is a person
     /// looking (Receive or Holdings open): only then may a USDC move spend a
-    /// little private ETH on its gas, which asks for you (prd §1565).
+    /// little private ETH on its gas, which asks for you (prd §1567).
     func check(context: ModelContext, force: Bool = false) async {
         guard !DemoMode.isActive, !looking, force || Date().timeIntervalSince(looked) > 15 else { return }
         let watched = FreshAddress.watched(entries)
@@ -150,7 +150,7 @@ final class FreshReceive {
                 #endif
                 continue
             }
-            // On Ethereum a fresh address may be paid USDC too (prd §1565).
+            // On Ethereum a fresh address may be paid USDC too (prd §1567).
             let usdcPool = network.yield.first { !$0.native }
             let usdc = usdcPool == nil ? "0" : ((try? await PrivateRPC.tokenBalance(network, token: usdcPool!.underlying, of: entry.address)) ?? "0")
             NSLog("privateWatch| fresh | %@ | %@ | %@ wei | %@ USDC units", network.name, YourAccount.short(entry.address), balance, usdc)
@@ -234,7 +234,7 @@ final class FreshReceive {
         rootID = PrivateRootKey.currentID
     }
 
-    // MARK: - A move on Ethereum (prd §1565)
+    // MARK: - A move on Ethereum (prd §1567)
 
     /// The pool's smallest budget in the token, today: its minimum in shares
     /// (`Entrypoint.assets`) at the share's live rate.
@@ -301,7 +301,7 @@ final class FreshReceive {
         }
     }
 
-    /// **USDC AT A FRESH ADDRESS, NO GATEKEEPER (prd §1565).** The address
+    /// **USDC AT A FRESH ADDRESS, NO GATEKEEPER (prd §1567).** The address
     /// holds no ETH to move it, so your private ETH pays its gas: a relayed
     /// private withdrawal of just enough ETH to the fresh address (the pool
     /// to the address: nothing names your account), then the address

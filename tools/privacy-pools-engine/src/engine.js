@@ -353,7 +353,7 @@ const methods = {
     return { notes, balances: Object.entries(balances).map(([tokenId, value]) => ({ tokenId, value })), ms: Math.round(now() - t) };
   },
 
-  // Balance to balance (prd §1565): the recipient's own private account,
+  // Balance to balance (prd §1567): the recipient's own private account,
   // found by its owner's address in the keystore. The SDK reads the
   // recipient's viewing key there and refuses an address with none
   // (`RecipientViewingKeyUnregistered`), never falling back to secrets the

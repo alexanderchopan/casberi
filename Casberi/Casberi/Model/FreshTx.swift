@@ -1,6 +1,6 @@
 import Foundation
 
-/// **A FRESH ADDRESS'S OWN TRANSACTION ON ETHEREUM (prd §1565).**
+/// **A FRESH ADDRESS'S OWN TRANSACTION ON ETHEREUM (prd §1567).**
 ///
 /// What a stranger pays a fresh address is moved into your private balance
 /// by a deposit SENT FROM THAT ADDRESS (prd §1560), its gas out of what

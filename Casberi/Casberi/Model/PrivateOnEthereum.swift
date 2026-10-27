@@ -128,7 +128,7 @@ enum PrivateOnEthereum {
     /// private balance to `to`, through 0xBow's relayer, which posts it and
     /// pays the gas for a fee taken in shares. To a plain address the router
     /// pays the token out (native ETH for ETH); to an address whose owner has
-    /// a private account of their own (`balanceToBalance`, prd §1565) it is
+    /// a private account of their own (`balanceToBalance`, prd §1567) it is
     /// a transfer inside the pool, balance to balance, nothing paid out.
     /// Asks for the device owner first. Returns the relayer's transaction hash.
     static func send(token: String, amount: String, to: String, balanceToBalance: Bool = false,
@@ -146,18 +146,21 @@ enum PrivateOnEthereum {
         return relayed.tx
     }
 
-    // MARK: - Balance to balance (prd §1565)
+    // MARK: - Balance to balance (prd §1567)
 
     /// Whether `owner` has a private account of its own on `net`: a viewing
     /// key registered in the keystore. Read with no account open (one
-    /// `eth_call` through the engine's door); an unreadable answer is no.
-    static func hasPrivateAccount(_ owner: String, on net: PrivacyNetwork) async -> Bool {
+    /// `eth_call` through the engine's door). Nil when the node did not
+    /// answer (Tor not up yet): unknown is never read as "no".
+    static func hasPrivateAccount(_ owner: String, on net: PrivacyNetwork) async -> Bool? {
         guard let data = PrivateMoney.viewingKeyCall(owner: owner) else { return false }
-        let answer = try? await PrivateRPC.call(net, "eth_call", [["to": net.keystore, "data": data], "latest"]) as? String
+        guard let answer = try? await PrivateRPC.call(net, "eth_call", [["to": net.keystore, "data": data], "latest"]) as? String else {
+            return nil
+        }
         return PrivateMoney.hasViewingKey(answer)
     }
 
-    // MARK: - Round-ups into your private balance (prd §1565)
+    // MARK: - Round-ups into your private balance (prd §1567)
 
     /// The deposit a Face ID operation on Ethereum carries for round-ups:
     /// `units` of USDC into ppUSDC for the root's account, the registration

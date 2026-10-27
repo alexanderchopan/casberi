@@ -1,7 +1,7 @@
 import Foundation
 import P256K
 
-/// **A FRESH ADDRESS SIGNS ITS OWN DEPOSIT ON ETHEREUM (prd §1565).**
+/// **A FRESH ADDRESS SIGNS ITS OWN DEPOSIT ON ETHEREUM (prd §1567).**
 ///
 /// Address `i`'s key is `FreshAddress.key(root:index:)` of the fresh root
 /// the private root in iCloud Keychain derives (`PrivateRoot.derive(_:
@@ -68,7 +68,7 @@ enum FreshSigner {
     }
 }
 
-/// **THE PRIVATE MONEY NODE (prd §1554, §1565).** One JSON-RPC call to a
+/// **THE PRIVATE MONEY NODE (prd §1554, §1567).** One JSON-RPC call to a
 /// network's node through the engine's door (Tor, a receipt each): what the
 /// fresh addresses and the watch read and send on Sepolia and Ethereum. A
 /// node's "slow down" is waited out; its error is thrown.

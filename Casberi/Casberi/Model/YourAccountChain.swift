@@ -1377,7 +1377,7 @@ enum YourAccountChain {
         var roundUpWaits = false
         /// A swap to another network it sent (prd §1555), as the Wallet keeps it.
         var crossing: YourAccountAcross.Crossing? = nil
-        /// Round-ups into your private balance rode this operation (prd §1565).
+        /// Round-ups into your private balance rode this operation (prd §1567).
         var rode = false
     }
 
@@ -1473,7 +1473,7 @@ enum YourAccountChain {
             try require(a.simulated, on: net, swaps: a.mustCheck)
         }
         // **ROUND-UPS INTO YOUR PRIVATE BALANCE RIDE THIS OPERATION (prd
-        // §1565).** The batch's calls (the keystore the first time, USDC's
+        // §1567).** The batch's calls (the keystore the first time, USDC's
         // approval, ppUSDC's router) join the send's in ONE Face ID
         // operation, and the whole of it is simulated again with them before
         // anything is signed; a node that will not simulate signs nothing.

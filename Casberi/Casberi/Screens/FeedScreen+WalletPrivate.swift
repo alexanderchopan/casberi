@@ -31,7 +31,7 @@ extension FeedScreen {
                         await store.readPrices()
                         await store.readYield()
                         // A new phone finds its private money again here
-                        // (prd §1562, every build since §1565): each root's
+                        // (prd §1562, every build since §1567): each root's
                         // notes from the pool, its fresh addresses walked
                         // back. Once per root; the line says so meanwhile.
                         await PrivateWatch.restoreNotes()
@@ -46,7 +46,7 @@ extension FeedScreen {
                             await store.refresh()
                         }
                     }
-                // One line while a new phone rebuilds it (prd §1565): never
+                // One line while a new phone rebuilds it (prd §1567): never
                 // a spinner page, gone when done.
                 if store.restoring {
                     Text("Restoring your private balance")

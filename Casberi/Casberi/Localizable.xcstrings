@@ -3012,6 +3012,34 @@
         }
       }
     },
+    "%@ arrived; needs a little private ETH to move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegó %@; necesita un poco de ETH privado para moverse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@が届きました。移すには少しのプライベートETHが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 도착함, 옮기려면 약간의 비공개 ETH가 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已到账；需要少量私密 ETH 才能转入"
+          }
+        }
+      }
+    },
     "%@ arrives" : {
       "localizations" : {
         "es" : {
@@ -9162,6 +9190,34 @@
         }
       }
     },
+    "%@ of round-ups moves to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de redondeos pasan a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の端数積立がプライベート残高に移ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 잔돈 적립이 비공개 잔액으로 옮겨집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的零钱凑整转入你的私密余额"
+          }
+        }
+      }
+    },
     "%@ of round-ups so far, %@ bought at $5" : {
       "localizations" : {
         "es" : {
@@ -9242,6 +9298,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目前零钱 %1$@,将在你下次发送 %2$@ 时买入"
+          }
+        }
+      }
+    },
+    "%@ of round-ups so far, for your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de redondeos hasta ahora, para tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの端数積立 %@、プライベート残高へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 잔돈 적립 %@, 비공개 잔액용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前零钱凑整 %@，转入你的私密余额"
+          }
+        }
+      }
+    },
+    "%@ of round-ups so far, moved with your next send of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de redondeos hasta ahora, se mueven con tu próximo envío de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの端数積立 %1$@、次の%2$@の送金で移ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 잔돈 적립 %1$@, 다음 %2$@ 보내기와 함께 옮겨집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前零钱凑整 %1$@，随你下一次发送 %2$@ 转入"
           }
         }
       }
@@ -10700,6 +10812,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 拒绝 Tor，因此直接读取"
+          }
+        }
+      }
+    },
+    "%@ relayer fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comisión del relayer: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リレイヤー手数料 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "릴레이어 수수료 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "中继费 %@"
           }
         }
       }
@@ -107371,6 +107511,34 @@
         }
       }
     },
+    "Move %@ to private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover %@ a privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をプライベートに移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 비공개로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 转为私密"
+          }
+        }
+      }
+    },
     "Move down" : {
       "localizations" : {
         "es" : {
@@ -148528,6 +148696,34 @@
         }
       }
     },
+    "Restoring your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Restaurando tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高を復元中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액 복원 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在恢复你的私密余额"
+          }
+        }
+      }
+    },
     "Resume" : {
       "localizations" : {
         "es" : {
@@ -150088,6 +150284,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@ 上的零钱攒够 %2$@ 后会一起转入你的私密余额。"
+          }
+        }
+      }
+    },
+    "Round-ups on Ethereum move to your private balance together, once %@ is set aside." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los redondeos en Ethereum pasan juntos a tu saldo privado cuando se apartan %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumの端数積立は、%@たまるとまとめてプライベート残高に移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 잔돈 적립은 %@이 모이면 함께 비공개 잔액으로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 上的零钱凑整攒满 %@ 后一起转入你的私密余额。"
+          }
+        }
+      }
+    },
+    "Round-ups on Ethereum move to your private balance together, once the pool's smallest deposit is set aside." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los redondeos en Ethereum pasan juntos a tu saldo privado cuando se aparta el depósito mínimo del pool."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumの端数積立は、プールの最小入金額がたまるとまとめてプライベート残高に移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 잔돈 적립은 풀의 최소 입금액이 모이면 함께 비공개 잔액으로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 上的零钱凑整攒满资金池的最低存款后一起转入你的私密余额。"
           }
         }
       }
@@ -180198,6 +180450,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "凑到下一个 $%lld"
+          }
+        }
+      }
+    },
+    "To their private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A su saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相手のプライベート残高へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "상대의 비공개 잔액으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入对方的私密余额"
           }
         }
       }

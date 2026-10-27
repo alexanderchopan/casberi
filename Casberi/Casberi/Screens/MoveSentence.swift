@@ -488,7 +488,7 @@ struct MoveSentence: View {
             return nil
         }
         guard sent != "0" else { return nil }
-        // Into your private balance on Ethereum (prd §1565): its own count,
+        // Into your private balance on Ethereum (prd §1567): its own count,
         // moving together once it reaches the pool's smallest deposit.
         if privateRoundUps {
             return RoundUps.privatePlan(dollarSent: sent, saved: RoundUps.privateSaved(on: network.chainId), step: setting.step,
@@ -497,7 +497,7 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
-    /// Round-ups move into your private balance here (prd §1565): picked,
+    /// Round-ups move into your private balance here (prd §1567): picked,
     /// on Ethereum, with private money on (the kill switch) and your
     /// account its owner.
     private var privateRoundUps: Bool {
@@ -3390,7 +3390,7 @@ struct MoveSentence: View {
         Task {
             do {
                 let buy = carried
-                // Round-ups due into your private balance (prd §1565): the
+                // Round-ups due into your private balance (prd §1567): the
                 // deposit proved now and carried by this operation; one that
                 // cannot be written keeps counting, and the send goes alone.
                 var ride: PrivateOnEthereum.Ride?
@@ -3505,7 +3505,7 @@ struct MoveSentence: View {
                                         roundUp: roundUp, renew: true, ride: ride, stage: stage)
     }
 
-    /// Round-ups that rode a landed operation (prd §1565): the note kept
+    /// Round-ups that rode a landed operation (prd §1567): the note kept
     /// waiting for approval, its Activity row with no verb.
     @MainActor
     static func landPrivateRoundUps(_ ride: PrivateOnEthereum.Ride, tx: String, context: ModelContext) {
