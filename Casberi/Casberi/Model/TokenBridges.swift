@@ -16,7 +16,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case notion   = "Notion"
     case linear   = "Linear"
     case bitrefill = "Bitrefill"
-    case privacy  = "Privacy"
+    case privacy  = "Privacy.com"
     /// Wise (2026-09-16, prd §778) — the multi-currency account, over a
     /// personal API token the person mints read-only in their own settings.
     /// Its sweep is its own because the credential is a token PLUS a resolved

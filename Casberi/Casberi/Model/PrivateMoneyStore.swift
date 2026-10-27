@@ -18,14 +18,74 @@ final class PrivateMoneyStore {
     /// USD per unit by lower-cased symbol, for notes on a network whose coins
     /// have value (`MainnetPrices`); never asked for test money.
     private(set) var prices: [String: Double] = [:]
+    /// Each yield share's exchange rate (the token's units per whole share)
+    /// and the yearly rate it earns, read live (prd §1563), by lower-cased
+    /// share. Never kept: a launch reads them again.
+    private(set) var rates: [String: String] = [:]
+    private(set) var apys: [String: Double] = [:]
     @ObservationIgnored private var asked: Date = .distantPast
+    @ObservationIgnored private var yieldRead: Date = .distantPast
 
     private init() {
         notes = UserDefaults.standard.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode([PrivateMoney.Note].self, from: $0) } ?? []
     }
 
-    var rows: [PrivateMoney.Row] { PrivateMoney.rows(notes) }
+    var rows: [PrivateMoney.Row] { PrivateMoney.rows(notes, rates: rates) }
+
+    /// A private row's line (prd §1563): "1.0% on Aave" where its token earns
+    /// and the rate was read; else nil, and the row says its network.
+    func yieldLine(_ row: PrivateMoney.Row) -> String? {
+        guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else { return nil }
+        return PrivateYield.line(apy: apys[pool.share.lowercased()])
+    }
+
+    /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.
+    var ethereumYieldLine: String? {
+        guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == "ETH" }) else { return nil }
+        return PrivateYield.line(apy: apys[pool.share.lowercased()])
+    }
+
+    /// Reads every yield pool's exchange rate, fee and Aave's rate, on each
+    /// network a note is on, at most once a minute: three calls a pool to the
+    /// network's node, through the engine's door (Tor, a receipt each).
+    func readYield(force: Bool = false, including network: PrivacyNetwork? = nil) async {
+        guard !DemoMode.isActive, force || Date().timeIntervalSince(yieldRead) > 60 else { return }
+        let chains = Set(notes.map(\.chainId) + (network.map { [$0.chainId] } ?? []))
+        let networks = chains.compactMap(PrivacyNetwork.forChain).filter { !$0.yield.isEmpty }
+        guard !networks.isEmpty else { return }
+        yieldRead = Date()
+        for network in networks {
+            for pool in network.yield {
+                let key = pool.share.lowercased()
+                if let rate = await Self.call(network, to: pool.share, data: PrivateYield.exchangeRateCall).flatMap({ PrivateYield.word($0, 0) }),
+                   rate != "0" { rates[key] = rate }
+                guard let fee = await Self.call(network, to: pool.share, data: PrivateYield.feeBpsCall).flatMap({ PrivateYield.word($0, 0) }).flatMap(Int.init),
+                      let reserve = PrivateYield.reserveDataCall(underlying: pool.underlying),
+                      let ray = await Self.call(network, to: PrivateYield.aavePool, data: reserve).flatMap(PrivateYield.liquidityRate),
+                      let apy = PrivateYield.apy(liquidityRateRay: ray, feeBps: fee) else {
+                    apys[key] = nil
+                    continue
+                }
+                apys[key] = apy
+                NSLog("privateMoney| yield | %@ | rate %@ | fee %d bps | %.4f%%", pool.symbol, rates[key] ?? "-", fee, apy * 100)
+            }
+        }
+    }
+
+    /// One `eth_call` to the network's node through the engine's door.
+    private static func call(_ network: PrivacyNetwork, to: String, data: String) async -> String? {
+        guard let url = URL(string: network.rpcUrl) else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                                   "params": [["to": to, "data": data], "latest"]]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        guard let (answer, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service), http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: answer) as? [String: Any] else { return nil }
+        return json["result"] as? String
+    }
 
     /// What Wallet › Needs you shows (prd §1561): every deposit the ASP has
     /// not approved, and in a DEBUG build the samples `-privateNeedsSample`
@@ -66,7 +126,8 @@ final class PrivateMoneyStore {
         guard !real.isEmpty else { return [] }
         let found = await MainnetPrices.prices(for: real.map(\.symbol))
         if found != prices { prices = found }
-        let usd = PrivateMoney.worthUSD(notes, prices: found)
+        await readYield()
+        let usd = PrivateMoney.worthUSD(notes, prices: found, rates: rates)
         NSLog("privateMoney| worth | $%.2f | %d prices", usd, found.count)
         return usd > 0 ? [(symbol: PrivateMoney.walletSymbol, usd: usd, holderID: PrivateMoney.holderID,
                            label: String(localized: "Private"))] : []
@@ -76,16 +137,20 @@ final class PrivateMoneyStore {
     /// units: the most any one account holds (prd §1562: a withdrawal spends
     /// from one account).
     func spendable(chainId: Int) -> String {
-        PrivateMoney.spendableByAccount(notes, chainId: chainId)
+        spendable(chainId: chainId, symbol: "ETH")
+    }
+
+    func spendable(chainId: Int, symbol: String) -> String {
+        PrivateMoney.spendableByAccount(notes, chainId: chainId, symbol: symbol, rates: rates)
             .compactMap { Decimal(string: $0.amount) }.max().map(PrivateMoney.plain) ?? "0"
     }
 
     /// The account a send of `value` (base units) and its relayer's fee
     /// spends from: the current root's when it covers it, else any other
     /// that does (`PrivateRoot.legacy` for the device-only one).
-    func account(toSpend value: String, fee: String, chainId: Int) -> String? {
+    func account(toSpend value: String, fee: String, chainId: Int, symbol: String = "ETH") -> String? {
         guard let need = Decimal(string: value).map({ $0 + (Decimal(string: fee) ?? 0) }) else { return nil }
-        let held = PrivateMoney.spendableByAccount(notes, chainId: chainId)
+        let held = PrivateMoney.spendableByAccount(notes, chainId: chainId, symbol: symbol, rates: rates)
             .filter { (Decimal(string: $0.amount) ?? 0) >= need }.map(\.root)
         let current = PrivateRootKey.currentID
         if let current, held.contains(current) { return current }
@@ -99,14 +164,17 @@ final class PrivateMoneyStore {
     /// holds unspent is gone, unless it was made in the last ten minutes and
     /// the pool has not indexed it yet. Other accounts' notes stand as they
     /// are. A note found on a new phone has no label hash yet: `fillLabelHashes`.
-    func reconcile(_ found: PrivacyEngineWire.Discovered, root: String? = nil) {
-        let mine = notes.filter { $0.root == root }
+    func reconcile(_ found: PrivacyEngineWire.Discovered, root: String? = nil, network: PrivacyNetwork = .sepolia) {
+        // One network's notes at a time: an account's notes on the other
+        // network stand as they are.
+        let mine = notes.filter { $0.root == root && $0.chainId == network.chainId }
         let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
         // Unspent is ACTIVE, and a deposit the ASP has not approved (PENDING)
         // or refused (REJECTED): both still hold their money, and Needs you
         // asks about them (prd §1561). SPENT and EXITED are gone.
+        // ETH, and on Ethereum each yield pool's shares (prd §1563).
         let unspent = found.notes.filter { ["ACTIVE", "PENDING", "REJECTED"].contains($0.status.uppercased())
-            && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
+            && ($0.tokenId.lowercased() == PrivateMove.eth.lowercased() || Self.isShare($0.tokenId, on: network)) }
         var next: [PrivateMoney.Note] = unspent.map { n in
             let had = mine.first { $0.commitment.lowercased() == n.commitment.lowercased() }
             let sameLabel = byLabel[n.label.lowercased()]
@@ -116,17 +184,22 @@ final class PrivateMoneyStore {
             case "ACTIVE": .approved
             default: nil
             }
+            let share = network.yield.first { $0.share.lowercased() == n.tokenId.lowercased() }
             return .init(commitment: n.commitment, label: n.label, labelHash: had?.labelHash ?? sameLabel?.labelHash ?? "",
-                         symbol: "ETH", amount: PrivateMoney.decimal(hex: n.value), decimals: 18,
-                         chainId: PrivacyNetwork.sepolia.chainId, tx: had?.tx ?? "", at: had?.at ?? Date(),
-                         status: pool ?? had?.status ?? sameLabel?.status ?? .waiting, root: root)
+                         symbol: share?.symbol ?? "ETH", amount: PrivateMoney.decimal(hex: n.value), decimals: share?.shareDecimals ?? 18,
+                         chainId: network.chainId, tx: had?.tx ?? "", at: had?.at ?? Date(),
+                         status: pool ?? had?.status ?? sameLabel?.status ?? .waiting, root: root, share: share?.share)
         }
         let recent = Date().addingTimeInterval(-600)
         next += mine.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
-        notes = notes.filter { $0.root != root } + next
+        notes = notes.filter { !($0.root == root && $0.chainId == network.chainId) } + next
         save()
-        NSLog("privateMoney| reconciled | %@ | %d notes | spendable %@", root ?? PrivateRoot.legacy, next.count,
-              PrivateMoney.spendable(next, chainId: PrivacyNetwork.sepolia.chainId))
+        NSLog("privateMoney| reconciled | %@ | %@ | %d notes | spendable %@", root ?? PrivateRoot.legacy, network.name, next.count,
+              PrivateMoney.spendable(next, chainId: network.chainId, rates: rates))
+    }
+
+    private static func isShare(_ token: String, on network: PrivacyNetwork) -> Bool {
+        network.yield.contains { $0.share.lowercased() == token.lowercased() }
     }
 
     /// The ASP files a deposit under Poseidon(label): a note found again on
@@ -138,7 +211,8 @@ final class PrivateMoneyStore {
                   let i = notes.firstIndex(where: { $0.commitment == note.commitment }) else { continue }
             let n = notes[i]
             notes[i] = .init(commitment: n.commitment, label: n.label, labelHash: hash, symbol: n.symbol, amount: n.amount,
-                             decimals: n.decimals, chainId: n.chainId, tx: n.tx, at: n.at, status: n.status, root: n.root)
+                             decimals: n.decimals, chainId: n.chainId, tx: n.tx, at: n.at, status: n.status, root: n.root,
+                             share: n.share)
             save()
         }
     }
@@ -162,7 +236,9 @@ final class PrivateMoneyStore {
         asked = Date()
         // A sample note's hash is "0": nothing to ask.
         for note in notes where PrivateMoney.asksASP(note.status) && note.labelHash != "0" {
-            guard let url = PrivateMoney.statusURL(aspUrl: PrivacyNetwork.sepolia.aspUrl, labelHash: note.labelHash),
+            // Each note asks its own network's ASP (Ethereum's is api-v2).
+            guard let network = PrivacyNetwork.forChain(note.chainId),
+                  let url = PrivateMoney.statusURL(aspUrl: network.aspUrl, labelHash: note.labelHash),
                   let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: PrivacyEngine.service),
                   http.statusCode == 200, let status = PrivateMoney.status(asp: data) else { continue }
             NSLog("privateMoney| asp | %@… | %@", String(note.commitment.prefix(10)), status.rawValue)
@@ -195,7 +271,7 @@ final class PrivateMoneyStore {
         NSLog("privateMoney| needs samples | %d", samples.count)
     }
 
-    /// `-privateMoneySample YES|mainnet|clear`: two notes no pool holds — one
+    /// `-privateMoneySample YES|mainnet|none|clear`: notes no pool holds — one
     /// approved, one waiting — so Holdings can be looked at with no funds;
     /// `mainnet` lays them on Ethereum, so the box's Private block and the
     /// total can be seen too (Sepolia's count nothing).
@@ -205,14 +281,31 @@ final class PrivateMoneyStore {
             save()
             return
         }
+        // Added beside the notes this phone holds, never over them (the
+        // simulator's are real Sepolia notes); `none` takes the samples away.
+        let kept = notes.filter { !$0.commitment.hasPrefix("0xsample") }
+        if raw == "none" {
+            notes = kept
+            save()
+            return
+        }
         let now = Date()
         let chain = raw == "mainnet" ? 1 : PrivacyNetwork.sepolia.chainId
-        notes = [
+        // On Ethereum the notes hold yield SHARES (prd §1563): ppETH and
+        // ppUSDC, worth their token at the live rate, the rate line live too.
+        let eth = raw == "mainnet" ? PrivacyNetwork.ethereum.yield.first { $0.symbol == "ETH" } : nil
+        let usdc = raw == "mainnet" ? PrivacyNetwork.ethereum.yield.first { $0.symbol == "USDC" } : nil
+        notes = kept + [
             .init(commitment: "0xsample-approved", label: "0x1", labelHash: "0", symbol: "ETH", amount: "4000000000000000",
-                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-86_400), status: .approved),
+                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-86_400), status: .approved, share: eth?.share),
             .init(commitment: "0xsample-waiting", label: "0x2", labelHash: "0", symbol: "ETH", amount: "1000000000000000",
-                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-120), status: .waiting),
+                  decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-120), status: .waiting, share: eth?.share),
         ]
+        if let usdc {
+            notes.append(.init(commitment: "0xsample-usdc", label: "0x3", labelHash: "0", symbol: "USDC", amount: "25000000000000000000",
+                               decimals: 18, chainId: chain, tx: "0x", at: now.addingTimeInterval(-3 * 86_400), status: .approved,
+                               share: usdc.share))
+        }
         save()
         NSLog("privateMoney| sample | %d rows", rows.count)
     }

@@ -2124,3 +2124,37 @@ body { overflow-x: clip; }
 .w-cta { justify-content: center; margin: 40px auto 72px; }
 #next .m-h2 { margin-bottom: 10px; }
 .next-sub { font-size: 19px; font-weight: 600; color: #c9c9ce; margin: 0 0 6px; }
+
+
+/* the catalog as category cards (2026-10-26): one card per catalogue
+   category, its name and count on top, its icons on one even six-column
+   grid shared by every card, so the tiles line up card to card. Cards are
+   ordered largest first (Wallet, Work, Media / Agents, Life, Social / Day,
+   Notes, Testnets) so each row of three is cards of one height; on two
+   columns the last small card spans the row. The count is a CSS counter,
+   so it can never disagree with the cells. */
+#catalog .store-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px; max-width: none; columns: auto; align-items: stretch; }
+#catalog .store-flow .shelf { display: grid; grid-template-columns: repeat(6, 34px);
+  grid-auto-rows: 34px; align-content: start; justify-content: start; gap: 8px;
+  position: relative; margin: 0; padding: 16px 18px 18px;
+  background: rgba(255,255,255,.035); border-radius: 20px; counter-reset: apps; }
+#catalog .store-flow .shelf > h3 { position: static; grid-column: 1 / -1; width: auto;
+  align-self: center; text-align: left; margin: 0; padding: 0; font-size: 15px;
+  font-weight: 750; color: var(--ink); }
+#catalog .store-flow .shelf .mini-cell { counter-increment: apps; display: flex;
+  width: 34px; height: 34px; padding: 0; justify-content: center; }
+#catalog .store-flow .shelf .mini-cell .ai { width: 34px; height: 34px; border-radius: 9px; }
+#catalog .store-flow .shelf::after { content: counter(apps); position: absolute;
+  top: 24px; right: 18px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; color: var(--faint); }
+@media (max-width: 1000px) {
+  #catalog .store-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #catalog .store-flow .shelf:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  #catalog .store-flow { grid-template-columns: minmax(0, 1fr); }
+  #catalog .store-flow .shelf { grid-template-columns: repeat(6, minmax(0, 34px));
+    justify-content: space-between; padding: 14px 16px 16px; }
+  #catalog .store-flow .shelf::after { top: 22px; right: 16px; }
+}

@@ -1615,6 +1615,34 @@
         }
       }
     },
+    "%@ ETH in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントに%@ ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정에 %@ ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "账户中有 %@ ETH"
+          }
+        }
+      }
+    },
     "%@ ETH is unstaking from ether.fi — still in the queue" : {
       "localizations" : {
         "es" : {
@@ -4100,6 +4128,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 无法检查这次兑换,因此没有签署任何内容"
+          }
+        }
+      }
+    },
+    "%@ could not check this, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no pudo comprobarlo, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で確認できなかったため、何も署名されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 확인할 수 없어 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 无法检查此操作，因此未签署任何内容"
           }
         }
       }
@@ -16412,6 +16468,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "占运作资产的 %@%%"
+          }
+        }
+      }
+    },
+    "%@%% on Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@%% en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aaveで%@%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 %@%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 上 %@%%"
           }
         }
       }
@@ -78448,6 +78532,62 @@
         }
       }
     },
+    "Ethereum could not be reached" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumに接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Ethereum"
+          }
+        }
+      }
+    },
+    "Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum。"
+          }
+        }
+      }
+    },
     "Ethrex Hegotá was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours." : {
       "localizations" : {
         "es" : {
@@ -121666,6 +121806,34 @@
         }
       }
     },
+    "Nothing private to send on Ethereum yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada privado para enviar en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumで送れるプライベートな残高はまだありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 Ethereum에서 보낼 비공개 잔액이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 上还没有可发送的私密余额。"
+          }
+        }
+      }
+    },
     "Nothing private to send on Sepolia yet." : {
       "localizations" : {
         "es" : {
@@ -137408,6 +137576,34 @@
         }
       }
     },
+    "Privacy.com" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy.com"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy.com"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy.com"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy.com"
+          }
+        }
+      }
+    },
     "Private" : {
       "localizations" : {
         "es" : {
@@ -140799,6 +140995,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取 App Store Connect…"
+          }
+        }
+      }
+    },
+    "Reading Ethereum…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo Ethereum…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumを読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 Ethereum…"
           }
         }
       }
@@ -155492,6 +155716,34 @@
         }
       }
     },
+    "Sent; Ethereum has not confirmed it yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado; Ethereum aún no lo ha confirmado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信しました。Ethereumではまだ確認されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냈습니다. Ethereum에서 아직 확인되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送；Ethereum 尚未确认"
+          }
+        }
+      }
+    },
     "Sentry answered — nothing unresolved. If that's a surprise, check which organization is selected above." : {
       "localizations" : {
         "es" : {
@@ -156384,6 +156636,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置一个代理"
+          }
+        }
+      }
+    },
+    "Set up your account first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configura tu cuenta primero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先にアカウントを設定してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 계정을 설정하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先设置你的账户"
           }
         }
       }
@@ -177004,6 +177284,34 @@
         }
       }
     },
+    "This could not be written, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "作成できなかったため、何も署名されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "작성할 수 없어 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法生成此操作，因此未签署任何内容"
+          }
+        }
+      }
+    },
     "This deposit address takes only %@ on %@. %@%@." : {
       "localizations" : {
         "es" : {
@@ -185615,6 +185923,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在等待 Dropbox…"
+          }
+        }
+      }
+    },
+    "Waiting for Ethereum…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a Ethereum…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumを待っています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 기다리는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 Ethereum…"
           }
         }
       }
@@ -201841,6 +202177,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你账户的密钥、上限和凑整"
+          }
+        }
+      }
+    },
+    "Your account, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウント、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户，%@"
           }
         }
       }

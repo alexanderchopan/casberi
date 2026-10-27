@@ -3299,7 +3299,7 @@ struct ThingSheetView: View {
         // **EVERY CARD SPEND IN THE CARD'S OWN LAYOUT (prd §1353).** The
         // onchain cards (ether.fi, MetaMask Card, Plasma One) name no account,
         // so the card goes by its app's name, never the plain receipt.
-        let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy", "Plasma One"]
+        let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy.com", "Plasma One"]
         // A price rise is news about a plan, not a charge on a card (prd
         // §1357.4): no card, no month of visits.
         guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,

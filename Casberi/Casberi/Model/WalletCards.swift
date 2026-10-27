@@ -8,7 +8,7 @@ import Foundation
 enum WalletCards {
 
     /// Privacy.com's `Thing.source`, as `PrivacyBridge` stamps it.
-    static let privacySource = "Privacy"
+    static let privacySource = "Privacy.com"
 
     /// Whether a row is a card spend. The three onchain cards go through
     /// `CardSpendSeat`, which already knows that ether.fi's room also holds

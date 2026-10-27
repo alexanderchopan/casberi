@@ -41,7 +41,7 @@ struct MoveSentence: View {
         self.inTray = inTray
         self.arrival = arrival
         let mode = PrivateMove.available ? privately : nil
-        let toFresh = PrivateMove.available && receivePrivately && mode == nil
+        let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil
         _verb = State(initialValue: mode != nil ? .send : toFresh ? .receive : opening ?? (arrival == nil ? .swap : .receive))
         _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
@@ -737,7 +737,7 @@ struct MoveSentence: View {
             // Receive's Private switch (prd §1560): off on arrival; on, a
             // fresh address. Your own account's Receive only, never a
             // route from another network or the arrival's sentence.
-            if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.available {
+            if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.freshAvailable {
                 MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))
                     .padding(.top, DS.Space.s4)
             }
@@ -2613,7 +2613,7 @@ struct MoveSentence: View {
             // Your private balance leads your own (prd §1554): one tap picks
             // it, never typed. Sepolia, DEBUG builds.
             if PrivateMove.available, q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
-                listRow(String(localized: "Your private balance"), sub: "Sepolia", symbol: "eye.slash") {
+                listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {
                     goPrivate(.deposit)
                 }
             }

@@ -42,7 +42,7 @@ enum AppHomepages {
         "ether.fi": "ether.fi",
         "L2BEAT": "l2beat.com",
         "Bitrefill": "bitrefill.com",
-        "Privacy": "privacy.com",
+        "Privacy.com": "privacy.com",
         "Venice": "venice.ai",
         "Bankr": "bankr.bot",
         "OpenRouter": "openrouter.ai",

@@ -84,7 +84,7 @@ enum PrivacyFetch {
             kind: .transaction,
             title: IngestSupport.titleLine(title),
             content: "https://privacy.com/account",
-            source: "Privacy",
+            source: WalletCards.privacySource,
             capturedAt: IngestSupport.isoDate(txn["created"]) ?? .now,
             sourceRef: "privacy:txn:\(id)"
         )
@@ -187,7 +187,7 @@ enum PrivacyFetch {
     @MainActor
     private static func repairLanded(_ fresh: [Thing]) {
         guard let context = SharedStore.live?.mainContext else { return }
-        let stored = IngestSupport.thingsByRef(context, source: "Privacy")
+        let stored = IngestSupport.thingsByRef(context, source: WalletCards.privacySource)
         guard !stored.isEmpty else { return }
         var changed = false
         for row in fresh {
@@ -255,7 +255,7 @@ enum PrivacyFetch {
     /// message gets truncated by the log reader (the `-todayProbe` lesson).
     static func probe() async {
         guard let token = TokenVault.get(TokenBridge.privacy.tokenKey) else {
-            NSLog("[Casberi] privacyProbe: no stored key (connect via -tokenBridge \"Privacy:<key>\")")
+            NSLog("[Casberi] privacyProbe: no stored key (connect via -tokenBridge \"Privacy.com:<key>\")")
             return
         }
         let url = "\(api)/transactions?result=APPROVED&page_size=25"

@@ -110,7 +110,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 
 ### 8. Catalogue (Apps)
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library; one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
-- The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
+- The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
 
@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1700 of 1769 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1702 of 1771 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1110,7 +1110,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §780 — Two finance seats, and the three that were refused for cause
 - §780a — Rocket Money, staged the same way, and its read-only guarantee is TWO refusals rather than a sentence
 - §780b — Acorns and Rocket Money are REAL SEATS, and a seat that ships ahead of its evidence has to say so on its own page
-- §780c — All three finance seats sit on the Wallet shelf, the app count is a rounded claim, and a seat never asks you to do it… (amended by §1049)
+- §780c — All three finance seats sit on the Wallet shelf, the app count is a rounded claim, and a seat never asks you to do it… (amended by §1049; part superseded by §1564)
 - §780d — NerdWallet stays news-only, and the reason is a choice, not a missing product
 - §781 — Rocket Money's sign-in never opened on a phone, because the site walls every screen 450px wide or narrower
 - §782 — No plates under any spelling: the wallet tray's rows, every well around a row or block, the settings-side List card,…
@@ -1946,6 +1946,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t…
 - §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan…
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,…
+- §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App…
+- §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 
 ## Dead rulings → what replaced them (generated)
 

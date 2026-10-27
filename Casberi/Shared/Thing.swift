@@ -233,7 +233,11 @@ enum Corpus {
         // Dexscreener → Tokens → Markets (prd §650, 2026-09-29) are gone with
         // Markets (prd §1529): all three names are in `droppedSources`, and
         // the retired seats' sweep deletes their rows.
-    :]
+        // The card seat takes the company's own name (prd §1564): "Privacy"
+        // alone read as the word, beside Privacy Pools and the Privacy page.
+        // Its key, seat id and ref namespace stay `privacy`.
+        "Privacy": Rename(current: "Privacy.com"),
+    ]
 
     /// A renamed seat: what it answers to now, and — when the rename moved the
     /// rows' ref namespace as well — the `sourceRef` prefix pair.

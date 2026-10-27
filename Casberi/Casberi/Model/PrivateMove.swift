@@ -14,8 +14,10 @@ import SwiftData
 ///   address, and hands it to 0xBow's relayer, which posts it and pays the
 ///   gas for a fee. Only APPROVED private money is spendable.
 ///
-/// Sepolia only; in DEBUG builds only, because the sender is the DEBUG
-/// testnet sender (`PrivacyTestnetSender`) until your account sends.
+/// On Ethereum (prd §1563, every build, `PrivateMainnet.on`) your account
+/// sends with Face ID and what moves in earns on Aave (`PrivateOnEthereum`);
+/// on Sepolia (DEBUG builds only) the DEBUG test sender sends
+/// (`PrivacyTestnetSender`).
 @MainActor
 @Observable
 final class PrivateMove {
@@ -47,20 +49,48 @@ final class PrivateMove {
     /// Switch on: the relayer's terms for ETH (`PrivateMoney.relayerTerms`).
     private(set) var terms: PrivateMoney.RelayerTerms?
 
+    /// Where this move happens: Ethereum, or in a DEBUG build Sepolia
+    /// (`PrivacyNetwork.current`).
+    let network: PrivacyNetwork
+
     init(mode: Mode = .deposit, recipient: String? = nil) {
         self.mode = mode
         self.recipient = recipient
+        self.network = PrivacyNetwork.current(debugAsks: Self.debugNetwork) ?? .ethereum
     }
+
+    /// `-privateNetwork ethereum` (DEBUG): Ethereum in place of Sepolia.
+    static var debugNetwork: String? {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "privateNetwork")
+        #else
+        nil
+        #endif
+    }
+
+    var onEthereum: Bool { network.chainId == PrivacyNetwork.ethereum.chainId }
+
+    /// On Ethereum: the relayer's quoted fee for a send, base units of ETH
+    /// (its fee is gas, quoted in shares at today's price, prd §1563), and
+    /// the pool's smallest deposit.
+    private(set) var quotedFee: String?
+    private(set) var minimum: String?
     /// The sender's Sepolia ETH and the gas a first move keeps back, base units.
     private(set) var balance: String?
     private(set) var reserve: String?
     private(set) var sender: String?
     var amount = "0.001"
 
-    /// Whether this build can move to private at all.
-    static var available: Bool {
+    /// Whether this build can move to private at all: Ethereum unless the
+    /// kill switch is off; Sepolia in a DEBUG build.
+    static var available: Bool { PrivacyNetwork.current(debugAsks: debugNetwork) != nil }
+
+    /// Receive to a fresh address (prd §1560): Sepolia in a DEBUG build only.
+    /// Not on Ethereum (prd §1563): a fresh address's deposit is signed by
+    /// its own key, and that signer exists for testnets only (`TestnetTx`).
+    static var freshAvailable: Bool {
         #if DEBUG
-        true
+        PrivacyNetwork.current(debugAsks: debugNetwork)?.isTest == true
         #else
         false
         #endif
@@ -73,11 +103,18 @@ final class PrivateMove {
         switch mode {
         case .deposit:
             guard let balance, let reserve else { return [] }
+            if onEthereum {
+                return PrivateMoney.choices(balance: balance, reserve: reserve, ladder: PrivateMoney.mainnetLadder, minimum: minimum ?? "0")
+            }
             return PrivateMoney.choices(balance: balance, reserve: reserve)
         case .send:
             // The approved private balance, less the relayer's fee on all of
             // it (the fee is paid from the notes, beside the amount).
-            let held = PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId)
+            let held = PrivateMoneyStore.shared.spendable(chainId: network.chainId)
+            if onEthereum {
+                guard let quotedFee else { return [] }
+                return PrivateMoney.choices(balance: held, reserve: quotedFee, ladder: PrivateMoney.mainnetLadder)
+            }
             return PrivateMoney.choices(balance: held,
                                         reserve: PrivateMoney.relayFee(held, terms: terms ?? PrivateMoney.measuredTerms))
         }
@@ -85,6 +122,7 @@ final class PrivateMove {
 
     /// The relayer's fee on this amount, base units, once its terms are read.
     var fee: String? {
+        if onEthereum { return quotedFee }
         guard let terms, let value = PrivateMoney.baseUnits(amount, decimals: 18) else { return nil }
         return PrivateMoney.relayFee(value, terms: terms)
     }
@@ -106,6 +144,7 @@ final class PrivateMove {
     func read() async {
         reads += 1
         let mine = reads
+        if onEthereum { await readEthereum(mine); return }
         #if DEBUG
         if mode == .send { await readSend(mine); return }
         // The demo reaches nothing (§217): its sentence stands on a pretended
@@ -168,10 +207,122 @@ final class PrivateMove {
         NSLog("privateMove| send read | %d choices | fee %@ bps", options.count, terms.map { String($0.feeBPS) } ?? "-")
     }
 
+    /// On Ethereum (prd §1563): into your private balance, what your
+    /// account holds after the gas a first move keeps back, in the pool's
+    /// smallest deposit or more; from it, what is approved after the
+    /// relayer's quoted fee.
+    private func readEthereum(_ mine: Int) async {
+        if DemoMode.isActive {
+            balance = "50000000000000000"
+            reserve = "0"
+            minimum = "4000000000000000"
+            quotedFee = "60000000000000"
+            stage = choices.isEmpty ? (mode == .send ? .nothingPrivate : .ready) : .ready
+            return
+        }
+        stage = .reading
+        guard let account = PrivateOnEthereum.owner else {
+            stage = .failed(String(localized: "Set up your account first"))
+            return
+        }
+        sender = account
+        let net = PrivateOnEthereum.accountNetwork
+        let pool = network.yieldPool(for: Self.eth)
+        if mode == .send {
+            await PrivateMoneyStore.shared.readYield()
+            if let pool { quotedFee = await Self.relayerFee(pool, network: network, to: recipient ?? account) }
+            guard mine == reads else { return }
+            let options = choices
+            guard !options.isEmpty else { stage = quotedFee == nil ? .failed(String(localized: "0xBow's relayer did not answer")) : .nothingPrivate; return }
+            if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+            stage = .ready
+            NSLog("privateMove| ethereum send read | %d choices | fee %@ wei", options.count, quotedFee ?? "-")
+            return
+        }
+        async let rates: Void = PrivateMoneyStore.shared.readYield(including: network)
+        async let held = YourAccountChain.balance(net, YourAccountOp.eth, of: account)
+        async let price = try? YourAccountChain.rpc(net, "eth_gasPrice", []) as? String
+        async let terms = pool != nil ? PrivateOnEthereum.terms(pool!) : nil
+        let (have, gas, config, _) = await (held, price, terms, rates)
+        guard mine == reads else { return }
+        guard let have, let gas, let config, config.enabled else {
+            stage = .failed(String(localized: "Ethereum could not be reached"))
+            return
+        }
+        balance = have
+        reserve = PrivateMoney.reserve(gasPrice: PrivateMoney.decimal(hex: gas))
+        minimum = config.minimum
+        let options = choices
+        if options.isEmpty {
+            stage = .needsFunds(account)
+        } else {
+            if !options.contains(amount) { amount = options[0] }
+            stage = .ready
+        }
+        NSLog("privateMove| ethereum read | %@ | balance %@ | reserve %@ | minimum %@ | %d choices",
+              YourAccount.short(account), have, reserve ?? "-", config.minimum, options.count)
+    }
+
+    /// The relayer's fee for a withdrawal from `pool`, in ETH base units:
+    /// its own quote (uncommitted: nothing is signed), in shares, at the
+    /// share's rate. The fee is the relayer's gas at today's price, so one
+    /// quote serves every amount.
+    static func relayerFee(_ pool: PrivacyNetwork.YieldPool, network: PrivacyNetwork, to recipient: String) async -> String? {
+        guard let url = URL(string: network.relayerUrl + "/v1/quote/evm/\(network.chainId)/receive") else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["asset": pool.share, "commit": false, "recipient": recipient, "extraGas": false,
+                                   "amount": "0x2386f26fc10000"]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service), http.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let shares = json["feeAmount"] as? String, shares.allSatisfy(\.isNumber), !shares.isEmpty else { return nil }
+        guard let rate = PrivateMoneyStore.shared.rates[pool.share.lowercased()] else { return shares }
+        return PrivateYield.underlying(shares: shares, exchangeRate: rate, shareDecimals: pool.shareDecimals)
+    }
+
     /// The act: a deposit, or switch on a relayed withdrawal.
     func run() async {
+        if onEthereum { await runEthereum(); return }
         if mode == .send { await runSend(); return }
         await runDeposit()
+    }
+
+    /// On Ethereum: your account's Face ID operation into the yield pool, or
+    /// a relayed send from your private balance (prd §1563).
+    private func runEthereum() async {
+        if DemoMode.isActive {
+            stage = .failed(YourAccountDemo.actsLater)
+            return
+        }
+        guard let value = PrivateMoney.baseUnits(amount, decimals: 18) else { return }
+        let started = Date()
+        do {
+            if mode == .send {
+                guard let to = recipient, PrivateMoney.isAddress(to) else { return }
+                stage = .opening
+                let hash = try await PrivateOnEthereum.send(token: Self.eth, amount: value, to: to)
+                stage = .done(hash)
+            } else {
+                stage = .preparing
+                let hash = try await PrivateOnEthereum.deposit(token: Self.eth, budget: value, context: nil, stage: { [weak self] s in
+                    await MainActor.run {
+                        switch s {
+                        case .preparing: self?.stage = .preparing
+                        case .signing: self?.stage = .opening
+                        case .sending, .landing: self?.stage = .sending
+                        }
+                    }
+                }, proving: { [weak self] in self?.stage = .proving })
+                stage = .done(hash)
+                await PrivateMoneyStore.shared.refresh(force: true)
+            }
+            NSLog("privateMove| ethereum | %@ | %@ ETH | %d s", mode == .send ? "sent" : "deposited", amount, Int(Date().timeIntervalSince(started)))
+        } catch {
+            stage = .failed(Self.words(error, network: network))
+            NSLog("privateMove| ethereum failed | %@", String(describing: error))
+        }
     }
 
     private func runSend() async {
@@ -328,7 +479,12 @@ final class PrivateMove {
     #endif
 
     /// A failure in the sentence's words: short, and what to do where there is something.
-    static func words(_ error: Error) -> String {
+    static func words(_ error: Error, network: PrivacyNetwork = .sepolia) -> String {
+        if let failure = error as? YourAccountChain.Failure { return failure.message }
+        if let failure = error as? PrivateOnEthereum.Failure {
+            return failure == .noAccount ? String(localized: "Set up your account first")
+                : String(localized: "This could not be written, so nothing was signed")
+        }
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
             if failure.name.hasPrefix("Relayer") {
@@ -359,6 +515,6 @@ final class PrivateMove {
         if error is PrivacyPoolsKey.Failure || error is PrivateRootKey.Failure {
             return String(localized: "Face ID did not open the private account")
         }
-        return String(localized: "Sepolia could not be reached")
+        return network.isTest ? String(localized: "Sepolia could not be reached") : String(localized: "Ethereum could not be reached")
     }
 }
