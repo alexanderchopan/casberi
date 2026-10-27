@@ -1,170 +1,192 @@
 # Casberi — Full documentation
 
-> Casberi is a free iOS app that gathers everything you make — notes, links, screenshots, events, chats, voice notes, and the output of your apps and agents — into one private feed on your iPhone. One search finds everything. Your things live on your device, work offline, and leave only by your choice.
+> Your life and money are scattered across apps. Casberi gives you an inbox and a wallet for all your accounts: connect your apps and everything lands in one private feed on your device, beside one balance for every account you have and follow. Free on iPhone, iPad and Mac, with no Casberi account, ever.
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
-Last updated: September 13, 2026
+Last updated: October 26, 2026
 
 ## Features — everything you can do
 
 ### Just connect
 
-- Own your data — No account, no sign-in. It's all on your phone.
-- Connect your apps — Mail, photos, wallets, calendars, and dozens more.
-- Watch one feed — One screen, no tabs. Everything together, or one app at a time.
+- Own your data — No account, no sign-in. It's all on your device.
+- Connect your apps — Mail, photos, wallets, calendars and a hundred more, kept in Library.
+- Watch one feed — Every app together, a category at a time, or one app on its own.
 
 ### Keep tabs
 
-- Read each app's room — Calendar reads as an agenda, Photos as a grid, a wallet leads with its balance.
-- Act on items — From your feed: open, or share, in the app it came from.
-- Follow your accounts — Balances, activity, and what's worth a look. Read-only, always.
+- Every subscription — What renews and when, found on its own. What it costs, in the Wallet.
+- Follow your accounts — Balances, holdings, spending and threats. Following is read-only.
+- Private by default — No server, no analytics, and every wallet read goes through Tor on iPhone and iPad.
 
 ### Take action
 
-- Save in one gesture — Share from any app, take a screenshot, or tap Save a thing in Control Center.
-- See your wallet — a Home Screen widget carries your balance and the week's money in and out.
-- Find anything — Spotlight and Shortcuts search your things by what they say.
+- An account of your own — No phrase to write down. A recovery key in iCloud Keychain, and a co-signer if you want one.
+- Move money — Swap, send, receive, sweep or buy a gift card. Face ID approves every move.
+- Save and find anything — Share from any app or take a screenshot. Search finds it by what it says.
 
 ### Make it yours
 
-- Make it yours — Set your avatar, your color, language, and data preferences.
-
-## About — what Casberi is, and why
-
-### The short version
-
-Connect your apps and everything lands in one private feed on your phone — no account, ever. Each app opens as a room shaped like what's in it, and you act on things in the apps they came from. A widget puts your wallet on the Home Screen, and Spotlight finds any thing by what it says. And it's yours to shape: avatar, language, and where your data lives.
-
-### The situation
-
-Everything you do creates something — a note, a link, a screenshot, a plan. Each one lands in a different app. The more apps you use, the more places you have to look, and the harder it gets to find and use your own stuff. AI assistants were supposed to help, but each one is another app, with its own history and its own settings. That just adds to the pile.
-
-### Who it's for
-
-**Casual users — built for you first.** Your iPhone is your computer. You use a lot of apps — Notes, Calendar, Reminders, Messages — and maybe one AI app. You don't want to set anything up. You shouldn't have to.
-
-**Power users — same app, more reach.** You run AI agents that work for you — a coding agent on your laptop, jobs on a server. Your phone is how you check on them. You get the same app, with more kinds of things and connections, plus approvals.
-
-### What you're trying to do
-
-1. Stay mobile — your phone finishes the job.
-2. Capture things — save any thought, image, or link the moment it happens.
-3. Organize things — keep order without doing the filing.
-4. Find things — search by what something is, not where you left it.
-5. Do things — plan, book, draft, schedule — all the way to done.
-6. Own things — your things stay on your phone and leave only when you choose.
-
-### How it works today
-
-Right now, your stuff lives in two separate worlds. There's the Apple world: you screenshot things, jot notes, text yourself, set reminders with Siri — and each app keeps its own pile, with its own search. Then there's the AI world: chats, threads, and memories inside an assistant app. The two don't talk. Your assistant can't put anything on your calendar, and no search covers both.
-
-If you run agents, it's four worlds. Your phone, your AI apps, the machines where agents actually work (their output stays there), and the dashboard that supervises them. One job leaves pieces in all four places — the prompt in one, the result in another, the approval in a third. Putting the story back together is your job.
-
-### What actually happens
-
-For casual users:
-
-- You save a recipe in Notes with no title — and never find it again. Your travel plan sits 40 messages deep in a chat; at the airport you ask again, and the new answer is missing the hotel address.
-- A dentist reminder gets snoozed six times, because booking takes a call. A dinner plan gets copied by hand into Calendar, Messages, and Safari — and the guest list never leaves the chat.
-- You open your assistant's settings once, connect nothing, and close it. You try a second assistant, end up with two of everything, and delete it within a week.
-
-For power users:
-
-- A run finishes at 11pm. You find out at 8am, and the follow-up starts a day late. You approve a change bigger than its notification on trust — and it breaks a config.
-- You rebuild in June a skill you wrote in March, because the March version lives in a folder on a machine you retired. A new laptop costs two days of keys and setup.
-- A scheduled job dies quietly. You notice a week later — from the silence.
-
-### The problems
-
-The same problems hit everyone — casual users across their apps, power users across their machines and agents.
-
-- Problem 1 — Everything takes copy-paste. To finish anything, you copy, switch apps, and paste. And if agents do your work, your phone can't reach them at all.
-- Problem 2 — Saving scatters your stuff. Where something ends up depends on how you saved it — and you're stuck with that choice.
-- Problem 3 — Organizing never ends. Keeping things tidy means doing the same filing in every app, forever.
-- Problem 4 — Finding means remembering. You have to recall which app holds the thing — and you find out it's lost right when you need it.
-- Problem 5 — Nothing gets finished. An assistant's answer still has to be moved into the real app by hand. That's where it stalls.
-- Problem 6 — Setup doesn't stick. Casual users skip it. Power users redo it for every machine and agent. Either way, none of it carries forward.
-- Problem 7 — Every AI app starts from zero. A new assistant brings its own history, memory, and settings. Nothing is shared with the last one.
-- Problem 8 — You don't find out. What you saved doesn't speak up when it matters, and your agents finish or fail in silence.
-
-### The solution
-
-Casberi is one assistant that works across your apps — not another app that runs separate from them. It gives everything you make one home. Notes, links, screenshots, events, chats, voice notes — they all become things in one feed. Here's how that fixes each problem:
-
-- Solution 1 — One home for your things. Everything lands in one place. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.
-- Solution 2 — Find by what it is. One search covers everything. You get the thing itself — not the chat it was buried in. Power users can also search by which agent, run, or machine made it.
-- Solution 3 — Capture in one gesture. Save from anywhere in one step — no folder to pick, no title to type. Connected apps and machines send their things in on their own.
-- Solution 4 — Captures become outcomes. A saved thing carries its next step. An event can go on your calendar, a task can become a reminder — right from the thing.
-- Solution 5 — Setup adds up. Casberi is useful before you set up anything, and asks for permissions only when they unlock something. What power users set up once is kept — secrets live only in the Keychain — so a new machine picks up where the old one left off.
-- Solution 6 — Not another AI app. Casberi looks and feels like an organizer, not a chatbot. No model picker, no memory panel. Your agents show up as rows in Apps, and their work shows up in your feed.
-- Solution 7 — Feels like an Apple product. It follows iOS in type, motion, and touch. It should feel like it came with your phone.
-- Solution 8 — Apps are bridges. Connecting an app builds a bridge. Apple apps connect through iOS itself. Services connect with a login or a pasted token. Agents and machines connect with a key. Every app's page tells you which kind it is.
-- Solution 9 — Approvals carry context. When an agent asks to do something, the request shows you what you need to judge it — the exact command, who's asking, what it touches. Approve or deny with one tap.
-- Solution 10 — Status arrives in your feed. Run finished, run failed, scheduled job died — each shows up as a row in your feed. Even something that should have arrived but didn't.
-
-### Your things stay yours
-
-Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Connected apps reach their own services straight from your phone — nothing routes through a Casberi server.
-
-### What's deliberately not here
-
-Some things are missing on purpose. There's no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No chatbot persona and no model picker in the way of an answer — Casberi shows results, not a character (choosing an agent happens once, in Settings, only if you bring your own key). No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.
+- Make it yours — Your name and photo, the order of your Feed, widgets, theme, notifications, and where your data lives.
 
 ## How to use — the whole app
 
-### Just connect
+Four steps to start. Then one short section per tab, in the order the tabs stand.
 
-#### One screen
+### Start here
 
-Casberi is one screen — no tabs to learn, no account to make. Open it and it's yours. Along the bottom sits the dock: All (everything you've saved) comes first, then a chip for each category. Tap one to land in its room; its folder opens with the apps inside. Your avatar leads the dock and opens your accounts — Manage, Connect and Settings — and a swipe walks from one room to the next. That's the whole app: your things, read in one place.
+1. Open it. There's no account and nothing to sign up for. The first screen is a demo — one person's furnished life you can walk through. Tap Exit demo and none of it sticks.
+2. Tap Library, the tab that wears your face. It starts you off with an app, a calendar, a card, a subscription or an account to follow.
+3. Pick one and connect it. Calendar and Photos are one tap; an account needs only an address.
+4. Tap Feed. What you connected is there.
 
-#### Apps
+Casberi is five tabs along the bottom. Feed is what's happening. Wallet is what you have. Move is what you do with it. Library is your apps and you. Search finds anything. Scroll down and the tabs fold into one circle; tap it to bring them back. On iPad and Mac the tabs run down the side, and ⌘1 to ⌘5 open them.
 
-Open Apps from the dock. Search leads the page. Yours shows the apps you've connected; All is the whole catalog, one row per app, grouped by category — Wallet, Markets, Testnets, Work, Agents, Life, Social, Media and Notes. Tap a row to set it up. The button on each row says what it takes: Allow, Sign in, Add key, Import, or Connect.
+### Feed
 
-There are nearly a hundred to choose from. The Apple apps you already use connect straight through iOS (Photos, Calendar, Reminders, Health, Music, Contacts, Apple Wallet). Services connect with a sign-in or a pasted token (Gmail and iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Twitch, Steam, and more). Wallets, tokens, and stocks connect with nothing at all — just an address or a symbol.
+The Feed puts every app you connect in one list, so you don't open ten apps to see what happened today.
 
-### Keep tabs
+It leads with the newest thing, then Newest: the five latest, whatever day they came. Under that, one section per category — Day, Notes, Social, Work, Media, Life and Agents — each with today's rows, one per app. Tap a section's name for the whole category, or an app for that app alone. A section's + adds what fits there: an event or a reminder in Day, a note or a voice note in Notes.
 
-#### All & your apps
+Day is what's ahead: meetings, reminders and renewals, in date order. Money isn't in the Feed; it has the Wallet.
 
-Tap All to see everything, newest first. Tap an app's chip to see just that app — and the feed takes its shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance. Everything you keep tabs on, in one place.
+Tap any row to open it, then open it in the app it came from, or share it. Some rows let you act in place: start an email, put an event on your calendar, turn a note into a reminder. Each write asks first.
 
-#### Wallets
+### Wallet
 
-Add a wallet by address, ENS or .sol name, or by connecting a wallet app — no key, no sign-in. Name as many as you like in the address book; watch up to five. A watched wallet gets its own feed: what it holds, drawn as a map you can tap, a balance line that fills in as history builds, and its activity as ordinary rows.
+The Wallet adds up every account you have and follow, so you see all your money in one place, and what could hurt it.
 
-Worth a look gathers what deserves your attention and sorts it by whether you can actually do something — a token approval still open, a delegation, a position drifting toward risk — with everything spammy folded into a pile you can mute. Casberi reads and shows; anything that would move funds happens in your own wallet app. Exchange balances, lending positions, onramp purchases, and privacy-pool deposits read the same way, in the same feed.
+- See what you have. Home leads with your balance and its line. Holdings breaks it into tokens, positions and NFTs, and Activity lists every transaction by day.
+- Choose whose money. The switch under the balance — Yours · Following · All — shows your own account, the accounts you follow, or everything added up. Every page of the Wallet follows it.
+- See what you spend. Spending sets this week or month against the last one, split into Subscriptions, Places, Fees and Round-ups. Fees and round-ups stay out of the total.
+- See what could hurt you. Needs you lists everything waiting on you. Permissions lists who can spend from you, each approval one tap from a cancellation. Threats lists address poisoning, fake tokens and fake transfers.
+- Follow an account. Tap + and type an address, ENS, .sol or basename, or connect a wallet app or an exchange.
 
-#### Open a thing, act on it
+Good to know: following is read-only. It asks for no permissions, so it can never trade or move funds.
 
-Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. Tags arrive on their own — the app labels what lands, and search reads those labels. There is nothing to file. Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.
+If you use DeFi: the Wallet also carries Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid liquidation distance, Aerodrome locks and their weekly vote deadline, staked ETH and HYPE, exchange balances and validators — all in one total.
 
-### Take action
+A Safe reads as a Safe: owners, threshold, signature queue. If this device is an owner, Sign sends that one signature to Safe's own service after Face ID; it can never execute a transaction on its own. MetaMask Card, ether.fi and Plasma One card spends, Peer onramp fills, 0xBow deposits clearing and Railgun shields show as ordinary rows. Spam folds into a pile you can mute.
 
-#### Save and find
+### Your account
 
-Share from any app and it lands in your feed. Screenshots flow in on their own and become searchable by what's in them. Voice notes transcribe.
+An account of your own lets you move money from Casberi, with no phrase to write down. Casberi never holds it: only your keys can move it. It lives on Base, Ethereum and Robinhood.
 
-Save a thing in Control Center opens the composer from anywhere — paste something to save it, or tap the mic and talk. Typing alone never saves.
+Tap Create an account on the Wallet, or open Move. It takes four steps:
 
-To find a thing again, search from Spotlight, or type a few words into the composer and tap Find.
+1. A recovery key in iCloud Keychain. If you lose this device, your account opens on another.
+2. A co-signer in another wallet, if you want one. That wallet signs once to prove it can.
+3. A spend limit, if you added a co-signer. Moves over it need the co-signer too.
+4. Round-ups, if you want them (see Move).
 
-The Wallet widget puts your balance on the Home Screen. Tap it and Casberi opens your wallet.
+- See your keys. Account, on the Wallet's Home, lists this iPhone, the recovery key, the co-signer, the networks, Tor and the private key, then the spend limit and round-ups.
+- Check your recovery key. Once a month, Needs you asks you to: Face ID and a test signature, no fee, nothing sent.
+- Take it elsewhere. Export makes a new private key, adds it as an owner and shows it once, so the account opens in another wallet without Casberi.
+- Use your own node. Nodes reads your account from a node you run, each address checked against its network first.
 
-### Make it yours
+Good to know: getting your account back on a new device needs your co-signer too, if you set a spend limit.
 
-#### Settings
+### Move
 
-Behind your avatar, Settings is the third section: your photo and name, your data (all on your phone — export or delete anytime), feed order, light or dark, notifications, language, your key, and diagnostics. No account, no sign-in — there was never anything to sign up for.
+Move is where you do something with your money. You say it as a sentence, fill in its blanks, and approve it with Face ID. Pick a verb — Buy, Receive, Send, Swap or Sweep; Move opens on Swap, and the slider under the sentence sets the amount.
 
-Your key is for an agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter. It lives in the Keychain, and what it sends goes from your phone straight to that provider, billed to your key. There is no Casberi server in between.
+- Send money. Pick a token, an amount and an address or a name, on a network. Add puts another send in the same transaction.
+- Swap. Your phone asks Uniswap and Aerodrome directly for the best price and writes the swap itself, with no aggregator in between. The line under the sentence names the exchange and its pool fee, which is in the price.
+- Swap to another network. Pick the network for what you get, and Across carries it: ETH arrives as ETH, USDC as USDC. Activity shows it arriving.
+- Clear out dust. Sweep swaps every token worth under $1, or $5, on one network for ETH, in one transaction. A token it won't touch stays listed with the reason — most dust is sent by strangers.
+- Receive. Pick a network and copy your address. Someone on another network can send a coin Relay bridges, and it lands as the one you pick. From another wallet connects a wallet of yours to send in from.
+- Buy a gift card. Pick a category and a merchant on Bitrefill. It's paid from your account in USDC on Base.
+- Round up. Sends, swaps and gift cards round up to the next $1 or $5. Once the change reaches $5, it buys ETH or a token you pick, inside a move you approve. What it bought is in Spending, under Round-ups.
+
+Before Face ID asks, the line under the sentence says the most the fee can be. Details shows the whole move and whether this exact move was run on the network and lands as written. What Details shows is what Face ID signs.
+
+A warning takes that line's place: the move would fail, the address is sanctioned or reported, it looks like an address you've paid, it's a new contract, or it's your first send there. Then the verb reads Send anyway: the first tap arms it, the second signs.
+
+Good to know: with a spend limit on, every swap needs your co-signer too.
+
+### Library
+
+Library is where you connect apps and find everything that's yours. Its tab wears your face.
+
+At the top, eight counts — Apps, Calendars, Cards, Contacts, Mail lists, Media, Subscriptions and Wallet — each open their list. Under them come Casberi's own settings, then a folder for each category with its apps. Tap an app you have and its feed rises; hold it for Open and Settings. Apps is the whole catalog, A–Z, with what you've added marked. Contacts is everyone you deal with, from every app.
+
+Over a hundred apps, connecting three ways:
+
+- One tap for the Apple apps you already use — Photos, Calendar, Reminders, Health, Music, Contacts, Apple Wallet.
+- A sign-in or a pasted token for services — Gmail, GitHub, Notion, Linear, and more.
+- Nothing at all for accounts. Type an address.
+
+### Subscriptions
+
+Casberi finds what you pay for again and again, so nothing renews without you seeing it.
+
+Every subscription is in Library, under Subscriptions, with the day it renews. Casberi finds a charge that repeats at one price, from your cards, Apple Wallet or Rocket Money. Add any it missed with Track a subscription. What they cost is in the Wallet, under Spending › Subscriptions, with the month's total and a calendar of renewals.
+
+The mailing lists that write to you are under Mail lists, each with a way out. To follow a calendar you don't own, paste its link — webcal:// or an .ics — under Calendars. Its events land in Day.
+
+### Notes
+
+Notes keeps everything you write in one place: your own notes, and what Obsidian, Notion, Day One and Apple Journal hold.
+
+It's a section of the Feed; your notes' page — All, Folders, Voice — is in Library's Notes folder. Check off a list, record a voice note, attach a picture or a sketch, file into folders, or lock one. A passage you keep from anything you read lands here as a highlight.
+
+### Search
+
+Anything you save, you can find again by what it says.
+
+Tap Search and type. Apps, accounts, people, notes, subscriptions and your things show under their categories, and a tap goes there. Find, the last row, searches your things by what they say. Spotlight finds them too.
+
+To save something, share it from any app. Screenshots come in on their own and are searchable by what's in them; voice notes are transcribed. Save to Casberi in Control Center opens the composer from anywhere — paste to save, or tap the mic and talk. Typing alone never saves. Casberi note starts a note.
+
+Three widgets put Casberi on your Home Screen: Notes shows your two newest notes, Wallet your balance and its line, and Feed how many things came today in each category.
+
+### Privacy and Tor
+
+When Casberi reads a wallet, no service learns where you are, or that the wallets you look at are one person's. On iPhone and iPad, every request that names a wallet — yours or one you follow — goes through Tor, always, with one route per wallet.
+
+There is no Casberi server and no analytics. Your apps are read straight from your device, and the Feed's apps never go through Tor. Swaps, sweeps and swaps to another network go through Tor too.
+
+Good to know: a few services refuse Tor and are read directly — among them Relay, so Receive from another network, and a round-up bought on another network, say "not through Tor". The Mac has no Tor yet, and says so.
+
+What this app reaches, in Casberi's settings under Data, lists every service Casberi can reach and what it actually reached, including how much went through Tor and which services refuse it.
+
+### Your options
+
+Casberi's own settings come first in Library: your photo and name, your data, the order of the Feed's sections, theme, notifications, language, support and licenses.
+
+Your data is all on your device. Export, import or delete it anytime, and turn iCloud sync on if you want it.
+
+Notifications are two switches, Wallet and Feed. They arrive as Casberi finds them, one per app.
+
+An agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok, NEAR AI or Muse — connects from Library like every other app. Its key lives in the Keychain, and what it sends goes from your device straight to that provider, billed to you. Your own model is a server you run that speaks OpenAI's format: give its address, a key only if it asks for one, and pick a model. Apple Intelligence needs no key. In the composer, the agent you connected is picked; Send asks it, and if it fails, it says so. There is no Casberi server in between.
+
+### If something's missing
+
+- I connected an app and nothing showed up — Pull down on the Feed to refresh. If it's an Apple app, check iOS Settings → Casberi and make sure you said yes. Some apps are quiet on purpose: Trello, for instance, only shows cards assigned to you, and the app tells you so.
+- My screenshots aren't updating — Photos needs full access, not selected photos: iOS Settings → Casberi → Photos → All Photos. That's also what lets a screenshot you delete in Photos disappear here.
+- An account shows no balance — Give the first read a moment, then pull to refresh. Pick Following on the Wallet's switch and check the address.
+- Tor can't connect, or my wallets aren't refreshing — Wallet › Account shows Tor as On, Connecting or Can't connect. Some networks block Tor: try another Wi-Fi, or cellular. Casberi starts Tor's connections again when your network changes. Until it connects, each wallet shows its last reading, with its time.
+- A swap was refused before Face ID — Before you sign, the network runs this exact swap. If it would pay less than the least you accept — the price moved since the quote — or would fail, Casberi won't sign it, and the line under the sentence says why. Nothing was sent or paid. Try again for a fresh price, or a smaller amount.
+- A swap to another network is still on its way — Activity shows it arriving until a relayer fills it on the other network. If none fills it in time, Across's contract refunds it on the network it left. ETH comes back as WETH, which Swap turns back into ETH one for one.
+- A subscription is missing — Casberi counts a charge once it has repeated at the same price, about a month apart. Connect the card or Apple Wallet it's paid from, or add it yourself with Track a subscription in Library.
+
+
+## Every app
+
+Over a hundred apps, in nine catalog categories: Wallet, Testnets, Work, Agents, Day, Notes, Life, Social and Media. The full list, each with one line, is on https://casberi.app/docs.html#every-app.
 
 ## Questions, answered
 
-- Do I need an account? — No. There is nothing to sign up for; Casberi works the moment it is installed.
-- Where do my things live? — In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds.
-- What does it cost? — It is free on the App Store.
-- What do I need to run it? — An iPhone. Nothing is billed. Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.
-- Can it act without asking? — No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.
+- Do I need an account? — No. There's nothing to sign up for — Casberi works the moment it's installed.
+- Where do my things live? — In a database on your device. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this device and iCloud); Delete access removes every token and key Casberi holds.
+- What does it cost? — It's free on the App Store.
+- What do I need to run it? — An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server.
+- Does Casberi hold my money? — No. Your account is a Safe that only your keys can move: this device's key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi.
+- Can it act without asking? — No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; over your spend limit, your co-signer signs too, and a round-up buys only inside a move you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions.
+- What if I lose my phone? — Your account's recovery key is in your iCloud Keychain, so the account opens on a new device signed in to the same Apple account. If you set a spend limit, getting it back needs your co-signer too. Your things come back only if you turned iCloud sync on; apps you connected can be connected again.
+- What does a swap cost? — The network's fee, and the exchange pool's fee, which is in the price. A swap to another network adds Across's fee. Casberi takes nothing. Move shows each before Face ID.
+- Is it audited? — Casberi's own code has not been independently audited. It deploys no contract of its own: your account is built from Safe's audited contracts, with Rhinestone's modules for the spend limit, and swaps call Uniswap, Aerodrome and Across contracts directly. Every move is run on the network before Face ID, and the source is public under the GPLv3.
+- What if Casberi goes away? — Your money stays where it is. Export a private key from Wallet › Account: it's added as an owner of your account and shown once, and the account opens in another wallet without Casberi.
+- Which networks? — Your account is on Base, Ethereum and Robinhood Chain. The accounts you follow are read on Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain, Arc, Tempo, Plasma, Robinhood Chain and Solana, plus Bitcoin and Lightning wallets and the exchanges you connect.
+- Why Tor? — So no service you ask about a wallet learns where you are, or that the wallets you look at belong to one person. It's always on for wallet reads on iPhone and iPad, and your other apps never go through it.
