@@ -273,7 +273,7 @@ struct MoveSecurity: View {
                 Toggle(isOn: Binding(get: { roundUps.on }, set: { on in
                     withAnimation(DS.Motion.standard) { roundUps.on = on }
                     RoundUps.setting = roundUps
-                })) { Text("Round up each send") }
+                })) { Text("Round up sends, swaps and buys") }
                 if roundUps.on {
                     Picker(selection: Binding(get: { roundUps.step }, set: { step in
                         withAnimation(DS.Motion.standard) { roundUps.step = step }
@@ -291,9 +291,12 @@ struct MoveSecurity: View {
                         Section(group.network.name) {
                             ForEach(group.tokens) { listed in
                                 let target = Self.target(listed, on: group.network)
-                                Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
+                                Toggle(isOn: Binding(get: { roundUps.target == target && !roundUps.movesPrivately }, set: { on in
                                     guard on else { return }
-                                    withAnimation(DS.Motion.standard) { roundUps.target = target }
+                                    withAnimation(DS.Motion.standard) {
+                                        roundUps.target = target
+                                        roundUps.toPrivate = nil
+                                    }
                                     RoundUps.setting = roundUps
                                 })) {
                                     Label {
@@ -302,6 +305,20 @@ struct MoveSecurity: View {
                                         Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil))
                                     }
                                 }
+                            }
+                        }
+                    }
+                    // **OR YOUR PRIVATE BALANCE (prd §1561)**, a word beside
+                    // the tokens, only where this build has a pool to move the
+                    // change into: Sepolia in a DEBUG build, none on mainnet.
+                    ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in
+                        Section(PrivateMoney.network(chain)) {
+                            Toggle(isOn: Binding(get: { roundUps.movesPrivately }, set: { on in
+                                guard on else { return }
+                                withAnimation(DS.Motion.standard) { roundUps.toPrivate = true }
+                                RoundUps.setting = roundUps
+                            })) {
+                                Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }
                             }
                         }
                     }
@@ -355,6 +372,7 @@ struct MoveSecurity: View {
     /// as the amount each send adds.
     private var roundUpWord: String {
         guard roundUps.on else { return String(localized: "Off") }
+        if roundUps.movesPrivately { return String(localized: "Moves to private") }
         return String(localized: "To next $\(roundUps.step), buys \(roundUps.target.symbol)")
     }
 
@@ -362,7 +380,12 @@ struct MoveSecurity: View {
     /// $3.40 send sets aside, and when that buys. Security and the keys walk
     /// say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
-        setting.step == 5
+        // Private: where it runs, and that it moves together (prd §1561).
+        if setting.movesPrivately, let chain = RoundUps.privatePools.sorted().first {
+            let at = PrivateMoney.figure(RoundUps.privateMoveAt, decimals: 18, symbol: "ETH")
+            return String(localized: "Round-ups on \(PrivateMoney.network(chain)) move to your private balance together, once \(at) is set aside.")
+        }
+        return setting.step == 5
             ? String(localized: "A $3.40 send rounds up to $5, setting aside $1.60. When $5 is set aside, it buys \(setting.target.symbol).")
             : String(localized: "A $3.40 send rounds up to $4, setting aside $0.60. When $5 is set aside, it buys \(setting.target.symbol).")
     }

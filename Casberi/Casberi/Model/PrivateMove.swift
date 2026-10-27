@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftData
 
 /// **SEND, PRIVATELY (prd §1554).** Two acts on Send, neither a verb:
 ///
@@ -248,9 +249,11 @@ final class PrivateMove {
             PrivateMoneyStore.shared.add(.init(commitment: deposit.commitment, label: deposit.label, labelHash: deposit.labelHash,
                                                symbol: "ETH", amount: value, decimals: 18, chainId: PrivacyNetwork.sepolia.chainId,
                                                tx: hash, at: Date(), status: .waiting, root: account))
-            stage = .done(hash)
             NSLog("privateMove| deposited | %@ | %@ ETH | label hash %@ | %d s",
                   hash, amount, deposit.labelHash, Int(Date().timeIntervalSince(started)))
+            // Round-ups due on Sepolia ride the send you confirmed (prd §1561).
+            await Self.moveRoundUps(engine: engine, context: context)
+            stage = .done(hash)
             await PrivateMoneyStore.shared.refresh(force: true)
         } catch {
             stage = .failed(Self.words(error))
@@ -260,6 +263,69 @@ final class PrivateMove {
     }
 
     static let eth = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+
+    /// Where a move lands its Activity row; the sentence sets it.
+    @ObservationIgnored var context: ModelContext?
+
+    // MARK: - Round-ups into your private balance (prd §1561)
+
+    /// **THE CHANGE MOVES TOGETHER.** When round-ups move privately and what
+    /// is counted on Sepolia has reached `RoundUps.privateMoveAt`, a send the
+    /// owner signs carries ONE more deposit: everything counted, its own note
+    /// (0xBow labels each deposit, so one per send would tie each send to its
+    /// change). The engine is open (the deposit's own Face ID). Done, the
+    /// count starts again and Activity says "0.00012 ETH round-ups to your
+    /// private balance". A failure leaves the change counting for the next.
+    /// Returns the deposit's hash.
+    @discardableResult
+    static func moveRoundUps(engine: PrivacyEngine, context: ModelContext?) async -> String? {
+        #if DEBUG
+        let chain = PrivacyNetwork.sepolia.chainId
+        let setting = RoundUps.setting
+        guard setting.movesPrivately, RoundUps.applies(setting, on: chain),
+              RoundUps.privateRoute(on: chain, bySession: false) == .deposit,
+              let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: chain), at: RoundUps.privateMoveAt),
+              let hex = PrivateMoney.hex(batch) else { return nil }
+        do {
+            let deposit = try await engine.prepareDeposit(tokenId: eth, value: hex)
+            for approval in deposit.approvals { _ = try await PrivacyTestnetSender.send(approval) }
+            let hash = try await PrivacyTestnetSender.send(deposit.tx)
+            RoundUps.setPrivateSaved("0", on: chain)
+            PrivateMoneyStore.shared.add(.init(commitment: deposit.commitment, label: deposit.label, labelHash: deposit.labelHash,
+                                               symbol: "ETH", amount: batch, decimals: 18, chainId: chain,
+                                               tx: hash, at: Date(), status: .waiting, root: PrivateRootKey.currentID))
+            let figure = PrivateMoney.figure(batch, decimals: 18, symbol: "ETH")
+            if let context { PrivateActivity.land(hash: hash, title: PrivateMoney.roundUpsTitle(figure: figure), context: context) }
+            NSLog("roundUpsPrivate| moved | %@ | %@ wei | label hash %@", hash, batch, deposit.labelHash)
+            return hash
+        } catch {
+            NSLog("roundUpsPrivate| kept counting | %@", String(describing: error))
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+
+    #if DEBUG
+    /// `-roundUpsPrivateMove YES`: the same move with nothing else sent —
+    /// the seed (Face ID), the account opened, the keystore set up if it is
+    /// not, then the batch. On Sepolia nothing sends publicly (your account is
+    /// not there), so this is the move's own door for a probe.
+    static func moveRoundUpsNow(context: ModelContext?) async {
+        do {
+            // Into the current root's account (prd §1562).
+            let account = try PrivateRootKey.ensure()
+            let engine = PrivacyEngine.shared
+            try await PrivateAccount.open(account, reason: String(localized: "Move to private"))
+            try await PrivateAccount.registerIfNeeded(account)
+            let hash = await moveRoundUps(engine: engine, context: context)
+            NSLog("roundUpsPrivate| probe | %@", hash ?? "nothing moved")
+        } catch {
+            NSLog("roundUpsPrivate| probe failed | %@", String(describing: error))
+        }
+    }
+    #endif
 
     /// A failure in the sentence's words: short, and what to do where there is something.
     static func words(_ error: Error) -> String {

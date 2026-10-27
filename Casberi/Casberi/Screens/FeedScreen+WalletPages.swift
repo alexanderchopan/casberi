@@ -156,6 +156,14 @@ extension FeedScreen {
         return nil
     }
 
+    /// Private money is yours (prd §1561): its asks stand on All and with
+    /// your account picked, never on another account's or Following's.
+    var walletShowsPrivate: Bool {
+        if walletOnAll { return true }
+        guard let yours = YourAccountDemo.shownAddress, let scope = chrome.walletScope else { return false }
+        return WalletWatch.sameAddress(scope, yours)
+    }
+
     /// Every ask Needs you holds, counted once: the undated and dated rows
     /// Home's list led with, a Safe signature waiting, the key nudges and
     /// the cards that ask.
@@ -166,7 +174,9 @@ extension FeedScreen {
         let nudges = (onAll && OutsideKeyNudge.shown ? 1 : 0) + (onAll && RecoveryKeyNudge.shown ? 1 : 0)
             + (onAll && RecoveryCheckNudge.shown ? 1 : 0)
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil }.count : 0
-        return rows + walletSignatureWarnings.count + nudges + cards
+        // A deposit waiting for 0xBow's approval, or refused (prd §1561).
+        let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks().count : 0
+        return rows + walletSignatureWarnings.count + nudges + cards + deposits
     }
 
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
@@ -234,6 +244,9 @@ extension FeedScreen {
         // The cards' asks need the Spending reading, which starts here
         // whatever Home shows (it did under the deleted Spending list).
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
+        // A deposit's approval is asked here too, so Needs you's count is
+        // the ASP's latest when Home stands (prd §1561; spaced 20 s).
+        .task { await PrivateMoneyStore.shared.refresh() }
     }
 
     // MARK: - Holdings' doors
@@ -591,6 +604,8 @@ extension FeedScreen {
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil } : []
         if walletNeedsCount(upcoming: upcoming) == 0 { walletSkeletonRowsSection }
         walletSignaturesSection
+        // Money of yours waiting on 0xBow, or refused (prd §1561).
+        if walletShowsPrivate { WalletPrivateAsks() }
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }
             // The monthly check (prd §1515): one row when it is due.

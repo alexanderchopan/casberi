@@ -146,6 +146,16 @@ enum PrivacyTestnetSender {
 
     // MARK: - Sending
 
+    /// Runs one prepared transaction from the sender against the latest
+    /// block without sending it (`eth_call`): a call that would revert throws
+    /// `.refused` here, before anything is signed (prd §1561).
+    static func simulate(_ prepared: PrivacyEngineWire.Tx) async throws {
+        let from = try ensure()
+        let call: [String: Any] = ["from": from, "to": prepared.to, "data": prepared.data, "value": prepared.value]
+        _ = try await rpc("eth_call", [call, "latest"])
+        NSLog("privateMove| simulated | %@", String(prepared.to.suffix(4)))
+    }
+
     /// Signs and sends one prepared transaction from the sender, then waits
     /// for it to land; returns its hash. Refuses anything off Sepolia.
     static func send(_ prepared: PrivacyEngineWire.Tx, gasFloor: Int = 0) async throws -> String {

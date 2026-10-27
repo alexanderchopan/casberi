@@ -27,9 +27,27 @@ final class PrivateMoneyStore {
 
     var rows: [PrivateMoney.Row] { PrivateMoney.rows(notes) }
 
+    /// What Wallet › Needs you shows (prd §1561): every deposit the ASP has
+    /// not approved, and in a DEBUG build the samples `-privateNeedsSample`
+    /// stood up, which are never kept.
+    func asks(now: Date = .now) -> [PrivateMoney.Ask] {
+        PrivateMoney.asks(notes + samples, now: now)
+    }
+
+    /// `-privateNeedsSample`'s notes: drawn in Needs you only, never saved,
+    /// never in Holdings or the total.
+    private(set) var samples: [PrivateMoney.Note] = []
+
     func add(_ note: PrivateMoney.Note) {
         notes.removeAll { $0.commitment == note.commitment }
         notes.append(note)
+        save()
+    }
+
+    /// A note taken back (prd §1561): it left the pool, so it leaves here.
+    func remove(commitment: String) {
+        notes.removeAll { $0.commitment.lowercased() == commitment.lowercased() }
+        samples.removeAll { $0.commitment.lowercased() == commitment.lowercased() }
         save()
     }
 
@@ -75,23 +93,33 @@ final class PrivateMoneyStore {
     }
 
     /// The notes of one account as the pool holds them (`PrivacyEngine.discover`;
-    /// `root` nil for the device-only account): an unspent note is kept with
-    /// the approval it had (a new one, change from a spend, keeps its
-    /// deposit's label and so its approval); a note the pool no longer holds
-    /// unspent is gone, unless it was made in the last ten minutes and the
-    /// pool has not indexed it yet. Other accounts' notes stand as they are.
-    /// A note found on a new phone has no label hash yet: `fillLabelHashes`.
+    /// `root` nil for the device-only account, prd §1562): an unspent note is
+    /// kept with the approval it had (a new one, change from a spend, keeps
+    /// its deposit's label and so its approval); a note the pool no longer
+    /// holds unspent is gone, unless it was made in the last ten minutes and
+    /// the pool has not indexed it yet. Other accounts' notes stand as they
+    /// are. A note found on a new phone has no label hash yet: `fillLabelHashes`.
     func reconcile(_ found: PrivacyEngineWire.Discovered, root: String? = nil) {
         let mine = notes.filter { $0.root == root }
         let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
-        let unspent = found.notes.filter { $0.status.uppercased() == "ACTIVE" && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
+        // Unspent is ACTIVE, and a deposit the ASP has not approved (PENDING)
+        // or refused (REJECTED): both still hold their money, and Needs you
+        // asks about them (prd §1561). SPENT and EXITED are gone.
+        let unspent = found.notes.filter { ["ACTIVE", "PENDING", "REJECTED"].contains($0.status.uppercased())
+            && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
         var next: [PrivateMoney.Note] = unspent.map { n in
             let had = mine.first { $0.commitment.lowercased() == n.commitment.lowercased() }
             let sameLabel = byLabel[n.label.lowercased()]
+            let pool: PrivateMoney.Status? = switch n.status.uppercased() {
+            case "REJECTED": .rejected
+            // The SDK promotes PENDING to ACTIVE only on the ASP's approval.
+            case "ACTIVE": .approved
+            default: nil
+            }
             return .init(commitment: n.commitment, label: n.label, labelHash: had?.labelHash ?? sameLabel?.labelHash ?? "",
                          symbol: "ETH", amount: PrivateMoney.decimal(hex: n.value), decimals: 18,
                          chainId: PrivacyNetwork.sepolia.chainId, tx: had?.tx ?? "", at: had?.at ?? Date(),
-                         status: had?.status ?? sameLabel?.status ?? .waiting, root: root)
+                         status: pool ?? had?.status ?? sameLabel?.status ?? .waiting, root: root)
         }
         let recent = Date().addingTimeInterval(-600)
         next += mine.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
@@ -133,7 +161,7 @@ final class PrivateMoneyStore {
         guard !DemoMode.isActive, PrivateMoney.anyWaiting(notes), force || Date().timeIntervalSince(asked) > 20 else { return }
         asked = Date()
         // A sample note's hash is "0": nothing to ask.
-        for note in notes where PrivateMoney.kind(note.status) == .waiting && note.labelHash != "0" {
+        for note in notes where PrivateMoney.asksASP(note.status) && note.labelHash != "0" {
             guard let url = PrivateMoney.statusURL(aspUrl: PrivacyNetwork.sepolia.aspUrl, labelHash: note.labelHash),
                   let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: PrivacyEngine.service),
                   http.statusCode == 200, let status = PrivateMoney.status(asp: data) else { continue }
@@ -145,6 +173,28 @@ final class PrivateMoneyStore {
     }
 
     #if DEBUG
+    /// `-privateNeedsSample "waiting,rejected,overdue"`: Needs you's rows with
+    /// no deposit behind them (prd §1561) — a refusal cannot be forced on
+    /// Sepolia. Drawn in Needs you only and never saved; Take it back on one
+    /// says it is a sample.
+    func sampleAsks(_ raw: String) {
+        let now = Date()
+        samples = raw.split(separator: ",").enumerated().compactMap { i, word in
+            let (status, at): (PrivateMoney.Status, Date) = switch word.trimmingCharacters(in: .whitespaces) {
+            case "waiting": (.waiting, now.addingTimeInterval(-25 * 60))
+            case "rejected": (.rejected, now.addingTimeInterval(-3 * 3600))
+            case "proof": (.needsProof, now.addingTimeInterval(-3 * 3600))
+            case "overdue": (.waiting, now.addingTimeInterval(-9 * 86_400))
+            default: (.approved, now)
+            }
+            guard status != .approved else { return nil }
+            return .init(commitment: "0xsample-ask-\(i)", label: "0x\(i + 10)", labelHash: "0", symbol: "ETH",
+                         amount: "100000000000000", decimals: 18, chainId: PrivacyNetwork.sepolia.chainId,
+                         tx: "", at: at, status: status)
+        }
+        NSLog("privateMoney| needs samples | %d", samples.count)
+    }
+
     /// `-privateMoneySample YES|mainnet|clear`: two notes no pool holds — one
     /// approved, one waiting — so Holdings can be looked at with no funds;
     /// `mainnet` lays them on Ethereum, so the box's Private block and the

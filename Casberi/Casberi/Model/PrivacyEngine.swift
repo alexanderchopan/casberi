@@ -195,6 +195,12 @@ final class PrivacyEngine: NSObject {
         try await call(.relay, Wire.Handle(handle: handle), as: Wire.Relayed.self)
     }
 
+    /// Take it back (prd §1561): a ragequit of one whole note to the account's
+    /// owner, proof included, for the owner to sign. `discover` first.
+    func prepareRagequit(commitment: String) async throws -> Wire.PreparedRagequit {
+        try await call(.prepareRagequit, Wire.Ragequit(commitment: commitment), as: Wire.PreparedRagequit.self)
+    }
+
     /// One proof on `circuit` with this network's real keys and synthetic
     /// inputs: what a proof costs on this phone, with no funds and no send.
     /// Poseidon(label), decimal: the id 0xBow's ASP files a deposit under.

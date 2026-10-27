@@ -426,14 +426,53 @@ struct MoveSentence: View {
     /// in it is the dollar.
     private var roundUpPlan: RoundUps.Plan? {
         let setting = RoundUps.setting
-        guard verb == .send, setting.on, !network.isTest else { return nil }
+        // Moving privately, a network with no pool sets nothing aside (prd §1561).
+        guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }
         let dollar = Op.dollar(on: network)
-        let sent = all.compactMap { item -> String? in
-            if case .send(let p) = item, p.token == dollar { return p.amount }
+        let sent: String
+        switch verb {
+        case .send:
+            sent = all.compactMap { item -> String? in
+                if case .send(let p) = item, p.token == dollar { return p.amount }
+                return nil
+            }.reduce("0") { Op.sum($0, $1) }
+        case .swap:
+            // **A SWAP ROUNDS UP WHAT IT SELLS (prd §1561)**, in dollars, on
+            // the network it leaves from; no price or a wrap, no round-up.
+            let usd = signing.compactMap { item -> Double? in
+                guard case .swap(let s) = item else { return nil }
+                return s.quote.wrap == nil ? soldDollars(s) : nil
+            }.reduce(0, +)
+            sent = RoundUps.soldUnits(usd: usd, wrap: false) ?? "0"
+        case .buy:
+            // A Buy rounds up its price in the dollar it pays (prd §1561).
+            sent = buyPackage.flatMap { Op.baseUnits(BitrefillBuy.Product.valueText($0.price), decimals: 6) } ?? "0"
+        default:
             return nil
-        }.reduce("0") { Op.sum($0, $1) }
+        }
         guard sent != "0" else { return nil }
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
+    }
+
+    /// What rounds up here, for whether its transaction carries the buy.
+    private var roundUpAct: RoundUps.Act {
+        switch verb {
+        case .swap:
+            let dollar = Op.dollar(on: network)
+            return .swap(sellsDollar: signing.allSatisfy { item in
+                if case .swap(let s) = item { return s.sell == dollar }
+                return false
+            })
+        case .buy: return .buy
+        default: return .send
+        }
+    }
+
+    /// The buy this transaction carries: the plan's, when the count reached
+    /// it and this act can carry it (prd §1561).
+    private var roundUpCarried: Chain.RoundUpBuy? {
+        guard RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }
+        return Chain.RoundUpBuy(units: units, target: RoundUps.setting.target)
     }
 
     /// Whether Relay carries this move (prd §1512, §1539, §1545): a send
@@ -445,8 +484,7 @@ struct MoveSentence: View {
     /// through Tor (measured 2026-10-26), and are not Relay's.
     private var relayCarries: Bool {
         switch verb {
-        case .swap: false
-        case .send: roundUpPlan?.buy != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)
+        case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)
         case .receive: elsewhere != nil
         case .buy: false
         case .sweep: false
@@ -462,7 +500,7 @@ struct MoveSentence: View {
     /// same way, from the preview's own quote: "On Aerodrome · 0.01% pool fee".
     private var exchangeCredit: String? {
         if verb == .send {
-            guard roundUpPlan?.buy != nil, let sold = shownPreview?.sold else { return nil }
+            guard roundUpCarried != nil, let sold = shownPreview?.sold else { return nil }
             return YourAccountSwap.credit(sold.compactMap(\.route))
         }
         guard verb == .swap || verb == .sweep else { return nil }
@@ -491,6 +529,11 @@ struct MoveSentence: View {
     private var roundUpPrint: [String] {
         guard let plan = roundUpPlan else { return [] }
         let target = RoundUps.setting.target
+        // A swap of another token, or a Buy, cannot carry the buy (prd §1561).
+        if let buy = plan.buy, !RoundUps.carriesBuy(roundUpAct) {
+            let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
+            return [String(localized: "\(Self.money(usd)) of round-ups so far, bought with your next send of \(Op.dollar(on: network).symbol)")]
+        }
         if let buy = plan.buy {
             let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
             // The spend limit's key signs this send alone and never buys on
@@ -698,7 +741,7 @@ struct MoveSentence: View {
                 MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))
                     .padding(.top, DS.Space.s4)
             }
-            if verb == .send, receipt == nil, let plan = roundUpPlan, plan.change != "0" {
+            if verb == .send || verb == .swap || verb == .buy, receipt == nil, let plan = roundUpPlan, plan.change != "0" {
                 let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
                 row(nil) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1991,11 +2034,11 @@ struct MoveSentence: View {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
-                case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 }
+                case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
                 case .receive, .sweep: []
-                case .buy: buyPrint
+                case .buy: buyPrint + roundUpPrint
                 }
                 // "$25.00 · Fee up to $0.01 · Details" (prd §1509): the last
                 // word opens this exact operation under the line.
@@ -2273,7 +2316,7 @@ struct MoveSentence: View {
             case .swap(let s): "w|\(s.sell.contract ?? "eth")|\(s.buy.contract ?? "eth")|\(s.amount)|\(s.to?.chainId ?? 0)"
             }
         }
-        return ([account, String(network.chainId), roundUpPlan?.buy ?? "-"] + lines).joined(separator: ";")
+        return ([account, String(network.chainId), roundUpCarried?.units ?? "-"] + lines).joined(separator: ";")
     }
 
     /// Ask for the preview once the sentence settles, then again every 40
@@ -2289,7 +2332,7 @@ struct MoveSentence: View {
                 try? await Task.sleep(for: .seconds(2))
                 continue
             }
-            let roundUp = roundUpPlan?.buy.map { Chain.RoundUpBuy(units: $0, target: RoundUps.setting.target) }
+            let roundUp = roundUpCarried
             let p = await Chain.preview(signing, account: account, roundUp: roundUp)
             guard !Task.isCancelled, key == previewKey else { return }
             withAnimation(DS.Motion.standard) { preview = p; previewFor = key }
@@ -3240,11 +3283,11 @@ struct MoveSentence: View {
         let reason = sweeping ? sweepFaceIDWords(batch) : faceIDWords(batch)
         let net = network
         let roundUp = roundUpPlan
-        let target = RoundUps.setting.target
+        let carried = roundUpCarried
         stage = .preparing
         Task {
             do {
-                let buy = roundUp?.buy.map { Chain.RoundUpBuy(units: $0, target: target) }
+                let buy = carried
                 let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, reason: reason,
                                                 said: { line in await MainActor.run { say(line) } }) { s in
                     await MainActor.run { stage = s }
@@ -3253,7 +3296,7 @@ struct MoveSentence: View {
                 // empties the count with it, and a send that did not buy (the
                 // spend limit's key, or no pool, prd §1545) keeps it all.
                 if let roundUp, case .landed = done.sent.outcome {
-                    RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: !done.roundUpWaits), on: net.chainId)
+                    RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)
                 }
                 let sent = done.sent
                 stage = nil
@@ -3978,6 +4021,7 @@ struct MoveSentence: View {
         let spoken = Op.spoken(Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: 6) ?? "0", decimals: 6)
         let reason = BitrefillBuy.faceWords(spoken: spoken, value: product.money(value), product: product)
         let net = network
+        let roundUp = roundUpPlan
         stage = .preparing
         delivering = false
         Task { @MainActor in
@@ -3987,6 +4031,8 @@ struct MoveSentence: View {
                 }
                 stage = .landing
                 delivering = true
+                // Paid: its change is counted, bought by a later send (prd §1561).
+                if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }
                 chrome.refreshRooms()
                 let standing = await BitrefillX402.awaitDelivery(invoiceID: invoice.id, account: account)
                 let landed = BitrefillX402.land(invoice: invoice, product: product, value: value, delivered: standing?.delivered == true)

@@ -298,12 +298,13 @@ struct HoldingsTreemap: View {
             VStack(alignment: .leading, spacing: 0) {
                 if showsMark {
                     if tile.id == PrivateMoney.walletSymbol {
-                        // Private money is one block, marked by its eye (prd §1554).
+                        // Private money is one block, marked by its eye in
+                        // the app's pink (prd §1554; no lime, §1561).
                         Image(systemName: "eye.slash")
                             .resizable()
                             .scaledToFit()
                             .fontWeight(.semibold)
-                            .foregroundStyle(DS.privateMark)
+                            .foregroundStyle(DS.pickInk)
                             .frame(width: mark * 0.8, height: mark * 0.8)
                             .frame(width: mark, height: mark, alignment: .leading)
                             .accessibilityHidden(true)

@@ -3344,6 +3344,34 @@
         }
       }
     },
+    "%@ back to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de vuelta a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ を %2$@ へ戻した"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@을(를) %2$@(으)로 되돌림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 退回到 %2$@"
+          }
+        }
+      }
+    },
     "%@ before that" : {
       "localizations" : {
         "es" : {
@@ -9134,6 +9162,34 @@
         }
       }
     },
+    "%@ of round-ups so far, bought with your next send of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de redondeos hasta ahora, se compran con tu próximo envío de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの端数 %1$@、次の %2$@ 送金で購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 잔돈 %1$@, 다음 %2$@ 보내기 때 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前零钱 %1$@,将在你下次发送 %2$@ 时买入"
+          }
+        }
+      }
+    },
     "%@ of that was served from cache." : {
       "localizations" : {
         "es" : {
@@ -10826,6 +10882,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 返回了意外的 HTTP %lld — 与你的密钥无关。请重试。"
+          }
+        }
+      }
+    },
+    "%@ round-ups to private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de redondeos a privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の端数を非公開へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 잔돈을 비공개로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 零钱存入私密"
           }
         }
       }
@@ -13000,6 +13084,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 待处理"
+          }
+        }
+      }
+    },
+    "%@ waiting for approval" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ esperando aprobación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 承認待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 승인 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 等待批准"
           }
         }
       }
@@ -41986,6 +42098,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "GitHub 上的仓库或用户"
+          }
+        }
+      }
+    },
+    "A sample: nothing to take back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un ejemplo: nada que recuperar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サンプルです。取り戻すものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "샘플: 되돌려 받을 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "示例:没有可取回的"
           }
         }
       }
@@ -95831,6 +95971,34 @@
         }
       }
     },
+    "It goes back to %@ on Sepolia, in public." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vuelve a %@ en Sepolia, de forma pública."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sepolia の %@ へ公開で戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sepolia의 %@(으)로 공개적으로 돌아갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它会公开退回到 Sepolia 上的 %@。"
+          }
+        }
+      }
+    },
     "It has transacted with more than one of your wallets." : {
       "localizations" : {
         "es" : {
@@ -107647,6 +107815,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按设计不转移价值，因此没有内容会落入。"
+          }
+        }
+      }
+    },
+    "Moves to private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasa a privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開へ移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入私密"
           }
         }
       }
@@ -148310,6 +148506,34 @@
         }
       }
     },
+    "Returns it to the address it came from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo devuelve a la dirección de la que vino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金元のアドレスへ戻します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 주소로 돌려보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退回到它的来源地址"
+          }
+        }
+      }
+    },
     "Reverted" : {
       "localizations" : {
         "es" : {
@@ -149476,6 +149700,34 @@
         }
       }
     },
+    "Round up sends, swaps and buys" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondear envíos, intercambios y compras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金・スワップ・購入を端数切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내기, 스왑, 구매 반올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对发送、兑换和购买取整"
+          }
+        }
+      }
+    },
     "Round up to" : {
       "localizations" : {
         "es" : {
@@ -149584,6 +149836,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "零钱买入"
+          }
+        }
+      }
+    },
+    "Round-ups on %@ move to your private balance together, once %@ is set aside." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los redondeos en %1$@ pasan juntos a tu saldo privado cuando se apartan %2$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の端数は、%2$@ たまるとまとめて非公開残高へ移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 잔돈은 %2$@이(가) 모이면 함께 비공개 잔액으로 이동합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 上的零钱攒够 %2$@ 后会一起转入你的私密余额。"
           }
         }
       }
@@ -166990,6 +167270,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "TLS 证书"
+          }
+        }
+      }
+    },
+    "Take back %@?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Recuperar %@?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を取り戻しますか?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) 되돌려 받을까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取回 %@?"
+          }
+        }
+      }
+    },
+    "Take it back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recuperarlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り戻す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "되돌려 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取回"
           }
         }
       }
@@ -224446,6 +224782,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的账户"
+          }
+        }
+      }
+    },
+    "the address it came from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "la dirección de la que vino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金元のアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낸 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它的来源地址"
           }
         }
       }

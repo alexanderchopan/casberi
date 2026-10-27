@@ -86,6 +86,7 @@ struct MovePrivateSentence<Head: View>: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .task(id: move.mode) {
+            move.context = context
             await move.read()
             #if DEBUG
             if let amount = UserDefaults.standard.string(forKey: "movePrivateAmount"), move.choices.contains(amount) {
@@ -171,7 +172,8 @@ struct MovePrivateSentence<Head: View>: View {
                 .accessibilityHint(Text("Picks how much"))
             }
             if move.mode == .send {
-                MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"))
+                MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"),
+                           ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
             }
             MoveClause(glue: String(localized: "to")) { recipientWord }
             MovePhrase(String(localized: "Sepolia."), glue: String(localized: "on"))
@@ -434,7 +436,7 @@ enum MovePrivateLeave { case switchOff, pickRecipient }
 
 /// **THE PRIVATE SWITCH (prd §1554).** Under Send's sentence: the eye-slash,
 /// "Private", an iOS switch. Off by default and never remembered on: each
-/// Send starts public. Lime when on, as the Holdings box marks private money.
+/// Send starts public. The app's pink when on, as every switch (prd §1561).
 struct MovePrivateSwitch: View {
     @Binding var isOn: Bool
 
@@ -442,9 +444,9 @@ struct MovePrivateSwitch: View {
         HStack(alignment: .center, spacing: DS.Space.s3) {
             Image(systemName: "eye.slash")
                 .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(isOn ? DS.privateMark : DS.textTertiary)
+                .foregroundStyle(isOn ? DS.pickInk : DS.textTertiary)
                 .accessibilityHidden(true)
-            DSToggleRow(title: Text("Private"), isOn: $isOn, tint: DS.privateMark)
+            DSToggleRow(title: Text("Private"), isOn: $isOn)
         }
         .frame(minHeight: 52)
         .animation(DS.Motion.standard, value: isOn)

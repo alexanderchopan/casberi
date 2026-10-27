@@ -63,6 +63,128 @@ enum RoundUps {
         /// Dollars to round up to: 1 or 5.
         var step = 1
         var target = Target.ethOnBase
+        /// The change moves into your private balance instead of buying
+        /// `target` (prd §1561). Off unless picked; nil reads as off, so a
+        /// setting kept before it decodes as it was.
+        var toPrivate: Bool? = nil
+
+        /// Picked, and this build has a pool: a setting kept by a DEBUG
+        /// build reads as buying `target` in one that has none.
+        var movesPrivately: Bool { RoundUps.movesPrivately(self, pools: RoundUps.privatePools) }
+    }
+
+    // MARK: - Swaps and Buy round up too (prd §1561)
+
+    /// What rounds up, and whether its own transaction can carry the buy.
+    enum Act: Equatable, Sendable {
+        /// Dollars sent: the transaction carries the buy (§1452).
+        case send
+        /// A swap: the dollar value of what is sold rounds up. Its Face ID
+        /// transaction carries the buy only when what it sells is the
+        /// network's dollar — the buy spends the dollar, which a swap of ETH
+        /// may leave the account without; otherwise the change counts and is
+        /// bought by the next send or dollar swap.
+        case swap(sellsDollar: Bool)
+        /// A Bitrefill purchase: paid by a signed authorisation Bitrefill
+        /// submits (§1473), so no call of ours rides it; it only counts.
+        case buy
+    }
+
+    static func carriesBuy(_ act: Act) -> Bool {
+        switch act {
+        case .send: true
+        case .swap(let sellsDollar): sellsDollar
+        case .buy: false
+        }
+    }
+
+    /// The dollar value of what a swap sells (or a Buy pays), in the
+    /// dollar's units, so it rounds up as dollars sent do. nil — no round-up
+    /// — for a token with no price and for WETH⇄ETH (one for one, no trade).
+    static func soldUnits(usd: Double?, wrap: Bool) -> String? {
+        guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }
+        let micro = (usd * 1_000_000).rounded(.down)
+        guard micro >= 1, micro < 1e15 else { return nil }
+        return String(Int64(micro))
+    }
+
+    // MARK: - Into your private balance (prd §1561)
+
+    /// **WHERE THE CHANGE MAY MOVE INTO YOUR PRIVATE BALANCE:** the networks
+    /// this build has a private pool it can deposit into. Sepolia in a DEBUG
+    /// build (the app's pool is Sepolia's, its sender DEBUG-only, prd §1554);
+    /// none in a shipped one. So on Base, Ethereum and Robinhood the choice is
+    /// never offered (no dead control, prd §83).
+    static var privatePools: Set<Int> {
+        #if DEBUG
+        [11_155_111]
+        #else
+        []
+        #endif
+    }
+
+    /// Whether a send on `chainId` rounds up at all: on, and when the change
+    /// moves privately, only where there is a pool to move it into — a send
+    /// elsewhere sets nothing aside for a balance it cannot reach.
+    static func applies(_ setting: Setting, on chainId: Int, pools: Set<Int> = privatePools) -> Bool {
+        setting.on && (!movesPrivately(setting, pools: pools) || pools.contains(chainId))
+    }
+
+    static func movesPrivately(_ setting: Setting, pools: Set<Int>) -> Bool {
+        setting.toPrivate == true && !pools.isEmpty
+    }
+
+    /// How a send carries the change into the pool once it is due.
+    enum PrivateRoute: Equatable, Sendable {
+        /// The send carries the deposit.
+        case deposit
+        /// Not this send: the change keeps counting and moves with the next
+        /// send you approve with Face ID.
+        case waits
+        /// No pool on this network.
+        case notHere
+    }
+
+    /// **A DEPOSIT IS A CONTRACT CALL**, so the spend limit's session key,
+    /// which may only `transfer` the dollar and send ETH through Multicall3
+    /// (§1545 item 2), never carries one: a send it signs alone leaves the
+    /// change counting, and the deposit rides the next send you approve with
+    /// Face ID — §1545's pattern for a buy on the exchanges.
+    static func privateRoute(on chainId: Int, bySession: Bool, pools: Set<Int> = privatePools) -> PrivateRoute {
+        guard pools.contains(chainId) else { return .notHere }
+        return bySession ? .waits : .deposit
+    }
+
+    /// When the change moves, in the network's coin: everything counted,
+    /// together, once it reaches `privateMoveAt` — never per send (0xBow
+    /// labels each deposit, so one per send would tie every send to its
+    /// change). nil before.
+    static func privateMove(saved: String, at threshold: String) -> String? {
+        guard let have = Decimal(string: saved), have > 0, let need = Decimal(string: threshold), have >= need else { return nil }
+        return saved
+    }
+
+    /// The threshold on a test network, in its coin's base units: test ETH
+    /// has no price (§949), so 0.0001 test ETH stands where $5 stands.
+    /// DEBUG's `-roundUpsPrivateAt <wei>` lowers it.
+    static var privateMoveAt: String {
+        #if DEBUG
+        if let wei = UserDefaults.standard.string(forKey: "roundUpsPrivateAt"), Decimal(string: wei) != nil { return wei }
+        #endif
+        return "100000000000000"
+    }
+
+    private static func privateSavedKey(_ chainId: Int) -> String { "yourAccount.roundUps.private.\(chainId)" }
+
+    /// The change counted toward your private balance on a network, in its
+    /// coin's base units.
+    static func privateSaved(on chainId: Int) -> String {
+        UserDefaults.standard.string(forKey: privateSavedKey(chainId)) ?? "0"
+    }
+
+    static func setPrivateSaved(_ units: String, on chainId: Int) {
+        guard !YourAccountDemo.isOn else { return }
+        UserDefaults.standard.set(units, forKey: privateSavedKey(chainId))
     }
 
     /// The change is bought once it reaches this, in the dollar's units ($5).

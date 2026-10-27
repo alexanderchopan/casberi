@@ -16,6 +16,7 @@ enum PrivacyEngineWire {
     enum Method: String, CaseIterable {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
         case discover, prepareTransfer, prepareWithdraw, bench, labelHash, relay
+        case prepareRagequit
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -73,6 +74,11 @@ enum PrivacyEngineWire {
     struct Label: Encodable, Equatable {
         /// 0x-hex, as `PreparedDeposit.label` carries it.
         let label: String
+    }
+
+    /// One note to take back (prd §1561), by its commitment.
+    struct Ragequit: Encodable, Equatable {
+        let commitment: String
     }
 
     struct Bench: Encodable, Equatable {
@@ -170,6 +176,17 @@ enum PrivacyEngineWire {
     struct Relayed: Decodable, Equatable {
         let tx: String
         let ms: Int
+    }
+
+    /// A ragequit, proved (prd §1561): the transaction for the account's
+    /// owner to sign, the whole note's value and where the circuit sends it.
+    struct PreparedRagequit: Decodable, Equatable {
+        let handle: String
+        let tx: Tx
+        let value: String
+        let recipient: String
+        let ms: Int
+        let proofs: [Proof]
     }
 
     struct Benched: Decodable, Equatable {

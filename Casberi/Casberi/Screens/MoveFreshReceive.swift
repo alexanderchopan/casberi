@@ -38,7 +38,7 @@ struct MoveFreshSentence<Head: View>: View {
                 MoveFlow {
                     MovePhrase(String(localized: "Receive"))
                     MovePhrase(String(localized: "Sepolia"), glue: String(localized: "on"))
-                    MovePhrase(String(localized: "privately."), ink: DS.privateMark)
+                    MovePhrase(String(localized: "privately."), ink: DS.pickInk)
                 }
                 MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))
                     .padding(.top, DS.Space.s4)
