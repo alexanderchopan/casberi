@@ -1643,6 +1643,34 @@
         }
       }
     },
+    "%@ ETH relayer fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH de comisión del relé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リレー手数料 %@ ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "릴레이 수수료 %@ ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "中继费 %@ ETH"
+          }
+        }
+      }
+    },
     "%@ Fee Juice" : {
       "localizations" : {
         "es" : {
@@ -12220,6 +12248,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "可印制 %@"
+          }
+        }
+      }
+    },
+    "%@ to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@を非公開残高へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) 비공개 잔액으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 到你的私密余额"
           }
         }
       }
@@ -55791,6 +55847,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "低于 %@"
+          }
+        }
+      }
+    },
+    "Below the pool's smallest deposit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por debajo del depósito mínimo del fondo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プールの最小入金額を下回っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀의 최소 입금액보다 적습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于资金池的最小存款"
           }
         }
       }
@@ -120966,6 +121050,34 @@
         }
       }
     },
+    "Nothing private to send on Sepolia yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada privado para enviar en Sepolia."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sepoliaで送れる非公開の資金はまだありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sepolia에서 보낼 비공개 자금이 아직 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sepolia 上还没有可发送的私密资金。"
+          }
+        }
+      }
+    },
     "Nothing reached yet this week" : {
       "localizations" : {
         "es" : {
@@ -128252,34 +128364,6 @@
         }
       }
     },
-    "Opens moving money to private" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abre mover dinero a privado"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "非公開への移動を開きます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "비공개로 옮기기를 엽니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "打开转为私密"
-          }
-        }
-      }
-    },
     "Opens that conversation" : {
       "localizations" : {
         "es" : {
@@ -134875,6 +134959,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择你收到的币种"
+          }
+        }
+      }
+    },
+    "Picks who it goes to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige a quién va"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送り先を選びます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 사람을 고릅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择收款方"
           }
         }
       }
@@ -151344,6 +151456,34 @@
         }
       }
     },
+    "Scan with %@ in its wallet, then approve." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escanea con %@ en su cartera y aprueba."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のウォレットでスキャンして承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 지갑으로 스캔한 다음 승인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用 %@ 的钱包扫描，然后批准。"
+          }
+        }
+      }
+    },
     "Scan with the wallet you want, then approve twice: connect, then sign." : {
       "localizations" : {
         "es" : {
@@ -151396,34 +151536,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用你想用的钱包扫描，然后批准。"
-          }
-        }
-      }
-    },
-    "Scan with %@ in its wallet, then approve." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Escanea con %@ en su cartera y aprueba."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ のウォレットでスキャンして承認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@의 지갑으로 스캔한 다음 승인하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "用 %@ 的钱包扫描，然后批准。"
           }
         }
       }
@@ -153368,6 +153480,34 @@
         }
       }
     },
+    "Send from your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar desde tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高から送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액에서 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的私密余额发送"
+          }
+        }
+      }
+    },
     "Send in Mail" : {
       "localizations" : {
         "es" : {
@@ -153616,6 +153756,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只在 %1$@ 上向它转账。创建此账户的 %2$@ 可以开通其他网络。"
+          }
+        }
+      }
+    },
+    "Send to your private balance first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primero envía a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に非公開残高へ送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 비공개 잔액으로 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先发送到你的私密余额"
           }
         }
       }
@@ -153940,6 +154108,34 @@
         }
       }
     },
+    "Sends from your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía desde tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高から送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액에서 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的私密余额发送"
+          }
+        }
+      }
+    },
     "Sends in different channels don't queue behind each other." : {
       "localizations" : {
         "es" : {
@@ -153992,6 +154188,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "互不等待的发送"
+          }
+        }
+      }
+    },
+    "Sends to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高へ送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액으로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送到你的私密余额"
           }
         }
       }
@@ -200781,6 +201005,34 @@
         }
       }
     },
+    "Your approved private balance does not cover it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo privado aprobado no alcanza"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "承認済みの非公開残高では足りません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "승인된 비공개 잔액으로는 부족합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已批准的私密余额不足"
+          }
+        }
+      }
+    },
     "Your apps" : {
       "localizations" : {
         "es" : {
@@ -203348,6 +203600,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的价格提醒"
+          }
+        }
+      }
+    },
+    "Your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密余额"
           }
         }
       }
@@ -207011,6 +207291,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "约 %lld 秒"
+          }
+        }
+      }
+    },
+    "about a minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cerca de un minuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约一分钟"
           }
         }
       }
@@ -226875,6 +227183,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你自己的地址"
+          }
+        }
+      }
+    },
+    "your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密余额"
           }
         }
       }

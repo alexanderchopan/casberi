@@ -28,6 +28,12 @@ extension FeedScreen {
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
+                        // A note waiting on the ASP is asked again while the
+                        // section shows (the store spaces the asks 20 s).
+                        while PrivateMoney.anyWaiting(store.notes), !Task.isCancelled {
+                            try? await Task.sleep(for: .seconds(20))
+                            await store.refresh()
+                        }
                     }
                 ForEach(rows) { row in
                     walletPrivateRow(row, mask: mask, prices: store.prices)

@@ -307,8 +307,20 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
     private static func send(_ request: URLRequest, to url: URL, fallback: URL) async -> (Data, HTTPURLResponse)? {
         var request = request
         request.url = url
+        var unanswered = 0
         for attempt in 0..<6 {
-            guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else { return nil }
+            guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else {
+                // The relayer's front end refuses some Tor exits, and a quote
+                // or a relay that dies there is the whole move (measured
+                // 2026-10-26: two of two failed on one circuit). Its
+                // requests get two more circuits before they are an outage;
+                // they never leave Tor (prd §1554).
+                unanswered += 1
+                let relayer = url.host?.lowercased() == URL(string: PrivacyNetwork.sepolia.relayerUrl)?.host?.lowercased()
+                NSLog("privacyEngine| no answer | %@ | try %d", url.host ?? "?", unanswered)
+                if relayer, unanswered < 3 { continue }
+                return nil
+            }
             let text = String(decoding: data.prefix(2048), as: UTF8.self)
             if PrivacyEngineWire.throttled(status: http.statusCode, body: text), attempt < 5 {
                 try? await Task.sleep(for: .milliseconds(500 << attempt))

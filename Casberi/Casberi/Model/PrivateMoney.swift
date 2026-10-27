@@ -180,10 +180,10 @@ enum PrivateMoney {
         return "\(shown) \(symbol)"
     }
 
-    /// The figure's number alone ("0.0412").
-    static func number(_ amount: String, decimals: Int) -> String? {
+    /// The figure's number alone ("0.0412"), at most `places` places.
+    static func number(_ amount: String, decimals: Int, places: Int = 6) -> String? {
         guard let units = Decimal(string: amount) else { return nil }
-        return (units / pow10(decimals)).formatted(.number.precision(.fractionLength(0...6)))
+        return (units / pow10(decimals)).formatted(.number.precision(.fractionLength(0...places)))
     }
 
     /// A decimal amount ("0.001") in base units, decimal; nil for anything
@@ -219,7 +219,7 @@ enum PrivateMoney {
 
     /// The amounts Move to private offers, in ETH: the ones the account can
     /// move and still pay the gas (`reserve`, base units).
-    static let ladder = ["0.0001", "0.0005", "0.001", "0.005", "0.01", "0.05"]
+    static let ladder = ["0.00005", "0.0001", "0.0005", "0.001", "0.005", "0.01", "0.05"]
 
     static func choices(balance: String, reserve: String, decimals: Int = 18) -> [String] {
         guard let have = Decimal(string: balance), let keep = Decimal(string: reserve) else { return [] }
@@ -247,6 +247,10 @@ enum PrivateMoney {
         let feeBPS: Int
         let fixed: String
     }
+
+    /// The Sepolia relayer's terms as read 2026-10-26, for the amounts until
+    /// its own answer lands.
+    static let measuredTerms = RelayerTerms(feeBPS: 10, fixed: "21000")
 
     /// The relayer's terms for ETH, or nil when the answer names none.
     static func relayerTerms(_ data: Data) -> RelayerTerms? {

@@ -74,9 +74,11 @@ final class PrivateMove {
             guard let balance, let reserve else { return [] }
             return PrivateMoney.choices(balance: balance, reserve: reserve)
         case .send:
-            // The approved private balance; the relayer's fee comes out of it.
-            return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId),
-                                        reserve: "0")
+            // The approved private balance, less the relayer's fee on all of
+            // it (the fee is paid from the notes, beside the amount).
+            let held = PrivateMoneyStore.shared.spendable(chainId: PrivacyNetwork.sepolia.chainId)
+            return PrivateMoney.choices(balance: held,
+                                        reserve: PrivateMoney.relayFee(held, terms: terms ?? PrivateMoney.measuredTerms))
         }
     }
 
@@ -96,9 +98,15 @@ final class PrivateMove {
     /// Past the tap: Move's verbs wait for it to finish.
     var acting: Bool { busy && stage != .reading }
 
+    /// Which read is the latest: a read the switch overtook (the mode
+    /// changed and a new read began) leaves the stage to the one after it.
+    @ObservationIgnored private var reads = 0
+
     func read() async {
+        reads += 1
+        let mine = reads
         #if DEBUG
-        if mode == .send { await readSend(); return }
+        if mode == .send { await readSend(mine); return }
         // The demo reaches nothing (§217): its sentence stands on a pretended
         // balance, and the act says it works once you leave the demo.
         if DemoMode.isActive {
@@ -115,6 +123,7 @@ final class PrivateMove {
             // that much, so it can be seen with no funds; `run` refuses.
             if let pretend = Self.pretend { have = pretend }
             let price = try await PrivacyTestnetSender.gasPrice()
+            guard mine == reads else { return }
             balance = have
             reserve = PrivateMoney.reserve(gasPrice: price)
             let options = choices
@@ -127,6 +136,7 @@ final class PrivateMove {
             NSLog("privateMove| read | sender %@ | balance %@ | reserve %@ | %d choices",
                   sender ?? "-", have, reserve ?? "-", options.count)
         } catch {
+            guard mine == reads else { return }
             stage = .failed(Self.words(error))
         }
         #else
@@ -141,7 +151,7 @@ final class PrivateMove {
     #endif
 
     /// Switch on: what is spendable, and the relayer's terms.
-    private func readSend() async {
+    private func readSend(_ mine: Int) async {
         stage = .reading
         let options = choices
         guard !options.isEmpty else { stage = .nothingPrivate; return }
@@ -152,6 +162,7 @@ final class PrivateMove {
            http.statusCode == 200 {
             terms = PrivateMoney.relayerTerms(data)
         }
+        guard mine == reads else { return }
         stage = .ready
         NSLog("privateMove| send read | %d choices | fee %@ bps", options.count, terms.map { String($0.feeBPS) } ?? "-")
     }
@@ -258,6 +269,9 @@ final class PrivateMove {
     static func words(_ error: Error) -> String {
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
+            if failure.name.hasPrefix("Relayer") {
+                return String(localized: "0xBow's relayer did not answer")
+            }
             if failure.name.localizedCaseInsensitiveContains("BelowMinimum") {
                 return String(localized: "Below the pool's smallest deposit")
             }

@@ -39,10 +39,8 @@ struct MovePrivateSentence<Head: View>: View {
     var inTray = false
     /// Leaves the private sentence: the switch turned off, or the recipient
     /// word tapped to pick someone else.
-    var leave: (Leave) -> Void = { _ in }
+    var leave: (MovePrivateLeave) -> Void = { _ in }
     @ViewBuilder let head: () -> Head
-
-    enum Leave { case switchOff, pickRecipient }
 
     @State private var open: Blank?
     @State private var copied = false
@@ -257,7 +255,8 @@ struct MovePrivateSentence<Head: View>: View {
     /// Switch on: the relayer's fee and about how long (the relayed
     /// withdrawal measured 27 s on Sepolia, the proof a few more).
     private var sendLine: String {
-        let fee = move.fee.flatMap { PrivateMoney.number($0, decimals: 18) }
+        // A Sepolia fee is a few hundred-millionths: it keeps its digits.
+        let fee = move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: 12) }
         let parts = [fee.map { String(localized: "\($0) ETH relayer fee") }, String(localized: "about a minute")]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
@@ -435,6 +434,10 @@ struct MovePrivateSentence<Head: View>: View {
         withAnimation(DS.Motion.standard) { copied = true }
     }
 }
+
+/// How the private sentence is left: the switch turned off, or the
+/// recipient word tapped to pick someone else.
+enum MovePrivateLeave { case switchOff, pickRecipient }
 
 /// **THE PRIVATE SWITCH (prd §1554).** Under Send's sentence: the eye-slash,
 /// "Private", an iOS switch. Off by default and never remembered on: each
