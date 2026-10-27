@@ -2912,6 +2912,10 @@ harness "Tor route self-test" "wallets through Tor on their own circuits, refuse
 # exited leaves every request at a dead port. Both look like a slow network.
 harness "Tor health self-test" "the watch keeps asking, a return renews, a new network resets, an ended run runs again, 7 mutations" "scripts/tor-health-selftest.sh" "the tor health self-test failed — run scripts/tor-health-selftest.sh"
 harness "Privacy engine self-test" "the wire, the network door, testnet only, 27 pinned circuits, 6 mutations" "scripts/privacy-engine-selftest.sh" "the privacy engine self-test failed — run scripts/privacy-engine-selftest.sh"
+# Private money (prd §1554, §1560–§1567): Send privately, fresh receive, Needs
+# you and Take it back, round-ups into private, recovery from the iCloud root,
+# Ethereum with Aave yield. A wrong amount, owner or key here moves real money.
+harness "Private money self-test" "send, receive, take back, round-ups, recovery, yield, mainnet calls pinned, every mutation caught" "scripts/private-money-selftest.sh" "the private money self-test failed — run scripts/private-money-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
