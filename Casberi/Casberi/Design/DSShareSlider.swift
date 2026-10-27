@@ -12,13 +12,13 @@ struct DSShareSlider: View {
     @Binding var percent: Int
     var enabled = true
     /// The filled part's ink: the pick's pink, white thumb over it — the
-    /// system slider's look (prd §1556, retiring §1442f's white fill: white on
+    /// system slider's look (prd §1557, retiring §1442f's white fill: white on
     /// white hid the thumb, and the slider sets the amount, which is pink).
     var tint: Color = DS.pickInk
     /// The thumb grows under the finger (§1438b).
     @State private var holding = false
     /// Where the finger is, while it is down: the thumb and the fill sit
-    /// UNDER it, never animated after it (prd §1556 — the snappy animation on
+    /// UNDER it, never animated after it (prd §1557 — the snappy animation on
     /// every step is what made the thumb trail the finger). Nil at rest.
     @State private var dragX: CGFloat?
 

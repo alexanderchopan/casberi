@@ -566,6 +566,18 @@ enum YourAccountAcross {
         return (hit.crossing.id, .settles(hit.state))
     }
 
+    /// **WHAT COMES BACK IS LISTED (prd §1556).** The token a crossing's
+    /// refund returns as — WETH for ETH, since the pool refunds its wrapped
+    /// coin, else the dollar — once it is refunded or its deadline passed
+    /// unfilled; nil before. Move remembers it on the sending network, so
+    /// its holdings read the WETH before the Wallet's next holdings read and
+    /// it can be sent or swapped from there.
+    static func returning(_ c: Crossing, now: Int) -> Op.Token? {
+        guard c.tx != nil, c.state == .refunded || (c.state == .waiting && now > c.fillDeadline),
+              SafeABI.word(address: c.refundContract) != nil else { return nil }
+        return Op.Token(symbol: c.refundSymbol, decimals: c.decimals, contract: c.refundContract.lowercased())
+    }
+
     static func networkName(_ chainId: Int) -> String {
         Op.networks.first { $0.chainId == chainId }?.name ?? String(chainId)
     }

@@ -265,6 +265,19 @@ whole.outputUnits = "50000000"
 check(X.figure(whole) == "50.00", "a whole dollar is not said with cents: \(X.figure(whole))")
 var eth = c; eth.decimals = 18; eth.state = .refunded; eth.inputUnits = "10000000000000000"; eth.refundSymbol = "WETH"
 check(X.figure(eth) == "0.01" && X.title(eth) == "Refunded 0.01 WETH on Ethereum", "an ETH refund is not said as WETH")
+// What comes back is listed in Move's holdings (prd §1556): WETH for ETH,
+// from the deadline on, never before, never for a crossing that filled.
+eth.refundContract = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+check(X.returning(eth, now: 0)?.contract == "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+      && X.returning(eth, now: 0)?.symbol == "WETH" && X.returning(eth, now: 0)?.decimals == 18,
+      "a refunded ETH crossing's WETH is not listed")
+var lapsed = eth; lapsed.state = .waiting
+check(X.returning(lapsed, now: lapsed.fillDeadline + 1)?.symbol == "WETH" && X.returning(lapsed, now: lapsed.fillDeadline) == nil,
+      "WETH is listed before the deadline, or not after it")
+var arrived = eth; arrived.state = .filled
+check(X.returning(arrived, now: arrived.fillDeadline + 1) == nil, "a filled crossing lists a refund")
+var unsentBack = eth; unsentBack.tx = nil
+check(X.returning(unsentBack, now: 0) == nil, "a crossing never sent lists a refund")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 
@@ -290,6 +303,12 @@ wire "$INGEST" 'guard let hit = YourAccountAcross.take(ref: leg.ref, hash: leg.h
   "the Wallet lands a crossing's legs as rows of their own"
 wire "$INGEST" 'var added = await WalletAcross.sync(context: context)' "the crossing's row is never written"
 wire "$REACH" '"app.across.to",' "Across's host is not declared in NetworkReach"
+wire "Casberi/Casberi/Model/WalletAcross.swift" 'YourAccountTokens.remember(back, on: net)' \
+  "a refund's WETH is never listed in Move's holdings (prd §1556)"
+wire "Casberi/Casberi/Screens/MoveSentence.swift" 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals) + " " + token.symbol' \
+  "the print line says ≈ before an exact Across output (prd §1556)"
+wire "Casberi/Casberi/Screens/MoveDetails.swift" 'let words = YourAccountSwap.brief(route)' \
+  "Details' swap row is the foot's whole sentence again (prd §1556)"
 
 # --- the mutation pass ------------------------------------------------------
 mutate() {
@@ -361,6 +380,8 @@ mutate "the sending transaction is matched on any network" \
   '$0.account == w && $0.from == chainId && $0.tx?.lowercased() == hash.lowercased()' '$0.account == w && $0.tx?.lowercased() == hash.lowercased()'
 mutate "a taken leg lands again" \
   'if let x = list.first(where: { $0.taken.contains(ref) }) { return (x.id, .taken) }' ''
+mutate "a refund is listed before the deadline" \
+  'guard c.tx != nil, c.state == .refunded || (c.state == .waiting && now > c.fillDeadline),' 'guard c.tx != nil, c.state != .filled,'
 mutate "the fee rounds down (says less than Across keeps)" \
   'NSDecimalRound(&r, &d, 0, .up)' 'NSDecimalRound(&r, &d, 0, .down)'
 

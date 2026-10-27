@@ -39,6 +39,13 @@ enum WalletAcross {
         let now = Int(Date().timeIntervalSince1970)
         var added = 0
         for c in list where c.tx != nil {
+            // What a refund returns (WETH for ETH) is listed in Move's
+            // holdings from the deadline on (prd §1556).
+            if let back = YourAccountAcross.returning(c, now: now),
+               let net = YourAccountOp.networks.first(where: { $0.chainId == c.from }),
+               !YourAccountTokens.remembered(on: net).contains(back) {
+                YourAccountTokens.remember(back, on: net)
+            }
             let ref = YourAccountAcross.ref(c)
             let thing = existing(ref, context) ?? {
                 let t = Thing(kind: .transaction, title: YourAccountAcross.title(c),

@@ -120,12 +120,13 @@ struct MoveDetails: View {
         }
     }
 
-    /// Each swap's exchange and pool fee, in words, once each.
+    /// Each swap's exchange and pool fee, once each, short enough for the
+    /// row's one line: "Uniswap · 0.01%" (prd §1556).
     private func exchanges(_ p: YourAccountChain.Preview) -> [String] {
         var out: [String] = []
         for s in p.sold {
             guard let route = s.route else { continue }
-            let words = YourAccountSwap.words(route)
+            let words = YourAccountSwap.brief(route)
             if !out.contains(words) { out.append(words) }
         }
         return out

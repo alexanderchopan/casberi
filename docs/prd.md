@@ -68965,7 +68965,18 @@ Mock: the design canvas "Private money with 0xBow".
 
 **Mac half.** The same Move and Wallet code; not walked on the Mac.
 
-## §1556 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track (retires §1442f's white fill; user, 2026-10-26: "i don't think our slider looks good. it's kind of janky maybe b/c it is white not our pink", then "ok") — BUILT, not yet seen on the simulator
+## §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈ (amends §1555 items 7, 9 and 11) (coordinator's follow-ups to §1555, 2026-10-26) — BUILT, seen on the simulator
+
+1. **What comes back is listed.** A refunded ETH crossing returns WETH (the SpokePool refunds its wrapped coin); the row already says "Refunded 0.01 WETH on Ethereum". From the deadline on, unfilled — or once refunded — the token it returns as (`YourAccountAcross.returning`: WETH for ETH, else the dollar) is remembered on the sending network for Move (`YourAccountTokens.remember`, in `WalletAcross.sync`), so Move's holdings read it before the Wallet's next holdings read and it can be sent or swapped from there; the Wallet's Holdings list WETH as any priced token. Nothing more is offered.
+2. **Is an unwrap needed? Recommended, not built.** Swap cannot turn WETH back into ETH: the pools quote ETH as WETH, so selling WETH for ETH is one token for itself and finds no route ("No pool … swaps WETH for ETH"). WETH can be swapped into any other token or sent, but the ETH a person sent comes back as a token they never had, and getting ETH again would take an unwrap: one call, `WETH.withdraw(amount)` on the network's pinned WETH, as cheap to check and simulate as a send. Left for the user's call.
+3. **Details' swap row fits one line.** "Swaps · Uniswap · 0.01%", two pools "Aerodrome · 0.05% + 0.3%", the exchange alone when its fees were not read (`YourAccountSwap.brief`); the Round-up row the same. The foot keeps "On Uniswap · 0.01% pool fee".
+4. **No ≈ before an exact output.** Across pays exactly the output it quoted, so a swap to another network's print line reads "22.95 USDC", not "≈ 22.95 USDC", and names the token that arrives there (USDG on Robinhood); a swap on one network keeps its ≈.
+5. **Checks.** `across-swap-selftest.sh`: what comes back (WETH for ETH, from the deadline, never before, never once filled, never unsent) and one mutation more, caught; the wiring of the three changes. `direct-swap-selftest.sh`: `brief` for one pool, two, and unread fees, one mutation more, caught. `move-details-selftest.sh`, `your-account-selftest.sh`, `ds-template-audit.py`, `harness-exists-audit.py` pass.
+6. **Seen on the simulator** (0.01 ETH on Base for USDC on Ethereum): the print line "$23.19 · 23.06 USDC · Fee up to $0.03" without ≈, and every Details row on one line — "Swaps · Uniswap · 0.01%", "Approves · 23.088397 USDC to Across", "Checked · Lands as written". Not seen: a real refund or its WETH in the holdings (nothing was sent). The `-acrossSample` rows went with the simulator, deleted.
+
+**Mac half.** The same code; not walked on the Mac.
+
+## §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track (retires §1442f's white fill; user, 2026-10-26: "i don't think our slider looks good. it's kind of janky maybe b/c it is white not our pink", then "ok") — BUILT, not yet seen on the simulator
 
 1. **Pink fill, white thumb (`DSShareSlider`, `tint` defaults to `DS.pickInk`; Move no longer passes `DS.textPrimary`).** White on white hid the thumb and its shadow cannot show on black. Pink is still the values' ink: the slider sets the amount, and the amount is pink in the sentence. The system slider's look.
 2. **The thumb is pinned to the finger.** While the finger is down the thumb and the fill follow its position (`dragX`) with no animation; the amount still snaps to a quarter within 3% of one, and the thumb sits on that quarter while it does. Only letting go animates (`.snappy(duration: 0.18)`), settling on the amount set. Every step was animated before, so the thumb trailed the finger.
@@ -68973,3 +68984,11 @@ Mock: the design canvas "Private money with 0xBow".
 4. **Unchanged:** the ticks and the snap haptic, VoiceOver's quarter steps, the 44pt hit area, the thumb growing under the finger.
 
 **Mac half.** The same view; the pointer drags it the same way. Not walked on the Mac.
+
+## §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amends §1537's last step; user, 2026-10-26, of "Swe" cut off at the line's edge: "fix it", "no scrolling", "we don't want to hand roll sizes", "you decide") — BUILT
+
+1. **The line's fits, in order (`MoveSentence.verbs`):** `heading24` at `s4`, then `s3`, then `ScaledToWidth` over the line at `s2` — the whole line drawn at its own size and scaled down as one piece from the leading edge, only where the phone is narrower than it. No rung of its own, no ladder of sizes: the verbs stay `heading24`. The `ScrollView` fallback is deleted: it showed the last verb cut ("Swe") with nothing saying more stood past the edge.
+2. **`ScaledToWidth` (`Design/ScaledToWidth.swift`)** is the template for any one-line row that must fit: its content measured before the scale (`onGeometryChange`; a scale does not change layout, so it never feeds back), the height held at the content's own.
+3. **Unchanged:** A–Z in the reader's language (§1547), Swap the verb Move opens on, the picked verb bright.
+
+**Mac half.** The Mac's wider column fits the first fit; no change there.
