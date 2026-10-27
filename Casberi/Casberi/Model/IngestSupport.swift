@@ -598,9 +598,18 @@ enum IngestSupport {
         // (`AlchemyBrake`, 2026-10-20).
         let braked = AlchemyBrake.brakes(host: request.url?.host)
         if braked { await AlchemyBrake.shared.waitForTurn() }
-        let answer: (Data, URLResponse)?
+        var answer: (Data, URLResponse)?
         if let tor {
             answer = await torData(for: request, isolation: tor)
+            // **THE ONE WAY AROUND A REFUSAL (0xBow's relayer, 2026-10-27).**
+            // A host listed `directWhenRefused`, with Tor up and every circuit
+            // refused, is read directly, counted so, and the move says so; no
+            // Tor is still an outage, never a direct read.
+            if answer == nil, TorRoute.fallsBack(host: request.url?.host()), TorClient.shared.isConnected {
+                NetworkLedger.shared.record(request, as: service, throughTor: false)
+                answer = try? await session.data(for: request)
+                if answer != nil, let host = request.url?.host() { TorFallback.shared.note(host) }
+            }
         } else {
             answer = try? await session.data(for: request)
         }

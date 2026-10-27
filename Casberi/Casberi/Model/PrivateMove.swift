@@ -74,6 +74,9 @@ final class PrivateMove {
     /// (its fee is gas, quoted in shares at today's price, prd §1563), and
     /// the pool's smallest deposit.
     private(set) var quotedFee: String?
+    /// The relayer was reached directly for this quote, Tor refused
+    /// (`TorFallback`): the foot says "not through Tor".
+    private(set) var relayerDirect = false
     private(set) var minimum: String?
     /// USDC on Ethereum (prd §1567): what your account holds, the pool's
     /// smallest deposit in USDC (read live), and the relayer's fee on a send.
@@ -288,7 +291,9 @@ final class PrivateMove {
         let pool = network.yieldPool(for: Self.eth)
         if mode == .send {
             await PrivateMoneyStore.shared.readYield()
+            let asked = Date()
             let quote: Quote = if let pool { await Self.relayerQuote(pool, network: network, to: recipient ?? account) } else { .noPool }
+            relayerDirect = URL(string: network.relayerUrl)?.host().map { TorFallback.shared.happened($0, since: asked) } ?? false
             if case .fee(let fee) = quote { quotedFee = fee } else { quotedFee = nil }
             if let usdcPool = network.yield.first(where: { !$0.native }),
                PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC") != "0" {

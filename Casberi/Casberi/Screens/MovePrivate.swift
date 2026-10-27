@@ -297,7 +297,8 @@ struct MovePrivateSentence<Head: View>: View {
         let fee: String? = move.symbol == "USDC"
             ? move.fee.map { String(localized: "\(PrivateMoney.figure($0, decimals: 6, symbol: "USDC")) relayer fee") }
             : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { String(localized: "\($0) ETH relayer fee") }
-        let parts = [fee, String(localized: "about a minute")]
+        // The relayer refused Tor and was asked directly (`TorFallback`).
+        let parts = [fee, String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
 

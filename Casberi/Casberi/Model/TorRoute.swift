@@ -58,6 +58,13 @@ enum TorRoute {
         return .tor(isolation: isolationKey(url: url, body: body, host: host))
     }
 
+    /// Whether `host` may be read directly once Tor refused it
+    /// (`NetworkReach.Endpoint.directWhenRefused`).
+    static func fallsBack(host: String?) -> Bool {
+        guard let host = host?.lowercased(), let endpoint = endpoint(forHost: host) else { return false }
+        return endpoint.directWhenRefused.contains { NetworkReach.matches(host: host, declared: $0) }
+    }
+
     /// The entry that owns `host`, longest declared host first — the
     /// receipts' own rule (`NetworkReach.service(forHost:)`).
     static func endpoint(forHost host: String) -> NetworkReach.Endpoint? {
@@ -77,5 +84,23 @@ enum TorRoute {
             return String(url[btc].dropFirst("/address/".count))
         }
         return host
+    }
+}
+
+/// When a host was last reached directly after Tor refused it, so the move
+/// that used it can say "not through Tor" (prd §1495's one fallback).
+final class TorFallback: @unchecked Sendable {
+    static let shared = TorFallback()
+    private let lock = NSLock()
+    private var at: [String: Date] = [:]
+
+    func note(_ host: String) {
+        lock.lock(); defer { lock.unlock() }
+        at[host.lowercased()] = Date()
+    }
+
+    func happened(_ host: String, since: Date) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return (at[host.lowercased()] ?? .distantPast) >= since
     }
 }

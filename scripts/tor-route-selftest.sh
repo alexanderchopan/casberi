@@ -39,6 +39,10 @@ fi
 if grep -rn -E 'readDirectly|Read without Tor|setDirect' Casberi/Casberi --include='*.swift' >/dev/null; then
     echo "✗ a way around Tor came back — wallet reads are never optional"; exit 1
 fi
+# The fallback asks Tor first, only with Tor up, and counts the direct read.
+use "$FUNNEL" 'if answer == nil, TorRoute.fallsBack(host: request.url?.host()), TorClient.shared.isConnected {' "the relayer's fallback no longer waits for Tor's refusal with Tor up"
+use "$FUNNEL" 'NetworkLedger.shared.record(request, as: service, throughTor: false)' "a direct read after Tor's refusal is not counted as one"
+use "Casberi/Casberi/Screens/MovePrivate.swift" 'move.relayerDirect ? String(localized: "not through Tor") : nil' "a private send reached directly no longer says it is not through Tor"
 echo "  ok   the funnel routes through the rule, never fails over, has no bypass, and counts what went through Tor"
 
 # Every move Relay carries says it left Tor (prd §1512): the foot reads one
@@ -111,6 +115,18 @@ for e in NetworkReach.endpoints where !e.refusesTor.isEmpty {
     for h in e.refusesTor {
         check(e.hosts.contains { NetworkReach.matches(host: h, declared: $0) || NetworkReach.matches(host: $0, declared: h) },
               "\(e.service)'s refusing host \(h) is one of its hosts")
+    }
+}
+// The one fallback: 0xBow's relayer alone may be read directly once Tor
+// refused it, and only a routed entry's own host may be listed so.
+check(TorRoute.fallsBack(host: "relayer-v2-prod-149184580131.us-east1.run.app"), "0xBow's relayer no longer falls back when Tor refuses it")
+check(!TorRoute.fallsBack(host: "api-v2.0xbow.io"), "0xBow's review service falls back around Tor")
+check(!TorRoute.fallsBack(host: "rpc.mevblocker.io"), "a node falls back around Tor")
+check(!TorRoute.fallsBack(host: "api.zerion.io"), "Zerion falls back around Tor")
+for e in NetworkReach.endpoints where !e.directWhenRefused.isEmpty {
+    check(e.throughTor, "\(e.service) falls back but is not routed")
+    for h in e.directWhenRefused {
+        check(e.hosts.contains { NetworkReach.matches(host: h, declared: $0) }, "\(e.service)'s fallback host \(h) is one of its hosts")
     }
 }
 for name in ["X notifications", "Instagram live", "TikTok live", "Spotify", "Gmail", "iCloud Mail",

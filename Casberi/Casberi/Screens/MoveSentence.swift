@@ -3205,7 +3205,10 @@ struct MoveSentence: View {
             }
             // Both keys sign this one (prd §1456): said before the tap, not
             // when the Signer's sheet rises.
-            if shownPreview?.route == .bothKeys, receipt == nil, !nothingToMove {
+            // Read off the preview's own co-signer (user: "it doesn't say your
+            // signer signs this too"): the limit's route missed an account
+            // that already needs both keys on this network.
+            if shownPreview?.signerSigns == true, receipt == nil, !nothingToMove {
                 Text("Your Signer signs this too")
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)

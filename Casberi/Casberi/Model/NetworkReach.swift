@@ -77,6 +77,11 @@ enum NetworkReach {
         /// ~18 exits, 2026-10-24), read directly and listed as such. A host
         /// leaves this list only on a new measurement.
         var refusesTor: [String] = []
+        /// Hosts read through Tor, and directly only when Tor is up and every
+        /// circuit was refused or stalled; the move says "not through Tor"
+        /// when it happened (`TorFallback`). 0xBow's relayer: Google's 403 to
+        /// 8 of 8 exits, 2026-10-27, while 0xBow looks into it.
+        var directWhenRefused: [String] = []
 
         var id: String { service }
 
@@ -469,7 +474,9 @@ enum NetworkReach {
                  throughTor: true,
                  // Tenderly refuses every Tor exit (the Railgun entry's
                  // measurement), so its log reads go direct and say so.
-                 refusesTor: ["sepolia.gateway.tenderly.co"]),
+                 refusesTor: ["sepolia.gateway.tenderly.co"],
+                 directWhenRefused: ["relayer-v2-prod-149184580131.us-east1.run.app",
+                                     "relayer-v2-staging-149184580131.us-east1.run.app"]),
         // The circuit files the engine proves with, each fetched once by its
         // IPFS CID and refused unless it hashes to its pin
         // (`PrivacyArtifacts`). Public files; the request names no one.

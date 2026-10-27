@@ -34,6 +34,9 @@ extension YourAccountChain {
         /// Why signing would be refused, in words: a fee the account cannot
         /// pay, a node that would not price it, no Signer over the limit.
         var refusal: String? = nil
+        /// Your Signer signs this too: both keys over the limit, or an
+        /// account that already needs both on this network (prd §1456).
+        var signerSigns = false
     }
 
     /// An operation built for a preview, kept for signing (prd §1509).
@@ -143,7 +146,8 @@ extension YourAccountChain {
             return Preview(network: net, route: route, feeWei: fee, nonce: op.nonce, checked: a.simulated.checked,
                            words: a.words, approvals: a.approvals, sold: a.sold, hash: YourAccountOp.safeOpHash(op, chainId: net.chainId),
                            hashKind: .eip712, callData: op.callData,
-                           refusal: await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed))
+                           refusal: await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed),
+                           signerSigns: coSigner != nil)
         } catch let failure as Failure {
             if let written { return empty(written, route: route, refusal: failure.message) }
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],

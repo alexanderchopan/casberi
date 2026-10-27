@@ -177,6 +177,13 @@ final class TorClient: @unchecked Sendable {
         TorStatus.publish(.failed)
     }
 
+    /// Tor is up with a port: a request it could not carry was refused or
+    /// stalled, not an outage.
+    var isConnected: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return connected && socksPort != nil
+    }
+
     private func running() -> Bool {
         lock.lock(); defer { lock.unlock() }
         return started
