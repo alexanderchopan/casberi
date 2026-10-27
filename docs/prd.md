@@ -69159,3 +69159,18 @@ Mock: the design canvas "Private money with 0xBow".
 10. **Not done.** Nothing was signed or sent on mainnet. iOS's real background cadence is still unmeasured (§1562 item 10), so a move out while the app is closed resolves on the next look.
 
 **Mac half (§1402).** The same code; Catalyst compiles. Not run on the Mac.
+
+## §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider leaves `eth_getLogs` unverified and outside Tor (keeps §1540, §1544) (user, 2026-10-27: "how would we use kohaku", then "doesn't seem ready for us", and "yes" to recording it) — RULED, nothing built
+
+**What was read.** `github.com/ethereum/kohaku` at its 2026-10-27 head ("Version Packages (alpha)", #357), MIT, every package alpha and unaudited by its own README. Read in a scratch clone; nothing entered the repo.
+
+1. **`@kohaku-eth/privacy-pools` (0.1.0-alpha.32) is Privacy Pools v1.** Its config names the v1 Entrypoints (mainnet `0x6818809E…`, Sepolia `0x34A20681…`) and the v1 circuits (`@fatsolutions/privacy-pools-core-circuits`); its `v2` export is types only. §1540 chose v2 and §1544 runs 0xBow's v2 SDK, so it replaces nothing.
+2. **`@kohaku-eth/railgun` is a placeholder** ("Do not depend on this stub"). The Railgun room's reads are unchanged.
+3. **`@kohaku-eth/tornado-cash` is not used.** §1540 chose the pool with an approval service; Tornado is the one without.
+4. **`@kohaku-eth/provider`'s Helios adapter is the part that would help, and is not ready.** A light client checks a node's answers against consensus, which Tor (§1495) does not. But the adapter sends `eth_getLogs` around Helios, unverified, with the page's own `fetch`: in the engine's web view that call would bypass `net.js` and Tor, and note discovery is where Privacy Pools reads logs. Helios covers Ethereum and OP Stack chains, not Robinhood Chain or World Chain.
+5. **`pq-account`** (post-quantum ERC-4337, ML-DSA with ECDSA) is demo pages. Your account (4337/7579 under Face ID) is unchanged.
+6. **Kept as reference, not code:** the host boundary in `@kohaku-eth/plugins` (a plugin asks the host for network, storage, keys and the chain; all non-RPC traffic goes through `network.fetch`) matches §1544's three doors; the v1 withdrawal paymaster (a throwaway sender delegated through EIP-7702 to Simple7702, the fee taken from the token moved) is prior art for §1541 item 3.
+
+**When to look again.** Either of two changes: Kohaku ships a working v2 Privacy Pools plugin, or Helios verifies `eth_getLogs` and its adapter routes every request through the host's network.
+
+**Mac half (§1402).** None: nothing is drawn.
