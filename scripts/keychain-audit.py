@@ -63,6 +63,14 @@ KNOWN_EXEMPT: dict[str, str] = {
     # app id's shared group so the Mac reads it, and every signature asks for
     # the device owner first. It only ever moves the account to a new key.
     "YourAccountRecovery.swift": "the recovery key syncs through iCloud Keychain by ruling (prd §1421, §1427)",
+    # The private money root (prd §1562): the private account's seed, its
+    # owner and the fresh addresses are derived from it, so its whole job is
+    # to be on the person's next iPhone — losing the phone must not lose the
+    # private balance or what waits at a fresh address. Stored as the
+    # recovery key is: synchronizable through iCloud Keychain (end-to-end
+    # encrypted), AfterFirstUnlock, in the app id's shared group; spending
+    # asks for the device owner first.
+    "PrivateRootKey.swift": "the private money root syncs through iCloud Keychain so a new phone gets private money back (prd §1562)",
 }
 
 # Files that write BOTH kinds by a stated rule (prd §1162, user 2026-10-07:

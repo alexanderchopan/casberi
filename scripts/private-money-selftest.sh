@@ -37,9 +37,10 @@ MOVE="Casberi/Casberi/Model/PrivateMove.swift"
 SENDER="Casberi/Casberi/Model/PrivacyTestnetSender.swift"
 ENGINE="Casberi/Casberi/Model/PrivacyEngine.swift"
 FRESH="Casberi/Casberi/Model/FreshAddress.swift"
+ROOT="Casberi/Casberi/Model/PrivateRoot.swift"
 ENGJS="tools/privacy-pools-engine/src/engine.js"
 BUNDLE="Casberi/Casberi/Resources/privacy-engine.js"
-for f in "$PM" "$TX" "$FRESH" "$KECCAK" "$WIRE" "$ART" "$PINS" "$REACH" "$STORE" "$MOVE" "$SENDER" "$ENGINE" "$ENGJS" "$BUNDLE"; do
+for f in "$PM" "$TX" "$FRESH" "$ROOT" "$KECCAK" "$WIRE" "$ART" "$PINS" "$REACH" "$STORE" "$MOVE" "$SENDER" "$ENGINE" "$ENGJS" "$BUNDLE"; do
     [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 echo "private-money self-test"
@@ -53,11 +54,54 @@ use "$WIRE" 'fromBlock: 10_932_354)' "Sepolia's first block is no longer the key
 use "$ENGJS" 'labelHash: await labelHashOf(r.pendingNote.label),' "the engine no longer returns a deposit's label hash"
 use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with tools/privacy-pools-engine/build.mjs"
 [[ $(head -1 "$SENDER") == "#if DEBUG" && $(tail -1 "$SENDER") == "#endif" ]] || { echo "✗ the testnet sender is not DEBUG-only"; exit 1; }
-use "$SENDER" 'kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,' "the testnet sender's key is not device-only"
-use "$SENDER" 'kSecAttrSynchronizable as String: false,' "the testnet sender's key may sync"
+! grep -q "SecItemAdd" "$SENDER" || { echo "✗ the testnet sender makes a device-only key again (prd §1562: it is the root's owner)"; exit 1; }
+use "$SENDER" "return try PrivateAccount.ownerAddress(try PrivateRootKey.ensure())" "the testnet sender is no longer the private root's owner"
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId,' "the sender no longer builds through TestnetTx's testnet guard"
 awk '/static var available: Bool/,/^    }$/' "$MOVE" | grep -q '#else' || { echo "✗ Move to private is no longer DEBUG-only"; exit 1; }
-echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only device-only sender"
+echo "  ok   asked by hash, routed before sent, the keystore's first block, a DEBUG-only sender owned by the root"
+
+# One root for private money (prd §1562): in iCloud Keychain, synchronizable,
+# AfterFirstUnlock, in the app id's shared group, each root its own item (a
+# new phone's root never overwrites the old one); the seed, the owner and the
+# fresh addresses derived from it; spending asks for the device owner, money
+# moving IN does not; a new phone finds the notes and walks the addresses
+# back; the device-only account's money is withdrawn to a fresh address of
+# the root; the background watch goes through Tor or asks nothing.
+RKEY="Casberi/Casberi/Model/PrivateRootKey.swift"
+RACC="Casberi/Casberi/Model/PrivateAccount.swift"
+WATCH="Casberi/Casberi/Model/PrivateWatch.swift"
+SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
+FRESHM="Casberi/Casberi/Model/FreshReceive.swift"
+for f in "$RKEY" "$RACC" "$WATCH" "$SEC"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
+use "$RKEY" 'kSecAttrSynchronizable as String: true,' "the private root no longer syncs through iCloud Keychain"
+use "$RKEY" 'add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock' "the private root is not readable after first unlock (a synced item cannot be device-only)"
+use "$RKEY" 'add[kSecAttrAccessGroup as String] = TokenVault.sharedAccessGroup' "the private root is not in the app id's shared group"
+use "$RKEY" 'var add = query("root-" + id)' "a root is no longer its own item, named by its id"
+! grep -qE 'SecItemUpdate|SecItemDelete' "$RKEY" || { echo "✗ the private root can be overwritten or deleted"; exit 1; }
+use "$RKEY" '.sorted { $0.made < $1.made }' "new money no longer goes to the oldest root"
+use "$RACC" 'guard let derived = PrivateRoot.derive(root, .poolSeed) else' "the private account's seed no longer comes from the root"
+use "$RACC" 'if let reason { try await PrivateRootKey.unlock(reason: reason) }' "opening to spend no longer asks for the device owner"
+use "$MOVE" 'try await PrivateAccount.open(account, reason: String(localized: "Send from your private balance"))' "a private send no longer asks for the device owner"
+use "$MOVE" 'let account = try PrivateRootKey.ensure()' "a deposit no longer goes to the root's account"
+use "$FRESHM" 'try await PrivateAccount.open(account, reason: nil)' "a fresh move asks for you (it cannot run in the background)"
+use "$FRESHM" 'while let batch = PrivateRoot.nextBatch(seen) {' "a new phone no longer walks the fresh addresses back"
+use "$FRESHM" 'async let nonce = PrivacyTestnetSender.rpc("eth_getTransactionCount", [address, "latest"])' "the walk no longer asks whether an address moved"
+use "$WATCH" 'store.reconcile(found, root: root)' "a new phone no longer keeps the notes it found"
+use "$WATCH" 'await store.fillLabelHashes()' "a note found again is never asked about its approval"
+use "$WATCH" 'let spend = try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to.address)' "the device-only account's money is no longer withdrawn"
+use "$WATCH" 'guard let to = FreshReceive.shared.unusedCurrent() else' "the device-only account's money no longer goes to an unused fresh address of the root"
+use "$WATCH" 'guard isReady(TorStatus.shared.state) else {' "the background watch no longer waits for Tor"
+awk '/guard isReady\(TorStatus.shared.state\) else \{/,/^            \}$/' "$WATCH" | grep -q 'return false' || { echo "✗ the background watch asks something without Tor"; exit 1; }
+use "$WATCH" 'await WalletBackgroundRefresh.runNotifySweep()' "the background watch tells through something other than the Wallet's one pass"
+! grep -q 'UNUserNotificationCenter\|Notifications.submit' "$WATCH" || { echo "✗ the private watch notifies on its own"; exit 1; }
+use "Casberi/Casberi/Info.plist" '<string>com.casberi.app.privatewatch</string>' "the watch's identifier is not permitted in Info.plist"
+use "Casberi/Casberi/CasberiApp.swift" 'PrivateWatchTask.register()' "the watch is not registered at launch"
+use "Casberi/Casberi/Shell/RootShell.swift" 'PrivateWatchTask.schedule()' "the watch is never scheduled"
+use "Casberi/Casberi/Shell/ProbeHooks.swift" 'Hook(key: "backgroundRefreshProbe")' "the watch has no probe"
+use "$SEC" 'if privateBackup != .fine {' "Security draws the private balance's row when nothing needs you"
+use "$SEC" 'value: String(localized: "Not backed up"),' "the private balance's row lost its state word"
+use "$SEC" 'tone: DS.attentionInk, verb: privateBackupVerb)' "the private balance's state is not amber, or has no fix"
+echo "  ok   one root in iCloud Keychain: the seed, the owner and the fresh addresses from it, found again, the watch through Tor"
 
 # Private is Send's, never a verb (prd §1554): "Your private balance" leads
 # Send's recipients, the Private switch stands under Send's sentence (off, and
@@ -119,15 +163,15 @@ use "$FRESHM" 'let deposit = try await engine.prepareDeposit(tokenId: PrivateMov
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
 use "$FRESHM" 'FreshAddress.matches(to: deposit.tx.to, value: deposit.tx.value, plan: plan, entrypoint: network.entrypoint)' "a fresh move is no longer checked against its plan"
 use "$FRESHM" 'guard estimate > 0, estimate <= FreshAddress.gasBudget else' "a fresh move is no longer held to its gas budget"
-use "$FRESHM" 'key: try FreshAddressKey.key(entry.index), from: entry.address,' "a fresh move is no longer signed by the fresh address itself"
+use "$FRESHM" 'key: try FreshAddressKey.key(entry.index, root: entry.root), from: entry.address,' "a fresh move is no longer signed by the fresh address itself"
 use "$FRESHM" 'gas: FreshAddress.gasBudget, tip: fees.tip, maxFee: fees.maxFee)' "a fresh move no longer sends at the fees it was planned with"
 use "$FRESHM" 'if case .failed = entry.state, !force { continue }' "a failed fresh move asks Face ID every 15 s"
 use "$SENDER" 'guard let tx = TestnetTx.Tx(chainId: network.chainId, nonce: nonce,' "a fresh key no longer signs through TestnetTx's testnet guard"
 [[ $(head -1 "$FRESHK") == "#if DEBUG" && $(tail -1 "$FRESHK") == "#endif" ]] || { echo "✗ the fresh addresses' root is not DEBUG-only"; exit 1; }
-use "$FRESHK" 'kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,' "the fresh addresses' root is not device-only"
-use "$FRESHK" 'kSecAttrSynchronizable as String: false,' "the fresh addresses' root may sync"
+! grep -q "SecItemAdd" "$FRESHK" || { echo "✗ the fresh addresses make a device-only root again (prd §1562)"; exit 1; }
+use "$FRESHK" "guard let fresh = PrivateRoot.derive(privateRoot, .freshAddresses) else" "the fresh addresses no longer come from the private root"
 use "$HOLD" 'await FreshReceive.shared.check(context: modelContext)' "Holdings no longer looks at the fresh addresses"
-echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, a device-only root"
+echo "  ok   a fresh address: Receive's switch, its tail and code, your own deposit sent from it, its root the private root"
 echo "  ok   private money counts once: in the total and the box, never in Tokens"
 
 TMP=$(mktemp -d /tmp/private-money-selftest.XXXXXX)
@@ -304,16 +348,64 @@ check(F.assetConfig("0x" + w("0") + w("1") + w("0") + w("0"))?.enabled == false,
 check(F.assetConfig("0x" + w("1") + w("1")) == nil && F.assetConfig("nope") == nil, "a short answer is no terms")
 check(TestnetTx.fees(gasPrice: 21, tip: 0) == (1, 43) && TestnetTx.fees(gasPrice: 21, tip: 5) == (5, 47), "the fee cap leaves the price room to double")
 
+// One root (prd §1562), every derivation against Node's crypto.hkdfSync
+// (salt "casberi private money root v1"; scratch vec.mjs in the PRD entry).
+typealias R = PrivateRoot
+check(hexs(R.derive(root, .poolSeed)) == "87ded0d942e85e131c31c1f6c7c5d4940c55f1c421194b782e0ae77a2a33cc0c", "the pool seed is Node's HKDF")
+check(hexs(R.derive(root, .freshAddresses)) == "ebfe5265a0746feed62a0421eeaf78063178350a8505bc35c12fda60f8961a41", "the fresh root is Node's HKDF")
+check(hexs(R.ownerKey(root)) == "b7bcb8cdd801a5cf9a96288b02f1a97e23092fe06a0a1de4db0d513d4a41c437", "the owner's key is Node's HKDF, counter 0")
+check(R.id(root) == "1690d3193e46c034", "the root's public id is Node's SHA-256")
+let freshRoot = R.derive(root, .freshAddresses) ?? []
+check(hexs(F.key(root: freshRoot, index: 0)) == "366ef074fb49a96e1924bf68ff0d069cf717d8317a84c7c2ca5480f3398ca327", "fresh address 0 under the root is Node's")
+check(hexs(F.key(root: freshRoot, index: 1)) == "5801f562b6383af432e1b3ffef89f239f4bfe7411b9eeb1a1a479810684209d2", "fresh address 1 under the root is Node's")
+check(Set(R.Purpose.allCases.compactMap { R.derive(root, $0).map(hexs) }).count == R.Purpose.allCases.count, "each use takes its own bytes")
+check(R.derive(Array(root.prefix(31)), .poolSeed) == nil && R.id([1, 2]) == nil && R.ownerKey([]) == nil, "a root that is not 32 bytes derives nothing")
+check(R.derive(root, .poolSeed) != root && R.id(root) != hexs(Array(root.prefix(8))), "nothing derived is the root")
+// Each root counts its own addresses; an entry's id names its root.
+let mixed = [entry(0), entry(1), F.Entry(index: 0, address: "0xa", made: t0, state: .waiting, root: "r1"),
+             F.Entry(index: 4, address: "0xb", made: t0, state: .waiting, root: "r1")]
+check(F.nextIndex(mixed) == 2 && F.nextIndex(mixed, root: "r1") == 5 && F.nextIndex(mixed, root: "r2") == 0, "each root counts its own addresses")
+check(Set(mixed.map(\.id)).count == 4 && mixed[2].id == "r1:0" && mixed[0].id == "legacy:0", "an entry's id names its root")
+// The walk back: twenty unused past the last used, then done.
+func seen(_ i: UInt32, _ b: String = "0", _ n: Int = 0) -> R.Seen { .init(index: i, balance: b, nonce: n) }
+check(R.nextBatch([]) == 0...19, "a new phone asks 0 to 19 first")
+check(R.nextBatch((0...19).map { seen($0) }) == nil, "twenty unused: done")
+let walk1 = (0...19).map { $0 == 3 ? seen(3, "0", 1) : seen($0) }
+check(R.nextBatch(walk1) == 20...23, "a used address at 3 asks to 23 (\(String(describing: R.nextBatch(walk1))))")
+check(R.nextBatch(walk1 + (20...23).map { seen($0) }) == nil, "and then is done")
+check(R.nextBatch((0...19).map { $0 == 19 ? seen(19, "5") : seen($0) }) == 20...39, "a payment at 19 asks twenty more")
+let book1 = R.restored((0...23).map { $0 == 3 ? seen(3, "37260729", 1) : $0 == 1 ? seen(1, "40000000000000") : seen($0) })
+check(book1.map(\.index) == [0, 1, 2, 3, 4], "the book: every address to the last used, and one more (\(book1.map(\.index)))")
+check(book1[1].state == .waiting, "paid and never moved: waiting, so the watch moves it")
+check(book1[3].state == .moved(amount: "0", tx: ""), "moved before: its dust never says too little")
+check(book1[4].state == .waiting && book1[0].state == .waiting, "the next never used is the one Receive shows")
+check(R.restored((0...19).map { seen($0) }).map(\.index) == [0], "nothing used: address 0 alone")
+check(seen(0, "1").used && seen(0, "0", 1).used && !seen(0).used, "used is paid or moved")
+// The device-only account's money, moved in.
+check(R.migrationAmount(spendable: "89999937500000", terms: P.measuredTerms) == "89909937541500", "the balance less the relayer's fee on all of it (\(String(describing: R.migrationAmount(spendable: "89999937500000", terms: P.measuredTerms))))")
+check(R.migrationAmount(spendable: "42000", terms: P.measuredTerms) == nil, "a balance the fee would mostly eat stays")
+check(R.migrationAmount(spendable: "0", terms: P.measuredTerms) == nil, "nothing, nothing")
+// What needs you on Security.
+check(R.backup(holdsPrivate: false, deviceOnlyHolds: true, iCloud: false) == .fine, "nothing private: no row")
+check(R.backup(holdsPrivate: true, deviceOnlyHolds: true, iCloud: true) == .deviceOnly, "money on the device-only account: Back up")
+check(R.backup(holdsPrivate: true, deviceOnlyHolds: false, iCloud: false) == .noICloud, "no iCloud account: on this phone only")
+check(R.backup(holdsPrivate: true, deviceOnlyHolds: false, iCloud: true) == .fine, "under the root, on iCloud: no row")
+// One send spends from one account.
+var r1n = note("r", "5000000000000000", .approved); r1n.root = "r1"
+let byAccount = P.spendableByAccount(notes + [r1n], chainId: 11155111)
+check(byAccount.count == 2 && byAccount.first { $0.root == nil }?.amount == "4000000000000000"
+      && byAccount.first { $0.root == "r1" }?.amount == "5000000000000000", "approved money by account (\(byAccount))")
+
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
 SWIFT
 
 compile_and_run() {
-    swiftc -Onone "$1" "$2" "$3" "$4" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
+    swiftc -Onone "$1" "$2" "$3" "$4" "$5" "$KECCAK" "$ART" "$PINS" "$REACH" "$TMP/main.swift" -o "$TMP/run" 2>"$TMP/err" \
         || { head -20 "$TMP/err"; return 2; }
     "$TMP/run"
 }
-compile_and_run "$PM" "$TX" "$WIRE" "$FRESH" || { echo "✗ Move to private's rules fail their own self-test"; exit 1; }
+compile_and_run "$PM" "$TX" "$WIRE" "$FRESH" "$ROOT" || { echo "✗ Move to private's rules fail their own self-test"; exit 1; }
 echo "  ok   the ASP's answer, the rows, amounts, viem's bytes and the node routes"
 
 mutate() {
@@ -321,15 +413,16 @@ mutate() {
     cp "$file" "$TMP/mut.swift"
     perl -0pi -e "$perl_expr" "$TMP/mut.swift"
     if cmp -s "$file" "$TMP/mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
-    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH"
+    local pm="$PM" tx="$TX" wire="$WIRE" fresh="$FRESH" root="$ROOT"
     case "$file" in
         "$PM") pm="$TMP/mut.swift" ;;
         "$TX") tx="$TMP/mut.swift" ;;
         "$WIRE") wire="$TMP/mut.swift" ;;
         "$FRESH") fresh="$TMP/mut.swift" ;;
+        "$ROOT") root="$TMP/mut.swift" ;;
     esac
     local ok
-    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" >/dev/null 2>&1 && echo y || echo n)
+    ok=$(compile_and_run "$pm" "$tx" "$wire" "$fresh" "$root" >/dev/null 2>&1 && echo y || echo n)
     [[ "$ok" == n ]] || { echo "✗ SURVIVED  $name"; exit 1; }
     echo "  ok   catches  $name"
 }
@@ -352,7 +445,7 @@ mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current 
 mutate "the fee cap forgets the price can double" "$TX" 's/max\(gasPrice \* 2, t\) \+ t/max(gasPrice, t) + t/'
 mutate "the fresh key ignores its index" "$FRESH" 's/let message = domain \+ bigEndian\(index\) \+ bigEndian\(counter\)/let message = domain + bigEndian(counter)/'
 mutate "a fresh key may be n or more" "$FRESH" 's/ && k\.lexicographicallyPrecedes\(curveOrder\)//'
-mutate "a fresh address is reused" "$FRESH" 's/entries\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/entries.map(\\.index).max()/'
+mutate "a fresh address is reused" "$FRESH" 's/\}\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/}.map(\\.index).max()/'
 mutate "a move under way is asked again" "$FRESH" 's/entries\.filter \{ if case \.moving = \$0\.state \{ false \} else \{ true \} \}/entries/'
 mutate "the gas is not taken out of what arrived" "$FRESH" 's/let spare = have - reserve/let spare = have/'
 mutate "the vetting fee is not left room for" "$FRESH" 's/Decimal\(10_000 \+ vettingBPS\)/Decimal(10_000)/'
@@ -360,4 +453,16 @@ mutate "gas may cost more than what moves" "$FRESH" 's/value >= max\(floor, rese
 mutate "a move's dust says too little" "$FRESH" 's/        default: return \.nothing\n        \}\n    \}/        default: return .tooLittle\n        }\n    }/'
 mutate "the prepared deposit is not checked against the plan" "$FRESH" 's/ && PrivateMoney\.decimal\(hex: value\) == plan\.msgValue//'
 mutate "the vetting fee is read from the wrong word" "$FRESH" 's/guard let bps = Int\(word\(2\)\)/guard let bps = Int(word(1))/'
-echo "  ok   27 mutations"
+mutate "the root's salt changes" "$ROOT" 's/static let salt = Array\("casberi private money root v1"/static let salt = Array("casberi private money root v2"/'
+mutate "the pool seed and the fresh root share their bytes" "$ROOT" 's/case freshAddresses = "fresh addresses"/case freshAddresses = "privacy pools seed "/'
+mutate "the owner's counter is not in its info" "$ROOT" 's/if let counter \{ info \+=/if let counter, counter > 99 { info +=/'
+mutate "the owner takes the fresh root's bytes" "$ROOT" 's/derive\(root, \.testnetOwner, counter: counter\)/derive(root, .freshAddresses)/'
+mutate "the id is the root's own bytes" "$ROOT" 's/let digest = SHA256\.hash\(data: Array\("casberi private root id v1"\.utf8\) \+ root\)/let digest = root/'
+mutate "the walk stops one short of the gap" "$ROOT" 's/let end = lastUsed\.map \{ \$0 \+ gap \} \?\? \(gap - 1\)/let end = lastUsed.map { $0 + gap - 1 } ?? (gap - 1)/'
+mutate "a moved address is waiting again" "$ROOT" 's/guard let s = byIndex\[i\], s\.nonce > 0 else/guard let s = byIndex[i], s.nonce > 99 else/'
+mutate "Receive shows a used address" "$ROOT" 's/        out\.append\(\(last \+ 1, \.waiting\)\)\n//'
+mutate "the migration forgets the relayer's fee" "$ROOT" 's/let amount = held - fee\n/let amount = held\n/'
+mutate "money on the device-only account needs nothing" "$ROOT" 's/if deviceOnlyHolds \{ return \.deviceOnly \}/if deviceOnlyHolds, !iCloud { return .deviceOnly }/'
+mutate "one send spends two accounts" "$PM" 's/spendable\(notes\.filter \{ \$0\.root == r \}, chainId: chainId, symbol: symbol\)/spendable(notes, chainId: chainId, symbol: symbol)/'
+mutate "each root shares one count" "$FRESH" 's/entries\.filter \{ \$0\.root == root \}\.map/entries.map/'
+echo "  ok   39 mutations"

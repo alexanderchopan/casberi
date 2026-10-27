@@ -18,8 +18,12 @@ import Security
 /// gone if Face ID is re-enrolled (`.biometryCurrentSet`), as
 /// `AztecSignerKey` and `SignerKey` are. Every read asks for Face ID.
 ///
-/// **No recovery yet.** Losing this seed loses what it holds privately;
-/// rotation and recovery are later steps. Testnet only until then.
+/// **The device-only account (prd §1562).** Since the private root, no
+/// product flow makes this seed: the private account's seed is derived from
+/// the root in iCloud Keychain (`PrivateRoot`, `PrivateAccount`). A phone
+/// that made this one before keeps reading its notes, and Move › Security's
+/// Back up withdraws what it holds into the root's account
+/// (`PrivateMigration`). Losing this seed loses what it still holds.
 enum PrivacyPoolsKey {
 
     private static let service = "com.casberi.app.privacypools.seed"

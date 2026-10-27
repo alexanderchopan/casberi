@@ -70,7 +70,10 @@ enum FreshAddress {
         let address: String
         let made: Date
         var state: State
-        var id: UInt32 { index }
+        /// The private root it comes from (`PrivateRoot.id`, prd §1562); nil
+        /// for the device-only root an address made before it came from.
+        var root: String? = nil
+        var id: String { "\(root ?? PrivateRoot.legacy):\(index)" }
     }
 
     enum State: Codable, Equatable {
@@ -86,9 +89,10 @@ enum FreshAddress {
         case failed(amount: String)
     }
 
-    /// The next address's index: one past the highest, so none is reused.
-    static func nextIndex(_ entries: [Entry]) -> UInt32 {
-        entries.map(\.index).max().map { $0 + 1 } ?? 0
+    /// The next address's index under `root`: one past its highest, so none
+    /// is reused. Each root counts its own.
+    static func nextIndex(_ entries: [Entry], root: String? = nil) -> UInt32 {
+        entries.filter { $0.root == root }.map(\.index).max().map { $0 + 1 } ?? 0
     }
 
     /// The addresses asked about on each look: the newest few, but never one
@@ -98,7 +102,7 @@ enum FreshAddress {
 
     static func watched(_ entries: [Entry]) -> [Entry] {
         Array(entries.filter { if case .moving = $0.state { false } else { true } }
-            .sorted { $0.index > $1.index }
+            .sorted { ($0.made, $0.index) > ($1.made, $1.index) }
             .prefix(watchCap))
     }
 

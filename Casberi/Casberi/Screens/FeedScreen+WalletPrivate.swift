@@ -28,6 +28,13 @@ extension FeedScreen {
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
+                        #if DEBUG
+                        // A new phone finds its private money again here
+                        // (prd §1562): each root's notes from the pool, its
+                        // fresh addresses walked back. Once per root.
+                        await PrivateWatch.restoreNotes()
+                        await FreshReceive.shared.restore()
+                        #endif
                         // What a fresh address was paid moves in from here
                         // too (prd §1560): its row appears as "moving in".
                         await FreshReceive.shared.check(context: modelContext)

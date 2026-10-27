@@ -4198,6 +4198,45 @@ enum ProbeHooks {
             FreshReceive.shared.forget()
             NSLog("freshAddress| forgotten")
         },
+        // `-backgroundRefreshProbe YES` — the private watch's background body
+        // (prd §1562) run now, in the foreground, with the background's 25 s
+        // budget; logs `privateWatch|` lines (`Model/PrivateWatch.swift`).
+        // A number in place of YES is the budget in seconds (a pass long
+        // enough for Tor's cold start, to see a new phone's restore whole).
+        Hook(key: "backgroundRefreshProbe") { raw, context in
+            Task { @MainActor in
+                let budget = Double(raw).map { max($0, 5) } ?? PrivateWatchTask.budget
+                let ok = await PrivateWatch.run(context: context, budget: budget, why: "probe")
+                NSLog("privateWatch| probe | %@", ok ? "did its work" : "could not")
+                PrivateWatch.logState()
+            }
+        },
+        // `-privateRecoveryProbe YES` — what this phone holds of private money
+        // (prd §1562): each root by its public id (never its bytes), its
+        // owner, the notes by account and the fresh book by root.
+        Hook(key: "privateRecoveryProbe") { _, _ in
+            Task { @MainActor in PrivateWatch.logState() }
+        },
+        // `-privateMigrate YES` — Move › Security's Back up: the device-only
+        // account's approved balance withdrawn to a fresh address of the
+        // root, then moved in by the watch (prd §1562). Logs `privateMigrate|`.
+        Hook(key: "privateMigrate") { _, context in
+            Task { @MainActor in
+                let outcome = await PrivateMigration.run(context: context)
+                NSLog("privateMigrate| outcome | %@", String(describing: outcome))
+            }
+        },
+        // `-privateForgetLocal YES` — the proof of recovery (prd §1562): this
+        // phone forgets what it kept about the roots' notes and fresh
+        // addresses (UserDefaults only). The device-only account's records and
+        // every Keychain item stay; the next pass rebuilds the rest from the
+        // root alone, as a new phone would.
+        Hook(key: "privateForgetLocal") { _, _ in
+            PrivateMoneyStore.shared.forgetRootNotes()
+            FreshReceive.shared.forgetRootBook()
+            PrivateRootKey.forgetFound()
+            NSLog("privateRoot| forgot this phone's records of the roots' notes and addresses")
+        },
         // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
         // connect time, then Relay's `/chains` over Tor and directly: Relay
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof

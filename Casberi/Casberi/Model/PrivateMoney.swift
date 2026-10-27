@@ -39,7 +39,17 @@ enum PrivateMoney {
         let tx: String
         let at: Date
         var status: Status
+        /// The private root whose account holds it (`PrivateRoot.id`, prd
+        /// §1562); nil for the device-only account notes were made in before.
+        var root: String? = nil
         var id: String { commitment }
+    }
+
+    /// What one account holds approved on `chainId`, by account: a private
+    /// send spends from one account (one withdrawal cannot join two).
+    static func spendableByAccount(_ notes: [Note], chainId: Int, symbol: String = "ETH") -> [(root: String?, amount: String)] {
+        let roots = notes.map(\.root).reduce(into: [String?]()) { if !$0.contains($1) { $0.append($1) } }
+        return roots.map { r in (r, spendable(notes.filter { $0.root == r }, chainId: chainId, symbol: symbol)) }
     }
 
     /// The ASP's answer, or nil when it is not one (a page, an error): an

@@ -54,31 +54,76 @@ final class PrivateMoneyStore {
                            label: String(localized: "Private"))] : []
     }
 
-    /// The approved private money on `chainId`, base units: what a send
-    /// with the Private switch on can spend.
-    func spendable(chainId: Int) -> String { PrivateMoney.spendable(notes, chainId: chainId) }
+    /// The approved private money on `chainId` one send can spend, base
+    /// units: the most any one account holds (prd §1562: a withdrawal spends
+    /// from one account).
+    func spendable(chainId: Int) -> String {
+        PrivateMoney.spendableByAccount(notes, chainId: chainId)
+            .compactMap { Decimal(string: $0.amount) }.max().map(PrivateMoney.plain) ?? "0"
+    }
 
-    /// The notes as the pool holds them (`PrivacyEngine.discover`): an
-    /// unspent note is kept with the approval it had (a new one, change from a
-    /// spend, keeps its deposit's label and so its approval); a note the pool
-    /// no longer holds unspent is gone, unless it was made in the last ten
-    /// minutes and the pool has not indexed it yet.
-    func reconcile(_ found: PrivacyEngineWire.Discovered) {
-        let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0.status) }, uniquingKeysWith: { a, _ in a })
+    /// The account a send of `value` (base units) and its relayer's fee
+    /// spends from: the current root's when it covers it, else any other
+    /// that does (`PrivateRoot.legacy` for the device-only one).
+    func account(toSpend value: String, fee: String, chainId: Int) -> String? {
+        guard let need = Decimal(string: value).map({ $0 + (Decimal(string: fee) ?? 0) }) else { return nil }
+        let held = PrivateMoney.spendableByAccount(notes, chainId: chainId)
+            .filter { (Decimal(string: $0.amount) ?? 0) >= need }.map(\.root)
+        let current = PrivateRootKey.currentID
+        if let current, held.contains(current) { return current }
+        return held.first.map { $0 ?? PrivateRoot.legacy }
+    }
+
+    /// The notes of one account as the pool holds them (`PrivacyEngine.discover`;
+    /// `root` nil for the device-only account): an unspent note is kept with
+    /// the approval it had (a new one, change from a spend, keeps its
+    /// deposit's label and so its approval); a note the pool no longer holds
+    /// unspent is gone, unless it was made in the last ten minutes and the
+    /// pool has not indexed it yet. Other accounts' notes stand as they are.
+    /// A note found on a new phone has no label hash yet: `fillLabelHashes`.
+    func reconcile(_ found: PrivacyEngineWire.Discovered, root: String? = nil) {
+        let mine = notes.filter { $0.root == root }
+        let byLabel = Dictionary(notes.map { ($0.label.lowercased(), $0) }, uniquingKeysWith: { a, _ in a })
         let unspent = found.notes.filter { $0.status.uppercased() == "ACTIVE" && $0.tokenId.lowercased() == PrivateMove.eth.lowercased() }
         var next: [PrivateMoney.Note] = unspent.map { n in
-            let had = notes.first { $0.commitment.lowercased() == n.commitment.lowercased() }
-            return .init(commitment: n.commitment, label: n.label, labelHash: had?.labelHash ?? "",
+            let had = mine.first { $0.commitment.lowercased() == n.commitment.lowercased() }
+            let sameLabel = byLabel[n.label.lowercased()]
+            return .init(commitment: n.commitment, label: n.label, labelHash: had?.labelHash ?? sameLabel?.labelHash ?? "",
                          symbol: "ETH", amount: PrivateMoney.decimal(hex: n.value), decimals: 18,
                          chainId: PrivacyNetwork.sepolia.chainId, tx: had?.tx ?? "", at: had?.at ?? Date(),
-                         status: had?.status ?? byLabel[n.label.lowercased()] ?? .waiting)
+                         status: had?.status ?? sameLabel?.status ?? .waiting, root: root)
         }
         let recent = Date().addingTimeInterval(-600)
-        next += notes.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
-        notes = next
+        next += mine.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
+        notes = notes.filter { $0.root != root } + next
         save()
-        NSLog("privateMoney| reconciled | %d notes | spendable %@", notes.count, spendable(chainId: PrivacyNetwork.sepolia.chainId))
+        NSLog("privateMoney| reconciled | %@ | %d notes | spendable %@", root ?? PrivateRoot.legacy, next.count,
+              PrivateMoney.spendable(next, chainId: PrivacyNetwork.sepolia.chainId))
     }
+
+    /// The ASP files a deposit under Poseidon(label): a note found again on
+    /// a new phone gets its hash from the engine (no account need be open),
+    /// so its approval can be asked.
+    func fillLabelHashes() async {
+        for note in notes where note.labelHash.isEmpty {
+            guard let hash = try? await PrivacyEngine.shared.labelHash(note.label),
+                  let i = notes.firstIndex(where: { $0.commitment == note.commitment }) else { continue }
+            let n = notes[i]
+            notes[i] = .init(commitment: n.commitment, label: n.label, labelHash: hash, symbol: n.symbol, amount: n.amount,
+                             decimals: n.decimals, chainId: n.chainId, tx: n.tx, at: n.at, status: n.status, root: n.root)
+            save()
+        }
+    }
+
+    #if DEBUG
+    /// `-privateForgetLocal YES` (prd §1562's proof): what this phone keeps
+    /// about the root accounts' notes goes; the device-only account's stay.
+    /// Nothing in the Keychain is touched: the root rebuilds them.
+    func forgetRootNotes() {
+        notes = notes.filter { $0.root == nil }
+        save()
+    }
+    #endif
 
     /// The dollars Holdings' rows draw, read when they show.
     func readPrices() async { _ = await walletHolding() }

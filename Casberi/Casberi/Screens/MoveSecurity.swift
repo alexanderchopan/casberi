@@ -60,6 +60,11 @@ struct MoveSecurity: View {
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
+    /// Whether private money is on this phone alone (prd §1562), read in a
+    /// task: the Keychain and the store, never in a body.
+    @State private var privateBackup: PrivateRoot.Backup = .fine
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
 
     /// **TWO SECTIONS, SEVEN ROWS, NO LINES (prd §1496, user: "the two
     /// sections … is better b/c spend limit and round ups are different type
@@ -98,6 +103,11 @@ struct MoveSecurity: View {
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             row(title: String(localized: "Private key"), value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
+            // Only when private money is on this phone alone (prd §1562).
+            if privateBackup != .fine {
+                row(title: String(localized: "Private balance"), value: String(localized: "Not backed up"),
+                    tone: DS.attentionInk, verb: privateBackupVerb)
+            }
             }
             .padding(.leading, Self.rowIndent)
             SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
@@ -122,6 +132,7 @@ struct MoveSecurity: View {
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
+        .task(id: PrivateMoneyStore.shared.notes.map(\.id)) { readPrivateBackup() }
         // Tor connecting late reads what failed again, unasked (prd §1549).
         .onChange(of: TorStatus.shared.state) { _, now in
             if case .ready = now, !unread.isEmpty, !reading { Task { await read(unread) } }
@@ -158,6 +169,44 @@ struct MoveSecurity: View {
     /// belong to; the glyph's column and its gap in `SectionPanelName` put
     /// them under the name, as a Feed row's words stand beside its mark.
     static let rowIndent: CGFloat = DSRoomChassis.headGlyph + DSRoomChassis.headGap
+
+    // MARK: - Private balance (prd §1562)
+
+    private func readPrivateBackup() {
+        #if DEBUG
+        let notes = PrivateMoneyStore.shared.notes
+        privateBackup = PrivateRoot.backup(holdsPrivate: !notes.isEmpty,
+                                           deviceOnlyHolds: PrivateAccount.legacyExists && PrivateMigration.needed(notes),
+                                           iCloud: PrivateRootKey.iCloudSignedIn)
+        #endif
+    }
+
+    /// The fix: Back up moves the device-only account's money into the
+    /// root's; signed out of iCloud, Settings is where to sign in.
+    private var privateBackupVerb: (String, () -> Void)? {
+        switch privateBackup {
+        case .fine: return nil
+        case .noICloud:
+            return (String(localized: "Settings"), {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            })
+        case .deviceOnly:
+            return (String(localized: "Back up"), backUpPrivate)
+        }
+    }
+
+    private func backUpPrivate() {
+        #if DEBUG
+        let title = String(localized: "Private balance")
+        working = (title, String(localized: "Backing up…"))
+        Task {
+            let outcome = await PrivateMigration.run(context: modelContext)
+            working = nil
+            if case .failed(let why) = outcome { chrome.flash(why) }
+            readPrivateBackup()
+        }
+        #endif
+    }
 
     /// Who signs, as a section's glyph: a person with a key. Not Permissions'
     /// bare key (who can spend FROM you) and not Your account's shield.

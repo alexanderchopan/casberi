@@ -184,17 +184,20 @@ final class PrivateMove {
         let engine = PrivacyEngine.shared
         let started = Date()
         do {
-            let owner = try PrivacyTestnetSender.ensure()
+            // One withdrawal spends from one account (prd §1562): the
+            // current root's when it covers the amount and its fee, else the
+            // one that does.
+            let fee = PrivateMoney.relayFee(value, terms: terms ?? PrivateMoney.measuredTerms)
+            guard let account = PrivateMoneyStore.shared.account(toSpend: value, fee: fee, chainId: PrivacyNetwork.sepolia.chainId) else {
+                stage = .failed(String(localized: "Your approved private balance does not cover it"))
+                return
+            }
             stage = .opening
-            if !PrivacyPoolsKey.exists() { try PrivacyPoolsKey.create() }
-            var seed = try PrivacyPoolsKey.seed(reason: String(localized: "Send from your private balance"))
-            defer { seed.resetBytes(in: 0..<seed.count) }
+            try await PrivateAccount.open(account, reason: String(localized: "Send from your private balance"))
             stage = .preparing
-            _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)
-            seed.resetBytes(in: 0..<seed.count)
             // The notes as the pool holds them: what is spendable is theirs.
             let found = try await engine.discover()
-            PrivateMoneyStore.shared.reconcile(found)
+            PrivateMoneyStore.shared.reconcile(found, root: account == PrivateRoot.legacy ? nil : account)
             stage = .proving
             let spend = try await engine.prepareWithdraw(tokenId: PrivateMove.eth, amount: hex, to: to)
             NSLog("privateMove| proved withdraw | %d ms", spend.ms)
@@ -202,7 +205,9 @@ final class PrivateMove {
             let relayed = try await engine.relay(handle: spend.handle)
             stage = .done(relayed.tx)
             NSLog("privateMove| relayed | %@ | %@ ETH | %d s", relayed.tx, amount, Int(Date().timeIntervalSince(started)))
-            if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after) }
+            if let after = try? await engine.discover() {
+                PrivateMoneyStore.shared.reconcile(after, root: account == PrivateRoot.legacy ? nil : account)
+            }
         } catch {
             stage = .failed(Self.words(error))
             NSLog("privateMove| failed | %@", String(describing: error))
@@ -225,24 +230,15 @@ final class PrivateMove {
         let engine = PrivacyEngine.shared
         let started = Date()
         do {
-            let owner = try PrivacyTestnetSender.ensure()
+            // New money goes to the current root's account (prd §1562), the
+            // one a new phone gets back; the root is made the first time.
+            let account = try PrivateRootKey.ensure()
             stage = .opening
-            if !PrivacyPoolsKey.exists() { try PrivacyPoolsKey.create() }
-            var seed = try PrivacyPoolsKey.seed(reason: String(localized: "Move to private"))
-            defer { seed.resetBytes(in: 0..<seed.count) }
+            // Opened every time: a page a probe or another account opened
+            // may name another owner.
+            try await PrivateAccount.open(account, reason: String(localized: "Move to private"))
             stage = .preparing
-            // Opened every time: the account's owner is the sender, and a
-            // page a probe opened may name another.
-            _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)
-            seed.resetBytes(in: 0..<seed.count)
-            if try await !engine.isRegistered().registered {
-                let registration = try await engine.prepareRegister()
-                for (i, tx) in registration.txs.enumerated() {
-                    stage = .registering(i + 1)
-                    let hash = try await PrivacyTestnetSender.send(tx)
-                    NSLog("privateMove| register %d | %@", i + 1, hash)
-                }
-            }
+            try await PrivateAccount.registerIfNeeded(account) { [weak self] i in self?.stage = .registering(i) }
             stage = .proving
             let deposit = try await engine.prepareDeposit(tokenId: PrivateMove.eth, value: hex)
             NSLog("privateMove| proved | %@ | %d ms", deposit.proofs.map { "\($0.circuit ?? "?") \($0.ms) ms" }.joined(separator: ", "), deposit.ms)
@@ -251,7 +247,7 @@ final class PrivateMove {
             let hash = try await PrivacyTestnetSender.send(deposit.tx)
             PrivateMoneyStore.shared.add(.init(commitment: deposit.commitment, label: deposit.label, labelHash: deposit.labelHash,
                                                symbol: "ETH", amount: value, decimals: 18, chainId: PrivacyNetwork.sepolia.chainId,
-                                               tx: hash, at: Date(), status: .waiting))
+                                               tx: hash, at: Date(), status: .waiting, root: account))
             stage = .done(hash)
             NSLog("privateMove| deposited | %@ | %@ ETH | label hash %@ | %d s",
                   hash, amount, deposit.labelHash, Int(Date().timeIntervalSince(started)))
@@ -294,7 +290,9 @@ final class PrivateMove {
             }
         }
         #endif
-        if error is PrivacyPoolsKey.Failure { return String(localized: "Face ID did not open the private account") }
+        if error is PrivacyPoolsKey.Failure || error is PrivateRootKey.Failure {
+            return String(localized: "Face ID did not open the private account")
+        }
         return String(localized: "Sepolia could not be reached")
     }
 }

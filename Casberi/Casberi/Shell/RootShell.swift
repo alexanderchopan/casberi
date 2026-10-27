@@ -2361,6 +2361,9 @@ struct RootShell: View {
             // the value line densifies between opens (no-op without a
             // watched wallet; the OS decides if it ever runs).
             WalletBackgroundRefresh.schedule()
+            // …and the private watch, while a fresh address or a waiting
+            // deposit could change (prd §1562).
+            PrivateWatchTask.schedule()
             // The "new since last seen" boundary a row's time tints against
             // (`ShapedRows.newSinceLastSeen`). Born as the hero widget's
             // new-ring stamp (2026-07-13); the key keeps its name.

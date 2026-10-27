@@ -15,6 +15,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.casberi.app.walletsample</string>
+		<string>com.casberi.app.privatewatch</string>
 	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>

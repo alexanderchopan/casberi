@@ -121,6 +121,9 @@ struct CasberiApp: App {
         // finishes (BGTaskScheduler's requirement). One call, no work — the
         // OS decides if it ever runs; scheduling happens when we background.
         WalletBackgroundRefresh.register()
+        // The private watch (prd §1562): fresh addresses and approvals while
+        // away, through Tor or not at all.
+        PrivateWatchTask.register()
         // Publish the container so the background task can sweep the corpus
         // for notifications (prd §306) with no view above it. Must be the SAME
         // container the UI runs on — see `SharedStore.live`.
