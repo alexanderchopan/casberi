@@ -297,9 +297,16 @@ struct MoveSentence: View {
     /// What For's search looks in: the network a swap arrives on, once
     /// another is picked (prd §1566).
     private var searchedIn: [Op.Network] {
-        if open == .buy, verb == .swap, let on = buyOn, on != network { return [on] }
+        if open == .buy, crossesInFor { return destinations }
         return lookIn
     }
+
+    /// **FOR LISTS EVERY NETWORK IT CAN ARRIVE ON (user, on picking the
+    /// token, then the sentence's last word: "too confusing"; "yes we need
+    /// the other networks' token in for").** Once what is sold is picked,
+    /// For lists this network's tokens, then each other network's that
+    /// Across reaches, named by network; picking one sets where it arrives.
+    private var crossesInFor: Bool { verb == .swap && networkPicked && with != nil }
 
     /// Read, and nothing anywhere: there is nothing to spend yet. A network
     /// no node answered for is not nothing, so it never says so.
@@ -346,6 +353,12 @@ struct MoveSentence: View {
     private var units: String? {
         guard let with else { return nil }
         if inDollars {
+            // **THE NETWORK'S DOLLAR IS A DOLLAR (user: "fix the usdc make it
+            // exact").** $1.30 of USDC is 1.30 USDC, never 1.300712 off a
+            // price a hair under $1, which also made its round-up $0.6993.
+            if with.token.contract?.lowercased() == Op.dollar(on: network).contract?.lowercased() {
+                return Op.baseUnits(amount, decimals: with.token.decimals)
+            }
             guard let price = with.price else { return nil }
             return Op.baseUnits(dollars: amount, price: price, decimals: with.token.decimals)
         }
@@ -2651,16 +2664,25 @@ struct MoveSentence: View {
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
         var out: [(key: String, net: Op.Network, listed: Tokens.Listed)] = []
         var seen: Set<String> = []
-        // Another network picked (prd §1566): its own list, what can arrive there.
-        if verb == .swap, let on = buyOn, on != network {
-            let pool = (typed ? (found[on.chainId] ?? []) : []) + (listedBy[on.chainId] ?? [])
-            var rows = Tokens.matches(search, in: pool, held: heldBy[on.chainId] ?? [], shows: majorToken)
-            if let p = pasted[on.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
-            // Never its WETH: ETH is ETH there (prd §1559).
-            let weth = YourAccountSwap.book(on.chainId)?.weth
-            for l in rows where Self.arrives(l.token, from: network, on: on) && l.token.contract?.lowercased() != weth {
-                let key = "\(on.chainId)|\(l.id)"
-                if seen.insert(key).inserted { out.append((key, on, l)) }
+        // This network, then each other it can arrive on (prd §1566): what
+        // can arrive there, a head of four until something is typed.
+        if crossesInFor {
+            for n in destinations {
+                let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
+                var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: majorToken)
+                if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
+                if n == network {
+                    rows = rows.filter { $0.token != with?.token }
+                } else {
+                    // Never its WETH: ETH is ETH there (prd §1559).
+                    let weth = YourAccountSwap.book(n.chainId)?.weth
+                    rows = rows.filter { Self.arrives($0.token, from: network, on: n) && $0.token.contract?.lowercased() != weth }
+                    if !typed { rows = Array(rows.prefix(4)) }
+                }
+                for l in rows {
+                    let key = "\(n.chainId)|\(l.id)"
+                    if seen.insert(key).inserted { out.append((key, n, l)) }
+                }
             }
             return out
         }
@@ -2684,12 +2706,17 @@ struct MoveSentence: View {
                 let mine = (heldBy[row.net.chainId] ?? []).first { $0.id == l.id }
                 let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
                 listRow(l.token.symbol,
-                        sub: networkPicked ? about : [about, row.net.name].compactMap { $0 }.joined(separator: " · "),
+                        sub: networkPicked && row.net == network ? about : [about, row.net.name].compactMap { $0 }.joined(separator: " · "),
                         trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
                         mark: l.token.symbol, dim: !l.onList) {
                     pick {
-                        // A token of the network it arrives on keeps the one it leaves (prd §1566).
-                        if row.net != buyHome || !networkPicked { switchNetwork(row.net) }
+                        if crossesInFor {
+                            // Picked on another network: it arrives there, and
+                            // what is sold stays where it is (prd §1566).
+                            buyOn = row.net == network ? nil : row.net
+                        } else if row.net != buyHome || !networkPicked {
+                            switchNetwork(row.net)
+                        }
                         buy = l
                     }
                     if amount.isEmpty { focus = .amount }
@@ -2699,9 +2726,9 @@ struct MoveSentence: View {
                 Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
-        // The list of the network it arrives on, read once (prd §1566).
-        .task(id: buyOn?.chainId) {
-            if let on = buyOn, listedBy[on.chainId] == nil { listedBy[on.chainId] = await Tokens.list(on) }
+        // The lists of the networks it can arrive on, read once (prd §1566).
+        .task(id: crossesInFor ? destinations.map(\.chainId) : []) {
+            for n in (crossesInFor ? destinations : []) where listedBy[n.chainId] == nil { listedBy[n.chainId] = await Tokens.list(n) }
         }
     }
 
