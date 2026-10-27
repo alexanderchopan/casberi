@@ -156,6 +156,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
 - Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before Face ID as before. The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
+- WETH and ETH swap one for one on their network, no pool and no new verb (§1559): ETH for WETH is WETH's `deposit()`; WETH for ETH goes to the pinned SwapRouter02 and its `unwrapWETH9` pays the account in full (WETH's own `withdraw` pays 2,300 gas, which a Safe refuses); checked and simulated as every swap; the foot "Unwraps WETH · no fee", no ≈; Face ID only.
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -243,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1695 of 1764 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1696 of 1765 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1940,6 +1941,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width
+- §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 
 ## Dead rulings → what replaced them (generated)
 

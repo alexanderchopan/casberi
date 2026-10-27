@@ -307,7 +307,7 @@ wire "Casberi/Casberi/Model/WalletAcross.swift" 'YourAccountTokens.remember(back
   "a refund's WETH is never listed in Move's holdings (prd §1556)"
 wire "Casberi/Casberi/Screens/MoveSentence.swift" 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals) + " " + token.symbol' \
   "the print line says ≈ before an exact Across output (prd §1556)"
-wire "Casberi/Casberi/Screens/MoveDetails.swift" 'let words = YourAccountSwap.brief(route)' \
+wire "Casberi/Casberi/Screens/MoveDetails.swift" 's.route.map(YourAccountSwap.brief)' \
   "Details' swap row is the foot's whole sentence again (prd §1556)"
 
 # --- the mutation pass ------------------------------------------------------

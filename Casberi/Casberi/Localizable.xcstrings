@@ -150840,6 +150840,34 @@
         }
       }
     },
+    "Scan with %@ in its wallet, then approve." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escanea con %@ en su cartera y aprueba."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のウォレットでスキャンして承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 지갑으로 스캔한 다음 승인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用 %@ 的钱包扫描，然后批准。"
+          }
+        }
+      }
+    },
     "Scan with the wallet you want, then approve twice: connect, then sign." : {
       "localizations" : {
         "es" : {
@@ -150892,34 +150920,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用你想用的钱包扫描，然后批准。"
-          }
-        }
-      }
-    },
-    "Scan with %@ in its wallet, then approve." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Escanea con %@ en su cartera y aprueba."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ のウォレットでスキャンして承認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@의 지갑으로 스캔한 다음 승인하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "用 %@ 的钱包扫描，然后批准。"
           }
         }
       }
@@ -177626,6 +177626,34 @@
         }
       }
     },
+    "Through Uniswap's router, which pays the ETH out in full" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través del router de Uniswap, que paga el ETH completo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswap のルーター経由。ETH を全額支払います"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uniswap 라우터를 통해 ETH 전액을 지급합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Uniswap 路由器，全额支付 ETH"
+          }
+        }
+      }
+    },
     "Tick %@" : {
       "localizations" : {
         "es" : {
@@ -181963,6 +181991,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "解除包装了 %@"
+          }
+        }
+      }
+    },
+    "Unwraps %@ WETH for %@ ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desenvuelve %1$@ WETH por %2$@ ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ WETH を %2$@ ETH にアンラップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ WETH를 %2$@ ETH로 언랩"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %1$@ WETH 解包为 %2$@ ETH"
+          }
+        }
+      }
+    },
+    "Unwraps WETH · no fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desenvuelve WETH · sin comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "WETH をアンラップ · 手数料なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "WETH 언랩 · 수수료 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "解包 WETH · 无手续费"
           }
         }
       }
@@ -194311,6 +194395,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "包装了 %@"
+          }
+        }
+      }
+    },
+    "Wraps %@ ETH for %@ WETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envuelve %1$@ ETH por %2$@ WETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ ETH を %2$@ WETH にラップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ ETH를 %2$@ WETH로 랩"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %1$@ ETH 包装为 %2$@ WETH"
+          }
+        }
+      }
+    },
+    "Wraps ETH · no fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envuelve ETH · sin comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH をラップ · 手数料なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH 랩 · 수수료 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "包装 ETH · 无手续费"
           }
         }
       }

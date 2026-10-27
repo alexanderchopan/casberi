@@ -438,6 +438,11 @@ struct MoveSentence: View {
         // **"THROUGH ACROSS · 0.06% FEE · ABOUT 10 SECONDS" (prd §1555).**
         // A swap to another network: Across's fee, rounded as a pool's is,
         // and its time; under the pool's words when a token is swapped first.
+        // "Unwraps WETH · no fee" (prd §1559): one for one through the
+        // network's WETH, no pool and no fee but the network's.
+        if signing.count == 1, case .swap(let s) = signing[0], let w = s.quote.wrap {
+            return YourAccountSwap.words(w)
+        }
         for item in signing {
             guard case .swap(let s) = item, let leg = s.quote.across else { continue }
             let across = [YourAccountAcross.words(leg), YourAccountAcross.about(leg.seconds)].compactMap { $0 }.joined(separator: " · ")
@@ -2241,7 +2246,8 @@ struct MoveSentence: View {
         // To another network the token is the one that arrives there, and
         // Across pays exactly what it quoted: no ≈ (prd §1556).
         let token = crossBuy ?? buy.token
-        let exact = quote?.across != nil
+        // So does a wrap or an unwrap: one for one (prd §1559).
+        let exact = quote?.across != nil || quote?.wrap != nil
         return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals) + " " + token.symbol
     }
 
@@ -3129,7 +3135,7 @@ struct MoveSentence: View {
         let q = YourAccountSwap.Quote(sellAmount: Op.sum(a.quote.sellAmount, b.quote.sellAmount),
                                       buyAmount: Op.sum(a.quote.buyAmount, b.quote.buyAmount),
                                       minimumBuy: Op.sum(a.quote.minimumBuy, b.quote.minimumBuy),
-                                      route: a.quote.route ?? b.quote.route, calls: [])
+                                      route: a.quote.route ?? b.quote.route, calls: [], wrap: a.quote.wrap)
         return Chain.Swap(id: a.id, network: a.network, sell: a.sell, buy: a.buy,
                           amount: Op.sum(a.amount, b.amount), quote: q, to: a.to)
     }

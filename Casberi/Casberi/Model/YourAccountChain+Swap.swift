@@ -74,6 +74,14 @@ extension YourAccountChain {
         guard YourAccountSwap.supported(net), let book = YourAccountSwap.book(net.chainId) else {
             throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
         }
+        // WETH and ETH are one for one through the network's WETH, no pool
+        // (prd §1559): exact, so the demo's estimate is the same.
+        if let w = YourAccountSwap.wrap(sell: sell, buy: buy, chainId: net.chainId) {
+            guard let q = YourAccountSwap.wrapQuote(w, amount: amount, account: account, chainId: net.chainId) else {
+                throw Failure(message: String(localized: "This swap could not be written"))
+            }
+            return q
+        }
         // The demo's estimate comes off its own prices (§1475), never a node.
         if YourAccountDemo.isDemo(account) {
             guard let q = YourAccountDemo.quote(sell: sell, buy: buy, amount: amount) else {

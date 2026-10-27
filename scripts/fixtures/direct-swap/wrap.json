@@ -1,0 +1,115 @@
+{
+ "account": "0x09930469ea9d645bb4141d94af5f2d02a22d29ce",
+ "made": 1793059629,
+ "note": "Each network's WETH, from the account made a SafeL2 1.4.1 proxy by a state override: deposit(); then transfer to SwapRouter02 and unwrapWETH9(amount, account); simulated in one eth_simulateV1 block (2026-10-26), balances read around each. A direct withdraw from the same cold Safe reverts (directWithdrawStatus): WETH pays out with a 2,300-gas transfer.",
+ "vectors": [
+  {
+   "chainId": 1,
+   "block": 26280347,
+   "amount": "10000000000000000",
+   "wrap": [
+    {
+     "to": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+     "value": "10000000000000000",
+     "data": "0xd0e30db0"
+    }
+   ],
+   "unwrap": [
+    {
+     "to": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+     "value": "0",
+     "data": "0xa9059cbb00000000000000000000000068b3465833fb72a70ecdf485e0e4c7bd8665fc45000000000000000000000000000000000000000000000000002386f26fc10000"
+    },
+    {
+     "to": "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+     "value": "0",
+     "data": "0x49404b7c000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000009930469ea9d645bb4141d94af5f2d02a22d29ce"
+    }
+   ],
+   "statuses": [
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1"
+   ],
+   "directWithdrawStatus": "0x0",
+   "wethGained": "10000000000000000",
+   "ethGained": "10000000000000000"
+  },
+  {
+   "chainId": 8453,
+   "block": 53135140,
+   "amount": "10000000000000000",
+   "wrap": [
+    {
+     "to": "0x4200000000000000000000000000000000000006",
+     "value": "10000000000000000",
+     "data": "0xd0e30db0"
+    }
+   ],
+   "unwrap": [
+    {
+     "to": "0x4200000000000000000000000000000000000006",
+     "value": "0",
+     "data": "0xa9059cbb0000000000000000000000002626664c2603336e57b271c5c0b26f421741e481000000000000000000000000000000000000000000000000002386f26fc10000"
+    },
+    {
+     "to": "0x2626664c2603336e57b271c5c0b26f421741e481",
+     "value": "0",
+     "data": "0x49404b7c000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000009930469ea9d645bb4141d94af5f2d02a22d29ce"
+    }
+   ],
+   "statuses": [
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1"
+   ],
+   "directWithdrawStatus": "0x0",
+   "wethGained": "10000000000000000",
+   "ethGained": "10000000000000000"
+  },
+  {
+   "chainId": 4663,
+   "block": 98818860,
+   "amount": "10000000000000000",
+   "wrap": [
+    {
+     "to": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+     "value": "10000000000000000",
+     "data": "0xd0e30db0"
+    }
+   ],
+   "unwrap": [
+    {
+     "to": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+     "value": "0",
+     "data": "0xa9059cbb000000000000000000000000caf681a66d020601342297493863e78c959e5cb2000000000000000000000000000000000000000000000000002386f26fc10000"
+    },
+    {
+     "to": "0xcaf681a66d020601342297493863e78c959e5cb2",
+     "value": "0",
+     "data": "0x49404b7c000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000009930469ea9d645bb4141d94af5f2d02a22d29ce"
+    }
+   ],
+   "statuses": [
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1",
+    "0x1"
+   ],
+   "directWithdrawStatus": "0x0",
+   "wethGained": "10000000000000000",
+   "ethGained": "10000000000000000"
+  }
+ ]
+}
