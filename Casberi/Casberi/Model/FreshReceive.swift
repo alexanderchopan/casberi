@@ -141,6 +141,12 @@ final class FreshReceive {
             if case .failed = entry.state, !force { continue }
             guard !Task.isCancelled else { return }
             guard let network = PrivacyNetwork.forChain(entry.network) else { continue }
+            // A transaction out for it is asked about first, and nothing new
+            // is sent for it while it may still land (findings 2 and 6).
+            if case .sent(let amount, let tx, let step, let nonce, let at) = entry.state {
+                await resolveSent(entry, amount: amount, tx: tx, step: step, nonce: nonce, at: at, network: network, context: context)
+                continue
+            }
             guard let balance = try? await PrivateRPC.decimal(network, "eth_getBalance", [entry.address, "latest"]) else { continue }
             if network.isTest {
                 #if DEBUG
@@ -154,10 +160,25 @@ final class FreshReceive {
             let usdcPool = network.yield.first { !$0.native }
             let usdc = usdcPool == nil ? "0" : ((try? await PrivateRPC.tokenBalance(network, token: usdcPool!.underlying, of: entry.address)) ?? "0")
             NSLog("privateWatch| fresh | %@ | %@ | %@ wei | %@ USDC units", network.name, YourAccount.short(entry.address), balance, usdc)
-            if usdc != "0", let usdcPool {
-                await lookToken(entry, pool: usdcPool, held: usdc, eth: balance, network: network, interactive: force, context: context)
-            } else if balance != "0" {
+            // **ETH AND USDC ARE LOOKED AT APART (the review of 2026-10-26,
+            // finding 4):** USDC under the pool's smallest deposit (dust) no
+            // longer hides the ETH beside it. ETH moves first when it is
+            // enough on its own; USDC's own look then reads what ETH is left
+            // for its gas.
+            switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool: usdcPool != nil) {
+            case .nothing:
+                break
+            case .eth:
                 await lookEthereum(entry, balance: balance, network: network, context: context)
+            case .usdc:
+                await lookToken(entry, pool: usdcPool!, held: usdc, eth: balance, network: network, interactive: force, context: context)
+            case .both:
+                let moved = await lookEthereum(entry, balance: balance, network: network, context: context)
+                // ETH that moved took the address's nonce and its balance: the
+                // USDC is looked at next time, from what the chain says then.
+                if !moved, let fresh = entries.first(where: { $0.id == entry.id }), !fresh.isSent {
+                    await lookToken(fresh, pool: usdcPool!, held: usdc, eth: balance, network: network, interactive: force, context: context)
+                }
             }
         }
     }
@@ -247,9 +268,11 @@ final class FreshReceive {
 
     /// ETH at a fresh address on Ethereum: into ppETH, its gas out of what
     /// arrived, or "too little to move" under the pool's smallest deposit
-    /// plus the gas (computed now, never a constant).
-    private func lookEthereum(_ entry: FreshAddress.Entry, balance: String, network: PrivacyNetwork, context: ModelContext) async {
-        guard let pool = network.yieldPool(for: PrivateMove.eth), entry.root != nil else { return }
+    /// plus the gas (computed now, never a constant). True when a transaction
+    /// went out for it (the USDC beside it is then looked at next time).
+    @discardableResult
+    private func lookEthereum(_ entry: FreshAddress.Entry, balance: String, network: PrivacyNetwork, context: ModelContext) async -> Bool {
+        guard let pool = network.yieldPool(for: PrivateMove.eth), entry.root != nil else { return false }
         do {
             let fees = try await PrivateRPC.fees(network)
             guard let floor = await minimumBudget(pool, on: network) else { throw FreshFailure.terms }
@@ -259,28 +282,37 @@ final class FreshReceive {
                   plan.map { "\($0.budget) (+gas \($0.reserve))" } ?? "none")
             guard let plan else {
                 if case .waiting = entry.state { set(entry.id, .tooLittle(amount: balance)) }
-                return
+                return false
             }
-            await moveEthereum(entry, plan: plan, pool: pool, network: network, fees: fees, context: context)
+            return await moveEthereum(entry, plan: plan, pool: pool, network: network, fees: fees, context: context)
         } catch {
             failure = PrivateMove.words(error, network: network)
             NSLog("freshAddress| look failed | %@", String(describing: error))
+            return false
         }
     }
 
+    /// The fresh address's deposit into ppETH. **Kept before it goes, never
+    /// failed by a wait (the review of 2026-10-26, finding 2):** the note and
+    /// `.sent` are written before the node is asked; a wait that ends leaves
+    /// it `.sent`, and the next look asks the chain (`resolveSent`).
     private func moveEthereum(_ entry: FreshAddress.Entry, plan: FreshAddress.YieldPlan, pool: PrivacyNetwork.YieldPool,
-                              network: PrivacyNetwork, fees: (tip: UInt64, maxFee: UInt64), context: ModelContext) async {
-        guard let root = entry.root else { return }
+                              network: PrivacyNetwork, fees: (tip: UInt64, maxFee: UInt64), context: ModelContext) async -> Bool {
+        guard let root = entry.root else { return false }
         let started = Date()
         set(entry.id, .moving(amount: plan.budget))
         failure = nil
+        var out: String?
         do {
             // Into the current root's account, owned by your account; no
-            // prompt: money only goes in.
+            // prompt: money only goes in. One flow at a time through the
+            // engine (finding 8): opened and proved together.
             let account = try PrivateRootKey.ensure()
-            try await PrivateOnEthereum.open(account, reason: nil)
             guard let budget = PrivateMoney.hex(plan.budget) else { throw FreshFailure.planned }
-            let d = try await PrivacyEngine.shared.prepareYieldDeposit(tokenId: PrivateMove.eth, budget: budget)
+            let d = try await PrivacyEngine.exclusive {
+                try await PrivateOnEthereum.open(account, reason: nil)
+                return try await PrivacyEngine.shared.prepareYieldDeposit(tokenId: PrivateMove.eth, budget: budget)
+            }
             guard FreshAddress.matchesYield(to: d.tx.to, value: d.tx.value, approvals: d.approvals.count, budget: plan.budget, pool: pool) else {
                 throw FreshFailure.planned
             }
@@ -288,17 +320,46 @@ final class FreshReceive {
                                                             [["from": entry.address, "to": d.tx.to, "data": d.tx.data, "value": d.tx.value]])) ?? 0
             NSLog("freshAddress| proved | %@ | %u | %d ms | estimate %d of %d", network.name, entry.index, d.ms, estimate, FreshAddress.gasBudget)
             guard estimate > 0, estimate <= FreshAddress.gasBudget else { throw FreshFailure.gas(estimate) }
+            let worth = PrivateMoney.decimal(hex: d.underlyingNeeded)
             let hash = try await FreshSigner.send(to: d.tx.to, data: d.tx.data, value: d.tx.value, index: entry.index, root: root,
                                                   from: entry.address, network: network, gas: FreshAddress.gasBudget,
-                                                  tip: fees.tip, maxFee: fees.maxFee)
-            let worth = PrivateMoney.decimal(hex: d.underlyingNeeded)
-            landed(entry, hash: hash, d: d, pool: pool, worth: worth, account: account, network: network, context: context)
-            NSLog("freshAddress| moved | %@ | %u | %@ | %@ wei | %d s", network.name, entry.index, hash, worth, Int(Date().timeIntervalSince(started)))
+                                                  tip: fees.tip, maxFee: fees.maxFee) { hash, nonce in
+                out = hash
+                keep(d, pool: pool, hash: hash, account: account, network: network)
+                set(entry.id, .sent(amount: worth, tx: hash, step: .deposit, nonce: nonce, at: Date()))
+            }
+            if try await FreshSigner.landed(hash, on: network) {
+                finish(entry, amount: worth, tx: hash, symbol: nil, network: network, context: context)
+                NSLog("freshAddress| moved | %@ | %u | %@ | %@ wei | %d s", network.name, entry.index, hash, worth, Int(Date().timeIntervalSince(started)))
+            } else {
+                NSLog("freshAddress| sent, not yet seen | %@ | %u | %@ | asked again next look", network.name, entry.index, hash)
+            }
+            return true
         } catch {
-            set(entry.id, .failed(amount: plan.budget))
-            failure = (error as? FreshFailure).map { _ in String(localized: "The move did not match what arrived") } ?? PrivateMove.words(error, network: network)
-            NSLog("freshAddress| move failed | %@ | %u | %@", network.name, entry.index, String(describing: error))
+            return failed(entry, amount: plan.budget, symbol: nil, out: out, error: error, network: network)
         }
+    }
+
+    /// A move that threw. Before its transaction was kept, or refused by the
+    /// node, or reverted, it failed (the note kept for it goes); after, with
+    /// no answer, it may still be out: it stays `.sent` for the chain to say.
+    /// True when a transaction may be out.
+    private func failed(_ entry: FreshAddress.Entry, amount: String, symbol: String?, out: String?, error: Error, network: PrivacyNetwork) -> Bool {
+        let notOut: Bool = switch error as? FreshSigner.Failure {
+        case .refused, .reverted: true
+        default: out == nil
+        }
+        guard notOut else {
+            NSLog("freshAddress| sent, no answer | %@ | %u | %@ | asked again next look", network.name, entry.index, String(describing: error))
+            return true
+        }
+        if let out, let note = PrivateMoneyStore.shared.notes.first(where: { $0.tx == out }) {
+            PrivateMoneyStore.shared.remove(commitment: note.commitment)
+        }
+        set(entry.id, .failed(amount: amount), symbol: symbol)
+        failure = (error as? FreshFailure).map { _ in String(localized: "The move did not match what arrived") } ?? PrivateMove.words(error, network: network)
+        NSLog("freshAddress| move failed | %@ | %u | %@", network.name, entry.index, String(describing: error))
+        return false
     }
 
     /// **USDC AT A FRESH ADDRESS, NO GATEKEEPER (prd §1567).** The address
@@ -309,10 +370,18 @@ final class FreshReceive {
     /// look (the withdrawal spends private money: it asks for you), and only
     /// when the approved private ETH covers it and the relayer's fee; else
     /// the line says it arrived and needs a little private ETH to move.
+    ///
+    /// **THE GAS IS PAID ONCE (the review of 2026-10-26, finding 6):** the
+    /// withdrawal is kept as `.sent(step: .gas)` before the relayer is
+    /// asked, and while it may still land nothing is relayed again; the
+    /// approval and the deposit are kept the same way (finding 2), and an
+    /// approval already standing is not sent again.
     private func lookToken(_ entry: FreshAddress.Entry, pool: PrivacyNetwork.YieldPool, held: String, eth: String,
                            network: PrivacyNetwork, interactive: Bool, context: ModelContext) async {
         guard let root = entry.root, let ethPool = network.yieldPool(for: PrivateMove.eth) else { return }
         let symbol = pool.symbol
+        var out: String?
+        var step = FreshAddress.SentStep.gas
         do {
             let fees = try await PrivateRPC.fees(network)
             guard let floor = await minimumBudget(pool, on: network) else { throw FreshFailure.terms }
@@ -333,52 +402,154 @@ final class FreshReceive {
                           gas.shortfall, PrivateMoney.plain(spendable), interactive ? "yes" : "no (background)")
                     return
                 }
-                set(entry.id, .moving(amount: held), symbol: symbol)
+                // Kept before the relayer is asked: a withdrawal that may be
+                // out is never asked for twice.
+                set(entry.id, .sent(amount: held, tx: "", step: .gas, nonce: nil, at: Date()), symbol: symbol)
+                out = ""
                 let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: gas.shortfall, to: entry.address,
                                                           reason: String(localized: "Move \(symbol) to private"))
-                try await PrivateRPC.waitFor(tx, on: network)
+                out = tx
+                set(entry.id, .sent(amount: held, tx: tx, step: .gas, nonce: nil, at: Date()), symbol: symbol)
                 NSLog("freshAddress| gas from private ETH | %u | %@ wei | %@", entry.index, gas.shortfall, tx)
+                guard try await FreshSigner.landed(tx, on: network) else {
+                    NSLog("freshAddress| gas not yet seen | %u | %@ | asked again next look", entry.index, tx)
+                    return
+                }
             }
+            out = nil
+            step = .approve
             set(entry.id, .moving(amount: held), symbol: symbol)
             let account = try PrivateRootKey.ensure()
-            try await PrivateOnEthereum.open(account, reason: nil)
             guard let budget = PrivateMoney.hex(held) else { throw FreshFailure.planned }
-            let d = try await PrivacyEngine.shared.prepareYieldDeposit(tokenId: pool.underlying, budget: budget)
+            let d = try await PrivacyEngine.exclusive {
+                try await PrivateOnEthereum.open(account, reason: nil)
+                return try await PrivacyEngine.shared.prepareYieldDeposit(tokenId: pool.underlying, budget: budget)
+            }
             let most = PrivateMoney.decimal(hex: d.maxUnderlyingIn)
             guard FreshAddress.matchesYield(to: d.tx.to, value: d.tx.value, approvals: d.approvals.count, budget: held, pool: pool),
                   (Decimal(string: most) ?? .greatestFiniteMagnitude) <= have,
                   let approve = FreshTx.approval(pool: pool, amount: most) else { throw FreshFailure.planned }
-            // The approval first (its own transaction), then the deposit,
-            // estimated against the state the approval left.
-            _ = try await FreshSigner.send(to: approve.to, data: approve.data, value: "0x0", index: entry.index, root: root,
-                                           from: entry.address, network: network, gas: FreshTx.approveGas,
-                                           tip: fees.tip, maxFee: fees.maxFee)
+            // The approval first (its own transaction) unless one already
+            // stands, then the deposit, estimated against the state it left.
+            if !(await allowanceCovers(pool, owner: entry.address, amount: most, network: network)) {
+                let approval = try await FreshSigner.send(to: approve.to, data: approve.data, value: "0x0", index: entry.index, root: root,
+                                                          from: entry.address, network: network, gas: FreshTx.approveGas,
+                                                          tip: fees.tip, maxFee: fees.maxFee) { hash, nonce in
+                    out = hash
+                    set(entry.id, .sent(amount: held, tx: hash, step: .approve, nonce: nonce, at: Date()), symbol: symbol)
+                }
+                guard try await FreshSigner.landed(approval, on: network, seconds: 120) else {
+                    NSLog("freshAddress| approval not yet seen | %u | %@ | asked again next look", entry.index, approval)
+                    return
+                }
+                out = nil
+                set(entry.id, .moving(amount: held), symbol: symbol)
+            }
+            step = .deposit
             let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
                                                             [["from": entry.address, "to": d.tx.to, "data": d.tx.data, "value": d.tx.value]])) ?? 0
             guard estimate > 0, estimate <= FreshAddress.gasBudget else { throw FreshFailure.gas(estimate) }
+            let worth = PrivateMoney.decimal(hex: d.underlyingNeeded)
             let hash = try await FreshSigner.send(to: d.tx.to, data: d.tx.data, value: d.tx.value, index: entry.index, root: root,
                                                   from: entry.address, network: network, gas: FreshAddress.gasBudget,
-                                                  tip: fees.tip, maxFee: fees.maxFee)
-            landed(entry, hash: hash, d: d, pool: pool, worth: PrivateMoney.decimal(hex: d.underlyingNeeded), account: account,
-                   network: network, context: context)
-            NSLog("freshAddress| moved | %@ | %u | %@ | %@ %@ units", network.name, entry.index, hash, held, symbol)
+                                                  tip: fees.tip, maxFee: fees.maxFee) { hash, nonce in
+                out = hash
+                keep(d, pool: pool, hash: hash, account: account, network: network)
+                set(entry.id, .sent(amount: worth, tx: hash, step: .deposit, nonce: nonce, at: Date()), symbol: symbol)
+            }
+            if try await FreshSigner.landed(hash, on: network) {
+                finish(entry, amount: worth, tx: hash, symbol: symbol, network: network, context: context)
+                NSLog("freshAddress| moved | %@ | %u | %@ | %@ %@ units", network.name, entry.index, hash, held, symbol)
+            } else {
+                NSLog("freshAddress| sent, not yet seen | %@ | %u | %@ | asked again next look", network.name, entry.index, hash)
+            }
         } catch {
-            set(entry.id, .failed(amount: held), symbol: symbol)
-            failure = (error as? FreshFailure).map { _ in String(localized: "The move did not match what arrived") } ?? PrivateMove.words(error, network: network)
-            NSLog("freshAddress| token move failed | %u | %@", entry.index, String(describing: error))
+            // The relayer's own refusal means nothing was posted; any other
+            // error after the gas step was kept may mean it was (finding 6).
+            if step == .gas, out != nil, error is PrivacyEngineWire.Failure || error is PrivateOnEthereum.Failure {
+                set(entry.id, .failed(amount: held), symbol: symbol)
+                failure = PrivateMove.words(error, network: network)
+                NSLog("freshAddress| gas refused | %u | %@", entry.index, String(describing: error))
+                return
+            }
+            if step == .gas, out != nil {
+                NSLog("freshAddress| gas asked, no answer | %u | %@ | asked again next look", entry.index, String(describing: error))
+                return
+            }
+            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network)
         }
     }
 
-    /// A fresh address's deposit landed: the note kept waiting for approval,
-    /// the address marked, one Activity row.
-    private func landed(_ entry: FreshAddress.Entry, hash: String, d: PrivacyEngineWire.PreparedYieldDeposit, pool: PrivacyNetwork.YieldPool,
-                        worth: String, account: String, network: PrivacyNetwork, context: ModelContext) {
+    /// Whether `owner` already allows the token's router `amount` (an
+    /// approval that landed after its look ended is not sent again).
+    private func allowanceCovers(_ pool: PrivacyNetwork.YieldPool, owner: String, amount: String, network: PrivacyNetwork) async -> Bool {
+        let data = "0xdd62ed3e" + String(repeating: "0", count: 24) + owner.dropFirst(2).lowercased()
+            + String(repeating: "0", count: 24) + pool.router.dropFirst(2).lowercased()
+        guard let answer = try? await PrivateRPC.call(network, "eth_call", [["to": pool.underlying, "data": data], "latest"]) as? String,
+              let have = PrivateYield.word(answer, 0).flatMap({ Decimal(string: $0) }), let need = Decimal(string: amount) else { return false }
+        return have >= need
+    }
+
+    /// **A TRANSACTION OUT, ASKED ABOUT (findings 2 and 6).** Its receipt;
+    /// else whether the node knows it, and for the address's own whether its
+    /// nonce was taken. Landed: a deposit finishes (its row, `.moved`), a gas
+    /// payment or an approval hands the address back to the next look, which
+    /// reads the chain afresh. Reverted, or dropped with its nonce free:
+    /// failed, the note kept for it gone. Otherwise it is still out and
+    /// nothing is sent for the address.
+    private func resolveSent(_ entry: FreshAddress.Entry, amount: String, tx: String, step: FreshAddress.SentStep, nonce: String?,
+                             at: Date, network: PrivacyNetwork, context: ModelContext) async {
+        var receipt: String?, known: Bool?, nonceTaken: Bool?
+        if tx.isEmpty {
+            known = false
+        } else if let r = try? await PrivateRPC.call(network, "eth_getTransactionReceipt", [tx]) as? [String: Any] {
+            receipt = (r["status"] as? String) ?? "0x0"
+        } else if let t = try? await PrivateRPC.call(network, "eth_getTransactionByHash", [tx]) {
+            known = !(t is NSNull)
+        }
+        if receipt == nil, let nonce, let sent = UInt64(nonce),
+           let now = (try? await PrivateRPC.decimal(network, "eth_getTransactionCount", [entry.address, "latest"])).flatMap(UInt64.init) {
+            nonceTaken = now > sent
+        }
+        let after = step == .gas && !tx.isEmpty ? FreshAddress.relayDroppedAfter : FreshAddress.droppedAfter
+        let verdict = FreshAddress.sentVerdict(receipt: receipt, known: known, nonceTaken: nonceTaken,
+                                               age: Date().timeIntervalSince(at), after: after)
+        NSLog("freshAddress| sent | %@ | %u | %@ | %@ | %@", network.name, entry.index, step.rawValue, tx.isEmpty ? "no hash" : tx,
+              String(describing: verdict))
+        switch (verdict, step) {
+        case (.waiting, _):
+            return
+        case (.landed, .deposit):
+            finish(entry, amount: amount, tx: tx, symbol: entry.symbol, network: network, context: context)
+        case (.landed, _), (.dropped, .gas), (.dropped, .approve):
+            // The next look reads the chain: the gas there, the approval standing.
+            set(entry.id, .waiting, symbol: entry.symbol)
+        case (.reverted, _), (.dropped, .deposit):
+            if step == .deposit, let note = PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx }) {
+                PrivateMoneyStore.shared.remove(commitment: note.commitment)
+            }
+            set(entry.id, .failed(amount: amount), symbol: entry.symbol)
+        }
+    }
+
+    /// The prepared deposit's note, kept the moment its transaction is
+    /// signed (before it goes): waiting for approval, named by its hash.
+    private func keep(_ d: PrivacyEngineWire.PreparedYieldDeposit, pool: PrivacyNetwork.YieldPool, hash: String, account: String,
+                      network: PrivacyNetwork) {
         PrivateMoneyStore.shared.add(.init(commitment: d.commitment, label: d.label, labelHash: d.labelHash,
                                            symbol: pool.symbol, amount: PrivateMoney.decimal(hex: d.shares), decimals: pool.shareDecimals,
                                            chainId: network.chainId, tx: hash, at: Date(), status: .waiting, root: account, share: pool.share))
-        set(entry.id, .moved(amount: worth, tx: hash), symbol: pool.native ? nil : pool.symbol)
-        let figure = PrivateMoney.figure(worth, decimals: pool.underlyingDecimals, symbol: pool.symbol)
-        PrivateActivity.land(hash: hash, title: PrivateMoney.activityTitle(figure: figure, to: nil), chainId: network.chainId, context: context)
+    }
+
+    /// A fresh address's deposit landed: the address marked, one Activity
+    /// row (the note was kept when it was signed).
+    private func finish(_ entry: FreshAddress.Entry, amount: String, tx: String, symbol: String?, network: PrivacyNetwork, context: ModelContext) {
+        let pool = network.yield.first { $0.symbol == (symbol ?? "ETH") }
+        set(entry.id, .moved(amount: amount, tx: tx), symbol: symbol)
+        if let pool {
+            let figure = PrivateMoney.figure(amount, decimals: pool.underlyingDecimals, symbol: pool.symbol)
+            PrivateActivity.land(hash: tx, title: PrivateMoney.activityTitle(figure: figure, to: nil), chainId: network.chainId, context: context)
+        }
         Task { await PrivateMoneyStore.shared.refresh(force: true) }
     }
 
@@ -418,11 +589,13 @@ final class FreshReceive {
             // Into the current root's account, whichever root the address
             // came from: new money is kept where a new phone finds it.
             let account = try PrivateRootKey.ensure()
-            let engine = PrivacyEngine.shared
-            try await PrivateAccount.open(account, reason: nil)
-            try await PrivateAccount.registerIfNeeded(account)
             guard let value = PrivateMoney.hex(plan.value) else { throw FreshFailure.planned }
-            let deposit = try await engine.prepareDeposit(tokenId: PrivateMove.eth, value: value)
+            // One flow at a time through the engine (finding 8).
+            let deposit = try await PrivacyEngine.exclusive {
+                try await PrivateAccount.open(account, reason: nil)
+                try await PrivateAccount.registerIfNeeded(account)
+                return try await PrivacyEngine.shared.prepareDeposit(tokenId: PrivateMove.eth, value: value)
+            }
             guard deposit.approvals.isEmpty,
                   FreshAddress.matches(to: deposit.tx.to, value: deposit.tx.value, plan: plan, entrypoint: network.entrypoint) else {
                 throw FreshFailure.planned

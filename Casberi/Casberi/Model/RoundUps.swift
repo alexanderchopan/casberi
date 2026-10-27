@@ -68,9 +68,12 @@ enum RoundUps {
         /// setting kept before it decodes as it was.
         var toPrivate: Bool? = nil
 
-        /// Picked, and this build has a pool: a setting kept by a DEBUG
-        /// build reads as buying `target` in one that has none.
-        var movesPrivately: Bool { RoundUps.movesPrivately(self, pools: RoundUps.privatePools) }
+        /// Picked. **A SAVED PRIVATE TARGET NEVER BUYS PUBLICLY (the review
+        /// of 2026-10-26, finding 7):** where private money cannot take the
+        /// change now — the kill switch off, no account on the phone to own
+        /// the note — it keeps counting and buys nothing (`privateRoute`
+        /// says `.waits`), never `target` instead.
+        var movesPrivately: Bool { RoundUps.movesPrivately(self, chains: RoundUps.privateChains) }
     }
 
     // MARK: - Swaps and Buy round up too (prd §1561)
@@ -115,15 +118,28 @@ enum RoundUps {
     /// build (0xBow's pool 1, ppUSDC), or in a DEBUG build Sepolia unless
     /// launched with `-privateNetwork ethereum` — the same choice
     /// `PrivacyNetwork.current` makes. On Base and Robinhood the choice is
-    /// never offered (no dead control, prd §83); the kill switch
-    /// (`PrivateMainnet.on`) takes Ethereum away where it is offered
-    /// (`MoveSecurity`, `MoveSentence`).
-    static var privatePools: Set<Int> {
+    /// never offered (no dead control, prd §83). A send elsewhere sets
+    /// nothing aside for a private target.
+    static var privateChains: Set<Int> {
         #if DEBUG
         UserDefaults.standard.string(forKey: "privateNetwork") == "ethereum" ? [ethereumPool] : [11_155_111]
         #else
         [ethereumPool]
         #endif
+    }
+
+    /// **WHERE IT CAN MOVE NOW (the review of 2026-10-26, finding 7):** the
+    /// private networks whose money is available — on Ethereum only with the
+    /// kill switch on (`PrivateMainnet.on`) and your account on the phone to
+    /// own the note. Offered (`MoveSecurity`) only here; where a private
+    /// target is kept and private money is not available, `privateRoute`
+    /// says `.waits`: the change counts and nothing is bought.
+    static var privatePools: Set<Int> {
+        pools(privateChains, mainnetOn: PrivateMainnet.on, owner: YourAccountKey.address != nil)
+    }
+
+    static func pools(_ chains: Set<Int>, mainnetOn: Bool, owner: Bool) -> Set<Int> {
+        chains.filter { $0 != ethereumPool || (mainnetOn && owner) }
     }
 
     /// Ethereum's chain id: the one network with value where round-ups move
@@ -154,14 +170,15 @@ enum RoundUps {
     }
 
     /// Whether a send on `chainId` rounds up at all: on, and when the change
-    /// moves privately, only where there is a pool to move it into — a send
-    /// elsewhere sets nothing aside for a balance it cannot reach.
-    static func applies(_ setting: Setting, on chainId: Int, pools: Set<Int> = privatePools) -> Bool {
-        setting.on && (!movesPrivately(setting, pools: pools) || pools.contains(chainId))
+    /// moves privately, only on a private network — a send elsewhere sets
+    /// nothing aside for a balance it cannot reach. On the private network it
+    /// counts whether or not private money is available now (finding 7).
+    static func applies(_ setting: Setting, on chainId: Int, chains: Set<Int> = privateChains) -> Bool {
+        setting.on && (!movesPrivately(setting, chains: chains) || chains.contains(chainId))
     }
 
-    static func movesPrivately(_ setting: Setting, pools: Set<Int>) -> Bool {
-        setting.toPrivate == true && !pools.isEmpty
+    static func movesPrivately(_ setting: Setting, chains: Set<Int>) -> Bool {
+        setting.toPrivate == true && !chains.isEmpty
     }
 
     /// How a send carries the change into the pool once it is due.
@@ -169,9 +186,10 @@ enum RoundUps {
         /// The send carries the deposit.
         case deposit
         /// Not this send: the change keeps counting and moves with the next
-        /// send you approve with Face ID.
+        /// send you approve with Face ID — or, with private money not
+        /// available now, once it is. Nothing is bought.
         case waits
-        /// No pool on this network.
+        /// Not a private network.
         case notHere
     }
 
@@ -179,10 +197,55 @@ enum RoundUps {
     /// which may only `transfer` the dollar and send ETH through Multicall3
     /// (§1545 item 2), never carries one: a send it signs alone leaves the
     /// change counting, and the deposit rides the next send you approve with
-    /// Face ID — §1545's pattern for a buy on the exchanges.
-    static func privateRoute(on chainId: Int, bySession: Bool, pools: Set<Int> = privatePools) -> PrivateRoute {
-        guard pools.contains(chainId) else { return .notHere }
+    /// Face ID — §1545's pattern for a buy on the exchanges. A private
+    /// network whose money is not available now (`pools`) waits too.
+    static func privateRoute(on chainId: Int, bySession: Bool, pools: Set<Int> = privatePools,
+                             chains: Set<Int> = privateChains) -> PrivateRoute {
+        guard chains.contains(chainId) else { return .notHere }
+        guard pools.contains(chainId) else { return .waits }
         return bySession ? .waits : .deposit
+    }
+
+    // MARK: - The ride, and a batch not yet seen (the review of 2026-10-26)
+
+    /// What the node said of the send with the ride's calls in it.
+    enum RideCheck: Equatable, Sendable { case lands, fails, notChecked }
+
+    /// **A RIDE THAT DOES NOT CHECK OUT IS DROPPED, NEVER THE SEND (finding
+    /// 5).** Rides only when its calls were written and the whole operation
+    /// with them lands in simulation; otherwise `why` names it and the send
+    /// goes alone, the change counting.
+    struct RideVerdict: Equatable, Sendable {
+        let why: String?
+        var rides: Bool { why == nil }
+    }
+
+    static func rideVerdict(written: Bool, checked: RideCheck) -> RideVerdict {
+        guard written else { return RideVerdict(why: "its calls could not be written") }
+        switch checked {
+        case .lands: return RideVerdict(why: nil)
+        case .fails: return RideVerdict(why: "the node refuses it")
+        case .notChecked: return RideVerdict(why: "no node would check it")
+        }
+    }
+
+    /// **A BATCH ON ITS WAY IS RESERVED, NOT COUNTED AGAIN (finding 3).**
+    /// When the operation carrying a batch (a private ride, or a buy) is sent
+    /// and not yet seen, the count is emptied as if it landed and the batch
+    /// is RESERVED: the next send neither rides nor buys it again. Proven
+    /// failed or dropped, the reserve goes back on the count — what was
+    /// counted before this send (its own change never happened); landed, the
+    /// reserve is cleared. Nil: nothing to reserve.
+    static func reserve(_ plan: Plan) -> String? {
+        guard let buy = plan.buy else { return nil }
+        let before = YourAccountOp.difference(buy, plan.change)
+        return before == "0" ? nil : before
+    }
+
+    /// The count once a reserve is released: added back onto whatever was
+    /// counted since.
+    static func released(_ reserved: String, onto saved: String) -> String {
+        YourAccountOp.sum(saved, reserved)
     }
 
     /// When the change moves, in the network's coin: everything counted,

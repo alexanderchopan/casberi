@@ -64,6 +64,10 @@ enum YourAccountDemo {
     static var isOn: Bool { false }
     static var roundUps: RoundUps.Setting { RoundUps.Setting() }
 }
+// What `RoundUps.privatePools` reads (the review of 2026-10-26, finding 7):
+// the kill switch on, an account on the phone.
+enum PrivateMainnet { static let on = true }
+enum YourAccountKey { static var stubbed: String? = "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"; static var address: String? { stubbed } }
 SWIFT
 
 cat > "$TMP/main.swift" <<'SWIFT'
@@ -294,7 +298,14 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [r
 var ruPriv = RoundUps.Setting(on: true)
 ruPriv.toPrivate = true
 let ruPools: Set<Int> = [11155111]
-check(RoundUps.privatePools == [1], "a shipped build offers private round-ups somewhere other than Ethereum (prd §1567)")
+check(RoundUps.privateChains == [1], "a shipped build counts private round-ups somewhere other than Ethereum (prd §1567)")
+check(RoundUps.privatePools == [1], "with the kill switch on and an account, private money is not available on Ethereum")
+// The review of 2026-10-26, finding 7: private money is available on Ethereum
+// only with the kill switch on AND an account to own the note; Sepolia's test
+// money is not gated on either.
+check(RoundUps.pools([1], mainnetOn: false, owner: true).isEmpty && RoundUps.pools([1], mainnetOn: true, owner: false).isEmpty
+      && RoundUps.pools([1], mainnetOn: true, owner: true) == [1] && RoundUps.pools([11155111], mainnetOn: false, owner: false) == [11155111],
+      "private money's availability ignores the kill switch or the owner")
 // On Ethereum the change is dollars, moved as USDC into ppUSDC once it reaches
 // $5 and the pool's smallest deposit, read live; unread, it keeps counting.
 check(RoundUps.privateMoveAt(on: 1, poolMinimum: "10046461") == "10046461", "Ethereum's round-ups move under ppUSDC's minimum")
@@ -306,20 +317,43 @@ check(ruEth.change == "700000" && ruEth.buy == "10600000" && ruEth.savedAfter ==
 let ruEthWait = RoundUps.privatePlan(dollarSent: "4300000", saved: "2000000", step: 1, threshold: "10046461")
 check(ruEthWait.buy == nil && ruEthWait.savedAfter == "2700000", "the change moves before the minimum (one deposit a send)")
 check(RoundUps.privatePlan(dollarSent: "4300000", saved: "99000000", step: 1, threshold: nil).buy == nil, "it moves with no minimum read")
-check(RoundUps.movesPrivately(ruPriv, pools: ruPools) && !RoundUps.movesPrivately(ruPriv, pools: [])
-      && !RoundUps.movesPrivately(RoundUps.Setting(on: true), pools: ruPools), "moving privately is the pick, where a pool is")
-check(RoundUps.applies(ruPriv, on: 11155111, pools: ruPools) && !RoundUps.applies(ruPriv, on: 8453, pools: ruPools),
+check(RoundUps.movesPrivately(ruPriv, chains: ruPools) && !RoundUps.movesPrivately(ruPriv, chains: [])
+      && !RoundUps.movesPrivately(RoundUps.Setting(on: true), chains: ruPools), "moving privately is the pick, where a pool is")
+check(RoundUps.applies(ruPriv, on: 11155111, chains: ruPools) && !RoundUps.applies(ruPriv, on: 8453, chains: ruPools),
       "moving privately, a send on a network with no pool still sets change aside")
-check(RoundUps.applies(RoundUps.Setting(on: true), on: 8453, pools: ruPools) && !RoundUps.applies(RoundUps.Setting(), on: 8453, pools: ruPools)
-      && RoundUps.applies(ruPriv, on: 8453, pools: []), "buying a token, round-ups run as they did")
-check(RoundUps.privateRoute(on: 11155111, bySession: false, pools: ruPools) == .deposit, "a Face ID send does not carry the deposit")
-check(RoundUps.privateRoute(on: 11155111, bySession: true, pools: ruPools) == .waits, "the session key carries a deposit (a contract call)")
-check(RoundUps.privateRoute(on: 8453, bySession: false, pools: ruPools) == .notHere, "a deposit is routed to a network with no pool")
+check(RoundUps.applies(RoundUps.Setting(on: true), on: 8453, chains: ruPools) && !RoundUps.applies(RoundUps.Setting(), on: 8453, chains: ruPools),
+      "buying a token, round-ups run as they did")
+check(RoundUps.privateRoute(on: 11155111, bySession: false, pools: ruPools, chains: ruPools) == .deposit, "a Face ID send does not carry the deposit")
+check(RoundUps.privateRoute(on: 11155111, bySession: true, pools: ruPools, chains: ruPools) == .waits, "the session key carries a deposit (a contract call)")
+check(RoundUps.privateRoute(on: 8453, bySession: false, pools: ruPools, chains: ruPools) == .notHere, "a deposit is routed to a network with no pool")
+// Finding 7: a private target kept while private money is not available (the
+// kill switch off, no account) counts on Ethereum and WAITS — never a public
+// buy — and off Ethereum sets nothing aside.
+check(RoundUps.applies(ruPriv, on: 1, chains: [1]) && RoundUps.privateRoute(on: 1, bySession: false, pools: [], chains: [1]) == .waits,
+      "a private target with private money unavailable stops counting, or moves")
+check(!RoundUps.applies(ruPriv, on: 8453, chains: [1]), "a private target with private money unavailable rounds up a Base send (a public buy)")
+// With no account on the phone (or the kill switch off) private money is not
+// available: the kept target still reads as private, never as its token.
+YourAccountKey.stubbed = nil
+check(RoundUps.privatePools.isEmpty && ruPriv.movesPrivately && RoundUps.applies(ruPriv, on: 1)
+      && RoundUps.privateRoute(on: 1, bySession: false) == .waits, "a kept private target reads as buying its token once private money is unavailable")
+YourAccountKey.stubbed = "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"
+// Finding 5: a ride that does not check out is dropped, never the send.
+check(RoundUps.rideVerdict(written: true, checked: .lands).rides, "a ride whose operation lands does not ride")
+check(!RoundUps.rideVerdict(written: true, checked: .fails).rides && !RoundUps.rideVerdict(written: true, checked: .notChecked).rides
+      && !RoundUps.rideVerdict(written: false, checked: .lands).rides, "a ride the node refuses, would not check, or could not be written rides")
+// Finding 3: a batch on its way is reserved; failed, what was counted before
+// it goes back on whatever was counted since (never overwriting it).
+let ruDue = RoundUps.privatePlan(dollarSent: "4300000", saved: "9900000", step: 1, threshold: "10046461")
+check(RoundUps.reserve(ruDue) == "9900000", "a batch on its way reserves something other than what was counted before it")
+check(RoundUps.reserve(RoundUps.privatePlan(dollarSent: "4300000", saved: "2000000", step: 1, threshold: "10046461")) == nil,
+      "a send that moves nothing reserves something")
+check(RoundUps.released("9900000", onto: "1200000") == "11100000", "a released reserve overwrites what was counted since")
 check(RoundUps.privateMove(saved: "120000000000000", at: "100000000000000") == "120000000000000", "the counted change does not move whole at the threshold")
 check(RoundUps.privateMove(saved: "90000000000000", at: "100000000000000") == nil, "the change moves before the threshold (one deposit a send)")
 check(RoundUps.privateMove(saved: "0", at: "0") == nil && RoundUps.privateMove(saved: "x", at: "1") == nil, "nothing moves nothing")
 let ruKept = try! JSONDecoder().decode(RoundUps.Setting.self, from: JSONEncoder().encode(RoundUps.Setting(on: true, step: 5)))
-check(ruKept.toPrivate == nil && !RoundUps.movesPrivately(ruKept, pools: ruPools), "a setting kept before moving privately decodes as private")
+check(ruKept.toPrivate == nil && !RoundUps.movesPrivately(ruKept, chains: ruPools), "a setting kept before moving privately decodes as private")
 
 // ── Swaps and Buy round up too (prd §1561) ────────────────────────────────
 // A swap rounds up the dollar value of what it sells; it carries the buy only
@@ -519,7 +553,23 @@ mutate "a send the session key signs carries the private deposit" "$ROUNDUPS" \
 mutate "the change moves into private per send" "$ROUNDUPS" \
   'have > 0, let need = Decimal(string: threshold), have >= need else' 'have > 0, let need = Decimal(string: threshold), need >= 0 else'
 mutate "a mainnet send sets change aside for private" "$ROUNDUPS" \
-  'setting.on && (!movesPrivately(setting, pools: pools) || pools.contains(chainId))' 'setting.on'
+  'setting.on && (!movesPrivately(setting, chains: chains) || chains.contains(chainId))' 'setting.on'
+mutate "private money ignores the kill switch (finding 7)" "$ROUNDUPS" \
+  'chains.filter { $0 != ethereumPool || (mainnetOn && owner) }' 'chains.filter { $0 != ethereumPool || owner }'
+mutate "private money ignores the owner (finding 7)" "$ROUNDUPS" \
+  'chains.filter { $0 != ethereumPool || (mainnetOn && owner) }' 'chains.filter { $0 != ethereumPool || mainnetOn }'
+mutate "unavailable private money is no private network (finding 7)" "$ROUNDUPS" \
+  'guard pools.contains(chainId) else { return .waits }' 'guard pools.contains(chainId) else { return .notHere }'
+mutate "a kept private target needs a pool (finding 7)" "$ROUNDUPS" \
+  'var movesPrivately: Bool { RoundUps.movesPrivately(self, chains: RoundUps.privateChains) }' 'var movesPrivately: Bool { RoundUps.movesPrivately(self, chains: RoundUps.privatePools) }'
+mutate "an unchecked ride rides (finding 5)" "$ROUNDUPS" \
+  'case .notChecked: return RideVerdict(why: "no node would check it")' 'case .notChecked: return RideVerdict(why: nil)'
+mutate "a refused ride rides (finding 5)" "$ROUNDUPS" \
+  'case .fails: return RideVerdict(why: "the node refuses it")' 'case .fails: return RideVerdict(why: nil)'
+mutate "a reserve is the whole batch (finding 3)" "$ROUNDUPS" \
+  'let before = YourAccountOp.difference(buy, plan.change)' 'let before = buy'
+mutate "a released reserve overwrites the count (finding 3)" "$ROUNDUPS" \
+  'YourAccountOp.sum(saved, reserved)' 'reserved'
 mutate "a shipped build offers private round-ups off Ethereum" "$ROUNDUPS" \
   $'#else\n        [ethereumPool]' $'#else\n        [ethereumPool, 8453]'
 mutate "Ethereum's round-ups move under the pool's minimum" "$ROUNDUPS" \

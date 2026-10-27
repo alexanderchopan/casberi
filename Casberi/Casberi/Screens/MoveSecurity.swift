@@ -387,7 +387,9 @@ struct MoveSecurity: View {
     /// say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
         // Private: where it runs, and that it moves together (prd §1561).
-        if setting.movesPrivately, let chain = RoundUps.privatePools.sorted().first {
+        // Where the change counts for your private balance, whether or not
+        // private money can take it now (it never buys instead, finding 7).
+        if setting.movesPrivately, let chain = RoundUps.privateChains.sorted().first {
             // On Ethereum the change is dollars, moved as USDC once it reaches
             // the pool's smallest deposit, read live (prd §1567).
             if chain == RoundUps.ethereumPool {

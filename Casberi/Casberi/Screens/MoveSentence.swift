@@ -497,19 +497,23 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
-    /// Round-ups move into your private balance here (prd §1567): picked,
-    /// on Ethereum, with private money on (the kill switch) and your
-    /// account its owner.
+    /// Round-ups count toward your private balance here (prd §1567): picked,
+    /// on Ethereum. **Counted whether or not private money is available now
+    /// (the review of 2026-10-26, finding 7):** with the kill switch off or
+    /// no account to own the note, the change keeps counting on its own
+    /// count and nothing is bought — a private target never goes public.
     private var privateRoundUps: Bool {
         RoundUps.setting.movesPrivately && !network.isTest && network.chainId == RoundUps.ethereumPool
-            && PrivateMove.available && PrivateOnEthereum.owner != nil
     }
 
     /// What this Face ID operation carries into your private balance: the
     /// whole count once it is due, when this act can spend the dollar (a
-    /// send of it, a swap selling it), as the buy rides (prd §1545, §1561).
+    /// send of it, a swap selling it), as the buy rides (prd §1545, §1561) —
+    /// only where private money is available now (`privateRoute`'s
+    /// `.deposit`: the kill switch on, your account the owner).
     private var privateRide: String? {
-        guard privateRoundUps, RoundUps.carriesBuy(roundUpAct) else { return nil }
+        guard privateRoundUps, RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit,
+              PrivateMove.available, PrivateOnEthereum.owner != nil, RoundUps.carriesBuy(roundUpAct) else { return nil }
         return roundUpPlan?.buy
     }
 
@@ -530,7 +534,9 @@ struct MoveSentence: View {
     /// The buy this transaction carries: the plan's, when the count reached
     /// it and this act can carry it (prd §1561).
     private var roundUpCarried: Chain.RoundUpBuy? {
-        guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }
+        // A private target is never bought publicly, on any network (finding 7).
+        guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),
+              let units = roundUpPlan?.buy else { return nil }
         return Chain.RoundUpBuy(units: units, target: RoundUps.setting.target)
     }
 
@@ -594,9 +600,12 @@ struct MoveSentence: View {
         if privateRoundUps {
             if let due = plan.buy {
                 let usd = Op.dollars(due, decimals: RoundUps.dollarDecimals, price: 1)
-                return privateRide != nil
-                    ? [String(localized: "\(Self.money(usd)) of round-ups moves to your private balance")]
-                    : [String(localized: "\(Self.money(usd)) of round-ups so far, moved with your next send of \(Op.dollar(on: network).symbol)")]
+                if privateRide != nil { return [String(localized: "\(Self.money(usd)) of round-ups moves to your private balance")] }
+                // Private money not available now (finding 7): it counts, nothing moves.
+                guard RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit else {
+                    return [String(localized: "\(Self.money(usd)) of round-ups so far, for your private balance")]
+                }
+                return [String(localized: "\(Self.money(usd)) of round-ups so far, moved with your next send of \(Op.dollar(on: network).symbol)")]
             }
             let usd = Op.dollars(plan.savedAfter, decimals: RoundUps.dollarDecimals, price: 1)
             return [String(localized: "\(Self.money(usd)) of round-ups so far, for your private balance")]
@@ -3399,22 +3408,53 @@ struct MoveSentence: View {
                         NSLog("roundUpsPrivate| kept counting | %@", String(describing: error))
                     }
                 }
-                let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
-                                                said: { line in await MainActor.run { say(line) } }) { s in
-                    await MainActor.run { stage = s }
+                // The operation is followed by its own id, so one still on its
+                // way can be told landed or failed later (the review of
+                // 2026-10-26, findings 2 and 3).
+                let followed = Chain.Followed()
+                let done = try await Chain.$following.withValue(followed) {
+                    try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
+                                         said: { line in await MainActor.run { say(line) } }) { s in
+                        await MainActor.run { stage = s }
+                    }
                 }
                 // The change is counted once the send has landed; a buy
                 // empties the count with it, and a send that did not buy (the
                 // spend limit's key, or no pool, prd §1545) keeps it all.
-                if let roundUp, case .landed(let tx, _) = done.sent.outcome {
-                    if toPrivate {
-                        // The pool's minimum, read again for the next send's threshold.
-                        Task { await PrivateMoneyStore.shared.readYield(including: .ethereum) }
-                        let moved = ride != nil && done.rode
-                        RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)
-                        if moved, let ride, let tx { Self.landPrivateRoundUps(ride, tx: tx, context: context) }
-                    } else {
-                        RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)
+                // **ONE STILL ON ITS WAY RESERVES ITS BATCH (finding 3):** the
+                // count empties as if it landed, so the next send neither
+                // rides nor buys it again; `PrivatePending` puts it back only
+                // if the operation is proven failed, and keeps the ride's note
+                // until the pool shows it (finding 2).
+                if let roundUp {
+                    let moved = toPrivate && ride != nil && done.rode
+                    let bought = !toPrivate && buy != nil && !done.roundUpWaits
+                    switch done.sent.outcome {
+                    case .landed(let tx, _):
+                        if toPrivate {
+                            // The pool's minimum, read again for the next send's threshold.
+                            Task { await PrivateMoneyStore.shared.readYield(including: .ethereum) }
+                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)
+                            // Landed with no transaction named (the nonce moved):
+                            // the note is still kept; its row waits for a hash.
+                            if moved, let ride { Self.landPrivateRoundUps(ride, tx: tx, context: context) }
+                        } else {
+                            RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: bought), on: net.chainId)
+                        }
+                    case .pending:
+                        guard moved || bought, let id = followed.id else { break }
+                        if toPrivate {
+                            RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)
+                            if let ride { Self.landPrivateRoundUps(ride, tx: nil, context: nil) }
+                        } else {
+                            RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)
+                        }
+                        PrivatePending.shared.add(.init(id: id, chainId: net.chainId, account: account, nonceKey: SafeABI.hex(followed.nonceKey),
+                                                        nonce: followed.nonce, at: Date(), commitment: moved ? ride?.keep.commitment : nil,
+                                                        title: moved ? ride.map { PrivateMoney.roundUpsTitle(figure: $0.figure) } : nil,
+                                                        reserved: RoundUps.reserve(roundUp), toPrivate: toPrivate))
+                    case .dryRun:
+                        break
                     }
                 }
                 let sent = done.sent
@@ -3507,14 +3547,19 @@ struct MoveSentence: View {
 
     /// Round-ups that rode a landed operation (prd §1567): the note kept
     /// waiting for approval, its Activity row with no verb.
+    /// Kept whether or not the transaction is named (finding 2): a ride that
+    /// landed with only the nonce moved, or one still on its way, is kept by
+    /// its commitment; the row lands once a hash is known (`PrivatePending`).
     @MainActor
-    static func landPrivateRoundUps(_ ride: PrivateOnEthereum.Ride, tx: String, context: ModelContext) {
+    static func landPrivateRoundUps(_ ride: PrivateOnEthereum.Ride, tx: String?, context: ModelContext?) {
         let n = ride.keep
         PrivateMoneyStore.shared.add(.init(commitment: n.commitment, label: n.label, labelHash: n.labelHash, symbol: n.symbol,
-                                           amount: n.amount, decimals: n.decimals, chainId: n.chainId, tx: tx, at: Date(),
+                                           amount: n.amount, decimals: n.decimals, chainId: n.chainId, tx: tx ?? "", at: Date(),
                                            status: .waiting, root: n.root, share: n.share))
-        PrivateActivity.land(hash: tx, title: PrivateMoney.roundUpsTitle(figure: ride.figure), chainId: n.chainId, context: context)
-        NSLog("roundUpsPrivate| moved | %@ | %@", tx, ride.figure)
+        if let tx, let context {
+            PrivateActivity.land(hash: tx, title: PrivateMoney.roundUpsTitle(figure: ride.figure), chainId: n.chainId, context: context)
+        }
+        NSLog("roundUpsPrivate| moved | %@ | %@", tx ?? "not yet seen", ride.figure)
     }
 
     /// Whether Face ID was reached, read across the send's tasks.

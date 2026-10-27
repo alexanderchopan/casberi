@@ -1,3 +1,5 @@
 node_modules/
 # Circuit artifacts fetched by `node bench-node.mjs` for the Mac comparison.
 .circuits/
+# The openclears mutation's engine (mainnet-sim.mjs).
+src/.engine-mutated.js

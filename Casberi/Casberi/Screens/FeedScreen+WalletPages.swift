@@ -246,7 +246,11 @@ extension FeedScreen {
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
         // A deposit's approval is asked here too, so Needs you's count is
         // the ASP's latest when Home stands (prd §1561; spaced 20 s).
-        .task { await PrivateMoneyStore.shared.refresh() }
+        .task {
+            await PrivateMoneyStore.shared.refresh()
+            // A move sent and not yet seen is asked about here too (finding 2).
+            if !PrivatePending.shared.ops.isEmpty { await PrivateWatch.findNotes(context: modelContext) }
+        }
     }
 
     // MARK: - Holdings' doors

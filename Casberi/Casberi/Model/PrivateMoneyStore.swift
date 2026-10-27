@@ -33,6 +33,11 @@ final class PrivateMoneyStore {
         PrivacyNetwork.ethereum.yield.first { !$0.native }.flatMap { minimums[$0.share.lowercased()] }
     }
     @ObservationIgnored private var asked: Date = .distantPast
+    /// Every commitment the pool has shown this launch (`reconcile`): an
+    /// operation still out is landed once its note is here (finding 2).
+    @ObservationIgnored private var poolSeen: Set<String> = []
+
+    func seenInPool(_ commitment: String) -> Bool { poolSeen.contains(commitment.lowercased()) }
     @ObservationIgnored private var yieldRead: Date = .distantPast
 
     /// **RESTORING YOUR PRIVATE BALANCE (prd §1567).** True while a new
@@ -203,6 +208,9 @@ final class PrivateMoneyStore {
     /// the pool has not indexed it yet. Other accounts' notes stand as they
     /// are. A note found on a new phone has no label hash yet: `fillLabelHashes`.
     func reconcile(_ found: PrivacyEngineWire.Discovered, root: String? = nil, network: PrivacyNetwork = .sepolia) {
+        // Every note the pool showed, whatever its state: what an operation
+        // still out carried is known to have landed once seen here (finding 2).
+        poolSeen.formUnion(found.notes.map { $0.commitment.lowercased() })
         // One network's notes at a time: an account's notes on the other
         // network stand as they are.
         let mine = notes.filter { $0.root == root && $0.chainId == network.chainId }
@@ -229,7 +237,17 @@ final class PrivateMoneyStore {
                          status: pool ?? had?.status ?? sameLabel?.status ?? .waiting, root: root, share: share?.share)
         }
         let recent = Date().addingTimeInterval(-600)
-        next += mine.filter { old in old.at > recent && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() } }
+        // A note whose transaction is still out (finding 2) stands however
+        // old: it may still land, and it leaves only when that is decided.
+        let out = Set(PrivatePending.shared.ops.compactMap { $0.exits ? nil : $0.commitment?.lowercased() })
+        let outTx = Set(FreshReceive.shared.entries.compactMap { e -> String? in
+            if case .sent(_, let tx, .deposit, _, _) = e.state { return tx.lowercased() }
+            return nil
+        })
+        next += mine.filter { old in
+            (old.at > recent || out.contains(old.commitment.lowercased()) || outTx.contains(old.tx.lowercased()))
+                && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() }
+        }
         notes = notes.filter { !($0.root == root && $0.chainId == network.chainId) } + next
         save()
         NSLog("privateMoney| reconciled | %@ | %@ | %d notes | spendable %@", root ?? PrivateRoot.legacy, network.name, next.count,

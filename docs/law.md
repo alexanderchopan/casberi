@@ -244,16 +244,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1705 of 1774 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1706 of 1775 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a)
+- §3 — Goals (amended by §1103a, §1568)
 - §4 — Persona variables (amended by §1126, §1344, §1567)
 - §5 — How it works today — Bob (amended by §1208c)
-- §6 — How it works today — Alice (amended by §1113)
+- §6 — How it works today — Alice (amended by §1113, §1568)
 - §7 — Outcomes — Bob (amended by §1100, §1498)
-- §8 — Outcomes — Alice (amended by §1119, §1160, §1163)
-- §9 — Problems (amended by §1556, §1567)
+- §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
+- §9 — Problems (amended by §1556, §1567, §1568)
 - §10 — Solutions (amended by §1208)
 - §11 — Bob vs Alice, per feature (amended by §1556)
 - §12 — Run 2 synthesis
@@ -1944,13 +1944,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567)
-- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567)
+- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568)
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
-- §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567)
+- §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's…
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu…
-- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri…
+- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568)
+- §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 
 ## Dead rulings → what replaced them (generated)
 

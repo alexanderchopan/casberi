@@ -67,13 +67,15 @@ final class PrivateTakeBack {
             }
             do {
                 stages[id] = .preparing
-                let (hash, figure) = try await PrivateOnEthereum.takeBack(note)
-                stages[id] = nil
-                if let context, let owner = PrivateOnEthereum.owner {
+                let (hash, figure, pending) = try await PrivateOnEthereum.takeBack(note)
+                // Not seen in two minutes: followed (`PrivatePending`), the
+                // note leaving once it lands; never called failed (finding 2).
+                stages[id] = pending ? .failed(String(localized: "Sent; Ethereum has not confirmed it yet")) : nil
+                if let hash, let context, let owner = PrivateOnEthereum.owner {
                     PrivateActivity.land(hash: hash, title: PrivateMoney.takenBackTitle(figure: figure, to: YourAccount.short(owner)),
                                          chainId: note.chainId, context: context)
                 }
-                NSLog("privateTakeBack| ethereum landed | %@ | %@", hash, figure)
+                NSLog("privateTakeBack| ethereum %@ | %@ | %@", pending ? "sent, not yet seen" : "landed", hash ?? "no hash", figure)
                 return hash
             } catch {
                 stages[id] = .failed(PrivateMove.words(error, network: .ethereum))
@@ -93,6 +95,8 @@ final class PrivateTakeBack {
         }
         let engine = PrivacyEngine.shared
         let started = Date()
+        // Alone through the engine, from the open to the send (finding 8).
+        return await PrivacyEngine.exclusive {
         do {
             // The note's own account (prd §1562): the device-only one or a root's.
             let account = note.root ?? PrivateRoot.legacy
@@ -125,6 +129,7 @@ final class PrivateTakeBack {
             stages[id] = .failed(PrivateMove.words(error))
             NSLog("privateTakeBack| failed | %@", String(describing: error))
             return nil
+        }
         }
         #else
         stages[id] = .failed(String(localized: "Not in this build"))

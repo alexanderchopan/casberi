@@ -373,8 +373,9 @@ final class PrivateMove {
             }
         }
         if onEthereum { await runEthereum(); return }
-        if mode == .send { await runSend(); return }
-        await runDeposit()
+        // Sepolia's flows hold the engine from the open to the send (finding 8).
+        if mode == .send { await PrivacyEngine.exclusive { await runSend() }; return }
+        await PrivacyEngine.exclusive { await runDeposit() }
     }
 
     /// On Ethereum: your account's Face ID operation into the yield pool, or
@@ -387,6 +388,7 @@ final class PrivateMove {
         guard let value = PrivateMoney.baseUnits(amount, decimals: decimals) else { return }
         let token = tokenId
         let started = Date()
+        deposited = nil
         do {
             if mode == .send {
                 guard let to = recipient, PrivateMoney.isAddress(to) else { return }
@@ -395,7 +397,7 @@ final class PrivateMove {
                 stage = .done(hash)
             } else {
                 stage = .preparing
-                let hash = try await PrivateOnEthereum.deposit(token: token, budget: value, context: nil, stage: { [weak self] s in
+                let made = try await PrivateOnEthereum.deposit(token: token, budget: value, context: nil, stage: { [weak self] s in
                     await MainActor.run {
                         switch s {
                         case .preparing: self?.stage = .preparing
@@ -404,7 +406,10 @@ final class PrivateMove {
                         }
                     }
                 }, proving: { [weak self] in self?.stage = .proving })
-                stage = .done(hash)
+                // Kept whether or not Ethereum named its transaction (finding 2):
+                // the sentence follows the note by its commitment.
+                deposited = made.commitment
+                stage = .done(made.tx ?? "")
                 await PrivateMoneyStore.shared.refresh(force: true)
             }
             NSLog("privateMove| ethereum | %@ | %@ %@ | %d s", mode == .send ? (balanceToBalance == true ? "balance to balance" : "sent") : "deposited",
@@ -512,6 +517,10 @@ final class PrivateMove {
     /// Where a move lands its Activity row; the sentence sets it.
     @ObservationIgnored var context: ModelContext?
 
+    /// The note the last deposit on Ethereum kept, by its commitment: the
+    /// sentence follows it whether or not a transaction was named (finding 2).
+    var deposited: String?
+
     // MARK: - Round-ups into your private balance (prd §1561)
 
     /// **THE CHANGE MOVES TOGETHER.** When round-ups move privately and what
@@ -558,6 +567,10 @@ final class PrivateMove {
     /// not, then the batch. On Sepolia nothing sends publicly (your account is
     /// not there), so this is the move's own door for a probe.
     static func moveRoundUpsNow(context: ModelContext?) async {
+        await PrivacyEngine.exclusive { await moveRoundUpsAlone(context: context) }
+    }
+
+    private static func moveRoundUpsAlone(context: ModelContext?) async {
         do {
             // Into the current root's account (prd §1562).
             let account = try PrivateRootKey.ensure()

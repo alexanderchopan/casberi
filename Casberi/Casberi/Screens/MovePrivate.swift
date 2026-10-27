@@ -135,7 +135,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// The note a deposit made, once it has.
     private var note: PrivateMoney.Note? {
         guard let doneHash else { return nil }
-        return store.notes.first { $0.tx == doneHash }
+        // By its commitment on Ethereum (kept even when no transaction was
+        // named, finding 2); else by its transaction.
+        if let kept = move.deposited { return store.notes.first { $0.commitment == kept } }
+        return doneHash.isEmpty ? nil : store.notes.first { $0.tx == doneHash }
     }
 
     private var figure: String {
@@ -259,7 +262,7 @@ struct MovePrivateSentence<Head: View>: View {
                         .foregroundStyle(note?.status == .approved ? DS.confirmInk
                                          : note?.status == .rejected ? DS.destructiveInk : DS.attentionInk)
                 }
-                if let link = URL(string: PrivateMoney.explorerTx(hash, chainId: move.network.chainId)) {
+                if !hash.isEmpty, let link = URL(string: PrivateMoney.explorerTx(hash, chainId: move.network.chainId)) {
                     let explorer = "Etherscan"
                     Button { openURL(link) } label: {
                         Text("View on \(explorer)").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)

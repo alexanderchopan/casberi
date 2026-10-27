@@ -82,6 +82,8 @@ enum FreshAddress {
         var id: String { "\(root ?? PrivateRoot.legacy):\(index)" }
         var network: Int { chainId ?? 11_155_111 }
         var token: String { symbol ?? "ETH" }
+        /// A transaction for it is out and not yet seen.
+        var isSent: Bool { if case .sent = state { true } else { false } }
     }
 
     enum State: Codable, Equatable {
@@ -98,6 +100,52 @@ enum FreshAddress {
         /// A token arrived and the address holds no ETH to move it; your
         /// private ETH is too little to pay its gas (prd §1567).
         case needsGas(amount: String)
+        /// **SENT AND NOT YET SEEN (the review of 2026-10-26, findings 2
+        /// and 6).** A transaction for this address is out: its own approval
+        /// or deposit (`nonce` its nonce, kept BEFORE it was broadcast), or
+        /// the relayed private withdrawal paying its gas (`tx` empty until
+        /// the relayer answered). Each look asks the chain about it
+        /// (`sentVerdict`) and nothing new is sent or paid for the address
+        /// while it may still land: never marked failed because a wait ran out.
+        case sent(amount: String, tx: String, step: SentStep, nonce: String?, at: Date)
+    }
+
+    enum SentStep: String, Codable, Equatable { case gas, approve, deposit }
+
+    /// **ETH AND USDC APART (the review of 2026-10-26, finding 4).** What a
+    /// look at an Ethereum fresh address asks about: each token it holds,
+    /// ETH first — so USDC under the pool's smallest deposit never hides the
+    /// ETH beside it, as it did when any USDC at all went the token's way.
+    enum LookOrder: Equatable { case nothing, eth, usdc, both }
+
+    static func lookOrder(eth: String, usdc: String, usdcPool: Bool) -> LookOrder {
+        let hasETH = (Decimal(string: eth) ?? 0) > 0
+        let hasUSDC = usdcPool && (Decimal(string: usdc) ?? 0) > 0
+        switch (hasETH, hasUSDC) {
+        case (true, true): return .both
+        case (true, false): return .eth
+        case (false, true): return .usdc
+        case (false, false): return .nothing
+        }
+    }
+
+    /// What the chain says of a sent transaction now.
+    enum SentVerdict: Equatable { case landed, reverted, waiting, dropped }
+
+    /// How long a transaction nobody's node knows may stay unknown before
+    /// it is taken as dropped (its nonce still free: sending again is safe);
+    /// a relayed withdrawal is the relayer's to post, so it gets a day.
+    static let droppedAfter: TimeInterval = 60 * 60
+    static let relayDroppedAfter: TimeInterval = 24 * 60 * 60
+
+    /// Landed or reverted by its receipt; still on its way while the node
+    /// knows it or its nonce was taken (mined, the receipt not served yet);
+    /// dropped only when the node has not known it for `after` and the
+    /// nonce is still free. Unknown answers are never a verdict.
+    static func sentVerdict(receipt: String?, known: Bool?, nonceTaken: Bool?, age: TimeInterval, after: TimeInterval) -> SentVerdict {
+        if let receipt { return receipt == "0x1" ? .landed : .reverted }
+        if nonceTaken == true || known != false { return .waiting }
+        return age > after ? .dropped : .waiting
     }
 
     /// The next address's index under `root`: one past its highest, so none
@@ -112,9 +160,12 @@ enum FreshAddress {
     static let watchCap = 8
 
     static func watched(_ entries: [Entry]) -> [Entry] {
-        Array(entries.filter { if case .moving = $0.state { false } else { true } }
+        let open = entries.filter { if case .moving = $0.state { false } else { true } }
             .sorted { ($0.made, $0.index) > ($1.made, $1.index) }
-            .prefix(watchCap))
+        let newest = Array(open.prefix(watchCap))
+        // One with a transaction out is looked at however old (finding 2):
+        // otherwise newer addresses would hide it and it would never resolve.
+        return newest + open.dropFirst(watchCap).filter(\.isSent)
     }
 
     /// What a look at an address's balance does: move it, say it was too

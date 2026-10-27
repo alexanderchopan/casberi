@@ -178,8 +178,9 @@ use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: c
 # a wrap and an unpriced token never; the buy rides only what can carry it;
 # a Buy counts its change once paid.
 use "$SENT" 'return s.quote.wrap == nil ? soldDollars(s) : nil' "a swap's round-up no longer reads what it sells, or rounds up a wrap"
-use "$SENT" 'guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "a swap or a Buy carries a buy it cannot pay"
-use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: buy != nil && !done.roundUpWaits), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
+use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),' "a swap or a Buy carries a buy it cannot pay, or a private target buys publicly"
+use "$SENT" 'let bought = !toPrivate && buy != nil && !done.roundUpWaits' "a send or swap that did not carry the buy empties the count"
+use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: bought), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
 use "$SENT" 'if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }' "a paid Buy's change is not counted"
 use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint' "a swap's small print says nothing of its round-up"
 echo "  ok   round-ups to private: offered where a pool is (Ethereum; Sepolia in DEBUG), moved together on a deposit you confirmed"
@@ -206,7 +207,7 @@ use "$FRESHV" 'Text("New address").dsText(.heading24).foregroundStyle(DS.textSec
 use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
 use "$FRESHV" 'MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))' "the fresh sentence's switch no longer leaves when turned off"
 ! grep -qE 'prefix\([0-9]+\)' "$FRESHV" || { echo "✗ the fresh sentence draws an address's head"; exit 1; }
-use "$FRESHM" 'let deposit = try await engine.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
+use "$FRESHM" 'return try await PrivacyEngine.shared.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
 use "$FRESHM" 'FreshAddress.matches(to: deposit.tx.to, value: deposit.tx.value, plan: plan, entrypoint: network.entrypoint)' "a fresh move is no longer checked against its plan"
 use "$FRESHM" 'guard estimate > 0, estimate <= FreshAddress.gasBudget else' "a fresh move is no longer held to its gas budget"
@@ -264,18 +265,24 @@ use "$ENGJS" "recipientDiscoveryData: { evmAddress: getAddress(recipient.toLower
 ! grep -q 'allowOutOfBandFallback' "$ENGJS" || { echo "✗ the engine falls back to secrets the app would have to deliver"; exit 1; }
 use "$BUNDLE" 'sharesForUnderlying' "the shipped bundle cannot transfer on a yield pool — rebuild with tools/privacy-pools-engine/build.mjs"
 awk '/static func transact\(_ items:/,/^    }$/' "$CHAIN" > "$TMPF"
-ride=$(grep -n 'let withRide = await check(net, account: account' "$TMPF" | cut -d: -f1)
-rreq=$(grep -n 'try require(withRide, on: net, swaps: a.mustCheck)' "$TMPF" | cut -d: -f1)
+ride=$(grep -n 'switch await Self.rideVerdict(ride, check: { extra in' "$TMPF" | cut -d: -f1)
+rreq=$(grep -n 'a.calls += extra' "$TMPF" | cut -d: -f1)
 rop=$(grep -n 'let outcome = try await operate(' "$TMPF" | cut -d: -f1)
 [[ -n "$ride" && -n "$rreq" && -n "$rop" && "$ride" -lt "$rreq" && "$rreq" -lt "$rop" ]] || { echo "✗ round-ups riding an operation are signed before the whole is simulated"; exit 1; }
+# The review of 2026-10-26, finding 5: a ride that does not check out is
+# DROPPED and the send goes alone (never `throw`, never `require` on the ride).
+awk '/switch await Self.rideVerdict\(ride, check:/,/^        }$/' "$TMPF" | grep -qE 'throw|try require' && { echo "✗ a failing round-up ride refuses the whole send"; exit 1; }
+grep -q 'rode: rode)' "$TMPF" || { echo "✗ a dropped ride still reads as ridden"; exit 1; }
+awk '/static func rideVerdict\(_ ride:/,/^    }$/' "$CHAIN" | grep -q 'let verdict = RoundUps.rideVerdict(written: true, checked: checked)' || { echo "✗ the ride's verdict is not RoundUps.rideVerdict's"; exit 1; }
 grep -q 'let kept = ride.isEmpty ? await Prepared.take(' "$TMPF" || { echo "✗ a riding deposit signs the preview's operation without it"; exit 1; }
-use "$SENT" 'let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,' "round-ups into private no longer ride the Face ID operation"
+use "$SENT" 'try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,' "round-ups into private no longer ride the Face ID operation"
 use "$SENT" 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: net.chainId)' "round-ups that did not ride are emptied"
-use "$SENT" 'guard !privateRoundUps, RoundUps.carriesBuy(roundUpAct), let units = roundUpPlan?.buy else { return nil }' "private round-ups also buy a token"
+use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),' "private round-ups also buy a token"
 use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "round-ups ride a deposit to something other than ppUSDC's router"
 awk '/static func schedule\(\)/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch is scheduled in DEBUG builds only"; exit 1; }
 awk '/private static func handle\(/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch's pass runs in DEBUG builds only"; exit 1; }
-awk '/static func restoreNotes\(\)/,/^    }$/' "$WATCH" | grep -q 'try await PrivateOnEthereum.open(root, reason: nil)' || { echo "✗ a new phone does not find its notes on Ethereum"; exit 1; }
+awk '/static func restoreNotes\(\)/,/^    }$/' "$WATCH" | grep -q 'if await findNotes(of: root, on: network) { PrivateRootKey.markFound(root) }' || { echo "✗ a new phone does not find its notes"; exit 1; }
+awk '/static func findNotes\(of root: String/,/^    }$/' "$WATCH" | grep -q 'try await PrivateOnEthereum.open(root, reason: nil)' || { echo "✗ a new phone does not find its notes on Ethereum"; exit 1; }
 use "$HOLD" 'Text("Restoring your private balance")' "a new phone's restore says nothing in Holdings"
 use "$HOLD" 'if store.restoring {' "the restoring line is not tied to the restore"
 grep -q 'store.beginRestore()' "$WATCH" && grep -q 'store.beginRestore()' "$FRESHM" || { echo "✗ a restore does not mark itself"; exit 1; }
@@ -313,7 +320,7 @@ use "$ETH" 'carried <= most else { throw Failure.noPool }' "a deposit may carry 
 use "$ETH" 'guard quit.recipient.lowercased() == owner.lowercased() else { throw Failure.notOwner }' "a ragequit paying someone other than your account is signed"
 use "$ETH" 'reason: String = String(localized: "Send from your private balance")) async throws -> String {' "a relayed send no longer asks for the device owner"
 awk '/static func send\(token: String/,/^    }$/' "$ETH" | grep -q 'try await open(account, reason: reason)' || { echo "✗ a relayed send opens without asking for the device owner"; exit 1; }
-use "$ETH" 'let sent = try await YourAccountChain.privateCalls(calls, on: accountNetwork,' "a deposit or Take it back no longer goes through your account"
+[[ $(grep -c 'try await YourAccountChain.privateCalls(' "$ETH") -ge 2 ]] || { echo "✗ a deposit or Take it back no longer goes through your account"; exit 1; }
 awk '/static func privateCalls\(/,/^    }$/' "$CHAIN" > "$TMP0"
 grep -q 'throw Failure(message: String(localized: "\\(net.name) could not check this, so nothing was signed"))' "$TMP0" || { echo "✗ a private call no node would simulate is signed"; exit 1; }
 sim=$(grep -n 'let simulated = await check(net, account: account' "$TMP0" | cut -d: -f1)
@@ -323,8 +330,10 @@ op=$(grep -n 'let outcome = try await operate(' "$TMP0" | cut -d: -f1)
 use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldLine(row) ?? PrivateMoney.network(row.chainId), DS.textSecondary)' "a private row no longer says its rate"
 use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
 ! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
-use "$TAKE" 'let (hash, figure) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
-python3 -I - "$SIMREC" <<'PY' || { echo "✗ the mainnet simulation record is not nine landed moves"; exit 1; }
+use "$TAKE" 'let (hash, figure, pending) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
+grep -qF 'router: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",' Casberi/Casberi/Model/YourAccountSwap.swift \
+    || { echo "✗ Swap's Ethereum SwapRouter02 is no longer the one Take it back unwraps through"; exit 1; }
+python3 -I - "$SIMREC" <<'PY' || { echo "✗ the mainnet simulation record is not nine landed moves from a real Safe proxy"; exit 1; }
 import json, sys
 r = json.load(open(sys.argv[1]))
 s = r["scenarios"]
@@ -341,6 +350,18 @@ assert int(s["roundups"]["batch"]) >= int(s["roundups"]["minUnderlying"]), "roun
 assert int(s["ragequit"]["ethBack"]) >= int(s["eth"]["spentWei"]) * 999 // 1000, "Take it back returns the deposit"
 assert int(s["withdraw"]["received"]) == int(s["withdraw"]["amount"]), "the recipient gets the amount"
 assert s["withdraw"]["processor"].lower() == "0x77613d670bb9fd48a9898d0eac8ebf21b566f960", "the router is the withdrawal's processor"
+# The review of 2026-10-26: the account is a real SafeL2 1.4.1 proxy, each move
+# checked as the app checks it and run as the operation; Take it back unwraps
+# through SwapRouter02; ppETH's router refunded into the cold proxy.
+a = r["account"]
+assert "proxy" in a["kind"] and a["singleton"].lower() == "0x29fcb43b46531bca003ddc8fcb67ffe91900c762" and a["threshold"] == 1, "the account is not the app's Safe proxy"
+calls = s["ragequit"]["calls"]
+assert any(c.endswith("0xa9059cbb") and c.startswith("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2") for c in calls), "Take it back's WETH does not go to the router"
+assert any(c == "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45 0x49404b7c" for c in calls), "Take it back is not unwrapped by the router"
+assert not any(c.endswith("0x2e1a7d4d") for c in calls), "Take it back calls WETH's own withdraw"
+assert int(s["eth"]["refundWei"]) > 0, "ppETH's refund into the proxy is unproven"
+assert s["roundups"].get("refusedRideDroppedSendLands") is True, "a refused ride is not shown dropped with the send landing alone"
+assert s["withdraw"].get("relayedAfterAnotherOpen") is True, "a relay after another account opened is unproven"
 PY
 rm -f "$TMP0"
 echo "  ok   Ethereum: your account sends what was simulated, owns and takes back; every deposit earns; the rate read live"
@@ -627,11 +648,20 @@ check(P.spendable([yn], chainId: 1, rates: rates) == "9999990118427979", "spenda
 check(abs(P.worthUSD([un], prices: ["usdc": 1], rates: rates) - 19.999975) < 0.000001, "the total counts the worth")
 // Take it back on a yield pool: approve the zap, redeem to the token, unwrap ETH.
 let tb = Y.takeBackCalls(pool: ppETH, shares: "9987480271160279", owner: "0x746dA2D4849B90571be2974454b3b712a5eb9d3F", worth: "9999990118427979")
-check(tb?.count == 3 && tb?[0].to == ppETH.share && tb?[0].data.hasPrefix("0x095ea7b3") == true && tb?[0].data.contains(ppETH.zap.dropFirst(2).lowercased()) == true,
+check(tb?.count == 4 && tb?[0].to == ppETH.share && tb?[0].data.hasPrefix("0x095ea7b3") == true && tb?[0].data.contains(ppETH.zap.dropFirst(2).lowercased()) == true,
       "first the share approves the zap")
 check(tb?[1].to == ppETH.zap && tb?[1].data.hasPrefix("0x7aa6a9fd") == true && tb?[1].data.hasSuffix("746da2d4849b90571be2974454b3b712a5eb9d3f") == true,
       "then the zap redeems to the account")
-check(tb?[2].to == ppETH.underlying && tb?[2].data == "0x2e1a7d4d" + Y.uint("9999990118427979")!, "then WETH unwraps what the shares were worth")
+// The review of 2026-10-26, finding 1: WETH's own `withdraw` pays a cold Safe
+// proxy 2,300 gas and the check refuses it, so the WETH goes through the
+// pinned SwapRouter02 (§1559): `transfer(router, worth)`, `unwrapWETH9(worth, owner)`.
+check(Y.unwrapRouter.lowercased() == "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45", "the unwrap router is not Ethereum's SwapRouter02")
+check(tb?[2].to == ppETH.underlying && tb?[2].data == "0xa9059cbb" + String(repeating: "0", count: 24) + "68b3465833fb72a70ecdf485e0e4c7bd8665fc45" + Y.uint("9999990118427979")!,
+      "then the WETH goes to the router, exactly what the shares were worth")
+check(tb?[3].to == Y.unwrapRouter && tb?[3].data == "0x49404b7c" + Y.uint("9999990118427979")! + String(repeating: "0", count: 24) + "746da2d4849b90571be2974454b3b712a5eb9d3f",
+      "then the router unwraps it to the account with a full-gas call")
+check(tb?.contains { $0.data.hasPrefix("0x2e1a7d4d") } == false, "Take it back calls WETH's own withdraw, which a cold Safe proxy cannot take")
+check(Y.takeBackCalls(pool: ppETH, shares: "1", owner: "0x746dA2D4849B90571be2974454b3b712a5eb9d3F", worth: "0") == nil, "a worthless unwrap is written")
 check(Y.takeBackCalls(pool: ppUSDC, shares: "1", owner: "0x746dA2D4849B90571be2974454b3b712a5eb9d3F", worth: "1")?.count == 2, "USDC needs no unwrap")
 check(Y.uint("255") == String(repeating: "0", count: 62) + "ff" && Y.uint("-1") == nil && Y.uint("") == nil, "one word")
 // What Move offers on Ethereum: from the pool's smallest deposit up.
@@ -701,6 +731,51 @@ check(P.viewingKeyCall(owner: "0x38db9f602274AFB7c9c87E2942C43c0781A3BC82") == "
 check(P.hasViewingKey("0xe53c39d8d674804fdef03da07227977ef56bccba73635f619e0be3f553a76f5c"), "B's registered key on Sepolia is a private account")
 check(!P.hasViewingKey("0x" + String(repeating: "0", count: 64)) && !P.hasViewingKey("0x") && !P.hasViewingKey(nil) && !P.hasViewingKey("0x12"),
       "a zero, empty or unreadable key is a private account")
+
+
+// ── The review of 2026-10-26 ───────────────────────────────────────────────
+// Findings 2 and 3: an operation of your account sent and not seen. Landed by
+// its receipt or its note in the pool; failed by a failed receipt, or — for a
+// note — the nonce taken and the pool silent past the grace; a buy whose nonce
+// was taken counts as landed (never bought twice); a nonce still free waits,
+// however long, and an unanswered read is never a verdict.
+let grace = P.pendingGrace
+check(P.pendingVerdict(receipt: true, nonceMoved: true, inPool: false, carriesNote: true, age: 0) == .landed, "a successful receipt is not landed")
+check(P.pendingVerdict(receipt: false, nonceMoved: true, inPool: false, carriesNote: true, age: 0) == .failed, "a failed receipt is not failed")
+check(P.pendingVerdict(receipt: nil, nonceMoved: nil, inPool: true, carriesNote: true, age: 0) == .landed, "a note found in the pool is not landed")
+check(P.pendingVerdict(receipt: nil, nonceMoved: false, inPool: false, carriesNote: true, age: 30 * 86_400) == .waiting,
+      "an operation whose nonce is still free is called failed by its age (it may still land)")
+check(P.pendingVerdict(receipt: nil, nonceMoved: nil, inPool: false, carriesNote: false, age: 30 * 86_400) == .waiting, "an unanswered read is a verdict")
+check(P.pendingVerdict(receipt: nil, nonceMoved: true, inPool: false, carriesNote: true, age: grace - 1) == .waiting,
+      "a note is called failed before the pool had its time to show it")
+check(P.pendingVerdict(receipt: nil, nonceMoved: true, inPool: false, carriesNote: true, age: grace + 1) == .failed,
+      "a note never in the pool long after its nonce was taken still waits (its round-ups never come back)")
+check(P.pendingVerdict(receipt: nil, nonceMoved: true, inPool: false, carriesNote: false, age: grace + 1) == .landed,
+      "a buy that may have landed is put back on the count (bought twice)")
+check(grace >= 10 * 60, "the pool gets under ten minutes to show a note")
+// Findings 2 and 6: a fresh address's transaction out. Landed or reverted by
+// its receipt; waiting while the node knows it or its nonce is taken; dropped
+// only when unknown past its time with the nonce free; unknown is no verdict.
+let da = F.droppedAfter
+check(F.sentVerdict(receipt: "0x1", known: nil, nonceTaken: nil, age: 0, after: da) == .landed
+      && F.sentVerdict(receipt: "0x0", known: nil, nonceTaken: nil, age: 0, after: da) == .reverted, "a receipt is read wrong")
+check(F.sentVerdict(receipt: nil, known: nil, nonceTaken: nil, age: 1e9, after: da) == .waiting, "an unanswered read drops a transaction (sent twice)")
+check(F.sentVerdict(receipt: nil, known: true, nonceTaken: false, age: 1e9, after: da) == .waiting, "a transaction the node holds is dropped (sent twice)")
+check(F.sentVerdict(receipt: nil, known: false, nonceTaken: true, age: 1e9, after: da) == .waiting, "a mined transaction whose receipt is late is dropped")
+check(F.sentVerdict(receipt: nil, known: false, nonceTaken: false, age: da - 1, after: da) == .waiting
+      && F.sentVerdict(receipt: nil, known: false, nonceTaken: false, age: da + 1, after: da) == .dropped, "a lost transaction is dropped too soon, or never")
+check(F.relayDroppedAfter >= 86_400 && da >= 3600, "a relayed gas payment is asked for again within a day, or a lost one within the hour")
+// A transaction out is looked at however many newer addresses there are.
+let made0 = Date(timeIntervalSince1970: 1_800_000_000)
+var outBook: [F.Entry] = (0..<10).map { F.Entry(index: UInt32($0 + 1), address: "0x\($0)", made: made0.addingTimeInterval(Double($0 + 1)), state: .waiting) }
+outBook.append(F.Entry(index: 0, address: "0xsent", made: made0, state: .sent(amount: "1", tx: "0xab", step: .deposit, nonce: "0", at: made0)))
+check(F.watched(outBook).contains { $0.address == "0xsent" }, "a transaction out on an older address is never asked about again")
+check(F.watched(outBook).count == F.watchCap + 1, "the look asks about more than the newest few and those out")
+// Finding 4: ETH and USDC apart, ETH first; USDC dust never hides ETH.
+check(F.lookOrder(eth: "4300000000000000", usdc: "1", usdcPool: true) == .both, "USDC dust hides the ETH beside it")
+check(F.lookOrder(eth: "0", usdc: "25000000", usdcPool: true) == .usdc && F.lookOrder(eth: "1", usdc: "0", usdcPool: true) == .eth
+      && F.lookOrder(eth: "0", usdc: "0", usdcPool: true) == .nothing && F.lookOrder(eth: "1", usdc: "5", usdcPool: false) == .eth,
+      "a look asks about a token the address does not hold, or one with no pool")
 
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
@@ -781,7 +856,9 @@ mutate "one send spends two accounts" "$PM" 's/spendable\(notes\.filter \{ \$0\.
 mutate "each root shares one count" "$FRESH" 's/entries\.filter \{ \$0\.root == root \}\.map/entries.map/'
 mutate "the rate forgets the share's fee" "$YIELD" 's/return gross \* \(1 - Double\(feeBps\) \/ 10_000\)/return gross/'
 mutate "the worth forgets the share's decimals" "$YIELD" 's/for _ in 0\.\.<shareDecimals \{ scale \*= 10 \}/for _ in 0..<(shareDecimals - 1) { scale *= 10 }/'
-mutate "Take it back leaves WETH" "$YIELD" 's/if pool\.native \{ calls\.append\(\(pool\.underlying, "0x2e1a7d4d" \+ worthWord\)\) \}//'
+mutate "Take it back leaves WETH" "$YIELD" 's/            calls\.append\(\(unwrapRouter, "0x49404b7c" \+ worthWord \+ ownerWord\)\)\n//'
+mutate "Take it back unwraps by WETH's own withdraw (finding 1)" "$YIELD" 's/calls\.append\(\(pool\.underlying, "0xa9059cbb" \+ routerWord \+ worthWord\)\)\n            calls\.append\(\(unwrapRouter, "0x49404b7c" \+ worthWord \+ ownerWord\)\)/calls.append((pool.underlying, "0x2e1a7d4d" + worthWord))/'
+mutate "the unwrap goes to the zap, not the router" "$YIELD" 's/let routerWord = String\(repeating: "0", count: 24\) \+ unwrapRouter/let routerWord = String(repeating: "0", count: 24) + pool.zap/'
 mutate "USDC's shares count as 18-place USDC" "$PM" 's/pool\.underlyingDecimals < pool\.shareDecimals,/pool.underlyingDecimals > 99,/'
 mutate "Ethereum offers less than the pool takes" "$PM" 's/return units \+ keep <= have && units >= floor/return units + keep <= have/'
 mutate "a rate past 100% is a rate" "$YIELD" 's/guard apr < 1 else \{ return nil \}//'
@@ -796,4 +873,131 @@ mutate "the minimum forgets the rate" "$FRESH" 's/var worth = shares \* rate \/ 
 mutate "a USDC move's gas forgets the approval" "$FRESH" 's/Decimal\(FreshTx\.approveGas \+ gasBudget\) \* fee/Decimal(gasBudget) * fee/'
 mutate "a zero viewing key is a private account" "$PM" 's/ && body\.contains \{ \$0 != "0" \}//'
 mutate "a deposit carrying more than its budget matches" "$FRESH" 's/approvals == 0 && carried <= most && carried > 0/approvals == 0 \&\& carried > 0/'
-echo "  ok   61 mutations"
+# The review of 2026-10-26, findings 2, 4 and 6: mutations of the pure rules.
+mutate "a nonce still free fails an operation by its age (finding 2)" "$PM" 's/guard nonceMoved == true else \{ return \.waiting \}/guard nonceMoved == true || age > pendingGrace else { return .waiting }/'
+mutate "a note is failed the moment its nonce is taken (finding 2)" "$PM" 's/return age > pendingGrace \? \.failed : \.waiting/return .failed/'
+mutate "a buy that may have landed is put back (finding 3)" "$PM" 's/guard carriesNote else \{ return \.landed \}/guard carriesNote else { return .failed }/'
+mutate "the pool's note is not proof of landing (finding 2)" "$PM" 's/if inPool \|\| receipt == true \{ return \.landed \}/if receipt == true { return .landed }/'
+mutate "an unknown transaction is dropped at once (finding 2)" "$FRESH" 's/return age > after \? \.dropped : \.waiting/return .dropped/'
+mutate "a transaction the node holds is dropped (finding 6)" "$FRESH" 's/if nonceTaken == true \|\| known != false \{ return \.waiting \}/if nonceTaken == true { return .waiting }/'
+mutate "a transaction out on an older address is never asked about (finding 2)" "$FRESH" 's/return newest \+ open\.dropFirst\(watchCap\)\.filter\(\\\.isSent\)/return newest/'
+mutate "USDC dust hides the ETH beside it (finding 4)" "$FRESH" 's/case \(true, true\): return \.both/case (true, true): return .usdc/'
+
+# Finding 8: one flow at a time through the engine. `PrivacyEngineQueue`
+# compiled whole and driven by three flows whose awaits interleave: each
+# must see only its own open from its proof to its relay, a nested flow runs
+# in place (no deadlock), and a flow that throws hands the engine on.
+QUEUE="Casberi/Casberi/Model/PrivacyEngineQueue.swift"
+[[ -f "$QUEUE" ]] || { echo "✗ $QUEUE not found"; exit 1; }
+use "$ENGINE" 'guard Self.accountFree.contains(method) || PrivacyEngineQueue.holding else {' "the engine serves an account-bound call outside PrivacyEngine.exclusive"
+use "$ENGINE" 'static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash]' "the engine lets an account-bound method run outside the queue"
+use "$ENGJS" 'prepared.set(h, { ...value, acct: account });' "a prepared handle no longer remembers the account it was made under"
+use "$ENGJS" 'const s = await session(p.kind, p.acct);' "a relay goes through whichever account is open, not its own"
+use "$ENGJS" 'const tx = await p.acct.relayer.relayWithdrawal(p.relayer, p.result.relayParams);' "a yield withdrawal is relayed through whichever account is open"
+[[ $(grep -c 'prepared.clear();' "$ENGJS") -eq 1 ]] || { echo "✗ opening an account wipes another account's prepared handles (only close may)"; exit 1; }
+use "$BUNDLE" '.acct.relayer.relayWithdrawal(' "the shipped bundle's handles are not keyed to their account — rebuild with tools/privacy-pools-engine/build.mjs"
+for f in "$ETH" "Casberi/Casberi/Model/FreshReceive.swift" "$WATCH"; do
+    grep -q 'PrivacyEngine.exclusive {' "$f" || { echo "✗ $f opens the engine outside the queue"; exit 1; }
+done
+mkdir -p "$TMP/q"; cat > "$TMP/q/main.swift" <<'SWIFT'
+import Foundation
+DispatchQueue.global().asyncAfter(deadline: .now() + 15) { print("  ✗ the engine queue deadlocked (a nested flow waits on itself)"); exit(1) }
+@MainActor final class Page { var open: String?; var log: [String] = [] }
+struct Boom: Error {}
+@MainActor func test() async -> Int {
+    var failures = 0
+    func check(_ ok: Bool, _ what: String) { if !ok { print("  ✗ \(what)"); failures += 1 } }
+    let q = PrivacyEngineQueue(), page = Page()
+    func flow(_ name: String) async {
+        await q.run {
+            page.open = name; page.log.append("\(name) open")
+            for _ in 0..<3 { await Task.yield(); try? await Task.sleep(nanoseconds: 1_000_000) }
+            page.log.append("\(name) prove under \(page.open ?? "-")")
+            await q.run { page.log.append("\(name) nested under \(page.open ?? "-")") }
+            await Task.yield()
+            page.log.append("\(name) relay under \(page.open ?? "-")")
+        }
+    }
+    await withTaskGroup(of: Void.self) { group in
+        for name in ["A", "B", "C"] { group.addTask { @MainActor in await flow(name) } }
+    }
+    for n in ["A", "B", "C"] {
+        check(page.log.contains("\(n) prove under \(n)") && page.log.contains("\(n) relay under \(n)"),
+              "flow \(n) proved or relayed under another flow's open account: \(page.log)")
+        check(page.log.contains("\(n) nested under \(n)"), "a nested flow did not run in place")
+        let mine = page.log.enumerated().filter { $0.element.hasPrefix("\(n) ") }.map(\.offset)
+        check(mine.count == 4 && mine.last! - mine.first! == 3, "flow \(n)'s steps interleave with another's: \(page.log)")
+    }
+    check(!PrivacyEngineQueue.holding, "the queue's hold leaks out of run")
+    do { try await q.run { throw Boom() } } catch {}
+    var after = false
+    await q.run { after = true }
+    check(after, "a flow that threw kept the engine")
+    return failures
+}
+let failures = await test()
+if failures > 0 { exit(1) }
+print("queue ok")
+SWIFT
+run_queue() { swiftc -Onone "$1" "$TMP/q/main.swift" -o "$TMP/queue" 2>"$TMP/queue-err" || { head -20 "$TMP/queue-err"; return 2; }; "$TMP/queue" >/dev/null 2>&1; }
+swiftc -Onone "$QUEUE" "$TMP/q/main.swift" -o "$TMP/queue" 2>"$TMP/queue-err" || { head -20 "$TMP/queue-err"; echo "✗ PrivacyEngineQueue does not compile alone"; exit 1; }
+"$TMP/queue" || { echo "✗ the engine queue lets flows swap the open account"; exit 1; }
+echo "  ok   one flow at a time through the engine: three interleaved flows each keep their own account, a nested one runs in place"
+qmutate() {
+    local name="$1" perl_expr="$2"
+    cp "$QUEUE" "$TMP/queue-mut.swift"
+    perl -0pi -e "$perl_expr" "$TMP/queue-mut.swift"
+    if cmp -s "$QUEUE" "$TMP/queue-mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
+    if run_queue "$TMP/queue-mut.swift"; then echo "✗ SURVIVED  $name"; exit 1; fi
+    echo "  ok   catches  $name"
+}
+qmutate "a flow runs while another holds the engine (finding 8)" 's/        if busy \{\n            await withCheckedContinuation \{ waiters\.append\(\$0\) \}\n        \} else \{\n            busy = true\n        \}/        busy = true/'
+qmutate "a nested flow waits on itself (finding 8)" 's/        if Self\.holding \{ return try await body\(\) \}\n//'
+qmutate "a release forgets the next flow (finding 8)" 's/            waiters\.removeFirst\(\)\.resume\(\)/            busy = false; waiters.removeAll()/'
+# The review's fixes in USE, not only in the rules (2026-10-26):
+PEND="Casberi/Casberi/Model/PrivatePending.swift"
+[[ -f "$PEND" ]] || { echo "✗ $PEND not found"; exit 1; }
+# 2: a fresh transaction is kept before it goes and never failed by a wait;
+# a `.sent` address is asked about before anything new is sent for it.
+awk '/static func send\(to: String, data: String, value: String, index: UInt32/,/^    }$/' "$FSIGN" > "$TMP/fsend"
+k=$(grep -n 'kept(hash, PrivateMoney.decimal(hex: nonce))' "$TMP/fsend" | cut -d: -f1)
+b=$(grep -n '"eth_sendRawTransaction"' "$TMP/fsend" | cut -d: -f1)
+[[ -n "$k" && -n "$b" && "$k" -lt "$b" ]] || { echo "✗ a fresh transaction is broadcast before it is kept (finding 2)"; exit 1; }
+! grep -q 'waitFor' "$TMP/fsend" || { echo "✗ a fresh send waits, and its wait's end is a failure (finding 2)"; exit 1; }
+awk '/    func check\(context: ModelContext, force: Bool = false\) async \{/,/^    }$/' "$FRESHM" > "$TMP/fcheck"
+r=$(grep -n 'await resolveSent(entry,' "$TMP/fcheck" | cut -d: -f1)
+g=$(grep -n '"eth_getBalance"' "$TMP/fcheck" | cut -d: -f1)
+[[ -n "$r" && -n "$g" && "$r" -lt "$g" ]] || { echo "✗ an address with a transaction out is moved again before it is asked about (findings 2, 6)"; exit 1; }
+use "$FRESHM" 'if try await FreshSigner.landed(hash, on: network) {' "a fresh deposit's wait decides its fate (finding 2)"
+# 2: a deposit, a round-up ride and Take it back not seen in two minutes are kept and followed.
+use "$ETH" 'if case .pending = sent.outcome, let id = followed.id {' "a deposit not seen in two minutes is not followed (finding 2)"
+use "$ETH" 'tx: hash ?? "", at: Date(),' "a deposit that landed with no transaction named is not kept (finding 2)"
+use "$SENT" 'PrivatePending.shared.add(.init(id: id, chainId: net.chainId, account: account, nonceKey: SafeABI.hex(followed.nonceKey),' "a round-up ride not seen in two minutes is not followed (findings 2, 3)"
+use "$SENT" 'if moved, let ride { Self.landPrivateRoundUps(ride, tx: tx, context: context) }' "a ride that landed with no transaction named drops its note (finding 2)"
+use "$CHAIN" 'if let followed = following {' "submit no longer names the operation it sent (findings 2, 3)"
+# 2: every root's notes on a cadence: Holdings, Needs you, the background pass.
+use "$HOLD" 'await PrivateWatch.findNotes(context: modelContext)' "Holdings no longer finds every root's notes on a cadence (finding 2)"
+use "$HOLD" 'await PrivateWatch.findNotes(context: context)' "Needs you no longer finds every root's notes on a cadence (finding 2)"
+use "$WATCH" 'if left() > 15 { await findNotes(context: context) }' "the background pass no longer finds every root's notes (finding 2)"
+awk '/static func findNotes\(context: ModelContext\?, force: Bool = false\) async \{/,/^    }$/' "$WATCH" | grep -q 'await PrivatePending.shared.resolve(context: context)' \
+    || { echo "✗ what was sent and not seen is never asked about (finding 2)"; exit 1; }
+# 3: a ride on its way empties the count and reserves it; failed, the reserve comes back.
+awk '/case \.pending:/,/case \.dryRun:/' "$SENT" | grep -q 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: net.chainId)' \
+    || { echo "✗ a ride still on its way leaves the count whole: the next send rides it again (finding 3)"; exit 1; }
+use "$SENT" 'reserved: RoundUps.reserve(roundUp), toPrivate: toPrivate))' "a ride on its way reserves nothing (finding 3)"
+use "$PEND" 'RoundUps.setPrivateSaved(RoundUps.released(reserved, onto: RoundUps.privateSaved(on: op.chainId)), on: op.chainId)' "a failed ride's round-ups never come back (finding 3)"
+# 6: the gas payment is kept before the relayer is asked.
+awk '/private func lookToken\(/,/^    }$/' "$FRESHM" > "$TMP/ftoken"
+sg=$(grep -n 'set(entry.id, .sent(amount: held, tx: "", step: .gas, nonce: nil, at: Date()), symbol: symbol)' "$TMP/ftoken" | cut -d: -f1)
+rl=$(grep -n 'let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: gas.shortfall' "$TMP/ftoken" | cut -d: -f1)
+[[ -n "$sg" && -n "$rl" && "$sg" -lt "$rl" ]] || { echo "✗ a fresh address's gas is relayed before it is kept: it can be paid twice (finding 6)"; exit 1; }
+! grep -q 'PrivateRPC.waitFor' "$TMP/ftoken" || { echo "✗ a gas payment's wait decides its fate (finding 6)"; exit 1; }
+use "$FRESHM" 'if !(await allowanceCovers(pool, owner: entry.address, amount: most, network: network)) {' "an approval that landed is sent again (finding 2)"
+# 4: ETH and USDC apart.
+use "$FRESHM" 'switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool: usdcPool != nil) {' "a fresh address's USDC still decides for its ETH (finding 4)"
+# 7: a private target counts on Ethereum whatever is available, and rides only where it can move.
+awk '/private var privateRoundUps: Bool \{/,/^    }$/' "$SENT" | grep -q 'PrivateMove.available\|owner != nil' && { echo "✗ a private target with private money unavailable falls back to a public buy (finding 7)"; exit 1; }
+awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit,' \
+    || { echo "✗ round-ups ride where private money is not available (finding 7)"; exit 1; }
+echo "  ok   the review's fixes in use: kept before sent, followed past two minutes, reserved, the gas paid once, ETH apart from USDC, never public"
+echo "  ok   74 mutations"

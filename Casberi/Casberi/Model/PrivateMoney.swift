@@ -475,3 +475,59 @@ enum PrivateMoney {
         return NSDecimalNumber(decimal: rounded).stringValue
     }
 }
+
+// MARK: - A move sent and not yet seen (the review of 2026-10-26, findings 2, 3)
+
+extension PrivateMoney {
+
+    /// An operation of your account that was sent and not seen on chain in
+    /// the two minutes `submit` follows it (`.pending`): a deposit into your
+    /// private balance, or a send carrying round-ups. Kept until it is known
+    /// landed or failed — never dropped because a wait ran out.
+    struct PendingOp: Codable, Equatable, Identifiable {
+        /// The user operation's hash: the bundler's receipt is asked by it.
+        let id: String
+        let chainId: Int
+        let account: String
+        /// Its nonce's key (hex) and sequence: some operation taking that
+        /// nonce means this one can no longer land unless it already did.
+        let nonceKey: String
+        let nonce: UInt64
+        let at: Date
+        /// The private note it carries, kept at once (status waiting): found
+        /// in the pool, the operation landed.
+        let commitment: String?
+        /// Its Activity row's words, landed once a transaction is named.
+        let title: String?
+        /// Round-ups it carried (`RoundUps.reserve`): back on the count only
+        /// if it is proven failed.
+        let reserved: String?
+        /// Which count `reserved` came off: the private one, or the buy's.
+        let toPrivate: Bool
+        /// Take it back: the note LEAVES the pool when it lands, so the pool
+        /// holding it says nothing, and landed it is removed here.
+        var exits: Bool = false
+    }
+
+    enum PendingVerdict: Equatable { case landed, failed, waiting }
+
+    /// How long a note-carrying operation whose nonce was taken may wait for
+    /// the pool to show its note before it is called failed (the pool's
+    /// events reach the engine within minutes; this is the slack).
+    static let pendingGrace: TimeInterval = 30 * 60
+
+    /// **LANDED, FAILED, OR STILL ON ITS WAY.** The bundler's receipt
+    /// decides when it answers; the note in the pool means landed. With no
+    /// receipt and the nonce taken, an operation carrying a note failed only
+    /// once the pool has had `pendingGrace` to show it; one carrying no note
+    /// (a public buy) cannot be told apart, so it counts as landed — the
+    /// safe side is never buying twice. A nonce not yet taken is still on its
+    /// way, however long: it may still land, so nothing is put back.
+    static func pendingVerdict(receipt: Bool?, nonceMoved: Bool?, inPool: Bool, carriesNote: Bool, age: TimeInterval) -> PendingVerdict {
+        if inPool || receipt == true { return .landed }
+        if receipt == false { return .failed }
+        guard nonceMoved == true else { return .waiting }
+        guard carriesNote else { return .landed }
+        return age > pendingGrace ? .failed : .waiting
+    }
+}

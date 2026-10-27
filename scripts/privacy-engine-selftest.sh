@@ -83,6 +83,22 @@ use "$BUNDLE" "prepareYieldDeposit" "the shipped bundle cannot deposit into a yi
 use "$ENGJS" "value = (await y.deposit.sharesForUnderlying(value)) + 1n;" "a transfer on a yield pool is not sized in shares"
 use "$ENGJS" "const r = await s.prepareTransfer({ inputCommitments: inputsFor(token, value), amount: hex(value), tokenId: token," "a transfer spends notes of another token than it moves"
 ! grep -q "allowOutOfBandFallback" "$ENGJS" || { echo "✗ the engine opts into out-of-band transfers"; exit 1; }
+# The review of 2026-10-26, finding 8: a prepared handle belongs to its
+# account (open wipes nothing; relay spends through the handle's own
+# account), proven against mainnet's state by `mainnet-sim.mjs withdraw` —
+# another account opened between the proof and its relay — and by its
+# `openclears` mutation, which the record's run must have caught. Findings 1
+# and the harness: the account is a real Safe proxy, WETH's own `withdraw`
+# refused (`wethwithdraw`).
+SIMDIR="tools/privacy-pools-engine"
+awk '/async open\(\{ seed,/,/^  },$/' "$ENGJS" | grep -q 'prepared.clear()' && { echo "✗ opening an account wipes another flow's prepared handle"; exit 1; }
+use "$ENGJS" "const s = await session(p.kind, p.acct);" "a relay goes through whichever account is open now"
+use "$SIMDIR/mainnet-sim.mjs" "await engine('relay', { handle: w.handle });" "the simulation no longer relays a handle"
+use "$SIMDIR/mainnet-sim.mjs" "const other = await makeAccount();" "the simulation no longer opens another account between a proof and its relay"
+use "$SIMDIR/mainnet-sim.mjs" "await fork.commit('your account created (SafeL2 1.4.1 proxy, the app\\'s setup)', accounts.map((a) => a.create));" "the simulated account is not a Safe proxy made as the app makes it"
+use "$SIMDIR/run-mainnet-sim.sh" "notowner wethwithdraw recipient openclears" "the simulation's mutations no longer include WETH's withdraw or a wiping open"
+python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["scenarios"]["withdraw"].get("relayedAfterAnotherOpen") is True and "proxy" in r["account"]["kind"]' \
+    "$SIMDIR/mainnet-sim.json" || { echo "✗ the simulation record does not show a relay after another open, from a Safe proxy"; exit 1; }
 # The seed is device-only behind Face ID outside DEBUG simulator builds.
 use "$KEY" "kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, [.biometryCurrentSet]" "the seed is no longer device-only behind Face ID"
 use "$KEY" "kSecAttrSynchronizable as String: false" "the seed may sync"

@@ -1476,24 +1476,26 @@ enum YourAccountChain {
         // §1567).** The batch's calls (the keystore the first time, USDC's
         // approval, ppUSDC's router) join the send's in ONE Face ID
         // operation, and the whole of it is simulated again with them before
-        // anything is signed; a node that will not simulate signs nothing.
+        // anything is signed. **A RIDE THAT DOES NOT CHECK OUT IS DROPPED,
+        // NEVER THE SEND (the review of 2026-10-26, finding 5):** the send
+        // itself already passed its own simulation above, so a ride the node
+        // refuses, or would not simulate, or could not be written, leaves
+        // the operation as it was — the send goes alone and the change keeps
+        // counting (`Transacted.rode` false).
+        var rode = false
         if !ride.isEmpty {
-            var extra: [YourAccountOp.Call] = []
-            for c in ride {
-                guard SafeABI.word(address: c.to) != nil, let data = SafeABI.hexBytes(c.data),
-                      let value = SafeABI.word(uint256: c.value) else {
-                    throw Failure(message: String(localized: "This send could not be written"))
-                }
-                extra.append(.init(operation: 0, to: c.to, value: value, data: data))
+            switch await Self.rideVerdict(ride, check: { extra in
+                await check(net, account: account, approvals: Array(a.calls.prefix(approvalCount)),
+                            steps: a.steps + [(calls: Array(a.calls.dropFirst(approvalCount + a.steps.reduce(0) { $0 + $1.calls.count })) + extra, swap: nil)])
+            }) {
+            case .rides(let extra):
+                a.calls += extra
+                rode = true
+                report("a private round-up rides: \(extra.count) calls")
+            case .dropped(let why):
+                report("the private round-up was dropped (\(why)); the send goes alone")
+                NSLog("roundUpsPrivate| ride dropped | %@ | the send goes alone", why)
             }
-            let withRide = await check(net, account: account, approvals: Array(a.calls.prefix(approvalCount)),
-                                       steps: a.steps + [(calls: Array(a.calls.dropFirst(approvalCount + a.steps.reduce(0) { $0 + $1.calls.count })) + extra, swap: nil)])
-            if case .notChecked = withRide.checked {
-                throw Failure(message: String(localized: "\(net.name) could not check this, so nothing was signed"))
-            }
-            try require(withRide, on: net, swaps: a.mustCheck)
-            a.calls += extra
-            report("a private round-up rides: \(extra.count) calls")
         }
         // ETH sent to another network must be proven to arrive as ETH: the
         // handler's message run on the receiving network (prd §1555).
@@ -1535,7 +1537,7 @@ enum YourAccountChain {
             crossing = c
         }
         guard case .landed = sent.outcome, !swaps.isEmpty else {
-            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: !ride.isEmpty)
+            return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: rode)
         }
         // A token bought by one swap alone: what actually arrived.
         var bought = a.simulated.paid
@@ -1547,7 +1549,33 @@ enum YourAccountChain {
             let arrived = YourAccountOp.difference(now, then)
             if arrived != "0" { bought[i] = arrived }
         }
-        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: !ride.isEmpty)
+        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: rode)
+    }
+
+    /// Whether a round-up ride joins the operation (finding 5): its calls
+    /// written, then the whole simulated with them (`check`); the verdict is
+    /// `RoundUps.rideVerdict`'s, so a refusal or an unchecked ride drops it.
+    enum Ride { case rides([YourAccountOp.Call]), dropped(String) }
+
+    static func rideVerdict(_ ride: [(to: String, data: String, value: String)],
+                            check: ([YourAccountOp.Call]) async -> Simulated) async -> Ride {
+        var extra: [YourAccountOp.Call] = []
+        for c in ride {
+            guard SafeABI.word(address: c.to) != nil, let data = SafeABI.hexBytes(c.data),
+                  let value = SafeABI.word(uint256: c.value) else {
+                return .dropped(RoundUps.rideVerdict(written: false, checked: .notChecked).why ?? "not written")
+            }
+            extra.append(.init(operation: 0, to: c.to, value: value, data: data))
+        }
+        let simulated = await check(extra)
+        let checked: RoundUps.RideCheck = switch simulated.checked {
+        case .lands, .returnsAtLeast: simulated.paysLess ? .fails : .lands
+        case .fails: .fails
+        case .notChecked: .notChecked
+        }
+        let verdict = RoundUps.rideVerdict(written: true, checked: checked)
+        if let why = verdict.why { return .dropped(why) }
+        return .rides(extra)
     }
 
     /// What `assemble` hands back beside the transaction: how many of its
@@ -2087,12 +2115,51 @@ enum YourAccountChain {
         return op
     }
 
+    // MARK: - Following an operation past `.pending` (the review of 2026-10-26)
+
+    /// The operation `submit` sent in this task: its own id (the user
+    /// operation's hash) and its nonce, so a caller can tell later whether a
+    /// `.pending` operation landed, failed or still may land. Set through
+    /// `$following.withValue(Followed()) { … }`.
+    final class Followed: @unchecked Sendable {
+        var id: String?
+        var nonceKey: [UInt8] = []
+        var nonce: UInt64 = 0
+    }
+    @TaskLocal static var following: Followed?
+
+    /// What the chain says of a followed operation now: the bundler's
+    /// receipt (`success`, its transaction), else whether the account's
+    /// nonce for its key has passed it (some operation took that nonce).
+    /// Nil fields: not answered.
+    struct Followup: Equatable, Sendable {
+        var receipt: Bool?
+        var tx: String?
+        var nonceMoved: Bool?
+    }
+
+    static func followup(id: String, nonceKey: [UInt8], nonce: UInt64, account: String, on net: Network) async -> Followup {
+        if let receipt = try? await bundler(net, "eth_getUserOperationReceipt", [id]) as? [String: Any] {
+            let tx = (receipt["receipt"] as? [String: Any])?["transactionHash"] as? String
+            return Followup(receipt: (receipt["success"] as? Bool) == true, tx: tx, nonceMoved: true)
+        }
+        guard let now = try? await self.nonce(net, account, key: nonceKey) else { return Followup() }
+        return Followup(nonceMoved: now > nonce)
+    }
+
     /// Sends a signed operation and follows it to the chain.
     private static func submit(_ op: YourAccountOp.Op, _ net: Network, account: String,
                                stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
         // Followed by its OWN id, known before it goes, so a late or lost
         // answer from the bundler can still be traced to whether it landed.
         let id = SafeABI.hex(YourAccountOp.userOpHash(op, chainId: net.chainId))
+        // A caller that must follow the operation past `.pending` (private
+        // money's deposits and round-ups, the review of 2026-10-26) keeps it.
+        if let followed = following {
+            followed.id = id
+            followed.nonceKey = op.nonceKey
+            followed.nonce = op.nonce
+        }
         await stage(.sending)
         var refusal: String?
         do {

@@ -35,10 +35,13 @@ enum PrivacyEngineProbe {
             let steps: [String] = raw == "all"
                 ? ["load", "keys", "deposit", "bench", "discover", "spend"]
                 : raw.split(separator: ",").map(String.init)
-            for step in steps {
-                do { try await run(step: step) } catch {
-                    log(step, 0, "FAILED \(describe(error))")
-                    if step == "load" || step == "keys" { break }
+            // Alone through the engine, every step (finding 8).
+            await PrivacyEngine.exclusive {
+                for step in steps {
+                    do { try await run(step: step) } catch {
+                        log(step, 0, "FAILED \(describe(error))")
+                        if step == "load" || step == "keys" { break }
+                    }
                 }
             }
             log("done", 0, "footprint \(footprintMB()) MB peak \(peakMB()) MB")

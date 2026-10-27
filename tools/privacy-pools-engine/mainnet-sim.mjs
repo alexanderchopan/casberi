@@ -16,11 +16,14 @@
 // step against the state the step before would have made: the keystore
 // registered, the deposit in the state tree, its note discovered.
 //
-// The account is a Safe (the same SafeL2 1.4.1 proxy a Casberi account is),
-// placed by a state override at a fresh address, with ETH and USDC given by
-// state overrides; each call runs as the account (msg.sender = the Safe), as
-// the account's own operation would run it — the pre-Face-ID check
-// `YourAccountChain.check` makes the same simulation.
+// The account is a real SafeL2 1.4.1 PROXY, created in the fork's first
+// block by SafeProxyFactory 1.4.1 with the app's own setup (see "your
+// account, as the app makes it" below), funded by state overrides. Each of
+// its moves runs twice: as the app's check before Face ID
+// (`YourAccountChain.check`: each call from the account, its code cold) and
+// as the operation executes (the EntryPoint's `executeUserOp` through the
+// 4337 module, one MultiSend). Until 2026-10-26 the "proxy" was SafeL2's own
+// code, which hid that WETH's `withdraw` cannot pay a cold proxy.
 //
 // What cannot be real: 0xBow's approval. A withdrawal needs the deposit's
 // label in 0xBow's association set, which only 0xBow publishes; the
@@ -326,7 +329,18 @@ globalThis.webkit = { messageHandlers: {
   engineNet: { postMessage: engineNet },
   engineLog: { postMessage: (line) => { if (line !== 'ready' && !/warn \[(rpc|notes|withdraw|transfer)/.test(line)) say('    page:', line); } },
 } };
-await import('./src/engine.js');
+// The `openclears` mutation runs the engine as it was before the review of
+// 2026-10-26 (finding 8): `open` wiping every prepared handle, so a handle
+// prepared under one account cannot be relayed after another was opened.
+if (MUTATION === 'openclears') {
+  const src = readFileSync(join(here, 'src/engine.js'), 'utf8');
+  const anchor = "addressSchema: AddressSchema }, { logger: logger('relayer') });\n";
+  if (!src.includes(anchor)) throw new Error('the openclears mutation found nothing to change');
+  writeFileSync(join(here, 'src/.engine-mutated.js'), src.replace(anchor, anchor + '    prepared.clear();\n'));
+  await import('./src/.engine-mutated.js');
+} else {
+  await import('./src/engine.js');
+}
 async function engine(method, params = {}) {
   const reply = JSON.parse(await globalThis.casberiEngine.call(method, JSON.stringify(params)));
   if (!reply.ok) throw Object.assign(new Error(`${method}: ${reply.error.name}: ${reply.error.message}`), { engine: reply.error });
@@ -344,26 +358,124 @@ const abi = parseAbi([
   'function assets(address) view returns (address pool, uint256 minimumDepositAmount, uint256 vettingFeeBPS, uint256 maxRelayFeeBPS)',
 ]);
 
-async function safeProxyCode() {
-  const head = Number(BigInt((await upstream(LOGS_RPC, 'eth_blockNumber', [])).result));
-  const topic = keccak256(toHex('ProxyCreation(address,address)'));
-  const logs = (await upstream(LOGS_RPC, 'eth_getLogs', [{ address: PROXY_FACTORY, topics: [topic], fromBlock: toHex(head - 2000), toBlock: toHex(head) }])).result;
-  const proxy = getAddress('0x' + logs[0].data.slice(26, 66));
-  return (await upstream(STATE_RPC, 'eth_getCode', [proxy, 'latest'])).result;
+// ------------------------------------------- your account, as the app makes it
+// THE ACCOUNT IS A REAL SAFE PROXY (the review of 2026-10-26, finding 1).
+// Until then the harness read `ProxyCreation`'s DATA word for the proxy, but
+// the proxy is the event's indexed topic and the data is the SINGLETON: the
+// "account" carried SafeL2's whole code, whose `receive` is cheap, so a
+// 2,300-gas `transfer` into it (WETH's `withdraw`) landed here and is
+// refused for every real account. Now the account is made exactly as the
+// app makes it (`YourAccount.initializer`): SafeProxyFactory 1.4.1's
+// `createProxyWithNonce(SafeL2 1.4.1, setup(...), 0)` — the shared passkey
+// signer the one owner, threshold 1, the 4337 module enabled and the
+// fallback handler, the key configured, both set-up steps delegate-called
+// through MultiSend — run in the fork's first block, so the account IS a
+// 1.4.1 proxy with that storage. (The 7579 adapter is not installed: the app
+// installs it only in simulation, `YourAccount7579`, so an account on
+// mainnet has the 4337 module alone.)
+//
+// Each of the account's moves is then run twice, as production runs it:
+// first as the app's own check before Face ID (`YourAccountChain.check`:
+// each call top-level FROM the account, its code cold), then as the
+// operation executes on chain (the EntryPoint calling the account's
+// `executeUserOp` through the 4337 module: one delegatecall to MultiSend
+// carrying every call and the key change). Both must land.
+const MULTISEND = '0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526';
+const MODULE_4337 = '0x75cf11467937ce3F2f357CE24ffc3DBF8fD5c226';
+const MODULE_SETUP = '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47';
+const SHARED_SIGNER = '0x94a4F6affBd8975951142c3999aEAB7ecee555c2';
+const ENTRYPOINT_07 = '0x0000000071727De22E5E9d8BAf0edAc6f37da032';
+// `SafeWebAuthn.verifiersWord`: RIP-7212's precompile (0x0100) above Daimo's verifier.
+const VERIFIERS = BigInt('0x0100c2b78104907F722DABAc4C69f826a522B2754De4');
+const DEPLOYER = '0x00000000000000000000000000000000000De910';
+const safeAbi = parseAbi([
+  'function setup(address[] owners, uint256 threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
+  'function enableModules(address[] modules)',
+  'function configure((uint256 x, uint256 y, uint176 verifiers) signer)',
+  'function multiSend(bytes transactions)',
+  'function createProxyWithNonce(address singleton, bytes initializer, uint256 saltNonce) returns (address)',
+  'function executeUserOp(address to, uint256 value, bytes data, uint8 operation)',
+  'function getOwners() view returns (address[])',
+  'function getThreshold() view returns (uint256)',
+  'function isModuleEnabled(address) view returns (bool)',
+  'function transfer(address,uint256) returns (bool)',
+  'function unwrapWETH9(uint256 amountMinimum, address recipient)',
+]);
+// Ethereum's pinned Uniswap SwapRouter02 (`YourAccountSwap.Book.ethereum`), the one that unwraps (prd §1559).
+const SWAP_ROUTER02 = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
+
+// MultiSend 1.4.1's packed transactions: operation, to, value, length, data.
+function multiSendData(calls) {
+  const packed = calls.map((c) => `${(c.operation ?? 0).toString(16).padStart(2, '0')}${c.to.slice(2).toLowerCase()}${pad(toHex(BigInt(c.value ?? 0))).slice(2)}${pad(toHex(BigInt((c.data.length - 2) / 2))).slice(2)}${c.data.slice(2)}`).join('');
+  return encodeFunctionData({ abi: safeAbi, functionName: 'multiSend', args: [`0x${packed}`] });
+}
+const randomWord = () => BigInt(toHex(crypto.getRandomValues(new Uint8Array(32))));
+const configureData = (x, y) => encodeFunctionData({ abi: safeAbi, functionName: 'configure', args: [{ x, y, verifiers: VERIFIERS }] });
+
+// `YourAccount.initializer(x:y:)`, byte for byte.
+function initializer(x, y) {
+  const enable = encodeFunctionData({ abi: safeAbi, functionName: 'enableModules', args: [[MODULE_4337]] });
+  const setupData = multiSendData([{ operation: 1, to: MODULE_SETUP, data: enable }, { operation: 1, to: SHARED_SIGNER, data: configureData(x, y) }]);
+  return encodeFunctionData({ abi: safeAbi, functionName: 'setup', args: [[SHARED_SIGNER], 1n, MULTISEND, setupData, MODULE_4337,
+    '0x0000000000000000000000000000000000000000', 0n, '0x0000000000000000000000000000000000000000'] });
+}
+
+// A new account: a random passkey (the shared signer only stores it), its
+// address read from the factory's own simulated create.
+async function makeAccount() {
+  const init = initializer(randomWord(), randomWord());
+  const data = encodeFunctionData({ abi: safeAbi, functionName: 'createProxyWithNonce', args: [SAFE_L2, init, 0n] });
+  const r = await upstream(STATE_RPC, 'eth_call', [{ from: DEPLOYER, to: PROXY_FACTORY, data }, 'latest']);
+  if (r.error) throw new Error(`the factory refused the account: ${JSON.stringify(r.error)}`);
+  return { address: getAddress(`0x${r.result.slice(26, 66)}`), create: { from: DEPLOYER, to: PROXY_FACTORY, data, note: 'SafeProxyFactory.createProxyWithNonce' } };
 }
 
 // USDC's balance slot for an address (FiatTokenV2: mapping at slot 9).
 const usdcSlot = (who) => keccak256(`0x${pad(who).slice(2)}${pad(toHex(9)).slice(2)}`);
 
-async function newFork(account, { usdc } = {}) {
+// A fork whose first block creates the accounts (funded by overrides first:
+// CREATE2 may land on an address that already holds ETH), then proves each
+// is the app's account: a proxy of SafeL2 1.4.1, the shared signer its one
+// owner, threshold 1, the 4337 module on.
+async function newFork(accounts, { usdc } = {}) {
   const head = Number(BigInt((await upstream(STATE_RPC, 'eth_blockNumber', [])).result)) - 2;
-  const code = await safeProxyCode();
-  const overrides = {
-    [account]: { code, balance: toHex(10n ** 18n), stateDiff: { [pad('0x0')]: pad(SAFE_L2) } },
-  };
-  if (usdc) overrides[USDC] = { stateDiff: { [usdcSlot(account)]: pad(toHex(usdc)) } };
+  const overrides = {};
+  for (const a of accounts) overrides[a.address] = { balance: toHex(10n ** 18n) };
+  if (usdc) overrides[USDC] = { stateDiff: Object.fromEntries(accounts.map((a) => [usdcSlot(a.address), pad(toHex(usdc))])) };
   fork = new SimFork(head, overrides);
+  await fork.commit('your account created (SafeL2 1.4.1 proxy, the app\'s setup)', accounts.map((a) => a.create));
+  for (const a of accounts) {
+    const q = async (fn, args = []) => (await fork.call({ to: a.address, data: encodeFunctionData({ abi: safeAbi, functionName: fn, args }) })).result;
+    const singleton = (await fork.call({ to: a.address, data: '0xa619486e' })).result; // the proxy's masterCopy()
+    const owners = await q('getOwners'), threshold = await q('getThreshold'), module = await q('isModuleEnabled', [MODULE_4337]);
+    if (BigInt(singleton ?? 0) !== BigInt(SAFE_L2) || !owners?.toLowerCase().includes(SHARED_SIGNER.slice(2).toLowerCase())
+        || BigInt(threshold ?? 0) !== 1n || BigInt(module ?? 0) !== 1n) {
+      throw new Error(`${a.address} is not the app's account (singleton ${singleton}, threshold ${threshold}, module ${module})`);
+    }
+  }
   return fork;
+}
+
+// One operation of the account, as production runs it (see above): the app's
+// check first, then the EntryPoint's `executeUserOp` through the 4337 module,
+// one MultiSend with the calls and the key change. `check: false` only for a
+// mutation that must be refused ON CHAIN (not by the check).
+async function accountOp(label, from, calls, { check = true } = {}) {
+  let checked = [];
+  if (check) {
+    const r = await fork.simulate(calls.map((c) => ({ from, to: c.to, data: c.data ?? '0x', value: c.value ?? '0x0' })));
+    const bad = r.at(-1).calls.findIndex((c) => c.status !== '0x1');
+    if (bad >= 0) {
+      const c = r.at(-1).calls[bad];
+      throw new Error(`${label}: the app's check before Face ID refuses call ${bad} (${calls[bad].note ?? calls[bad].to}): ${c.error?.message ?? ''} ${c.returnData ?? ''}`);
+    }
+    checked = r.at(-1).calls.map((c) => Number(BigInt(c.gasUsed)));
+  }
+  const batch = [...calls.map((c) => ({ operation: 0, to: c.to, value: c.value ?? 0, data: c.data ?? '0x' })),
+    { operation: 1, to: SHARED_SIGNER, value: 0, data: configureData(randomWord(), randomWord()) }];
+  const data = encodeFunctionData({ abi: safeAbi, functionName: 'executeUserOp', args: [MULTISEND, 0n, multiSendData(batch), 1] });
+  const block = await fork.commit(`${label} (the operation, through the 4337 module)`, [{ from: ENTRYPOINT_07, to: from, data, note: `${label}: executeUserOp` }]);
+  return { block, gas: Number(BigInt(block.calls[0].gasUsed)), checkGas: checked };
 }
 
 const read = async (to, fn, a = [], from) => {
@@ -460,7 +572,9 @@ const FRESH_APPROVE_GAS = 80_000n;
 
 // One seed per run: a new private account, nobody's.
 const seed = toHex(crypto.getRandomValues(new Uint8Array(32)));
-const account = getAddress(toHex(crypto.getRandomValues(new Uint8Array(20))));
+// Your account: a real SafeL2 1.4.1 proxy, made as the app makes it (above).
+const A = await makeAccount();
+const account = A.address;
 
 async function openAndRegister() {
   const opened = await engine('open', { seed, revocableKeyIndex: '0x0', owner: account, network: ETHEREUM });
@@ -477,10 +591,10 @@ async function yieldDeposit(token, budget, reg, note) {
   if (MUTATION === 'value' && token === ETH) tx = { ...tx, value: toHex(BigInt(d.underlyingNeeded) - 1n) };
   if (MUTATION === 'proof') tx = { ...tx, data: tx.data.slice(0, 20) + (tx.data[20] === 'a' ? 'b' : 'a') + tx.data.slice(21) };
   const calls = [...asCalls(account, reg?.txs ?? [], 'register'), ...asCalls(account, d.approvals, 'approve'), { from: account, ...tx, note: 'deposit' }];
-  const block = await fork.commit(note, calls);
-  const gas = block.calls.map((c) => Number(BigInt(c.gasUsed)));
-  say(`  ${note}: LANDS in simulation — gas ${gas.join(' + ')} = ${gas.reduce((a, b) => a + b, 0)}`);
-  return { d, gas };
+  const op = await accountOp(note, account, calls);
+  const gas = op.checkGas;
+  say(`  ${note}: LANDS — the app's check (gas ${gas.join(' + ')} = ${gas.reduce((a, b) => a + b, 0)}) and the operation from the Safe proxy (${op.gas})`);
+  return { d, gas, opGas: op.gas };
 }
 
 // ------------------------------------------------------------ scenarios
@@ -490,17 +604,24 @@ for (const name of SCENARIOS) {
   const t0 = performance.now();
   try {
     if (name === 'eth') {
-      await newFork(account);
+      await newFork([A]);
       const reg = await openAndRegister();
       const before = await ethOf(account);
-      const { d, gas } = await yieldDeposit(ETH, 10n ** 16n, reg, 'register + 0.01 ETH into ppETH');
+      const { d, gas, opGas } = await yieldDeposit(ETH, 10n ** 16n, reg, 'register + 0.01 ETH into ppETH');
       const spent = before - await ethOf(account);
       const shares = await read(ETHEREUM.yield[0].share, 'balanceOf', [ETHEREUM.pool]);
-      out.eth = { shares: BigInt(d.shares).toString(), spentWei: spent.toString(), underlyingNeeded: BigInt(d.underlyingNeeded).toString(), gas, poolShares: shares.toString() };
-      say(`  the account spent ${spent} wei (refund of the rest included); the router kept no ETH`);
+      // ppETH's router takes the budget as the value and pays back what it
+      // did not use. Into a COLD Safe proxy (the app's check) a 2,300-gas
+      // refund would revert the deposit (finding 1's question): it lands, so
+      // the router refunds with a full-gas call — measured, the refund > 0.
+      const refund = BigInt(d.tx.value) - spent;
+      if (refund <= 0n) throw new Error(`no refund was made (value ${BigInt(d.tx.value)}, spent ${spent}): the refund path is unproven`);
+      out.eth = { shares: BigInt(d.shares).toString(), value: BigInt(d.tx.value).toString(), spentWei: spent.toString(), refundWei: refund.toString(),
+        underlyingNeeded: BigInt(d.underlyingNeeded).toString(), gas, opGas, poolShares: shares.toString() };
+      say(`  the account spent ${spent} wei of the ${BigInt(d.tx.value)} sent: the router refunded ${refund} wei into the Safe proxy, cold, with a full-gas call`);
     }
     if (name === 'usdc') {
-      await newFork(account, { usdc: 50_000_000n });
+      await newFork([A], { usdc: 50_000_000n });
       const reg = await openAndRegister();
       const { d, gas } = await yieldDeposit(USDC, 20_000_000n, reg, 'register + 20 USDC into ppUSDC');
       const left = await read(USDC, 'balanceOf', [account]);
@@ -508,7 +629,7 @@ for (const name of SCENARIOS) {
       say(`  the account spent ${(50_000_000n - left)} USDC units of a 20 USDC budget`);
     }
     if (name === 'ragequit') {
-      await newFork(account);
+      await newFork([A]);
       const reg = await openAndRegister();
       const { d } = await yieldDeposit(ETH, 10n ** 16n, reg, 'register + 0.01 ETH into ppETH');
       if (process.env.SIM_DEBUG) say(`    head ${fork.head} (${toHex(fork.head)}); simulated logs at ${[...new Set(fork.logs().map((l) => l.blockNumber))]}; keystore topics ${fork.logs().filter((l) => l.address.toLowerCase() === ETHEREUM.keystore.toLowerCase()).map((l) => l.topics[0].slice(0, 10))}`);
@@ -519,26 +640,43 @@ for (const name of SCENARIOS) {
       const rq = await engine('prepareRagequit', { commitment: note.commitment });
       say(`  ragequit proved (${rq.proofs.map((p) => `${p.circuit} ${p.ms} ms`).join(', ')}); pays ${rq.recipient}`);
       if (rq.recipient.toLowerCase() !== account.toLowerCase()) throw new Error('ragequit does not pay the account');
-      const from = MUTATION === 'notowner' ? '0x000000000000000000000000000000000000bEEF' : account;
+      if (MUTATION === 'notowner') {
+        // Someone other than the owner sends the ragequit: the pool refuses.
+        await fork.commit('take it back, not the owner', [{ from: '0x000000000000000000000000000000000000bEEF', ...rq.tx, note: 'ragequit' }]);
+      }
       const before = await ethOf(account);
-      const zap = ETHEREUM.yield[0].zap;
+      const pool = ETHEREUM.yield[0];
       const value = BigInt(rq.value);
+      // Take it back as the app sends it (`PrivateOnEthereum.takeBack`,
+      // `PrivateYield.takeBackCalls`): what the shares are worth is read
+      // BEFORE Face ID (`previewRedeem`), then ONE operation — the ragequit,
+      // the zap's approval and `redeemToUnderlying`, and the WETH unwrapped
+      // through the pinned SwapRouter02 (WETH's `transfer` of exactly that
+      // much to the router, then its `unwrapWETH9(worth, account)`, which
+      // pays with a full-gas call). WETH's own `withdraw` pays a 2,300-gas
+      // `transfer` the Safe proxy cannot take cold: the `wethwithdraw`
+      // mutation sends it, and the app's check must refuse it.
+      const worth = await read(pool.share, 'previewRedeem', [value]);
+      const unwrap = MUTATION === 'wethwithdraw'
+        ? [{ to: pool.underlying, data: encodeFunctionData({ abi, functionName: 'withdraw', args: [worth] }), note: "WETH's own withdraw" }]
+        : [{ to: pool.underlying, data: encodeFunctionData({ abi: safeAbi, functionName: 'transfer', args: [SWAP_ROUTER02, worth] }), note: 'WETH to the router' },
+           { to: SWAP_ROUTER02, data: encodeFunctionData({ abi: safeAbi, functionName: 'unwrapWETH9', args: [worth, account] }), note: 'router.unwrapWETH9' }];
       const calls = [
-        { from, ...rq.tx, note: 'ragequit' },
-        { from: account, to: ETHEREUM.yield[0].share, data: encodeFunctionData({ abi, functionName: 'approve', args: [zap, value] }), note: 'approve zap' },
-        { from: account, to: zap, data: encodeFunctionData({ abi, functionName: 'redeemToUnderlying', args: [value, account] }), note: 'zap: shares to WETH' },
+        { ...rq.tx, note: 'ragequit' },
+        { to: pool.share, data: encodeFunctionData({ abi, functionName: 'approve', args: [pool.zap, value] }), note: 'approve zap' },
+        { to: pool.zap, data: encodeFunctionData({ abi, functionName: 'redeemToUnderlying', args: [value, account] }), note: 'zap: shares to WETH' },
+        ...unwrap,
       ];
-      const block = await fork.commit('take it back', calls);
-      const weth = await read(ETHEREUM.yield[0].underlying, 'balanceOf', [account]);
-      const unwrap = { from: account, to: ETHEREUM.yield[0].underlying, data: encodeFunctionData({ abi, functionName: 'withdraw', args: [weth] }), note: 'WETH to ETH' };
-      const block2 = await fork.commit('unwrap', [unwrap]);
+      const op = await accountOp('take it back', account, calls);
       const back = await ethOf(account) - before;
-      const gas = [...block.calls, ...block2.calls].map((c) => Number(BigInt(c.gasUsed)));
-      out.ragequit = { shares: value.toString(), ethBack: back.toString(), gas, recipient: rq.recipient };
-      say(`  Take it back LANDS: ${value} shares -> ${back} wei of ETH back to the account (gas ${gas.join(' + ')})`);
+      const wethLeft = await read(pool.underlying, 'balanceOf', [account]);
+      if (back < worth) throw new Error(`the account got ${back} wei back for shares worth ${worth}`);
+      out.ragequit = { shares: value.toString(), worth: worth.toString(), ethBack: back.toString(), wethLeft: wethLeft.toString(), gas: op.checkGas, opGas: op.gas, recipient: rq.recipient,
+        calls: calls.map((c) => `${c.to.toLowerCase()} ${c.data.slice(0, 10)}`) };
+      say(`  Take it back LANDS as one operation from the Safe proxy: ${value} shares -> ${back} wei of ETH (worth ${worth} read before; ${wethLeft} wei of WETH left; check gas ${op.checkGas.join(' + ')}, operation ${op.gas})`);
     }
     if (name === 'withdraw') {
-      await newFork(account);
+      await newFork([A]);
       const reg = await openAndRegister();
       const { d } = await yieldDeposit(ETH, 10n ** 16n, reg, 'register + 0.01 ETH into ppETH');
       // 0xBow's approval, stood in for (see the header): the label in a copy
@@ -558,7 +696,13 @@ for (const name of SCENARIOS) {
       const amount = 5n * 10n ** 15n; // 0.005 ETH to the recipient
       const w = await engine('prepareWithdraw', { tokenId: ETH, amount: toHex(amount), recipient });
       say(`  withdrawal proved (${w.proofs.map((p) => `${p.circuit} ${p.ms} ms`).join(', ')}); relayer fee ${BigInt(w.fee.feeAmount)} shares at ${BigInt(w.fee.gasPrice)} wei gas`);
+      // Finding 8: another account is opened between this prepare and its
+      // relay (the fresh watch, a second root): the handle still relays THIS
+      // account's own proof, through its own sessions.
+      const other = await makeAccount();
+      await engine('open', { seed: toHex(crypto.getRandomValues(new Uint8Array(32))), revocableKeyIndex: '0x0', owner: other.address, network: ETHEREUM });
       await engine('relay', { handle: w.handle });
+      say('  another account opened between the proof and its relay: the handle relayed its own account\'s proof');
       const sent = relayCaptured.at(-1);
       if (!sent) throw new Error('nothing was handed to the relayer');
       // What the relayer would post: the router's withdrawToUnderlying with
@@ -590,7 +734,7 @@ for (const name of SCENARIOS) {
       const before = await ethOf(recipient);
       const block = await fork.commit('relayed withdraw', [{ from: ETHEREUM.relayerAddress, to: sent.processorAddress, data, note: 'router.withdrawToUnderlying' }]);
       const got = await ethOf(recipient) - before;
-      out.withdraw = { amount: amount.toString(), received: got.toString(), gas: Number(BigInt(block.calls[0].gasUsed)), processor: sent.processorAddress,
+      out.withdraw = { amount: amount.toString(), received: got.toString(), relayedAfterAnotherOpen: true, gas: Number(BigInt(block.calls[0].gasUsed)), processor: sent.processorAddress,
         feeShares: BigInt(w.fee.feeAmount).toString(), minUnderlyingOut: BigInt(sent.minUnderlyingOut).toString() };
       say(`  relayed withdraw LANDS: the recipient got ${got} wei of native ETH (asked ${amount}); gas ${BigInt(block.calls[0].gasUsed)}`);
     }
@@ -602,9 +746,9 @@ for (const name of SCENARIOS) {
       // account, its gas out of what arrived. The account is registered first
       // (its first Face ID private move). "Too little to move" is computed
       // from the pool's minimum and today's fees, never a constant.
-      await newFork(account);
+      await newFork([A]);
       const reg = await openAndRegister();
-      await fork.commit('register the account', asCalls(account, reg.txs, 'register'));
+      await accountOp('register the account', account, asCalls(account, reg.txs, 'register'));
       const pool = ETHEREUM.yield[0];
       const { minShares, minUnderlying } = await minimumUnderlying(pool);
       const f = await fees();
@@ -653,13 +797,13 @@ for (const name of SCENARIOS) {
       // account, found by B's owner address in the keystore; 0xBow's relayer
       // posts PoolVault.transact; B finds the note. An address with no
       // private account is refused, so the app pays it out publicly instead.
-      const accountB = getAddress(toHex(crypto.getRandomValues(new Uint8Array(20))));
+      const B = await makeAccount();
+      const accountB = B.address;
       const seedB = toHex(crypto.getRandomValues(new Uint8Array(32)));
-      await newFork(account);
-      fork.overrides[accountB] = { ...fork.overrides[account] };
+      await newFork([A, B]);
       await engine('open', { seed: seedB, revocableKeyIndex: '0x0', owner: accountB, network: ETHEREUM });
       const regB = await engine('prepareRegister');
-      await fork.commit('B registers', asCalls(accountB, regB.txs, 'register B'));
+      await accountOp('B registers', accountB, asCalls(accountB, regB.txs, 'register B'));
       const reg = await openAndRegister();
       const { d } = await yieldDeposit(ETH, 10n ** 16n, reg, 'A: register + 0.01 ETH into ppETH');
       await approveStandIn([d.labelHash]);
@@ -685,7 +829,7 @@ for (const name of SCENARIOS) {
       // SEND PRIVATELY FROM PRIVATE USDC (prd §1567): 20 USDC into ppUSDC,
       // approved (stood in for), then 10 USDC to a plain address, relayed:
       // the router pays USDC.
-      await newFork(account, { usdc: 50_000_000n });
+      await newFork([A], { usdc: 50_000_000n });
       const reg = await openAndRegister();
       const { d } = await yieldDeposit(USDC, 20_000_000n, reg, 'register + 20 USDC into ppUSDC');
       await approveStandIn([d.labelHash]);
@@ -706,7 +850,7 @@ for (const name of SCENARIOS) {
       // pays its gas: a relayed private withdrawal of just enough ETH from
       // private ETH to the fresh address (nothing links it to the account),
       // then the fresh address approves and deposits the USDC into ppUSDC.
-      await newFork(account);
+      await newFork([A]);
       const reg = await openAndRegister();
       const { d } = await yieldDeposit(ETH, 10n ** 16n, reg, 'register + 0.01 ETH into ppETH (private ETH)');
       await approveStandIn([d.labelHash]);
@@ -747,20 +891,31 @@ for (const name of SCENARIOS) {
       // ROUND-UPS INTO PRIVATE ON ETHEREUM (prd §1567): a send of USDC you
       // approve with Face ID carries the batch — everything counted, once it
       // reaches the pool's smallest deposit — into ppUSDC, in ONE operation.
-      await newFork(account, { usdc: 100_000_000n });
+      await newFork([A], { usdc: 100_000_000n });
       const reg = await openAndRegister();
-      await fork.commit('the account registered (an earlier private move)', asCalls(account, reg.txs, 'register'));
+      await accountOp('the account registered (an earlier private move)', account, asCalls(account, reg.txs, 'register'));
       const usdcPool = ETHEREUM.yield[1];
       const { minUnderlying } = await minimumUnderlying(usdcPool);
       const batch = minUnderlying + 500_000n; // the count reached the pool's minimum
       const y = await engine('prepareYieldDeposit', { tokenId: USDC, budget: toHex(batch) });
       const friend = getAddress(toHex(crypto.getRandomValues(new Uint8Array(20))));
       const send = { from: account, to: USDC, data: encodeFunctionData({ abi: parseAbi(['function transfer(address,uint256) returns (bool)']), functionName: 'transfer', args: [friend, 4_300_000n] }), note: 'the send: 4.30 USDC' };
-      const block = await fork.commit('one Face ID operation: the send and the round-ups', [send, ...asCalls(account, y.approvals, 'approve'), { from: account, ...y.tx, note: 'round-ups into ppUSDC' }]);
+      const op = await accountOp('one Face ID operation: the send and the round-ups', account, [send, ...asCalls(account, y.approvals, 'approve'), { from: account, ...y.tx, note: 'round-ups into ppUSDC' }]);
       const found = await engine('discover');
       if (!found.notes.find((n) => n.commitment.toLowerCase() === y.commitment.toLowerCase())) throw new Error('the round-ups note was not found');
-      const gas = block.calls.map((c) => Number(BigInt(c.gasUsed)));
-      out.roundups = { batch: batch.toString(), minUnderlying: minUnderlying.toString(), shares: BigInt(y.shares).toString(), gas };
+      const gas = op.checkGas;
+      // Finding 5: a ride the node refuses is DROPPED and the send goes
+      // alone. Here the ride is a deposit with no approval before it (the
+      // router cannot pull the USDC): the app's check of the send with it
+      // refuses the ride's call, and the send alone lands, as the check and
+      // as the operation.
+      const y2 = await engine('prepareYieldDeposit', { tokenId: USDC, budget: toHex(batch) });
+      const send2 = { ...send, note: 'the next send: 4.30 USDC' };
+      const withRide = await fork.simulate([send2, { from: account, ...y2.tx }].map((c) => ({ from: account, to: c.to, data: c.data, value: c.value ?? '0x0' })));
+      if (withRide.at(-1).calls[1].status === '0x1') throw new Error('the broken ride was not refused: nothing proves a refused ride is dropped');
+      await accountOp('the send alone, the refused ride dropped', account, [send2]);
+      out.roundups = { batch: batch.toString(), minUnderlying: minUnderlying.toString(), shares: BigInt(y.shares).toString(), gas,
+        refusedRideDroppedSendLands: true };
       say(`  ONE operation LANDS: 4.30 USDC sent, ${batch} USDC units of round-ups into ppUSDC (${BigInt(y.shares)} shares); gas ${gas.join(' + ')}`);
     }
     record.scenarios[name] = { ok: true, seconds: Math.round((performance.now() - t0) / 1000), ...out[name] };
@@ -774,6 +929,8 @@ for (const name of SCENARIOS) {
 }
 
 record.head = fork?.head;
+record.account = { kind: 'SafeL2 1.4.1 proxy, made by SafeProxyFactory 1.4.1 with the app\'s setup', singleton: SAFE_L2, module: MODULE_4337,
+  owner: SHARED_SIGNER, threshold: 1, checked: 'the app\'s check (each call from the account, cold), then the operation (EntryPoint -> executeUserOp -> MultiSend)' };
 const failed = Object.values(record.scenarios).filter((s) => !s.ok).length;
 say(`\n${Object.keys(record.scenarios).length - failed} of ${Object.keys(record.scenarios).length} landed in simulation${MUTATION ? ` under mutation ${MUTATION}` : ''}`);
 if (!MUTATION && process.env.WRITE_RECORD) writeFileSync(join(here, 'mainnet-sim.json'), JSON.stringify(record, null, 2) + '\n');

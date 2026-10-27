@@ -40,11 +40,19 @@ enum FreshSigner {
     }
 
     /// Signs `call` as fresh address `index` at exactly this gas and these
-    /// fees (fixed before what moves was planned), sends it and waits for it
-    /// to land; returns its hash. Nil-built (`FreshTx.Tx`) for anything but a
-    /// router's deposit or a token's approval of its router.
+    /// fees (fixed before what moves was planned) and broadcasts it; returns
+    /// its hash. Nil-built (`FreshTx.Tx`) for anything but a router's deposit
+    /// or a token's approval of its router.
+    ///
+    /// **KEPT BEFORE IT GOES, NEVER WAITED ON HERE (the review of
+    /// 2026-10-26, finding 2).** `kept` is told the hash and the nonce before
+    /// the node is asked, so a move outlives the app and is never signed
+    /// twice; the caller waits as long as it likes and a wait that ends is
+    /// not a failure. Only the node's own refusal (`refused`) means the
+    /// transaction is not out; no answer at all may still mean it is.
     static func send(to: String, data: String, value: String, index: UInt32, root: String, from: String,
-                     network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64) async throws -> String {
+                     network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64,
+                     kept: (_ hash: String, _ nonce: String) -> Void) async throws -> String {
         let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
         guard let tx = FreshTx.Tx(network: network, nonce: nonce, maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
                                   maxFeePerGas: "0x" + String(maxFee, radix: 16), gas: "0x" + String(gas, radix: 16),
@@ -59,12 +67,27 @@ enum FreshSigner {
         guard rs.count == 64, let raw = tx.signed(yParity: Int(compact.recoveryId), r: Array(rs[0..<32]), s: Array(rs[32..<64])) else {
             throw Failure.curve
         }
-        guard let hash = try await PrivateRPC.call(network, "eth_sendRawTransaction", [TestnetTx.hex(raw)]) as? String else {
-            throw Failure.node("no hash")
+        // The hash is the signed bytes' own: known, and kept, before it goes.
+        let hash = "0x" + Keccak256.hexString(Keccak256.hash(raw))
+        kept(hash, PrivateMoney.decimal(hex: nonce))
+        do {
+            _ = try await PrivateRPC.call(network, "eth_sendRawTransaction", [TestnetTx.hex(raw)])
+        } catch Failure.refused(let why) where why.lowercased().contains("already known") {
+            // The node has it already: out.
         }
         NSLog("freshAddress| sent | %@ | %@ | gas %d", network.name, hash, gas)
-        try await PrivateRPC.waitFor(hash, on: network)
         return hash
+    }
+
+    /// Waits for `hash` at most `seconds`: true landed, false still out (a
+    /// wait that ends says nothing); a reverted one throws.
+    static func landed(_ hash: String, on network: PrivacyNetwork, seconds: Int = 240) async throws -> Bool {
+        do {
+            try await PrivateRPC.waitFor(hash, on: network, seconds: seconds)
+            return true
+        } catch Failure.timedOut {
+            return false
+        }
     }
 }
 
@@ -113,9 +136,11 @@ enum PrivateRPC {
         return PrivateYield.word(answer, 0) ?? "0"
     }
 
-    /// Polls for the receipt, every 3 s for 4 min; a reverted one throws.
-    static func waitFor(_ hash: String, on network: PrivacyNetwork) async throws {
-        for _ in 0..<80 {
+    /// Polls for the receipt, every 3 s for `seconds` (4 min); a reverted one
+    /// throws, and so does the end of the wait (`timedOut`) — which says
+    /// only that it was not seen yet.
+    static func waitFor(_ hash: String, on network: PrivacyNetwork, seconds: Int = 240) async throws {
+        for _ in 0..<max(seconds / 3, 1) {
             if let receipt = try? await call(network, "eth_getTransactionReceipt", [hash]) as? [String: Any] {
                 guard (receipt["status"] as? String) == "0x1" else { throw FreshSigner.Failure.reverted(hash) }
                 return

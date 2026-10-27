@@ -45,7 +45,8 @@ enum PrivateWatchTask {
     @MainActor
     static func schedule() {
         guard PrivateMove.available, !DemoMode.isActive,
-              !FreshReceive.shared.entries.isEmpty || PrivateMoney.anyWaiting(PrivateMoneyStore.shared.notes) else { return }
+              !FreshReceive.shared.entries.isEmpty || PrivateMoney.anyWaiting(PrivateMoneyStore.shared.notes)
+                || !PrivatePending.shared.ops.isEmpty else { return }
         let request = BGAppRefreshTaskRequest(identifier: taskID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         try? BGTaskScheduler.shared.submit(request)
@@ -126,8 +127,10 @@ enum PrivateWatch {
         await store.refresh(force: true)
         NSLog("privateWatch| asp | %d waiting before | %d after | %.1f s", waitingBefore,
               store.notes.filter { PrivateMoney.kind($0.status) == .waiting }.count, Date().timeIntervalSince(started))
-        // A new phone: each root's notes found again from the pool's events.
-        if left() > 15 { await restoreNotes() }
+        // A new phone: each root's notes found again from the pool's events;
+        // on any phone, every root's notes on a cadence, and what was sent and
+        // not seen asked about (the review of 2026-10-26, finding 2).
+        if left() > 15 { await findNotes(context: context) }
         // The fresh addresses: walked back, then looked at, a move for each paid.
         // The walk took 13 s through Tor for twenty-one addresses (measured):
         // in a 25 s background pass it waits for a later one or the foreground.
@@ -179,28 +182,66 @@ enum PrivateWatch {
         defer { if restoring { store.endRestore() } }
         for (root, _) in pending {
             guard !Task.isCancelled else { return }
-            let started = Date()
-            do {
+            if await findNotes(of: root, on: network) { PrivateRootKey.markFound(root) }
+        }
+        await store.refresh(force: true)
+    }
+
+    /// One root's notes, read from the pool with its keys and kept: alone
+    /// through the engine (finding 8), opened from the root (no prompt:
+    /// nothing spends). False when it could not be read.
+    @discardableResult
+    static func findNotes(of root: String, on network: PrivacyNetwork) async -> Bool {
+        let store = PrivateMoneyStore.shared
+        // On Ethereum the owner is your account: none, nothing to find yet.
+        guard network.isTest || PrivateOnEthereum.owner != nil else { return false }
+        let started = Date()
+        do {
+            let found = try await PrivacyEngine.exclusive {
                 if network.isTest {
                     #if DEBUG
                     try await PrivateAccount.open(root, reason: nil)
                     #endif
                 } else {
-                    // On Ethereum the owner is your account: none, nothing to find yet.
-                    guard PrivateOnEthereum.owner != nil else { continue }
                     try await PrivateOnEthereum.open(root, reason: nil)
                 }
-                let found = try await PrivacyEngine.shared.discover()
-                store.reconcile(found, root: root, network: network)
-                await store.fillLabelHashes()
-                PrivateRootKey.markFound(root)
-                NSLog("privateWatch| notes | %@ | %@ | %d found | %d unspent | %d s", network.name, root, found.notes.count,
-                      store.notes.filter { $0.root == root }.count, Int(Date().timeIntervalSince(started)))
-            } catch {
-                NSLog("privateWatch| notes | %@ | failed | %@", root, String(describing: error))
+                return try await PrivacyEngine.shared.discover()
+            }
+            store.reconcile(found, root: root, network: network)
+            await store.fillLabelHashes()
+            NSLog("privateWatch| notes | %@ | %@ | %d found | %d unspent | %d s", network.name, root, found.notes.count,
+                  store.notes.filter { $0.root == root }.count, Int(Date().timeIntervalSince(started)))
+            return true
+        } catch {
+            NSLog("privateWatch| notes | %@ | failed | %@", root, String(describing: error))
+            return false
+        }
+    }
+
+    /// **EVERY ROOT'S NOTES, ON A CADENCE (the review of 2026-10-26, finding
+    /// 2).** Not only a new phone's: each root's notes are read from the pool
+    /// again at most every `findEvery` while Holdings or Needs you shows and
+    /// in the background pass (every `findEverySoon` while something is out
+    /// and not yet seen), so a deposit that landed and was never kept — the
+    /// app closed, a wait ended — is found and kept. Then every operation
+    /// sent and not seen is asked about (`PrivatePending.resolve`).
+    static let findEvery: TimeInterval = 10 * 60
+    static let findEverySoon: TimeInterval = 60
+    private static var lastFound: Date = .distantPast
+
+    static func findNotes(context: ModelContext?, force: Bool = false) async {
+        guard !DemoMode.isActive, let network = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) else { return }
+        let known = Set(PrivateRootKey.roots().map(\.id).filter(PrivateRootKey.found))
+        await restoreNotes()
+        let soon = !PrivatePending.shared.ops.isEmpty || FreshReceive.shared.entries.contains(where: \.isSent)
+        if force || Date().timeIntervalSince(lastFound) > (soon ? findEverySoon : findEvery) {
+            lastFound = Date()
+            for root in known.sorted() {
+                guard !Task.isCancelled else { break }
+                await findNotes(of: root, on: network)
             }
         }
-        await store.refresh(force: true)
+        await PrivatePending.shared.resolve(context: context)
     }
 }
 
@@ -217,6 +258,12 @@ enum PrivateMigration {
     enum Outcome: Equatable { case nothing, moved(String), failed(String) }
 
     static func run(context: ModelContext) async -> Outcome {
+        // Alone through the engine (finding 8): the device-only account stays
+        // open from the discovery to the relay.
+        await PrivacyEngine.exclusive { await runAlone(context: context) }
+    }
+
+    private static func runAlone(context: ModelContext) async -> Outcome {
         guard PrivateAccount.legacyExists, !DemoMode.isActive else { return .nothing }
         let store = PrivateMoneyStore.shared
         let engine = PrivacyEngine.shared

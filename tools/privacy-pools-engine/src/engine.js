@@ -88,10 +88,22 @@ async function labelHashOf(label) {
 
 // The open account: its keys, one session per relayer route, and the
 // prepared transactions waiting for the app.
+//
+// A prepared handle BELONGS TO THE ACCOUNT IT WAS MADE UNDER (the review of
+// 2026-10-26, finding 8): `open` no longer wipes it, and `relay` spends it
+// through that account's own sessions, so a flow that opened another
+// account between this one's prepare and relay cannot swap it. (The app
+// also runs one flow at a time, `PrivacyEngine.exclusive`.) At most 16 are
+// kept; `close` drops them all.
 let account = null;
 const prepared = new Map();
 let nextHandle = 1;
-function keep(value) { const h = `p${nextHandle++}`; prepared.set(h, value); return h; }
+function keep(value) {
+  const h = `p${nextHandle++}`;
+  prepared.set(h, { ...value, acct: account });
+  while (prepared.size > 16) prepared.delete(prepared.keys().next().value);
+  return h;
+}
 
 function deriveKeys(seedHex, revocableKeyIndex) {
   const seed = bytesFromHex(seedHex);
@@ -109,10 +121,10 @@ function deriveKeys(seedHex, revocableKeyIndex) {
   }
 }
 
-async function session(route) {
-  if (!account) throw new Error('no account is open');
-  if (account.sessions[route]) return account.sessions[route];
-  const n = account.network;
+async function session(route, acct = account) {
+  if (!acct) throw new Error('no account is open');
+  if (acct.sessions[route]) return acct.sessions[route];
+  const n = acct.network;
   // PoolVault.transact checks that the proof names its caller: the relayer's
   // signer for a transfer, the PrivacyPoolRelay contract for a withdrawal.
   const processorAddress = route === 'transfer' ? n.transferProcessor : n.withdrawProcessor;
@@ -120,17 +132,17 @@ async function session(route) {
   const builder = PoolSessionBuilder.fromConfig({
     chainId: n.chainId,
     rpcUrl: n.rpcUrl,
-    ownerAddress: account.owner,
+    ownerAddress: acct.owner,
     deployment: { poolAddress: n.pool, entrypointAddress: n.entrypoint, keystoreAddress: n.keystore, aspRegistryAddress: n.aspRegistry },
     deploymentBlock: hex(n.fromBlock),
     aspUrl: n.aspUrl,
     relayers: [{ name: 'relayer', url: n.relayerUrl, address: n.relayerAddress, processorAddress, chainId: n.chainId, chainType: 'evm', status: 'active' }],
     logger: log,
   })
-    .withKeystoreManager(account.keystore)
-    .withHashService(account.hash)
-    .withRpcInteractor(account.rpc)
-    .withNoteManager(account.notes)
+    .withKeystoreManager(acct.keystore)
+    .withHashService(acct.hash)
+    .withRpcInteractor(acct.rpc)
+    .withNoteManager(acct.notes)
     .withCircuitArtifacts(artifacts)
     .withProofService(new ProofService({ circuitArtifacts: artifacts, groth16Prover: timedProver }, { logger: log }));
   // 0xBow's yield pools (prd §1563): what is private earns on Aave. Each
@@ -138,8 +150,8 @@ async function session(route) {
   // and unwraps on the way out; ppETH's takes and pays native ETH.
   const yields = yieldDeployments(n);
   if (yields.length) builder.withYieldDeployments(yields);
-  account.sessions[route] = await builder.create();
-  return account.sessions[route];
+  acct.sessions[route] = await builder.create();
+  return acct.sessions[route];
 }
 
 function yieldDeployments(n) {
@@ -261,7 +273,6 @@ const methods = {
     // The relayer, asked directly for a yield withdrawal's quote and handed
     // its proof (prd §1563): the SDK's own interactor and schemas.
     account.relayer = new RelayerInteractor({ relayers: [relayerInfo('withdraw')], httpClient: new HTTPClient(), addressSchema: AddressSchema }, { logger: logger('relayer') });
-    prepared.clear();
     const s = now();
     await session('withdraw');
     return { viewingPublicKey: keys.viewingPublicKey, keysMs, sessionMs: Math.round(now() - s) };
@@ -421,11 +432,13 @@ const methods = {
     if (!p || !['withdraw', 'transfer', 'yieldWithdraw'].includes(p.kind)) throw Object.assign(new Error('nothing prepared under that handle'), { name: 'NoPrepared' });
     prepared.delete(handle);
     const t = now();
+    // Through the account the handle was prepared under, never whichever
+    // is open now (finding 8).
     if (p.kind === 'yieldWithdraw') {
-      const tx = await account.relayer.relayWithdrawal(p.relayer, p.result.relayParams);
+      const tx = await p.acct.relayer.relayWithdrawal(p.relayer, p.result.relayParams);
       return { tx, ms: Math.round(now() - t) };
     }
-    const s = await session(p.kind);
+    const s = await session(p.kind, p.acct);
     if (p.kind === 'withdraw') {
       const option = p.result.relayerOptions?.[0];
       if (!option) throw Object.assign(new Error('the relayer quoted nothing'), { name: 'NoQuote' });

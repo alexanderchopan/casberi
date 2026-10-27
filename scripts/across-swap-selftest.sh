@@ -76,6 +76,10 @@ enum YourAccountDemo {
     static var isOn: Bool { false }
     static var roundUps: RoundUps.Setting { RoundUps.Setting() }
 }
+// What `RoundUps.privatePools` reads (the review of 2026-10-26, finding 7):
+// the kill switch on, an account on the phone.
+enum PrivateMainnet { static let on = true }
+enum YourAccountKey { static var stubbed: String? = "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"; static var address: String? { stubbed } }
 SWIFT
 
 cat > "$TMP/main.swift" <<'SWIFT'

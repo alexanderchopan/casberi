@@ -123,8 +123,23 @@ final class PrivacyEngine: NSObject {
 
     // MARK: - Calls
 
+    /// One flow at a time through the engine's one open account (the review
+    /// of 2026-10-26, finding 8): every `open` → prepare → relay runs inside.
+    static let queue = PrivacyEngineQueue()
+
+    static func exclusive<T>(_ body: () async throws -> T) async rethrows -> T {
+        try await queue.run(body)
+    }
+
+    /// What needs no open account: everything else must be called inside
+    /// `exclusive`, or it is refused before it reaches the page.
+    static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash]
+
     func call<Params: Encodable, Value: Decodable>(_ method: Wire.Method, _ params: Params,
                                                   as type: Value.Type) async throws -> Value {
+        guard Self.accountFree.contains(method) || PrivacyEngineQueue.holding else {
+            throw Wire.Failure(name: "NotExclusive", message: "\(method.rawValue) outside PrivacyEngine.exclusive")
+        }
         try await start()
         guard let webView else { throw Wire.Failure(name: "Stopped", message: "engine stopped") }
         let reply = try await webView.callAsyncJavaScript(

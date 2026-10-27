@@ -79,7 +79,18 @@ enum PrivateYield {
     /// pay the token (`redeemToUnderlying`), and for ETH unwraps the WETH it
     /// pays. `worth` is the shares' value read before signing; the share only
     /// rises, so unwrapping that much never asks for more than arrived.
-    /// Measured in simulation on Ethereum (`mainnet-sim.mjs ragequit`).
+    ///
+    /// **THE WETH IS UNWRAPPED THROUGH THE ROUTER, NEVER BY WETH's OWN
+    /// `withdraw` (the review of 2026-10-26, finding 1; §1559's measure).**
+    /// WETH9 pays out with a 2,300-gas `transfer`, and your account is a Safe
+    /// proxy whose code is cold in the app's check before Face ID, so that
+    /// check refused every Take it back on ppETH. As Swap's unwrap does, the
+    /// WETH goes to Ethereum's pinned SwapRouter02 by its `transfer` of
+    /// exactly `worth`, and the router's `unwrapWETH9(worth, owner)` pays the
+    /// account with a full-gas call, in the same operation. Proven from a real
+    /// SafeL2 1.4.1 proxy, both as the check runs it and as the operation
+    /// executes (`mainnet-sim.mjs ragequit`; its `wethwithdraw` mutation is
+    /// the old call, and the check refuses it).
     static func takeBackCalls(pool: PrivacyNetwork.YieldPool, shares: String, owner: String,
                               worth: String) -> [(to: String, data: String)]? {
         guard PrivateMoney.isAddress(owner), let sharesWord = uint(shares), let worthWord = uint(worth) else { return nil }
@@ -89,9 +100,19 @@ enum PrivateYield {
             (pool.share, "0x095ea7b3" + zapWord + sharesWord),
             (pool.zap, "0x7aa6a9fd" + sharesWord + ownerWord),
         ]
-        if pool.native { calls.append((pool.underlying, "0x2e1a7d4d" + worthWord)) }
+        if pool.native {
+            guard worthWord != String(repeating: "0", count: 64) else { return nil }
+            let routerWord = String(repeating: "0", count: 24) + unwrapRouter.dropFirst(2).lowercased()
+            calls.append((pool.underlying, "0xa9059cbb" + routerWord + worthWord))
+            calls.append((unwrapRouter, "0x49404b7c" + worthWord + ownerWord))
+        }
         return calls
     }
+
+    /// Ethereum's Uniswap SwapRouter02, the one that unwraps (the same pin as
+    /// `YourAccountSwap.Book.ethereum`'s router, held equal by
+    /// `private-money-selftest.sh`).
+    static let unwrapRouter = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45"
 
     /// A decimal as one 32-byte word, hex; nil past 2^256 or not a whole number.
     static func uint(_ decimal: String) -> String? {

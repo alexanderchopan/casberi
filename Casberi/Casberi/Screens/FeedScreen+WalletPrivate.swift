@@ -34,7 +34,10 @@ extension FeedScreen {
                         // (prd §1562, every build since §1567): each root's
                         // notes from the pool, its fresh addresses walked
                         // back. Once per root; the line says so meanwhile.
-                        await PrivateWatch.restoreNotes()
+                        // Every root's notes again on a cadence, and what was
+                        // sent and not seen asked about (the review of
+                        // 2026-10-26, finding 2).
+                        await PrivateWatch.findNotes(context: modelContext)
                         await FreshReceive.shared.restore()
                         // What a fresh address was paid moves in from here
                         // too (prd §1560): its row appears as "moving in".
@@ -191,8 +194,11 @@ struct WalletPrivateAsks: View {
                 ForEach(asks) { ask in row(ask) }
             }
             .task(id: asks.map(\.id)) {
-                // The ASP is asked again while a row stands (spaced 20 s).
+                // The ASP is asked again while a row stands (spaced 20 s);
+                // every root's notes on their cadence, and what was sent and
+                // not seen asked about (the review of 2026-10-26, finding 2).
                 while PrivateMoney.anyWaiting(store.notes), !Task.isCancelled {
+                    await PrivateWatch.findNotes(context: context)
                     await store.refresh()
                     try? await Task.sleep(for: .seconds(20))
                 }

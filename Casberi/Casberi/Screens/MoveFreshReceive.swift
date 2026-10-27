@@ -134,7 +134,8 @@ struct MoveFreshSentence<Head: View>: View {
         switch state {
         case .waiting:
             return nil
-        case .moving(let amount):
+        // A transaction out and not yet seen reads as the move under way it is.
+        case .moving(let amount), .sent(let amount, _, _, _, _):
             return (String(localized: "\(figure(amount)) arrived, moving in…"), DS.textSecondary)
         case .moved(let amount, let tx):
             switch PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })?.status {
