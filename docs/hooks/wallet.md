@@ -396,3 +396,12 @@ Private is never a verb. **"Your private balance"** is the first row of Send's r
 - A crossing is one Wallet thing, `wallet:across:<id>` (`WalletAcross`), drawn by `AcrossCrossingRow`; `WalletIngest` drops its legs (`YourAccountAcross.take`). The notes are `yourAccount.across.crossings` in UserDefaults (device-only, newest 200).
 - A refund of an ETH crossing comes back as WETH (the pool refunds its wrapped coin).
 - `across-swap-selftest.sh`: vectors simulated on each network, real relay hashes, 21 mutations.
+
+## Private money's root, recovery and the background watch (prd §1562, Sepolia, DEBUG)
+
+`-privateRecoveryProbe YES` logs `privateRoot|` lines: each root by its public id (never its bytes), its owner, whether this phone found its notes, the device-only account, every note by account and the fresh book by root. `-backgroundRefreshProbe YES` runs the background watch's body now with its 25 s budget (`privateWatch|`); a number is the budget in seconds (`240` to see a whole restore after Tor's cold start). `-privateMigrate YES` is Security's Back up (`privateMigrate|`). `-privateForgetLocal YES` deletes what the phone kept about the roots' accounts (notes, fresh book, found/walked marks; UserDefaults only) so the next pass rebuilds them from the root: the recovery proof. Never pass `-privateMoneySample clear` on a device holding real notes.
+
+- The root: `Model/PrivateRootKey.swift` (iCloud Keychain, synchronizable, `AfterFirstUnlock`, shared group, one item per root named `root-<id>`, oldest wins). Derivations: `Model/PrivateRoot.swift` (pure). Accounts: `Model/PrivateAccount.swift` (the device-only one while its seed and sender are here, then every root; `open`, `registerIfNeeded` tops up a root owner that is not the sender).
+- The walk: `FreshReceive.restore`, twenty unused past the last used, balance and nonce through Tor. The notes: `PrivateWatch.restoreNotes`, then `fillLabelHashes`.
+- The watch: `PrivateWatchTask` (`com.casberi.app.privatewatch`), Tor or nothing; it tells only through `WalletBackgroundRefresh.runNotifySweep`. Measured: cold Tor 13.6–14.3 s, the walk 13 s for 21 addresses, discovery 24 s.
+- `private-money-selftest.sh` pins the derivations against Node (`crypto.hkdfSync`, salt "casberi private money root v1").

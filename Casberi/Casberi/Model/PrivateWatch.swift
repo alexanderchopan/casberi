@@ -130,8 +130,10 @@ enum PrivateWatch {
         // A new phone: each root's notes found again from the pool's events.
         if left() > 15 { await restoreNotes() }
         // The fresh addresses: walked back, then looked at, a move for each paid.
-        if left() > 5, !Task.isCancelled { await fresh.restore() }
-        if left() > 3, !Task.isCancelled { await fresh.check(context: context, force: why != "background") }
+        // The walk took 13 s through Tor for twenty-one addresses (measured):
+        // in a 25 s background pass it waits for a later one or the foreground.
+        if left() > 15, !Task.isCancelled { await fresh.restore() }
+        if left() > 5, !Task.isCancelled { await fresh.check(context: context, force: why != "background") }
         NSLog("privateWatch| done | %@ | %.1f s of %.0f | %d notes | %d fresh addresses", why,
               Date().timeIntervalSince(started), budget, store.notes.count, fresh.entries.count)
         return !Task.isCancelled
