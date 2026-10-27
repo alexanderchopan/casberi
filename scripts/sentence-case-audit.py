@@ -230,6 +230,11 @@ KNOWN_PROPER: set[str] = {
     # Tor, the network every Wallet read goes through (prd §1495): "Through
     # Tor", "refuses Tor" name the network, as "Relay" names Relay.
     "Tor",
+    # Across, the bridge cross-network swaps go through (prd §1555): "Through
+    # Across", "More than Across carries" name the protocol, as "Relay" names Relay.
+    "Across",
+    # WETH, wrapped ether's ticker (prd §1559): "Unwraps WETH" names the token.
+    "WETH",
     # ERC-8213's terms (prd §1509, §1514): "EIP-712 Digest", "Calldata
     # Digest", "Domain Hash" and "Message Hash" are what the ERC says a
     # wallet MUST label these values, exactly, so a hardware wallet and this
