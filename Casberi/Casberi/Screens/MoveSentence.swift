@@ -1492,13 +1492,14 @@ struct MoveSentence: View {
     /// sentence under it is what that verb does.
     private var verbs: some View {
         // Five verbs outgrow a phone's line at this spacing (prd §1537): the
-        // gap narrows first, and past that the line scrolls, never clips.
+        // gap narrows first, and past that the whole line shrinks evenly to
+        // the width, its one rung kept — never a scroll, never a clip, never
+        // a size of its own (prd §1558, user: "no scrolling", "we don't want
+        // to hand roll sizes").
         ViewThatFits(in: .horizontal) {
             verbRow(spacing: DS.Space.s4)
             verbRow(spacing: DS.Space.s3)
-            verbRow(spacing: DS.Space.s2)
-            ScrollView(.horizontal) { verbRow(spacing: DS.Space.s2) }
-                .scrollIndicators(.hidden)
+            ScaledToWidth { verbRow(spacing: DS.Space.s2) }
         }
         .frame(minHeight: 44, alignment: .leading)
     }
