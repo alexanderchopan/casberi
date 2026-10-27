@@ -289,7 +289,9 @@ extension FeedScreen {
             if let whole = portfolioUnhidden {
                 let portfolio = whole.hiding(walletHidden)
                 let hidden = whole.positions.filter { walletHidden.contains($0.symbol.uppercased()) }
-                WalletTokensSheet(positions: portfolio.positions, total: portfolio.totalUSD,
+                // Public balances only: private money is its own section (prd §1554).
+                WalletTokensSheet(positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol },
+                                  total: portfolio.totalUSD,
                                   moves: walletHoldingMoves, hidden: hidden) { position in
                     feedSheet = nil
                     Task { @MainActor in

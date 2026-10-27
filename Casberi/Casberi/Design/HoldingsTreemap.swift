@@ -297,7 +297,19 @@ struct HoldingsTreemap: View {
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 if showsMark {
-                    AssetMark(name: tile.id, size: mark)
+                    if tile.id == PrivateMoney.walletSymbol {
+                        // Private money is one block, marked by its eye (prd §1554).
+                        Image(systemName: "eye.slash")
+                            .resizable()
+                            .scaledToFit()
+                            .fontWeight(.semibold)
+                            .foregroundStyle(DS.privateMark)
+                            .frame(width: mark * 0.8, height: mark * 0.8)
+                            .frame(width: mark, height: mark, alignment: .leading)
+                            .accessibilityHidden(true)
+                    } else {
+                        AssetMark(name: tile.id, size: mark)
+                    }
                 }
                 Spacer(minLength: 0)
                 // **A TILE SAYS WHAT AND HOW MUCH, NEVER THE DAY (prd §1338,

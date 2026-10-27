@@ -416,6 +416,16 @@ enum DS {
         })
     }
 
+    /// **PRIVATE MONEY'S MARK (prd §1554).** The eye-slash on the Holdings
+    /// box's Private block wears lime, the one place it does: a block of money
+    /// nobody else can see. A glyph's hue, never a word's ink; light pages take
+    /// it darker so it holds against white.
+    static var privateMark: Color {
+        Color(uiColor: UIColor { traits in
+            UIColor(traits.userInterfaceStyle == .light ? Color.fixed("#5f7a00") : Color.fixed("#d7ff2e"))
+        })
+    }
+
     /// **THE INK OF A WORD THAT NAMES A PLACE (prd §1252, user: "white words
     /// everywhere but pink glyphs").** A screen's title, a section's name, a
     /// header's picked word, a day divider, a category's label: white in

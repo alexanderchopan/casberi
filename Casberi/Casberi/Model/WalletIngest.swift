@@ -2216,10 +2216,14 @@ enum WalletIngest {
         // all on an exchange still has one, and returning nil would paint the
         // empty state over a balance we successfully read. Privy is the one
         // that may not stand alone.
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty else { return (read: nil, failed: read.unreached > 0) }
+        // Private money (prd §1554): your own, approved, on a network whose
+        // coins have value; one block, never folded into the token it is. It
+        // may stand alone only where no wallet went unread.
+        let privately = combined ? await PrivateMoneyStore.shared.walletHolding() : []
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || (!privately.isEmpty && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
-                                             venues: cash + privy,
+                                             venues: cash + privy + privately,
                                              asOf: asOf)
         portfolio.unpricedCash = unpricedCash
         // What the total leaves out (prd §1078). Combined read only, as the
@@ -2236,7 +2240,7 @@ enum WalletIngest {
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
         if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
-            + (privy.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
+            + (privy.isEmpty ? 0 : 1) + (privately.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.
             //

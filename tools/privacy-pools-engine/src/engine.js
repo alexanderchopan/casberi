@@ -77,6 +77,12 @@ async function poseidon() {
   return hashService;
 }
 
+// Poseidon(label) as a decimal string: the id 0xBow's ASP files a deposit
+// under (`/labels/<id>/status`), never the label itself (prd §1554).
+async function labelHashOf(label) {
+  return BigInt((await poseidon()).hash([hex(label)])).toString(10);
+}
+
 // The open account: its keys, one session per relayer route, and the
 // prepared transactions waiting for the app.
 let account = null;
@@ -217,9 +223,16 @@ const methods = {
       approvals: (r.approvalTxs ?? []).map(publicTx),
       commitment: r.pendingNote.commitment,
       label: hex(r.pendingNote.label),
+      // The ASP keys a deposit by Poseidon(label), in decimal; asked with the
+      // raw label it reads `unknown` forever (prd §1554).
+      labelHash: await labelHashOf(r.pendingNote.label),
       ms: Math.round(now() - t),
       proofs,
     };
+  },
+
+  async labelHash({ label }) {
+    return { labelHash: await labelHashOf(BigInt(label)) };
   },
 
   async discover() {
@@ -249,6 +262,27 @@ const methods = {
     const r = await s.prepareWithdraw({ inputCommitments: inputsFor(tokenId, amount), amount, tokenId, recipientAddress: recipient });
     const option = r.relayerOptions?.[0];
     return { handle: keep({ kind: 'withdraw', result: r }), fee: option ? JSON.parse(JSON.stringify(option.selectedQuote?.quote ?? null, (_, v) => (typeof v === 'bigint' ? hex(v) : v))) : null, ms: Math.round(now() - t), proofs };
+  },
+
+  // Hands a prepared withdrawal or transfer to the relayer, which posts it
+  // and pays its gas (prd §1554): the handle is spent either way, so a second
+  // tap cannot post one proof twice. Returns the transaction's hash.
+  async relay({ handle }) {
+    const p = prepared.get(handle);
+    if (!p || (p.kind !== 'withdraw' && p.kind !== 'transfer')) throw Object.assign(new Error('nothing prepared under that handle'), { name: 'NoPrepared' });
+    prepared.delete(handle);
+    const t = now();
+    const s = await session(p.kind);
+    if (p.kind === 'withdraw') {
+      const option = p.result.relayerOptions?.[0];
+      if (!option) throw Object.assign(new Error('the relayer quoted nothing'), { name: 'NoQuote' });
+      const r = await s.relayWithdraw(option);
+      return { tx: r.txHash, ms: Math.round(now() - t) };
+    }
+    const option = p.result.relayOptions?.[0];
+    if (!option) throw Object.assign(new Error('the relayer quoted nothing'), { name: 'NoQuote' });
+    const r = await s.relayTransfer(option);
+    return { tx: r.txReceipt.txHash, ms: Math.round(now() - t) };
   },
 
   // A proof with the network's real circuit and keys, on synthetic inputs

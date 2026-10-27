@@ -15,7 +15,7 @@ enum PrivacyEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
-        case discover, prepareTransfer, prepareWithdraw, bench
+        case discover, prepareTransfer, prepareWithdraw, bench, labelHash, relay
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -70,6 +70,11 @@ enum PrivacyEngineWire {
         let recipient: String
     }
 
+    struct Label: Encodable, Equatable {
+        /// 0x-hex, as `PreparedDeposit.label` carries it.
+        let label: String
+    }
+
     struct Bench: Encodable, Equatable {
         let circuit: String
         let singleThread: Bool
@@ -120,8 +125,15 @@ enum PrivacyEngineWire {
         let approvals: [Tx]
         let commitment: String
         let label: String
+        /// Poseidon(label), decimal: what 0xBow's ASP files the deposit
+        /// under (prd §1554). The raw label reads `unknown` forever.
+        let labelHash: String
         let ms: Int
         let proofs: [Proof]
+    }
+
+    struct LabelHash: Decodable, Equatable {
+        let labelHash: String
     }
 
     struct Note: Decodable, Equatable {
@@ -149,6 +161,17 @@ enum PrivacyEngineWire {
         let proofs: [Proof]
     }
 
+    /// A prepared spend, named for the relayer (prd §1554).
+    struct Handle: Codable, Equatable {
+        let handle: String
+    }
+
+    /// What the relayer posted: the transaction's hash.
+    struct Relayed: Decodable, Equatable {
+        let tx: String
+        let ms: Int
+    }
+
     struct Benched: Decodable, Equatable {
         let circuit: String
         let loadMs: Int
@@ -157,6 +180,38 @@ enum PrivacyEngineWire {
         let verifies: Bool
         let wasmBytes: Int
         let zkeyBytes: Int
+    }
+
+    // MARK: - Where a node request goes (prd §1554)
+
+    /// The JSON-RPC methods a request body names: one object or a batch.
+    static func rpcMethods(_ body: String?) -> [String] {
+        guard let data = body?.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) else { return [] }
+        let calls = (json as? [[String: Any]]) ?? ((json as? [String: Any]).map { [$0] } ?? [])
+        return calls.compactMap { $0["method"] as? String }
+    }
+
+    /// The URL a request to the network's node is sent to: one asking for
+    /// logs goes to the node that keeps the whole history (`logsUrl`), and
+    /// everything else, or any request to another host, where it was going.
+    static func routed(_ url: URL, body: String?, rpcUrl: String, logsUrl: String) -> URL {
+        guard let node = URL(string: rpcUrl), url.host?.lowercased() == node.host?.lowercased(),
+              rpcMethods(body).contains("eth_getLogs"), let logs = URL(string: logsUrl) else { return url }
+        return logs
+    }
+
+    /// The history node lags the head by a block, and answers a range that
+    /// reaches past it with an error: that request goes back to the node.
+    static func missesHead(_ body: String) -> Bool {
+        body.range(of: "beyond current head", options: .caseInsensitive) != nil
+    }
+
+    /// A free node's "slow down", by status or in the body: retried after a
+    /// pause, never handed to the SDK as an answer.
+    static func throttled(status: Int, body: String) -> Bool {
+        status == 429 || body.range(of: #"too many requests|rate.?limit"#,
+                                    options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     // MARK: - The network door
@@ -213,7 +268,19 @@ struct PrivacyNetwork: Codable, Equatable {
         pool: "0x09b94d3127019298757A6ceeB7911922085f7C01",
         keystore: "0x6d264aCb9C3A7A3105c29470AfE2F5F1EC203C73",
         aspRegistry: "0x35D29EFDCf067599ab4A53cf40229477f0b1cA9c",
-        fromBlock: 10_994_884)
+        // The KEYSTORE's first block, not pool 4's (10,994,884): the SDK
+        // takes one `deploymentBlock` for every contract, and the keystore
+        // is older; scanning from the pool leaves holes in its tree and a
+        // spend's witness fails (`keystoreLeaves.0 undefined`, prd §1554).
+        fromBlock: 10_932_354)
+
+    /// The node old logs come from (prd §1554): PublicNode answers "pruned
+    /// history unavailable" for the keystore's first blocks, and every other
+    /// free Sepolia node tried caps the range or rate-limits; Tenderly's
+    /// gateway served the whole range (measured 2026-10-26). It lags the
+    /// head by a block, so a request it answers "beyond current head" goes
+    /// back to `rpcUrl` (`SepoliaLogs`).
+    static let sepoliaLogsUrl = "https://sepolia.gateway.tenderly.co"
 
     static let testnets: Set<Int> = [11_155_111]
 
@@ -227,6 +294,6 @@ struct PrivacyNetwork: Codable, Equatable {
 
     /// The hosts this network's engine reaches, for the door above.
     var hosts: [String] {
-        [rpcUrl, aspUrl, relayerUrl].compactMap { URL(string: $0)?.host?.lowercased() }
+        [rpcUrl, aspUrl, relayerUrl, Self.sepoliaLogsUrl].compactMap { URL(string: $0)?.host?.lowercased() }
     }
 }

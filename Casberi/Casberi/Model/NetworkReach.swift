@@ -460,10 +460,14 @@ enum NetworkReach {
         // is the Aztec entry's too, which already routes it through Tor.
         Endpoint(service: "Privacy Pools engine",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
-                 purpose: "Reads Privacy Pools v2 on the Sepolia testnet for your private balance: the pool's notes and keystore from a public Sepolia node, which deposits 0xBow has approved from its test review service, and its relayer's fees. Carries your account's address and your notes' public commitments, never a key or a note's secret.",
+                 purpose: "Reads Privacy Pools v2 on the Sepolia testnet for your private balance: the pool's notes and keystore from public Sepolia nodes (old logs from Tenderly's, the one that keeps them all), which deposits 0xBow has approved from its test review service, and its relayer's fees; and sends what you move to private there. Carries your account's address and your notes' public commitments, never a key or a note's secret.",
                  hosts: ["ethereum-sepolia-rpc.publicnode.com", "api-dev.0xbow.io",
-                         "relayer-v2-staging-149184580131.us-east1.run.app"],
-                 throughTor: true),
+                         "relayer-v2-staging-149184580131.us-east1.run.app",
+                         "sepolia.gateway.tenderly.co"],
+                 throughTor: true,
+                 // Tenderly refuses every Tor exit (the Railgun entry's
+                 // measurement), so its log reads go direct and say so.
+                 refusesTor: ["sepolia.gateway.tenderly.co"]),
         // The circuit files the engine proves with, each fetched once by its
         // IPFS CID and refused unless it hashes to its pin
         // (`PrivacyArtifacts`). Public files; the request names no one.

@@ -189,8 +189,19 @@ final class PrivacyEngine: NSObject {
                        as: Wire.PreparedSpend.self)
     }
 
+    /// Hands a prepared spend to the relayer, which posts it and pays its
+    /// gas (prd §1554); the handle is spent either way.
+    func relay(handle: String) async throws -> Wire.Relayed {
+        try await call(.relay, Wire.Handle(handle: handle), as: Wire.Relayed.self)
+    }
+
     /// One proof on `circuit` with this network's real keys and synthetic
     /// inputs: what a proof costs on this phone, with no funds and no send.
+    /// Poseidon(label), decimal: the id 0xBow's ASP files a deposit under.
+    func labelHash(_ label: String) async throws -> String {
+        try await call(.labelHash, Wire.Label(label: label), as: Wire.LabelHash.self).labelHash
+    }
+
     func bench(circuit: String, singleThread: Bool = false) async throws -> Wire.Benched {
         try await call(.bench, Wire.Bench(circuit: circuit, singleThread: singleThread), as: Wire.Benched.self)
     }
@@ -267,10 +278,16 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
         for (field, value) in (body["headers"] as? [String: String]) ?? [:] {
             request.setValue(value, forHTTPHeaderField: field)
         }
-        if let text = body["body"] as? String { request.httpBody = Data(text.utf8) }
+        let text = body["body"] as? String
+        if let text { request.httpBody = Data(text.utf8) }
         request.timeoutInterval = 60
+        // Old logs from the node that keeps them (prd §1554); the rest, and a
+        // range past its head, from the network's own node.
+        let network = MainActor.assumeIsolated { PrivacyEngine.shared.network ?? .sepolia }
+        let routed = PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl,
+                                              logsUrl: PrivacyNetwork.sepoliaLogsUrl)
         Task { @MainActor in
-            guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else {
+            guard let (data, http) = await Self.send(request, to: routed, fallback: url) else {
                 replyHandler(nil, "no answer from \(url.host ?? "?")")
                 return
             }
@@ -281,6 +298,41 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
             replyHandler(["status": http.statusCode, "headers": headers,
                                 "body": String(decoding: data, as: UTF8.self)], nil)
         }
+    }
+
+    /// One request through the funnel, to `url` (a routed log read) and back
+    /// to `fallback` when that node has not reached the head yet; a free
+    /// node's 429 is waited out, a few times, before it is an answer.
+    @MainActor
+    private static func send(_ request: URLRequest, to url: URL, fallback: URL) async -> (Data, HTTPURLResponse)? {
+        var request = request
+        request.url = url
+        var unanswered = 0
+        for attempt in 0..<6 {
+            guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else {
+                // The relayer's front end refuses some Tor exits, and a quote
+                // or a relay that dies there is the whole move (measured
+                // 2026-10-26: two of two failed on one circuit). Its
+                // requests get two more circuits before they are an outage;
+                // they never leave Tor (prd §1554).
+                unanswered += 1
+                let relayer = url.host?.lowercased() == URL(string: PrivacyNetwork.sepolia.relayerUrl)?.host?.lowercased()
+                NSLog("privacyEngine| no answer | %@ | try %d", url.host ?? "?", unanswered)
+                if relayer, unanswered < 3 { continue }
+                return nil
+            }
+            let text = String(decoding: data.prefix(2048), as: UTF8.self)
+            if PrivacyEngineWire.throttled(status: http.statusCode, body: text), attempt < 5 {
+                try? await Task.sleep(for: .milliseconds(500 << attempt))
+                continue
+            }
+            if request.url != fallback, PrivacyEngineWire.missesHead(text) {
+                request.url = fallback
+                continue
+            }
+            return (data, http)
+        }
+        return nil
     }
 }
 
