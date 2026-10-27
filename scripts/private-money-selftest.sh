@@ -171,7 +171,7 @@ check(P.baseUnits("0", decimals: 18) == nil && P.baseUnits("abc", decimals: 18) 
 check(P.hex("1000000000000000") == "0x38d7ea4c68000", "wei to 0x-hex")
 check(P.hex("0") == "0x0" && P.hex("255") == "0xff" && P.hex("0x1") == nil, "0, 255 and a non-decimal")
 check(P.reserve(gasPrice: "1000") == "4400000000", "the reserve is the budget at twice the price")
-check(P.choices(balance: "6000000000000000", reserve: "1000000000000000") == ["0.00005", "0.0001", "0.0005", "0.001", "0.005"], "the ladder the balance allows after the reserve")
+check(P.choices(balance: "6000000000000000", reserve: "1000000000000000") == ["0.00001", "0.00005", "0.0001", "0.0005", "0.001", "0.005"], "the ladder the balance allows after the reserve")
 check(P.choices(balance: "1000000000000000", reserve: "1000000000000000").isEmpty, "nothing when the reserve takes it all")
 
 // The testnet transaction, against viem.

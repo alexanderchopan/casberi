@@ -219,7 +219,7 @@ enum PrivateMoney {
 
     /// The amounts Move to private offers, in ETH: the ones the account can
     /// move and still pay the gas (`reserve`, base units).
-    static let ladder = ["0.00005", "0.0001", "0.0005", "0.001", "0.005", "0.01", "0.05"]
+    static let ladder = ["0.00001", "0.00005", "0.0001", "0.0005", "0.001", "0.005", "0.01", "0.05"]
 
     static func choices(balance: String, reserve: String, decimals: Int = 18) -> [String] {
         guard let have = Decimal(string: balance), let keep = Decimal(string: reserve) else { return [] }
