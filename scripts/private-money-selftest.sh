@@ -130,7 +130,7 @@ grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'retu
 ! grep -q 'feedSheet' "$HOLD" || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
 use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
-use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: live ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
+use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
 ! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
 use "Casberi/Casberi/Model/PrivateMove.swift" 'let relayed = try await engine.relay(handle: spend.handle)' "a private send no longer goes through the relayer"
 use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shared.spendable(chainId: network.chainId)' "a private send's amounts are not the approved private balance"

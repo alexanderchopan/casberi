@@ -33585,6 +33585,34 @@
         }
       }
     },
+    "0xBow's relayer refused to quote" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El relayer de 0xBow se negó a cotizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow のリレイヤーが見積もりを拒否しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 릴레이어가 견적을 거부했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 的中继器拒绝报价"
+          }
+        }
+      }
+    },
     "0x…" : {
       "localizations" : {
         "es" : {
@@ -137824,6 +137852,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Private Cloud Compute"
+          }
+        }
+      }
+    },
+    "Private ETH is not served on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El ETH privado no está disponible en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ではプライベート ETH を利用できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서는 비공개 ETH를 사용할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上不提供私密 ETH"
           }
         }
       }

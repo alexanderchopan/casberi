@@ -205,12 +205,15 @@ struct MovePrivateSentence<Head: View>: View {
             .buttonStyle(RowPress())
             .accessibilityHint(Text("Picks who it goes to"))
         } else {
+            // A failed read leaves the address open: the relayer's fee does
+            // not wait on it, and taking one reads again (`take`).
+            let pickable = live || failed
             Button {
-                guard live else { return }
+                guard pickable else { return }
                 toggle(.recipient)
             } label: {
                 if let to = move.recipient {
-                    MoveWord(YourAccount.short(to), ink: live ? DS.pickInk : DS.textPrimary)
+                    MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)
                 } else {
                     MoveWord(String(localized: "address"), ink: DS.textTertiary)
                 }
@@ -385,6 +388,12 @@ struct MovePrivateSentence<Head: View>: View {
             open = nil
         }
         DSHaptic.selection()
+        if failed { Task { await move.read() } }
+    }
+
+    /// The read or the act failed, and the foot offers Try again.
+    private var failed: Bool {
+        if case .failed = move.stage { true } else { false }
     }
 
     // MARK: - The foot

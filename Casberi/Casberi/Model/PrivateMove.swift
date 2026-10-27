@@ -288,14 +288,15 @@ final class PrivateMove {
         let pool = network.yieldPool(for: Self.eth)
         if mode == .send {
             await PrivateMoneyStore.shared.readYield()
-            if let pool { quotedFee = await Self.relayerFee(pool, network: network, to: recipient ?? account) }
+            let quote: Quote = if let pool { await Self.relayerQuote(pool, network: network, to: recipient ?? account) } else { .noPool }
+            if case .fee(let fee) = quote { quotedFee = fee } else { quotedFee = nil }
             if let usdcPool = network.yield.first(where: { !$0.native }),
                PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC") != "0" {
                 usdcFee = await Self.relayerFee(usdcPool, network: network, to: recipient ?? account)
             }
             guard mine == reads else { return }
             let options = self.options
-            guard !options.isEmpty else { stage = quotedFee == nil ? .failed(String(localized: "0xBow's relayer did not answer")) : .nothingPrivate; return }
+            guard !options.isEmpty else { stage = quote.failure(on: network).map(Stage.failed) ?? .nothingPrivate; return }
             if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) {
                 let first = options[min(2, options.count - 1)]
                 pick(first.amount, of: first.symbol)
@@ -346,18 +347,51 @@ final class PrivateMove {
     /// share's rate. The fee is the relayer's gas at today's price, so one
     /// quote serves every amount.
     static func relayerFee(_ pool: PrivacyNetwork.YieldPool, network: PrivacyNetwork, to recipient: String) async -> String? {
-        guard let url = URL(string: network.relayerUrl + "/v1/quote/evm/\(network.chainId)/receive") else { return nil }
+        if case .fee(let fee) = await relayerQuote(pool, network: network, to: recipient) { return fee }
+        return nil
+    }
+
+    /// What the relayer said to a quote: its fee, a refusal (another status,
+    /// or an answer with no fee in it), or nothing at all.
+    enum Quote: Equatable {
+        case fee(String)
+        case refused
+        case unanswered
+        /// No yield pool for ETH on this network: the relayer was not asked.
+        case noPool
+
+        /// The sentence's words for a quote that is not a fee.
+        func failure(on network: PrivacyNetwork) -> String? {
+            switch self {
+            case .fee: nil
+            case .refused: String(localized: "0xBow's relayer refused to quote")
+            case .unanswered: String(localized: "0xBow's relayer did not answer")
+            case .noPool: String(localized: "Private ETH is not served on \(network.name)")
+            }
+        }
+    }
+
+    /// The quote, through Tor. The relayer's front end answers some Tor
+    /// exits with nothing (prd §1554), so no answer gets two more circuits
+    /// before it is an outage, as the engine's own relayer requests do.
+    static func relayerQuote(_ pool: PrivacyNetwork.YieldPool, network: PrivacyNetwork, to recipient: String) async -> Quote {
+        guard let url = URL(string: network.relayerUrl + "/v1/quote/evm/\(network.chainId)/receive") else { return .unanswered }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = ["asset": pool.share, "commit": false, "recipient": recipient, "extraGas": false,
                                    "amount": "0x2386f26fc10000"]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service), http.statusCode == 200,
+        var answer: (Data, HTTPURLResponse)?
+        for _ in 0..<3 where answer == nil {
+            answer = await IngestSupport.sendRequest(request, service: PrivacyEngine.service)
+        }
+        guard let (data, http) = answer else { return .unanswered }
+        guard http.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let shares = json["feeAmount"] as? String, shares.allSatisfy(\.isNumber), !shares.isEmpty else { return nil }
-        guard let rate = PrivateMoneyStore.shared.rates[pool.share.lowercased()] else { return shares }
-        return PrivateYield.underlying(shares: shares, exchangeRate: rate, shareDecimals: pool.shareDecimals)
+              let shares = json["feeAmount"] as? String, shares.allSatisfy(\.isNumber), !shares.isEmpty else { return .refused }
+        guard let rate = PrivateMoneyStore.shared.rates[pool.share.lowercased()] else { return .fee(shares) }
+        return PrivateYield.underlying(shares: shares, exchangeRate: rate, shareDecimals: pool.shareDecimals).map(Quote.fee) ?? .unanswered
     }
 
     /// The act: a deposit, or switch on a relayed withdrawal.
