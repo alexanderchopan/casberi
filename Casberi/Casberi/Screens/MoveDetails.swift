@@ -97,7 +97,7 @@ struct MoveDetails: View {
             // **TO ANOTHER NETWORK (prd §1555):** what arrives — exactly
             // what a relayer pays, so its least — Across's fee, rounded as a
             // pool's, and its time.
-            // A swap on arrival (prd §1565): its minimum, of what it buys there.
+            // A swap on arrival (prd §1566): its minimum, of what it buys there.
             let dest = Op.networks.first { $0.chainId == leg.to } ?? p.network
             let token = leg.swap?.buy ?? YourAccountAcross.token(leg.asset, on: dest)
             let least = leg.swap?.minimum ?? leg.outputAmount
@@ -131,7 +131,7 @@ struct MoveDetails: View {
             if let words = s.wrap.map(YourAccountSwap.words) ?? s.route.map(YourAccountSwap.brief), !out.contains(words) {
                 out.append(words)
             }
-            // The swap on arrival, its network named: "Uniswap · 0.05% on Ethereum" (prd §1565).
+            // The swap on arrival, its network named: "Uniswap · 0.05% on Ethereum" (prd §1566).
             if let words = s.across.flatMap(YourAccountAcross.arrivalBrief), !out.contains(words) { out.append(words) }
         }
         return out

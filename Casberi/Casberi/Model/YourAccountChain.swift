@@ -1467,7 +1467,7 @@ enum YourAccountChain {
         }
         // ETH sent to another network must be proven to arrive as ETH: the
         // handler's message run on the receiving network (prd §1555).
-        // So must a swap on arrival: the handler and the swap run there (prd §1565).
+        // So must a swap on arrival: the handler and the swap run there (prd §1566).
         if let crossing = a.crossing, a.sold.contains(where: { $0.across.map(YourAccountAcross.viaHandler) == true }),
            a.arrives != true {
             throw Failure(message: String(localized: "Could not check that \(crossing.symbol) arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
@@ -1592,7 +1592,7 @@ enum YourAccountChain {
                 approvals += checked.approvals
                 steps.append((calls, nil))
                 // What Across pays there: the token bought, or for a swap on
-                // arrival (prd §1565) the bridged token the handler swaps.
+                // arrival (prd §1566) the bridged token the handler swaps.
                 let landing = YourAccountAcross.token(leg.asset, on: dest)
                 let lands = leg.swap == nil ? s.buy : landing
                 stepWords.append(Words.crossing(figure(leg.inputAmount, bridged), bridged.symbol, to: dest.name,
@@ -1609,7 +1609,7 @@ enum YourAccountChain {
                                       to: YourAccountAcross.spoke(net.chainId) ?? account, toName: "Across"))
                 let refund = leg.asset == .eth ? (contract: YourAccountSwap.book(net.chainId)?.weth ?? "", symbol: "WETH")
                                                : (contract: net.dollar.lowercased(), symbol: net.dollarSymbol)
-                // A swap on arrival (prd §1565): its minimum until the arrival
+                // A swap on arrival (prd §1566): its minimum until the arrival
                 // is met, and the bridged token, exactly, if it falls back.
                 let there = leg.swap
                 let fallback = YourAccountAcross.bridged(leg.asset, on: dest.chainId)
@@ -1624,7 +1624,7 @@ enum YourAccountChain {
                     fallbackDecimals: there == nil ? nil : landing.decimals, fallbackUnits: there == nil ? nil : leg.outputAmount,
                     refundDecimals: bridged.decimals == s.buy.decimals ? nil : bridged.decimals)
                 // ETH's unwrap and a swap on arrival run on the other network:
-                // proven there before Face ID (prd §1555, §1565).
+                // proven there before Face ID (prd §1555, §1566).
                 if YourAccountAcross.viaHandler(leg) { arrives = await arrivalCheck(dest, leg: leg, account: account) }
                 report("across: \(leg.inputAmount) \(bridged.symbol) \(net.name)→\(dest.name) out=\(leg.outputAmount) fee=\(leg.feePips)pips arrives=\(arrives.map { String($0) } ?? "-")")
             case .send(let p):

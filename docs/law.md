@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1703 of 1772 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1704 of 1773 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1949,6 +1949,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App…
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's…
+- §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu…
 
 ## Dead rulings → what replaced them (generated)
 

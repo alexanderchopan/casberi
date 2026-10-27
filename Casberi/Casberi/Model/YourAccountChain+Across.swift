@@ -17,7 +17,7 @@ extension YourAccountChain {
 
     /// Across's fee for `amount` of `asset` from one network to another,
     /// read; a refusal in Across's own words, drawn as theirs. A swap on
-    /// arrival (`through`, prd §1565) is priced with its message's shape.
+    /// arrival (`through`, prd §1566) is priced with its message's shape.
     static func acrossFees(_ asset: Across.Asset, from: Network, to: Network, amount: String,
                            account: String, through route: YourAccountSwap.Route? = nil) async throws -> Across.Fees {
         guard let url = Across.feesURL(asset, from: from.chainId, to: to.chainId, amount: amount, account: account,
@@ -37,7 +37,7 @@ extension YourAccountChain {
 
     /// **A SWAP WHOSE TOKEN IS ON ANOTHER NETWORK.** ETH or the receiving
     /// network's dollar arrives as itself; any other token there is bought
-    /// on arrival by that network's pools (prd §1565), from ETH when ETH is
+    /// on arrival by that network's pools (prd §1566), from ETH when ETH is
     /// sold or nothing that crosses is, else from the dollar. What is sold,
     /// if it is not the asset that crosses, is swapped into it here first.
     /// The quote's calls are the swap's (if any), then the crossing's; what
@@ -75,7 +75,7 @@ extension YourAccountChain {
         }
         let bridged = swap?.minimumBuy ?? amount
         // A swap on arrival: its pools found for what is sent, so the fee
-        // question carries the message's shape (prd §1565).
+        // question carries the message's shape (prd §1566).
         var arrivalRoute: YourAccountSwap.Route?
         if arrivesAsItself == nil {
             guard let into = Across.bridged(asset, on: dest.chainId), let target = buy.contract?.lowercased(),
@@ -114,7 +114,7 @@ extension YourAccountChain {
                                      route: swap?.route, calls: (swap?.calls ?? []) + crossCalls, across: leg)
     }
 
-    /// **WHAT ARRIVES, PROVEN BEFORE FACE ID (prd §1555, §1565).** The
+    /// **WHAT ARRIVES, PROVEN BEFORE FACE ID (prd §1555, §1566).** The
     /// handler's message run on the receiving network as a fill would run
     /// it — the handler holding what a relayer pays it (WETH it wraps from
     /// ETH given by a state override, or the dollar handed it by the
@@ -175,7 +175,7 @@ extension YourAccountChain {
                   let deposited = Across.deposited(logs, origin: c.from, account: c.account) else { return nil }
             let h = Across.relayHash(deposited)
             hash = h
-            // Its id too, so the Wallet can meet its fill off chain (prd §1565).
+            // Its id too, so the Wallet can meet its fill off chain (prd §1566).
             Across.update(c.id) { $0.relayHash = SafeABI.hex(h); $0.depositId = $0.depositId ?? Across.depositId(deposited) }
         }
         guard let hash, let hex = try? await ethCall(dest, to: pool, data: Across.fillStatusCall(hash)),

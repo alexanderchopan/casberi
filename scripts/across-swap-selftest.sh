@@ -26,7 +26,7 @@
 #   • THE WALLET'S ONE ROW: the sending transaction, the arrival (exactly the
 #     amount, this wallet, this network, in its window) and the refund (from
 #     the SpokePool, after the deadline) are the crossing's, and nothing else.
-#   • A SWAP ON THE RECEIVING NETWORK (prd §1565) that pays someone else,
+#   • A SWAP ON THE RECEIVING NETWORK (prd §1566) that pays someone else,
 #     names another fallback, takes a looser minimum than the network's
 #     slippage, goes through a router of another network, or carries the
 #     fee question's message. Every vector in `fixtures/across-swap/
@@ -294,7 +294,7 @@ check(X.returning(arrived, now: arrived.fillDeadline + 1) == nil, "a filled cros
 var unsentBack = eth; unsentBack.tx = nil
 check(X.returning(unsentBack, now: 0) == nil, "a crossing never sent lists a refund")
 
-// ── A swap on the receiving network (prd §1565) ─────────────────────────────
+// ── A swap on the receiving network (prd §1566) ─────────────────────────────
 // Each vector: written by an independent encoder, its deposit simulated on
 // the sending network, the handler's message run on the receiving one as a
 // fill runs it (the swap paid the account its quote), and run again with a
@@ -448,7 +448,7 @@ check(X.title(swapRefund) == "Refunded 0.01 WETH on Base" && X.figure(swapRefund
       "a refund counted in the token it was to buy: \(X.title(swapRefund))")
 check(X.returning(swapRefund, now: 0)?.decimals == 18, "the WETH a swap's refund returns is not counted in WETH's decimals")
 
-// ── A crossing from another device, read off chain (prd §1565) ─────────────
+// ── A crossing from another device, read off chain (prd §1566) ─────────────
 // Real Across deposits on Base and their fills on Ethereum and Robinhood,
 // as the public nodes answered: the deposit's own log names the crossing,
 // the receiving pool's FilledRelay names its fill, and the Wallet's two legs
@@ -558,7 +558,7 @@ wire "$CHAIN" 'guard let checked = YourAccountAcross.checked(crossCalls, leg: le
 wire "$CHAIN" 'if let crossing = a.crossing, a.sold.contains(where: { $0.across.map(YourAccountAcross.viaHandler) == true }),' \
   "ETH or a swap on arrival is signed without the arrival proven"
 wire "$CHAIN" 'if YourAccountAcross.viaHandler(leg) { arrives = await arrivalCheck(dest, leg: leg, account: account) }' \
-  "the handler's run on the receiving network is not simulated before Face ID (prd §1565)"
+  "the handler's run on the receiving network is not simulated before Face ID (prd §1566)"
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute)' \
   "Across's fee for a swap on arrival is asked without its message"
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount),' \
@@ -566,7 +566,7 @@ wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let best = try await
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'read = ["to": bought, "data": SafeABI.hex(YourAccount.sel("balanceOf(address)") + YourAccount.w(account))]' \
   "the simulation on the receiving network does not read the token bought"
 wire "$INGEST" 'await WalletAcross.foldFromChain(fresh.compactMap { leg in' \
-  "a crossing from another device is not read off chain (prd §1565)"
+  "a crossing from another device is not read off chain (prd §1566)"
 wire "Casberi/Casberi/Model/WalletAcross.swift" 'let deposit = YourAccountAcross.deposited(logs, origin: first.chainId, account: first.wallet) else { continue }' \
   "the fold off chain does not read the deposit's own log"
 wire "Casberi/Casberi/Model/WalletAcross.swift" 'for f in YourAccountAcross.filled(logs, dest: first.chainId) {' \

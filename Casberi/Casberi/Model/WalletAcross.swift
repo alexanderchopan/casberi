@@ -10,7 +10,7 @@ import SwiftData
 /// on Ethereum" when the refund is met. `WalletIngest` lands none of the
 /// legs it is made of. The row is `AcrossCrossingRow`. A crossing another
 /// phone of the account sent is read off chain into the same list
-/// (`foldFromChain`, prd §1565), so it is one row here too.
+/// (`foldFromChain`, prd §1566), so it is one row here too.
 @MainActor
 enum WalletAcross {
     /// How many waiting crossings a pass asks about: each is one or two reads.
@@ -87,7 +87,7 @@ enum WalletAcross {
         }
     }
 
-    // MARK: - Read off chain (prd §1565)
+    // MARK: - Read off chain (prd §1566)
 
     /// One leg the Wallet read this pass, as the fold off chain needs it.
     struct Seen: Sendable {
@@ -108,7 +108,7 @@ enum WalletAcross {
     /// How many receipts one pass reads to fold crossings off chain.
     static let receiptsPerPass = 8
 
-    /// **A CROSSING FROM ANOTHER DEVICE IS ONE ROW TOO (prd §1565).** The
+    /// **A CROSSING FROM ANOTHER DEVICE IS ONE ROW TOO (prd §1566).** The
     /// phone that sent a crossing keeps a note of it; another phone of the
     /// same account has none, and saw two moves: a send to Across and, on
     /// another network, a receive. So the fold is read off chain, where both

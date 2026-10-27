@@ -573,7 +573,7 @@ enum WalletIngest {
         // transaction, its arrival on the other network and its refund are
         // the crossing's own row in Activity (`WalletAcross`), never legs of
         // their own: no stray "Sent to Across" and unexplained receive.
-        // One sent from another phone is read off chain first (prd §1565).
+        // One sent from another phone is read off chain first (prd §1566).
         await WalletAcross.foldFromChain(fresh.compactMap { leg in
             guard let chainId = YourAccountOp.network(appName: leg.chain.network)?.chainId else { return nil }
             return WalletAcross.Seen(ref: leg.ref, hash: leg.hash, received: leg.received, wallet: leg.address, chainId: chainId,
@@ -592,7 +592,7 @@ enum WalletIngest {
                                                        from: leg.t["from"] as? String, value: leg.value, at: at,
                                                        in: crossings) else { return true }
                 if case .settles(let state) = hit.take {
-                    // A swap on arrival names what came (prd §1565).
+                    // A swap on arrival names what came (prd §1566).
                     YourAccountAcross.update(hit.id) { x in
                         YourAccountAcross.settle(&x, state, ref: leg.ref, contract: leg.contract,
                                                  value: leg.value, at: at)

@@ -16,7 +16,7 @@ import Foundation
 /// Robinhood. Anything else is first swapped on the sending network into
 /// one of those by the pools (§1542), in the same transaction; any other
 /// token on the receiving network is bought there by its pools, through the
-/// handler's message (`Arrival`, prd §1565), and a swap there that fails
+/// handler's message (`Arrival`, prd §1566), and a swap there that fails
 /// pays the account the bridged token instead.
 ///
 /// **ETH arrives as ETH.** A SpokePool pays a contract recipient WETH, never
@@ -114,7 +114,7 @@ enum YourAccountAcross {
     /// `suggested-fees` for `amount` of `asset` from one network to another.
     /// ETH is priced with the handler as the recipient and the message it
     /// will carry, since relayers charge for running it.
-    /// A swap on arrival (`through`, prd §1565) is priced with its own
+    /// A swap on arrival (`through`, prd §1566) is priced with its own
     /// message's shape: relayers pay the gas of running it.
     static func feesURL(_ asset: Asset, from: Int, to: Int, amount: String, account: String,
                         through route: YourAccountSwap.Route? = nil, now: Int = 0) -> URL? {
@@ -196,7 +196,7 @@ enum YourAccountAcross {
         let outputAmount: String
         let seconds: Int?
         let fillDeadline: Int
-        /// A swap on the receiving network (prd §1565): what `outputAmount`
+        /// A swap on the receiving network (prd §1566): what `outputAmount`
         /// buys there, through the handler's message. Nil when ETH or the
         /// dollar is what arrives.
         var swap: Arrival? = nil
@@ -238,7 +238,7 @@ enum YourAccountAcross {
         return YourAccountSwap.encode([.tuple([calls, .address(account)])])
     }
 
-    // MARK: - A swap on the receiving network (prd §1565)
+    // MARK: - A swap on the receiving network (prd §1566)
 
     /// **WHAT ARRIVES IS SWAPPED THERE.** The bridged token — WETH for ETH
     /// (a SpokePool pays a contract WETH), or the dollar — reaches Across's
@@ -500,7 +500,7 @@ enum YourAccountAcross {
         }
     }
 
-    // MARK: - A crossing read off chain (prd §1565)
+    // MARK: - A crossing read off chain (prd §1566)
 
     /// `FilledRelay`, as the receiving SpokePool emits it: `originChainId`,
     /// `depositId` and the relayer indexed.
@@ -650,7 +650,7 @@ enum YourAccountAcross {
     }
 
     /// A swap on arrival in the foot's words: "On Uniswap · 0.05% pool fee
-    /// on Ethereum" (prd §1565).
+    /// on Ethereum" (prd §1566).
     static func arrivalWords(_ leg: Leg) -> String? {
         leg.swap.map { String(localized: "\(YourAccountSwap.words($0.route)) on \(networkName(leg.to))") }
     }
@@ -715,7 +715,7 @@ enum YourAccountAcross {
         /// their ref: kept off the list on every later read too.
         var taken: [String] = []
         // Each below is optional, so a note kept before it existed still reads.
-        /// A swap on arrival (prd §1565): `outputUnits` is its minimum until
+        /// A swap on arrival (prd §1566): `outputUnits` is its minimum until
         /// the arrival is met.
         var atLeast: Bool?
         /// What arrives if that swap fails there: the bridged token, exactly
@@ -727,7 +727,7 @@ enum YourAccountAcross {
         /// What a refund is counted in, when not `decimals` (ETH sent for a
         /// token of other decimals).
         var refundDecimals: Int?
-        /// The deposit's id at its SpokePool (read off chain, prd §1565),
+        /// The deposit's id at its SpokePool (read off chain, prd §1566),
         /// and the fill's transaction on the receiving network once met.
         var depositId: String?
         var fillTx: String?
@@ -816,7 +816,7 @@ enum YourAccountAcross {
             if x.to == chainId, x.contract == c, same(value, units: x.outputUnits, decimals: x.decimals) {
                 return (x, .filled)
             }
-            // A swap on arrival (prd §1565): at least its minimum, after it
+            // A swap on arrival (prd §1566): at least its minimum, after it
             // was sent; or, failed there, the bridged token whole, from the handler.
             if x.atLeast == true, x.to == chainId, at.map({ $0 >= x.at }) ?? true {
                 if x.contract == c, atLeast(value, units: x.outputUnits, decimals: x.decimals) { return (x, .filled) }
@@ -847,7 +847,7 @@ enum YourAccountAcross {
         if !hash.isEmpty, let x = list.first(where: {
             $0.account == w && $0.from == chainId && $0.tx?.lowercased() == hash.lowercased()
         }) { return (x.id, .sending) }
-        // The fill's own transaction, met off chain (prd §1565): every leg of it is the crossing's.
+        // The fill's own transaction, met off chain (prd §1566): every leg of it is the crossing's.
         if !hash.isEmpty, let x = list.first(where: {
             $0.account == w && $0.to == chainId && $0.fillTx == hash.lowercased()
         }) { return (x.id, .taken) }

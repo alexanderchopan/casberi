@@ -546,7 +546,7 @@ grep -q 'steps.append((calls, (s.buy, s.amount)))' "Casberi/Casberi/Model/YourAc
   || { echo "✗ an unwrap is not simulated to pay back exactly what is sold (prd §1559)"; exit 1; }
 grep -q 'return YourAccountSwap.words(w)' "$SENTENCE" || { echo "✗ the foot no longer says 'Unwraps WETH · no fee' (prd §1559)"; exit 1; }
 # The ≈ stands before a pool's quote; Across's output is exact (prd §1556),
-# unless the receiving network's pools swap it (prd §1565).
+# unless the receiving network's pools swap it (prd §1566).
 grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals)' "$SENTENCE" \
   && grep -q 'let exact = quote?.across.map { $0.swap == nil } == true || quote?.wrap != nil' "$SENTENCE" \
   || { echo "✗ the print line no longer carries the ≈ and the exact quote, or drops the ≈ for a pool's quote (prd §1479, §83, §1556)"; exit 1; }

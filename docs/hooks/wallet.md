@@ -397,7 +397,7 @@ Private is never a verb. **"Your private balance"** is the first row of Send's r
 - A refund of an ETH crossing comes back as WETH (the pool refunds its wrapped coin).
 - `across-swap-selftest.sh`: vectors simulated on each network, real relay hashes, 21 mutations.
 
-### A swap on the receiving network, and a crossing read off chain (prd §1565, built 2026-10-26)
+### A swap on the receiving network, and a crossing read off chain (prd §1566, built 2026-10-26)
 
 `-moveSwapDraft "0.01|ETH|USDT@Ethereum"` from Base drafts a swap whose token is bought on arrival (For lists the receiving network's open list once another network is picked; the draft reads it and logs `moveSwapDraft: <network> arrives as <symbol>`). `acrossFold| deposit …` and `acrossFold| fill …` log each crossing read off chain.
 

@@ -120,7 +120,7 @@ struct MoveSentence: View {
     @State private var buy: Tokens.Listed?
     /// Where what Swap buys arrives, when that is another network (prd
     /// §1555): picked from "Get <token> on"; nil is the sending network.
-    /// While it is set, `buy` is a token of that network (prd §1565).
+    /// While it is set, `buy` is a token of that network (prd §1566).
     @State private var buyOn: Op.Network?
     /// A swap to another network that landed: its fill is read until it
     /// arrives (prd §1555).
@@ -294,7 +294,7 @@ struct MoveSentence: View {
     /// network as often as after).
     private var lookIn: [Op.Network] { networkPicked ? [network] : networksByWorth }
     /// What For's search looks in: the network a swap arrives on, once
-    /// another is picked (prd §1565).
+    /// another is picked (prd §1566).
     private var searchedIn: [Op.Network] {
         if open == .buy, verb == .swap, let on = buyOn, on != network { return [on] }
         return lookIn
@@ -364,7 +364,7 @@ struct MoveSentence: View {
         return nil
     }
 
-    /// **A SWAP TO ANOTHER NETWORK (prd §1555, §1565).** The network what
+    /// **A SWAP TO ANOTHER NETWORK (prd §1555, §1566).** The network what
     /// Swap buys arrives on, when Across carries it there: ETH and the
     /// network's dollar arrive as themselves, any other token there is
     /// bought on arrival by its pools. Nil keeps the swap on its own network.
@@ -386,7 +386,7 @@ struct MoveSentence: View {
     }
 
     /// What arrives there: a token of that network (USDC on Base arrives as
-    /// USDG on Robinhood; prd §1565, anything on its list).
+    /// USDG on Robinhood; prd §1566, anything on its list).
     private var crossBuy: Op.Token? {
         guard crossTo != nil else { return nil }
         return buy?.token
@@ -405,7 +405,7 @@ struct MoveSentence: View {
 
     /// Where a swap's token can arrive from this network: this network
     /// first, then every network of the account's that Across reaches and
-    /// that swaps (prd §1565: anything on its list can be bought there).
+    /// that swaps (prd §1566: anything on its list can be bought there).
     private var destinations: [Op.Network] {
         let usable = reach ?? Op.networks
         return [network] + Op.networks.filter { n in
@@ -552,7 +552,7 @@ struct MoveSentence: View {
             guard case .swap(let s) = item, let leg = s.quote.across else { continue }
             let across = [YourAccountAcross.words(leg), YourAccountAcross.about(leg.seconds)].compactMap { $0 }.joined(separator: " · ")
             // In the order it happens: the pools here, Across, the pools
-            // there (prd §1565: "On Uniswap · 0.05% pool fee on Ethereum").
+            // there (prd §1566: "On Uniswap · 0.05% pool fee on Ethereum").
             return [s.quote.route.map(YourAccountSwap.words), across, YourAccountAcross.arrivalWords(leg)]
                 .compactMap { $0 }.joined(separator: "\n")
         }
@@ -2401,7 +2401,7 @@ struct MoveSentence: View {
         // Across pays exactly what it quoted: no ≈ (prd §1556).
         let token = crossBuy ?? buy.token
         // So does a wrap or an unwrap: one for one (prd §1559). A swap on
-        // arrival is a pool's quote again, with its ≈ (prd §1565).
+        // arrival is a pool's quote again, with its ≈ (prd §1566).
         let exact = quote?.across.map { $0.swap == nil } == true || quote?.wrap != nil
         return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals) + " " + token.symbol
     }
@@ -2606,7 +2606,7 @@ struct MoveSentence: View {
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
         var out: [(key: String, net: Op.Network, listed: Tokens.Listed)] = []
         var seen: Set<String> = []
-        // Another network picked (prd §1565): its own list, what can arrive there.
+        // Another network picked (prd §1566): its own list, what can arrive there.
         if verb == .swap, let on = buyOn, on != network {
             let pool = (typed ? (found[on.chainId] ?? []) : []) + (listedBy[on.chainId] ?? [])
             var rows = Tokens.matches(search, in: pool, held: heldBy[on.chainId] ?? [], shows: majorToken)
@@ -2643,7 +2643,7 @@ struct MoveSentence: View {
                         trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
                         mark: l.token.symbol, dim: !l.onList) {
                     pick {
-                        // A token of the network it arrives on keeps the one it leaves (prd §1565).
+                        // A token of the network it arrives on keeps the one it leaves (prd §1566).
                         if row.net != buyHome || !networkPicked { switchNetwork(row.net) }
                         buy = l
                     }
@@ -2654,7 +2654,7 @@ struct MoveSentence: View {
                 Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
-        // The list of the network it arrives on, read once (prd §1565).
+        // The list of the network it arrives on, read once (prd §1566).
         .task(id: buyOn?.chainId) {
             if let on = buyOn, listedBy[on.chainId] == nil { listedBy[on.chainId] = await Tokens.list(on) }
         }
@@ -2841,7 +2841,7 @@ struct MoveSentence: View {
                 listHeader(String(localized: "Get \(buy.token.symbol) on"))
                 ForEach(destinations) { n in
                     // The same token there, or none: For then opens on that
-                    // network's list (prd §1565).
+                    // network's list (prd §1566).
                     let there = n == buyHome ? buy : equivalent(buy.token, from: buyHome, to: n)
                     let sub: String? = n == network ? String(localized: "Same network")
                         : there.map { $0.token.symbol != buy.token.symbol ? String(localized: "As \($0.token.symbol)") : nil } ?? nil
@@ -4225,7 +4225,7 @@ struct MoveSentence: View {
         buy = listed.first { $0.token.symbol == buyName && $0.onList }
             ?? listed.first { $0.token.symbol == buyName }
             ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }
-        // On another network the token is that network's (prd §1565), read off its list.
+        // On another network the token is that network's (prd §1566), read off its list.
         if let on = buyOn, on != network {
             let from = network
             let mine = buy
