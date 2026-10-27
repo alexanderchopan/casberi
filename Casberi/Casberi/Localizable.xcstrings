@@ -67326,30 +67326,30 @@
         }
       }
     },
-    "Could not check that ETH arrives on %@, so nothing was signed" : {
+    "Could not check that %@ arrives on %@, so nothing was signed" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "No se pudo comprobar que el ETH llegue a %@, así que no se firmó nada"
+            "value" : "No se pudo comprobar que %1$@ llegue a %2$@, así que no se firmó nada"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ETH が %@ に届くことを確認できなかったため、何も署名していません"
+            "value" : "%1$@ が %2$@ に届くことを確認できなかったため、何も署名していません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ETH가 %@에 도착하는지 확인할 수 없어 아무것도 서명하지 않았습니다"
+            "value" : "%1$@이(가) %2$@에 도착하는지 확인하지 못해 아무것도 서명하지 않았습니다"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "无法确认 ETH 会到达 %@，因此未签署任何内容"
+            "value" : "无法确认 %1$@ 会到达 %2$@，因此没有签署任何内容"
           }
         }
       }
