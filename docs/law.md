@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1710 of 1779 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1711 of 1780 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -845,7 +845,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §537 — Polar lands SALES
 - §538 — Sending is the room, not a door to a room — vibenet's Home scope becomes the form, and three sheets stop saying their… (part superseded by §1038)
 - §539 — The same ruling carried to Hegotá, one divergence on gas, and the duplicate-title rule becomes a check (part superseded by §1038)
-- §540 — ENS renewal, prepared and handed off
+- §540 — ENS renewal, prepared and handed off (amended by §1573)
 - §541 — The venue switcher's marks become the circle they sit in, and its chips reach the touch floor
 - §542 — The paper is ink everywhere, and the account sheet fits what it draws
 - §543 — Nothing is prepopulated, and one capsule says who will answer
@@ -1276,7 +1276,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §913 — More signer capabilities without a wallet that holds funds: a paired Safe app, a Secure Enclave owner, Safe statement…
 - §914 — The lead's count foot is deleted; the cast cover's sentence takes the fit's rung; the eyebrow never repeats the cast'…
 - §915 — The Apple polish pass: say every fact once, one scale of hierarchy, one title seam, words under art, the list just en… (amended by §1381)
-- §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025, §1109) [+1 sub-entries]
+- §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025, §1109, §1573) [+1 sub-entries]
 - §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs (part superseded by §939)
 - §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, eve…
 - §919 — The demo's mark is a blue pill that floats, and nothing on the page moves for it (amended by §1005)
@@ -1956,6 +1956,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the…
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum…
+- §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
 
 ## Dead rulings → what replaced them (generated)
 

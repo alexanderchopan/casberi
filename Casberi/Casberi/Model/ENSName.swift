@@ -163,6 +163,28 @@ enum ENSName {
         return String(parts[0])
     }
 
+    /// The `.eth` BaseRegistrar — the NFT contract the metadata service keys
+    /// on. Since ENSv2's activation (2026-10-27) it is owned by `ETHRenewerV1`
+    /// and still holds every unmigrated name's expiry.
+    static let baseRegistrar = "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85"
+
+    /// The registrar's token id for a name: `keccak256(label)` as 0x-hex.
+    ///
+    /// **THE METADATA SERVICE STOPPED TAKING NAMES (measured 2026-10-27, the
+    /// day ENSv2 activated).** `…/<registrar>/vitalik.eth` answers 400
+    /// "Invalid token id" for every name; the labelhash answers 200 with the
+    /// same "Expiration Date", and an unregistered labelhash still answers
+    /// 404. A name-keyed read failed SILENTLY — no row ever got a date.
+    static func labelhash(of name: String) -> String? {
+        guard let label = label(of: name) else { return nil }
+        return "0x" + Keccak256.hexString(Keccak256.hash(Array(label.utf8)))
+    }
+
+    /// The metadata service's page for a `.eth` name, keyed by labelhash.
+    static func metadataURL(for name: String) -> String? {
+        labelhash(of: name).map { "https://metadata.ens.domains/mainnet/\(baseRegistrar)/\($0)" }
+    }
+
     // MARK: - The ladder
 
     enum Stage: String {

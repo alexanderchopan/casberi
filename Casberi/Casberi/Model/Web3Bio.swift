@@ -7,11 +7,11 @@ import Foundation
 /// record it links: ENS, Basenames, Linea Name Service, Farcaster, Lens, SNS.
 /// Farcaster's rows are dropped since the seat was retired (prd §1110): the
 /// platform is not in `Platform`, so `record` refuses it.
-/// `api.ensideas.com` (the resolver `ENS` has used since 2026-07-09) answers
+/// `api.ensideas.com` (the resolver `ENS` used from 2026-07-09) answered
 /// ENS alone, one name per call, and could not say whether `jesse.base.eth`
-/// is on Base. This is the
-/// resolver behind `ENS` now — ensideas stays as the fallback, so a web3.bio
-/// outage costs nothing that worked before.
+/// is on Base. This is the ONLY resolver behind `ENS`: ensideas was the
+/// fallback until ENSv2 (2026-10-27), when it went on answering the old
+/// resolver's address for a name ENS moved (prd §1573).
 ///
 /// **MEASURED 2026-09-24**, and every rule below is one of these facts:
 ///

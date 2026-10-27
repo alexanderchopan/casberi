@@ -293,10 +293,6 @@ enum ENSState {
 
 enum ENSIngest {
 
-    /// The `.eth` BaseRegistrar — the NFT contract the metadata service keys
-    /// on. Shared with `ENSExpiry`, which measured it first.
-    static let baseRegistrar = "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85"
-
     /// How many names one foreground pass reads. A bound, not a ceiling: names
     /// are read oldest-reading-first, so a long follow list finishes over a few
     /// opens rather than firing thirty requests on one.
@@ -328,9 +324,10 @@ enum ENSIngest {
         var added = 0
         var reached = false
         for name in names {
-            let (json, status) = await IngestSupport.getJSONStatus(
-                "https://metadata.ens.domains/mainnet/\(baseRegistrar)/\(encoded(name))",
-                service: "ENS")
+            // Keyed by labelhash since ENSv2 (prd §1573): a name-keyed read is
+            // a 400 for every name, which this loop would have skipped forever.
+            guard let url = ENSName.metadataURL(for: name) else { continue }
+            let (json, status) = await IngestSupport.getJSONStatus(url, service: "ENS")
             // A 404 is the service SAYING the registrar has no record — the one
             // negative answer it gives (measured 2026-08-29). Any other failure
             // is not knowing, and must never be read as "nobody owns this".
@@ -450,9 +447,5 @@ enum ENSIngest {
         var tags = row.tags.filter { !all.contains($0) }
         if let tag = ENSName.tag(for: stage) { tags.append(tag) }
         if row.tags != tags { row.tags = tags }
-    }
-
-    private static func encoded(_ name: String) -> String {
-        name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
     }
 }

@@ -39,6 +39,16 @@ enum ENSRenew {
     /// A hardcoded "well-known" address is exactly how that ships.
     static let controller = "0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547"
 
+    /// **OFF since ENSv2 activated (2026-10-27, prd §1573).** The activation
+    /// removed `controller` from the BaseRegistrar (`controllers(…)` answers
+    /// `0`, measured that day) and handed renewals of unmigrated names to
+    /// `ETHRenewerV1` (`0x56c447F308F463A01121C41E72b0E7e7557fCb68`), whose
+    /// `renew(tuple,address)` is paid in an approved stablecoin, not ETH. Every
+    /// transaction this file encodes now reverts after the person pays gas, so
+    /// the sheet draws `ENSRenewDoor` (ENS's own app) instead of the card
+    /// until the stablecoin renewal is built.
+    static let prepares = false
+
     /// `renew(string,uint256,bytes32)` — **THREE arguments, not two.** The old
     /// controller took `renew(string,uint256)`; the live one takes a third
     /// `referrer` word (ENS's referral programme). Measured by reading the

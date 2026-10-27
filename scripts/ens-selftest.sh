@@ -36,7 +36,8 @@ NAME="Casberi/Casberi/Model/ENSName.swift"
 BRIDGE="Casberi/Casberi/Model/ENSBridge.swift"
 EXPIRY="Casberi/Casberi/Model/ENSExpiry.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-for f in "$NAME" "$BRIDGE" "$EXPIRY" "$CATALOG"; do
+KECCAK="Casberi/Casberi/Model/Keccak256.swift"
+for f in "$NAME" "$BRIDGE" "$EXPIRY" "$CATALOG" "$KECCAK"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -207,6 +208,20 @@ check("the label is everything before .eth", ENSName.label(of: "vitalik.eth") ==
 check("a subname has no single label", ENSName.label(of: "sub.vitalik.eth") == nil)
 check("a non-.eth name has no label", ENSName.label(of: "vitalik.box") == nil)
 
+// ── labelhash — the metadata service's only key since ENSv2 (prd §1573) ─────
+// The vector is viem's `keccak256(toHex("vitalik"))`, an independent
+// implementation; the live heartbeat reads the service at this same id.
+print("\nlabelhash — the metadata service's key")
+let vitalikHash = "0xaf2caa1c2ca1d027f1ac823b529d0a67cd144264b2789fa2ea4d63a67c7103cc"
+check("vitalik.eth hashes its LABEL, not the name", ENSName.labelhash(of: "vitalik.eth") == vitalikHash)
+check("a subname has no labelhash", ENSName.labelhash(of: "sub.vitalik.eth") == nil)
+check("a DNS name has no labelhash", ENSName.labelhash(of: "vitalik.box") == nil)
+check("the metadata URL is keyed by labelhash",
+      ENSName.metadataURL(for: "vitalik.eth")
+        == "https://metadata.ens.domains/mainnet/0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85/" + vitalikHash)
+check("the metadata URL never carries the name (a 400 since ENSv2)",
+      !(ENSName.metadataURL(for: "vitalik.eth") ?? "vitalik").contains("vitalik"))
+
 // ── stage — the four-rung ladder ────────────────────────────────────────────
 print("\nstage — where a name stands")
 check("no expiry at all is unregistered", ENSName.stage(expiry: nil, now: ref) == .unregistered)
@@ -327,7 +342,7 @@ SWIFT
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.2x faster).
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/run" "$NAME" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -Onone -o "$TMP/run" "$NAME" "$KECCAK" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the shipped ENSName.swift did not compile against the harness"
   grep -E 'error:' "$TMP/build.log" | head -30
   exit 1
@@ -355,7 +370,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/ENSName.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/ENSName.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/ENSName.swift" "$KECCAK" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -424,6 +439,18 @@ mutate "a zero expiry accepted" \
 mutate "is_normalized defaults to false" \
   'isNormalized: (root["is_normalized"] as? Bool) ?? true)' \
   'isNormalized: (root["is_normalized"] as? Bool) ?? false)'
+
+# 11. The metadata service keyed by the NAME again — what shipped until ENSv2
+#     (2026-10-27), when every such read became a silent 400 (prd §1573).
+mutate "the metadata URL keyed by name" \
+  'labelhash(of: name).map { "https://metadata.ens.domains/mainnet/\(baseRegistrar)/\($0)" }' \
+  'labelhash(of: name).map { _ in "https://metadata.ens.domains/mainnet/\(baseRegistrar)/\(name)" }'
+
+# 12. The whole name hashed instead of its label — a well-formed id for an
+#     entry nobody registered, so every name would read as unregistered.
+mutate "the name hashed, not the label" \
+  'return "0x" + Keccak256.hexString(Keccak256.hash(Array(label.utf8)))' \
+  'return "0x" + Keccak256.hexString(Keccak256.hash(Array(name.utf8)))'
 
 echo
 echo "✓ ens-selftest passed"

@@ -39,7 +39,7 @@ enum NameResolve {
     /// string that is not hex), so anything asked after it is never asked.
     ///
     /// Today that costs `.wei` and `.gwei` names exactly what it once cost
-    /// `.sol` ones: sent to `api.ensideas.com`, which has no such TLD, answers
+    /// `.sol` ones: sent to the ENS resolver, which has no such TLD, answers
     /// nothing, and leaves the name looking like one nobody has taken.
     static func family(of raw: String) -> Family? {
         if SNS.looksLikeName(raw) { return .sns }
@@ -188,7 +188,7 @@ enum NameResolve {
     /// beside somebody's money (§83, where believing it costs most).
     ///
     /// **Measured 2026-09-04, and the measurement is why the check is OURS.**
-    /// `api.ensideas.com` answers the forward and the reverse query with one
+    /// `api.ensideas.com` (deleted by §1573) answered forward and reverse with one
     /// byte-identical object, so its response cannot say whether it verified;
     /// the endpoint is a third party's undocumented internals and this is the
     /// one claim on the screen that must not rest on them. The round trip

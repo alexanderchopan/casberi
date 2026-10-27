@@ -146,3 +146,27 @@ struct ENSRenewCard: View {
         }
     }
 }
+
+/// What stands in the card's place while `ENSRenew.prepares` is off (prd
+/// §1573): ENS's own app, where the renewal happens. No deadline line — the
+/// sheet's title already says it (measured on screen). ENSv2
+/// removed the controller the card's transaction calls, so a prepared renewal
+/// would revert after the person paid gas; the stablecoin renewal through
+/// `ETHRenewerV1` is not built yet.
+struct ENSRenewDoor: View {
+    let thing: Thing
+    let name: String
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
+        if let url = URL(string: "https://app.ens.domains/\(name)") {
+            DSDoorRow(icon: "arrow.up.right", label: "Renew on ENS") { openURL(url) }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}

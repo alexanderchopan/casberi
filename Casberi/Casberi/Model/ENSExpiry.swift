@@ -7,10 +7,10 @@ import SwiftData
 /// falls back to a hash, and the only warning is an email you may not read.
 ///
 /// Keyless, and no on-chain call. Expiry lives on the `.eth` BaseRegistrar as
-/// `nameExpires(uint256 labelhash)`, which would need keccak256 the app has no
-/// implementation of — but ENS's own metadata service answers BY NAME and
-/// carries the same fact as an "Expiration Date" attribute (measured
-/// 2026-07-21). One GET per name, no key, no hashing.
+/// `nameExpires(uint256 labelhash)`; ENS's own metadata service carries the
+/// same fact as an "Expiration Date" attribute (measured 2026-07-21). It
+/// answered by name until ENSv2 (2026-10-27) and now takes only the labelhash
+/// (`ENSName.metadataURL`, prd §1573). One GET per name, no key.
 ///
 /// Reads only the names Casberi can already SEE: a watched address the person
 /// typed as a name, and the primary name an address reverse-resolves to. There
@@ -20,12 +20,6 @@ import SwiftData
 /// honesty rule exists to prevent. What lands is what we can stand behind.
 @MainActor
 enum ENSExpiry {
-
-    /// The `.eth` BaseRegistrar — the NFT contract the metadata service keys
-    /// on. Only `.eth` names have a registrar expiry at all; a DNS-imported
-    /// name (`.com`, `.xyz`) expires with its DNS registration, somewhere this
-    /// endpoint can't see, so those are skipped rather than guessed at.
-    private static let baseRegistrar = "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85"
 
     /// How far ahead a name has to be expiring before it becomes a thing.
     /// Without a horizon every watched name would land a row expiring in 2048
@@ -139,10 +133,14 @@ enum ENSExpiry {
     /// The expiry the metadata service reports, as a date. The attribute is
     /// epoch MILLISECONDS (measured) — reading it as seconds would put every
     /// name's expiry in 1970 and make each one permanently, silently overdue.
+    ///
+    /// Only `.eth` names have a registrar expiry at all; a DNS-imported name
+    /// (`.com`, `.xyz`) has no labelhash here, so `metadataURL` is nil and the
+    /// name is skipped rather than guessed at. Keyed by labelhash since ENSv2
+    /// (prd §1573).
     private static func expiryDate(for name: String) async -> Date? {
-        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let root = await IngestSupport.getJSON(
-                "https://metadata.ens.domains/mainnet/\(baseRegistrar)/\(encoded)") as? [String: Any],
+        guard let url = ENSName.metadataURL(for: name),
+              let root = await IngestSupport.getJSON(url) as? [String: Any],
               let attributes = root["attributes"] as? [[String: Any]]
         else { return nil }
         for attribute in attributes where attribute["trait_type"] as? String == "Expiration Date" {

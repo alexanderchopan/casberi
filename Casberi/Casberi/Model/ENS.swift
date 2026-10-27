@@ -36,24 +36,21 @@ enum ENS {
     /// caller exposed to the same miss; gating the three functions here closes
     /// it structurally.
     ///
-    /// **web3.bio first, ensideas after (prd §916, 2026-09-24).** web3.bio
-    /// answers Basenames and Linea names, which ensideas may not, and its
-    /// records are what `NameResolve.primaryNames` reads for the linked
-    /// Farcaster/Lens/Base rows — so the forward check §599 requires runs
-    /// against the same service that made the claim. ensideas stays as the
-    /// fallback so an outage costs nothing that worked before.
+    /// **web3.bio alone (prd §916; the ensideas fallback deleted by §1573).**
+    /// web3.bio answers Basenames and Linea names, and its records are what
+    /// `NameResolve.primaryNames` reads for the linked Lens/Base rows — so the
+    /// forward check §599 requires runs against the same service that made
+    /// the claim. ensideas was the fallback until ENSv2 activated
+    /// (2026-10-27): it answers ENS's own test name `ur.integration-tests.eth`
+    /// with `0x1111…`, the outdated-resolver answer, where web3.bio answers
+    /// the current `0x2222…`. A fallback that can name the WRONG address is
+    /// worse than none, so an outage now resolves nothing.
     static func resolve(_ raw: String) async -> String? {
         guard !DemoMode.isActive else { return nil }
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard looksLikeName(name) else { return nil }
-        if let hex = await Web3Bio.resolve(name), isHexAddress(hex) { return hex }
-        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let root = await IngestSupport.getJSON(
-                "https://api.ensideas.com/ens/resolve/\(encoded)") as? [String: Any],
-              let address = root["address"] as? String,
-              isHexAddress(address)
-        else { return nil }
-        return address
+        guard let hex = await Web3Bio.resolve(name), isHexAddress(hex) else { return nil }
+        return hex
     }
 
     /// The primary name an address goes by, when it set one — reverse
@@ -71,18 +68,11 @@ enum ENS {
         let addr = hexAddress.lowercased()
         guard isHexAddress(addr) else { return nil }
         if let cached = reverseCache[addr] { return cached }
-        var name: String?
-        // web3.bio first (prd §916): the ENS record whose own address is this
-        // one. `names(for:)` already drops the rows web3.bio linked through
-        // its graph, so the forward check in `NameResolve` is the only other
-        // bar left to clear.
-        if let ens = await Web3Bio.names(for: addr).first(where: { $0.platform == .ens }) {
-            name = ens.identity
-        } else if let root = await IngestSupport.getJSON(
-            "https://api.ensideas.com/ens/resolve/\(addr)") as? [String: Any],
-           let n = root["name"] as? String, !n.isEmpty {
-            name = n
-        }
+        // web3.bio alone (prd §916, §1573): the ENS record whose own address
+        // is this one. `names(for:)` already drops the rows web3.bio linked
+        // through its graph, so the forward check in `NameResolve` is the
+        // only other bar left to clear.
+        let name = await Web3Bio.names(for: addr).first(where: { $0.platform == .ens })?.identity
         reverseCache[addr] = name
         return name
     }
@@ -105,16 +95,7 @@ enum ENS {
         let key = hexOrName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !key.isEmpty else { return nil }
         if let cached = avatarCache[key] { return cached }
-        var avatar: String?
-        if let found = await Web3Bio.avatar(for: key) {
-            avatar = found
-        } else if let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-           let root = await IngestSupport.getJSON(
-            "https://api.ensideas.com/ens/resolve/\(encoded)") as? [String: Any],
-           let a = root["avatar"] as? String,
-           a.hasPrefix("http") {
-            avatar = a
-        }
+        let avatar = await Web3Bio.avatar(for: key)
         avatarCache[key] = avatar
         return avatar
     }

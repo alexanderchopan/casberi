@@ -316,10 +316,11 @@ enum NetworkReach {
                  // Chain, which is the one reach the sentence below adds.
                  purpose: "Resolves .eth, .sol, .wei and .gwei names, Base and Linea names, World App usernames, and their avatars — for the accounts you follow, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow — and reads the Lens and Base names an address has linked to itself. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
                  // web3.bio joined 2026-09-24 (prd §916): one keyless lookup
-                 // that answers every name service at once; ensideas is the
-                 // fallback. Avatars it returns live on third-party image
-                 // hosts, loaded the way ENS avatars always were.
-                 hosts: ["api.web3.bio", "api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
+                 // that answers every name service at once (ensideas, the
+                 // fallback, deleted by §1573 at ENSv2). Avatars it returns
+                 // live on third-party image hosts, loaded the way ENS avatars
+                 // always were.
+                 hosts: ["api.web3.bio", "metadata.ens.domains", "app.ens.domains",
                          "lite-api.jup.ag",
                          "usernames.worldcoin.org",
                          "static.usernames.app-backend.toolsforhumanity.com"],

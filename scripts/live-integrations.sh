@@ -481,17 +481,44 @@ fi
 hr
 # ── web3.bio (prd §916) ──────────────────────────────────────────────────────
 # The resolver behind `ENS` since 2026-09-24, keyless. When it stops answering
-# the app falls back to ensideas for ENS and goes QUIET for Base/Linea/
-# Lens names — no row breaks, the linked rows simply never draw
+# the app resolves NO names (the ensideas fallback went with §1573) and goes
+# QUIET for Base/Linea/Lens names — no row breaks, the linked rows simply never draw
 # (§311's shape). Pinned to a name whose ENS record cannot lapse quietly.
 print -P "%Bweb3.bio%b  (keyless name lookup, api.web3.bio/ns)"
 w3b=$(curl -s --max-time "$TIMEOUT" "https://api.web3.bio/ns/vitalik.eth" 2>/dev/null)
 if [[ -z "$w3b" ]]; then
-  warn "web3.bio — /ns/vitalik.eth did not answer; ENS falls back to ensideas, linked names go quiet"
+  warn "web3.bio — /ns/vitalik.eth did not answer; no name resolves, linked names go quiet"
 elif [[ "$w3b" == \[* && "$w3b" == *'"platform":"ens"'* && "$w3b" == *'0xd8da6bf26964af9d7eed9e03e53415d37aa96045'* ]]; then
   pass "web3.bio — /ns answers an array with the ENS record at the measured address"
 else
   fail "web3.bio — /ns/vitalik.eth answered in a shape the app does not parse: $(print -r -- "$w3b" | cut -c1-80)"
+fi
+# ENSv2 (prd §1573): ENS's own integration name answers 0x2222… through the v2
+# Universal Resolver and 0x1111… through an outdated one. A resolver that
+# answers the old one names a stale address for every name moved to v2.
+urt=$(curl -s --max-time "$TIMEOUT" "https://api.web3.bio/ns/ens/ur.integration-tests.eth" 2>/dev/null)
+if [[ -z "$urt" ]]; then
+  warn "web3.bio — ur.integration-tests.eth did not answer"
+elif [[ "$urt" == *'0x2222222222222222222222222222222222222222'* ]]; then
+  pass "web3.bio — resolves through ENSv2 (ur.integration-tests.eth → 0x2222…)"
+else
+  fail "web3.bio — ur.integration-tests.eth did not answer 0x2222…; its ENS resolver is outdated: $(print -r -- "$urt" | cut -c1-80)"
+fi
+hr
+
+# ── ENS expiry (metadata.ens.domains, prd §1573) ─────────────────────────────
+# Every expiry row reads this service. It stopped answering by NAME the day
+# ENSv2 activated (400 "Invalid token id") and the rows went dateless with no
+# error anywhere; the app keys it by labelhash since. Pinned to vitalik's
+# labelhash, which `ens-selftest.sh` pins `ENSName.labelhash` to.
+print -P "%BENS expiry%b  (keyless, metadata.ens.domains by labelhash)"
+ensm=$(curl -s --max-time "$TIMEOUT" "https://metadata.ens.domains/mainnet/0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85/0xaf2caa1c2ca1d027f1ac823b529d0a67cd144264b2789fa2ea4d63a67c7103cc" 2>/dev/null)
+if [[ -z "$ensm" ]]; then
+  warn "ENS metadata — did not answer; expiry rows keep their last reading"
+elif [[ "$ensm" == *'"Expiration Date"'* ]]; then
+  pass "ENS metadata — a labelhash answers with its Expiration Date"
+else
+  fail "ENS metadata — vitalik's labelhash answered without an Expiration Date: $(print -r -- "$ensm" | cut -c1-80)"
 fi
 hr
 

@@ -172,6 +172,11 @@ enum ENSRenewPrepare {
         let applicable = row.map { applies(to: $0) } ?? false
         out.append("ensRenew| followed=\(row != nil ? "YES" : "NO") cardWouldShow=\(applicable ? "YES" : "NO")"
                    + " yours=\(isYours(name: name, context: context) ? "YES" : "NO")")
+        // Off since ENSv2 (prd §1573): the sheet draws ENS's door, not the card.
+        guard ENSRenew.prepares else {
+            out.append("ensRenew| prepares=NO — the sheet shows Renew on ENS, no price or transaction")
+            return out
+        }
         let from = sender()
         out.append("ensRenew| from=\(from ?? "none (no watched wallet)")")
         for term in ENSRenew.Term.allCases {
