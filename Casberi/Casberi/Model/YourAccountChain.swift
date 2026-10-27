@@ -36,9 +36,11 @@ enum YourAccountChain {
     // MARK: - JSON-RPC
 
     private static func post(_ url: String, _ method: String, _ params: [Any],
-                             as caller: String = service) async -> (result: Any?, error: String?) {
+                             as caller: String = service, wait: TimeInterval? = nil) async -> (result: Any?, error: String?) {
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": method, "params": params]
-        let (json, status) = await IngestSupport.postJSONBody(url, body: body, service: caller)
+        let (json, status) = await IngestSupport.$torWait.withValue(wait) {
+            await IngestSupport.postJSONBody(url, body: body, service: caller)
+        }
         guard let root = json as? [String: Any] else { return (nil, status == 0 ? nil : "HTTP \(status)") }
         if let error = root["error"] as? [String: Any] {
             return (nil, (error["message"] as? String) ?? "\(error)")
@@ -59,8 +61,10 @@ enum YourAccountChain {
             throw Failure(message: error ?? String(localized: "Your node for \(net.name) did not answer"))
         }
         var last = "\(net.name) did not answer"
+        // A node's read is small: 20s over Tor, then a fresh circuit. The
+        // bundler keeps the long wait, since pricing an operation is not.
         for url in net.rpcs {
-            let (result, error) = await post(url, method, params)
+            let (result, error) = await post(url, method, params, wait: 20)
             if let result, !(result is NSNull) { return result }
             if let error { last = error; if method == "eth_call" { break } }
         }

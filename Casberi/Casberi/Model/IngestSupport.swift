@@ -622,11 +622,19 @@ enum IngestSupport {
     /// refuses 80.67.167.81 every time, Safe's service one exit in five), so it
     /// gets one more circuit and then reads as an outage, never as the
     /// provider's refusal a chain would carry for a week (prd §827b).
+    /// A shorter wait over Tor for a caller whose answers are small (a node's
+    /// `eth_call`, 1–3s over Tor, measured 2026-10-27): a stalled circuit is
+    /// given up on in this many seconds and the fresh one asked, rather than
+    /// holding every row of a page on "Reading…" for a minute (user: "when i
+    /// tap on account it says 'reading' for everything and if i navigate to
+    /// holdings and then back it shows").
+    @TaskLocal static var torWait: TimeInterval?
+
     private static func torData(for request: URLRequest,
                                 isolation key: String) async -> (Data, URLResponse)? {
         var request = request
         // Zerion takes 6–45s over Tor for a heavy wallet (measured 2026-10-24).
-        request.timeoutInterval = max(request.timeoutInterval, TorClient.requestTimeout)
+        request.timeoutInterval = torWait ?? max(request.timeoutInterval, TorClient.requestTimeout)
         guard let first = await TorClient.shared.session(isolation: key) else { return nil }
         // **A STALLED CIRCUIT GETS ANOTHER, AS A REFUSING EXIT DOES (user: "i
         // constantly get this error of can't read the networks").** A wallet's
