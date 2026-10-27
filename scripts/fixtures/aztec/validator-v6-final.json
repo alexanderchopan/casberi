@@ -1,0 +1,884 @@
+{
+ "id": 1,
+ "jsonrpc": "2.0",
+ "result": {
+  "validator": {
+   "address": "0x3332bf09054de0e3a8cd667bf5a7b6a8d90cb2f8",
+   "lastProposal": {
+    "timestamp": "1793070012",
+    "slot": 5580,
+    "date": "2026-10-27T03:00:12.000Z"
+   },
+   "lastAttestation": {
+    "timestamp": "1793071236",
+    "slot": 5597,
+    "date": "2026-10-27T03:20:36.000Z"
+   },
+   "totalSlots": 190,
+   "missedProposals": {
+    "currentStreak": 0,
+    "rate": 0,
+    "count": 0,
+    "total": 5
+   },
+   "missedAttestations": {
+    "currentStreak": 0,
+    "rate": 0,
+    "count": 0,
+    "total": 185
+   },
+   "history": [
+    {
+     "slot": 5184,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5185,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5186,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5187,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5188,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5189,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5190,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5191,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5192,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5193,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5194,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5195,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5196,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5197,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5198,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5199,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5200,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5201,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5202,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5203,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5204,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5205,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5206,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5207,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5208,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5209,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5210,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5211,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5212,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5213,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5214,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5215,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5248,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5249,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5250,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5251,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5252,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5253,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5254,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5255,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5256,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5257,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5258,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5259,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5260,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5261,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5262,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5263,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5264,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5265,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5266,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5267,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5268,
+     "status": "checkpoint-mined"
+    },
+    {
+     "slot": 5269,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5270,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5271,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5272,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5273,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5274,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5275,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5276,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5277,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5278,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5279,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5312,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5313,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5314,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5315,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5316,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5317,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5318,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5319,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5320,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5321,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5322,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5323,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5324,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5325,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5326,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5327,
+     "status": "checkpoint-mined"
+    },
+    {
+     "slot": 5328,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5329,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5330,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5331,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5332,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5333,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5334,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5335,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5336,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5337,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5338,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5339,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5340,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5341,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5342,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5343,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5504,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5505,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5506,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5507,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5508,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5509,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5510,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5511,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5512,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5513,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5514,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5515,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5516,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5517,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5518,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5519,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5520,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5521,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5522,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5523,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5524,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5525,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5526,
+     "status": "checkpoint-mined"
+    },
+    {
+     "slot": 5527,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5528,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5529,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5530,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5531,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5532,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5533,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5534,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5535,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5536,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5537,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5538,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5539,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5540,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5541,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5542,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5543,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5544,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5545,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5546,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5547,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5548,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5549,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5550,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5551,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5552,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5553,
+     "status": "checkpoint-mined"
+    },
+    {
+     "slot": 5554,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5555,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5556,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5557,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5558,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5559,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5560,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5561,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5562,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5563,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5564,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5565,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5566,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5567,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5568,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5569,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5570,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5571,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5572,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5573,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5574,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5575,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5576,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5577,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5578,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5579,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5580,
+     "status": "checkpoint-mined"
+    },
+    {
+     "slot": 5581,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5582,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5583,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5584,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5585,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5586,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5587,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5588,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5589,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5590,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5591,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5592,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5593,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5594,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5595,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5596,
+     "status": "attestation-sent"
+    },
+    {
+     "slot": 5597,
+     "status": "attestation-sent"
+    }
+   ]
+  },
+  "allTimeEpochPerformance": [
+   {
+    "epoch": 53,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 62,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 68,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 71,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 74,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 75,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 76,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 84,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 95,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 101,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 106,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 145,
+    "missed": 0,
+    "total": 31
+   },
+   {
+    "epoch": 162,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 164,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 166,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 172,
+    "missed": 0,
+    "total": 32
+   },
+   {
+    "epoch": 173,
+    "missed": 0,
+    "total": 32
+   }
+  ],
+  "lastProcessedSlot": 5597,
+  "initialSlot": 1340,
+  "slotWindow": 768
+ }
+}

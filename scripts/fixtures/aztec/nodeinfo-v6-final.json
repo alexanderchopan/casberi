@@ -1,0 +1,38 @@
+{
+ "id": 1,
+ "jsonrpc": "2.0",
+ "result": {
+  "nodeVersion": "6.0.0",
+  "l1ChainId": 11155111,
+  "rollupVersion": 679261766,
+  "enr": "enr:-My4QH_i5Fll5nR1_gnMuGG5hmyDxrO0fFJ20d8z_w6PH895eTCKFF6nDXyCUNXYIs_bZMyyz5MejbRh-_IAGQezlA8HhWF6dGVjsDAwLTExMTU1MTExLTFmNDM1YTdmLTY3OTI2MTc2Ni0wZjU0MjcxYy0yMmZmZjVkZYJpZIJ2NIJpcIQFx6RViXNlY3AyNTZrMaEDWf_cibMaXXhQieucgp5BPsvVi6oxqDEFhXcdElFc_ICDdGNwgj7ag3VkcII-2oN2ZXKFNi4wLjA",
+  "l1ContractAddresses": {
+   "rollupAddress": "0x1f435a7f2da358caf887a470faeee7d5d5f4efba",
+   "registryAddress": "0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba",
+   "inboxAddress": "0x7cdc32dd7d008870a95f1837ffd7229ef676ef8a",
+   "outboxAddress": "0xa5a0f7a7bdaf280964a1922a68c83462e5f6e15b",
+   "feeJuiceAddress": "0x762c132040fda6183066fa3b14d985ee55aa3c18",
+   "feeJuicePortalAddress": "0xe59acba462a0324b1d619a7a1b219419f156f505",
+   "coinIssuerAddress": "0xe05d0a62045b4237556c1ec423e59eea9a24eaee",
+   "rewardDistributorAddress": "0x83b2a93ef343cab7be9d8bba7317f314975e5cb0",
+   "governanceProposerAddress": "0x01c7d4ca153748d2377968fef22894cb162e9480",
+   "governanceAddress": "0xcaf7447721447b22cd0076ac7c63877c3afd329f",
+   "stakingAssetAddress": "0x5595cb9ed193cac2c0bc5393313bc6115817954b",
+   "feeAssetHandlerAddress": "0x5602c39a6e9c5ace589f64f754927bcda4f4bfc9",
+   "gseAddress": "0xb6a38a51a6c1de9012f9d8ea9745ef957212eaac"
+  },
+  "protocolContractAddresses": {
+   "classRegistry": "0x0000000000000000000000000000000000000000000000000000000000000001",
+   "feeJuice": "0x0000000000000000000000000000000000000000000000000000000000000003",
+   "instanceRegistry": "0x0000000000000000000000000000000000000000000000000000000000000002",
+   "multiCallEntrypoint": "0x2d464e835406c6057bf147843d1541e0b338a13f8fedd5cba697629172dd8105"
+  },
+  "realProofs": true,
+  "txsLimits": {
+   "gas": {
+    "daGas": 117624,
+    "l2Gas": 6540000
+   }
+  }
+ }
+}

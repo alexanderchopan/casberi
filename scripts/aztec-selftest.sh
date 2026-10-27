@@ -35,7 +35,8 @@ WIRE="Casberi/Casberi/Model/AztecWire.swift"
 P2="Casberi/Casberi/Model/AztecPoseidon2.swift"
 FIX="scripts/fixtures/aztec"
 for f in "$WIRE" "$P2" "$FIX/l1-batch.json" "$FIX/validator-v6.json" "$FIX/nodeinfo-v6.json" "$FIX/validator-active.json" "$FIX/validator-idle.json" "$FIX/validator-unknown.json" \
-         "$FIX/tips.json" "$FIX/nodeinfo.json" "$FIX/fees.json"; do
+         "$FIX/tips.json" "$FIX/nodeinfo.json" "$FIX/fees.json" "$FIX/nodeinfo-v6-final.json" "$FIX/validator-v6-final.json" \
+         "$FIX/l1-batch-v6-final.json" "$FIX/l1-attester-v6-final.txt" "$FIX/fpc-feejuice-v6-final.json"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -166,8 +167,33 @@ let epochsReply: [String: Any] = ["validator": ["address": "0xab", "totalSlots":
 let strip = AztecWire.sequencer(epochsReply)!.recentEpochs
 check(strip.count == 48 && strip.allSatisfy { $0 == 0 }, "the strip is the NEWEST 48, sorted by epoch")
 let chain6 = AztecWire.chain(AztecWire.result(load("nodeinfo-v6.json")))!
-check(chain6.nodeVersion == "6.0.0-rc.1" && chain6.rollup == "0x8c2fb2a68a3d362ab1de99e06f83f8903160bbd9", "the current testnet is v6, its own rollup")
+check(chain6.nodeVersion == "6.0.0-rc.1" && chain6.rollup == "0x8c2fb2a68a3d362ab1de99e06f83f8903160bbd9", "v6.0.0-rc.1 had its own rollup")
 check(chain6.stakingAsset?.lowercased() == "0x5595cb9ed193cac2c0bc5393313bc6115817954b", "the stake token's address")
+
+print("v6.0.0, the final testnet (read 2026-10-26)")
+let final6 = AztecWire.chain(AztecWire.result(load("nodeinfo-v6-final.json")))!
+check(final6.nodeVersion == "6.0.0" && final6.version == 679_261_766 && final6.l1ChainID == 11_155_111,
+      "node 6.0.0, rollup version 679261766, on Sepolia")
+check(final6.rollup == "0x1f435a7f2da358caf887a470faeee7d5d5f4efba" && final6.key != chain6.key,
+      "its rollup is the Registry's canonical one, a new chain to the store")
+check(final6.stakingAsset == chain6.stakingAsset && final6.governance?.lowercased() == "0xcaf7447721447b22cd0076ac7c63877c3afd329f",
+      "the same stake token and Governance as the release candidates")
+let seq6 = AztecWire.sequencer(AztecWire.result(load("validator-v6-final.json")))!
+check(seq6.address == "0x3332bf09054de0e3a8cd667bf5a7b6a8d90cb2f8" && seq6.totalSlots == 190, "a committee member's duty, read off the v6 node")
+check(AztecWire.line(seq6) == "Attested 185 of 185 · proposed 5", "its line: \(AztecWire.line(seq6))")
+check(seq6.recentEpochs.count == 17, "seventeen epochs since the reset")
+let l1v6 = AztecWire.batchResults(load("l1-batch-v6-final.json"))
+let stake6 = AztecWire.stake(view: l1v6[100], rewards: l1v6[101])!
+check(stake6.status == .validating && AztecWire.tokens(stake6.staked) == "200,000" && stake6.rewards == 0,
+      "the v6 Rollup answers the same selectors: validating, 200,000 STK")
+let attester6 = (try! String(contentsOfFile: fix + "/l1-attester-v6-final.txt", encoding: .utf8)).trimmingCharacters(in: .whitespacesAndNewlines)
+check(AztecWire.addresses(l1v6[1]!)?.count == 48 && AztecWire.addresses(l1v6[1]!)?.first == attester6, "its committee: 48, the attester first")
+check(AztecWire.string(l1v6[2]!) == "STK", "the stake token's symbol")
+let fpc6 = "0x2d8fff82a3b0c15d0a89169e7d8d043e079ab94d52031f1de1e4972ebad169d3"
+check(AztecWire.feeJuiceSlot(fpc6) == "0x19fd6f21e3abf3142e0a10cf9af7e3809480d788e0c093b126f5ca41da61702f",
+      "the v6 sponsored FPC's Fee Juice slot matches @aztec-labs/stdlib 6.0.0")
+check(AztecWire.feeJuice(AztecWire.result(load("fpc-feejuice-v6-final.json"))).map { AztecWire.tokens($0) } == "366.75",
+      "…and the v6 node answers it: 366.75 Fee Juice")
 let l1 = AztecWire.batchResults(load("l1-batch.json"))
 let stake = AztecWire.stake(view: l1[100], rewards: l1[101])!
 check(stake.status == .validating && stake.status.word == "Validating", "status 1 reads as validating")
