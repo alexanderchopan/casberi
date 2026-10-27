@@ -770,6 +770,11 @@ struct MoveSecurity: View {
             if working?.row == "limit" {
                 Text(verbatim: working!.label).dsText(.body17).foregroundStyle(DS.textTertiary)
                     .lineLimit(1).frame(minHeight: 44)
+            } else if limited.isEmpty, limitNetworks.contains(where: { $0.threshold == 2 && $0.limit == nil }) {
+                // Both keys stand there and the limit did not read: neither
+                // off nor a co-signer missing.
+                Text("Couldn't read").dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .lineLimit(1).frame(minHeight: 44)
             } else if (limited.isEmpty && notYet.isEmpty) {
                 Text("Add a co-signer first").dsText(.body17).foregroundStyle(DS.textTertiary)
                     .lineLimit(1).frame(minHeight: 44)
@@ -807,7 +812,11 @@ struct MoveSecurity: View {
     /// "$100 a month", or Off; "Set below" while the amount is being typed.
     private var limitWord: String {
         if limitEditing { return String(localized: "Set below") }
-        guard let standing = shown else { return String(localized: "Off") }
+        // A limit that could not be read is not off (user, 2026-10-27: "it
+        // says 'off'" while Ethereum and Robinhood still needed both keys).
+        guard let standing = shown else {
+            return limitNetworks.contains { $0.threshold == 2 && $0.limit == nil } ? String(localized: "Couldn't read") : String(localized: "Off")
+        }
         // A limit is whole dollars (`amountDollars`), so it says no cents.
         let usd = Op.dollars(standing.dollarCap, decimals: 6, price: 1)
         let amount = usd == usd.rounded() ? "$\(Int(usd))" : dollars(standing.dollarCap)
