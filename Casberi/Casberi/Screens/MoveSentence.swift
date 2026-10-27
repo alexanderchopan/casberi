@@ -36,12 +36,14 @@ struct MoveSentence: View {
     var arrival: Arrival?
 
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
-         privately: PrivateMove.Mode? = nil) {
+         privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
         let mode = PrivateMove.available ? privately : nil
-        _verb = State(initialValue: mode != nil ? .send : opening ?? (arrival == nil ? .swap : .receive))
+        let toFresh = PrivateMove.available && receivePrivately && mode == nil
+        _verb = State(initialValue: mode != nil ? .send : toFresh ? .receive : opening ?? (arrival == nil ? .swap : .receive))
+        _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
@@ -55,10 +57,20 @@ struct MoveSentence: View {
     @State private var privateMode: PrivateMove.Mode?
     @State private var privateMove = PrivateMove()
 
+    /// **RECEIVE, PRIVATELY (prd §1560): a fresh address.** Receive's Private
+    /// switch draws `MoveFreshSentence` under these verbs, over the
+    /// account's sentence. Off on every arrival, never remembered on.
+    @State private var freshReceive = false
+
     private func goPrivate(_ mode: PrivateMove.Mode) {
         privateMove.mode = mode
         privateMove.recipient = mode == .send ? resolved?.address : nil
         withAnimation(DS.Motion.standard) { open = nil; privateMode = mode }
+        DSHaptic.selection()
+    }
+
+    private func goFresh() {
+        withAnimation(DS.Motion.standard) { open = nil; freshReceive = true }
         DSHaptic.selection()
     }
 
@@ -497,9 +509,15 @@ struct MoveSentence: View {
     var body: some View {
         ZStack {
             accountPage
-                .opacity(privateMode == nil ? 1 : 0)
-                .allowsHitTesting(privateMode == nil)
-                .accessibilityHidden(privateMode != nil)
+                .opacity(privateMode == nil && !freshReceive ? 1 : 0)
+                .allowsHitTesting(privateMode == nil && !freshReceive)
+                .accessibilityHidden(privateMode != nil || freshReceive)
+            if freshReceive, privateMode == nil {
+                MoveFreshSentence(inTray: inTray, leave: {
+                    withAnimation(DS.Motion.standard) { freshReceive = false }
+                }) { verbs }
+                .transition(.opacity)
+            }
             if privateMode != nil {
                 MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
@@ -511,6 +529,7 @@ struct MoveSentence: View {
             }
         }
         .animation(DS.Motion.standard, value: privateMode)
+        .animation(DS.Motion.standard, value: freshReceive)
     }
 
     private var accountPage: some View {
@@ -671,6 +690,13 @@ struct MoveSentence: View {
                 MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))
                     .padding(.top, DS.Space.s4)
                     .disabled(stage != nil)
+            }
+            // Receive's Private switch (prd §1560): off on arrival; on, a
+            // fresh address. Your own account's Receive only, never a
+            // route from another network or the arrival's sentence.
+            if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.available {
+                MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))
+                    .padding(.top, DS.Space.s4)
             }
             if verb == .send, receipt == nil, let plan = roundUpPlan, plan.change != "0" {
                 let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
@@ -1560,9 +1586,10 @@ struct MoveSentence: View {
             ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
                 .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
                 Button {
-                    guard v != verb || receipt != nil || privateMode != nil else { return }
+                    guard v != verb || receipt != nil || privateMode != nil || freshReceive else { return }
                     withAnimation(DS.Motion.standard) {
                         privateMode = nil
+                        freshReceive = false
                         verb = v
                         open = nil
                         receipt = nil

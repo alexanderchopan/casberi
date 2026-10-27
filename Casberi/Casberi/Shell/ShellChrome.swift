@@ -234,6 +234,9 @@ final class ShellChrome {
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.
     var movePrivately: PrivateMove.Mode?
+    /// Move opens on Receive with its Private switch on: a fresh address
+    /// (prd §1560). Cleared when the tray closes.
+    var moveFreshReceive = false
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: SettingsFace?

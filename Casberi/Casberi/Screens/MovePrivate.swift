@@ -415,17 +415,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// One Activity row for the move, by its transaction: the eye-slash
     /// lead, the words with no verb, Etherscan its door.
     private func land(_ hash: String) {
-        let ref = PrivateMoney.activityPrefix + hash.lowercased()
-        let existing = (try? context.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref }))) ?? 0
-        guard existing == 0 else { return }
         let title = PrivateMoney.activityTitle(figure: figure,
                                                to: move.mode == .send ? move.recipient.map(YourAccount.short) : nil)
-        let thing = Thing(kind: .link, title: title, content: "https://sepolia.etherscan.io/tx/" + hash,
-                          source: "Wallet", capturedAt: .now, sourceRef: ref)
-        context.insert(thing)
-        try? context.save()
+        PrivateActivity.land(hash: hash, title: title, context: context)
         chrome.refreshRooms()
-        NSLog("privateMove| landed | %@", title)
     }
 
     private func copy(_ address: String) {

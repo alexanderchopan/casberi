@@ -418,8 +418,10 @@ enum DS {
 
     /// **PRIVATE MONEY'S MARK (prd §1554).** The eye-slash on the Holdings
     /// box's Private block wears lime, the one place it does: a block of money
-    /// nobody else can see. A glyph's hue, never a word's ink; light pages take
-    /// it darker so it holds against white.
+    /// nobody else can see. A glyph's hue, never a word's ink, but for the one
+    /// word "privately." in Receive's fresh-address sentence (prd §1560, the
+    /// user's board "Fresh"); light pages take it darker so it holds against
+    /// white.
     static var privateMark: Color {
         Color(uiColor: UIColor { traits in
             UIColor(traits.userInterfaceStyle == .light ? Color.fixed("#5f7a00") : Color.fixed("#d7ff2e"))

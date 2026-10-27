@@ -4168,6 +4168,36 @@ enum ProbeHooks {
             PrivacyTestnetSender.forget()
             NSLog("privateMoney| sender forgotten")
         },
+        // `-freshAddressProbe YES` logs every fresh address and what became of
+        // it; `-freshAddressForget YES` drops them and their root (prd §1560).
+        Hook(key: "freshAddressProbe") { _, _ in
+            for e in FreshReceive.shared.entries {
+                NSLog("freshAddress| probe | %u | %@ | %@", e.index, e.address, String(describing: e.state))
+            }
+            NSLog("freshAddress| probe | %d addresses", FreshReceive.shared.entries.count)
+        },
+        // `-freshAddressPay <wei>` — the DEBUG test sender plays the payer: it
+        // sends that much Sepolia ETH to the newest fresh address, a plain
+        // transfer, so the watch can be seen moving it in. A real payer is
+        // someone else; this one is the private account's own owner, so this
+        // test payment IS linked to it on chain.
+        Hook(key: "freshAddressPay") { raw, _ in
+            guard raw.allSatisfy(\.isNumber), let value = PrivateMoney.hex(raw) else { return }
+            Task { @MainActor in
+                FreshReceive.shared.ensureCurrent()
+                guard let to = FreshReceive.shared.current?.address else { return }
+                do {
+                    let hash = try await PrivacyTestnetSender.send(.init(to: to, data: "0x", value: value))
+                    NSLog("freshAddress| paid | %@ wei | to %@ | %@", raw, to, hash)
+                } catch {
+                    NSLog("freshAddress| pay failed | %@", String(describing: error))
+                }
+            }
+        },
+        Hook(key: "freshAddressForget") { _, _ in
+            FreshReceive.shared.forget()
+            NSLog("freshAddress| forgotten")
+        },
         // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
         // connect time, then Relay's `/chains` over Tor and directly: Relay
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof

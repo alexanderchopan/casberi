@@ -28,6 +28,9 @@ extension FeedScreen {
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
+                        // What a fresh address was paid moves in from here
+                        // too (prd §1560): its row appears as "moving in".
+                        await FreshReceive.shared.check(context: modelContext)
                         // A note waiting on the ASP is asked again while the
                         // section shows (the store spaces the asks 20 s).
                         while PrivateMoney.anyWaiting(store.notes), !Task.isCancelled {
