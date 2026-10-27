@@ -104,9 +104,12 @@ enum RoundUps {
     /// The dollar value of what a swap sells (or a Buy pays), in the
     /// dollar's units, so it rounds up as dollars sent do. nil — no round-up
     /// — for a token with no price and for WETH⇄ETH (one for one, no trade).
+    ///
+    /// A price is an estimate, so it is counted to the CENT: $10 of DAI
+    /// priced at $9.999999 is $10.00, never a round-up of $0.000001.
     static func soldUnits(usd: Double?, wrap: Bool) -> String? {
         guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }
-        let micro = (usd * 1_000_000).rounded(.down)
+        let micro = (usd * 100).rounded() * 10_000
         guard micro >= 1, micro < 1e15 else { return nil }
         return String(Int64(micro))
     }

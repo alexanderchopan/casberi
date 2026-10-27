@@ -27474,6 +27474,34 @@
         }
       }
     },
+    "%lld periods ahead. Over it, and for a swap or a private move, your Signer signs too." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld periodos por adelantado. Por encima, y para un intercambio o un movimiento privado, tu Signer también firma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld期間先まで。上限を超える場合と、スワップやプライベートな移動では、Signerも署名します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 기간 앞까지. 한도를 넘거나 스왑 또는 비공개 이동일 때는 Signer도 서명합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提前 %lld 个周期。超出限额时，以及兑换或私密转移时，你的 Signer 也会签名。"
+          }
+        }
+      }
+    },
     "%lld periods ahead. Over it, your Signer signs too." : {
       "localizations" : {
         "es" : {
@@ -45010,6 +45038,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加 %@ %@"
+          }
+        }
+      }
+    },
+    "Add %@ ETH on %@ for the fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade %1$@ ETH en %2$@ para la comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手数料のために%2$@に%1$@ ETHを追加してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수수료를 위해 %2$@에 %1$@ ETH를 추가하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %2$@ 上添加 %1$@ ETH 以支付手续费"
+          }
+        }
+      }
+    },
+    "Add %@ ETH on %@: your first send there also sets up your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade %1$@ ETH en %2$@: tu primer envío allí también configura tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@に%1$@ ETHを追加してください。そこでの最初の送金でアカウントも設定されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에 %1$@ ETH를 추가하세요. 그곳에서의 첫 전송으로 계정도 설정됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %2$@ 上添加 %1$@ ETH：你在那里的第一次发送也会设置你的账户"
           }
         }
       }
@@ -64232,6 +64316,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "为超出支出上限的每笔转移共同签名。首次转移时启用。"
+          }
+        }
+      }
+    },
+    "Co-signs swaps, private moves and sends over your spend limit. Activates on your first move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma también los intercambios, los movimientos privados y los envíos por encima de tu límite de gasto. Se activa en tu primer movimiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スワップ、プライベートな移動、利用上限を超える送金に共同署名します。最初の移動で有効になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스왑, 비공개 이동, 지출 한도를 넘는 송금에 공동 서명합니다. 첫 이동 때 활성화됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为兑换、私密转移和超出支出限额的发送共同签名。在你第一次转移时启用。"
           }
         }
       }
@@ -167413,6 +167525,34 @@
         }
       }
     },
+    "Swaps, private moves and getting your account back need it too." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los intercambios, los movimientos privados y recuperar tu cuenta también lo necesitan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スワップ、プライベートな移動、アカウントの復旧にも必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스왑, 비공개 이동, 계정 복구에도 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "兑换、私密转移和找回账户也需要它。"
+          }
+        }
+      }
+    },
     "Sweep" : {
       "localizations" : {
         "es" : {
@@ -201841,6 +201981,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的签名者"
+          }
+        }
+      }
+    },
+    "Your Signer signs this too" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu Signer también firma esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これにはSignerも署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이것은 Signer도 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Signer 也会签署这一项"
           }
         }
       }

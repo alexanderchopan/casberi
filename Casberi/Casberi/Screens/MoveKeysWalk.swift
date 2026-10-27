@@ -116,7 +116,7 @@ struct MoveKeysWalk: View {
             }
             // Its own job, never the recovery key's; and when it lands —
             // connecting signs nothing (prd §1499).
-            small(String(localized: "Co-signs any move over your spend limit. Activates on your first move."))
+            small(String(localized: "Co-signs swaps, private moves and sends over your spend limit. Activates on your first move."))
         case .limit:
             MoveFlow {
                 MoveWord(String(localized: "Require a co-signer"))
@@ -153,9 +153,11 @@ struct MoveKeysWalk: View {
                     .accessibilityLabel(Text("How often it starts again"))
                 }
             }
-            // With the limit on, recovery needs the co-signer too (prd §1456):
-            // the one consequence nobody would guess.
-            small(String(localized: "Getting your account back needs it too."))
+            // With the limit on, everything but a send under it needs the
+            // co-signer (prd §1456), said where the limit is set (user: "the
+            // fact that it requires a signer for a 'not plain send' is
+            // something user should be aware of").
+            small(String(localized: "Swaps, private moves and getting your account back need it too."))
         case .roundUps:
             MoveFlow {
                 MoveWord(String(localized: "Round up each move"))

@@ -152,9 +152,11 @@ final class TorClient: @unchecked Sendable {
         }
     }
 
-    /// A fresh circuit for a request an exit refused: same wallet, another key.
+    /// A fresh circuit for a request an exit refused or a circuit dropped:
+    /// same wallet, another key — one a minute, so a burst of failed reads
+    /// shares one new circuit rather than building one each.
     func retrySession(isolation key: String) async -> URLSession? {
-        await session(isolation: key + "#retry-\(Int.random(in: 1...1_000_000))")
+        await session(isolation: key + "#retry-\(Int(Date().timeIntervalSince1970 / 60))")
     }
 
     /// A run ended (`tor_run_main` returned): nothing points at its port any

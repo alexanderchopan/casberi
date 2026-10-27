@@ -627,9 +627,15 @@ enum IngestSupport {
         var request = request
         // Zerion takes 6–45s over Tor for a heavy wallet (measured 2026-10-24).
         request.timeoutInterval = max(request.timeoutInterval, TorClient.requestTimeout)
-        guard let first = await TorClient.shared.session(isolation: key),
-              let answer = try? await first.data(for: request) else { return nil }
-        guard (answer.1 as? HTTPURLResponse)?.statusCode == 403 else { return answer }
+        guard let first = await TorClient.shared.session(isolation: key) else { return nil }
+        // **A STALLED CIRCUIT GETS ANOTHER, AS A REFUSING EXIT DOES (user: "i
+        // constantly get this error of can't read the networks").** A wallet's
+        // reads share one circuit, so one that dropped failed Base, Ethereum
+        // and Robinhood at once, and Move's ask two seconds on rode it again;
+        // every node answered through three other exits from a desk.
+        if let answer = try? await first.data(for: request),
+           (answer.1 as? HTTPURLResponse)?.statusCode != 403 { return answer }
+        guard !Task.isCancelled else { return nil }
         guard let second = await TorClient.shared.retrySession(isolation: key),
               let again = try? await second.data(for: request),
               (again.1 as? HTTPURLResponse)?.statusCode != 403 else { return nil }

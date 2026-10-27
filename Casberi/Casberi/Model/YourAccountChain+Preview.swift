@@ -143,7 +143,7 @@ extension YourAccountChain {
             return Preview(network: net, route: route, feeWei: fee, nonce: op.nonce, checked: a.simulated.checked,
                            words: a.words, approvals: a.approvals, sold: a.sold, hash: YourAccountOp.safeOpHash(op, chainId: net.chainId),
                            hashKind: .eip712, callData: op.callData,
-                           refusal: await short(a.payments, fee: fee, net: net, account: account))
+                           refusal: await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed))
         } catch let failure as Failure {
             if let written { return empty(written, route: route, refusal: failure.message) }
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],
@@ -199,8 +199,10 @@ extension YourAccountChain {
 
     /// `operate`'s own balance rule, said before the tap: ETH for what is
     /// sent and the most the fee can be.
-    private static func short(_ payments: [YourAccountOp.Payment], fee: String?, net: Network, account: String) async -> String? {
+    private static func short(_ payments: [YourAccountOp.Payment], fee: String?, net: Network, account: String,
+                              deployed: Bool = true) async -> String? {
         guard let fee, var held = await balance(net, YourAccountOp.eth, of: account) else { return nil }
+        if deployed { held = YourAccountOp.sum(held, await feeDeposit(net, of: account)) }
         #if DEBUG
         // `-moveSimulateETH` (prd §1542): the same pretended balance the
         // simulation runs with, so Details can be seen; `transact` still refuses.
@@ -209,7 +211,7 @@ extension YourAccountChain {
         let out = payments.filter { $0.token.contract == nil }.reduce("0") { YourAccountOp.sum($0, $1.amount) }
         let need = YourAccountOp.sum(out, fee)
         guard !YourAccountOp.atMost(need, held) else { return nil }
-        return String(localized: "Needs \(YourAccountOp.spoken(need, decimals: 18)) ETH on \(net.name), with the fee")
+        return shortOfETH(need: need, held: held, on: net, deployed: deployed)
     }
 
     // MARK: - The demo (§1475)

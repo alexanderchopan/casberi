@@ -2115,7 +2115,10 @@ struct MoveSentence: View {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
-                case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + roundUpPrint
+                // A swap's round-up is the row above; the line names it only
+                // when this swap also buys with it (user: "some of this
+                // message is below the fold").
+                case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpPlan?.buy != nil ? roundUpPrint : [])
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
                 case .receive, .sweep: []
@@ -3170,6 +3173,15 @@ struct MoveSentence: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DS.Space.s1)
+            }
+            // Both keys sign this one (prd §1456): said before the tap, not
+            // when the Signer's sheet rises.
+            if shownPreview?.route == .bothKeys, receipt == nil, !nothingToMove {
+                Text("Your Signer signs this too")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s1)
             }

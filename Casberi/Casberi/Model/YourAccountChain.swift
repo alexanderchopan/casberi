@@ -85,6 +85,27 @@ enum YourAccountChain {
         throw Failure(message: last)
     }
 
+    /// **WHAT TO ADD, NOT THAT SOMETHING IS SHORT (user, on "Needs … ETH,
+    /// with the fee": "we should be able to tell the user that").** The ETH
+    /// to add, rounded up so adding it is enough; an account not yet on the
+    /// network says why its first send costs more.
+    static func shortOfETH(need: String, held: String, on net: Network, deployed: Bool) -> String {
+        let add = roundedUp(YourAccountOp.difference(need, held))
+        return deployed
+            ? String(localized: "Add \(add) ETH on \(net.name) for the fee")
+            : String(localized: "Add \(add) ETH on \(net.name): your first send there also sets up your account")
+    }
+
+    /// Wei as ETH, rounded UP to two significant figures: 0.000719… is
+    /// "0.00072", so adding what is said is enough.
+    static func roundedUp(_ wei: String) -> String {
+        guard let w = Double(wei), w > 0 else { return "0" }
+        let eth = w / 1e18
+        let scale = pow(10, 1 - floor(log10(eth)))
+        let up = (eth * scale).rounded(.up) / scale
+        return up.formatted(.number.precision(.significantDigits(1...2)).locale(Locale(identifier: "en_US_POSIX")))
+    }
+
     /// A bundler's refusal in the app's words (prd §1461 item 4): the ones
     /// a person can meet are said as what happened; the rest keep the
     /// bundler's, which name an AA code the logs can be read by.
@@ -123,6 +144,17 @@ enum YourAccountChain {
         }
         guard let hex = try? await rpc(net, "eth_getBalance", [account, "latest"]) as? String else { return nil }
         return YourAccountOp.decimal(hexQuantity: hex)
+    }
+
+    /// **THE FEE ALREADY PAID IN (user's first swap on Ethereum, measured:
+    /// 0.00221 ETH stayed behind).** The EntryPoint takes the most a fee can
+    /// be before an operation runs and keeps what was not spent as the
+    /// account's deposit, which pays the next fee first; so what can pay is
+    /// the balance AND the deposit. "0" when no node answered.
+    static func feeDeposit(_ net: Network, of account: String) async -> String {
+        let data = YourAccount.sel("balanceOf(address)") + YourAccount.w(account)
+        guard let hex = try? await ethCall(net, to: YourAccount.entryPoint, data: data), hex.count > 2 else { return "0" }
+        return YourAccountOp.decimal(hexQuantity: hex) ?? "0"
     }
 
     static func isDeployed(_ net: Network, _ account: String) async throws -> Bool {
@@ -1959,14 +1991,15 @@ enum YourAccountChain {
         let fee = String(maxCost)
         var out: [String: String] = [:]
         for p in payments { out[p.token.contract ?? "", default: "0"] = YourAccountOp.sum(out[p.token.contract ?? "", default: "0"], p.amount) }
-        guard let held = await balance(net, YourAccountOp.eth, of: account) else {
+        guard let onHand = await balance(net, YourAccountOp.eth, of: account) else {
             throw Failure(message: String(localized: "\(net.name) did not answer"))
         }
+        let held = YourAccountOp.sum(onHand, deployed ? await feeDeposit(net, of: account) : "0")
         report("held=\(held) fee<=\(fee)")
         let ethNeed = YourAccountOp.sum(out[""] ?? "0", fee)
         if !YourAccountOp.atMost(ethNeed, held) {
             let need = YourAccountOp.spoken(ethNeed, decimals: 18)
-            guard dryRun else { throw Failure(message: String(localized: "Needs \(need) ETH on \(net.name), with the fee")) }
+            guard dryRun else { throw Failure(message: shortOfETH(need: ethNeed, held: held, on: net, deployed: deployed)) }
             report("short: needs \(need) ETH with the fee")
         }
         // Every token the transaction moves, whatever list it came from

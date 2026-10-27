@@ -239,7 +239,7 @@ enum YourAccountPreview {
 
     static func setsLimit(periods: Int) -> Step {
         Step(words: String(localized: "Sets your spend limit"),
-             detail: String(localized: "\(periods) periods ahead. Over it, your Signer signs too."))
+             detail: String(localized: "\(periods) periods ahead. Over it, and for a swap or a private move, your Signer signs too."))
     }
 
     static func renewsLimit(periods: Int) -> Step {

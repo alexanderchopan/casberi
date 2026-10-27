@@ -361,7 +361,8 @@ check(ruKept.toPrivate == nil && !RoundUps.movesPrivately(ruKept, chains: ruPool
 check(RoundUps.carriesBuy(.send) && RoundUps.carriesBuy(.swap(sellsDollar: true)), "a send or a dollar swap does not carry the buy")
 check(!RoundUps.carriesBuy(.swap(sellsDollar: false)), "a swap of ETH carries a buy that spends a dollar it may not hold")
 check(!RoundUps.carriesBuy(.buy), "a Bitrefill purchase carries a call of ours")
-check(RoundUps.soldUnits(usd: 3.40, wrap: false) == "3400000" && RoundUps.soldUnits(usd: 12.3456789, wrap: false) == "12345678",
+check(RoundUps.soldUnits(usd: 3.40, wrap: false) == "3400000" && RoundUps.soldUnits(usd: 12.3456789, wrap: false) == "12350000"
+      && RoundUps.soldUnits(usd: 9.999999, wrap: false) == "10000000",
       "what a swap sells is not its dollars in the dollar's units")
 check(RoundUps.soldUnits(usd: 3.40, wrap: true) == nil, "WETH to ETH rounds up")
 check(RoundUps.soldUnits(usd: nil, wrap: false) == nil && RoundUps.soldUnits(usd: 0, wrap: false) == nil
@@ -582,8 +583,8 @@ mutate "a Bitrefill purchase carries the buy" "$ROUNDUPS" \
   $'        case .buy: false\n        }' $'        case .buy: true\n        }'
 mutate "a wrap rounds up" "$ROUNDUPS" \
   'guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }' 'guard let usd, usd.isFinite, usd > 0 else { return nil }'
-mutate "a swap's dollars are counted in cents" "$ROUNDUPS" \
-  'let micro = (usd * 1_000_000).rounded(.down)' 'let micro = (usd * 100).rounded(.down)'
+mutate "a swap's dollars are counted to the millionth" "$ROUNDUPS" \
+  'let micro = (usd * 100).rounded() * 10_000' 'let micro = (usd * 1_000_000).rounded(.down)'
 mutate "the list keeps a malformed address" "$LIST" \
   's.count == 42 && s.lowercased().hasPrefix("0x")' 's.lowercased().hasPrefix("0x")'
 mutate "the list keeps any decimals" "$LIST" \
