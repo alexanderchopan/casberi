@@ -86,6 +86,7 @@ struct MovePrivateSentence<Head: View>: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .task(id: move.mode) {
+            move.context = context
             await move.read()
             #if DEBUG
             if let amount = UserDefaults.standard.string(forKey: "movePrivateAmount"), move.choices.contains(amount) {

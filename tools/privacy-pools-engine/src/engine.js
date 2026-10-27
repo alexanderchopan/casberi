@@ -264,6 +264,29 @@ const methods = {
     return { handle: keep({ kind: 'withdraw', result: r }), fee: option ? JSON.parse(JSON.stringify(option.selectedQuote?.quote ?? null, (_, v) => (typeof v === 'bigint' ? hex(v) : v))) : null, ms: Math.round(now() - t), proofs };
   },
 
+  // Take it back (prd §1560): the ragequit, a public exit of one whole note
+  // to the address that owns the account (the circuit fixes the recipient).
+  // It needs no approval from 0xBow, so it is the way back for a deposit
+  // the ASP refused or never answered. `discover` must have run, so the note
+  // is in this page's NoteManager. The transaction is for the owner to sign.
+  async prepareRagequit({ commitment }) {
+    proofs = [];
+    const t = now();
+    const s = await session('withdraw');
+    const want = String(commitment).toLowerCase();
+    const note = account.notes.getNotes().find((n) => String(n.commitment).toLowerCase() === want);
+    if (!note) throw Object.assign(new Error('the pool holds no such note for this account'), { name: 'NoNote' });
+    const r = await s.prepareRageQuit({ commitment: note.commitment });
+    return {
+      handle: keep({ kind: 'ragequit', result: r }),
+      tx: publicTx(r.ragequitTx),
+      value: hex(r.value),
+      recipient: r.recipientAddress,
+      ms: Math.round(now() - t),
+      proofs,
+    };
+  },
+
   // Hands a prepared withdrawal or transfer to the relayer, which posts it
   // and pays its gas (prd §1554): the handle is spent either way, so a second
   // tap cannot post one proof twice. Returns the transaction's hash.

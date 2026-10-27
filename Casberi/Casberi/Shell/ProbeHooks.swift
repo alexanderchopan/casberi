@@ -4168,6 +4168,45 @@ enum ProbeHooks {
             PrivacyTestnetSender.forget()
             NSLog("privateMoney| sender forgotten")
         },
+        // `-privateNeedsSample "waiting,rejected,proof,overdue"` — Needs you's
+        // deposit rows with no deposit behind them, never kept (prd §1560): a
+        // refusal cannot be forced on Sepolia. Logs `privateMoney|`.
+        Hook(key: "privateNeedsSample") { raw, _ in PrivateMoneyStore.shared.sampleAsks(raw) },
+        // `-privateTakeBackProbe "<commitment prefix>|newest"` — Take it back
+        // on a REAL note, headless, whatever the ASP said (prd §1560): the
+        // ragequit proved, simulated, signed by the Sepolia sender. Logs
+        // `privateTakeBack|`. Moves test money; Sepolia only.
+        Hook(key: "privateTakeBackProbe") { raw, context in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let notes = PrivateMoneyStore.shared.notes
+                let note = raw == "newest" ? notes.max { $0.at < $1.at }
+                    : notes.first { $0.commitment.lowercased().hasPrefix(raw.lowercased()) }
+                guard let note else { NSLog("privateTakeBack| no note %@ among %d", raw, notes.count); return }
+                NSLog("privateTakeBack| probe | %@… | %@ wei | %@", String(note.commitment.prefix(12)), note.amount, note.status.rawValue)
+                let hash = await PrivateTakeBack.shared.run(note, context: context)
+                NSLog("privateTakeBack| probe done | %@ | %@", hash ?? "-",
+                      PrivateTakeBack.shared.stage(note).map { PrivateTakeBack.words($0) } ?? "ok")
+            }
+        },
+        // `-roundUpsPrivate "on|<wei counted on Sepolia>"` — round-ups set to
+        // move into your private balance, as the Security menu sets them, and
+        // the change counted there (prd §1560): nothing sends publicly on
+        // Sepolia, so the count stands for the sends'. `off` picks the token
+        // again. `-roundUpsPrivateMove YES` moves it now (Face ID, the batch's
+        // deposit, its Activity row). Logs `roundUpsPrivate|`.
+        Hook(key: "roundUpsPrivate") { raw, _ in
+            let p = raw.split(separator: "|").map(String.init)
+            var setting = RoundUps.setting
+            if p.first == "on" { setting.on = true; setting.toPrivate = true } else { setting.toPrivate = nil }
+            RoundUps.setting = setting
+            if p.count > 1, Decimal(string: p[1]) != nil { RoundUps.setPrivateSaved(p[1], on: PrivacyNetwork.sepolia.chainId) }
+            NSLog("roundUpsPrivate| private=%d saved=%@ at=%@", setting.movesPrivately ? 1 : 0,
+                  RoundUps.privateSaved(on: PrivacyNetwork.sepolia.chainId), RoundUps.privateMoveAt)
+        },
+        Hook(key: "roundUpsPrivateMove") { _, context in
+            Task { @MainActor in await PrivateMove.moveRoundUpsNow(context: context) }
+        },
         // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
         // connect time, then Relay's `/chains` over Tor and directly: Relay
         // refuses every exit, so a 403 over Tor and a 200 direct is the proof

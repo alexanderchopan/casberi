@@ -88,13 +88,18 @@ enum PrivateMoney {
         }
     }
 
+    /// `poi_required` is not approved either (prd §1560): 0xBow wants a proof
+    /// this app cannot give, so it is drawn as refused, and asked again.
     static func kind(_ status: Status) -> Row.Kind {
         switch status {
         case .approved: .held
-        case .waiting, .needsProof: .waiting
-        case .rejected: .refused
+        case .waiting: .waiting
+        case .rejected, .needsProof: .refused
         }
     }
+
+    /// Whether the ASP may still change its answer: waiting, or wanting a proof.
+    static func asksASP(_ status: Status) -> Bool { status == .waiting || status == .needsProof }
 
     /// One row per token, state and network: what is private first, then
     /// what is waiting, then what was refused; tokens A–Z within each.
@@ -168,7 +173,66 @@ enum PrivateMoney {
 
     /// Whether any note still waits on the ASP: the store asks again.
     static func anyWaiting(_ notes: [Note]) -> Bool {
-        notes.contains { kind($0.status) == .waiting }
+        notes.contains { asksASP($0.status) }
+    }
+
+    // MARK: - Needs you (prd §1560)
+
+    /// A deposit Wallet › Needs you shows: waiting for 0xBow's approval (the
+    /// amber clock, "Since 2:14 PM"), or not approved (red), whose act is Take
+    /// it back — the ragequit, a public exit to the address it came from.
+    /// Take it back is offered too on a deposit that has waited past
+    /// `takeBackAfter`. An approved note asks nothing: it leaves.
+    struct Ask: Equatable, Identifiable {
+        enum Kind: Equatable { case waiting, refused }
+        let note: Note
+        let kind: Kind
+        let canTakeBack: Bool
+        var id: String { note.commitment }
+        var figure: String { PrivateMoney.figure(note.amount, decimals: note.decimals, symbol: note.symbol) }
+
+        var title: String {
+            switch kind {
+            case .waiting: String(localized: "\(figure) waiting for approval")
+            case .refused: String(localized: "\(figure) not approved")
+            }
+        }
+    }
+
+    static let takeBackAfter: TimeInterval = 7 * 86_400
+
+    /// One ask per note the ASP has not approved, refused first, then the
+    /// oldest first.
+    static func asks(_ notes: [Note], now: Date) -> [Ask] {
+        notes.compactMap { note -> Ask? in
+            guard let units = Decimal(string: note.amount), units > 0 else { return nil }
+            switch note.status {
+            case .approved: return nil
+            case .waiting:
+                return Ask(note: note, kind: .waiting, canTakeBack: now.timeIntervalSince(note.at) > takeBackAfter)
+            case .rejected, .needsProof:
+                return Ask(note: note, kind: .refused, canTakeBack: true)
+            }
+        }
+        .sorted { ($0.kind == .refused ? 0 : 1, $0.note.at) < ($1.kind == .refused ? 0 : 1, $1.note.at) }
+    }
+
+    /// "Since 2:14 PM" today, "Since Oct 19" before.
+    static func since(_ at: Date, now: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {
+        let shown = calendar.isDate(at, inSameDayAs: now)
+            ? at.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: calendar.timeZone))
+            : at.formatted(Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated).day())
+        return String(localized: "Since \(shown)")
+    }
+
+    /// A taken-back deposit's Activity row, with no verb: "0.0001 ETH back to ...DeBb".
+    static func takenBackTitle(figure: String, to owner: String) -> String {
+        String(localized: "\(figure) back to \(owner)")
+    }
+
+    /// Round-ups moved in together (prd §1560), with no verb.
+    static func roundUpsTitle(figure: String) -> String {
+        String(localized: "\(figure) round-ups to your private balance")
     }
 
     // MARK: - Amounts

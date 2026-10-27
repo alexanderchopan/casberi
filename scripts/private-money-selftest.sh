@@ -88,6 +88,40 @@ use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens rows count private money twice"
 use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens sheet counts private money twice"
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
+# Needs you and Take it back (prd §1560): the rows stand on Needs you's page
+# and in its count, the act is a word in a push row behind a dialog, the
+# ragequit is proved, checked against the chain BEFORE it is signed, and pays
+# the owner; discovery keeps a deposit waiting or refused.
+TAKE="Casberi/Casberi/Model/PrivateTakeBack.swift"
+PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
+use "$PAGES" 'if walletShowsPrivate { WalletPrivateAsks() }' "Needs you's page no longer draws the private deposits"
+use "$PAGES" 'let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks().count : 0' "Needs you's count leaves out the private deposits"
+use "$HOLD" 'return DSPushRow(title: Text(verbatim: ask.title), subtitle: line(ask, stage: stage),' "a deposit's ask is no longer the push row"
+use "$HOLD" 'let act = Text("Take it back").foregroundStyle(' "Take it back is no longer a word in the row's line"
+awk '/if ask.canTakeBack \{/{getline; print}' "$HOLD" | grep -q 'confirming = ask' || { echo "✗ Take it back opens without the dialog, or where it is not offered"; exit 1; }
+use "$ENGJS" 'const r = await s.prepareRageQuit({ commitment: note.commitment });' "the engine no longer proves a ragequit"
+use "$BUNDLE" 'prepareRagequit' "the shipped bundle cannot take back — rebuild with tools/privacy-pools-engine/build.mjs"
+use "$TAKE" 'guard quit.recipient.lowercased() == owner.lowercased() else {' "a ragequit paying someone else is signed"
+sim=$(grep -n 'try await PrivacyTestnetSender.simulate(quit.tx)' "$TAKE" | cut -d: -f1)
+snd=$(grep -n 'let hash = try await PrivacyTestnetSender.send(quit.tx)' "$TAKE" | cut -d: -f1)
+[[ -n "$sim" && -n "$snd" && "$sim" -lt "$snd" ]] || { echo "✗ Take it back is signed before it is simulated"; exit 1; }
+use "$TAKE" 'PrivateMoneyStore.shared.remove(commitment: note.commitment)' "a taken-back note stays in Needs you"
+use "$STORE" 'let unspent = found.notes.filter { ["ACTIVE", "PENDING", "REJECTED"].contains($0.status.uppercased())' "discovery drops a deposit waiting or refused"
+echo "  ok   Needs you: the deposits counted and drawn, Take it back a word behind a dialog, simulated before it is signed"
+
+# Round-ups into your private balance (prd §1560): offered only where a
+# pool is, a send elsewhere sets nothing aside, the batch rides a deposit you
+# confirmed, and its Activity row has no verb.
+SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
+use "$SEC" 'ForEach(RoundUps.privatePools.sorted(), id: \.self) { chain in' "the private target is offered where there is no pool"
+use "$SEC" 'Label { Text("Your private balance") } icon: { Image(systemName: "eye.slash") }' "the private target is no longer its words and the eye"
+use "$SENT" 'guard verb == .send, RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
+mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
+dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
+[[ -n "$mv" && -n "$dn" && "$mv" -lt "$dn" ]] || { echo "✗ due round-ups no longer ride the deposit you confirmed"; exit 1; }
+use "$MOVE" 'PrivateActivity.land(PrivateMoney.roundUpsTitle(figure: figure), hash: hash, context: context)' "moved round-ups land no Activity row"
+use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: chain), at: RoundUps.privateMoveAt),' "round-ups move per send, not together"
+echo "  ok   round-ups to private: offered only on Sepolia, moved together on a deposit you confirmed"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
 echo "  ok   private money counts once: in the total and the box, never in Tokens"
 
@@ -120,15 +154,42 @@ func note(_ c: String, _ amount: String, _ s: P.Status, _ at: Date = t0, _ sym: 
 }
 let notes = [note("a", "1000000000000000", .approved), note("b", "3000000000000000", .approved),
              note("c", "1000000000000000", .waiting, t1), note("d", "500000000000000", .needsProof, t0),
-             note("e", "2000000000000000", .rejected), note("f", "7", .approved, t0, "USDC")]
+             note("e", "2000000000000000", .rejected, t0.addingTimeInterval(-10)), note("f", "7", .approved, t0, "USDC"),
+             note("g", "500000000000000", .waiting, t0)]
 let rows = P.rows(notes)
 check(rows.map(\.id) == ["0:ETH:11155111", "0:USDC:11155111", "1:ETH:11155111", "2:ETH:11155111"], "private first, then waiting, then refused, A–Z within (\(rows.map(\.id)))")
 check(rows.first?.amount == "4000000000000000", "a token's private notes are summed")
 check(rows[2].amount == "1500000000000000" && rows[2].since == t0, "a waiting row sums its notes and dates from the oldest")
+check(rows[3].amount == "2500000000000000", "poi_required is not approved either: drawn with the refused (prd §1560)")
 check(rows[0].since == nil, "a private row has no since")
 check(rows[0].title == "ETH, private" && rows[2].title == "ETH, moving in" && rows[3].title == "ETH, not approved", "the rows' names")
 check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a zero or unreadable amount draws nothing")
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
+check(P.anyWaiting([note("p", "1", .needsProof)]) && !P.anyWaiting([note("r", "1", .rejected)]), "poi_required is asked again, rejected is not")
+
+// Needs you (prd §1560): every deposit not approved, refused first, oldest
+// first; Take it back on a refusal, and on a deposit waiting past a week.
+let now0 = t1.addingTimeInterval(3600)
+let asks = P.asks(notes, now: now0)
+check(asks.map(\.id) == ["e", "d", "g", "c"], "refused first, then waiting, oldest first (\(asks.map(\.id)))")
+check(asks.map(\.title) == ["0.002 ETH not approved", "0.0005 ETH not approved", "0.0005 ETH waiting for approval", "0.001 ETH waiting for approval"],
+      "the rows' words (\(asks.map(\.title)))")
+check(asks.filter(\.canTakeBack).map(\.id) == ["e", "d"], "only a refusal is taken back within the week")
+check(P.asks(notes, now: t0.addingTimeInterval(8 * 86_400)).filter(\.canTakeBack).map(\.id) == ["e", "d", "g", "c"],
+      "a deposit waiting past a week is not offered back")
+check(P.asks(notes, now: t0.addingTimeInterval(6 * 86_400)).filter(\.canTakeBack).count == 2, "a week is a week")
+check(P.asks([note("a", "1", .approved)], now: now0).isEmpty, "an approved deposit still needs you")
+check(P.asks([note("z", "0", .rejected)], now: now0).isEmpty, "an empty note needs you")
+var utc = Calendar(identifier: .gregorian)
+utc.timeZone = TimeZone(identifier: "UTC")!
+let at = Date(timeIntervalSince1970: 1_793_024_040)  // 2026-10-26 14:14 UTC
+func since(_ now: Date) -> String {
+    P.since(at, now: now, calendar: utc, locale: Locale(identifier: "en_US")).replacingOccurrences(of: "\u{202F}", with: " ")
+}
+check(since(at.addingTimeInterval(3 * 3600)) == "Since 2:14 PM", "today's wait says its time (\(since(at.addingTimeInterval(3 * 3600))))")
+check(since(at.addingTimeInterval(86_400)) == "Since Oct 26", "an older wait says its day (\(since(at.addingTimeInterval(86_400))))")
+check(P.takenBackTitle(figure: "0.0001 ETH", to: "...DeBb") == "0.0001 ETH back to ...DeBb", "a taken-back deposit's Activity row, with no verb")
+check(P.roundUpsTitle(figure: "0.00012 ETH") == "0.00012 ETH round-ups to your private balance", "round-ups moved in, with no verb")
 check(P.held(notes, symbol: "ETH") == Decimal(string: "4000000000000000"), "held counts approved notes only")
 
 // In the Wallet's number (prd §1554): approved notes on a network with value, once.
@@ -248,6 +309,12 @@ mutate() {
 mutate "unknown no longer waits" "$PM" 's/case "pending", "unknown": return \.waiting/case "pending": return .waiting/'
 mutate "the ASP is asked by any label" "$PM" 's/guard labelHash\.range\(of: #"\^\[0-9\]\{1,80\}\$"#/guard labelHash.range(of: #".+"#/'
 mutate "a waiting row dates from its newest note" "$PM" 's/min\(had\.since, note\.at\)/max(had.since, note.at)/'
+mutate "a refused deposit is not taken back" "$PM" 's/return Ask\(note: note, kind: \.refused, canTakeBack: true\)/return Ask(note: note, kind: .refused, canTakeBack: false)/'
+mutate "a deposit waiting a month is never offered back" "$PM" 's/canTakeBack: now\.timeIntervalSince\(note\.at\) > takeBackAfter/canTakeBack: false/'
+mutate "an approved deposit still needs you" "$PM" 's/case \.approved: return nil/case .approved: return Ask(note: note, kind: .waiting, canTakeBack: false)/'
+mutate "poi_required waits in Needs you" "$PM" 's/case \.rejected, \.needsProof:\n                return Ask\(note: note, kind: \.refused/case .rejected, .needsProof:\n                return Ask(note: note, kind: .waiting/'
+mutate "an older wait says only its time" "$PM" 's/let shown = calendar\.isDate\(at, inSameDayAs: now\)/let shown = true/'
+mutate "poi_required is never asked again" "$PM" 's/status == \.waiting \|\| status == \.needsProof/status == .waiting/'
 mutate "a waiting note is spendable" "$PM" 's/notes\.filter \{ \$0\.status == \.approved && \$0\.chainId == chainId/notes.filter { $0.chainId == chainId/'
 mutate "the relayer's share rounds down" "$PM" 's/NSDecimalRound\(&up, &share, 0, \.up\)/NSDecimalRound(\&up, \&share, 0, .down)/'
 mutate "a waiting deposit counts in the total" "$PM" 's/guard note\.status == \.approved, !testnets/guard !testnets/'
@@ -261,4 +328,4 @@ mutate "parity 0 is a zero byte" "$TX" 's/\.bytes\(yParity == 0 \? \[\] : \[1\]\
 mutate "r keeps its leading zero" "$TX" 's/\.bytes\(TestnetTx\.stripped\(r\)\)/.bytes(r)/'
 mutate "every request goes to the logs node" "$WIRE" 's/rpcMethods\(body\)\.contains\("eth_getLogs"\)/!rpcMethods(body).isEmpty/'
 mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current head", options: \.caseInsensitive\) != nil/body.isEmpty/'
-echo "  ok   16 mutations"
+echo "  ok   22 mutations"

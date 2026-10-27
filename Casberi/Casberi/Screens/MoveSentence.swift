@@ -414,7 +414,8 @@ struct MoveSentence: View {
     /// in it is the dollar.
     private var roundUpPlan: RoundUps.Plan? {
         let setting = RoundUps.setting
-        guard verb == .send, setting.on, !network.isTest else { return nil }
+        // Moving privately, a network with no pool sets nothing aside (prd §1560).
+        guard verb == .send, RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }
         let dollar = Op.dollar(on: network)
         let sent = all.compactMap { item -> String? in
             if case .send(let p) = item, p.token == dollar { return p.amount }

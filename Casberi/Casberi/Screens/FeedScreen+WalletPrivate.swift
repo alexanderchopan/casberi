@@ -142,3 +142,106 @@ extension FeedScreen {
         .walletListRow()
     }
 }
+
+/// **WAITING FOR APPROVAL, IN NEEDS YOU (prd §1560).** One row per deposit
+/// 0xBow's ASP has not approved, as the board drew it: the amber clock,
+/// "0.0001 ETH waiting for approval", "Since 2:14 PM"; it leaves when
+/// approved. Refused (or `poi_required`), the row turns red — "0.0001 ETH not
+/// approved" — and its line is the act, "Take it back": the ragequit, a public
+/// exit to the address the deposit came from (`PrivateTakeBack`), proved,
+/// run against the chain, then signed. A deposit that has waited past a week
+/// offers it too, after its date. The verb is a word, never a pill; nothing
+/// explains it but the dialog that names where the money goes.
+struct WalletPrivateAsks: View {
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.modelContext) private var context
+    @Environment(\.openURL) private var openURL
+    @State private var confirming: PrivateMoney.Ask?
+
+    private var store: PrivateMoneyStore { .shared }
+    private var taking: PrivateTakeBack { .shared }
+
+    var body: some View {
+        let asks = store.asks()
+        if !asks.isEmpty {
+            Section {
+                ForEach(asks) { ask in row(ask) }
+            }
+            .task(id: asks.map(\.id)) {
+                // The ASP is asked again while a row stands (spaced 20 s).
+                while PrivateMoney.anyWaiting(store.notes), !Task.isCancelled {
+                    await store.refresh()
+                    try? await Task.sleep(for: .seconds(20))
+                }
+            }
+            .confirmationDialog(confirming.map { Text("Take back \($0.figure)?") } ?? Text(verbatim: ""),
+                                isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+                                titleVisibility: .visible, presenting: confirming) { ask in
+                Button(String(localized: "Take it back")) { takeBack(ask) }
+                Button(String(localized: "Cancel"), role: .cancel) {}
+            } message: { _ in
+                Text("It goes back to \(Self.owner) on Sepolia, in public.")
+            }
+        }
+    }
+
+    /// Where a ragequit pays: the account's owner, by its tail.
+    private static var owner: String {
+        #if DEBUG
+        PrivacyTestnetSender.address.map(YourAccount.short) ?? String(localized: "the address it came from")
+        #else
+        String(localized: "the address it came from")
+        #endif
+    }
+
+    private func row(_ ask: PrivateMoney.Ask) -> some View {
+        let stage = taking.stage(ask.note)
+        let working = stage.map { if case .failed = $0 { false } else { true } } ?? false
+        return DSPushRow(title: Text(verbatim: ask.title), subtitle: line(ask, stage: stage),
+                         subtitleTone: DS.textSecondary, busy: working, opens: false) {
+            guard !working else { return }
+            if ask.canTakeBack {
+                confirming = ask
+            } else if !ask.note.tx.isEmpty, let link = URL(string: "https://sepolia.etherscan.io/tx/" + ask.note.tx) {
+                openURL(link)
+            }
+        } leading: {
+            ZStack {
+                Color.clear.frame(width: DS.Face.row, height: DS.Face.row)
+                Image(systemName: ask.kind == .refused ? "xmark.circle" : "clock")
+                    .dsGlyph(.body, weight: .semibold)
+                    .foregroundStyle(ask.kind == .refused ? DS.destructive : DS.attention)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityHint(ask.canTakeBack ? Text("Returns it to the address it came from") : Text(verbatim: ""))
+        .walletListRow()
+    }
+
+    /// The line: where the take-back stands, else the date it has waited
+    /// since and, where it is offered, the act.
+    private func line(_ ask: PrivateMoney.Ask, stage: PrivateTakeBack.Stage?) -> Text {
+        if let stage {
+            if case .failed = stage {
+                return Text(verbatim: PrivateTakeBack.words(stage)).foregroundStyle(DS.attentionInk)
+            }
+            return Text(verbatim: PrivateTakeBack.words(stage))
+        }
+        let act = Text("Take it back").foregroundStyle(ask.kind == .refused ? DS.destructiveInk : DS.pickInk)
+        switch (ask.kind, ask.canTakeBack) {
+        case (.refused, _): return act
+        case (.waiting, true): return Text(verbatim: PrivateMoney.since(ask.note.at, now: .now) + " · ") + act
+        case (.waiting, false): return Text(verbatim: PrivateMoney.since(ask.note.at, now: .now))
+        }
+    }
+
+    private func takeBack(_ ask: PrivateMoney.Ask) {
+        Task {
+            guard let hash = await taking.run(ask.note, context: context) else { return }
+            DSHaptic.success()
+            chrome.flash(PrivateMoney.takenBackTitle(figure: ask.figure, to: Self.owner), tone: .success)
+            chrome.refreshRooms()
+            NSLog("privateTakeBack| row | %@", hash)
+        }
+    }
+}
