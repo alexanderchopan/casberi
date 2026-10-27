@@ -319,7 +319,7 @@ struct MoneyReceipt: Equatable {
     /// missing from here keeps exactly the sheet it has today rather than
     /// getting a half-composed hero.
     static let sources: Set<String> = [
-        "Wallet", "Apple Wallet", "ether.fi", "Privacy",
+        "Wallet", "Apple Wallet", "ether.fi", "Privacy.com",
         "Peer", "Privacy Pools", "Railgun", "Safe", "Wise",
         // EVERY MONEY ROW IN THE WALLET OPENS THE RECEIPT (prd §1341, user,
         // of a Lightning payment and an Acorns account in Home's
@@ -387,7 +387,7 @@ struct MoneyReceipt: Equatable {
         switch f.source {
         case "Apple Wallet" where f.tags.contains("Price rise"): return priceRise(f)
         case "Apple Wallet":                 return card(f, hue: .neutral)
-        case "ether.fi", "Privacy", "MetaMask Card", "Plasma One":
+        case "ether.fi", "Privacy.com", "MetaMask Card", "Plasma One":
             return card(f, hue: .card)
         case "Peer":                         return peer(f)
         case "Privacy Pools":                return pools(f)

@@ -10,9 +10,11 @@
 // verifies against the phone's key before it is used.
 //
 // TESTNET ONLY: the phone refuses any chain but an Aztec testnet. This reaches
-// Aztec's v5 testnet (aztec.js 5.2.0; v6's client is not published yet).
+// Aztec's v6 testnet (node 6.0.0, rollup 679261766 on Sepolia) through the
+// `@aztec-labs/*` 6.0.0 packages (the `@aztec/*` scope stops at 5.2.1).
 //
 //   node signer.mjs account <phone public key hex>   make + deploy the account
+//   node signer.mjs once                             one signed tx: deploy a token
 //   node signer.mjs demo                             a token: deploy, mint, shield
 //   node signer.mjs status                           the account and its balances
 //
@@ -28,22 +30,26 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import QRCode from 'qrcode';
 
-import { NO_FROM } from '@aztec/aztec.js/account';
-import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee/testing';
-import { Fr } from '@aztec/aztec.js/fields';
-import { AccountManager } from '@aztec/aztec.js/wallet';
-import { EcdsaRSSHAccountContract } from '@aztec/accounts/ecdsa';
-import { EncodedAppEntrypointCalls } from '@aztec/entrypoints/encoding';
-import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
-import { TokenContract } from '@aztec/noir-contracts.js/Token';
-import { FunctionSelector, decodeFunctionSignature } from '@aztec/stdlib/abi';
-import { AuthWitness } from '@aztec/stdlib/auth-witness';
-import { AztecAddress } from '@aztec/stdlib/aztec-address';
-import { getContractInstanceFromInstantiationParams } from '@aztec/stdlib/contract';
-import { NodeEmbeddedWallet } from '@aztec/wallets/embedded';
+import { NO_FROM } from '@aztec-labs/aztec.js/account';
+import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee/testing';
+import { Fr } from '@aztec-labs/aztec.js/fields';
+import { AccountManager } from '@aztec-labs/aztec.js/wallet';
+import { EcdsaRSSHAccountContract } from '@aztec-labs/accounts/ecdsa';
+import { EncodedAppEntrypointCalls } from '@aztec-labs/entrypoints/encoding';
+import { SponsoredFPCContract } from '@aztec-labs/noir-contracts.js/SponsoredFPC';
+import { TokenContract } from '@aztec-labs/noir-contracts.js/Token';
+import { FunctionSelector, decodeFunctionSignature } from '@aztec-labs/stdlib/abi';
+import { AuthWitness } from '@aztec-labs/stdlib/auth-witness';
+import { AztecAddress } from '@aztec-labs/stdlib/aztec-address';
+import { getContractInstanceFromInstantiationParams } from '@aztec-labs/stdlib/contract';
+import { NodeEmbeddedWallet } from '@aztec-labs/wallets/embedded';
 
-const NODE_URL = process.env.AZTEC_NODE_URL ?? 'https://v5.testnet.rpc.aztec-labs.com';
-const HOME = join(homedir(), '.casberi-aztec-signer');
+const NODE_URL = process.env.AZTEC_NODE_URL ?? 'https://aztec-testnet.drpc.org';
+// The public endpoint refuses JSON-RPC batches of more than three.
+const NODE_OPTS = { maxBatchSize: Number(process.env.AZTEC_MAX_BATCH ?? 3) };
+// One directory per testnet: a v5 PXE cannot open on v6, and the stock
+// account's address moved with its artifact.
+const HOME = process.env.AZTEC_SIGNER_HOME ?? join(homedir(), '.casberi-aztec-signer', 'v6');
 const STATE = join(HOME, 'state.json');
 const args = process.argv.slice(2);
 const sim = args.includes('--sim') ? args[args.indexOf('--sim') + 1] : null;
@@ -75,6 +81,9 @@ function simClipboard() { try { return execFileSync('xcrun', ['simctl', 'pbpaste
 async function askPhone(request, publicKeyHex) {
   const json = Buffer.from(JSON.stringify(request)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const link = `casberi://aztec/sign#${json}`;
+  // The last request, kept beside the state: what the phone was shown.
+  mkdirSync(HOME, { recursive: true, mode: 0o700 });
+  writeFileSync(join(HOME, 'last-request.json'), JSON.stringify(request, null, 1));
   const before = sim ? simClipboard() : clipboard();
   if (sim) {
     // A relaunch through the app's `-deeplink` hook (DEBUG builds): `simctl
@@ -151,7 +160,7 @@ class PhoneAccountContract extends EcdsaRSSHAccountContract {
 }
 
 async function open(state) {
-  const wallet = await NodeEmbeddedWallet.create(NODE_URL, { pxe: { proverEnabled: true, dataDirectory: join(HOME, 'pxe') } });
+  const wallet = await NodeEmbeddedWallet.create(NODE_URL, { nodeClientOptions: NODE_OPTS, pxe: { proverEnabled: true, dataDirectory: join(HOME, 'pxe') } });
   const contract = new PhoneAccountContract(state.publicKey);
   const manager = await AccountManager.create(wallet, Fr.fromString(state.secret), contract, { salt: Fr.fromString(state.salt) });
   const address = manager.getInstance().address;
@@ -186,12 +195,14 @@ try {
     } else say('already deployed');
     state.address = address.toString(); saveState(state);
     await wallet.stop();
-  } else if (command === 'demo') {
+  } else if (command === 'demo' || command === 'once') {
     const state = loadState(); if (!state?.address) throw new Error('run `account` first');
     const { wallet, address, fee } = await open(state);
     say('tx 1: deploy a token from the account');
     const { contract: token, receipt: r1 } = await TokenContract.deploy(wallet, address, 'Casberi', 'CSB', 18).send({ from: address, fee });
-    say('token', token.address.toString(), 'block', r1.blockNumber);
+    say('token', token.address.toString(), 'block', r1.blockNumber, 'tx', r1.txHash.toString());
+    state.token = token.address.toString(); saveState(state);
+    if (command === 'once') { await wallet.stop(); process.exit(0); }
     say('tx 2: mint 100 publicly');
     const { receipt: r2 } = await token.methods.mint_to_public(address, 100n).send({ from: address, fee });
     say('block', r2.blockNumber);

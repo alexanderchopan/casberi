@@ -370,7 +370,7 @@ enum BridgeCatalog {
         // Honesty note (2026-07-22): Privacy's key is NOT scoped read-only, so
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
-        Offer(name: "Privacy",     tagline: "",         group: "Wallet",  connectable: true,
+        Offer(name: "Privacy.com", tagline: "",         group: "Wallet",  connectable: true,
               needsSetup: true, added: day(2026, 7, 22)),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               needsSetup: true),

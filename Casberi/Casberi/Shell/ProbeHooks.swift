@@ -4159,8 +4159,10 @@ enum ProbeHooks {
         // — the Privacy Pools engine on Sepolia (prd §1540), headless; logs
         // `privacyEngine|` lines (`Shell/PrivacyEngineProbe.swift`).
         Hook(key: "privacyEngineProbe") { raw, _ in PrivacyEngineProbe.run(raw) },
-        // `-privateMoneySample YES|clear` — two sample private notes (one
-        // approved, one waiting) for Holdings' Private rows, no funds needed;
+        // `-privateMoneySample YES|mainnet|none|clear` — sample private notes
+        // (approved, waiting; `mainnet`: ppETH and ppUSDC on Ethereum, worth
+        // and rate read live, prd §1563) beside the phone's own, no funds
+        // needed; `none` takes them away, `clear` takes EVERY note;
         // `-privacySenderForget YES` drops the DEBUG Sepolia sender's key
         // (prd §1554). Logs `privateMoney|`.
         Hook(key: "privateMoneySample") { raw, _ in PrivateMoneyStore.shared.sample(raw) },

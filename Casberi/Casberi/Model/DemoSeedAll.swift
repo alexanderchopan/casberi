@@ -3864,7 +3864,7 @@ enum DemoSeedAll {
         ]
         out += card.enumerated().map { i, c in
             row(.transaction, "\(c.0) · $\(String(format: "%.2f", c.1))",
-                source: "Privacy", ref: "privacy:txn:demo\(i)",
+                source: "Privacy.com", ref: "privacy:txn:demo\(i)",
                 days: c.2, hour: 8, content: "https://privacy.com/account",
                 // `Settled` vs `Pending` is the §317 distinction this pass gave
                 // Privacy — the newest charge is deliberately unsettled, since
@@ -5709,7 +5709,7 @@ enum DemoSeedAll {
         ("Binance", "Read-only key", "Reads your balances, never trades."),
         ("Gemini Exchange", "Read-only key", "Reads your balances, never trades."),
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
-        ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
+        ("Privacy.com", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
         // Wise (prd §778, 2026-09-16). The proof line counts the balances,
         // which is what `WiseWatch.registerBridge` really composes — never

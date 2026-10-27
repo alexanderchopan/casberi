@@ -55,8 +55,15 @@ enum PrivacyArtifacts {
     static let gateways = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/"]
 
     /// The pins for a chain, or nil: a network with no pins runs no proof.
+    /// Sepolia's verifiers hold 1.0.0's dev keys; Ethereum's the ceremony
+    /// keys (prd §1563): a proof made with the other set reverts there
+    /// (`mainnet-sim.mjs --mutate devkeys`).
     static func pins(chainId: Int) -> [String: Circuit]? {
-        chainId == PrivacyNetwork.sepolia.chainId ? sepoliaPins : nil
+        switch chainId {
+        case PrivacyNetwork.sepolia.chainId: sepoliaPins
+        case PrivacyNetwork.ethereum.chainId: ceremonyPins
+        default: nil
+        }
     }
 
     /// `artifact/<circuit>/<kind>`, the path the engine asks for; anything

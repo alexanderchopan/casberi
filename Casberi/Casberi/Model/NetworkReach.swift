@@ -453,15 +453,17 @@ enum NetworkReach {
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
         // The Privacy Pools engine (prd §1540): 0xBow's SDK in a hidden web
-        // view, Sepolia only for now. The page can reach no host itself (its
+        // view, on Ethereum (§1563) and Sepolia. The page can reach no host itself (its
         // Content-Security-Policy); every request it makes is handed to
         // `PrivacyEngine`, which sends it only to a host listed HERE
         // (`PrivacyEngineWire.allows`), through the funnel. The Sepolia node
         // is the Aztec entry's too, which already routes it through Tor.
         Endpoint(service: "Privacy Pools engine",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
-                 purpose: "Reads Privacy Pools v2 on the Sepolia testnet for your private balance: the pool's notes and keystore from public Sepolia nodes (old logs from Tenderly's, the one that keeps them all), which deposits 0xBow has approved from its test review service, and its relayer's fees; and sends what you move to private there. Carries your account's address and your notes' public commitments, never a key or a note's secret.",
-                 hosts: ["ethereum-sepolia-rpc.publicnode.com", "api-dev.0xbow.io",
+                 purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",
+                 hosts: ["rpc.mevblocker.io", "api-v2.0xbow.io",
+                         "relayer-v2-prod-149184580131.us-east1.run.app",
+                         "ethereum-sepolia-rpc.publicnode.com", "api-dev.0xbow.io",
                          "relayer-v2-staging-149184580131.us-east1.run.app",
                          "sepolia.gateway.tenderly.co"],
                  throughTor: true,
@@ -977,7 +979,7 @@ enum NetworkReach {
                  purpose: "Reads your Bitrefill orders and balance with an API key you provide.",
                  hosts: ["api-bitrefill.com", "www.bitrefill.com"]),
         Endpoint(service: "Privacy.com",
-                 reach: .whenConnected(bridge: "Privacy"),
+                 reach: .whenConnected(bridge: "Privacy.com"),
                  purpose: "Reads your approved card purchases with an API key you provide. Read-only by conduct — it only ever reads.",
                  hosts: ["api.privacy.com"]),
 
