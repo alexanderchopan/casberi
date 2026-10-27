@@ -792,7 +792,7 @@ struct MoveSecurity: View {
                 } label: {
                     Text(verbatim: limitWord)
                         .dsText(.body17)
-                        .foregroundStyle(DS.pickInk)
+                        .foregroundStyle(notYet.isEmpty || limitEditing ? DS.pickInk : DS.attentionInk)
                         .contentTransition(.opacity)
                         .lineLimit(1)
                         .frame(minHeight: 44)
@@ -811,7 +811,11 @@ struct MoveSecurity: View {
         // A limit is whole dollars (`amountDollars`), so it says no cents.
         let usd = Op.dollars(standing.dollarCap, decimals: 6, price: 1)
         let amount = usd == usd.rounded() ? "$\(Int(usd))" : dollars(standing.dollarCap)
-        return String(localized: "\(amount) a \(period(of: standing).word)")
+        let word = String(localized: "\(amount) a \(period(of: standing).word)")
+        // **A NETWORK WITHOUT IT IS SAID ON THE ROW (user, 2026-10-27: Base
+        // read one key under "$100 a month", its Finish only in the menu).**
+        guard !notYet.isEmpty else { return word }
+        return word + " · " + String(localized: "not on \(notYet.map(\.network.name).formatted(.list(type: .and)))")
     }
 
     /// On, or a new amount: the sentence opens with the amount focused.
