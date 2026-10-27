@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1707 of 1776 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1708 of 1777 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1838,14 +1838,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1452 — Round-ups: each dollar send rounds up, the change buys a token you pick (amended by §1465)
 - §1453 — Receive from another network: Relay's deposit address for the route (amended by §1484, §1486)
 - §1454 — Robinhood Chain comes back to the account with every feature
-- §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458)
-- §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458)
+- §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458, §1570)
+- §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458, §1570)
 - §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501, §1516)
 - §1458 — The spend limit fits the bundler: a change in two operations, a renewal that leaves ended periods be, Finish that kee…
 - §1459 — Two lines cut from creating your account (amended by §1500, §1501)
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
-- §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480)
+- §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480, §1570)
 - §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
@@ -1879,7 +1879,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546)
-- §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499)
+- §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
@@ -1953,6 +1953,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
+- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the…
 
 ## Dead rulings → what replaced them (generated)
 

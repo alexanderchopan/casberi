@@ -50,13 +50,11 @@ struct MoveSecurity: View {
     @State private var addingOutside = false
     @State private var outsideText = ""
     @FocusState private var outsideFocused: Bool
-    /// The spend limit being set (prd §1447): the switch is on here before
-    /// the chain says so, while the amount is typed.
-    /// The spend limit's amount being set.
-    @State private var limitEditing = false
-    @State private var amountText = ""
-    @State private var period: LimitPeriod = .month
-    @FocusState private var amountFocused: Bool
+    /// The co-signer switch's tray: true turning it on, false off; nil shut.
+    @State private var coSignerTray: Bool?
+    /// Each network's step while the switch walks them.
+    @State private var coSignerSteps: [Int: CoSignerStep] = [:]
+    @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
@@ -84,6 +82,9 @@ struct MoveSecurity: View {
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
             row(title: String(localized: "Recovery key"), value: recoveryValue.text, tone: recoveryValue.tone,
                 verb: recoveryVerb.map { ($0, setUp) })
+            if coSignerSwitchable {
+                coSignerSwitchRow
+            } else {
             row(title: String(localized: "Co-signer"), value: outsideValue.text, tone: outsideValue.tone,
                 verb: addingOutside ? nil : outsideVerb.map { word in
                     // Add opens the field; Finish puts the key already on one
@@ -92,6 +93,7 @@ struct MoveSecurity: View {
                         withAnimation(DS.Motion.standard) { addingOutside = true }
                     } else { addOutside() } })
                 })
+            }
             if addingOutside { outsideField }
             row(title: String(localized: "Networks"), value: networksValue,
                 tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
@@ -113,7 +115,6 @@ struct MoveSecurity: View {
             SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
                 .padding(.top, DS.Space.s3)
             VStack(alignment: .leading, spacing: 0) {
-                spendLimit
                 roundUpsRow
             }
             .padding(.leading, Self.rowIndent)
@@ -129,6 +130,11 @@ struct MoveSecurity: View {
                     .padding(.vertical, DS.Space.s2)
             }
         }
+        // The co-signer switch's tray (prd §1570); a walk continues if it is
+        // pulled down, and the row says so.
+        .sheet(isPresented: Binding(get: { coSignerTray != nil }, set: { shown in
+            if !shown { coSignerTray = nil; if !coSignerWalking { coSignerSteps = [:] } }
+        })) { coSignerTraySheet }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
@@ -676,12 +682,10 @@ struct MoveSecurity: View {
         }
         #if DEBUG
         NSLog("spendLimit| %@", standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\(plan(of: $0) == nil ? "off" : "on")" }.joined(separator: ","))
-        // `-spendLimitOpen YES`: the sentence open, as the switch turned on
-        // opens it, because a simulator does not flip a switch;
-        // `-spendLimitAmount <dollars>` fills its amount (it types nothing).
-        if UserDefaults.standard.bool(forKey: "spendLimitOpen"), !limitEditing {
-            withAnimation(DS.Motion.standard) { limitEditing = true }
-            if let amount = UserDefaults.standard.string(forKey: "spendLimitAmount") { amountText = amount }
+        // `-coSignerTray on|off`: the switch's tray raised, because a
+        // simulator does not flip a switch.
+        if let tray = UserDefaults.standard.string(forKey: "coSignerTray"), coSignerTray == nil, coSignerSwitchable {
+            coSignerTray = tray == "on"
         }
         #endif
         return nets.filter { failed.contains($0.chainId) }
@@ -729,213 +733,180 @@ struct MoveSecurity: View {
         return nil
     }
 
-    private var limited: [Standing] { limitNetworks.filter { plan(of: $0) != nil } }
-    /// Where it is not yet, though a Signer stands there to turn it on.
-    /// Only a network read as off: one whose limit could not be read is
-    /// neither on nor off.
-    private var notYet: [Standing] { limitNetworks.filter { $0.limit == .off && !$0.outside.isEmpty } }
-    private var shown: YourAccount7579.Plan? { limited.compactMap { plan(of: $0)?.plan }.first }
-    private var signerShort: String {
-        limitNetworks.flatMap(\.outside).first.map(YourAccount.short) ?? String(localized: "your co-signer")
+    /// The networks the co-signer can be required on: the account there,
+    /// this phone signing for it, and a co-signer standing.
+    private var coSignerNetworks: [Standing] { limitNetworks.filter { !$0.outside.isEmpty } }
+
+    /// Every network read, a co-signer on each: the switch stands.
+    private var coSignerSwitchable: Bool {
+        unsettled == nil && outsideOwner != nil && outsideTargets.isEmpty && !coSignerNetworks.isEmpty
     }
 
-    /// **ONE SWITCH FOR EVERY NETWORK (prd §1455, user: "we want one switch
-    /// for all networks").** One amount and one period, set on each network
-    /// the account is on — each its own transaction, because each network
-    /// keeps its own copy of the account — with what it comes to in all said
-    /// beside it.
-    @ViewBuilder private var spendLimit: some View {
-        if !unread.isEmpty, let unsettled {
-            // Neither on nor off until every network answered (§1549).
-            row(title: String(localized: "Spend limit"), value: unsettled, verb: nil)
-        } else if limitNetworks.isEmpty, let limit = setup?.limit, !unopened.isEmpty {
-            // Chosen at Create, landing with the first send (prd §1457).
-            row(title: String(localized: "Spend limit"),
-                value: String(localized: "\(MoveSentence.money(Double(limit.dollars))) a \(LimitPeriod.of(seconds: limit.minutes * 60).word)"),
-                verb: nil)
-        } else if !limitNetworks.isEmpty {
-            limitRow
-            if limitEditing { limitSentence }
-        }
-    }
+    /// Required where both keys sign everything: two keys, no allowance left.
+    private func required(_ s: Standing) -> Bool { s.threshold == 2 && plan(of: s) == nil }
 
-    /// The row's one word: the amount and period in the pick's ink, opening
-    /// the menu (Change, Finish where it is not yet, Turn off); Off opens the
-    /// amount; "Add a co-signer first" grey, because over the limit a send
-    /// waits on that key (prd §1455).
-    private var limitRow: some View {
+    private var coSignerRequired: Bool { coSignerNetworks.allSatisfy(required) }
+    private var notRequired: [Standing] { coSignerNetworks.filter { !required($0) } }
+
+    enum CoSignerStep: Equatable { case next, waiting(String), done, failed(String) }
+
+    /// **ONE ROW: WHO, AND WHETHER IT IS REQUIRED (user, 2026-10-27: "we
+    /// should just turn cosigner on or off"; the spend limit's allowance is
+    /// retired).** The address, then the switch; on, one line says what it
+    /// means; partly on, the networks it is not on, in amber. Flipping it
+    /// opens the tray that walks the networks.
+    @ViewBuilder private var coSignerSwitchRow: some View {
+        let who = YourAccount.short(outsideOwner ?? "")
+        let partly = !coSignerRequired && notRequired.count < coSignerNetworks.count
         HStack(spacing: DS.Space.s3) {
-            Text("Spend limit").dsText(.body17).foregroundStyle(DS.textPrimary)
+            Text("Co-signer").dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
-            if working?.row == "limit" {
-                Text(verbatim: working!.label).dsText(.body17).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1).frame(minHeight: 44)
-            } else if limited.isEmpty, limitNetworks.contains(where: { $0.threshold == 2 && $0.limit == nil }) {
-                // Both keys stand there and the limit did not read: neither
-                // off nor a co-signer missing.
-                Text("Couldn't read").dsText(.body17).foregroundStyle(DS.attentionInk)
-                    .lineLimit(1).frame(minHeight: 44)
-            } else if (limited.isEmpty && notYet.isEmpty) {
-                Text("Add a co-signer first").dsText(.body17).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1).frame(minHeight: 44)
-            } else {
-                Menu {
-                    if limited.isEmpty {
-                        Button { openLimit() } label: { Label(String(localized: "Set a limit"), systemImage: "plus") }
-                    } else {
-                        Button { openLimit() } label: { Label(String(localized: "Change"), systemImage: "pencil") }
-                        if !notYet.isEmpty {
-                            Button { finishLimit() } label: {
-                                Label(String(localized: "Finish on \(notYet.map(\.network.name).formatted(.list(type: .and)))"),
-                                      systemImage: "checkmark")
-                            }
-                        }
-                        Button(role: .destructive) { turnOffLimit() } label: {
-                            Label(String(localized: "Turn off"), systemImage: "xmark")
-                        }
-                    }
-                } label: {
-                    Text(verbatim: limitWord)
-                        .dsText(.body17)
-                        .foregroundStyle(notYet.isEmpty || limitEditing ? DS.pickInk : DS.attentionInk)
-                        .contentTransition(.opacity)
-                        .lineLimit(1)
-                        .frame(minHeight: 44)
-                }
-                .layoutPriority(1)
-                .accessibilityLabel(Text("Spend limit, \(limitWord)"))
-            }
+            Text(verbatim: partly ? String(localized: "Not on \(names(notRequired))") : who)
+                .dsText(.body17).foregroundStyle(partly ? DS.attentionInk : DS.textSecondary)
+                .lineLimit(1)
+            Toggle(isOn: Binding(get: { coSignerRequired }, set: { on in
+                coSignerSteps = [:]
+                coSignerTray = on
+            })) { Text("Co-signer required") }
+            .labelsHidden()
+            .tint(DS.pickInk)
+            .disabled(coSignerWalking || working != nil)
         }
         .walletRowPitch()
-    }
-
-    /// "$100 a month", or Off; "Set below" while the amount is being typed.
-    private var limitWord: String {
-        if limitEditing { return String(localized: "Set below") }
-        // A limit that could not be read is not off (user, 2026-10-27: "it
-        // says 'off'" while Ethereum and Robinhood still needed both keys).
-        guard let standing = shown else {
-            return limitNetworks.contains { $0.threshold == 2 && $0.limit == nil } ? String(localized: "Couldn't read") : String(localized: "Off")
-        }
-        // A limit is whole dollars (`amountDollars`), so it says no cents.
-        let usd = Op.dollars(standing.dollarCap, decimals: 6, price: 1)
-        let amount = usd == usd.rounded() ? "$\(Int(usd))" : dollars(standing.dollarCap)
-        let word = String(localized: "\(amount) a \(period(of: standing).word)")
-        // **A NETWORK WITHOUT IT IS SAID ON THE ROW (user, 2026-10-27: Base
-        // read one key under "$100 a month", its Finish only in the menu).**
-        guard !notYet.isEmpty else { return word }
-        return word + " · " + String(localized: "not on \(notYet.map(\.network.name).formatted(.list(type: .and)))")
-    }
-
-    /// On, or a new amount: the sentence opens with the amount focused.
-    private func openLimit() {
-        guard !limitEditing else { return }
-        withAnimation(DS.Motion.standard) { limitEditing = true; amountText = ""; period = .month }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(250))
-            amountFocused = true
-        }
-    }
-
-    private func period(of plan: YourAccount7579.Plan) -> LimitPeriod {
-        LimitPeriod.of(seconds: plan.windows.first.map { $0.until - $0.from } ?? 0)
-    }
-
-    private func dollars(_ units: String) -> String {
-        MoveSentence.money(Op.dollars(units, decimals: 6, price: 1))
-    }
-
-    /// Whole dollars, one or more.
-    private var amountDollars: Int? {
-        let text = amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "$", with: "")
-        guard let n = Int(text), n >= 1, n <= 1_000_000 else { return nil }
-        return n
-    }
-
-    /// The amount, as Move says things (§1438): the glue in the gutter, the
-    /// value large, pink while it can be changed. This card's two sentences
-    /// (the limit and Round-ups) share ONE gutter, so their values stand in
-    /// one column; "of each coin" is a line of the sentence as the keys
-    /// walk says it, not glue.
-    private var limitSentence: some View {
-        let gutter = Self.sentenceGutter
-        return VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("up to").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text(verbatim: "$").dsText(.heading28).foregroundStyle(DS.pickInk)
-                    TextField("500", text: $amountText)
-                        .keyboardType(.numberPad)
-                        .focused($amountFocused)
-                        .dsText(.heading28)
-                        .foregroundStyle(DS.pickInk)
-                        .tint(DS.pickInk)
-                        .fixedSize()
-                        .accessibilityLabel(Text("Dollars"))
-                }
-                Spacer(minLength: DS.Space.s2)
-                Button { setLimit() } label: {
-                    Text("Set")
-                        .dsText(.body17)
-                        .foregroundStyle(amountDollars == nil || working != nil ? DS.textTertiary : DS.pickInk)
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(RowPress())
-                .disabled(amountDollars == nil || working != nil)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(verbatim: " ").dsText(.body17).frame(width: gutter, alignment: .leading)
-                Text("of each coin").dsText(.heading28).foregroundStyle(DS.textPrimary)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("a").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)
-                Menu {
-                    ForEach(LimitPeriod.allCases, id: \.self) { p in
-                        Button { withAnimation(DS.Motion.standard) { period = p } } label: {
-                            if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
-                        }
-                    }
-                } label: {
-                    Text(verbatim: period.word).dsText(.heading28).foregroundStyle(DS.pickInk)
-                        .contentTransition(.opacity)
-                }
-                .accessibilityLabel(Text("How often it starts again"))
-            }
-            // What it waits on stands under the sentence, after what was
-            // asked (user: "that should be under the Month. so it's not
-            // jammed"), never beside the amount.
-            if working?.row == "limit" {
-                Text(verbatim: working!.label)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .padding(.leading, gutter + DS.Space.s2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity)
-            }
-            Text(limitFootnote)
+        if coSignerRequired {
+            Text("Every send and swap needs approval in \(who).")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .padding(.leading, gutter + DS.Space.s2)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, DS.Space.s2)
         }
-        .padding(.bottom, DS.Space.s3)
-        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
-    /// Where it applies, and what that comes to in all (user: "each token is
-    /// separate, this applies to eth and base, for a total of 1k").
-    private var limitFootnote: String {
-        // Short, as the user asked ("these helper texts could be clearer and
-        // more concise").
-        let targets = (limited + notYet).count
-        guard let n = amountDollars else {
-            return String(localized: "Over it, \(signerShort) signs too. ETH and dollars count apart on each network.")
-        }
-        let total = MoveSentence.money(Double(n * 2 * max(targets, 1)))
-        return String(localized: "Over it, \(signerShort) signs too. ETH and dollars count apart on each network: up to \(total) in all.")
+    /// The networks the switch changes: on, those not yet required; off,
+    /// those that require it.
+    private func coSignerTargets(on: Bool) -> [Standing] {
+        on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }
     }
 
-    /// The Signer every one of these networks shares, for one scan (prd
-    /// §1456): a network's first Signer may be on it alone (measured: the
-    /// test account's Base kept a second Signer Robinhood Chain never had).
+    /// How many of them ask the co-signer: off, each; on, only where an
+    /// allowance stands under both keys.
+    private func coSignerApprovals(on: Bool) -> Int {
+        coSignerTargets(on: on).filter { $0.threshold == 2 }.count
+    }
+
+    /// The switch's tray (user: "it isn't clear to user that they need to
+    /// wait for each network"): what it does, each network and its step, how
+    /// many approvals, then the verb.
+    @ViewBuilder private var coSignerTraySheet: some View {
+        let on = coSignerTray ?? true
+        let who = YourAccount.short(outsideOwner ?? "")
+        let targets = coSignerTargets(on: on)
+        let approvals = coSignerApprovals(on: on)
+        let finished = !coSignerSteps.isEmpty && !coSignerWalking
+        DSTray(title: on ? String(localized: "Require co-signer") : String(localized: "Stop requiring co-signer"), height: 520) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text(on ? String(localized: "Every send and swap will need approval in \(who), on each network.")
+                        : String(localized: "Face ID alone will send and swap again, on each network."))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(targets) { s in
+                        HStack {
+                            Text(verbatim: s.network.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: DS.Space.s2)
+                            let (word, ink) = coSignerStepWord(s, on: on)
+                            Text(verbatim: word).dsText(.body17).foregroundStyle(ink).lineLimit(1)
+                        }
+                        .frame(minHeight: 44)
+                    }
+                }
+                if approvals > 0, !finished {
+                    Text(approvals == 1 ? String(localized: "You'll approve once in \(who).")
+                                        : String(localized: "You'll approve \(approvals) times in \(who), once for each network."))
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                HStack {
+                    Spacer()
+                    Button {
+                        if finished { coSignerTray = nil; coSignerSteps = [:] } else { walkCoSigner(on: on) }
+                    } label: {
+                        Text(finished ? String(localized: "Done") : on ? String(localized: "Turn on") : String(localized: "Turn off"))
+                            .dsText(.heading28)
+                            .foregroundStyle(coSignerWalking ? DS.textTertiary : DS.pickInk)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(RowPress())
+                    .disabled(coSignerWalking)
+                }
+            }
+            .padding(.vertical, DS.Space.s4)
+        }
+    }
+
+    /// A network's word in the tray: where it stands before the walk, then its step.
+    private func coSignerStepWord(_ s: Standing, on: Bool) -> (String, Color) {
+        switch coSignerSteps[s.id] {
+        case .next: return (String(localized: "Next"), DS.textTertiary)
+        case .waiting(let word): return (word, DS.pickInk)
+        case .done: return (on ? String(localized: "Required") : String(localized: "Face ID alone"), DS.confirmInk)
+        case .failed(let why): return (why, DS.attentionInk)
+        case nil:
+            if s.threshold != 2 { return (String(localized: "Face ID alone"), DS.textSecondary) }
+            return plan(of: s) != nil ? (String(localized: "Allowance on"), DS.textSecondary)
+                : (String(localized: "Required"), DS.textSecondary)
+        }
+    }
+
+    /// One network at a time, each its own transaction, each step said in
+    /// the tray. On: this phone alone where one key signs, both where an
+    /// allowance is removed; off: both, every network.
+    private func walkCoSigner(on: Bool) {
+        if demoSays() { return }
+        guard !coSignerWalking else { return }
+        let targets = coSignerTargets(on: on)
+        guard !targets.isEmpty else { coSignerTray = nil; return }
+        coSignerWalking = true
+        coSignerSteps = Dictionary(uniqueKeysWithValues: targets.map { ($0.id, CoSignerStep.next) })
+        let cosigned = targets.filter { $0.threshold == 2 }
+        let batch = Self.sharedSigner(cosigned).map {
+            SignerRequestSheet.Batch(owner: $0, chainIds: cosigned.map(\.network.chainId))
+        }
+        Task {
+            defer { Task { await batch?.finish() } }
+            for s in targets {
+                let net = s.network
+                let co = s.threshold == 2 ? coSigner(s, batch) : nil
+                coSignerSteps[s.id] = .waiting(co.map { String(localized: "Approve in \(YourAccount.short($0.owner))") }
+                                               ?? String(localized: "Confirm with Face ID"))
+                do {
+                    let sent: Chain.Sent?
+                    if on {
+                        sent = try await Chain.requireCoSigner(on: net, coSigner: co,
+                                                               reason: String(localized: "Require your co-signer on \(net.name)")) { _ in }
+                    } else if let co {
+                        sent = try await Chain.turnOffLimit(on: net, coSigner: co,
+                                                            reason: String(localized: "Stop requiring your co-signer on \(net.name)")) { _ in }
+                    } else {
+                        coSignerSteps[s.id] = .failed(String(localized: "No co-signer here"))
+                        continue
+                    }
+                    if let sent, case .pending = sent.outcome {
+                        coSignerSteps[s.id] = .failed(String(localized: "Sent, not yet seen"))
+                    } else {
+                        coSignerSteps[s.id] = .done
+                    }
+                } catch let failure as Chain.Failure {
+                    coSignerSteps[s.id] = .failed(MoveRecovery.worded(failure.message, on: net))
+                } catch {
+                    coSignerSteps[s.id] = .failed(String(localized: "Not sent"))
+                }
+            }
+            coSignerWalking = false
+            await read()
+        }
+    }
+
     private static func sharedSigner(_ list: [Standing]) -> String? {
         list.first?.outside.first { owner in
             list.allSatisfy { $0.outside.contains { $0.caseInsensitiveCompare(owner) == .orderedSame } }
@@ -949,111 +920,6 @@ struct MoveSecurity: View {
             return batch.coSigner(chainId: s.network.chainId)
         }
         return s.outside.first.map { SignerRequestSheet.coSigner(owner: $0, chainId: s.network.chainId) }
-    }
-
-    /// One network at a time, each its own transaction: on, this phone alone
-    /// while one key still signs; a new amount where it stands, the Signer too.
-    private func applyLimit(_ targets: [Standing], dollars n: Int, minutes: Int) {
-        if demoSays() { return }
-        guard working == nil, !targets.isEmpty else { return }
-        amountFocused = false
-        working = ("limit", String(localized: "Setting…"))
-        let word = LimitPeriod.of(seconds: minutes * 60).word
-        // One scan for every network that needs the Signer (prd §1456).
-        let cosigned = targets.filter { $0.threshold == 2 }
-        let batch = Self.sharedSigner(cosigned).map {
-            SignerRequestSheet.Batch(owner: $0, chainIds: cosigned.map(\.network.chainId))
-        }
-        Task {
-            var done: [String] = []
-            var failed: [String] = []
-            defer { Task { await batch?.finish() } }
-            for s in targets {
-                let net = s.network
-                let reason = String(localized: "Spend limit of \(MoveSentence.money(Double(n))) a \(word) on \(net.name)")
-                do {
-                    let sent: Chain.Sent
-                    if plan(of: s) != nil, let co = coSigner(s, batch) {
-                        working = ("limit", String(localized: "Waiting on \(YourAccount.short(co.owner)) · \(net.name)"))
-                        sent = try await Chain.changeLimit(on: net, dollars: n, minutes: minutes,
-                                                           coSigner: co, reason: reason) { _ in }
-                    } else {
-                        working = ("limit", String(localized: "Setting on \(net.name)…"))
-                        sent = try await Chain.turnOnLimit(on: net, dollars: n, minutes: minutes, reason: reason,
-                                                           coSigner: s.threshold == 2 ? coSigner(s, batch) : nil) { _ in }
-                    }
-                    if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
-                    else { done.append(net.name) }
-                } catch let failure as Chain.Failure {
-                    #if DEBUG
-                    NSLog("spendLimit| %@ failed: %@", net.name, failure.message)
-                    #endif
-                    failed.append(MoveRecovery.worded(failure.message, on: net))
-                } catch {
-                    #if DEBUG
-                    NSLog("spendLimit| %@ not sent: %@", net.name, String(describing: error))
-                    #endif
-                    failed.append(String(localized: "\(net.name): not sent"))
-                }
-            }
-            working = nil
-            withAnimation(DS.Motion.standard) { limitEditing = false; amountText = "" }
-            await read()
-            if failed.isEmpty {
-                chrome.flash(String(localized: "Spend limit set on \(done.formatted(.list(type: .and)))"), tone: .success)
-            } else {
-                chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
-            }
-        }
-    }
-
-    private func setLimit() {
-        guard let n = amountDollars else { return }
-        applyLimit(limited + notYet, dollars: n, minutes: period.minutes)
-    }
-
-    /// The networks it is not on yet, at the amount and period it stands at.
-    private func finishLimit() {
-        guard let plan = shown, let n = Int(plan.dollarCap.dropLast(6)) else { return }
-        applyLimit(notYet, dollars: n, minutes: period(of: plan).minutes)
-    }
-
-    /// Off on every network: each its sessions removed and one key again —
-    /// the Signer signs each.
-    private func turnOffLimit() {
-        if demoSays() { return }
-        guard working == nil else { return }
-        let targets = limited
-        let batch = Self.sharedSigner(targets).map {
-            SignerRequestSheet.Batch(owner: $0, chainIds: targets.map(\.network.chainId))
-        }
-        Task {
-            var done: [String] = []
-            var failed: [String] = []
-            defer { Task { await batch?.finish() } }
-            for s in targets {
-                let net = s.network
-                guard let co = coSigner(s, batch) else { continue }
-                working = ("limit", String(localized: "Waiting on \(YourAccount.short(co.owner)) · \(net.name)"))
-                do {
-                    let sent = try await Chain.turnOffLimit(on: net, coSigner: co,
-                                                            reason: String(localized: "Turn off the spend limit on \(net.name)")) { _ in }
-                    if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
-                    else { done.append(net.name) }
-                } catch let failure as Chain.Failure {
-                    failed.append(MoveRecovery.worded(failure.message, on: net))
-                } catch {
-                    failed.append(String(localized: "\(net.name): not sent"))
-                }
-            }
-            working = nil
-            await read()
-            if failed.isEmpty {
-                chrome.flash(String(localized: "Spend limit off on \(done.formatted(.list(type: .and)))"), tone: .success)
-            } else {
-                chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
-            }
-        }
     }
 
     // MARK: - The outside key (prd §1432)

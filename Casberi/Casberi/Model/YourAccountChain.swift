@@ -727,6 +727,36 @@ enum YourAccountChain {
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
+    /// **CO-SIGNER REQUIRED (user, 2026-10-27: "we should just turn cosigner
+    /// on or off"; the spend limit's allowance retired).** Every send and swap
+    /// needs both keys on `net`: from one key this phone alone raises it; an
+    /// allowance still standing (§1455) has its sessions removed, which both
+    /// keys sign. Nil when nothing was to change.
+    static func requireCoSigner(on net: Network, coSigner: CoSigner?, reason: String,
+                                stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent? {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        let keys = try await threshold(net, account)
+        var calls = (try? await sessionIds(net, account))?.map(YourAccount7579.removeSessionCall) ?? []
+        if keys < 2 {
+            calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                            data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
+        }
+        guard !calls.isEmpty else { return nil }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device,
+                                        coSigner: keys < 2 ? nil : coSigner, reason: reason, stage: stage)
+        if case .landed = outcome { UserDefaults.standard.removeObject(forKey: planKey(net)) }
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
     /// Sends under the limit, on the session key alone (prd §1455): each
     /// the network's dollar or ETH, a round-up's buy with them, in one
     /// operation on the window that holds now. Over the limit, or anything

@@ -69174,3 +69174,13 @@ Mock: the design canvas "Private money with 0xBow".
 **When to look again.** Either of two changes: Kohaku ships a working v2 Privacy Pools plugin, or Helios verifies `eth_getLogs` and its adapter routes every request through the host's network.
 
 **Mac half (§1402).** None: nothing is drawn.
+
+## §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the surface (amends §1455, §1456, §1462, §1496) (user, 2026-10-27: "we should just turn cosigner on or off. this allowance stuff has too many edge cases"; "ok" to one row) — RULED, built in 878
+
+**Why.** Testing on mainnet, "$100 a month" turned out to mean six separate allowances (ETH and the network's dollar on three networks), sends only, and every other token and every swap needing the co-signer anyway. Every wording tried ("of each coin", "per token and per network", "anything else needs …") left the person more confused, because the feature was co-signer protection with a carve-out, not a cap. A switch says what it does.
+
+1. **One row, in Keys: "Co-signer · …2725 · [switch]".** On: "Every send and swap needs approval in …2725." Partly on: the networks it is not on, in amber. No co-signer yet: the row's Add, as before. Spending holds Round-ups only.
+2. **Flipping it opens a tray** (`DSTray`, "Require co-signer" / "Stop requiring co-signer") that says what it does, lists each network with its state, says how many approvals it takes ("You'll approve 3 times in …2725, once for each network"), and walks them one at a time: Next → "Approve in …2725" / "Confirm with Face ID" → Required / Face ID alone, or why it failed (user: "it isn't clear to user that they need to wait for each network").
+3. **On** is `requireCoSigner`: from one key, this phone alone raises the threshold to 2; an allowance still standing has its sessions removed, which both keys sign. **Off** is the old `turnOffLimit`: sessions removed and one key again, both keys signing.
+4. **Measured first:** Base read one key under "$100 a month" while Ethereum and Robinhood read two; the row never said so (its Finish sat in a menu). The tray names every network's state.
+5. **Not yet done:** Create's limit step (MoveKeysWalk `.limit`) still offers an amount, and the session-send path stays for accounts whose allowance has not been removed. Both are the next pass.

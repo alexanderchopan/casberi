@@ -370,7 +370,7 @@ grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletPa
 # over it would wait on nobody); the row is drawn in every build (no hidden
 # feature, §1435); the adapter's publish stays a throwaway's alone.
 grep -q 'Add a signer first: over the limit, a send waits on it' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ turning the limit on no longer refuses an account with no Signer (prd §1455)"; exit 1; }
-grep -q '^                spendLimit$' "$SEC" || { echo "✗ the Spend limit row is not drawn in every build (prd §1455, §1435)"; exit 1; }
+grep -q '^                coSignerSwitchRow$' "$SEC" || { echo "✗ the co-signer switch is not drawn in every build (prd §1570, §1435)"; exit 1; }
 grep -A9 'static func publishAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ publishing Safe's adapter runs outside the throwaway (prd §1447 item 18)"; exit 1; }
 grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casberi/Casberi/Screens/*.swift && { echo "✗ the dropped Allowance-module design is back (prd §1447 item 9, §1455)"; exit 1; }
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
@@ -471,10 +471,12 @@ for f in requireBoth; do
 done
 awk '/private static func throwaway/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -A1 '#else' | grep -q 'return false' || { echo "✗ a build outside DEBUG may install the adapter for real (prd §1447 item 13)"; exit 1; }
 grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\]' Casberi/Casberi/Model/YourAccount7579.swift || { echo "✗ initializeAccount is not the deployed v1 signature (prd §1447 item 11)"; exit 1; }
-# The Security row offers the switch only where a Signer stands (§1447 item 2).
-grep -q '(limited.isEmpty && notYet.isEmpty)' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer on any network (prd §1455)"; exit 1; }
-grep -q 'applyLimit(limited + notYet' "$SEC" || { echo "✗ the one Spend limit switch no longer sets every network the account is on (prd §1455, user: \"we want one switch for all networks\")"; exit 1; }
-grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'guard let co = coSigner(s, batch) else' "$SEC" && grep -q 'Self.sharedSigner(targets)' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
+# The co-signer switch (prd §1570, retiring §1455's allowance): offered only
+# where a co-signer stands on every network read; one switch walks every
+# network; off asks the co-signer on each, since at 2-of-2 it cannot be one key's.
+grep -q 'unsettled == nil && outsideOwner != nil && outsideTargets.isEmpty && !coSignerNetworks.isEmpty' "$SEC" || { echo "✗ the co-signer switch can be turned on with no co-signer on a network (prd §1570)"; exit 1; }
+grep -q 'on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }' "$SEC" || { echo "✗ the one co-signer switch no longer walks every network (prd §1570)"; exit 1; }
+grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.threshold == 2 ? coSigner(s, batch) : nil' "$SEC" && grep -q 'Self.sharedSigner(cosigned)' "$SEC" || { echo "✗ turning the co-signer off no longer asks the co-signer — at 2-of-2 it cannot be one key's (prd §1570, §83)"; exit 1; }
 
 # The keys chosen at Create (prd §1457): they ride only the operation that
 # opens a network, the limit only with a Signer, both keys switched on LAST
@@ -496,7 +498,7 @@ FIG=Casberi/Casberi/Screens/FeedScreen+WalletPages.swift
 grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1496)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
 # The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1496).
-grep -q 'return String(localized: "\\(amount) a \\(period(of: standing).word)")' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the Spend limit row's word is no longer the amount and its period (prd §1462, §1496)"; exit 1; }
+grep -q 'Every send and swap needs approval in' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the co-signer row no longer says what required means (prd §1570)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
 # The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink.
 grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: DS.pickInk' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1496)"; exit 1; }

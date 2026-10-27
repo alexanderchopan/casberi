@@ -48894,6 +48894,34 @@
         }
       }
     },
+    "Allowance on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Asignación activada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "許容額あり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "허용 한도 켜짐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "额度已开启"
+          }
+        }
+      }
+    },
     "Already claimed this hour — the faucet allows one per hour, for everyone on your network. Try again later." : {
       "localizations" : {
         "es" : {
@@ -52427,6 +52455,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "批准一次恢复"
+          }
+        }
+      }
+    },
+    "Approve in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprueba en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 中批准"
           }
         }
       }
@@ -64288,6 +64344,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 %@ 添加共同签名人"
+          }
+        }
+      }
+    },
+    "Co-signer required" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cofirmante obligatorio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が必須"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 필수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要共同签名者"
           }
         }
       }
@@ -80131,6 +80215,62 @@
         }
       }
     },
+    "Every send and swap needs approval in %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada envío e intercambio necesita aprobación en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての送金とスワップに%@での承認が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 송금과 스왑에 %@의 승인이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送和兑换都需要在 %@ 中批准。"
+          }
+        }
+      }
+    },
+    "Every send and swap will need approval in %@, on each network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada envío e intercambio necesitará aprobación en %@, en cada red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各ネットワークで、すべての送金とスワップに%@での承認が必要になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 네트워크에서 모든 송금과 스왑에 %@의 승인이 필요해집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在每个网络上，每次发送和兑换都需要在 %@ 中批准。"
+          }
+        }
+      }
+    },
     "Every send, receipt, swap and charge, by day." : {
       "localizations" : {
         "es" : {
@@ -82811,6 +82951,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "仅凭面容 ID"
+          }
+        }
+      }
+    },
+    "Face ID alone will send and swap again, on each network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo Face ID volverá a enviar e intercambiar, en cada red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各ネットワークで、Face IDだけで再び送金とスワップができます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 네트워크에서 Face ID만으로 다시 송금과 스왑을 할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在每个网络上，仅凭 Face ID 即可再次发送和兑换。"
           }
         }
       }
@@ -112966,6 +113134,34 @@
         }
       }
     },
+    "No co-signer here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay cofirmante aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここには共同署名者がいません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에는 공동 서명자가 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此处没有共同签名者"
+          }
+        }
+      }
+    },
     "No collectibles" : {
       "localizations" : {
         "es" : {
@@ -117672,6 +117868,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "暂不"
+          }
+        }
+      }
+    },
+    "Not on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@では未設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에는 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上未开启"
           }
         }
       }
@@ -148628,6 +148852,90 @@
         }
       }
     },
+    "Require co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を必須にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 필수로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要求共同签名者"
+          }
+        }
+      }
+    },
+    "Require your co-signer on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir tu cofirmante en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で共同署名者を必須にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 공동 서명자 필수로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上要求你的共同签名者"
+          }
+        }
+      }
+    },
+    "Required" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Obligatorio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "必須"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "필수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "必需"
+          }
+        }
+      }
+    },
     "Reset order" : {
       "localizations" : {
         "es" : {
@@ -156132,6 +156440,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已发送，但尚未在 %@ 上看到。再次发送前请先确认"
+          }
+        }
+      }
+    },
+    "Sent, not yet seen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado, aún no visto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信済み、未確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냄, 아직 확인 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送，尚未看到"
           }
         }
       }
@@ -165729,6 +166065,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "停止录音"
+          }
+        }
+      }
+    },
+    "Stop requiring co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejar de exigir cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者の必須をやめる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 필수 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不再要求共同签名者"
+          }
+        }
+      }
+    },
+    "Stop requiring your co-signer on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejar de exigir tu cofirmante en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で共同署名者の必須をやめる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 공동 서명자 필수 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上不再要求你的共同签名者"
           }
         }
       }
@@ -200031,6 +200423,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你在 %@ 连续写了 %@ 天"
+          }
+        }
+      }
+    },
+    "You'll approve %lld times in %@, once for each network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprobarás %1$lld veces en %2$@, una por cada red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@で%1$lld回承認します。ネットワークごとに1回です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 %1$lld번 승인하게 됩니다. 네트워크마다 한 번입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你将在 %2$@ 中批准 %1$lld 次，每个网络一次。"
+          }
+        }
+      }
+    },
+    "You'll approve once in %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprobarás una vez en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で1回承認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 한 번 승인하게 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你将在 %@ 中批准一次。"
           }
         }
       }
