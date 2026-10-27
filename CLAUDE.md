@@ -428,7 +428,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A seat may ship ahead of its evidence only if it SAYS what it doesn't know (RULE).** → docs/hooks/system.md · prd §780b
 - **Rocket Money's queries come from the live page, so "signed in" is not "connected" (prd §780b).** An empty catalogue lands nothing; the page carries a DOOR ("Teach it your pages"), never a sentence telling you to act with no way to act → prd §780b
 - **"Don't ship it yet" says where a feature may NOT go, and nothing about where its DOOR belongs (RULE).** The staged seats' only door went in Diagnostics because it was the nearest screen that compiled — a default, not an answer. Ask → prd §780b
-- **All three finance seats are on the WALLET shelf (prd §780c)** — app catalogue, website shelf and docs list. NerdWallet moved off Reading (user); the honesty half is its TAGLINE ("news"), which `nerdwallet-selftest.sh` guards instead of the group → prd §780c
+- **Acorns and Rocket Money are on the WALLET shelf, NerdWallet in Media (prd §780c, §1564)** — app catalogue, website shelf and docs list. NerdWallet's honesty is its TAGLINE ("news"), which `nerdwallet-selftest.sh` guards → prd §780c
 - **A seat never asks you to do its own work (RULE, prd §780c).** Rocket Money's sign-in view WALKS the account's pages itself to learn its queries. → docs/hooks/system.md · prd §780c
 - **The website's app count is derived (`app.js`) and rounded DOWN ("100+"; `catalog-sync.sh` fails either way), and its docs list is gated** → docs/hooks/system.md · prd §780b · §780c
 - **The website shelf's ROW placement is unchecked** — `catalog-sync.sh` compares name sets only; two seats landed in Reading off a Substack anchor → prd §780c

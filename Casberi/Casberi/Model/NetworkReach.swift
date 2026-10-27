@@ -979,7 +979,7 @@ enum NetworkReach {
                  purpose: "Reads your Bitrefill orders and balance with an API key you provide.",
                  hosts: ["api-bitrefill.com", "www.bitrefill.com"]),
         Endpoint(service: "Privacy.com",
-                 reach: .whenConnected(bridge: "Privacy"),
+                 reach: .whenConnected(bridge: "Privacy.com"),
                  purpose: "Reads your approved card purchases with an API key you provide. Read-only by conduct — it only ever reads.",
                  hosts: ["api.privacy.com"]),
 

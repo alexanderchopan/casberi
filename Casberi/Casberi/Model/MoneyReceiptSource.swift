@@ -111,7 +111,7 @@ enum MoneyReceiptSource {
         guard thing.isLive else { return nil }
         switch thing.source {
         case "Wallet":         return walletCommentary(thing, context)
-        case "Apple Wallet", "ether.fi", "Privacy":
+        case "Apple Wallet", "ether.fi", "Privacy.com":
             return merchantCommentary(thing, context)
         case "Privacy Pools":  return poolsCommentary(thing)
         case "Peer", "Railgun":

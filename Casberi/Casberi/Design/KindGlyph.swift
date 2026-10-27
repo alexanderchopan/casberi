@@ -282,7 +282,7 @@ enum BridgeGlyph {
         case "twitch":    return "tv"
         case "open food facts": return "barcode.viewfinder"
         case "bitrefill": return "gift"
-        case "privacy":   return "creditcard"
+        case "privacy.com": return "creditcard"
         // Walletbeat GRADES wallets, and plenty of its verdicts are failing
         // ones — so a seal or a shield is wrong here twice over: both read as
         // "approved", which would state a verdict this seat does not hold (§83),

@@ -252,7 +252,7 @@ extension DS {
         case "open food facts":     return Color.fixed("#7cb342")   // a fresh grocery green
         case "stocktwits":          return Color.fixed("#008fff")   // their azure (icon-sampled)
         case "bitrefill":           return Color.fixed("#002b28")   // their dark teal (icon-sampled)
-        case "privacy":             return Color.fixed("#232320")   // their near-black (icon-sampled)
+        case "privacy.com":         return Color.fixed("#232320")   // their near-black (icon-sampled)
         // Wise's bright green, from their published brand palette rather
         // than icon-sampled — no mark is bundled for this seat, so the glyph
         // is an SF Symbol on this ground (prd §778). Re-sample if a mark is

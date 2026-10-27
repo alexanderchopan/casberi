@@ -153,6 +153,9 @@ enum SourceRename {
         // with no `seatNames` entry, so its records kept the old name, and
         // two of them drew as two rows in Settings › Apps.
         store.convergeNames(Corpus.canonicalSource)
+        // Their health records follow the name every reader asks for
+        // (prd §1564, the Privacy → Privacy.com rename).
+        BridgeHealth.adoptCatalogNames(Corpus.renamedSources.mapValues(\.current))
         // Health records filed under a seat id move to the catalog name every
         // reader asks for (prd §1163). The four import riders' records are
         // dropped, not moved: they were stamped by calls that carry no key
