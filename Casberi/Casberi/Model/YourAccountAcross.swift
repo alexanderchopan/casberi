@@ -14,8 +14,10 @@ import Foundation
 /// open on Across's `available-routes` (2026-10-26): ETH↔ETH on all six
 /// pairs, USDC↔USDC between Base and Ethereum, USDC↔USDG to and from
 /// Robinhood. Anything else is first swapped on the sending network into
-/// one of those by the pools (§1542), in the same transaction; a swap on
-/// the receiving network is not built.
+/// one of those by the pools (§1542), in the same transaction; any other
+/// token on the receiving network is bought there by its pools, through the
+/// handler's message (`Arrival`, prd §1566), and a swap there that fails
+/// pays the account the bridged token instead.
 ///
 /// **ETH arrives as ETH.** A SpokePool pays a contract recipient WETH, never
 /// ETH (`_unwrapwrappedNativeTokenTo`, read in Across's source), and the
@@ -112,7 +114,10 @@ enum YourAccountAcross {
     /// `suggested-fees` for `amount` of `asset` from one network to another.
     /// ETH is priced with the handler as the recipient and the message it
     /// will carry, since relayers charge for running it.
-    static func feesURL(_ asset: Asset, from: Int, to: Int, amount: String, account: String) -> URL? {
+    /// A swap on arrival (`through`, prd §1566) is priced with its own
+    /// message's shape: relayers pay the gas of running it.
+    static func feesURL(_ asset: Asset, from: Int, to: Int, amount: String, account: String,
+                        through route: YourAccountSwap.Route? = nil, now: Int = 0) -> URL? {
         guard carries(asset, from: from, to: to), let input = bridged(asset, on: from),
               let output = bridged(asset, on: to), YourAccountSwap.isPositive(amount) else { return nil }
         var parts = URLComponents(string: feesEndpoint)
@@ -120,7 +125,10 @@ enum YourAccountAcross {
                      URLQueryItem(name: "originChainId", value: String(from)),
                      URLQueryItem(name: "destinationChainId", value: String(to)),
                      URLQueryItem(name: "amount", value: amount), URLQueryItem(name: "depositor", value: account.lowercased())]
-        if asset == .eth {
+        if let route {
+            guard let message = pricing(asset, to: to, amount: amount, route: route, account: account, now: now) else { return nil }
+            items += [URLQueryItem(name: "recipient", value: handler), URLQueryItem(name: "message", value: SafeABI.hex(message))]
+        } else if asset == .eth {
             guard let message = message(to: to, amount: amount, account: account) else { return nil }
             items += [URLQueryItem(name: "recipient", value: handler), URLQueryItem(name: "message", value: SafeABI.hex(message))]
         } else {
@@ -188,6 +196,10 @@ enum YourAccountAcross {
         let outputAmount: String
         let seconds: Int?
         let fillDeadline: Int
+        /// A swap on the receiving network (prd §1566): what `outputAmount`
+        /// buys there, through the handler's message. Nil when ETH or the
+        /// dollar is what arrives.
+        var swap: Arrival? = nil
 
         /// Across's whole fee, in millionths of what is sent.
         var feePips: Int {
@@ -226,6 +238,83 @@ enum YourAccountAcross {
         return YourAccountSwap.encode([.tuple([calls, .address(account)])])
     }
 
+    // MARK: - A swap on the receiving network (prd §1566)
+
+    /// **WHAT ARRIVES IS SWAPPED THERE.** The bridged token — WETH for ETH
+    /// (a SpokePool pays a contract WETH), or the dollar — reaches Across's
+    /// handler, whose message approves the receiving network's pinned router
+    /// exactly what was filled, swaps it along `route` for at least `minimum`
+    /// of `buy`, paid straight to the account, and names the account the
+    /// fallback: a swap that fails there (a price past the minimum, a pool
+    /// emptied) leaves the handler holding the bridged token, which it then
+    /// pays the account whole (`MulticallHandler`: `attemptCalls` reverts as
+    /// one, `_drainRemainingTokens` follows). Never stranded.
+    struct Arrival: Equatable, Sendable {
+        /// Through the receiving network's own pools (`YourAccountSwap.book`).
+        let route: YourAccountSwap.Route
+        /// The token bought there, on the receiving network.
+        let buy: Op.Token
+        /// What the pools paid for the filled amount when the sentence asked.
+        let quoted: String
+        /// The least the swap takes: `quoted` less the receiving network's
+        /// slippage limit (`Book.slippageBps`), exactly.
+        let minimum: String
+    }
+
+    /// The swap's calls as the handler makes them: the bridged token's exact
+    /// approval to the router, then one router call paying the account, with
+    /// the fill deadline as its own (a fill may come any time before it; the
+    /// minimum is what holds the price). Nil unless every rule holds: a
+    /// router pinned on the receiving network, from exactly the bridged
+    /// token, to exactly the token bought (never the bridged token itself),
+    /// the minimum exactly the quote less that network's slippage.
+    static func arrivalCalls(_ leg: Leg, account: String) -> [Call]? {
+        guard let s = leg.swap, let book = YourAccountSwap.book(leg.to), book.venues.contains(s.route.venue),
+              let into = bridged(leg.asset, on: leg.to), s.route.hops.first?.from.lowercased() == into,
+              let target = s.buy.contract?.lowercased(), target != into, s.route.hops.last?.to.lowercased() == target,
+              YourAccountSwap.isPositive(s.minimum), Op.atMost(s.minimum, s.quoted),
+              s.minimum == YourAccountSwap.minimum(s.quoted, bps: book.slippageBps),
+              let calls = YourAccountSwap.calls(s.route, in: book, sellsETH: false, buysETH: false, amount: leg.outputAmount,
+                                                minimum: s.minimum, account: account, deadline: leg.fillDeadline),
+              calls.allSatisfy({ $0.value == "0" }) else { return nil }
+        return calls
+    }
+
+    /// `abi.encode(Instructions)`: the calls, none sending ETH, the account
+    /// the fallback.
+    private static func instructions(_ calls: [Call], account: String) -> [UInt8] {
+        typealias A = YourAccountSwap.Arg
+        let list: A = .array(calls.map { .tuple([.address($0.to), .bytes($0.data), .uint(0)]) })
+        return YourAccountSwap.encode([.tuple([list, .address(account)])])
+    }
+
+    /// The message a deposit carries: the swap on arrival's, ETH's unwrap,
+    /// or none for a dollar paid straight to the account.
+    static func message(for leg: Leg, account: String) -> [UInt8]? {
+        if leg.swap != nil { return arrivalCalls(leg, account: account).map { instructions($0, account: account) } }
+        return leg.asset == .eth ? message(to: leg.to, amount: leg.outputAmount, account: account) : []
+    }
+
+    /// Whether the deposit pays Across's handler (its message runs there)
+    /// rather than the account.
+    static func viaHandler(_ leg: Leg) -> Bool { leg.asset == .eth || leg.swap != nil }
+
+    /// The message the fee question carries for a swap on arrival: its
+    /// shape, so relayers price its gas, before the output is known — the
+    /// least Across's terms allow (`maxFeeBps` under what is sent) swapped
+    /// for at least one unit, so the relayers' run of it succeeds. Never
+    /// signed: the deposit carries `message(for:)`.
+    static func pricing(_ asset: Asset, to: Int, amount: String, route: YourAccountSwap.Route, account: String,
+                        now: Int) -> [UInt8]? {
+        guard let book = YourAccountSwap.book(to), book.venues.contains(route.venue),
+              route.hops.first?.from.lowercased() == bridged(asset, on: to),
+              let least = YourAccountSwap.minimum(amount, bps: maxFeeBps), YourAccountSwap.isPositive(least),
+              let calls = YourAccountSwap.calls(route, in: book, sellsETH: false, buysETH: false, amount: least,
+                                                minimum: "1", account: account, deadline: now + maxDeadlineSeconds)
+        else { return nil }
+        return instructions(calls, account: account)
+    }
+
     static let depositSignature = "deposit(bytes32,bytes32,bytes32,bytes32,uint256,uint256,uint256,bytes32,uint32,uint32,uint32,bytes)"
     static let approveSelector = YourAccountSwap.approveSelector
 
@@ -235,18 +324,9 @@ enum YourAccountAcross {
         typealias A = YourAccountSwap.Arg
         guard let input = bridged(leg.asset, on: leg.from), let output = bridged(leg.asset, on: leg.to),
               let inAmount = A.amount(leg.inputAmount), let outAmount = A.amount(leg.outputAmount),
-              SafeABI.word(address: account) != nil, fees.exclusivity >= 0 else { return nil }
-        let recipient: String
-        let note: [UInt8]
-        switch leg.asset {
-        case .eth:
-            guard let m = message(to: leg.to, amount: leg.outputAmount, account: account) else { return nil }
-            recipient = handler
-            note = m
-        case .dollar:
-            recipient = account
-            note = []
-        }
+              SafeABI.word(address: account) != nil, fees.exclusivity >= 0,
+              let note = message(for: leg, account: account) else { return nil }
+        let recipient = viaHandler(leg) ? handler : account
         return YourAccountSwap.call(depositSignature, [
             .address(account), .address(recipient), .address(input), .address(output),
             inAmount, outAmount, .uint(leg.to), .address(fees.exclusiveRelayer),
@@ -314,11 +394,12 @@ enum YourAccountAcross {
               let noteAt = word(d, 11).flatMap(small), let noteLength = small(d, at: 4 + noteAt),
               4 + noteAt + 32 + noteLength <= d.count else { return nil }
         let note = Array(d[(4 + noteAt + 32)..<(4 + noteAt + 32 + noteLength)])
-        switch leg.asset {
-        case .eth:
-            guard word(d, 1).flatMap(address) == handler,
-                  note == message(to: leg.to, amount: leg.outputAmount, account: account) else { return nil }
-        case .dollar:
+        // To the handler only with exactly the message that pays the account
+        // (ETH's unwrap, or the swap on arrival with the account its fallback).
+        if viaHandler(leg) {
+            guard word(d, 1).flatMap(address) == handler, let want = message(for: leg, account: account),
+                  note == want else { return nil }
+        } else {
             guard word(d, 1).flatMap(address) == me, note.isEmpty else { return nil }
         }
         return (approvals, deposits)
@@ -419,11 +500,164 @@ enum YourAccountAcross {
         }
     }
 
+    // MARK: - A crossing read off chain (prd §1566)
+
+    /// `FilledRelay`, as the receiving SpokePool emits it: `originChainId`,
+    /// `depositId` and the relayer indexed.
+    static let filledRelayTopic = "0x" + Keccak256.hexString(Keccak256.hash(Array(
+        ("FilledRelay(bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,uint32,uint32,bytes32,bytes32,bytes32,"
+         + "bytes32,bytes32,(bytes32,bytes32,uint256,uint8))").utf8)))
+
+    /// A fill as it landed on the receiving network.
+    struct Filled: Equatable, Sendable {
+        let originChainId: Int
+        /// Decimal, as `Crossing.depositId` keeps it (an unsafe deposit's id
+        /// is a full 256-bit hash, past any Int).
+        let depositId: String
+        let depositor: String
+        let recipient: String
+        let outputToken: String
+        let outputAmount: String
+    }
+
+    /// The fills among a landed transaction's logs, from the pinned
+    /// SpokePool of `dest` only.
+    static func filled(_ logs: [[String: Any]], dest: Int) -> [Filled] {
+        guard let pool = spokes[dest] else { return [] }
+        var out: [Filled] = []
+        for log in logs {
+            guard let from = (log["address"] as? String)?.lowercased(), from == pool,
+                  let topics = (log["topics"] as? [String])?.compactMap(SafeABI.hexBytes), topics.count == 4,
+                  SafeABI.hex(topics[0]).lowercased() == filledRelayTopic,
+                  let origin = small(topics[1]),
+                  let data = (log["data"] as? String).flatMap(SafeABI.hexBytes), data.count == 15 * 32 else { continue }
+            func w(_ i: Int) -> [UInt8] { Array(data[(32 * i)..<(32 * i + 32)]) }
+            guard let depositor = address(w(8)), let recipient = address(w(11)), let token = address(w(1)) else { continue }
+            out.append(Filled(originChainId: origin, depositId: SafeCalldata.decimal(topics[2]), depositor: depositor,
+                              recipient: recipient, outputToken: token, outputAmount: SafeCalldata.decimal(w(13))))
+        }
+        return out
+    }
+
+    /// The deposit's id, decimal.
+    static func depositId(_ d: Deposited) -> String { SafeCalldata.decimal(d.depositId) }
+
+    /// **A CROSSING SENT FROM ANOTHER DEVICE, READ OFF CHAIN.** The Wallet
+    /// saw the account send to a SpokePool; the deposit's own log says the
+    /// rest: where it goes, what arrives, its deadline, what a refund would
+    /// return. Only a crossing between the account's networks, of ETH or the
+    /// dollar, to the account itself or to Across's handler (a swap or an
+    /// unwrap on arrival, whose output then counts as a minimum until the
+    /// arrival is met); nil for anything else, which lands as before.
+    /// `sold` is what left the account when a swap went first ("12 AERO"),
+    /// else the deposit's own input is said.
+    static func chainCrossing(_ d: Deposited, tx: String, wallet: String, at: Date, sold: String? = nil) -> Crossing? {
+        let me = wallet.lowercased()
+        guard address(d.depositor) == me, d.originChainId != d.destinationChainId,
+              let origin = Op.networks.first(where: { $0.chainId == d.originChainId && spokes[$0.chainId] != nil }),
+              let dest = Op.networks.first(where: { $0.chainId == d.destinationChainId && spokes[$0.chainId] != nil }),
+              let input = address(d.inputToken), let output = address(d.outputToken), let recipient = address(d.recipient),
+              recipient == me || recipient == handler else { return nil }
+        let refund: (symbol: String, decimals: Int, said: String)
+        if input == bridged(.eth, on: origin.chainId) { refund = ("WETH", 18, "ETH") }
+        else if input == bridged(.dollar, on: origin.chainId) { refund = (origin.dollarSymbol, 6, origin.dollarSymbol) }
+        else { return nil }
+        let arrives: (symbol: String, contract: String?, decimals: Int)
+        if output == bridged(.eth, on: dest.chainId) { arrives = ("ETH", nil, 18) }
+        else if output == bridged(.dollar, on: dest.chainId) { arrives = (dest.dollarSymbol, output, 6) }
+        else { return nil }
+        let inUnits = SafeCalldata.decimal(d.inputAmount), outUnits = SafeCalldata.decimal(d.outputAmount)
+        let via = recipient == handler
+        return Crossing(id: "chain-\(origin.chainId)-\(depositId(d))", account: me, from: origin.chainId, to: dest.chainId,
+                        sold: sold ?? "\(Op.spoken(inUnits, decimals: refund.decimals)) \(refund.said)",
+                        symbol: arrives.symbol, contract: arrives.contract, decimals: arrives.decimals, outputUnits: outUnits,
+                        refundContract: input, refundSymbol: refund.symbol, inputUnits: inUnits, fillDeadline: d.deadline,
+                        at: at, tx: tx.lowercased(), relayHash: SafeABI.hex(relayHash(d)),
+                        atLeast: via ? true : nil, fallbackContract: via ? output : nil,
+                        fallbackSymbol: via ? (output == bridged(.eth, on: dest.chainId) ? "WETH" : dest.dollarSymbol) : nil,
+                        fallbackDecimals: via ? arrives.decimals : nil, fallbackUnits: via ? outUnits : nil,
+                        refundDecimals: refund.decimals == arrives.decimals ? nil : refund.decimals,
+                        depositId: depositId(d))
+    }
+
+    /// The crossing a fill finishes: the same deposit (its network, its id,
+    /// its depositor), waiting or read filled, its fill not yet met.
+    static func crossing(filledBy f: Filled, dest: Int, in list: [Crossing]) -> Crossing? {
+        list.first {
+            $0.to == dest && $0.from == f.originChainId && $0.depositId == f.depositId && $0.account == f.depositor
+                && $0.state != .refunded && $0.fillTx == nil
+        }
+    }
+
+    /// What the account received in the fill's transaction: its symbol,
+    /// contract (nil for ETH) and amount in whole tokens, as the Wallet read it.
+    struct Received: Equatable, Sendable {
+        let contract: String?
+        let symbol: String
+        let value: Double
+    }
+
+    /// **THE FILL MET.** The crossing is filled by `tx`, and says what came:
+    /// what it was to buy, at the amount that came (a swap on arrival pays at
+    /// least its minimum); else, for a swap that failed there, the bridged
+    /// token the handler paid instead; else, for a crossing read off chain
+    /// whose message the phone did not write, whatever the account received.
+    static func arrived(_ x: inout Crossing, received: [Received], fillTx: String, at: Date?) {
+        x.fillTx = fillTx.lowercased()
+        if x.state == .waiting { x.state = .filled }
+        x.settledAt = x.settledAt ?? at ?? .now
+        guard x.atLeast == true else { return }
+        let fb = x.fallbackContract
+        let pick = received.first { $0.contract?.lowercased() == x.contract && $0.contract?.lowercased() != fb }
+            ?? received.filter { $0.contract?.lowercased() != fb }.max { $0.value < $1.value }
+            ?? received.first
+        guard let pick else { return }
+        let c = pick.contract?.lowercased()
+        if let fb, c == fb {
+            fellBack(&x)
+        } else {
+            if c != x.contract { x.contract = c; x.symbol = pick.symbol; x.decimals = 18 }
+            if let units = units(pick.value, decimals: x.decimals) { x.outputUnits = units }
+        }
+        x.atLeast = false
+    }
+
+    /// A swap on arrival that failed: what came is the bridged token, exactly.
+    private static func fellBack(_ x: inout Crossing) {
+        guard let fb = x.fallbackContract else { return }
+        x.contract = fb
+        x.symbol = x.fallbackSymbol ?? x.symbol
+        x.decimals = x.fallbackDecimals ?? x.decimals
+        x.outputUnits = x.fallbackUnits ?? x.outputUnits
+        x.atLeast = false
+    }
+
+    /// `value` whole tokens in base units at `decimals`; nil when it does not read.
+    static func units(_ value: Double, decimals: Int) -> String? {
+        guard value.isFinite, value > 0, decimals >= 0, decimals <= 36 else { return nil }
+        var d = Decimal(value) * pow(10, decimals)
+        var r = Decimal()
+        NSDecimalRound(&r, &d, 0, .plain)
+        let s = NSDecimalNumber(decimal: r).stringValue
+        return YourAccountSwap.isPositive(s) ? s : nil
+    }
+
     // MARK: - In words
 
     /// "Through Across · 0.11% fee": rounded as a pool fee is (§1545).
     static func words(_ leg: Leg) -> String {
         String(localized: "Through Across · \(YourAccountSwap.percent(pips: leg.feePips)) fee")
+    }
+
+    /// A swap on arrival in the foot's words: "On Uniswap · 0.05% pool fee
+    /// on Ethereum" (prd §1566).
+    static func arrivalWords(_ leg: Leg) -> String? {
+        leg.swap.map { String(localized: "\(YourAccountSwap.words($0.route)) on \(networkName(leg.to))") }
+    }
+
+    /// The same in Details' Swaps row, one line: "Uniswap · 0.05% on Ethereum".
+    static func arrivalBrief(_ leg: Leg) -> String? {
+        leg.swap.map { String(localized: "\(YourAccountSwap.brief($0.route)) on \(networkName(leg.to))") }
     }
 
     /// "About 7 seconds", "About 2 minutes": Details' row.
@@ -480,6 +714,23 @@ enum YourAccountAcross {
         /// The legs the Wallet met as this crossing's arrival or refund, by
         /// their ref: kept off the list on every later read too.
         var taken: [String] = []
+        // Each below is optional, so a note kept before it existed still reads.
+        /// A swap on arrival (prd §1566): `outputUnits` is its minimum until
+        /// the arrival is met.
+        var atLeast: Bool?
+        /// What arrives if that swap fails there: the bridged token, exactly
+        /// what was filled.
+        var fallbackContract: String?
+        var fallbackSymbol: String?
+        var fallbackDecimals: Int?
+        var fallbackUnits: String?
+        /// What a refund is counted in, when not `decimals` (ETH sent for a
+        /// token of other decimals).
+        var refundDecimals: Int?
+        /// The deposit's id at its SpokePool (read off chain, prd §1566),
+        /// and the fill's transaction on the receiving network once met.
+        var depositId: String?
+        var fillTx: String?
     }
 
     private static let crossingsKey = "yourAccount.across.crossings"
@@ -523,6 +774,32 @@ enum YourAccountAcross {
         return abs(value - want) <= max(want * 1e-9, 1e-15)
     }
 
+    /// Whether `value` whole tokens is at least `units` at `decimals`.
+    static func atLeast(_ value: Double, units: String, decimals: Int) -> Bool {
+        guard let u = Decimal(string: units), u > 0 else { return false }
+        let want = NSDecimalNumber(decimal: u / pow(10, decimals)).doubleValue
+        return value >= want - max(want * 1e-9, 1e-15)
+    }
+
+    /// A leg the Wallet met settles `x`: kept off the list, its state, and
+    /// for a swap on arrival what came (`arrived`).
+    static func settle(_ x: inout Crossing, _ state: Crossing.State, ref: String, contract: String?,
+                       value: Double, at: Date?) {
+        x.taken.append(ref)
+        // Move may have read the fill first; a refund settles it.
+        if x.state == .waiting || state == .refunded { x.state = state }
+        x.settledAt = x.settledAt ?? at ?? .now
+        if state == .filled, x.atLeast == true {
+            let c = contract?.lowercased()
+            if c != x.contract, let fb = x.fallbackContract, c == fb {
+                fellBack(&x)
+            } else if let u = units(value, decimals: x.decimals) {
+                x.outputUnits = u
+                x.atLeast = false
+            }
+        }
+    }
+
     /// The crossing a received leg finishes: its arrival on the destination
     /// (this token, exactly the amount filled), or its refund on the sending
     /// network (from the SpokePool, in what it took, exactly that amount,
@@ -539,8 +816,17 @@ enum YourAccountAcross {
             if x.to == chainId, x.contract == c, same(value, units: x.outputUnits, decimals: x.decimals) {
                 return (x, .filled)
             }
+            // A swap on arrival (prd §1566): at least its minimum, after it
+            // was sent; or, failed there, the bridged token whole, from the handler.
+            if x.atLeast == true, x.to == chainId, at.map({ $0 >= x.at }) ?? true {
+                if x.contract == c, atLeast(value, units: x.outputUnits, decimals: x.decimals) { return (x, .filled) }
+                if let fb = x.fallbackContract, c == fb, sender?.lowercased() == handler,
+                   same(value, units: x.fallbackUnits ?? "", decimals: x.fallbackDecimals ?? x.decimals) {
+                    return (x, .filled)
+                }
+            }
             if x.state == .waiting, x.from == chainId, c == x.refundContract, sender.map(isSpoke) == true,
-               same(value, units: x.inputUnits, decimals: x.decimals),
+               same(value, units: x.inputUnits, decimals: x.refundDecimals ?? x.decimals),
                at.map({ Int($0.timeIntervalSince1970) > x.fillDeadline }) ?? true {
                 return (x, .refunded)
             }
@@ -561,6 +847,10 @@ enum YourAccountAcross {
         if !hash.isEmpty, let x = list.first(where: {
             $0.account == w && $0.from == chainId && $0.tx?.lowercased() == hash.lowercased()
         }) { return (x.id, .sending) }
+        // The fill's own transaction, met off chain (prd §1566): every leg of it is the crossing's.
+        if !hash.isEmpty, let x = list.first(where: {
+            $0.account == w && $0.to == chainId && $0.fillTx == hash.lowercased()
+        }) { return (x.id, .taken) }
         guard received, let hit = settles(wallet: wallet, chainId: chainId, contract: contract, from: sender,
                                           value: value, at: at, in: list) else { return nil }
         return (hit.crossing.id, .settles(hit.state))
@@ -575,7 +865,7 @@ enum YourAccountAcross {
     static func returning(_ c: Crossing, now: Int) -> Op.Token? {
         guard c.tx != nil, c.state == .refunded || (c.state == .waiting && now > c.fillDeadline),
               SafeABI.word(address: c.refundContract) != nil else { return nil }
-        return Op.Token(symbol: c.refundSymbol, decimals: c.decimals, contract: c.refundContract.lowercased())
+        return Op.Token(symbol: c.refundSymbol, decimals: c.refundDecimals ?? c.decimals, contract: c.refundContract.lowercased())
     }
 
     static func networkName(_ chainId: Int) -> String {
@@ -591,7 +881,7 @@ enum YourAccountAcross {
         case .filled:
             return String(localized: "Swapped \(c.sold) for \(c.symbol)")
         case .refunded:
-            let back = Op.display(c.inputUnits, decimals: c.decimals)
+            let back = Op.display(c.inputUnits, decimals: c.refundDecimals ?? c.decimals)
             return String(localized: "Refunded \(back) \(c.refundSymbol) on \(networkName(c.from))")
         }
     }
@@ -618,8 +908,9 @@ enum YourAccountAcross {
     /// title says the token. A dollar keeps its cents ("49.70").
     static func figure(_ c: Crossing) -> String {
         let units = c.state == .refunded ? c.inputUnits : c.outputUnits
-        let shown = Op.display(units, decimals: c.decimals, places: c.decimals == 6 ? 2 : 6)
-        guard c.decimals == 6 else { return shown }
+        let decimals = c.state == .refunded ? c.refundDecimals ?? c.decimals : c.decimals
+        let shown = Op.display(units, decimals: decimals, places: decimals == 6 ? 2 : 6)
+        guard decimals == 6 else { return shown }
         let parts = shown.split(separator: ".", omittingEmptySubsequences: false)
         let cents = parts.count > 1 ? String(parts[1]) : ""
         return String(parts[0]) + "." + cents + String(repeating: "0", count: max(0, 2 - cents.count))

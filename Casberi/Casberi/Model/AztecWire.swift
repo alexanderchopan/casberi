@@ -35,8 +35,10 @@ enum AztecWire {
 
     /// The value that names a chain (FramesNetwork's rule, prd §962): its
     /// Aztec node, its explorer, and the Ethereum node its Rollup lives on.
-    /// The testnet is Aztec's CURRENT one (v6.0.0-rc.1, measured 2026-10-11;
-    /// the v5 host the getting-started page names is the previous testnet).
+    /// The testnet is Aztec's CURRENT one (v6.0.0, rollup version 679261766,
+    /// read 2026-10-26, prd §1565; the v5 host the getting-started page names
+    /// is the previous testnet). The node names its own Rollup, and that is
+    /// the testnet Registry's canonical one on Sepolia, so nothing L1 is pinned.
     /// Both Aztec hosts are dRPC's public endpoints, which refuse a batch of
     /// more than three (measured), so they are asked one call at a time; the
     /// Ethereum nodes are publicnode's, which answer a batch of 40 in ~130ms.
@@ -328,8 +330,9 @@ enum AztecWire {
     // MARK: - Ethereum: stake, rewards, committee, schedule
 
     /// Function selectors, measured off `@aztec/l1-artifacts` 5.2.0's
-    /// `RollupAbi` with viem (2026-10-11) — keccak isn't in Foundation, and
-    /// these never change for a deployed contract.
+    /// `RollupAbi` with viem (2026-10-11), and unchanged in
+    /// `@aztec-foundation/l1-artifacts` 6.0.0 (2026-10-26) — keccak isn't in
+    /// Foundation, and these never change for a deployed contract.
     enum Selector {
         static let getAttesterView = "34a51ed5"
         static let getSequencerRewards = "8789a132"
@@ -481,8 +484,9 @@ enum AztecWire {
     }
 
     /// The Fee Juice contract (protocol address 3) and its balances map's
-    /// slot (1), and the map's separator — identical in v5.2.0 and
-    /// v6.0.0-rc.1 (`constants.nr`, read 2026-10-11).
+    /// slot (1), and the map's separator — identical in v5.2.0,
+    /// v6.0.0-rc.1 (`constants.nr`, read 2026-10-11) and v6.0.0
+    /// (`@aztec-labs/constants` 6.0.0, read 2026-10-26).
     static let feeJuiceContract = "0x" + String(repeating: "0", count: 63) + "3"
     static let feeJuiceBalancesSlot: UInt64 = 1
     static let publicStorageMapSlot: UInt32 = 4015149901

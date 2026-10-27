@@ -97,9 +97,11 @@ struct MoveDetails: View {
             // **TO ANOTHER NETWORK (prd §1555):** what arrives — exactly
             // what a relayer pays, so its least — Across's fee, rounded as a
             // pool's, and its time.
+            // A swap on arrival (prd §1566): its minimum, of what it buys there.
             let dest = Op.networks.first { $0.chainId == leg.to } ?? p.network
-            let token = YourAccountAcross.token(leg.asset, on: dest)
-            row(String(localized: "You get at least"), "\(MoveSentence.figure(leg.outputAmount, decimals: token.decimals)) \(token.symbol)")
+            let token = leg.swap?.buy ?? YourAccountAcross.token(leg.asset, on: dest)
+            let least = leg.swap?.minimum ?? leg.outputAmount
+            row(String(localized: "You get at least"), "\(MoveSentence.figure(least, decimals: token.decimals)) \(token.symbol)")
             row(String(localized: "Across"), String(localized: "\(YourAccountSwap.percent(pips: leg.feePips)) fee"))
             if let time = YourAccountAcross.time(leg.seconds) {
                 row(String(localized: "Expected time"), time)
@@ -126,8 +128,11 @@ struct MoveDetails: View {
         var out: [String] = []
         for s in p.sold {
             // A wrap or an unwrap says so, no pool (prd §1559).
-            guard let words = s.wrap.map(YourAccountSwap.words) ?? s.route.map(YourAccountSwap.brief) else { continue }
-            if !out.contains(words) { out.append(words) }
+            if let words = s.wrap.map(YourAccountSwap.words) ?? s.route.map(YourAccountSwap.brief), !out.contains(words) {
+                out.append(words)
+            }
+            // The swap on arrival, its network named: "Uniswap · 0.05% on Ethereum" (prd §1566).
+            if let words = s.across.flatMap(YourAccountAcross.arrivalBrief), !out.contains(words) { out.append(words) }
         }
         return out
     }

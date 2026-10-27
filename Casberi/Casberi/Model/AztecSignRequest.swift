@@ -55,20 +55,24 @@ enum AztecSignRequest {
     }
 
     /// The only chains a request may name: Sepolia (11155111), and the
-    /// rollup versions of Aztec's testnets as their nodes report them —
-    /// v5 (the previous testnet, which aztec.js 5.2 reaches) and v6.
+    /// rollup versions of Aztec's testnets whose nodes still answer — v6
+    /// (6.0.0, `aztec-testnet.drpc.org`) and v5 (5.0.0,
+    /// `v5.testnet.rpc.aztec-labs.com`), both read 2026-10-26 and both in the
+    /// testnet Registry on Sepolia (prd §1565). v6's release candidates
+    /// (2914217885, 3409706519) are dropped: no node answers them.
     static let l1ChainID = 11_155_111
-    static let testnetRollups: [Int: String] = [1_821_665_230: "Aztec testnet (v5)",
-                                                2_914_217_885: "Aztec testnet (v6)",
-                                                3_409_706_519: "Aztec testnet (v6)"]
+    static let testnetRollups: [Int: String] = [679_261_766: "Aztec testnet (v6)",
+                                                1_821_665_230: "Aztec testnet (v5)"]
 
     /// Aztec mainnet's rollup version: refused even if a node calls it a
     /// testnet (a lie, or a misconfigured host), because it is real money.
     ///
-    /// Every version mainnet has run or is moving to: Alpha V5, and V6, the
-    /// rollup Aztec governance proposal 5 ("V6UpgradePayload") adds to the
-    /// Registry (`getVersion()` on 0xe37a…402f, read 2026-10-20, prd §1446).
-    static let mainnetRollups: Set<Int> = [4_248_422_647, 2_070_860_440]
+    /// Every version mainnet's Registry lists: the first Alpha rollup, Alpha
+    /// V5, and V6, the rollup governance proposal 5 ("V6UpgradePayload")
+    /// added (`getVersion()` on 0xe37a…402f, read 2026-10-20, prd §1446; V6
+    /// is canonical since, and the Registry's four versions were read again
+    /// 2026-10-26, prd §1565).
+    static let mainnetRollups: Set<Int> = [4_248_422_647, 2_070_860_440, 2_934_756_905]
 
     /// What Aztec's testnet node reports right now (`node_getNodeInfo`,
     /// 2026-10-18, prd §1419): the testnet is reset onto a new rollup version
@@ -174,7 +178,8 @@ enum AztecSignRequest {
 
     // MARK: - The hash, rebuilt
 
-    // DomainSeparator values (identical in v5.2.0 and v6.0.0-rc.1).
+    // DomainSeparator values (identical in v5.2.0, v6.0.0-rc.1 and v6.0.0:
+    // `@aztec-labs/constants` 6.0.0, read 2026-10-26).
     static let functionArgs: UInt32 = 3_576_554_347
     static let publicCalldata: UInt32 = 2_760_353_947
     static let signaturePayload: UInt32 = 463_525_807

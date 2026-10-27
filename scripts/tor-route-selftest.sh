@@ -47,9 +47,8 @@ echo "  ok   the funnel routes through the rule, never fails over, has no bypass
 # §1539, measured 2026-10-26), so they are not Relay's and never say so.
 MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
 use "$MOVE" 'if relayCarries, receipt == nil, !nothingToMove {' "Relay's foot no longer reads relayCarries"
-use "$MOVE" 'case .swap: false' "a swap says Relay carries it, though it goes to the pools through Tor (prd §1539)"
 use "$MOVE" 'case .sweep: false' "a sweep says Relay carries it, though it goes to the pools through Tor (prd §1539)"
-use "$MOVE" 'case .send: roundUpPlan?.buy != nil' "a round-up that buys no longer says Relay carries it"
+use "$MOVE" 'case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)' "a send or swap says Relay carries it beyond its round-up buy on another network (prd §1539, §1545, §1561)"
 use "$MOVE" 'case .receive: elsewhere != nil' "Receive from another network no longer says Relay carries it"
 if awk '/Text\("Powered by Relay"\)/,/padding\(\.top/' "$MOVE" | grep -q 'not through Tor'; then :; else
     echo "✗ Relay's foot no longer says it is not through Tor"; exit 1

@@ -545,9 +545,10 @@ grep -q 'let checked = YourAccountSwap.checkedWrap(quote, sell: s.sell, buy: s.b
 grep -q 'steps.append((calls, (s.buy, s.amount)))' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an unwrap is not simulated to pay back exactly what is sold (prd §1559)"; exit 1; }
 grep -q 'return YourAccountSwap.words(w)' "$SENTENCE" || { echo "✗ the foot no longer says 'Unwraps WETH · no fee' (prd §1559)"; exit 1; }
-# The ≈ stands before a pool's quote; Across's output is exact (prd §1556).
+# The ≈ stands before a pool's quote; Across's output is exact (prd §1556),
+# unless the receiving network's pools swap it (prd §1566).
 grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decimals)' "$SENTENCE" \
-  && grep -q 'let exact = quote?.across != nil || quote?.wrap != nil' "$SENTENCE" \
+  && grep -q 'let exact = quote?.across.map { $0.swap == nil } == true || quote?.wrap != nil' "$SENTENCE" \
   || { echo "✗ the print line no longer carries the ≈ and the exact quote, or drops the ≈ for a pool's quote (prd §1479, §83, §1556)"; exit 1; }
 # The fee after it is the network's alone since §1539: the pool's is in the price (`swapFeePrint`).
 grep -q 'case .swap: \[soldPrint, quotePrint, swapFeePrint\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote or the whole fee (prd §1479, §1509)"; exit 1; }

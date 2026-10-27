@@ -1497,8 +1497,10 @@ enum YourAccountChain {
         }
         // ETH sent to another network must be proven to arrive as ETH: the
         // handler's message run on the receiving network (prd §1555).
-        if let crossing = a.crossing, crossing.contract == nil, a.arrives != true {
-            throw Failure(message: String(localized: "Could not check that ETH arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
+        // So must a swap on arrival: the handler and the swap run there (prd §1566).
+        if let crossing = a.crossing, a.sold.contains(where: { $0.across.map(YourAccountAcross.viaHandler) == true }),
+           a.arrives != true {
+            throw Failure(message: String(localized: "Could not check that \(crossing.symbol) arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
         }
         // The crossing is kept before Face ID, so the Wallet shows it however
         // the app is left; it gets its transaction once it lands.
@@ -1619,8 +1621,17 @@ enum YourAccountChain {
                 guard calls.count == checked.calls.count else { throw Failure(message: String(localized: "This swap could not be written")) }
                 approvals += checked.approvals
                 steps.append((calls, nil))
+                // What Across pays there: the token bought, or for a swap on
+                // arrival (prd §1566) the bridged token the handler swaps.
+                let landing = YourAccountAcross.token(leg.asset, on: dest)
+                let lands = leg.swap == nil ? s.buy : landing
                 stepWords.append(Words.crossing(figure(leg.inputAmount, bridged), bridged.symbol, to: dest.name,
-                                                arrives: figure(leg.outputAmount, s.buy), s.buy.symbol, back: net.name))
+                                                arrives: figure(leg.outputAmount, lands), lands.symbol, back: net.name))
+                if let there = leg.swap {
+                    stepWords.append(Words.swap(figure(leg.outputAmount, landing), landing.symbol,
+                                                atLeast: figure(there.minimum, there.buy), there.buy.symbol,
+                                                on: String(localized: "\(there.route.venue.exchange) on \(dest.name)")))
+                }
                 sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, route: quote.route, across: leg))
                 if let c = s.sell.contract { symbols[c.lowercased()] = s.sell.symbol }
                 if let c = bridged.contract { symbols[c.lowercased()] = bridged.symbol }
@@ -1628,13 +1639,23 @@ enum YourAccountChain {
                                       to: YourAccountAcross.spoke(net.chainId) ?? account, toName: "Across"))
                 let refund = leg.asset == .eth ? (contract: YourAccountSwap.book(net.chainId)?.weth ?? "", symbol: "WETH")
                                                : (contract: net.dollar.lowercased(), symbol: net.dollarSymbol)
+                // A swap on arrival (prd §1566): its minimum until the arrival
+                // is met, and the bridged token, exactly, if it falls back.
+                let there = leg.swap
+                let fallback = YourAccountAcross.bridged(leg.asset, on: dest.chainId)
                 crossing = YourAccountAcross.Crossing(
                     id: UUID().uuidString, account: account.lowercased(), from: net.chainId, to: dest.chainId,
                     sold: "\(figure(s.amount, s.sell)) \(s.sell.symbol)", symbol: s.buy.symbol,
-                    contract: s.buy.contract?.lowercased(), decimals: s.buy.decimals, outputUnits: leg.outputAmount,
+                    contract: s.buy.contract?.lowercased(), decimals: s.buy.decimals, outputUnits: there?.minimum ?? leg.outputAmount,
                     refundContract: refund.contract, refundSymbol: refund.symbol, inputUnits: leg.inputAmount,
-                    fillDeadline: leg.fillDeadline, at: .now)
-                if leg.asset == .eth { arrives = await arrivalCheck(dest, leg: leg, account: account) }
+                    fillDeadline: leg.fillDeadline, at: .now,
+                    atLeast: there == nil ? nil : true, fallbackContract: there == nil ? nil : fallback,
+                    fallbackSymbol: there == nil ? nil : (leg.asset == .eth ? "WETH" : landing.symbol),
+                    fallbackDecimals: there == nil ? nil : landing.decimals, fallbackUnits: there == nil ? nil : leg.outputAmount,
+                    refundDecimals: bridged.decimals == s.buy.decimals ? nil : bridged.decimals)
+                // ETH's unwrap and a swap on arrival run on the other network:
+                // proven there before Face ID (prd §1555, §1566).
+                if YourAccountAcross.viaHandler(leg) { arrives = await arrivalCheck(dest, leg: leg, account: account) }
                 report("across: \(leg.inputAmount) \(bridged.symbol) \(net.name)→\(dest.name) out=\(leg.outputAmount) fee=\(leg.feePips)pips arrives=\(arrives.map { String($0) } ?? "-")")
             case .send(let p):
                 guard let call = YourAccountOp.call(for: p) else {

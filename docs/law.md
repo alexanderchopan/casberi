@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1702 of 1771 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1704 of 1773 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1664,7 +1664,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1273 — zk.money: its moves named in the Wallet, its tags read, its links kept safely
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
-- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538)
+- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538, §1565)
 - §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions (amended by §1419, §1446)
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1… (amended by §1446)
@@ -1803,7 +1803,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
 - §1417 — Connect a wallet is back in Follow an account, every time
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
-- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446)
+- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
@@ -1830,7 +1830,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1443 — The toast draws above every sheet [+9 sub-entries]
 - §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
-- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… [+2 sub-entries]
+- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… (amended by §1565) [+2 sub-entries]
 - §1448 — The node's epoch, read the day the Observer sends it
 - §1449 — Robinhood Chain leaves the account (amends §1441, §1441a) (amended by §1454)
 - §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed
@@ -1948,6 +1948,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,…
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App…
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
+- §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's…
+- §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu…
 
 ## Dead rulings → what replaced them (generated)
 
