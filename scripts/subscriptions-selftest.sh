@@ -173,13 +173,17 @@ check(names == names.sorted { $0.localizedStandardCompare($1) == .orderedAscendi
 check(Set(names).count == names.count, "Popular names one service once")
 check(SubscriptionPlans.popular(matching: "pri").map(\.name) == ["Amazon Prime"], "a word inside a name finds it")
 check(SubscriptionPlans.isTracked("spotify ", among: ["Spotify"]), "a tracked name is the same plan whatever its case")
-let asks = UserDefaults(suiteName: "subs-selftest-\(ProcessInfo.processInfo.processIdentifier)")!
+let asksSuite = "subs-selftest-\(ProcessInfo.processInfo.processIdentifier)"
+let asks = UserDefaults(suiteName: asksSuite)!
+// A pid is reused, and a suite outlives its run: start empty, leave nothing.
+asks.removePersistentDomain(forName: asksSuite)
 check(SubscriptionPlans.shouldAsk("Spotify", tracked: [], defaults: asks), "a first connect of a plan app asks")
 check(!SubscriptionPlans.shouldAsk("Photos", tracked: [], defaults: asks), "an app with no plan never asks")
 check(!SubscriptionPlans.shouldAsk("Notion", tracked: ["Notion"], defaults: asks), "a plan already tracked never asks")
 SubscriptionPlans.markAsked("Spotify", defaults: asks)
 check(!SubscriptionPlans.shouldAsk("Spotify", tracked: [], defaults: asks), "an app asks once, ever")
 
+asks.removePersistentDomain(forName: asksSuite)
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   detection, merge, cadence, renewals, order, total, plans")
 SWIFT
