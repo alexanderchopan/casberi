@@ -29,7 +29,7 @@ TESTNET ONLY. This folder evaluates 0xBow's Privacy Pools v2 for Casberi. It is 
 | ASP approval | **3.2 min** | — | — | — | Measured: deposit mined 17:07:48 UTC, approved 17:11:00. Ask by label HASH (`Poseidon(label)`); the raw label always reads `unknown`. Over 14 days the next root followed a deposit after p50 1.4 min, p90 2.6 min, max 62 min |
 | Private transfer (1 in → 2 out) | 124 s | 101 s prepare, almost all the keystore-tree sync over rate-limited RPCs; transact_1x2 alone 3.0 s | **1,538,548** (relayer budgets 850,000) | 16,171,000 wei at 19 wei gas | Measured. The relayer paid the gas; B found the note in 14 s |
 | Relayed withdrawal (0.00005 ETH) | 27 s | transact_1x1: 3.1 s | **1,450,486** (relayer budgets 1,050,000) | 0.00000005 ETH (10 bps) + gas | Measured. The plain address C received exactly 0.00005 ETH |
-| Ragequit | not run | 1.2 s | — | — | |
+| Ragequit | measured 2026-10-27 (`ragequit-sender.mjs`) | 1.2 s | **879,078** | none | Only the note OWNER may send it: the vault checks `msg.sender == ownerAddress` (`PoolVault_InvalidOwnerAddress()`, `0x7db3fe30`), not the depositor. A deposit SENT by another address F ragequits from the owner A, before or after ASP approval, and pays A |
 | Payment request | 6 ms | — | — | — | Generated locally; no registration needed |
 | Stealth withdrawal | not run | — | — | — | `@0xbow/privacy-pools-v2-sdk/stealth` (ERC-5564, canonical and FluidKey schemes) |
 
