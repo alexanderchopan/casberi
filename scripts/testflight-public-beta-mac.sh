@@ -1,4 +1,5 @@
 #!/bin/bash
+# RETIRED 2026-10-28: the public beta is closed (docs/testflight-handoff.md step 2). Run only if the user asks to reopen it.
 # Public Beta handoff — the macOS-platform sibling of testflight-public-beta.sh.
 #
 # That script now filters its build lookup to filter[preReleaseVersion.platform]=IOS

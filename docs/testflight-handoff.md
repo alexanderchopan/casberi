@@ -1,9 +1,7 @@
 # Shipping a TestFlight build (handoff)
 
 Point any session at this file to ship a Casberi build to TestFlight the same
-way we always do. The process has TWO scripts, both run every ship, no
-exceptions — this is not a step to wait to be asked for (user ruling
-2026-07-21):
+way we always do.
 
 1. `scripts/testflight.sh` bumps the build number across all targets, archives
    Release **signed**, then re-signs + uploads for App Store distribution.
@@ -14,11 +12,14 @@ exceptions — this is not a step to wait to be asked for (user ruling
    HealthKit, no push. Do not "restore" the unsigned trick. Verify a doubtful
    build with `codesign -d --entitlements :- Payload/Casberi.app` on the
    exported IPA.)
-2. `scripts/testflight-public-beta.sh` waits for that build to finish
-   processing, writes tester-facing release notes, assigns it to the
-   **Casberi Public Beta** external group, and submits it for Beta App Review.
-   A ship that skips this step leaves the build sitting unassigned in App
-   Store Connect — internal-only, not what "ship" means here.
+2. **There is no public-beta step any more (user ruling 2026-10-28).** Most
+   people sat on TestFlight builds instead of the App Store version, so every
+   build was expired, the public link closed
+   (`scripts/testflight-expire-old.py --all --yes`), and a ship now stops at
+   the internal group. Do NOT run `testflight-public-beta.sh` /
+   `testflight-public-beta-mac.sh` or reopen the link unless the user asks;
+   they remain for that case. (Until 2026-10-28 this step was mandatory,
+   ruling 2026-07-21.)
 
 ## Credentials
 

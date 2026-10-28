@@ -1,4 +1,5 @@
 #!/bin/bash
+# RETIRED 2026-10-28: the public beta is closed (docs/testflight-handoff.md step 2). Run only if the user asks to reopen it.
 # Public Beta handoff — the second half of every ship, not just internal.
 #
 # Run this AFTER scripts/testflight.sh has uploaded a build. It:

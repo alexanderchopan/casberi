@@ -9,11 +9,16 @@ APPROVED and everything newer (still in review, or internal-only), so no
 tester is ever left with nothing to update to, and any build an App Store
 version is still waiting on.
 
+--all retires the public beta (user ruling 2026-10-28: testers sat on betas
+instead of the store): it expires EVERY build, the newest approved included,
+keeping only builds an App Store version is still waiting on, and turns off
+every external group's public link so nobody new joins.
+
 Dry run by default; --yes applies.
 
   scripts/dev-keys.sh get-file asc-p8 /tmp/asc-expire.p8
   ASC_KEY_ID=TR287WZD72 ASC_ISSUER_ID=2152ec98-0a7c-477a-9c4a-e1c478a3a106 \
-    ASC_KEY_PATH=/tmp/asc-expire.p8 scripts/testflight-expire-old.py [--yes]
+    ASC_KEY_PATH=/tmp/asc-expire.p8 scripts/testflight-expire-old.py [--all] [--yes]
   rm -f /tmp/asc-expire.p8
 """
 import json, os, subprocess, sys, urllib.request, urllib.error
@@ -83,8 +88,17 @@ def store_held(token):
             and v["relationships"]["build"]["data"]}
 
 
+def public_links(token):
+    _, page = call("GET", f"/v1/apps/{APP_ID}/betaGroups"
+                          "?fields[betaGroups]=name,isInternalGroup,publicLinkEnabled,publicLink",
+                   token=token)
+    return [g for g in page["data"]
+            if not g["attributes"]["isInternalGroup"] and g["attributes"]["publicLinkEnabled"]]
+
+
 def main():
     apply = "--yes" in sys.argv
+    everything = "--all" in sys.argv
     token = jwt()
     rows = builds(token)
     held = store_held(token)
@@ -92,6 +106,8 @@ def main():
     for platform in sorted({r["platform"] for r in rows}):
         mine = sorted((r for r in rows if r["platform"] == platform), key=lambda r: -r["build"])
         approved = [r for r in mine if r["review"] == "APPROVED"]
+        if everything:
+            approved = [{"build": float("inf")}]
         if not approved:
             print(f"{platform}: no APPROVED build, keeping all {len(mine)}")
             continue
@@ -101,14 +117,22 @@ def main():
         for r in mine:
             if r["build"] < floor and r["id"] in held:
                 print(f"{platform}: keep {r['build']}, an App Store version is waiting on it")
-        kept = ", ".join(f"{r['build']} ({r['marketing']}, {r['review']})" for r in keep)
+        kept = ", ".join(f"{r['build']} ({r['marketing']}, {r['review']})" for r in keep) or "none"
         print(f"{platform}: keep {kept}")
         gone = ", ".join(str(r["build"]) for r in old) or "none"
         print(f"{platform}: expire {len(old)}: {gone}")
         doomed += old
+    links = public_links(token) if everything else []
+    for g in links:
+        print(f"close public link: {g['attributes']['name']} ({g['attributes']['publicLink']})")
     if not apply:
         print(f"\ndry run, {len(doomed)} to expire; pass --yes to apply")
         return
+    for g in links:
+        body = {"data": {"type": "betaGroups", "id": g["id"],
+                         "attributes": {"publicLinkEnabled": False}}}
+        call("PATCH", f"/v1/betaGroups/{g['id']}", body, token)
+        print(f"closed public link: {g['attributes']['name']}")
     failed = 0
     for i, r in enumerate(doomed):
         if i and i % 150 == 0:
