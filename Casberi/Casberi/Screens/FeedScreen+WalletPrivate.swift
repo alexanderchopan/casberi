@@ -209,7 +209,10 @@ struct WalletPrivateAsks: View {
                 Button(String(localized: "Take it back")) { takeBack(ask) }
                 Button(String(localized: "Cancel"), role: .cancel) {}
             } message: { _ in
-                Text("It goes back to \(Self.owner) on Sepolia, in public.")
+                // Where it goes, on the network it is on, and what it gives up.
+                Text(ask.note.chainId == PrivacyNetwork.ethereum.chainId
+                     ? String(localized: "It goes back to your account on Ethereum, in public. This deposit won't be private.")
+                     : String(localized: "It goes back to \(Self.owner) on Sepolia, in public."))
             }
         }
     }

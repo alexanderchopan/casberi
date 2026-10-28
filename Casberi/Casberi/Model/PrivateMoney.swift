@@ -224,8 +224,10 @@ enum PrivateMoney {
     /// A deposit Wallet › Needs you shows: waiting for 0xBow's approval (the
     /// amber clock, "Since 2:14 PM"), or not approved (red), whose act is Take
     /// it back — the ragequit, a public exit to the address it came from.
-    /// Take it back is offered too on a deposit that has waited past
-    /// `takeBackAfter`. An approved note asks nothing: it leaves.
+    /// **TAKE IT BACK ANYTIME (prd §1576, user: "yes we want it for take back
+    /// anytime!"):** a waiting deposit offers it from the start — the chain
+    /// lets your account ragequit whatever 0xBow says. An approved note asks
+    /// nothing: it leaves.
     struct Ask: Equatable, Identifiable {
         enum Kind: Equatable { case waiting, refused }
         let note: Note
@@ -247,8 +249,6 @@ enum PrivateMoney {
         }
     }
 
-    static let takeBackAfter: TimeInterval = 7 * 86_400
-
     /// One ask per note the ASP has not approved, refused first, then the
     /// oldest first.
     static func asks(_ notes: [Note], now: Date) -> [Ask] {
@@ -257,7 +257,7 @@ enum PrivateMoney {
             switch note.status {
             case .approved: return nil
             case .waiting:
-                return Ask(note: note, kind: .waiting, canTakeBack: now.timeIntervalSince(note.at) > takeBackAfter)
+                return Ask(note: note, kind: .waiting, canTakeBack: true)
             case .rejected, .needsProof:
                 return Ask(note: note, kind: .refused, canTakeBack: true)
             }

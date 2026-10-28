@@ -416,10 +416,8 @@ let asks = P.asks(notes, now: now0)
 check(asks.map(\.id) == ["e", "d", "g", "c"], "refused first, then waiting, oldest first (\(asks.map(\.id)))")
 check(asks.map(\.title) == ["0.002 ETH not approved", "0.0005 ETH not approved", "0.0005 ETH waiting for approval", "0.001 ETH waiting for approval"],
       "the rows' words (\(asks.map(\.title)))")
-check(asks.filter(\.canTakeBack).map(\.id) == ["e", "d"], "only a refusal is taken back within the week")
-check(P.asks(notes, now: t0.addingTimeInterval(8 * 86_400)).filter(\.canTakeBack).map(\.id) == ["e", "d", "g", "c"],
-      "a deposit waiting past a week is not offered back")
-check(P.asks(notes, now: t0.addingTimeInterval(6 * 86_400)).filter(\.canTakeBack).count == 2, "a week is a week")
+// Take it back anytime (prd §1576): every deposit not approved offers it.
+check(asks.filter(\.canTakeBack).map(\.id) == ["e", "d", "g", "c"], "a waiting deposit is not offered back at once (prd §1576)")
 check(P.asks([note("a", "1", .approved)], now: now0).isEmpty, "an approved deposit still needs you")
 check(P.asks([note("z", "0", .rejected)], now: now0).isEmpty, "an empty note needs you")
 var utc = Calendar(identifier: .gregorian)
@@ -814,7 +812,7 @@ mutate "unknown no longer waits" "$PM" 's/case "pending", "unknown": return \.wa
 mutate "the ASP is asked by any label" "$PM" 's/guard labelHash\.range\(of: #"\^\[0-9\]\{1,80\}\$"#/guard labelHash.range(of: #".+"#/'
 mutate "a waiting row dates from its newest note" "$PM" 's/min\(had\.since, note\.at\)/max(had.since, note.at)/'
 mutate "a refused deposit is not taken back" "$PM" 's/return Ask\(note: note, kind: \.refused, canTakeBack: true\)/return Ask(note: note, kind: .refused, canTakeBack: false)/'
-mutate "a deposit waiting a month is never offered back" "$PM" 's/canTakeBack: now\.timeIntervalSince\(note\.at\) > takeBackAfter/canTakeBack: false/'
+mutate "a waiting deposit is never offered back (prd §1576)" "$PM" 's/return Ask\(note: note, kind: \.waiting, canTakeBack: true\)/return Ask(note: note, kind: .waiting, canTakeBack: false)/'
 mutate "an approved deposit still needs you" "$PM" 's/case \.approved: return nil/case .approved: return Ask(note: note, kind: .waiting, canTakeBack: false)/'
 mutate "poi_required waits in Needs you" "$PM" 's/case \.rejected, \.needsProof:\n                return Ask\(note: note, kind: \.refused/case .rejected, .needsProof:\n                return Ask(note: note, kind: .waiting/'
 mutate "an older wait says only its time" "$PM" 's/let shown = calendar\.isDate\(at, inSameDayAs: now\)/let shown = true/'

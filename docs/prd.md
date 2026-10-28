@@ -69234,3 +69234,8 @@ ENSv2 activated on mainnet on 2026-10-27. Measured that day: the `.eth` BaseRegi
 
 `-telegramMessagesProbe YES` logs the shape (kinds, line counts, never words); `-liveMessages telegram` flips the switch. `telegram-messages-selftest.sh` holds the mapping, the 777000 rule and the no-write rule.
 7. **Faces.** A one-to-one leads with the person's public photo, `t.me/i/userpic/320/<username>.jpg` (Telegram's redirect to `telesco.pe`, keyless, a 404 without a public username or photo, which keeps the mark), read off the row's handle so rows landed before faces have one too. TDLib's own photos are files on one device, and a face has to reach the Mac. A group keeps the mark (§707).
+
+## §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week (amends §1561's Needs you) (user, 2026-10-27: "yes we want it for take back anytime!") — RULED, built
+
+1. **The chain allows it, so the app does:** ragequit pays your account whatever 0xBow says (v2's PoolVault checks only the proof's owner), so the seven-day wait (`takeBackAfter`) is deleted; a waiting row reads "Since 2:14 PM · Take it back".
+2. **The dialog says what it gives up, on the right network:** "It goes back to your account on Ethereum, in public. This deposit won't be private." (it said "on Sepolia" on mainnet).
