@@ -100,7 +100,12 @@ guard "the archive sentence excludes a row that arrived live" \
 guard "the live notice namespace is the literal XLiveNotifications builds" \
   'static let sourceRefPrefix = "x-live:notif:"' "$XLIVE"
 guard "…and the same literal is X's entry in Corpus.liveRefPrefixesBySource" \
-  '^[[:space:]]*"X": \["x-live:notif:", "x-live:dm:"\],' "$THING"
+  '^[[:space:]]*"X": \["x-live:notif:", "x-live:dm:", "x-live:post:"\],' "$THING"
+# The Following timeline's posts (prd §1582): built from `XLiveFollowing.refPrefix`.
+# This drift shipped once already, before a build left the desk: 74 posts landed
+# and not one reached the Feed.
+guard "the Following post namespace is the literal XLiveFollowing builds" \
+  'static let refPrefix = "x-live:post:"' "Casberi/Casberi/Model/XLiveFollowing.swift"
 # The messages read (prd §1244) is the same miss waiting a third time: a
 # conversation under a prefix the set does not hold is kept out of All and
 # counted by "Remove import".

@@ -15,58 +15,6 @@ import Foundation
 /// counts by kind — never a post's words, a handle or an id. Read-only: the
 /// request sends no `seenTweetIds` and nothing here marks anything seen.
 enum XLiveFollowingProbe {
-    /// `HomeLatestTimeline`'s query id, as x.com's logged-in web bundle named
-    /// it on 2026-10-27 (read off a public tracker of that bundle,
-    /// fa0311/TwitterInternalAPIDocument, regenerated the same day). Pinned
-    /// like `XLiveNotifications.notificationsQueryID`: X rotates it without
-    /// notice, a rotation reads as a 404 on this path, and
-    /// `-xFollowingQueryID <id>` tries another without a rebuild.
-    static let pinnedQueryID = "KQPfcqQJJqF6M0D77p3JKw"
-
-    /// The feature switches the same bundle sends with this query, verbatim.
-    /// X answers 400 naming any it wants and did not get.
-    private static let features: [String: Any] = [
-        "rweb_video_screen_enabled": false,
-        "rweb_cashtags_enabled": true,
-        "profile_label_improvements_pcf_label_in_post_enabled": true,
-        "responsive_web_profile_redirect_enabled": true,
-        "rweb_tipjar_consumption_enabled": false,
-        "verified_phone_label_enabled": false,
-        "creator_subscriptions_tweet_preview_api_enabled": true,
-        "responsive_web_graphql_timeline_navigation_enabled": true,
-        "premium_content_api_read_enabled": false,
-        "communities_web_enable_tweet_community_results_fetch": true,
-        "c9s_tweet_anatomy_moderator_badge_enabled": true,
-        "responsive_web_grok_analyze_button_fetch_trends_enabled": false,
-        "responsive_web_grok_analyze_post_followups_enabled": true,
-        "rweb_cashtags_composer_attachment_enabled": true,
-        "responsive_web_jetfuel_frame": true,
-        "rweb_sports_post_context_enabled": true,
-        "responsive_web_grok_share_attachment_enabled": true,
-        "responsive_web_grok_annotations_enabled": true,
-        "articles_preview_enabled": true,
-        "responsive_web_edit_tweet_api_enabled": true,
-        "graphql_is_translatable_rweb_tweet_is_translatable_enabled": true,
-        "view_counts_everywhere_api_enabled": true,
-        "longform_notetweets_consumption_enabled": true,
-        "responsive_web_twitter_article_tweet_consumption_enabled": true,
-        "content_disclosure_indicator_enabled": true,
-        "content_disclosure_ai_generated_indicator_enabled": true,
-        "responsive_web_grok_show_grok_translated_post": true,
-        "responsive_web_grok_analysis_button_from_backend": true,
-        "post_ctas_fetch_enabled": false,
-        "freedom_of_speech_not_reach_fetch_enabled": true,
-        "standardized_nudges_misinfo": true,
-        "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled": true,
-        "longform_notetweets_rich_text_read_enabled": true,
-        "longform_notetweets_inline_media_enabled": false,
-        "responsive_web_nested_quote_preview_enabled": true,
-        "responsive_web_grok_image_annotation_enabled": true,
-        "responsive_web_grok_imagine_annotation_enabled": true,
-        "responsive_web_grok_community_note_auto_translation_is_enabled": true,
-        "responsive_web_enhance_cards_enabled": false,
-    ]
-
     /// A POST with a JSON body unless `mode` is `get`. MEASURED 2026-10-27:
     /// the GET the tracker lists answers 200 with the two cursors and no
     /// posts; the POST answers the page (89 entries). Either way, one request.
@@ -76,10 +24,10 @@ enum XLiveFollowingProbe {
             NSLog("[Casberi] xFollowing| not signed in — sign in on the X account page first")
             return
         }
-        let queryID = queryOverride.flatMap { $0.isEmpty ? nil : $0 } ?? pinnedQueryID
+        let queryID = queryOverride.flatMap { $0.isEmpty ? nil : $0 } ?? XLiveFollowing.queryID
         let post = mode.lowercased() != "get"
         NSLog("[Casberi] xFollowing| query id %@ (%@), %@, no x-client-transaction-id",
-              queryID, queryOverride == nil ? "pinned 2026-10-27 from the web bundle's tracker" : "-xFollowingQueryID",
+              queryID, queryOverride == nil ? "XLiveFollowing.queryID, pinned 2026-10-27" : "-xFollowingQueryID",
               post ? "POST" : "GET")
 
         let variables: [String: Any] = [
@@ -146,32 +94,107 @@ enum XLiveFollowingProbe {
             return
         }
         logShape(json)
+        // What the landing would take (prd §1582), counted, never shown.
+        if let posts = XFollowingRead.posts(json, me: XLiveAuth.userID, now: .now) {
+            NSLog("[Casberi] xFollowing| parsed %d posts: %d reposts, %d quotes, %d with pictures, %d words-only",
+                  posts.count, posts.filter { $0.repostedBy != nil }.count,
+                  posts.filter { $0.quoted != nil }.count,
+                  posts.filter { !$0.imageURLs.isEmpty }.count,
+                  posts.filter { $0.imageURLs.isEmpty }.count)
+        } else {
+            NSLog("[Casberi] xFollowing| parsed nil — not the measured shape")
+        }
+        if mode.lowercased() == "shape" { writeSkeleton(json) }
+    }
+
+    /// `shape`: the STRUCTURE of one post entry, one conversation and one
+    /// repost — every key kept, every value replaced by its type — written to
+    /// the app's Documents as `xFollowingShape.json`. No words, ids or handles
+    /// survive it; it is what the parser is written against.
+    private static func writeSkeleton(_ root: [String: Any]) {
+        let instructions = ((((root["data"] as? [String: Any])?["home"] as? [String: Any])?["home_timeline_urt"]
+            as? [String: Any])?["instructions"] as? [[String: Any]]) ?? []
+        let entries = instructions.flatMap { $0["entries"] as? [[String: Any]] ?? [] }
+        func id(_ e: [String: Any]) -> String { e["entryId"] as? String ?? "" }
+        let post = entries.first { id($0).hasPrefix("tweet-") && !String(describing: $0).contains("retweeted_status_result") }
+        let repost = entries.first { id($0).hasPrefix("tweet-") && String(describing: $0).contains("retweeted_status_result") }
+        let conversation = entries.first { id($0).hasPrefix("home-conversation") }
+        let quote = entries.first { id($0).hasPrefix("tweet-") && String(describing: $0).contains("quoted_status_result") }
+        var out: [String: Any] = [:]
+        // Posts whose words are a bare x.com status address: what else they
+        // carry, and whether the address is the post's own. No words kept.
+        var linkOnly: [[String: Any]] = []
+        for e in entries where id(e).hasPrefix("tweet-") || id(e).hasPrefix("home-conversation") {
+            let item = ((e["content"] as? [String: Any])?["itemContent"] as? [String: Any])
+                ?? ((((e["content"] as? [String: Any])?["items"] as? [[String: Any]])?.last?["item"] as? [String: Any])?["itemContent"] as? [String: Any])
+            guard let raw = (item?["tweet_results"] as? [String: Any])?["result"] as? [String: Any] else { continue }
+            let r = XPostShape.unwrap(raw)
+            let inner = ((r["legacy"] as? [String: Any])?["retweeted_status_result"] as? [String: Any])?["result"] as? [String: Any]
+            let body = inner.map(XPostShape.unwrap) ?? r
+            guard let words = XPostShape.words(body).map({ XPostShape.expandLinks($0, result: body) }),
+                  words.range(of: #"^https?://\S+/status/\d+\S*$"#, options: .regularExpression) != nil
+            else { continue }
+            let rest = body["rest_id"] as? String ?? "?"
+            let tail = words.split(separator: "/").suffix(2).map { $0.allSatisfy(\.isNumber) ? "<id>" : String($0) }
+            let qid = (body["legacy"] as? [String: Any])?["quoted_status_id_str"] as? String ?? ""
+            let parsed = XFollowingRead.post(r, me: XLiveAuth.userID, now: .now)
+            linkOnly.append(["selfLink": words.contains(rest), "tail": tail.joined(separator: "/"),
+                             "linkIsQuoted": !qid.isEmpty && words.contains(qid),
+                             "dropsToEmpty": !qid.isEmpty && XFollowingRead.dropping(qid, from: words).isEmpty,
+                             "parsedTextNil": parsed.map { $0.text == nil } ?? false,
+                             "parsedNil": parsed == nil,
+                             "hostShape": words.replacingOccurrences(of: #"/status/.*"#, with: "", options: .regularExpression)
+                                 .replacingOccurrences(of: #"[A-Za-z0-9_]+$"#, with: "<h>", options: .regularExpression),
+                             "skeleton": skeleton(body)])
+        }
+        if !linkOnly.isEmpty { out["linkOnly"] = linkOnly }
+        if let post { out["post"] = skeleton(post) }
+        if let repost { out["repost"] = skeleton(repost) }
+        if let conversation { out["conversation"] = skeleton(conversation) }
+        if let quote { out["quote"] = skeleton(quote) }
+        // A created_at's FORMAT, never its value: the digits become 9s.
+        if let legacy = (((((post?["content"] as? [String: Any])?["itemContent"] as? [String: Any])?["tweet_results"]
+            as? [String: Any])?["result"] as? [String: Any])?["legacy"] as? [String: Any]),
+           let created = legacy["created_at"] as? String {
+            out["created_at_format"] = String(created.map { $0.isNumber ? "9" : $0 })
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: out, options: [.prettyPrinted, .sortedKeys]),
+              let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        else { return }
+        let url = dir.appendingPathComponent("xFollowingShape.json")
+        try? data.write(to: url)
+        NSLog("[Casberi] xFollowing| skeleton written: %@ (%d bytes)", url.path, data.count)
+    }
+
+    private static func skeleton(_ value: Any, depth: Int = 0) -> Any {
+        guard depth < 18 else { return "…" }
+        switch value {
+        case let dict as [String: Any]:
+            return dict.mapValues { skeleton($0, depth: depth + 1) }
+        case let array as [Any]:
+            return array.isEmpty ? [] : ["\(array.count)×", skeleton(array[0], depth: depth + 1)]
+        case let n as NSNumber:
+            return CFGetTypeID(n) == CFBooleanGetTypeID() ? "bool" : "number"
+        case is String:
+            return "string"
+        default:
+            return "null"
+        }
     }
 
     private static func request(queryID: String, variables: [String: Any], post: Bool,
                                 auth: (authToken: String, ct0: String)) -> URLRequest? {
-        let base = "https://x.com/i/api/graphql/\(queryID)/HomeLatestTimeline"
-        var request: URLRequest
-        if post {
-            guard let url = URL(string: base),
-                  let body = try? JSONSerialization.data(withJSONObject: [
-                      "variables": variables, "features": features, "queryId": queryID,
-                  ]) else { return nil }
-            request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.httpBody = body
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        } else {
-            guard let v = try? JSONSerialization.data(withJSONObject: variables, options: [.sortedKeys]),
-                  let f = try? JSONSerialization.data(withJSONObject: features, options: [.sortedKeys]),
-                  var comps = URLComponents(string: base) else { return nil }
-            comps.queryItems = [
-                URLQueryItem(name: "variables", value: String(data: v, encoding: .utf8)),
-                URLQueryItem(name: "features", value: String(data: f, encoding: .utf8)),
-            ]
-            guard let url = comps.url else { return nil }
-            request = URLRequest(url: url)
-        }
+        if post { return XLiveFollowing.request(queryID: queryID, auth: auth) }
+        guard let v = try? JSONSerialization.data(withJSONObject: variables, options: [.sortedKeys]),
+              let f = try? JSONSerialization.data(withJSONObject: XLiveFollowing.features, options: [.sortedKeys]),
+              var comps = URLComponents(string: "https://x.com/i/api/graphql/\(queryID)/HomeLatestTimeline")
+        else { return nil }
+        comps.queryItems = [
+            URLQueryItem(name: "variables", value: String(data: v, encoding: .utf8)),
+            URLQueryItem(name: "features", value: String(data: f, encoding: .utf8)),
+        ]
+        guard let url = comps.url else { return nil }
+        var request = URLRequest(url: url)
         request.setValue("Bearer \(XLiveNotifications.guestBearerToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         for (field, value) in XLiveNotifications.headers(auth) {

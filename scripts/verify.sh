@@ -1780,6 +1780,11 @@ harness "Threads live self-test" "Threads live self-test" "scripts/threads-live-
 # for when a stored notice moves. A notice stamped with the sweep's clock reads
 # "minutes ago" for a like from hours ago, and nothing on screen can tell.
 harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the X live self-test failed — run scripts/x-live-selftest.sh"
+# Your X Following timeline (prd §1582): an ad lands as a post, a reply thread
+# lands a stranger's root, your own posts come back as news, a stale post is
+# landed and pruned on every read, an opened post is pruned, or the "New post"
+# notices land beside the posts that replace them.
+harness "X Following self-test" "X Following self-test" "scripts/x-following-selftest.sh" "the X Following self-test failed — run scripts/x-following-selftest.sh"
 # The X and Instagram DM reads (prd §1244): a message request lands beside your
 # conversations, your own lines carry your name or a one-to-one is titled with
 # yourself, Instagram's microseconds date a chat decades away, a second read

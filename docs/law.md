@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1719 of 1788 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1720 of 1789 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1022,7 +1022,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §698 — The Frames scope is one reading in three rooms
 - §699 — The GitHub room is ONE FEED: the head card is deleted, the type becomes a tag under the timestamp, and the faces you… (part superseded by §815)
 - §700 — Only the avatar is fixed: the catalogue is the strip's LAST item (part superseded by §793, §798)
-- §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined (amended by §1577)
+- §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined (amended by §1577, §1582)
 - §702 — "What it reaches" leaves the account pages; the app's hosts are stated once, in settings
 - §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows (amended by §1158)
 - §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it
@@ -1064,7 +1064,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §734 — Under a picture the cover's title is a caption, not a head
 - §735 — "From — in your inbox" is a door: a mail row goes to THE MESSAGE, not to the mail app
 - §736 — The "From" row is DELETED: the dial was already the open button, and the two facts the row alone held are now words o…
-- §737 — X's live notifications are swept from the foreground, not only from the account page's button
+- §737 — X's live notifications are swept from the foreground, not only from the account page's button (amended by §1582)
 - §738 — The curve library is VENDORED at 0.21.1 with one line patched, because Xcode 27 stopped compiling it
 - §739 — Hover goes through `AutomaticHoverEffect()`, because the iOS 27 SDK linked a conformance no older OS has
 - §740 — The day divider wears the brand pink
@@ -1965,6 +1965,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396)
 - §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
 - §1581 — Newest holds one thing per app
+- §1582 — Your X Following timeline lands as posts, and they replace the "New post" notices
 
 ## Dead rulings → what replaced them (generated)
 

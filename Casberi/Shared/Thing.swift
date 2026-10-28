@@ -350,7 +350,8 @@ enum Corpus {
     static let liveRefPrefixesBySource: [String: Set<String>] = [
         // Your chats through TDLib (prd §1575), beside the followed channels.
         "Telegram": ["telegram:post:", "telegram:dm:"],
-        "X": ["x-live:notif:", "x-live:dm:"],
+        // The Following timeline's posts (prd §1582) are live too.
+        "X": ["x-live:notif:", "x-live:dm:", "x-live:post:"],
         "Instagram": ["ig-live:notif:", "ig-live:dm:"],
         "TikTok": ["tiktok:live:notif:"],
     ]

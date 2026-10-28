@@ -1382,6 +1382,8 @@ struct ThingSheetView: View {
         .toolbar(onBack != nil || inlineRest ? .hidden : .automatic, for: .navigationBar)
         .onAppear {
             streamRelated()
+            // An X Following post you opened is kept past its days (prd §1582).
+            XLiveFollowing.noteOpened(thing)
             Task { replies = await SocialThread.replies(for: thing) }
             // The note anatomies (prd §366). All of it is synchronous and
             // scoped: two bounded fetches for a passage, one bounded fetch for

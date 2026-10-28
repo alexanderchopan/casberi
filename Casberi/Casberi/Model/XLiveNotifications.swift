@@ -76,6 +76,7 @@ enum XLiveAuth {
         // disconnecting doesn't leave casts to be re-adopted by a later
         // reconnect under the same entry ids.
         ThingCast.shared.forget(refPrefix: XLiveNotifications.sourceRefPrefix)
+        XLiveFollowing.Opened.forget()
     }
 }
 
@@ -123,17 +124,23 @@ enum XLiveNotifications {
         running = true
         defer { running = false }
 
+        // YOUR FOLLOWING TIMELINE FIRST (prd §1582): its posts replace the
+        // "New post from…" notices, so those land only while it cannot be
+        // read (a rotated query id, a refused session) — the news never goes
+        // quiet because one door did.
+        let following = await XLiveFollowing.refresh(auth: auth, context: context)
+
         let (json, status) = await fetch(auth: auth)
         guard status == 200, let entries = notificationEntries(json) else {
             // The messages read is its own endpoint (prd §1244): a rotated
             // notifications query id must not silence it too.
-            guard LiveMessages.reads(.x) else { return nil }
-            return await landMessages(auth: auth, context: context)
+            guard LiveMessages.reads(.x) else { return following }
+            return (following ?? 0) + (await landMessages(auth: auth, context: context) ?? 0)
         }
 
         let landed = landedNotices(context: context)
         let now = Date.now
-        var added = 0
+        var added = following ?? 0
         var healed = 0
         for entry in entries {
             guard let id = entry["entryId"] as? String, !id.isEmpty else { continue }
@@ -200,6 +207,8 @@ enum XLiveNotifications {
                 if touched { healed += 1 }
                 continue
             }
+            if following != nil, let text = notificationText(entry),
+               XFollowingRead.isNewPostNotice(text) { continue }
             guard let thing = thing(from: entry, ref: ref, at: at ?? now) else { continue }
             recordCast(from: entry, ref: ref, at: at ?? now)
             context.insert(thing)
@@ -636,11 +645,7 @@ enum XLiveNotifications {
     /// either may be what a given account comes back as, so both are read and
     /// the first non-empty answer wins.
     private static func author(_ result: [String: Any]) -> (handle: String?, avatar: String?) {
-        guard let core = result["core"] as? [String: Any],
-              let userResults = core["user_results"] as? [String: Any],
-              let user = userResults["result"] as? [String: Any]
-        else { return (nil, nil) }
-        return face(of: user)
+        XPostShape.author(result)
     }
 
     /// WHO ACTED — the person the notice is about, off `template.from_users`
@@ -748,16 +753,7 @@ enum XLiveNotifications {
     /// at `DS.Face.badge` on a 3× screen. `_400x400` is X's own named size and
     /// the substitution is safe on any URL that lacks it (no match, no change).
     private static func face(of user: [String: Any]) -> (handle: String?, avatar: String?) {
-        let legacy = user["legacy"] as? [String: Any]
-        let userCore = user["core"] as? [String: Any]
-        let handle = (legacy?["screen_name"] as? String)
-            ?? (userCore?["screen_name"] as? String)
-        let avatar = (legacy?["profile_image_url_https"] as? String)
-            ?? ((user["avatar"] as? [String: Any])?["image_url"] as? String)
-        return (handle.flatMap { $0.isEmpty ? nil : $0 },
-                avatar.flatMap {
-                    $0.isEmpty ? nil : $0.replacingOccurrences(of: "_normal.", with: "_400x400.")
-                })
+        XPostShape.face(of: user)
     }
 
     /// The post's own words. A long-form post keeps its full text on
@@ -765,16 +761,7 @@ enum XLiveNotifications {
     /// so the long form is read FIRST — the same precedence the archive
     /// importer gave `note-tweet.js` over `tweets.js` (§375).
     private static func words(_ result: [String: Any]) -> String? {
-        if let note = result["note_tweet"] as? [String: Any],
-           let noteResults = note["note_tweet_results"] as? [String: Any],
-           let noteResult = noteResults["result"] as? [String: Any],
-           let text = noteResult["text"] as? String, !text.isEmpty {
-            return text
-        }
-        guard let legacy = result["legacy"] as? [String: Any] else { return nil }
-        let text = (legacy["full_text"] as? String) ?? (legacy["text"] as? String)
-        guard let text, !text.isEmpty else { return nil }
-        return text
+        XPostShape.words(result)
     }
 
     /// t.co out, the real link in — the same job the archive importer's
@@ -785,33 +772,11 @@ enum XLiveNotifications {
     /// picture post reads as a sentence followed by a shortlink to itself. The
     /// picture is drawn above the words here, so that link is dropped outright.
     private static func expandLinks(_ text: String, result: [String: Any]) -> String {
-        guard let legacy = result["legacy"] as? [String: Any] else { return text }
-        var out = text
-        let entities = legacy["entities"] as? [String: Any]
-        for url in (entities?["urls"] as? [[String: Any]]) ?? [] {
-            guard let short = url["url"] as? String,
-                  let expanded = url["expanded_url"] as? String, !short.isEmpty
-            else { continue }
-            out = out.replacingOccurrences(of: short, with: expanded)
-        }
-        let media = ((legacy["extended_entities"] as? [String: Any])?["media"] as? [[String: Any]])
-            ?? (entities?["media"] as? [[String: Any]]) ?? []
-        for item in media {
-            guard let short = item["url"] as? String, !short.isEmpty else { continue }
-            out = out.replacingOccurrences(of: short, with: "")
-        }
-        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+        XPostShape.expandLinks(text, result: result)
     }
 
     private static func imageURLs(_ result: [String: Any]) -> [String] {
-        guard let legacy = result["legacy"] as? [String: Any] else { return [] }
-        let media = ((legacy["extended_entities"] as? [String: Any])?["media"] as? [[String: Any]])
-            ?? ((legacy["entities"] as? [String: Any])?["media"] as? [[String: Any]]) ?? []
-        return media.compactMap { item in
-            // A video's poster frame is served under the same key, so this
-            // covers both without claiming to play anything.
-            (item["media_url_https"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        }
+        XPostShape.imageURLs(result)
     }
 
     static func subject(from entry: [String: Any]) -> Subject? {
