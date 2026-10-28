@@ -289,38 +289,6 @@ def leaf(cx, cy, length, width, angle, fill, vein=None):
 # ── coffee (three subjects, three set-ups) ────────────────────────────────
 
 
-def x_photo_1(p):
-    """Morning: a white cup on a stone ledge, backlit; the city a peach-and-blue blur outside."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#f7cfa9", "#f3dcc5", "#b9cbe0")))
-    p.add(p.soft(C(250, 150, 120, "#fff4d8", opacity=.9), 40))
-    city = []
-    rnd = random.Random(21)
-    x = -20
-    while x < w:
-        bw = rnd.uniform(50, 120)
-        bh = rnd.uniform(130, 300)
-        city.append(R(x, 420 - bh, bw, bh + 20, rnd.choice(["#9fb0c9", "#aebbd0", "#8ea2c0", "#b6c0d4"]), opacity=.85))
-        x += bw + rnd.uniform(-10, 10)
-    p.add(p.soft("".join(city), 7))
-    glints = [(rnd.uniform(0, w), rnd.uniform(180, 400), rnd.uniform(6, 16), "#ffe7c2", rnd.uniform(.35, .7)) for _ in range(14)]
-    p.add(bokeh(p, glints, 3))
-    # window frame edges
-    p.add(R(0, 0, 26, 440, "#f7f3ee"))
-    p.add(R(0, 0, w, 18, "#f7f3ee"))
-    p.add(R(420, 0, 14, 440, "#f7f3ee"))
-    p.add(R(0, 430, w, 14, "#e9e1d6"))
-    # ledge
-    p.add(R(0, 440, w, 160, p.lg("#efe6da", "#d9ccbc")))
-    p.add(p.soft(PL([(300, 450), (700, 450), (800, 600), (240, 600)], "#fff1d6", opacity=.6), 10))
-    # cup (backlit, shadow toward the viewer)
-    cx = 590
-    p.add(p.soft(PL([(cx - 60, 520), (cx + 60, 520), (cx + 110, 600), (cx - 20, 600)], "#8a735b"), 12, .4))
-    p.add(cup_side(p, cx, 520, 150, 112, "#fbf7f1", liquid=p.rg("#8a5a36", "#5a3620"), rim_light="#fff1c9", persp=.2))
-    p.add(p.soft(R(cx + 58, 420, 8, 90, "#fff1c9", opacity=.8), 3))
-    p.add(steam(p, cx, 390, 150, col="#fff4dc", op=.55, wide=10, seed=8))
-
-
 def ig_save_0(p):
     """A café interior: bottle-green wall, cup shelves, three pendant lamps, white marble counter."""
     w, h = p.w, p.h
@@ -370,7 +338,7 @@ def ig_save_0(p):
 
 
 DRAW = {
-    "x-photo-1": x_photo_1, "ig-save-0": ig_save_0,
+    "ig-save-0": ig_save_0,
 }
 
 
@@ -427,92 +395,6 @@ def flour(p, box, k, rnd, col="#ffffff", op=.5):
 
 
 # ── pastry and food ───────────────────────────────────────────────────────
-
-
-def ig_photo_1(p):
-    """Pastel de nata, top-down on a pale plate over a navy slate table; cinnamon, a stick of it."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.rg("#3f4b62", "#2a3346", "#1c2232", cx=.3, cy=.25, r=.95)))
-    cx, cy = 312, 390
-    p.add(p.soft(C(cx + 26, cy + 30, 238, "#0b0f18"), 18, .55))
-    p.add(C(cx, cy, 236, p.rg((0, "#eef2f3"), (.72, "#e2e8ea"), (.8, "#f7f9f9"), (1, "#c3cdd2"), cx=.45, cy=.42)))
-    p.add(C(cx, cy, 172, "#dbe3e6"))
-    p.add(C(cx, cy, 172, "none", stroke="#ffffff", stroke_width=2, opacity=.6))
-    # the tart
-    tx, ty = cx - 6, cy - 4
-    p.add(p.soft(C(tx + 12, ty + 14, 146, "#5a6770"), 8, .6))
-    p.add(P(scallop(tx, ty, 140, 5, 18), p.rg((0, "#e8b765"), (.78, "#d99a45"), (.9, "#b8702e"), (1, "#8a4d1d"))))
-    for i, r in enumerate((138, 133, 128, 123, 119)):
-        p.add(C(tx + (i - 2) * 1.2, ty + (i % 2), r, "none", stroke="#f9dc9a" if i % 2 == 0 else "#95521f", stroke_width=2.4, opacity=.7))
-    p.add(C(tx, ty, 116, "#b8702e"))
-    p.add(C(tx, ty, 112, p.rg((0, "#fbe08a"), (.6, "#f3c552"), (1, "#e3a43a"), cx=.45, cy=.45)))
-    rnd = random.Random(8)
-    halo, spots = [], []
-    for _ in range(26):
-        a = rnd.uniform(0, 2 * math.pi)
-        rr = 96 * math.sqrt(rnd.uniform(0, 1))
-        x, y = tx + math.cos(a) * rr, ty + math.sin(a) * rr
-        big = rnd.random() < .25
-        rx_ = rnd.uniform(12, 22) if big else rnd.uniform(4, 10)
-        ry_ = rx_ * rnd.uniform(.55, .85)
-        rot = rnd.uniform(0, 180)
-        halo.append(P(blob(x, y, rx_ * 1.7, ry_ * 1.7, rnd, rot=rot), "#b8641f"))
-        spots.append(P(blob(x, y, rx_, ry_, rnd, rot=rot), rnd.choice(["#3a1606", "#4a1e08", "#2a0f04"])))
-    p.add(p.soft("".join(halo), 6, .55))
-    p.add(p.soft("".join(spots), 1.5, .92))
-    p.add(p.soft(E(tx - 40, ty - 44, 50, 26, "#fff6d0", opacity=.45), 10))
-    # cinnamon dusting
-    p.add(p.soft(C(tx + 20, ty + 10, 60, "#8b4a22", opacity=.22), 14))
-    p.add(flour(p, (tx - 90, ty - 80, tx + 100, ty + 90), 120, rnd, col="#7a3a18", op=.7))
-    # cinnamon stick
-    st = [R(0, -14, 210, 28, p.lg("#9a4f25", "#7a3718", "#4f200c"), rx=10),
-          R(0, -14, 210, 8, "#b8683a", rx=4, opacity=.6),
-          E(210, 0, 9, 14, "#5a2710"), P("M204,-10 C216,-4 212,6 202,8", "none", stroke="#b8683a", stroke_width=3)]
-    p.add(p.soft(f'<g transform="translate(400 700) rotate(-18)">{R(6, -4, 210, 28, "#0b0f18", rx=10)}</g>', 6, .55))
-    p.add(f'<g transform="translate(380 694) rotate(-18)">{"".join(st)}</g>')
-    p.add(flour(p, (90, 640, 340, 760), 26, rnd, col="#8b4a22", op=.6))
-
-
-def ig_photo_3(p):
-    """Sourdough batard from a high three-quarter view on oatmeal linen: banneton flour rings, one long opened ear."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#4a423c", "#2d2724", x1=0, y1=0, x2=1, y2=.4)))
-    p.add(p.soft(E(60, 160, 260, 280, "#8a7a6a", opacity=.35), 60))
-    p.add(P("M-20,300 C140,270 480,280 660,300 L660,800 L-20,800 Z", p.lg("#e7dcc8", "#d6c8ae", "#c4b393")))
-    p.add(P("M-20,700 C200,690 420,700 660,690 L660,716 C420,726 200,716 -20,726 Z", "#6f8aa3", opacity=.55))
-    folds = [("M40,320 C90,480 70,640 120,800", .18), ("M560,300 C520,460 580,640 540,800", .16)]
-    for d, op in folds:
-        p.add(p.soft(P(d, "none", stroke="#8f7c5c", stroke_width=18, opacity=op), 8))
-    cx, cy = 320, 500
-    p.add(p.soft(E(cx + 30, cy + 96, 270, 40, "#3f3322"), 16, .65))
-    loaf = (f"M{cx - 262},{cy + 70} C{cx - 280},{cy - 70} {cx - 160},{cy - 170} {cx},{cy - 170} "
-            f"C{cx + 160},{cy - 170} {cx + 284},{cy - 70} {cx + 262},{cy + 70} C{cx + 230},{cy + 112} {cx - 230},{cy + 112} {cx - 262},{cy + 70} Z")
-    p.add(P(loaf, p.rg((0, "#a8622a"), (.45, "#7a3a14"), (.8, "#4e220a"), (1, "#2e1204"), cx=.38, cy=.28, r=.78)))
-    clip = p.clip(P(loaf, "#000"))
-    rb = random.Random(33)
-    blotch = "".join(P(blob(cx + rb.uniform(-230, 230), cy + rb.uniform(-140, 80), rb.uniform(20, 50), rb.uniform(12, 30), rb), rb.choice(["#3a1606", "#b86e32"])) for _ in range(14))
-    p.add(G(p.soft(blotch, 8, .45), clip_path=clip))
-    blist = "".join(C(cx + rb.uniform(-240, 240), cy + rb.uniform(-150, 90), rb.uniform(1.5, 3.5), "#2a1004", opacity=.7) for _ in range(90))
-    p.add(G(blist, clip_path=clip))
-    # matte flour at the two ends, and banneton lines across the shoulders
-    p.add(G(p.soft(E(cx - 200, cy + 10, 110, 100, "#efe4d2", opacity=.5), 26), p.soft(E(cx + 210, cy - 10, 100, 100, "#efe4d2", opacity=.45), 26), clip_path=clip))
-    lines = "".join(P(f"M{cx - 260 + k * 30},{cy + 80} C{cx - 250 + k * 30},{cy - 20} {cx - 200 + k * 34},{cy - 110} {cx - 140 + k * 38},{cy - 160}",
-                      "none", stroke="#f1e6d2", stroke_width=4, opacity=.22) for k in range(3))
-    lines += "".join(P(f"M{cx + 260 - k * 30},{cy + 80} C{cx + 250 - k * 30},{cy - 20} {cx + 200 - k * 34},{cy - 110} {cx + 140 - k * 38},{cy - 160}",
-                       "none", stroke="#f1e6d2", stroke_width=4, opacity=.2) for k in range(3))
-    p.add(G(p.soft(lines, 1.2), clip_path=clip))
-    # the long score, opened wide, and the ear lifting over it
-    ax, ay, bx, by = cx - 190, cy - 30, cx + 200, cy - 80
-    p.add(P(f"M{ax},{ay} C{cx - 90},{cy - 140} {cx + 90},{cy - 156} {bx},{by} C{cx + 90},{cy - 100} {cx - 90},{cy - 70} {ax},{ay} Z",
-            p.lg("#f0c784", "#d9974e", "#8a4a1c", x2=0, y2=1)))
-    p.add(p.soft(P(f"M{ax + 10},{ay - 6} C{cx - 90},{cy - 136} {cx + 90},{cy - 156} {bx - 8},{by - 2}", "none", stroke="#3a1606", stroke_width=14), 5, .55))
-    ear = f"M{ax},{ay} C{cx - 100},{cy - 172} {cx + 80},{cy - 190} {bx},{by} C{cx + 80},{cy - 160} {cx - 90},{cy - 138} {ax},{ay} Z"
-    p.add(P(ear, p.lg("#7a3a14", "#3a1806", x2=0, y2=1)))
-    p.add(P(f"M{ax + 16},{ay - 12} C{cx - 96},{cy - 166} {cx + 76},{cy - 184} {bx - 12},{by - 4}", "none", stroke="#f0b06a", stroke_width=3.5, opacity=.9))
-    p.add(P(f"M{ax},{ay} C{cx - 90},{cy - 70} {cx + 90},{cy - 100} {bx},{by}", "none", stroke="#3a1606", stroke_width=3, opacity=.7))
-    p.add(p.soft(P(f"M{cx - 240},{cy + 20} C{cx - 230},{cy - 60} {cx - 170},{cy - 120} {cx - 90},{cy - 150}", "none", stroke="#f0b87a", stroke_width=10, opacity=.4), 6))
-    rnd = random.Random(13)
-    p.add(flour(p, (cx - 250, cy + 90, cx + 270, cy + 170), 40, rnd, col="#f8f2e6", op=.8))
 
 
 def ig_save_5(p):
@@ -595,52 +477,6 @@ def ig_save_10(p):
     p.add(p.soft(P(face, "none", stroke="#ffe0a8", stroke_width=8, opacity=.35, transform="translate(-6 -6)"), 5))
     for (x, y, r) in [(80, 640, 6), (120, 670, 4), (520, 660, 5), (580, 640, 3), (470, 700, 4)]:
         p.add(P(blob(x, y, r * 1.4, r, rnd), "#c98a4a"))
-
-
-def ig_like_1(p):
-    """A black cast-iron pot of stew on a cream range, seen from above at 45°, steam and a wooden spoon."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, 210, p.lg("#8aa4b4", "#7792a3")))
-    p.add(R(0, 200, w, 14, "#d9d1c0"))
-    p.add(R(0, 214, w, 586, p.lg("#efe7d6", "#ded3bd")))
-    # grates
-    for gx in (-70, 320, 710):
-        p.add(E(gx, 560, 250, 150, "none", stroke="#222", stroke_width=14))
-    p.add(L(0, 560, w, 560, "#222", 12))
-    p.add(p.soft(E(320, 610, 170, 40, "#3f7bff", opacity=.55), 10))
-    cx, cy = 320, 470
-    p.add(p.soft(E(cx + 20, cy + 190, 250, 60, "#2b2418"), 18, .6))
-    # handles
-    for sx in (-1, 1):
-        p.add(P(f"M{cx + sx * 220},{cy + 20} q{sx * 50},0 {sx * 50},40 q0,30 {sx * -40},30", "none", stroke="#1b1b1c", stroke_width=16))
-    p.add(P(f"M{cx - 232},{cy} L{cx - 222},{cy + 170} C{cx - 150},{cy + 230} {cx + 150},{cy + 230} {cx + 222},{cy + 170} L{cx + 232},{cy} Z",
-            p.lg("#111112", "#3a3b3e", "#1a1a1b", "#070707", x2=1, y2=0)))
-    p.add(E(cx, cy, 232, 120, "#1c1c1e"))
-    p.add(E(cx, cy + 6, 212, 108, p.rg("#b84a24", "#8f3517", "#5f200b", cx=.45, cy=.4, r=.65)))
-    rnd = random.Random(29)
-    bits = []
-    for _ in range(26):
-        a = rnd.uniform(0, 2 * math.pi)
-        rr = rnd.uniform(0, .85)
-        x, y = cx + math.cos(a) * 200 * rr, cy + 6 + math.sin(a) * 98 * rr
-        kind = rnd.random()
-        if kind < .35:
-            bits.append(E(x, y, 16, 9, "#e8782a") + E(x - 3, y - 2, 8, 4, "#ffb066", opacity=.7))
-        elif kind < .6:
-            bits.append(P(blob(x, y, 15, 10, rnd), "#ecd7a0") + E(x - 4, y - 3, 6, 3, "#fff3cf", opacity=.7))
-        elif kind < .85:
-            bits.append(P(blob(x, y, 18, 11, rnd), "#5e2412"))
-        else:
-            bits.append(leaf(x, y, 12, 4, rnd.uniform(0, 360), "#3f7a3a"))
-    p.add("".join(bits))
-    p.add(p.soft(E(cx - 80, cy - 20, 60, 16, "#ffd6b0", opacity=.35), 6))
-    p.add(E(cx, cy, 232, 120, "none", stroke="#555", stroke_width=3, opacity=.8))
-    # spoon resting in the pot, handle over the rim to the upper right
-    sp = [E(0, 0, 44, 30, p.lg("#d6a86c", "#a8773f")), R(30, -9, 300, 18, p.lg("#e2b57a", "#b48548", "#8f6534"), rx=9),
-          E(-6, -2, 30, 18, "#8f3517", opacity=.6)]
-    p.add(p.soft(f'<g transform="translate({cx + 28} {cy + 26}) rotate(-28)">{R(30, -9, 300, 18, "#1c1c1e", rx=9)}</g>', 6, .6))
-    p.add(f'<g transform="translate({cx + 10} {cy + 14}) rotate(-28)">{"".join(sp)}</g>')
-    p.add(steam(p, cx - 40, cy - 40, 280, op=.45, wide=26, sway=30, k=4, seed=3))
 
 
 def tt_save_0(p):
@@ -838,8 +674,8 @@ def dayone_14(p):
 
 
 DRAW.update({
-    "ig-photo-1": ig_photo_1, "ig-photo-3": ig_photo_3, "ig-save-5": ig_save_5, "ig-save-10": ig_save_10,
-    "ig-like-1": ig_like_1, "tt-save-0": tt_save_0, "tt-save-1": tt_save_1, "snap-2": snap_2,
+    "ig-save-5": ig_save_5, "ig-save-10": ig_save_10,
+    "tt-save-0": tt_save_0, "tt-save-1": tt_save_1, "snap-2": snap_2,
     "dayone-14": dayone_14,
 })
 
@@ -1467,34 +1303,6 @@ def ig_save_11(p):
     p.add(p.soft(P("M160,170 C200,120 180,80 230,40 M300,170 C330,130 300,90 350,50 M400,170 C420,120 400,90 440,60", "none", stroke="#ffb870", stroke_width=10, opacity=.18), 8))
 
 
-def ig_like_2(p):
-    """Macro from just below: a slim black steel bracket under an oak shelf, raking sun, its shadow on plaster."""
-    w, h = p.w, p.h
-    p.add(R(0, 0, w, h, p.lg("#d8d1c6", "#c2baae", x2=1, y2=1)))
-    p.add(p.soft(PL([(640, 0), (640, 800), (200, 800)], "#fff4e0", opacity=.35), 40))
-    # the shelf's shadow on the wall, and the bracket's, falling down-left
-    p.add(p.soft(PL([(0, 330), (640, 330), (640, 380), (0, 440)], "#6e6456"), 10, .35))
-    p.add(p.soft(PL([(352, 330), (374, 330), (250, 640), (228, 640)], "#5e5448"), 5, .45))
-    # front face and underside of the shelf
-    p.add(PL([(0, 290), (640, 290), (640, 332), (0, 332)], p.lg("#b88752", "#9a6c3c")))
-    p.add(R(0, 200, w, 92, p.lg("#e0b27a", "#cf9f64", "#b98a52")))
-    p.add(grain(p, 0, 204, w, 84, "#8a5a2a", k=12, op=.4, seed=17, wav=10))
-    p.add(R(0, 200, w, 4, "#f4d3a3"))
-    p.add(p.soft(R(0, 286, w, 8, "#5a3a1a"), 3, .5))
-    # a leaf of a plant trailing over the edge
-    p.add(P("M120,200 C118,240 130,280 150,330", "none", stroke="#3f6b2f", stroke_width=3))
-    p.add(leaf(150, 330, 50, 20, 170, "#4f8a3a", vein="#a6c98a"))
-    p.add(leaf(128, 262, 40, 16, 210, "#5f9a44", vein="#a6c98a"))
-    # bracket: arm along the underside, plate down the wall
-    p.add(PL([(330, 292), (360, 292), (374, 332), (352, 332)], "#1b1b1c"))
-    p.add(PL([(330, 292), (336, 292), (356, 332), (352, 332)], "#5a5a5e"))
-    p.add(R(352, 332, 22, 250, p.lg("#2a2a2c", "#0e0e0f", x2=1, y2=0), rx=2))
-    p.add(R(354, 336, 4, 240, "#6a6a70", opacity=.6))
-    for y in (380, 520):
-        p.add(C(363, y, 6, "#3a3a3e"), L(359, y, 367, y, "#0a0a0a", 1.8))
-    p.add(P("M352,582 L374,582 L374,588 Q363,596 352,588 Z", "#0e0e0f"))
-
-
 def tile(p, x, y, s, col, rot=0, gloss=True, rnd=None, sh=0.4):
     g = [R(-s / 2, -s / 2, s, s, p.lg(lt(col, .12), col, dk(col, .18), x2=1, y2=1), rx=3)]
     if rnd:
@@ -1619,7 +1427,7 @@ def bsky_4a(p):
 
 
 DRAW.update({
-    "ig-save-8": ig_save_8, "ig-save-11": ig_save_11, "ig-like-2": ig_like_2, "file-3": file_3, "file-5": file_5,
+    "ig-save-8": ig_save_8, "ig-save-11": ig_save_11, "file-3": file_3, "file-5": file_5,
     "trello-0": trello_0, "bsky-4a": bsky_4a,
 })
 

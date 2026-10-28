@@ -1,59 +1,20 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
-/// Instagram, connected — by import, the ChatGPT grade, because a personal
-/// Instagram account has no API at all (prd §245).
+/// Instagram, connected — by its live sign-in alone (prd §726): a sign-in
+/// inside this app, through `InstagramLiveLoginSheet`, reads the person's own
+/// notifications and saved posts with their own session cookies, and their
+/// messages when they turn them on (§1244). `InstagramCaptions` reads a saved
+/// post's caption and cover back off its public page.
 ///
-/// This screen picks a FOLDER rather than a file, which is the one way it
-/// diverges from its siblings: an Instagram export scatters saves, likes,
-/// posts and comments across four different files, and asking for four picks
-/// would be four chances to pick the wrong one.
-///
-/// The note under the button states the export's own split — captions and
-/// comments arrive as text, saves and likes arrive as named links — because
-/// the alternative is a person importing their saves and finding rows that
-/// don't say what the post said. That is the honesty rule, not hedging.
-///
-/// AMENDED 2026-08-02 (`InstagramCaptions`, prd §245 amendment). Those rows no
-/// longer STAY wordless: the caption is public on the post's own page, so a
-/// paced background pass reads it back. The note had to change with the
-/// behaviour and gained two obligations rather than losing one — it says the
-/// app will open those pages (a network act the person is entitled to know
-/// about before tapping Import, and disclosed in `NetworkReach` besides), and
-/// it says a deleted or private post stays a link, because the failure has to
-/// be named where the promise is made.
-///
-/// AMENDED AGAIN 2026-08-18 (prd §389). Two of the export's own categories the
-/// steps never told anybody to tick — Stories and Reels — are read now, so the
-/// tick list names them; and the saved rows get their COVER PICTURE back beside
-/// their words, which is why the intro says a picture is fetched as well as a
-/// caption. The reach is the same one `NetworkReach` already discloses, one
-/// entry widened rather than a new act to explain.
-///
-/// SHAPE: `ImportSetupComponents`' (prd §314) — the staged block X earned. The
-/// wait here is about an hour rather than a day, but the structure is the same
-/// and so was the clutter.
-///
-/// AMENDED 2026-09-13 (prd §726): a SECOND door, X's §701 one seat over. A
-/// sign-in inside this app, through `InstagramLiveLoginSheet`, reads the
-/// person's own notifications and saved posts with their own session cookies —
-/// and fills the export's pointers with the posts themselves. The two doors are
-/// uncoupled: connecting or disconnecting the live half never touches an
-/// imported row, and the seat reads connected when EITHER is open. The
-/// catalogue word is "Connect" now (`mode: .signIn`, `catalog-mode-audit.py`);
-/// the export stays the second act, for the years the live read cannot reach.
+/// The export import that gave this screen its name is deleted, steps, folder
+/// pick and model together (prd §1577, §1579). Nobody had imported, so
+/// nothing is kept for an old import.
 struct InstagramImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @State private var result: BridgeProof?
-    /// How old this import is, and how much of it is here (2026-08-05,
-    /// prd §310). Both read off the import RECEIPT and a count — no new field.
-    @State private var staleness: String?
-    @State private var held = 0
-    /// The SECOND door onto this seat (prd §726) — notifications and saves
-    /// read live through the person's OWN Instagram session, entirely separate
-    /// from the export above.
+    /// The live door (prd §726) — notifications and saves read through the
+    /// person's OWN Instagram session.
     @State private var liveConnected = false
     @State private var liveSyncing = false
     @State private var liveResult: BridgeProof?
@@ -66,11 +27,8 @@ struct InstagramImportScreen: View {
     var body: some View {
         AccountPage(
             name: "Instagram", seatID: "instagram", source: "Instagram",
-            // Connected if EITHER door is open (prd §726) — an import with no
-            // live read, or a live sign-in with no export yet, are both real
-            // "this seat is doing something" states.
             state: AccountPageState.of(name: "Instagram", seatID: "instagram",
-                                       connected: held > 0 || liveConnected, store: store),
+                                       connected: liveConnected, store: store),
             mode: .signIn,
             // The live sign-in (prd §726), raised through the page's ONE
             // presentation like every other seat-only screen here.
@@ -80,9 +38,9 @@ struct InstagramImportScreen: View {
                     Task { await syncLive() }
                 }))
             },
-            // Clears the LIVE half only — an imported export's rows are
-            // untouched, the "delete things vs. delete access" split every
-            // other seat here follows (2026-07-13).
+            // Clears the session only — the rows it landed stay, the "delete
+            // things vs. delete access" split every other seat here follows
+            // (2026-07-13).
             teardown: { InstagramLiveAuth.clear() },
             sheet: $sheet,
             act: {
@@ -104,9 +62,8 @@ struct InstagramImportScreen: View {
     }
 
     /// The live door (prd §726) — a sign-in inside this app, through
-    /// `InstagramLiveLoginSheet`, apart from the export below. First, because
-    /// it is the door that reads what the export cannot: the posts you saved
-    /// as posts, and the likes, comments and follows as they happen.
+    /// `InstagramLiveLoginSheet`: the posts you saved as posts, and the likes,
+    /// comments and follows as they happen.
     ///
     /// The note says the price before the tap, and the price here is not the
     /// app's: Meta may ask the person to confirm the sign-in in their own
@@ -145,11 +102,7 @@ struct InstagramImportScreen: View {
         }
     }
 
-    /// One re-read of what this screen shows about the corpus — on appear,
-    /// after an import and after a removal, so the three can never disagree.
     private func reread() {
-        staleness = ImportRemoval.stalenessLine(source: "Instagram", context: modelContext)
-        held = ImportRemoval.count(source: "Instagram", context: modelContext)
         liveConnected = InstagramLiveAuth.connected
     }
 
@@ -170,9 +123,8 @@ struct InstagramImportScreen: View {
             return
         }
         liveResult = added > 0 ? .landed(added) : .upToDate
-        // Registers the seat even when no export has ever been imported —
-        // the catalog tile and the dock chip both read `BridgeStore`, and a
-        // live-only connection is a real one.
+        // Registers the seat — the catalog tile and the dock chip both read
+        // `BridgeStore`.
         let proof = added > 0 ? String(localized: "\(added) new") : String(localized: "Synced just now")
         if store.registerConnected(id: "instagram", name: "Instagram", proof: proof,
                                    can: ["Reads your notifications and saved posts, with your own sign-in.",
@@ -180,7 +132,4 @@ struct InstagramImportScreen: View {
             DSHaptic.success()
         }
     }
-
-    // MARK: - Run
-
 }

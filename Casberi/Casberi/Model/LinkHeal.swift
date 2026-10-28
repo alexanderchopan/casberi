@@ -17,7 +17,7 @@ import SwiftData
 /// reaches (the "Saved links" entry in `NetworkReach`); a new source here would
 /// be a new reach and needs `FeedArticleText`'s fairness rule first. Imports
 /// are left out on purpose: Instagram's and TikTok's rows keep their own
-/// faces and their own passes (`InstagramImport`, `TikTokImport.fetchFaces`).
+/// faces and their own passes (`InstagramCaptions`, `TikTokImport.fetchFaces`).
 ///
 /// BOUNDED, PACED, LEDGERED — `FeedArticleText`'s discipline, for its reason:
 /// a page with no title and no picture is not going to grow one, and asking

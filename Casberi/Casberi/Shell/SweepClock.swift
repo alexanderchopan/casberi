@@ -10,7 +10,7 @@ import UIKit
 /// latency. A build can hold all three flat and still feel worse to use, and
 /// after build 271 it did: `BridgeRefresh.refreshAllConnected` grew from 42
 /// slots to 45, several of them main-actor work over the whole corpus
-/// (`ScreenshotTopics` NLTagger passes, `XArchiveImport.healRoom`,
+/// (`ScreenshotTopics` NLTagger passes, the X archive's room heal,
 /// `FeedArticleText`, `YouTubeShorts`), every one of them firing within ~2s of
 /// the moment somebody opens the app and starts scrolling. None of it touches
 /// launch, RSS or the answer path, so the nightly reads green over a build that

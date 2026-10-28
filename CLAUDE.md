@@ -342,10 +342,9 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-peerRoomProbe` `-privacyPoolsRoomProbe` — the WALLET-RIDING room heads, line by line (prd §349, 2026-08-10; one NSLog per fill/row/spend → docs/hooks/wallet.md · prd §349
 - **The onchain card head is SHARED (prd §858, 2026-09-20): `CardSpendRoom` serves every onchain card, drawn by one `CardSpendRoomCard(room:seat:)` behind one `FeedScreen` case `.cardSpend(_, seat:)`.** → docs/hooks/wallet.md · prd §858
 - **`CardSpendSeat` is the ONE rule for which rows in a card's room are SPENDS (prd §868, `-etherfiCashRoomProbe`), read by all three sources and the door under the card** → docs/hooks/wallet.md · prd §868 · §858
-- `-instagramImport` — import an UNZIPPED Instagram export folder (prd §245, Model/InstagramImport.swift; screen → docs/hooks/imports.md · prd §245
+- `-instagramImport` `-xArchiveImport` `-xFaces` `-xReplyContext` are DELETED with the X and Instagram importers (prd §1579); X and Instagram are their live sign-ins → docs/hooks/imports.md · prd §1579
 - `-tiktokImport` `-tiktokFaces` — import a TikTok export (the user_data_tiktok.json file itself, or a folder holding it), -tiktokFaces <limit|YES> → docs/hooks/imports.md · prd §279
-- `-xArchiveImport` — import an UNZIPPED X archive folder (prd §280, 2026-08-02, Model/XArchiveImport.swift; screen → docs/hooks/imports.md · prd §280
-- **X joined OEmbed.endpoints the same day, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
+- **X joined OEmbed.endpoints on 2026-08-02, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
 - `-xLiveProbe YES` — X's live-notifications door, read with the person's own browser-session cookies via an in-app sign-in, not the paid public API §280 declined → docs/hooks/bridges.md · prd §701 · §737 · §772
 - `-igLiveProbe YES` `-igLiveSession` — Instagram's live door: notifications and saved posts with the person's own web-session cookies, and a live save FILLS the export's pointer by shortcode. Only a refusal clears the session; a checkpoint keeps it → docs/hooks/bridges.md · prd §726
 - `-liveMessages x|instagram|telegram[,…]|all|off` `-telegramMessagesProbe YES` — X, Instagram and Telegram DMs, live (prd §1244, §1575): a switch per seat, off by default, one `.chat` per conversation; probes print no words. Telegram is TDLib, from `scripts/tdlib.sh` (never committed)

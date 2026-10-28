@@ -90,7 +90,7 @@ enum XLiveAuth {
 /// `diagnose()` exists so that drift is a one-launch diagnosis, never a
 /// silently empty room.
 enum XLiveNotifications {
-    /// Distinct from `XArchiveImport`'s `"x:"` prefix (`x:tweet:`, `x:like:`,
+    /// Distinct from the archive importer's `"x:"` prefix (`x:tweet:`, `x:like:`,
     /// …) ON PURPOSE — a live notification and an archived post can name the
     /// same underlying id, and folding them into one dedupe namespace would
     /// let a live read silently swallow an archived row or vice versa.
@@ -762,8 +762,8 @@ enum XLiveNotifications {
 
     /// The post's own words. A long-form post keeps its full text on
     /// `note_tweet` and truncates `legacy.full_text` at 280 with an ellipsis,
-    /// so the long form is read FIRST — the same precedence `XArchiveImport`
-    /// gives `note-tweet.js` over `tweets.js` (§375).
+    /// so the long form is read FIRST — the same precedence the archive
+    /// importer gave `note-tweet.js` over `tweets.js` (§375).
     private static func words(_ result: [String: Any]) -> String? {
         if let note = result["note_tweet"] as? [String: Any],
            let noteResults = note["note_tweet_results"] as? [String: Any],
@@ -777,8 +777,8 @@ enum XLiveNotifications {
         return text
     }
 
-    /// t.co out, the real link in — the same job `XArchiveImport.clean` does
-    /// for an imported post, over the entity table this response carries.
+    /// t.co out, the real link in — the same job the archive importer's
+    /// `clean` did for an imported post, over the entity table this response carries.
     ///
     /// Two substitutions, and the second matters more than it looks: X appends
     /// a t.co link to the post's own PHOTO at the end of the text, so a

@@ -43,7 +43,7 @@ enum ScreenshotTopics {
     /// signal, which is why it leads. For a person's own sentences it is the
     /// WEAKEST — the words are right there, and the domain of a link they
     /// pointed at is not what they wrote about. The X room proved it the
-    /// expensive way: `XArchiveImport.clean` expands `entities.urls` and never
+    /// expensive way: the archive importer's `clean` expanded `entities.urls` and never
     /// `entities.media`, so every post with a picture kept its bare
     /// `t.co` shortlink, and that hostname cleared `normalize` (four
     /// characters, three letters, no stoplist entry) and recurred across
@@ -402,8 +402,8 @@ enum ScreenshotTopics {
         // is the person's own posts and replies, its `.link` half is posts
         // somebody else wrote, and a map over both would be titled a lie.
         //
-        // `XArchiveImportScreen` has called `healTopics(source: "X")` since the
-        // seat shipped and this switch answered nil for it every time, so the
+        // The X import screen called `healTopics(source: "X")` from the day
+        // the seat shipped and this switch answered nil for it every time, so the
         // call did nothing and the map it was meant to fill never had terms —
         // one of three separate places X was missing from a registry the other
         // import rooms are in.

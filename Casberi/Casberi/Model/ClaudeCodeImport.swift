@@ -534,8 +534,8 @@ enum ClaudeCodeImport {
     ///
     /// The pick is EITHER `~/.claude/projects` (project folders, each holding
     /// `<uuid>.jsonl`) OR a single project folder. Both work rather than the
-    /// screen having to explain the difference — the same coin flip
-    /// `XArchiveImport.read` handles for an unzipped archive.
+    /// screen having to explain the difference — the same coin flip every
+    /// folder importer here handles for an unzipped archive.
     ///
     /// `failed` is reserved for "there are no transcripts under this at all".
     @MainActor

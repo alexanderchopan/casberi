@@ -3872,7 +3872,7 @@ struct ThingSheetView: View {
 
     private var xPostVerb: Verb? {
         guard thing.isLive, thing.kind == .note,
-              thing.source == XArchiveImport.source,
+              thing.source == "X",
               let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty,
               let url = URL(string: raw), url.scheme == "https"

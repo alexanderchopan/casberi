@@ -15,7 +15,7 @@ The dominant cost class — `@Query` materialising the whole corpus on the main 
 ## Method (non-negotiable, each rule paid for)
 
 1. **Sample first.** `sample` on the main thread against the sim process is the truth; `perfAccum` wall-clocks span work attributed elsewhere and has misrouted three sessions. `scripts/main-thread-profile.sh` works on the iOS sim build (the "Catalyst only" limit is retired).
-2. **Interleaved A/B on a drained corpus** (A,B,A,B). Successive launches drain sweeps, so control-then-fix is partly order effect. Reference corpus: the synthetic 6,000-row X archive (`-xArchiveImport`), on a dedicated sim device with the udid pinned.
+2. **Interleaved A/B on a drained corpus** (A,B,A,B). Successive launches drain sweeps, so control-then-fix is partly order effect. Reference corpus: was the synthetic 6,000-row X archive (`-xArchiveImport`, deleted with the importer, prd §1579); seed one another way (the demo pour, `-demoEnter YES`), on a dedicated sim device with the udid pinned.
 3. **Structural over tuned.** Every fix that held removed or reordered work; every tuning guess died. If a fix can't be stated as "this work no longer runs / runs later / runs once," don't ship it as a perf fix.
 4. **Any fetch hoisted earlier is a liveness change** (corollary 6). Re-check `.live` at the last await, by hand — the audit's check 6 has two known blind spots here.
 

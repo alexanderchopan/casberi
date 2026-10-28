@@ -9,18 +9,19 @@
 # is every guard on something still alive, and a guard that the model stays
 # gone.
 #
-# WHY A HARNESS AND NOT A LIVE CHECK. The export half has never been imported
-# on this host (prd §245), so every failure here is a SILENT WRONG ANSWER that
-# renders perfectly: a photo room drawn as text, a cover URL that 404s within
-# the week, a year of reels never imported, a wordless picture counted as
-# writing.
+# The export importer (`InstagramImport`) is DELETED (prd §1579), and its
+# guards went with it; the room, the covers and the facets the live seat
+# still feeds stay.
+#
+# WHY A HARNESS AND NOT A LIVE CHECK. Every failure here is a SILENT WRONG
+# ANSWER that renders perfectly: a photo room drawn as text, a cover URL that
+# 404s within the week, a wordless picture counted as writing.
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-IMPORT="Casberi/Casberi/Model/InstagramImport.swift"
 CAPTIONS="Casberi/Casberi/Model/InstagramCaptions.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
@@ -31,7 +32,7 @@ INSIGHT="Casberi/Casberi/Model/FeedInsight.swift"
 SOCIAL="Casberi/Casberi/Model/SocialRoom.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-for f in "$IMPORT" "$CAPTIONS" "$FEED" "$INSIGHT" "$SOCIAL" "$RETRIEVER" "$REACH"; do
+for f in "$CAPTIONS" "$FEED" "$INSIGHT" "$SOCIAL" "$RETRIEVER" "$REACH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -55,7 +56,6 @@ for line in src.split("\n"):
 print("\n".join(out))
 PY
 }
-strip_comments "$IMPORT" "$TMP/import.nc"
 strip_comments "$CAPTIONS" "$TMP/captions.nc"
 strip_comments "$FEED" "$TMP/feed.nc"
 
@@ -105,12 +105,8 @@ grep -qF 'let (dayTiles, dayRows) = isTile.map { Self.splitTiles(rows, by: $0) }
   || { echo "✗ the day section no longer splits its tiles from its rows (prd §910)"; exit 1; }
 
 # THE FIELDS the rows read, stamped where the post card expects them.
-grep -qF 'thing.socialContext = marker' "$TMP/import.nc" \
-  || { echo "✗ saves/likes no longer carry their act as socialContext — the post card loses its Saved/Liked word"; exit 1; }
 grep -qF '"Instagram"' Casberi/Casberi/Model/SocialBridge.swift \
   || { echo "✗ Instagram is not a context source — contextLabel returns nil for every save"; exit 1; }
-grep -qF 'if !row.handle.isEmpty { thing.authorHandle = row.handle }' "$TMP/import.nc" \
-  || { echo "✗ saves no longer stamp authorHandle — a save's card has nobody to name"; exit 1; }
 grep -qF 'thing.tags.append("Gone")' "$TMP/captions.nc" \
   || { echo "✗ a deleted saved post is no longer tagged Gone"; exit 1; }
 
@@ -130,22 +126,10 @@ grep -qF 'NetworkLedger.shared.record(request)' "$TMP/captions.nc" \
 grep -qF 'cdninstagram.com' "$REACH" \
   || { echo "✗ Meta's picture CDN is not in the reach registry — the privacy screen is wrong the moment a cover lands"; exit 1; }
 
-# THE OTHER FOUR media files (prd §395). Reels and stories are the half of an
-# Instagram account this importer never opened; a missing path here is a person
-# importing their comments and nothing they have made in years.
-for f in reels stories archived_posts igtv_videos; do
-  grep -qF "media/$f.json" "$TMP/import.nc" \
-    || { echo "✗ $f.json is no longer imported — your own $f never land"; exit 1; }
-done
-# A wordless VIDEO must stay skipped: `CGImageSource` cannot open an .mp4, so
-# landing one gives a row titled "Photo" with no photo in it.
-grep -qF 'isPicture(uri: uri)' "$TMP/import.nc" \
-  || { echo "✗ a captionless entry no longer has to name a decodable picture — wordless videos land as empty rows titled Photo"; exit 1; }
-
-# THE FACETS. All three are ordinary English words, so each only ever filters
-# alongside a named room (§308) — and each is read off a fact the export already
+# THE FACETS. Both are ordinary English words, so each only ever filters
+# alongside a named room (§308) — and each is read off a fact the post already
 # states rather than guessed.
-for tag in Reel Story Photo; do
+for tag in Reel Photo; do
   grep -qF "\"$tag\")," "$RETRIEVER" \
     || { echo "✗ the $tag facet is gone — that half of the room can't be asked for"; exit 1; }
 done

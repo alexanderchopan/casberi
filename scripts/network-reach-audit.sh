@@ -242,12 +242,12 @@ KNOWN_NON_REACH=(
   # The demo's mailing lists' unsubscribe links (prd §1111): opened in the
   # person's browser from a list's sheet, never fetched by us.
   eats.example notion.example weeklyfold.example sundayloaf.example
-  # X's link shortener — appears ONLY in prose. Three comments in
-  # XArchiveImport/ScreenshotTopics discuss the `https://t.co/…` shape
-  # because handling it correctly is the whole point of those passages: an
-  # X archive stores every link as its t.co shortening, and the importer
-  # swaps in `entities.urls[].expanded_url` so the shortlink never becomes
-  # a title, a topic-map term, or a request. We match against the form and
+  # X's link shortener — appears ONLY in prose. Comments in ScreenshotTopics
+  # and XLiveNotifications discuss the `https://t.co/…` shape because
+  # handling it correctly is the whole point of those passages: X stores
+  # every link as its t.co shortening, and the readers swap in
+  # `entities.urls[].expanded_url` so the shortlink never becomes a title, a
+  # topic-map term, or a request. We match against the form and
   # deliberately never send to it. (This scan reads raw source, comments
   # included — the "negative guards must read a comment-stripped copy"
   # lesson CLAUDE.md records for the Obsidian and Cursor self-tests, in a

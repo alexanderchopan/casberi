@@ -652,105 +652,6 @@ def dome(cam, S, base, R, H_drum, wall="#f4f0e8", shade="#9aa7bd", lantern=True)
     return "".join(out)
 
 
-def ig_photo_0(p):
-    """Lisbon rooftops at midday, terracotta close up, a white dome behind."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("ig-photo-0")
-    hy = 330
-    S(sky(S, [(0, "#1f5fb8"), (0.6, "#4f90d8"), (1, "#b4d6f0")], 0, hy + 10))
-    S(cloud(S, 60, 120, 170, rng, shade="#c3d4ea"))
-    S(cloud(S, 420, 70, 120, rng, shade="#c3d4ea"))
-    S(ridge(S, rng, hy - 8, 6, "#a9bfd6", freq=1.2, bottom=hy + 30))
-    S(rect(0, hy + 4, w, h - hy, S.lin([(0, "#c9d3dc"), (0.3, "#d8c2b0"), (1, "#c98a6a")])))
-    cam = Cam((0, 34, -6), yaw=-12, pitch=5, f=520, cx=w / 2, cy=hy + 45, light=(-0.7, 0.9, -0.55),
-              shadow="#5a6a9a", shadow_k=0.42, lit="#fff8ea", lit_k=0.3, fog="#bfd6ee", fogd=420, fogmax=0.85)
-
-    def ground(x, z):
-        return -0.05 * z + 0.2 * max(0.0, z - 140)
-    items = city_grid(cam, rng, (-280, 170), (4, 330), ground, 8, 16, gap=0.08, skip=0.03, win_w=0.28, lot=(15, 26),
-                      shutters=None)
-    dz = 215
-    gy = ground(30, dz)
-    items.append(house(cam, 2, 58, dz, dz + 38, gy - 2, 24, 0, "#f2ede4", "#c46a44", rng, win=False,
-                       cornice="#ffffff"))
-    base = (30, gy + 22, dz + 19)
-    items.append((cam.dist(base) - 3, dome(cam, S, base, 19, 16)))
-    for tx in (3, 49):
-        items.append(house(cam, tx, tx + 8, dz - 4, dz + 4, gy + 20, 14, 0, "#f3eee6", "#c46a44", rng, win=False))
-        tb = (tx + 4, gy + 34, dz)
-        items.append((cam.dist(tb) - 4, dome(cam, S, tb, 4.6, 2, lantern=False)))
-    S(draw_sorted(items))
-    return S.html()
-
-
-def ig_photo_2(p):
-    """A yellow tram climbing a steep Lisbon street, morning, seen side-on."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("ig-photo-2")
-    ang = 18
-    t = math.tan(math.radians(ang))
-
-    def sy(x, y0=640):
-        return y0 - t * x
-    S(sky(S, [(0, "#8fc3e6"), (1, "#f4e7cf")], 0, 360))
-    # facades stepping up the hill
-    x = -30
-    facs = [("#f1d7c3", 330), ("#f4ecd8", 360), ("#e9c46a", 300), ("#dfe6e0", 380), ("#f2cfc0", 320), ("#f4ecd8", 340)]
-    i = 0
-    while x < w + 40:
-        col, H = facs[i % len(facs)]
-        fw = rng.uniform(110, 150)
-        base = sy(x + fw) - 26
-        top = base - H
-        S(rect(x, top, fw + 2, base - top + 60, col))
-        S(rect(x, top - 6, fw + 2, 8, light(col, 0.3)))
-        S(rect(x + fw - 4, top, 6, base - top + 60, dark(col, 0.12)))
-        rows = int((base - top - 40) / 62)
-        for r_ in range(rows):
-            wy = top + 26 + r_ * 62
-            for k in range(2):
-                wx = x + fw * (0.2 + k * 0.42)
-                S(rect(wx - 4, wy - 4, fw * 0.2 + 8, 44, light(col, 0.45)))
-                S(rect(wx, wy, fw * 0.2, 38, "#34404c"))
-                S(rect(wx, wy, fw * 0.1, 38, "#4b6b7a", opacity=0.45))
-                if r_ % 2 == 0:
-                    S(rect(wx - 6, wy + 36, fw * 0.2 + 12, 4, "#2b2b2f"))
-                    for b in range(6):
-                        S(rect(wx - 5 + b * (fw * 0.2 + 10) / 5, wy + 22, 1.6, 14, "#2b2b2f"))
-                    S(rect(wx - 6, wy + 21, fw * 0.2 + 12, 2, "#2b2b2f"))
-        x += fw
-        i += 1
-    # the opposite side's shadow falls across the lower facades
-    S(poly([(0, 380), (w, 170), (w, h), (0, h)], "#3b4a78", opacity=0.28))
-    # pavement and street
-    S(poly([(0, sy(0) - 26), (w, sy(w) - 26), (w, sy(w) + 4), (0, sy(0) + 4)], "#d9d0c3"))
-    S(poly([(0, sy(0) + 4), (w, sy(w) + 4), (w, h), (0, h)], S.lin([(0, "#7b7a80"), (1, "#4a4a52")])))
-    for k in range(8):
-        yy = sy(0) + 40 + k * 22
-        S(line(0, yy, w, yy - t * w, "#3c3c44", 1, opacity=0.25))
-    for off in (28, 70):
-        S(line(0, sy(0) + off, w, sy(w) + off, "#c9c9cf", 2.2, opacity=0.8))
-    # the tram, level with its rails
-    L = 360
-    tx = 150
-    ty = sy(tx) + 70 - L * 0.44 * 0.93
-    S(g(tram_side(tx, ty, L), transform=f"rotate({-ang} {tx} {sy(tx) + 70})"))
-    # the wire the pole runs on
-    ox, oy = tx, sy(tx) + 70
-    px, py = tx + L * 0.25 - ox, ty - L * 0.44 * 0.55 - oy
-    a = math.radians(-ang)
-    wx, wy = ox + px * math.cos(a) - py * math.sin(a), oy + px * math.sin(a) + py * math.cos(a)
-    for off in (0, -7):
-        S(line(0, wy + off + t * wx, w, wy + off - t * (w - wx), "#2a2a30", 1.4, opacity=0.85))
-    S(line(0, 60, w, 30, "#2a2a30", 1, opacity=0.5))
-    # a walker on the pavement
-    S(person(560, sy(560) - 22, 64, "#2c3040"))
-    S(rect(0, 0, w, h, S.lin([(0, "#fff3d6", 0.12), (0.5, "#fff3d6", 0), (1, "#1b1e2e", 0.2)])))
-    return S.html()
-
-
 def azulejo(S, size, ink="#1f4c9c", ground="#f3f0e8", kind=0):
     """A repeating tile; `kind` picks the motif. Returns a pattern url."""
     s = size
@@ -1252,75 +1153,6 @@ def ig_save_3(p):
     return S.html()
 
 
-def x_photo_0(p):
-    """A Berlin canal at dusk: a brick bridge of three arches, lamps just coming on."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("x-photo-0")
-    hy = 300
-    S(sky(S, [(0, "#232a58"), (0.45, "#5f4f86"), (0.8, "#d4808a"), (1, "#f2a878")], 0, hy))
-    S(glow(S, 520, hy - 10, 300, "#ffb57a", 0.35))
-    # far buildings, flat-roofed, a few windows lit
-    x = -10
-    while x < w:
-        bw = rng.uniform(50, 110)
-        bh = rng.uniform(70, 150)
-        S(rect(x, hy - bh, bw, bh + 2, "#3a3558"))
-        for r_ in range(int(bh / 18)):
-            for c_ in range(int(bw / 16)):
-                if rng.random() < 0.18:
-                    S(rect(x + 6 + c_ * 16, hy - bh + 10 + r_ * 18, 6, 8, rng.choice(["#ffcf7a", "#ffe0a8"]), opacity=0.9))
-        x += bw
-    # trees along both banks
-    for i in range(14):
-        tx = rng.uniform(-20, w + 20)
-        if 180 < tx < 620:
-            continue
-        S(blob(tx, hy - rng.uniform(20, 50), rng.uniform(30, 55), rng, "#1f2440"))
-    # water with the sky in it
-    S(rect(0, hy, w, h - hy, S.lin([(0, "#e39a7e"), (0.25, "#8a5f86"), (1, "#1c2448")])))
-    # quays converging
-    S(poly([(0, hy + 10), (190, hy + 4), (120, h), (0, h)], "#2b2a44"))
-    S(poly([(w, hy + 10), (610, hy + 4), (690, h), (w, h)], "#2b2a44"))
-    S(poly([(190, hy + 4), (196, hy + 4), (130, h), (120, h)], "#4a4468"))
-    S(poly([(604, hy + 4), (610, hy + 4), (690, h), (680, h)], "#4a4468"))
-    # the bridge
-    top, deck, base = 238, 262, 338
-    brick = S.lin([(0, "#8a4a3a"), (1, "#5a2e2a")])
-    arches = [(160, 90), (400, 110), (640, 90)]
-    d = f"M-10 {top} L{w + 10} {top} L{w + 10} {base} "
-    for ax, aw in reversed(arches):
-        d += f"L{ax + aw} {base} L{ax + aw} {deck + 40} A{aw} {aw * 0.62} 0 0 0 {ax - aw} {deck + 40} L{ax - aw} {base} "
-    d += f"L-10 {base} Z"
-    S(path(d, brick))
-    # its reflection: arches close into ovals
-    rd = f"M-10 {base} L{w + 10} {base} L{w + 10} {base + 40} "
-    for ax, aw in reversed(arches):
-        rd += f"L{ax + aw} {base + 40} L{ax + aw} {base + 18} A{aw} {aw * 0.5} 0 0 1 {ax - aw} {base + 18} L{ax - aw} {base + 40} "
-    rd += f"L-10 {base + 40} Z"
-    S(path(rd, "#3a2440", opacity=0.75))
-    for i in range(10):
-        yy = base + 44 + i * 9
-        S(rect(rng.uniform(-50, 200), yy, rng.uniform(200, 500), 2, "#f0b08a", opacity=0.18))
-    S(rect(-10, top - 8, w + 20, 10, "#6a3a30"))
-    for i in range(40):
-        S(rect(i * 21, top - 22, 3, 14, "#2a2230"))
-    S(rect(-10, top - 24, w + 20, 3, "#2a2230"))
-    for ax, aw in arches:
-        S(path(f"M{ax - aw} {deck + 40} A{aw} {aw * 0.62} 0 0 1 {ax + aw} {deck + 40}", "none", stroke="#c07a5a",
-               stroke_width=5, opacity=0.5))
-    # lamps on the parapet
-    for lx in (40, 280, 520, 760):
-        S(lamp_post(lx, top - 8, 70, "#1e1a28", "#fff0c8", "#ffc877", S, glow_r=60))
-        S(rect(lx - 3, base + 10, 6, 70, "#ffcf80", opacity=0.3, rx=3))
-    # a moored boat along the left quay
-    S(path(f"M20 {hy + 120} L150 {hy + 110} L140 {hy + 128} L30 {hy + 140} Z", "#1c1a2c"))
-    S(rect(50, hy + 96, 60, 18, "#26233a"))
-    S(rect(58, hy + 100, 10, 6, "#ffcf7a", opacity=0.8))
-    S(water_glints(rng, 150, 650, base + 40, h, "#f6c09a", 40, 0.3, 50))
-    return S.html()
-
-
 def bicycle(frame="#3fb8a0", tyre="#1e1e22", metal="#c9ccd2", saddle="#6a4028", basket="#b0824a", mono=None,
             spokes=True, fender=None, chain=False):
     """A city bike in its own frame: rear hub at (0, 0), front hub at (290, 0), wheels r=88, facing right."""
@@ -1368,45 +1200,6 @@ def bicycle(frame="#3fb8a0", tyre="#1e1e22", metal="#c9ccd2", saddle="#6a4028", 
                 yy = -186 + j * 12
                 out.append(line(258 + j * 2, yy, 326 - j * 2, yy, dark(basket, 0.25), 1.2))
     return "".join(out)
-
-
-def x_photo_2(p):
-    """A bicycle against a pastel wall in hard sun; its shadow thrown big across the plaster."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("x-photo-2")
-    wall = "#f4c3b4"
-    S(rect(0, 0, w, h, S.lin([(0, "#f7cfc2"), (1, "#eeb5a5")], 0, 0, 1, 1)))
-    # a shuttered window and a drainpipe for scale
-    S(rect(560, -20, 150, 190, "#f8e6dc"))
-    S(rect(575, -20, 120, 176, "#34424e"))
-    S(rect(540, -20, 36, 186, "#4f8a74"))
-    S(rect(694, -20, 36, 186, "#4f8a74"))
-    for i in range(12):
-        S(line(540, i * 15, 576, i * 15, "#3c6e5c", 2))
-        S(line(694, i * 15, 730, i * 15, "#3c6e5c", 2))
-    S(rect(556, 166, 158, 12, "#f9ece4"))
-    S(poly([(556, 178), (714, 178), (760, 230), (602, 230)], "#b86f68", opacity=0.3))
-    S(rect(40, 0, 14, 470, "#e2a898"))
-    S(rect(36, 120, 22, 8, "#cf9384"))
-    S(rect(36, 330, 22, 8, "#cf9384"))
-    S(poly([(54, 0), (68, 0), (100, 470), (86, 470)], "#b86f68", opacity=0.25))
-    # baseboard and pavement
-    S(rect(0, 470, w, 26, "#dba194"))
-    S(rect(0, 496, w, h - 496, "#d9d3cb"))
-    for i in range(9):
-        S(line(0, 520 + i * 12, w, 520 + i * 12, "#c2bbb2", 1.2, opacity=0.6))
-    for i in range(20):
-        x = i * 46 + (i % 2) * 20
-        S(line(x, 496, x - 30, h, "#c2bbb2", 1.2, opacity=0.5))
-    # the bike's shadow: the same bike, sheared up and to the right
-    bx, by = 190, 405
-    c_, d_ = -0.62, 0.92
-    S(g(bicycle(mono="#b8736c", spokes=False, basket="#b8736c"),
-        transform=f"matrix(1 0 {c_} {d_} {bx + 34 - c_ * 88} {490 - d_ * 88})", opacity=0.6))
-    S(poly([(bx - 90, 496), (bx + 330, 496), (bx + 360, 470), (bx - 40, 470)], "#b8736c", opacity=0.3))
-    S(g(bicycle(frame="#3fae9a", fender="#e9e6de"), transform=f"translate({bx} {by}) rotate(-3)"))
-    return S.html()
 
 
 def tt_save_2(p):
@@ -1712,132 +1505,8 @@ def pylon(x, yb, h, col, sw=1.6):
     return "".join(out)
 
 
-def x_video_0(p):
-    """From a train window: fields and pylons streaking past, the near bank a blur."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("x-video-0")
-    view = []
-    hy = 190
-    view.append(sky(S, [(0, "#6fa2d4"), (1, "#e8e4cf")], 0, hy + 10))
-    view.append(cloud(S, 120, 90, 180, rng, shade="#d2dbe6"))
-    view.append(cloud(S, 520, 60, 130, rng, shade="#d2dbe6"))
-    view.append(ridge(S, rng, hy - 16, 10, "#8fa6b8", freq=1.3))
-    view.append(ridge(S, rng, hy - 2, 7, "#9cad8a", freq=2.2))
-    bands = ["#b9b26a", "#8fa35a", "#d4be72", "#7d9a52", "#c9a860", "#94aa5e"]
-    y = hy + 4
-    k = 0
-    while y < h:
-        bh = 8 + (y - hy) * 0.22
-        view.append(rect(-10, y, w + 20, bh + 1, bands[k % len(bands)]))
-        view.append(line(-10, y, w + 10, y, "#4f6a3a", 1 + (y - hy) * 0.02, opacity=0.6))
-        y += bh
-        k += 1
-    # hedgerow trees along the field lines
-    for _ in range(26):
-        tx = rng.uniform(0, w)
-        ty = rng.uniform(hy + 6, hy + 60)
-        view.append(blob(tx, ty - 5, 5 + (ty - hy) * 0.12, rng, "#4a6a3a"))
-    # pylons and their lines, crossing the frame
-    tops = []
-    for px, pb, ph, blur in ((110, 268, 150, 1.2), (470, 232, 88, 0), (720, 214, 52, 0)):
-        view.append(g(pylon(px, pb, ph, "#4a5058", 1.4 + ph / 150), filter=S.blur(blur, 0) if blur else None))
-        tops.append((px, pb - ph * 0.9, ph))
-    for dy in (0, 0.12):
-        pts_ = []
-        for (x1, y1, h1), (x2, y2, h2) in zip(tops, tops[1:]):
-            for i in range(11):
-                t = i / 10
-                pts_.append((x1 + (x2 - x1) * t, y1 + h1 * dy + (y2 - y1) * t + 16 * (1 - (2 * t - 1) ** 2)))
-        view.append(pline([(-10, tops[0][1] + 30)] + pts_ + [(w + 10, tops[-1][1] + 6)], "#3a3f46", 1.1))
-    # the embankment rushing past, blurred along the track
-    near = []
-    near.append(rect(-60, 330, w + 120, 140, "#5f7a3a"))
-    for _ in range(90):
-        x = rng.uniform(-40, w + 40)
-        y = rng.uniform(320, 440)
-        near.append(rect(x, y, rng.uniform(40, 160), rng.uniform(3, 10), rng.choice(["#86a04a", "#4a6230", "#a9b86a", "#394a26"])))
-    view.append(g(near, filter=S.blur(22, 1.5)))
-    view.append(rect(0, 0, w, h, S.lin([(0, "#ffffff", 0.08), (0.5, "#ffffff", 0)], 0, 0, 1, 0)))
-    win = rect(70, 34, 660, 356, "#000", rx=34)
-    S(rect(0, 0, w, h, S.lin([(0, "#2a2e36"), (1, "#1c1f25")])))
-    S(g(view, clip_path=S.clip(win)))
-    S(rect(70, 34, 660, 356, "none", rx=34, stroke="#40454e", stroke_width=10))
-    S(rect(62, 26, 676, 372, "none", rx=40, stroke="#15171c", stroke_width=6))
-    S(poly([(200, 34), (300, 34), (150, 390), (50, 390)], "#ffffff", opacity=0.05))
-    # the ledge and a paper cup
-    S(rect(0, 404, w, 46, S.lin([(0, "#4a4f58"), (1, "#2e3238")])))
-    S(rect(0, 400, w, 8, "#5a606a"))
-    S(path("M600 404 L604 360 L636 360 L640 404 Z", "#efe9dc"))
-    S(rect(600, 354, 40, 8, "#d8d0c0", rx=2))
-    S(rect(603, 374, 34, 14, "#b87a4a"))
-    return S.html()
-
-
 def leaf(x, y, s, col, rot):
     return ell(x, y, s, s * 0.5, col, transform=f"rotate({n(rot)} {n(x)} {n(y)})")
-
-
-def ig_like_0(p):
-    """A park bench under a big tree in autumn; leaves on the grass and falling."""
-    w, h = p["size"]
-    S = Svg(w, h)
-    rng = random.Random("ig-like-0")
-    S(sky(S, [(0, "#f6d9a8"), (1, "#f2c48a")], 0, 420))
-    S(glow(S, 470, 260, 380, "#fff4d8", 0.6))
-    # far trees, soft
-    far = []
-    for i in range(14):
-        far.append(blob(rng.uniform(-40, w + 40), rng.uniform(300, 380), rng.uniform(60, 110), rng,
-                        rng.choice(["#e0a454", "#d88a3c", "#c9b060", "#e8b86a"])))
-    S(g(far, filter=S.blur(6), opacity=0.8))
-    S(rect(0, 400, w, h - 400, S.lin([(0, "#b9a45a"), (0.4, "#8f8a44"), (1, "#6a6a36")])))
-    S(path("M640 430 C520 470 380 520 300 800 L460 800 C500 600 560 500 640 470 Z", "#d9c49a"))
-    # the big tree at left: trunk, limbs, and a roof of leaves
-    S(path("M60 800 C80 640 90 520 70 380 C60 300 40 200 10 0 L120 0 C120 160 140 300 150 400 C160 520 170 660 190 800 Z",
-           "#3a2a22"))
-    S(path("M150 330 C220 260 330 220 460 150", "none", stroke="#3a2a22", stroke_width=22, stroke_linecap="round"))
-    S(path("M120 160 C200 120 300 90 380 40", "none", stroke="#3a2a22", stroke_width=16, stroke_linecap="round"))
-    S(path("M95 700 C110 600 118 520 110 420", "none", stroke="#5a4232", stroke_width=10, opacity=0.6))
-    cols = ["#d9642e", "#e8903a", "#c94a28", "#f2b24a", "#b8402a"]
-    clusters = ((120, 60, 190), (330, 80, 170), (500, 40, 150), (260, 200, 120), (600, 150, 100))
-    for cx, cy, r in clusters:
-        S(blob(cx, cy + r * 0.1, r * 0.9, rng, "#8a3a22"))
-    for layer, k in ((0.3, 0), (0.0, 1), (-0.25, 2)):
-        for cx, cy, r in clusters:
-            for _ in range(14):
-                a = rng.uniform(0, 6.283)
-                d = r * math.sqrt(rng.random()) * 0.85
-                bx_, by_ = cx + math.cos(a) * d, cy + math.sin(a) * d * 0.75 + layer * r * 0.3
-                c = cols[rng.randrange(len(cols))]
-                c = [dark(c, 0.25), c, light(c, 0.2)][k]
-                S(blob(bx_, by_, r * rng.uniform(0.14, 0.26), rng, c))
-    # the bench, three-quarter view, its shadow long toward us
-    bx, by = 330, 560
-    S(poly([(bx - 20, by + 50), (bx + 230, by + 10), (bx + 330, by + 150), (bx + 40, by + 210)], "#4a4a2a", opacity=0.28))
-    frame = "#2f4a3a"
-    for lx, ly in ((bx, by + 40), (bx + 200, by + 4)):
-        S(line(lx, ly, lx - 4, ly + 60, frame, 7))
-        S(line(lx + 30, ly + 10, lx + 34, ly + 62, frame, 7))
-        S(line(lx - 2, ly - 10, lx - 6, ly - 110, frame, 7))
-    for i in range(4):
-        dy = i * 9
-        S(poly([(bx - 12 + i * 4, by + 30 - dy * 0.1 + i * 4), (bx + 212 + i * 4, by - 6 + i * 4),
-                (bx + 214 + i * 4, by + 1 + i * 4), (bx - 10 + i * 4, by + 37 + i * 4)], rng.choice(["#8a5a34", "#9a6a3e"])))
-    for i in range(4):
-        S(poly([(bx - 8, by - 20 - i * 22), (bx + 206, by - 58 - i * 22), (bx + 206, by - 44 - i * 22), (bx - 8, by - 6 - i * 22)],
-               rng.choice(["#8a5a34", "#9a6a3e", "#7a4e2e"])))
-    # leaves: on the bench, the grass, and in the air
-    for _ in range(95):
-        x, y = rng.uniform(-10, w + 10), rng.uniform(430, h)
-        s = 3 + (y - 430) / 40
-        S(leaf(x, y, s, rng.choice(cols), rng.uniform(0, 180)))
-    for _ in range(8):
-        S(leaf(bx + rng.uniform(0, 200), by + rng.uniform(-4, 30), 5, rng.choice(cols), rng.uniform(0, 180)))
-    for _ in range(22):
-        S(leaf(rng.uniform(0, w), rng.uniform(200, 520), rng.uniform(4, 8), rng.choice(cols), rng.uniform(0, 180)))
-    S(rect(0, 0, w, h, S.lin([(0, "#fff0c8", 0.12), (0.6, "#fff0c8", 0), (1, "#2a1a10", 0.2)])))
-    return S.html()
 
 
 def boat(x, y, L, hull, stripe, inside, trim="#f4f0e6", flip=False, cabin=False):
@@ -2932,8 +2601,6 @@ PICS = {
     "shot-2": shot_2,
     "shot-3": shot_3,
     "shot-4": shot_4,
-    "ig-photo-0": ig_photo_0,
-    "ig-photo-2": ig_photo_2,
     "trello-2": trello_2,
     "ig-save-6": ig_save_6,
     "ig-save-9": ig_save_9,
@@ -2941,15 +2608,11 @@ PICS = {
     "ig-notice-3": ig_notice_3,
     "journal-1": journal_1,
     "ig-save-3": ig_save_3,
-    "x-photo-0": x_photo_0,
-    "x-photo-2": x_photo_2,
     "tt-save-2": tt_save_2,
     "dayone-0": dayone_0,
     "journal-11": journal_11,
     "dayone-18": dayone_18,
     "snap-3": snap_3,
-    "x-video-0": x_video_0,
-    "ig-like-0": ig_like_0,
     "ig-notice-0": ig_notice_0,
     "bsky-4b": bsky_4b,
     "snap-0": snap_0,
