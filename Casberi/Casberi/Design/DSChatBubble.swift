@@ -6,10 +6,22 @@ import SwiftUI
 /// conversation's turns are read by side and by fill before a word is read;
 /// it lives here so no screen hand-rolls its own (`ds-template-audit.py`).
 struct DSChatBubble: View {
-    let text: String
+    let text: AttributedString
     let fromSelf: Bool
     /// A message the Observer says was not delivered draws faded.
     var faded = false
+
+    init(text: String, fromSelf: Bool, faded: Bool = false) {
+        self.init(attributed: AttributedString(text), fromSelf: fromSelf, faded: faded)
+    }
+
+    /// Words with their links already painted (`ProseLinks.rendered`), so an
+    /// address in a chat opens (prd §1580).
+    init(attributed: AttributedString, fromSelf: Bool, faded: Bool = false) {
+        self.text = attributed
+        self.fromSelf = fromSelf
+        self.faded = faded
+    }
 
     var body: some View {
         Text(text)

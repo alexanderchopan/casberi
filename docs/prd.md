@@ -69264,3 +69264,15 @@ ENSv2 activated on mainnet on 2026-10-27. Measured that day: the `.eth` BaseRegi
 4. **The facets only the importers produced are deleted** (`Community`, `Story`); `Access`, `Photo`, `Video`, `Reel` stay, because the live seats or the demo still stamp them.
 5. **Kept:** `bulkImportSources` and `ImportRemoval` unchanged (Telegram's precedent in §1577: the demo's rooms and Instagram's live saves still ride the bulk shape); the archive-shaped rendering (thread fold, picture grid, `PostCard` ladder) that the demo's X and Instagram rooms draw. `x-selftest.sh` and `instagram-selftest.sh` keep every guard on the live seats and the rooms and drop the importer's.
 6. **Not yet:** the demo's X and Instagram rooms are still archive-shaped (your posts across years, liked posts, connected apps), a room no live seat can now produce.
+
+## §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and the day (amends §1191 item 2, §1192 item 3) (user, 2026-10-28, of a Telegram chat's sheet: "is this how telegram messages should look. like it doesn't even show all of this person response to me", then "yes" to the recommendation) — RULED, built, not compiled
+
+**What it did.** §1191's box drew the transcript's last two lines as bubbles cut at two lines (`ChatTranscriptBox`, `.lineLimit(2)`), and the transcript under the tiles dropped those two lines so they were not drawn twice (`SheetBoxDrawn.lastLines`). The newest two messages were drawn nowhere whole: on a Telegram chat with matthewb both were his replies, ending "…". They also stood above the chat they end, so the sheet read newest, then oldest onward. Under the tiles a one-to-one's other person carried no name and no bubble (`TelegramMessages`: "the other person is the title"), and your lines were set right-aligned line by line.
+
+1. **The box is the network, the message count and the day** (`ChatTranscriptBox`), no messages. `SheetBoxDrawn.lastLines` and `ChatTranscriptBox.linesDrawn` are deleted.
+2. **Every message under the tiles, oldest first, in a `DSChatBubble`** (`PersonChatBubbles`, §1213's bubble): yours on the trailing edge in ink, theirs on the leading edge in the faint fill, the words left-aligned inside. The side says who, so a one-to-one names nobody; with two or more people besides you, a sender's name stands over the first bubble of their run.
+3. **A long chat hides its oldest, never its newest:** the newest 20 show, "Show N earlier" lets the rest in.
+4. **Links open:** `DSChatBubble` takes words with their links painted (`init(attributed:)`, `ProseLinks.rendered`).
+5. **Not changed:** an agent chat's fallback (`ChatBubbles`, no speaker labels it can read) and the transcript's 60-line, 4,000-character clamp.
+
+**UNRUN.** No Swift toolchain in the session that made this: nothing compiled. The check is a Telegram one-to-one and a group on an iPhone 17 Pro simulator over the demo's chats (Climbing crew, Snapchat), light and dark, and the Mac.
