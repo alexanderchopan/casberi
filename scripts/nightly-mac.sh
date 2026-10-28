@@ -137,14 +137,19 @@ print -r -- "$TS  $SHA  $VERDICT  $PERF  ${RUN_DIR:-no-output-dir}" >> "$LEDGER"
 # reports none). The key is the step with digits as N: "cold-launch cycle 7"
 # and "cycle 3" are one issue. Perf flags are not filed — the run raises them
 # by design and never gates on them.
+# A step that names checks ("static audit failed: a.py b.py", "logic self-test
+# failed: x.sh — logs in <path>") files ONE issue per check, keyed `audit-<name>`
+# or `selftest-<name>` (2026-10-28): keyed by the whole line, every new
+# combination of failing checks, and every new log path, opened a duplicate —
+# tor-route-selftest.sh was open three times, sheet-sweep-audit.py three.
 if (( STATUS == 0 )); then
   python3 "$ROOT/scripts/file-findings.py" --source nightly-mac --sha "$SHA" --complete
 else
   STEP=${VERDICT#FAIL: }
-  KEY=$(print -r -- "$STEP" | sed -E 's/[0-9]+/N/g' | cut -c1-90)
+  FULL=$(grep '✗' /tmp/nightly-mac-run.log | tail -1 \
+    | sed $'s/\033\\[[0-9;]*m//g' | sed 's/^✗ *//')
   TAIL=$(sed $'s/\033\\[[0-9;]*m//g' /tmp/nightly-mac-run.log | tail -40)
-  python3 "$ROOT/scripts/file-findings.py" --source nightly-mac --sha "$SHA" \
-    --finding "$KEY" "Mac nightly: $STEP" "The Mac nightly failed at $TS on \`$SHA\`.
+  BODY="The Mac nightly failed at $TS on \`$SHA\`: $FULL
 
 Last 40 lines of the run:
 
@@ -153,6 +158,23 @@ $TAIL
 \`\`\`
 
 Run dir on the Mac: \`${RUN_DIR:-none}\`. Re-run with \`scripts/verify-mac.sh\`."
+  typeset -a MFIND CHECKS
+  case "$FULL" in
+    "static audit failed:"*)    KIND=audit ;;
+    "logic self-test failed:"*) KIND=selftest ;;
+    *)                          KIND="" ;;
+  esac
+  # The names stop at the first "(" or "—": what follows is commentary and a path.
+  [[ -n "$KIND" ]] && CHECKS=($(print -r -- "${FULL#*:}" | sed 's/[(—].*//' \
+    | grep -oE '[A-Za-z0-9._-]+\.(py|sh)'))
+  for c in "${CHECKS[@]}"; do
+    MFIND+=(--finding "$KIND-$c" "Mac nightly: ${FULL%%:*}: $c" "$BODY")
+  done
+  if (( ${#MFIND} == 0 )); then
+    KEY=$(print -r -- "$STEP" | sed -E 's/[0-9]+/N/g' | cut -c1-90)
+    MFIND=(--finding "$KEY" "Mac nightly: $STEP" "$BODY")
+  fi
+  python3 "$ROOT/scripts/file-findings.py" --source nightly-mac --sha "$SHA" "${MFIND[@]}"
 fi
 
 # Journeys (2026-10-14): how many taps, characters and seconds each job takes
@@ -219,21 +241,49 @@ fi
 # meets, so it FILES, keyed `sheet-<id>`, the row's note as its body; a row
 # that comes back clean closes its issue. Complete only when every entry
 # reported, so a run a crash cut short closes nothing.
+# Sheets that break at the SAME control ("step N (button:^Sources, …): not
+# found", step number aside) are one cause and file ONE issue, keyed
+# `sheets-at-<control>`, every sheet it stopped listed (2026-10-28): one renamed
+# button on the way to Sources had opened seventeen. A note naming no control
+# ("anchor never appeared") is a different anchor per sheet, so it stays apart.
 "$ROOT/scripts/journeys.sh" sheets > /tmp/nightly-sheets.log 2>&1
 SHEETS_DIR=$(print -l -- "$ROOT"/scripts/output/journeys-*(/om[1]N) 2>/dev/null)
 if [[ -n "$SHEETS_DIR" && -f "$SHEETS_DIR/sheets.tsv" ]]; then
   [[ -f "$SHEETS_DIR/sheets-report.txt" ]] && print -r -- "sheets:" && sed 's/^/  /' "$SHEETS_DIR/sheets-report.txt"
   typeset -a SFIND
+  typeset -A SGROUP SNOTE STITLE SBODY
   SSEEN=0
   SHEETS_TOTAL=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["entries"]))' "$ROOT/scripts/sheet-sweep.json")
   while IFS=$'\t' read -r sid sopen sswipe scontrol ssec snote; do
     [[ -z "$sid" ]] && continue
     (( SSEEN++ ))
     [[ "$sopen" != fail && "$sswipe" != fail && "$scontrol" != fail ]] && continue
-    SFIND+=(--finding "sheet-$sid" "Sheet \"$sid\" did not open or close: $snote" "The sheet sweep met \`$sid\` on the Mac nightly at $TS on \`$SHA\`: opened=$sopen, pull down=$sswipe, control=$scontrol. $snote
+    STITLE[$sid]="Sheet \"$sid\" did not open or close: $snote"
+    SBODY[$sid]="The sheet sweep met \`$sid\` on the Mac nightly at $TS on \`$SHA\`: opened=$sopen, pull down=$sswipe, control=$scontrol. $snote
 
-Its screenshots and the tree as it opened: \`${SHEETS_DIR#$ROOT/}/sheet-$sid-*\`. A renamed anchor breaks an entry the same way a stuck sheet would; read the picture first. Re-run with \`JOURNEYS_SHEETS=$sid scripts/journeys.sh sheets\`.")
+Its screenshots and the tree as it opened: \`${SHEETS_DIR#$ROOT/}/sheet-$sid-*\`. A renamed anchor breaks an entry the same way a stuck sheet would; read the picture first. Re-run with \`JOURNEYS_SHEETS=$sid scripts/journeys.sh sheets\`."
+    if [[ "$snote" == "step "<->" ("* ]]; then
+      g=${snote#step <-> }
+      SGROUP[$g]="${SGROUP[$g]:-}$sid "
+      SNOTE[$g]=$snote
+    else
+      SFIND+=(--finding "sheet-$sid" "${STITLE[$sid]}" "${SBODY[$sid]}")
+    fi
   done < "$SHEETS_DIR/sheets.tsv"
+  for g in ${(k)SGROUP}; do
+    ids=(${=SGROUP[$g]})
+    if (( ${#ids} == 1 )); then
+      SFIND+=(--finding "sheet-${ids[1]}" "${STITLE[${ids[1]}]}" "${SBODY[${ids[1]}]}")
+      continue
+    fi
+    slug=$(print -r -- "$g" | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-60)
+    named=""; for i in "${ids[@]}"; do named+="\`$i\`, "; done
+    SFIND+=(--finding "sheets-at-$slug" "${#ids} sheets stop at the same step: $g" "The sheet sweep on the Mac nightly at $TS on \`$SHA\` stopped ${#ids} sheets at one control: ${SNOTE[$g]}
+
+One cause, most likely a renamed or moved control on the shared way in. Sheets: ${named%, }.
+
+Screenshots: \`${SHEETS_DIR#$ROOT/}/sheet-<id>-*\`. Re-run one with \`JOURNEYS_SHEETS=<id> scripts/journeys.sh sheets\`.")
+  done
   SCOMPLETE=(); (( SSEEN == SHEETS_TOTAL )) && SCOMPLETE=(--complete)
   python3 "$ROOT/scripts/file-findings.py" --source sheets --sha "$SHA" $SCOMPLETE "${SFIND[@]}"
 else
@@ -248,5 +298,9 @@ done
 print -l -- "$ROOT"/scripts/output/journeys-*(/omN) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -rf "$old"
 done
+
+# Mondays: delete the branches sessions left behind that hold nothing main
+# lacks (scripts/branch-prune.sh says exactly which). Never changes $STATUS.
+[[ $(date +%u) == 1 ]] && "$ROOT/scripts/branch-prune.sh"
 
 exit $STATUS
