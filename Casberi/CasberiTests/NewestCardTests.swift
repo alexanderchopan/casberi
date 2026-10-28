@@ -26,7 +26,7 @@ struct NewestCardTests {
     /// Past midnight: nothing from today, and the card still holds last
     /// night's five, newest first.
     @Test @MainActor func yesterdaysThingsStandWhenTodayIsEmpty() throws {
-        let (container, rows) = try Self.inserted((1...7).map { Self.thing("n\($0)", daysAgo: Double($0)) })
+        let (container, rows) = try Self.inserted((1...7).map { Self.thing("n\($0)", source: "App\($0)", daysAgo: Double($0)) })
         _ = container
         let newest = FeedScreen.newestThings(rows.shuffled(), lede: nil, elsewhere: Self.elsewhere)
         #expect(newest.map(\.title) == ["n1", "n2", "n3", "n4", "n5"])
@@ -41,12 +41,29 @@ struct NewestCardTests {
             Self.thing("Box — again", daysAgo: 0.2),
             Self.thing("Ahead", daysAgo: -1),
             Self.thing("Move", source: "Coinbase", daysAgo: 0.3),
-            Self.thing("today", daysAgo: 0.4),
-            Self.thing("yesterday", daysAgo: 1.5),
+            Self.thing("today", source: "Mail", daysAgo: 0.4),
+            Self.thing("yesterday", source: "Bluesky", daysAgo: 1.5),
         ])
         _ = container
         let newest = FeedScreen.newestThings(rows, lede: lede, elsewhere: Self.elsewhere)
         #expect(newest.map(\.title) == ["today", "yesterday"])
+    }
+
+    /// One thing per app (prd §1581): a busy app holds one slot, its newest,
+    /// whatever order the things arrive in, and the slots it would have
+    /// taken go to the next apps.
+    @Test @MainActor func oneThingPerApp() throws {
+        let (container, rows) = try Self.inserted(
+            (1...6).map { Self.thing("x\($0)", source: "X", daysAgo: Double($0) / 10) }
+            + [Self.thing("mail", source: "Mail", daysAgo: 1),
+               Self.thing("mail older", source: "Mail", daysAgo: 1.2),
+               Self.thing("sky", source: "Bluesky", daysAgo: 2),
+               Self.thing("note", daysAgo: 3)])
+        _ = container
+        for order in [rows, rows.reversed(), rows.shuffled()] {
+            let newest = FeedScreen.newestThings(order, lede: nil, elsewhere: Self.elsewhere)
+            #expect(newest.map(\.title) == ["x1", "mail", "sky", "note"])
+        }
     }
 
     /// A thing no store backs is never read (the dead-Thing rule).

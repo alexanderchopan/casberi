@@ -69276,3 +69276,13 @@ ENSv2 activated on mainnet on 2026-10-27. Measured that day: the `.eth` BaseRegi
 5. **Not changed:** an agent chat's fallback (`ChatBubbles`, no speaker labels it can read) and the transcript's 60-line, 4,000-character clamp.
 
 **UNRUN.** No Swift toolchain in the session that made this: nothing compiled. The check is a Telegram one-to-one and a group on an iPhone 17 Pro simulator over the demo's chats (Climbing crew, Snapchat), light and dark, and the Mac.
+
+## §1581 — Newest holds one thing per app (amends §1256, §1399) (user, 2026-10-27, on X's Following timeline filling the card: "does newest give everything else one slot at most? or would that only be for x" — "yes that is how it should be") — RULED, built
+
+Newest was the five newest things from any mix of apps (§1399), so one busy app (a mail burst, a Bluesky thread, X's Following timeline once it lands) could fill all five.
+
+1. **One thing per app, every app** (`FeedScreen.newestThings`): an app's newest thing holds its one slot and its older things give theirs to the next apps. The category sections under it already draw each app once (§1103); Newest now keeps the same promise, so it reads as "the five apps that just had something".
+2. **The app is the thing's `source`**: Gmail and iCloud Mail are two apps, your notes (You) are one.
+3. **Unchanged:** five rows, never day-bound (§1399), the standing exclusions (the box's thing, the same news again, the Wallet, the testnets, Markets, nothing dated ahead).
+
+**Guarded.** `CasberiTests/NewestCardTests.oneThingPerApp`: six X things, two mails, one Bluesky post and a note give X's newest, the newer mail, the post and the note, in any arrival order.

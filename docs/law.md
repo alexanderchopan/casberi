@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1718 of 1787 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1719 of 1788 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1644,7 +1644,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
-- §1256 — Home's glance tiles become one Newest card (amended by §1497)
+- §1256 — Home's glance tiles become one Newest card (amended by §1497, §1581)
 - §1257 — The Wallet's Home tiles become one Overview card (amended by §1480)
 - §1258 — Every thing sheet takes the Feed's style
 - §1259 — The wallet balance line is green
@@ -1783,7 +1783,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
 - §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n…
 - §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic…
-- §1399 — Newest is never day-bound (amends §1331 item 4, §1256)
+- §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (amended by §1581)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
 - §1401 — The connect and setup screens stand bare too (completes §1393)
 - §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,…
@@ -1964,6 +1964,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1578 — Round-ups save with your sends only, always in USDC: ETH is swapped for a dollar that is short, Save now and the ppET…
 - §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396)
 - §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
+- §1581 — Newest holds one thing per app
 
 ## Dead rulings → what replaced them (generated)
 

@@ -595,6 +595,10 @@ extension FeedScreen {
     /// `elsewhere` names the categories that are their own place (§1331).
     /// `.isLive` before any read, the dead-Thing rule; one pass, a bounded
     /// top-N, never a sort of the whole set.
+    ///
+    /// ONE thing per app (prd §1581, user: "yes that is how it should be"),
+    /// the sections' own rule (§1103): a busy app's newer thing takes its one
+    /// slot, so no single app can fill the card.
     static func newestThings(_ visible: [Thing], lede: Thing?, elsewhere: Set<String>) -> [Thing] {
         let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
         let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
@@ -608,6 +612,10 @@ extension FeedScreen {
             if top.count == newestRows, let last = top.last, at <= last.capturedAt { continue }
             guard TitleSeam.split(thing.title).0 != ledeTitle,
                   !elsewhere.contains(BridgeCatalog.category(forSource: thing.source) ?? "") else { continue }
+            if let same = top.firstIndex(where: { $0.source == thing.source }) {
+                guard top[same].capturedAt < at else { continue }
+                top.remove(at: same)
+            }
             let i = top.firstIndex { $0.capturedAt < at } ?? top.count
             top.insert(thing, at: i)
             if top.count > newestRows { top.removeLast() }
