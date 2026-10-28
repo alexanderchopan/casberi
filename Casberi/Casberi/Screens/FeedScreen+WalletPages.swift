@@ -54,6 +54,9 @@ extension FeedScreen {
                         .monospacedDigit()
                         .foregroundStyle(figureTone)
                         .lineLimit(1)
+                        // A count that changes rolls, never pops (prd §1587).
+                        .contentTransition(.numericText())
+                        .animation(DS.Motion.standard, value: figure)
                 } else if let word {
                     Text(verbatim: word)
                         .dsText(.body17)
@@ -69,7 +72,11 @@ extension FeedScreen {
         .accessibilityLabel(Text(verbatim: [name ?? section.label, figure ?? word]
             .compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
+        // Where back from this door's page lands (prd §1587).
+        .id(Self.walletDoorAnchor(section))
     }
+
+    static func walletDoorAnchor(_ section: WalletSection) -> String { "wallet.door.\(section.rawValue)" }
 
     /// A Wallet row's figure: Activity's money rung, tabular, one line.
     func walletRowFigure(_ figure: String, tone: Color = DS.textPrimary) -> some View {
@@ -98,6 +105,9 @@ extension FeedScreen {
     func walletDoorsSection<Rows: View>(@ViewBuilder _ rows: () -> Rows) -> some View {
         Section { rows() }
     }
+
+    /// Needs you's count on one account, for its cleared beat (prd §1587).
+    struct NeedsBeat: Equatable { let scope: String?; let needs: Int; var demo = DemoMode.isActive }
 
     // MARK: - Home's five doors
 
@@ -225,8 +235,14 @@ extension FeedScreen {
                            figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary)
             }
             if counts.flagged > 0 {
-                // Every threat is red (prd §1463).
-                walletDoor(.threats, figure: "\(counts.flagged)", figureTone: DS.destructiveInk)
+                // Every threat is red (prd §1463); the count is what you have
+                // not seen yet, and none left says so (prd §1587).
+                let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
+                if unseen > 0 {
+                    walletDoor(.threats, figure: "\(unseen)", figureTone: DS.destructiveInk)
+                } else {
+                    walletDoor(.threats, word: String(localized: "All seen"))
+                }
             }
             // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"
             // to "Nothing needs you on Railgun").** With Following and Markets
@@ -244,6 +260,13 @@ extension FeedScreen {
         // The cards' asks need the Spending reading, which starts here
         // whatever Home shows (it did under the deleted Spending list).
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
+        // **THE LAST ASK CLEARED IS A MOMENT (prd §1587).** Needs you going
+        // to nothing on the same account plays one success beat and says so;
+        // a scope switch that changes the count is not one.
+        .onChange(of: NeedsBeat(scope: chrome.walletScope, needs: needs)) { was, now in
+            guard was.scope == now.scope, was.demo == now.demo, was.needs > 0, now.needs == 0 else { return }
+            chrome.flash(String(localized: "Nothing needs you"), tone: .success)
+        }
         // A deposit's approval is asked here too, so Needs you's count is
         // the ASP's latest when Home stands (prd §1561; spaced 20 s).
         .task {
@@ -335,8 +358,11 @@ extension FeedScreen {
             }
             if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"), act: { feedSheet = .walletTokens })
-                walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)),
-                                   mask: mask, act: { feedSheet = .walletTokens })
+                // A token's row opens that token (prd §1587); one with no
+                // page of its own opens the list, as the door does.
+                walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)), mask: mask) { token in
+                    if token.route != nil { walletOpenToken(token) } else { feedSheet = .walletTokens }
+                }
             }
             // What is private, under the tokens (prd §1554).
             walletPrivateRows
@@ -404,9 +430,9 @@ extension FeedScreen {
     /// A door's tokens, each wearing the mark its treemap tile wears.
     @ViewBuilder
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
-                            act: @escaping () -> Void) -> some View {
+                            act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            walletPreviewRow(token.symbol, figure: mask ?? WalletValue.money(token.usd), act: act) {
+            walletPreviewRow(token.symbol, figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
                 AssetMark(name: token.symbol, size: DS.Mark.badge)
             }
         }
@@ -625,6 +651,7 @@ extension FeedScreen {
                 ForEach(cards) { card in
                     let app = BridgeCatalog.seatName(forSource: card.app)
                     Button {
+                        DSHaptic.selection()
                         route.openSetup(forOffer: app)
                     } label: {
                         DSFeedRow(name: card.name, line: Text(verbatim: Self.cardAsk(card) ?? "")) {
@@ -673,6 +700,13 @@ extension FeedScreen {
                     Button {
                         DSHaptic.selection()
                         if !isVenue { withAnimation(DS.Motion.standard) { chrome.walletScope = holder.address } }
+                        // **AN APP'S ROW NARROWS TO THE APP (prd §1587, §83):**
+                        // the Wallet's menu pick for its seat, else the app itself.
+                        else if let seat = RoomAccounts.seats(for: CategoryFold.walletRoom).first(where: { $0.holds(holder.address) }) {
+                            withAnimation(DS.Motion.standard) { chrome.walletScope = RoomAccounts.scopeID(seat) }
+                        } else {
+                            chrome.openApp(holder.label)
+                        }
                     } label: {
                         DSFeedRow(name: name, trailingBesideLine: true) {
                             Group {
@@ -797,7 +831,7 @@ extension FeedScreen {
             walletSkeletonRowsSection
         } else {
             walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
-            walletSeeAllSection(total: moves.count)
+            walletSeeAllSection(older: all.count >= min(Self.sourceRoomFetchLimit, rowBudget ?? .max) || selectedWallet != nil || selectedSeat != nil)
         }
     }
 }
@@ -816,7 +850,7 @@ struct WalletYourAccountFigure: View {
                 Text(verbatim: WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 Button {
-                    DSHaptic.selection()
+                    // One buzz: the success flash carries its own (prd §1587).
                     UIPasteboard.general.string = address
                     chrome.flash(String(localized: "Address copied"), tone: .success)
                 } label: {

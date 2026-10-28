@@ -332,7 +332,7 @@ grep -q 'if moneyReceipt.form == .record {' "$SHEET" \
 # A balance is never a transaction: Activity's list and its history share one
 # filter (Activity's stream left Home for its own page in prd §1480).
 grep -q 'let moves = Self.walletMoves(all)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
-  && grep -q 'walletSeeAllSection(total: moves.count)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
+  && grep -q 'walletSeeAllSection(older:' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
   && grep -q 'FeedScreen.walletMoves(all.live)' "Casberi/Casberi/Screens/WalletHistoryScreen.swift" \
   || { echo "✗ Transactions or its history lists states again (prd §1341)"; exit 1; }
 # They stand on Holdings › Apps since prd §1503 (§1480 put them behind a door).

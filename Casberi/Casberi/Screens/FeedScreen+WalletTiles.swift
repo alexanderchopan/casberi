@@ -59,6 +59,10 @@ extension FeedScreen {
     /// The same, with the tokens you hid still in: what Holdings' Hidden row
     /// counts and brings back.
     var portfolioUnhidden: WalletPortfolio? {
+        // **NEVER ANOTHER ACCOUNT'S TOTAL (prd §1587).** Read for a scope
+        // since left, it waits for this scope's own read rather than stand
+        // under the new account's name.
+        guard portfolio == nil || portfolioScope == chrome.walletScope else { return nil }
         guard let seat = selectedSeat else { return portfolio }
         guard let slice = portfolio.map({ Self.slice($0, for: seat) }), !slice.isEmpty else { return nil }
         return slice
@@ -521,7 +525,8 @@ extension FeedScreen {
                 WalletStartFigure()
                     .modifier(rowEntrance(0))
             } else {
-                WalletScopeEmptyFigure(section: .home, padded: false)
+                // Still reading says so, never "No balance yet" (prd §1587).
+                WalletScopeEmptyFigure(section: .home, padded: false, reading: holdingsReads > 0)
                     // An account with nothing read yet still offers the way
                     // back to Everything (prd §1526): the switch at the foot.
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

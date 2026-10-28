@@ -31,6 +31,9 @@ struct Verb: Identifiable {
         /// `.openURL`, because the secret must not sit in a derived verb: it
         /// is read from this device's Keychain on tap (`ZkMoneyClaims`).
         case claimZkMoney
+        /// Send to the other side of a transfer (prd §1587): Move rises with
+        /// Send and this address in To. In-app, like `.openAddress`.
+        case sendTo(String)
     }
     let label: String
     let icon: String
@@ -56,6 +59,7 @@ struct Verb: Identifiable {
         case .openAddress:    return "Wallet"
         case .edit:           return "Edit"
         case .claimZkMoney:   return "Claim"
+        case .sendTo:         return "Send"
         }
     }
     var id: String { label }

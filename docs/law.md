@@ -53,8 +53,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The tray is one grid of five columns. Every button is 46pt. Headers are a bare glyph over a `heading17` word. A Recent line holds the five rooms you last landed in. No badges, no collapsing (§1013).
 - The tray is solid black (`DS.surfaceSheet`), never glass. You doors not standing fill with `DS.surfaceRaised`. The first column sits on the face's axis (§1014).
 - The tray's search narrows the grid in place. The search and the You row stay pinned above the scroll (§1015). A mark has no hold menu (§1033).
-- You doors, in this order: Home, Notes, Markets, Apps, Addresses, Settings (§1012, §1111, §1123). While the tray is up, the face shows the octopus (§1009). In the tray You is a row like the others: your name, else You (§1133d), Home's disc and the other five places on one line (§1133, §1133c).
-- Notes, Markets, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
+- You doors, in this order: Home, Notes, Apps, Addresses, Settings (§1012, §1111, §1123; Markets deleted, §1529). While the tray is up, the face shows the octopus (§1009). In the tray You is a row like the others: your name, else You (§1133d), Home's disc and the other five places on one line (§1133, §1133c).
+- Notes, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
 - Two controls: the face's tray says where (a category, or any app or account in its row, which shows them all, the name on its own line and the icons six across under it; the room's act second; Search filters the tray as you type, then hands the words to Find, §1133b, §1133c, §1133e; on the phone it is its own capsule in the room bar's slot beside the face, the bar stepping out while the tray is up, and the card grows up from it, beside the rail it leads the card, §1176, §1177), the tiles say what. No room draws a pill; the title is a label, the category pink, " · " and the pick (§1133). Nothing pushes on the phone: what you open rises as one sheet (§1132). The rail's face opens the same tray on the iPad and the Mac (§1133f).
 - A category shows in the tray only while it holds a connected seat (§977).
 - No controls at the top of the screen anywhere (§752). The corner gear is deleted (§937). No room draws an account door; an app's settings open from its row in Apps (§1050f).
@@ -111,7 +111,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 ### 8. Catalogue (Apps)
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library; one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564).
-- Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
+- Markets is deleted (§1529): its tile, seat, watchlist, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions.
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
 
 ### 9. Bridges and seats
@@ -127,7 +127,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Which chains are on is one rule, `WalletChainStore.effectiveIDs`, and every ingest reads it. A total may not silently omit a chain (§827).
 - One refused chain may not empty every read. An unreachable wallet stands on its last reading, stamped (§825).
 - Zerion and Alchemy results are unioned, not either/or (§826).
-- The money rooms merge into one Wallet; Markets, Frames and Logos stay their own rooms (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
+- The money rooms merge into one Wallet; Frames and Logos stay their own rooms (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
 - Zerion goes through one lane: one request a second, 300 a day for every install. A refusal is waited out (§934).
 - Robinhood is read on Alchemy beside Zerion. A DEX-only token is priced off a pool of at least $10K, holding at most 25% of it. A native coin takes the cent floor (§968).
 - The Wallet is the place; what is in it is an account, and the verb is "Follow an account" (§1415). "Wallet" stays for the place and for a wallet app (the software that signs); code identifiers keep their names.
@@ -139,7 +139,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
-- Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
+- Testnets (Hegotá Frames, Logos, `flask`) is its own category, never inside Wallet (§1050, §1050a).
 - Aztec mainnet is the Wallet's, never Testnets': its contracts are named, and AZTEC staked is a Positions row per sequencer, in AZTEC, never priced. A stake is found by its withdrawer (the wallet, or its token vault's staker) and read on the Registry's canonical Rollup, never the one that queued it. Its line says its health and the wallet's share of unclaimed rewards. Withdrawable money and a stopped sequencer notify; an Aztec vote is a quiet row (§1277, §1279).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
@@ -147,8 +147,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
-- Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1250).
-- The Wallet's tiles are Home · Activity · Holdings · Markets · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats. Markets is a tile, its first list the Watchlist (Watchlist · Alerts), then From your apps; it stays lit whatever account or app is picked (§1480, §1498, §1519).
+- The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats (§1480; Markets deleted, §1529).
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
@@ -244,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1724 of 1793 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1725 of 1794 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -803,7 +802,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §498 — The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a s… (amended by §583)
 - §499 — The account sheet stops looking like a database
 - §500 — Ethrex Hegotá — a seat for a chain that publishes what other chains hide (amended by §504, §522; part superseded by §525, §1038)
-- §501 — Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped
+- §501 — Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped (amended by §1587)
 - §502 — Five moments the address book did not have, and the one it cannot have
 - §503 — The Hegotá room's three figures, and six moments (part superseded by §504, §1038)
 - §504 — The Hegotá room's other four figures, a scope it refused, and the failure every guard missed [+1 sub-entries]
@@ -1846,7 +1845,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480, §1570)
-- §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
+- §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero (amended by §1587)
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479, §1494, §1586; part superseded by §1501)
@@ -1863,7 +1862,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model (amended by §1505)
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526, §1527)
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526, §1527, §1587)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1909,7 +1908,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1523 — Round-ups is Spending's fourth door: what the change bought, kept out of the total, and the buy is never spending (bu…
 - §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amended by §1526)
 - §1525 — Holdings' doors show their top three (amended by §1530)
-- §1526 — Yours · Everything: one switch in the Wallet's boxes
+- §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587)
 - §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 - §1528 — Logos, the record to 2026-10-25: a chat nobody is known in can be named, and the Observer becomes a Basecamp module (…
 - §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §…
@@ -1970,6 +1969,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
+- §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a…
 
 ## Dead rulings → what replaced them (generated)
 

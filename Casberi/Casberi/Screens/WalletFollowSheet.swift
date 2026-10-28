@@ -26,6 +26,11 @@ struct WalletFollowSheet: View {
     @State private var searching = false
     @State private var following: Set<String> = []
     @State private var justFollowed: String? = nil
+    /// The account followed last: the Wallet lands on it as the tray
+    /// closes, its balance rolling in as the read lands (prd §1587).
+    @State private var landOn: String? = nil
+    /// Raised from the Wallet: closing lands on the account followed.
+    var landsOnClose = false
     /// What a settled WalletConnect session shared, on its way to the picker
     /// (prd §1417): the tray is where you follow, so connecting is here too.
     @State private var shared: [WalletConnectBridge.ConnectedAccount] = []
@@ -48,6 +53,13 @@ struct WalletFollowSheet: View {
             .dsFindField { field }
         }
         .task { load() }
+        .onDisappear {
+            // Only from the Wallet's own tray: Settings opens it too, and a
+            // follow there is not a trip out of Settings.
+            guard landsOnClose, let landOn, let chrome else { return }
+            chrome.openWallet()
+            chrome.walletScope = landOn
+        }
         .task(id: trimmed) { await resolve() }
         // A sheet on Catalyst does not inherit the presenter's environment
         // (prd §872), and the picker reads both objects unwrapped.
@@ -70,17 +82,16 @@ struct WalletFollowSheet: View {
                           text: $query, focus: $fieldFocused, searching: searching,
                           submitLabel: .done) {
             // The paste is the common way in: an address is copied, never typed.
+            // **THE SYSTEM'S PASTE (prd §1587):** it reads the clipboard with
+            // no "Allow Paste" prompt, which a custom button raised each time.
             if UIPasteboard.general.hasStrings {
-                Button {
-                    if let s = UIPasteboard.general.string { query = s }
-                } label: {
-                    Image(systemName: "doc.on.clipboard")
-                        .dsGlyph(.body)
-                        .foregroundStyle(DS.pickInk)
-                        .frame(minWidth: 44, minHeight: 44)
+                PasteButton(payloadType: String.self) { strings in
+                    if let s = strings.first { query = s }
                 }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Paste"))
+                .labelStyle(.iconOnly)
+                .buttonBorderShape(.circle)
+                .tint(DS.pickInk)
+                .frame(minWidth: 44, minHeight: 44)
             }
         }
     }
@@ -220,7 +231,8 @@ struct WalletFollowSheet: View {
             store?.reconcileWalletSeats()
             following.insert(WalletFollowSuggest.key(target.address))
             justFollowed = WalletFollowSuggest.key(target.address)
-            DSHaptic.success()
+            landOn = target.address
+            // The success flash carries the one buzz (prd §1587).
             let name = target.label.isEmpty ? WalletStore.shortAddress(target.address) : target.label
             chrome?.flash(String(localized: "Following \(name)"), tone: .success)
             let context = modelContext

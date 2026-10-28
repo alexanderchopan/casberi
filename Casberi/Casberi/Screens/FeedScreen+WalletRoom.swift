@@ -296,6 +296,9 @@ extension FeedScreen {
             // (Yours → Everything, a followed wallet → the Wallet tab) remounts
             // nothing, so the page's crown kept the account's $2K over
             // Everything's line while the read had landed $33K (logged).
+            // Still keyed on the total, since nothing else rebuilds the row; a
+            // remount rolls from the figure on screen rather than replaying
+            // the entrance (`WalletBalanceHeadline.lastShown`, prd §1587).
             .id((roomBoxPlace == .paneBox ? "paneBalance:" : "walletChrome:") + "\(portfolioShown?.totalUSD ?? 0)")
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
@@ -1327,6 +1330,7 @@ extension FeedScreen {
         }
         let route = "\(walletPlaceName(sent)) → \(walletPlaceName(received))"
         return Button {
+            DSHaptic.selection()
             openThing(sent)
         } label: {
             HStack(spacing: DS.Space.s3) {
@@ -1428,6 +1432,8 @@ extension FeedScreen {
         let folded = (thing.counterpartyAddress ?? "").isEmpty && !WalletCards.isSpend(thing)
             && WalletFlow.parseAmount(thing.transferAmount ?? "").symbol.isEmpty && thing.source != "Wallet"
         Button {
+            // Every row ticks as it opens, as every door does (prd §1587).
+            DSHaptic.selection()
             openThing(thing)
         } label: {
             HStack(spacing: DS.Space.s3) {
@@ -1534,11 +1540,14 @@ extension FeedScreen {
     }
 
     @ViewBuilder
-    func walletSeeAllSection(total: Int) -> some View {
-        if total > Self.walletPreviewRows {
+    func walletSeeAllSection(older: Bool) -> some View {
+        // **ONLY WHEN THERE IS MORE (prd §1587).** Activity already lists
+        // every row the room fetched; the door stands only when the fetch
+        // filled, so what it opens is older than what is here.
+        if older {
             Section {
                 // The one More row (prd §1386), at the rows' pitch (prd §1482).
-                DSMoreRow(title: Text("See all \(total) transactions")) {
+                DSMoreRow(title: Text("Older transactions")) {
                     route.pushBridge(.walletHistory(scope: walletHistoryScope))
                 }
                 .walletListRow()

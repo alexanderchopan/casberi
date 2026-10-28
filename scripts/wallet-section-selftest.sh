@@ -419,7 +419,7 @@ deny DSRoomScopeChrome.swift "dsWidgetSurface" \
 # rendered as a card of black; §757 dropped the floor and it renders as a room
 # that opens on `Actions` with no explanation. Home is a scope like the other
 # seven now: its words live in `WalletSection` and are drawn by the one figure.
-guard FeedScreen.swift "WalletScopeEmptyFigure(section: .home, padded: false)" \
+guard FeedScreen.swift "WalletScopeEmptyFigure(section: .home, padded: false" \
   "the wallet crown's empty branch draws nothing again, or hand-rolls its own copy instead of \`WalletSection\`'s (§611/§761)"
 # `padded: false` is not decoration: Home's crown sets no horizontal padding of
 # its own, so the scope slot's pad would set these words 16pt right of the

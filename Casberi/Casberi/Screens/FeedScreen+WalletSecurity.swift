@@ -114,10 +114,22 @@ extension FeedScreen {
                 ForEach(shown.keyed) { row in
                     if let thing = row.live {
                         let words = Self.flaggedRowWords(thing, kind: kind)
-                        // Every threat's glyph is red (prd §1463), fake transfers too.
-                        needsYouRow(glyph: kind.glyph, critical: true,
-                                    title: words.title, line: words.line) {
+                        let seen = ThreatsSeen.shared.contains(thing.id)
+                        // Every threat's glyph is red (prd §1463), fake transfers
+                        // too, until it is seen: then grey, and out of Home's
+                        // count (prd §1587).
+                        needsYouRow(glyph: kind.glyph, critical: !seen,
+                                    title: words.title, line: seen ? [words.line, String(localized: "Seen")].joined(separator: " · ") : words.line) {
+                            ThreatsSeen.shared.mark(thing.id)
                             feedSheet = .thing(thing, walk: .none)
+                        }
+                        .contextMenu {
+                            if !seen {
+                                Button {
+                                    withAnimation(DS.Motion.standard) { ThreatsSeen.shared.mark(thing.id) }
+                                    DSHaptic.selection()
+                                } label: { Label("Mark as seen", systemImage: "eye") }
+                            }
                         }
                         .walletListRow()
                     }

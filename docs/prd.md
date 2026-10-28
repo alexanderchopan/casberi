@@ -69364,3 +69364,28 @@ Walked on the simulator (twelve screens) and read in code. What changed:
 **Not verifiable on the simulator:** the demo signs nothing (§1475), so the receipt changes (items 6–10) were read in code, not seen.
 
 **Mac half (§1402).** The same Move on Catalyst; nothing Mac-only.
+
+## §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, and money arriving says how much and where (amends §1463, §1480 item 9, §1526, §501) (user, 2026-10-28: "do the same walk on the wallet", then of the list: "ok i like these but do not add an edge swipe back because we hav the swipe between larger categories eg feed wallet move library search. do all the rest"; "this is by design" of Activity's mixed units) — RULED, built
+
+Walked on the simulator (twelve sections and the Follow tray) and read in code. What changed:
+
+1. **No dead taps.** Holdings › Apps: an app's row narrows the Wallet to that app's seat, else opens the app (it only buzzed, §83). A token under Tokens opens that token, not the every-token sheet.
+2. **Reading says so.** Home's empty box passes `reading:` as Holdings does, never "No balance yet" while a read is out; Spending draws the reading state before its reading lands.
+3. **Never another account's total.** `portfolioUnhidden` is nil while the portfolio on hand was read for a scope since left, so a pick never shows the last account's figure under its name.
+4. **One read on a cold open.** The remembered Yours/Everything choice is applied as the shell appears (`WalletWhoseSwitch.applyLaunchChoice`), before the Wallet draws.
+5. **A refresh rolls.** The box stays keyed on its total (§1403, §1535), and a remount within the launch rolls from the figure last on screen with the line already drawn (`WalletBalanceHeadline.lastShown`); only the first open plays the entrance.
+6. **Back lands where you were.** Back from a door's page (the title word, §1480 item 9) returns to that door (`walletDoorAnchor`), the top first so a door no longer drawn lands at the top. **No edge swipe** (user): the sideways swipe is the tabs'.
+7. **Activity's door only when there is more:** "Older transactions" when the room's fetch filled or an account is picked; the list above already is every row fetched.
+8. **Threats can be seen (amends §1463).** Opening a threat, or holding it for Mark as seen, keeps it in `ThreatsSeen` (this device); the row greys and says "Seen", and Home's Threats counts what is unseen, "All seen" when none is. Unseen threats stay red.
+9. **Follow:** Paste is the system's `PasteButton` (no "Allow Paste" prompt); following from the Wallet lands on that account as the tray closes (`landsOnClose`, never from Settings); the success flash carries the one buzz.
+10. **Haptics:** Activity's move rows, the own-move row and Needs you's Cards rows tick as they open; Copy address buzzes once.
+11. **Money arriving says how much and where (amends §501's no-words):** the rain flashes "+250 USDC · Savings" (no amount under Hide balances), once per arrival however many headlines watch.
+12. **Counts roll** on Home's doors (`numericText`), and Needs you reaching nothing on the same account, outside a demo switch, flashes "Nothing needs you" with its success beat.
+13. **Send from a transfer.** A plain transfer's sheet (sent or received, a token amount, not a swap, grant, approval, flagged row, known pool or book contract) offers Send: Move rises once the sheet has gone, on Send with that address in To and the row's network when its explorer link names one (`MoveSentence.sendDraft`, §1586's draft). Move's own contract warning still stands before Face ID.
+14. `docs/law.md` drops the deleted Markets (§1529) from the Wallet's tiles, You's doors and the categories.
+
+Activity mixing units ("+21,000 sats", "−246.31 USDT0", "Moved 0.5 ETH" as dollars) is by design (user). The five pages whose box holds only a number (Needs you, Permissions, Threats, Following, Nodes) are left for a ruling.
+
+**Not verified on the simulator:** Send opening Move with To filled (the demo's person transfers carry no address); the arrival flash (the demo pours, nothing arrives); the cleared beat.
+
+**Mac half (§1402).** The same Wallet on Catalyst; `PasteButton` is available there; the pane's box keeps its own key.

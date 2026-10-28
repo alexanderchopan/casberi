@@ -17,7 +17,8 @@ extension FeedScreen {
         Group {
             if reading.page.places.isEmpty && reading.page.subscriptions.isEmpty {
                 if !reading.read {
-                    Color.clear
+                    // Reading draws as Holdings' does (prd §1587).
+                    WalletScopeEmptyFigure(section: .spending, reading: true)
                 } else if !reading.fed, wallet.addresses.isEmpty {
                     // **NOTHING COULD FEED IT YET (prd §1469, user: "a 'start
                     // here' kinda thing"):** Library's box (§1365), its three

@@ -280,7 +280,7 @@ extension FeedScreen {
         case .socialFollow:
             SocialFollowSheet()
         case .walletFollow:
-            WalletFollowSheet()
+            WalletFollowSheet(landsOnClose: true)
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

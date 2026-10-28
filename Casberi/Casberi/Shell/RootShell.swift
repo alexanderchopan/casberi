@@ -295,6 +295,9 @@ struct RootShell: View {
 
     var body: some View {
         shell
+            // Whose money the Wallet opens on is settled before the room
+            // first draws, so a cold open reads once (prd §1587).
+            .onAppear { WalletWhoseSwitch.applyLaunchChoice(chrome) }
     }
 
     private var shell: some View {

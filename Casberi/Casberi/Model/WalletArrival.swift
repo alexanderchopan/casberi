@@ -69,9 +69,14 @@ final class WalletArrival {
     /// an unread stored property is not a warning, and this doc is why.
     private(set) var address: String?
 
+    /// What arrived, as its row says it ("250 USDC"), when known: the
+    /// words the rain carries (prd §1587).
+    private(set) var amount: String?
+
     @MainActor
-    func announce(address: String) {
+    func announce(address: String, amount: String? = nil) {
         self.address = address
+        self.amount = amount
         pulse += 1
     }
 }

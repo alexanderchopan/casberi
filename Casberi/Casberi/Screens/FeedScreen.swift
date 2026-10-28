@@ -1514,12 +1514,26 @@ struct FeedScreen: View {
             // and it SUPERSEDES §357's placement for these two rooms rather
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
-            .onChange(of: chrome.walletSection) { _, _ in
+            .onChange(of: chrome.walletSection) { was, now in
                 // A WALLET TILE IS THE WALLET'S PAGE, on every size class
                 // (prd §1321, retiring §1220's phone sheet, user: "ya wallet
                 // needs to do the same"): the tile swaps the page in place,
                 // the band stays under it.
+                // **BACK LANDS WHERE YOU WERE (prd §1587):** back from a
+                // door's page, the parent page comes back at that door, once
+                // its rows are in; anywhere else, the top. No edge swipe: the
+                // sideways swipe is the tabs' (user).
+                // The top first, so a door that is not on the page (Recovery
+                // key's lives in Needs you; a count that reached zero) lands
+                // there rather than at the child page's offset.
                 returnToRoomTop(proxy)
+                guard let was, now != nil, was.parent == now else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(60))
+                    withAnimation(DS.Motion.standard) {
+                        proxy.scrollTo(Self.walletDoorAnchor(was), anchor: .center)
+                    }
+                }
             }
             // **AND ON AN ACCOUNT PICK** (prd §495, user: *"it makes the
             // silhouette and toggle bar jump to the top"*).

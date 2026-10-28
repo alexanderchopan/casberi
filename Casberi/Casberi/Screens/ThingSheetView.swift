@@ -400,22 +400,30 @@ struct ThingSheetView: View {
     private var pushesHere: Bool { inSheetStack || standsAlone }
 
     var body: some View {
-        if standsAlone {
-            NavigationStack {
+        Group {
+            if standsAlone {
+                NavigationStack {
+                    sheetBody
+                        .toolbar(.hidden, for: .navigationBar)
+                }
+                // On the stack, not its root: a pushed page takes the stack's
+                // environment, and one that missed this built a second stack and
+                // never showed (a quoted post, measured by the sheet sweep).
+                .environment(\.dsInSheetStack, true)
+                // A sheet, so a pushed step's way back is the seat at the foot
+                // (§1304), never the system's at the top.
+                .environment(\.dsInSheet, true)
+            } else {
                 sheetBody
-                    .toolbar(.hidden, for: .navigationBar)
             }
-            // On the stack, not its root: a pushed page takes the stack's
-            // environment, and one that missed this built a second stack and
-            // never showed (a quoted post, measured by the sheet sweep).
-            .environment(\.dsInSheetStack, true)
-            // A sheet, so a pushed step's way back is the seat at the foot
-            // (§1304), never the system's at the top.
-            .environment(\.dsInSheet, true)
-        } else {
-            sheetBody
         }
+        // Send raises Move once this sheet has gone (prd §1587): raised
+        // while it is still closing, the tray would find the screen busy.
+        .onDisappear { if raisesMove { chrome.moveTray = true } }
     }
+
+    /// Send was tapped: Move rises as this sheet leaves.
+    @State private var raisesMove = false
 
     @ViewBuilder
     private var sheetBody: some View {
@@ -3771,6 +3779,11 @@ struct ThingSheetView: View {
         if page != nil, thing.source == "Wallet", SwapStage(thing) == nil {
             out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         }
+        // **SEND TO THEM (prd §1587):** the other side of a transfer, with an
+        // account here to send from; never your own address or a flagged row.
+        if let sendTo = MoveSentence.sendableCounterparty(thing) {
+            out.append(Verb(label: String(localized: "Send"), icon: "paperplane", action: .sendTo(sendTo)))
+        }
         return out
     }
 
@@ -5157,6 +5170,13 @@ struct ThingSheetView: View {
                 verbResult = error.localizedDescription
                 verbResultIsError = true
             }
+        case .sendTo(let address):
+            // Move rises over the place this sheet came from, Send filled,
+            // on the network the row moved on.
+            verbResult = nil
+            chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
+            raisesMove = true
+            dismiss()
         case .claimZkMoney:
             // The whole link, read from this device's Keychain now, opened in
             // Safari where the person's zk.money wallet lives (prd §1384).

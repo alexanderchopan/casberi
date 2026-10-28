@@ -174,6 +174,9 @@ extension FeedScreen {
                 do { try await HandOff.showInFiles(thing) }
                 catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
+        case .sendTo(let address):
+            chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
+            chrome.moveTray = true
         case .claimZkMoney:
             // The whole link, read from this device's Keychain on tap (prd §1384).
             if let url = ZkMoneyClaims.link(for: thing.id) { UIApplication.shared.open(url) }

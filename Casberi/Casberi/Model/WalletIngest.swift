@@ -665,7 +665,7 @@ enum WalletIngest {
         var landed: [Thing] = []
         /// The first wallet this pass received qualifying money at (prd §501).
         /// ONE per pass, never one per transfer — see `WalletArrival.pulse`.
-        var arrival: String?
+        var arrival: (address: String, amount: String?)?
         // Round-ups bought on the exchanges this phone signed (prd §1545), once a pass.
         var swapBuys = RoundUps.swapBuys
         for key in order {
@@ -784,7 +784,8 @@ enum WalletIngest {
                     // that fails to write must not have rained.
                     if arrival == nil, leg.received, !thing.isFlagged, roundUpLegs[leg.ref] == nil,
                        let usd = leg.pricedUSD, usd >= Self.holdingFloor {
-                        arrival = leg.address
+                        // What came, for the words the rain carries (prd §1587).
+                        arrival = (leg.address, thing.transferAmount)
                     }
                 }
             }
@@ -809,7 +810,7 @@ enum WalletIngest {
         // first of the arrival fences and it is not knowable before this line:
         // a landing the store rejected must never have rained, or the shower
         // celebrates a row that is not there when you look for it.
-        if saved, let arrival { WalletArrival.shared.announce(address: arrival) }
+        if saved, let arrival { WalletArrival.shared.announce(address: arrival.address, amount: arrival.amount) }
         // Then the already-landed legs this pass re-read (2026-08-02): backfill
         // the price the row may predate, and flag the fictions among them.
         // Separate save — a heal must never be able to lose a landing.

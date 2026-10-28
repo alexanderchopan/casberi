@@ -405,6 +405,43 @@ struct MoveSentence: View {
                      withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date())
     }
 
+    /// A Send with To filled, for "Send" on a transfer's sheet (prd §1587).
+    static func sendDraft(to address: String, on network: Op.Network? = nil) -> Draft {
+        Draft(verb: .send, network: network ?? Op.base, networkPicked: network != nil, amount: "", inDollars: true,
+              withID: nil, buy: nil, buyOn: nil, to: address, at: Date())
+    }
+
+    /// The network a wallet row moved on, read off its explorer link; nil
+    /// when the row names none Move sends on, so the sentence asks.
+    static func network(of thing: Thing) -> Op.Network? {
+        guard let host = Capture.detectURL(in: thing.content)?.host?.lowercased() else { return nil }
+        let id: Int? = host.hasSuffix("basescan.org") && !host.hasPrefix("sepolia") ? 8453
+            : host.hasSuffix("etherscan.io") && !host.contains("sepolia") ? 1
+            : host.hasPrefix("robinhoodchain") ? 4663 : nil
+        return id.flatMap { id in Op.networks.first { $0.chainId == id } }
+    }
+
+    /// The other side of a wallet transfer you could send to: an address,
+    /// not yours, not flagged, with an account on this phone to send from.
+    static func sendableCounterparty(_ thing: Thing) -> String? {
+        // A plain transfer only: a swap's router, an approval's spender or a
+        // grant's contract is a counterparty too, and money sent there is lost.
+        guard thing.source == "Wallet", !thing.isFlagged, YourAccountDemo.shownAddress != nil,
+              thing.transferDirection == "sent" || thing.transferDirection == "received",
+              SwapStage(thing) == nil, thing.grantedAt == nil,
+              !WalletIngest.isWorldGrantHolder(thing.counterpartyAddress),
+              !WalletFlow.parseAmount(thing.transferAmount ?? "").symbol.isEmpty,
+              // A pool the app names by address, or a book entry known to be a
+              // contract, is no one to send to; Move still warns on any other
+              // contract before Face ID (prd §1513).
+              !Tacit.pools.contains(where: { WalletWatch.sameAddress($0, thing.counterpartyAddress ?? "") }),
+              AddressBook.shared.entry(for: thing.counterpartyAddress ?? "")?.kind != .contract,
+              let address = thing.counterpartyAddress, ENS.isHexAddress(address),
+              !WalletStore.shared.addresses.contains(where: { WalletWatch.sameAddress($0.address, address) }),
+              !(YourAccountDemo.shownAddress.map { WalletWatch.sameAddress($0, address) } ?? false) else { return nil }
+        return address
+    }
+
     private func pickUpDraft() {
         guard picksUpDraft, let d = chrome.moveDraft else { return }
         chrome.moveDraft = nil

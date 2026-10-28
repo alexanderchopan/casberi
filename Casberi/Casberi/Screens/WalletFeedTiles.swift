@@ -277,6 +277,10 @@ struct WalletBalanceHeadline: View {
     /// first cut of this got an unstructured `Task` that outlived its view.)
     @State private var rollAnchor: Double?
     @State private var rollLanded = false
+    /// The total last on screen this launch (prd §1587): a remount rolls
+    /// from it instead of replaying the entrance.
+    @MainActor static var lastShown: Double?
+    @MainActor static var flashedPulse = 0
     /// The delta pill waits out the roll — a summary that lands with the thing
     /// it summarizes makes the eye choose, and it chooses wrong (2026-07-22).
     @State private var pillShown = false
@@ -403,7 +407,10 @@ struct WalletBalanceHeadline: View {
                     // Two entrances, two owners: `draw` owns the line's own
                     // mask and replays on a range switch; `enter` owns the
                     // number's roll and fires once ever.
-                    .onAppear { draw(); enter() }
+                    // Back on screen after a refresh or a pick (prd §1587):
+                    // the line stands drawn and the number rolls from what
+                    // was there, never the first open's entrance again.
+                    .onAppear { draw(settled: Self.lastShown != nil); enter() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
                 if ranges.count > 1 || whose {
@@ -566,6 +573,16 @@ struct WalletBalanceHeadline: View {
             // what it gained is the one grammar.
             .onChange(of: arrivals.pulse) { _, _ in
                 chrome.rain(sources: ["Wallet"])
+                // **THE RAIN SAYS HOW MUCH AND WHERE (prd §1587):** "+250 USDC
+                // · Savings". The amount stays out under Hide balances.
+                // One flash per arrival, however many headlines watch it
+                // (the page's, the pane's, the crown's).
+                if let address = arrivals.address, Self.flashedPulse != arrivals.pulse {
+                    Self.flashedPulse = arrivals.pulse
+                    let name = WalletStore.shared.displayName(forWatched: address) ?? WalletStore.shortAddress(address)
+                    let amount = BalancePrivacy.shared.withheld ? nil : arrivals.amount.map { "+" + $0 }
+                    chrome.flash([amount ?? String(localized: "Money arrived"), name].joined(separator: " · "))
+                }
             }
     }
 
@@ -663,8 +680,8 @@ struct WalletBalanceHeadline: View {
             .padding(.top, DS.Space.s2)
     }
 
-    private func draw(redraw: Bool = false) {
-        guard !reduceMotion else { drawn = 1; return }
+    private func draw(redraw: Bool = false, settled: Bool = false) {
+        guard !reduceMotion, !settled else { drawn = 1; return }
         if redraw { drawn = 0 }
         withAnimation(.easeOut(duration: 0.8).delay(redraw ? 0.05 : 0.25)) { drawn = 1 }
     }
@@ -684,6 +701,18 @@ struct WalletBalanceHeadline: View {
     private func enter() {
         guard !entered else { return }
         entered = true
+        // Remounted in this launch (the box re-keys on its total, §1403): roll
+        // from the figure that was on screen, the pill already there.
+        if let was = Self.lastShown {
+            let now = total ?? chart?.price
+            Self.lastShown = now ?? was
+            pillShown = true
+            guard !reduceMotion, let now, was > 0, abs(now - was) / was > 0.001 else { rollLanded = true; return }
+            rollAnchor = was
+            withAnimation(DS.Motion.standard) { rollLanded = true }
+            return
+        }
+        Self.lastShown = total ?? chart?.price
         let anchor = chart?.closes.first
         guard !reduceMotion, let anchor, let now = total ?? chart?.price,
               anchor > 0, abs(now - anchor) / anchor > 0.001
