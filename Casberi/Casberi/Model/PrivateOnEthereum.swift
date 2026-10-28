@@ -240,41 +240,38 @@ enum PrivateOnEthereum {
         return (pool.router, data, note, PrivateMoney.figure(budget, decimals: pool.underlyingDecimals, symbol: pool.symbol))
     }
 
-    /// **SAVED FROM ETH WHEN THERE IS NO USDC (user, 2026-10-27: "if someone
-    /// doesn't have usdc do we swap it for them?").** `units` of the dollar,
-    /// at ETH's price, into ppETH: the deposit carries the ETH itself, no
-    /// swap. Nil price: no ride.
-    static func roundUpsRideInETH(units: String, ethPrice: Double) async throws -> Ride {
-        guard let pool = network.yield.first(where: { $0.native }), ethPrice > 0,
-              let usd = Decimal(string: units).map({ $0 / pow(10, RoundUps.dollarDecimals) }) else { throw Failure.noPool }
-        var wei = usd / Decimal(ethPrice) * pow(10, 18), rounded = Decimal()
-        NSDecimalRound(&rounded, &wei, 0, .down)
-        let budget = NSDecimalNumber(decimal: rounded).stringValue
-        guard let hex = PrivateMoney.hex(budget) else { throw Failure.noPool }
-        let account = try PrivateRootKey.ensure()
-        let (calls, d) = try await PrivacyEngine.exclusive {
-            _ = try await open(account, reason: nil)
-            let engine = PrivacyEngine.shared
-            var calls: [(to: String, data: String, value: String)] = []
-            if try await !engine.isRegistered().registered {
-                for tx in try await engine.prepareRegister().txs {
-                    guard tx.to.lowercased() == network.keystore.lowercased() else { throw Failure.notOwner }
-                    calls.append((tx.to, tx.data, PrivateMoney.decimal(hex: tx.value)))
-                }
-            }
-            return (calls, try await engine.prepareYieldDeposit(tokenId: PrivateMove.eth, budget: hex))
+    /// **ETH PAYS WHEN THE DOLLAR IS SHORT (prd §1578, user: "i want the
+    /// simplest for the user").** Your private balance takes round-ups in
+    /// USDC only. Where the account holds less of the network's dollar than
+    /// the ride spends (`spends`, else `units`) beside what the operation's
+    /// own sends and swaps take (`leaving`), the ride opens with a swap of
+    /// ETH for what is short, written by Swap's own code (`swapQuote`,
+    /// `YourAccountSwap.checked`) and its minimum covering the shortfall. No
+    /// price, no pool, no answer, or ETH that could not also pay the fee
+    /// (`RoundUps.ethCovers`, beside the ETH the operation sends,
+    /// `ethLeaving`): the ride as it was, and the operation's
+    /// simulation drops it if the dollar is not there — the change keeps
+    /// counting, and nothing is said.
+    static func fundedByETH(_ ride: Ride, units: String, on net: YourAccountOp.Network, account: String,
+                            leaving: String, ethLeaving: String) async -> Ride {
+        typealias Chain = YourAccountChain
+        let dollar = YourAccountOp.dollar(on: net)
+        guard let held = await Chain.balance(net, dollar, of: account),
+              let short = RoundUps.dollarShort(spends: ride.spends ?? units, leaving: leaving, held: held) else { return ride }
+        guard let price = await Chain.exchangePrice(net, YourAccountOp.eth),
+              let wei = RoundUps.ethFor(short: short, ethPrice: price),
+              let eth = await Chain.balance(net, YourAccountOp.eth, of: account),
+              RoundUps.ethCovers(swap: wei, leaving: ethLeaving, held: eth),
+              let quote = try? await Chain.swapQuote(net, sell: YourAccountOp.eth, buy: dollar, amount: wei, account: account),
+              YourAccountOp.atMost(short, quote.minimumBuy),
+              let checked = YourAccountSwap.checked(quote, sell: YourAccountOp.eth, amount: wei, chainId: net.chainId),
+              checked.approvals.isEmpty else {
+            NSLog("roundUpsPrivate| no swap from ETH | short %@", short)
+            return ride
         }
-        // The router of ppETH, carrying at most the budget in ETH.
-        guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),
-              let carried = Decimal(string: PrivateMoney.decimal(hex: d.tx.value)), carried <= rounded else { throw Failure.noPool }
-        var all = calls
-        for a in d.approvals { all.append((a.to, a.data, PrivateMoney.decimal(hex: a.value))) }
-        all.append((d.tx.to, d.tx.data, PrivateMoney.decimal(hex: d.tx.value)))
-        let note = PrivateMoney.Note(commitment: d.commitment, label: d.label, labelHash: d.labelHash, symbol: pool.symbol,
-                                     amount: PrivateMoney.decimal(hex: d.shares), decimals: pool.shareDecimals, chainId: network.chainId,
-                                     tx: "", at: Date(), status: .waiting, root: account, share: pool.share)
-        return Ride(calls: all, keep: note,
-                    figure: PrivateMoney.figure(PrivateMoney.decimal(hex: d.underlyingNeeded), decimals: pool.underlyingDecimals, symbol: pool.symbol))
+        let swap = checked.calls.map { (to: $0.to, data: SafeABI.hex($0.data), value: $0.value) }
+        NSLog("roundUpsPrivate| swaps %@ wei of ETH for %@ of %@", wei, short, dollar.symbol)
+        return Ride(calls: swap + ride.calls, keep: ride.keep, figure: ride.figure, spends: ride.spends)
     }
 
     static func roundUpsRide(units: String) async throws -> Ride {

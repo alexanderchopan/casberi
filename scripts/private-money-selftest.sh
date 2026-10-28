@@ -166,8 +166,12 @@ echo "  ok   Needs you: the deposits counted and drawn, Take it back a word behi
 # pool is, a send elsewhere sets nothing aside, the batch rides a deposit you
 # confirmed, and its Activity row has no verb.
 SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
-# One switch (prd §1572): nothing to pick; Save now only where it can move.
-use "$SEC" 'guard !roundUpsSaving, roundUpsReady, PrivateMove.available, PrivateOnEthereum.owner != nil else { return }' "Save now runs where private money cannot take it (the kill switch off, no owner)"
+# One switch (prd §1572): nothing to pick. Saved with your sends only, in
+# USDC: no Save now, no ppETH, ETH swapped for a dollar that is short (prd §1578).
+grep -qF 'saveRoundUpsNow' "$SEC" && { echo "✗ Save now is back (prd §1578)"; exit 1; }
+grep -qF 'roundUpsRideInETH' Casberi/Casberi/Model/PrivateOnEthereum.swift && { echo "✗ round-ups deposit into ppETH again (prd §1578)"; exit 1; }
+use "$SENT" 'ride = await PrivateOnEthereum.fundedByETH(made, units: rideUnits, on: net, account: account,' "a ride short of the dollar no longer swaps ETH for it (prd §1578)"
+use Casberi/Casberi/Model/PrivateOnEthereum.swift 'checked.approvals.isEmpty else {' "the ETH swap before a round-up is not Swap's checked call (prd §1578)"
 use "$SEC" 'Text("Your spare change is saved privately in dollars, and earns interest.")' "the round-ups tray no longer says what the one switch does (prd §1572)"
 use "$SENT" 'guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)

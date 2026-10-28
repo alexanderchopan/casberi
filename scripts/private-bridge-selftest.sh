@@ -86,8 +86,9 @@ SWIFT
 xcrun swiftc -Onone -o "$TMP/run" "$BRIDGE" "$ACROSS" "Casberi/Shared/AddressTail.swift" "$SWAP" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err" | head -20; echo "✗ PrivateBridge.swift does not compile alone"; exit 1; }
 "$TMP/run" || { echo "✗ the bridged save drifted — see above"; exit 1; }
-grep -qF 'ride = try await PrivateBridge.ride(budget: units, from: from, account: account)' Casberi/Casberi/Screens/MoveSecurity.swift \
-  || { echo "✗ Save now no longer saves from Base or Robinhood"; exit 1; }
+# Save now is deleted (prd §1578): a round-up saves with your sends only.
+grep -qF 'saveRoundUpsNow' Casberi/Casberi/Screens/MoveSecurity.swift \
+  && { echo "✗ Save now is back: round-ups save with your sends only (prd §1578)"; exit 1; }
 grep -qF ': try await PrivateBridge.ride(budget: rideUnits, from: net, account: account)' Casberi/Casberi/Screens/MoveSentence.swift \
   || { echo "✗ a send on Base or Robinhood no longer carries the save"; exit 1; }
 echo "✓ private bridge: the handler's message, the fee and the two calls (prd §1574)"

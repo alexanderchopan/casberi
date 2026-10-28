@@ -57,7 +57,6 @@ struct MoveSecurity: View {
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpsTray = false
-    @State private var roundUpsSaving = false
     /// Whether private money is on this phone alone (prd §1562), read in a
     /// task: the Keychain and the store, never in a body.
     @State private var privateBackup: PrivateRoot.Backup = .fine
@@ -281,21 +280,10 @@ struct MoveSecurity: View {
                 Spacer(minLength: DS.Space.s2)
                 Text(verbatim: roundUpWord)
                     .dsText(.body17)
-                    .foregroundStyle(roundUpsReady ? DS.textSecondary : DS.pickInk)
+                    .foregroundStyle(DS.pickInk)
                     .contentTransition(.opacity)
                     .lineLimit(1)
                     .frame(minHeight: 44)
-                if roundUpsReady {
-                    Button { saveRoundUpsNow() } label: {
-                        Text(roundUpsSaving ? String(localized: "Saving…") : String(localized: "Save now"))
-                            .dsText(.body17)
-                            .foregroundStyle(roundUpsSaving ? DS.textTertiary : DS.pickInk)
-                            .lineLimit(1).fixedSize()
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(RowPress())
-                    .disabled(roundUpsSaving)
-                }
             }
             .contentShape(Rectangle())
         }
@@ -310,8 +298,8 @@ struct MoveSecurity: View {
             }
         }
         if roundUps.on {
-            Text(roundUpsReady ? String(localized: "Save now, or it saves automatically with your next send.")
-                               : Self.roundUpsExample(roundUps))
+            // Saved with your sends only (prd §1578): no Save now.
+            Text(verbatim: Self.roundUpsExample(roundUps))
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, DS.Space.s2)
@@ -364,82 +352,6 @@ struct MoveSecurity: View {
         // spending the USDC does not empty it (user: "so it won't say 0 if
         // they spend their money before?").
         return String(localized: "\(usd) to save")
-    }
-
-    /// The network a bridged save leaves from (prd §1574): Base or
-    /// Robinhood, whichever holds its dollar for the save and Across's fee.
-    static func bridgeSource(units: String, account: String) async -> YourAccountOp.Network? {
-        guard let need = Decimal(string: units) else { return nil }
-        for net in YourAccountOp.networks where !net.isTest && PrivateBridge.carries(from: net.chainId) {
-            guard let held = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account),
-                  let have = Decimal(string: held), have >= need * Decimal(1.05) else { continue }
-            return net
-        }
-        return nil
-    }
-
-    /// Enough is counted to move into your private balance (prd §1572).
-    private var roundUpsReady: Bool {
-        guard roundUps.on, let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool,
-                                                            poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) else { return false }
-        return RoundUps.privateMove(saved: RoundUps.privateSaved(on: RoundUps.ethereumPool), at: at) != nil
-    }
-
-    /// **SAVE NOW (prd §1572, user: "it's too bad it happens on next
-    /// send"):** what is counted, into your private balance with one Face
-    /// ID, from your USDC on Ethereum; a send there would carry it anyway.
-    private func saveRoundUpsNow() {
-        if demoSays() { return }
-        guard !roundUpsSaving, roundUpsReady, PrivateMove.available, PrivateOnEthereum.owner != nil else { return }
-        let units = RoundUps.privateSaved(on: RoundUps.ethereumPool)
-        let usd = WalletValue.money(YourAccountOp.dollars(units, decimals: RoundUps.dollarDecimals, price: 1))
-        roundUpsSaving = true
-        Task {
-            defer { roundUpsSaving = false }
-            do {
-                // From your USDC on Ethereum; short of it, from your ETH there
-                // (ppETH, no swap); short of both, say what to add.
-                var net = PrivateOnEthereum.accountNetwork
-                let usdc = await Chain.balance(net, YourAccountOp.dollar(on: net), of: account) ?? "0"
-                let ride: PrivateOnEthereum.Ride
-                // From Base or Robinhood, bridged into the pool on the way in
-                // (prd §1574): the network holding the dollar, with Across's
-                // fee besides (a twentieth more covers it).
-                let bridgedFrom = await Self.bridgeSource(units: units, account: account)
-                if YourAccountOp.atMost(units, usdc) {
-                    ride = try await PrivateOnEthereum.roundUpsRide(units: units)
-                } else if let from = bridgedFrom {
-                    net = from
-                    ride = try await PrivateBridge.ride(budget: units, from: from, account: account)
-                } else if let price = await Chain.exchangePrice(net, YourAccountOp.eth), price > 0,
-                          let eth = await Chain.balance(net, YourAccountOp.eth, of: account),
-                          let have = Decimal(string: eth), let usd = Decimal(string: units),
-                          // Room for the fee besides: a fifth more than the deposit.
-                          have * Decimal(price) / pow(10, 18) >= usd / pow(10, RoundUps.dollarDecimals) * Decimal(1.2) {
-                    ride = try await PrivateOnEthereum.roundUpsRideInETH(units: units, ethPrice: price)
-                } else {
-                    chrome.flash(String(localized: "Add \(usd) of USDC or ETH on Ethereum to save it"), tone: .neutral, seconds: 6)
-                    return
-                }
-                let sent = try await Chain.privateCalls(ride.calls, on: net,
-                                                        reason: String(localized: "Save \(usd) of round-ups")) { _ in }
-                switch sent.outcome {
-                case .landed(let tx, _):
-                    MoveSentence.landPrivateRoundUps(ride, tx: tx, context: modelContext)
-                case .pending:
-                    MoveSentence.landPrivateRoundUps(ride, tx: nil, context: nil)
-                case .dryRun:
-                    return
-                }
-                RoundUps.setPrivateSaved("0", on: RoundUps.ethereumPool)
-                await PrivateMoneyStore.shared.refresh(force: true)
-                chrome.flash(String(localized: "\(usd) saved to your private balance"), tone: .success)
-            } catch let failure as Chain.Failure {
-                chrome.flash(failure.message, tone: .failure, seconds: 6)
-            } catch {
-                chrome.flash(PrivateMove.words(error, network: .ethereum), tone: .failure, seconds: 6)
-            }
-        }
     }
 
     /// A worked send, because "the next $1" read as a $1 round-up: what a

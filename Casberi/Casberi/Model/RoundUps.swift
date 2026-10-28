@@ -78,7 +78,8 @@ enum RoundUps {
         /// **ONE SWITCH (prd §1572, user: "we are offering too many choices
         /// to a user"):** on is the next dollar, into your private balance;
         /// the step and the token are no longer choices. A setting kept by
-        /// an older build reads this way too.
+        /// an older build reads this way too. It saves with your sends only,
+        /// in USDC, ETH swapped to USDC where the dollar is short (prd §1578).
         var simple: Setting {
             var s = self
             s.step = 1
@@ -263,6 +264,36 @@ enum RoundUps {
         guard let buy = plan.buy else { return nil }
         let before = YourAccountOp.difference(buy, plan.change)
         return before == "0" ? nil : before
+    }
+
+    // MARK: - ETH pays when the dollar is short (prd §1578)
+
+    /// What a save is short of the network's dollar where it leaves from:
+    /// what the ride spends, plus what this operation's own sends and swaps
+    /// take of the dollar, less what the account holds. nil: enough.
+    static func dollarShort(spends: String, leaving: String, held: String) -> String? {
+        let need = YourAccountOp.sum(spends, leaving)
+        guard !YourAccountOp.atMost(need, held) else { return nil }
+        return YourAccountOp.difference(need, held)
+    }
+
+    /// The ETH sold for `units` of the dollar at `ethPrice`: a fiftieth more,
+    /// for the pool's fee and the price moving since it was read, rounded up
+    /// to the wei. The swap's minimum must still cover `units`. nil without a
+    /// price.
+    static func ethFor(short units: String, ethPrice: Double) -> String? {
+        guard ethPrice.isFinite, ethPrice > 0, let usd = Decimal(string: units), usd > 0 else { return nil }
+        var wei = usd * 102 / 100 / pow(10, dollarDecimals) / Decimal(ethPrice) * pow(10, 18), rounded = Decimal()
+        NSDecimalRound(&rounded, &wei, 0, .up)
+        return NSDecimalNumber(decimal: rounded).stringValue
+    }
+
+    /// Whether the account's ETH takes the swap and still pays the fee: the
+    /// operation's own ETH out, then the swap at most half of what is left.
+    /// The fee check before Face ID counts the operation's sends, never the
+    /// ride, so the other half is what keeps the send itself paid for.
+    static func ethCovers(swap wei: String, leaving: String, held: String) -> Bool {
+        YourAccountOp.atMost(YourAccountOp.sum(leaving, YourAccountOp.sum(wei, wei)), held)
     }
 
     /// The count once a reserve is released: added back onto whatever was
