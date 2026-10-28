@@ -208,7 +208,7 @@ struct WalletPrivateAsks: View {
                                 titleVisibility: .visible, presenting: confirming) { ask in
                 Button(String(localized: "Take it back")) { takeBack(ask) }
                 Button(String(localized: "Cancel"), role: .cancel) {}
-            } message: { _ in
+            } message: { ask in
                 // Where it goes, on the network it is on, and what it gives up.
                 Text(ask.note.chainId == PrivacyNetwork.ethereum.chainId
                      ? String(localized: "It goes back to your account on Ethereum, in public. This deposit won't be private.")
