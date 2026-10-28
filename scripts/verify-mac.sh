@@ -334,6 +334,7 @@ fi
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"
+"$ROOT/scripts/tdlib.sh"   # TDLib (prd §1575): linked from the cache, built once
 "$ROOT/scripts/xcb.sh" -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination 'platform=macOS,variant=Mac Catalyst' \
   -derivedDataPath "$DD" build -quiet 2>&1 | grep -E "error:" | head -20

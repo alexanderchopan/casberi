@@ -48,6 +48,7 @@ rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
 # (prd §738), which sits beside the .xcodeproj folder rather than inside it, so
 # it is staged beside project/ too. Without it the archive fails to resolve
 # packages; verify.sh never sees that, because it builds the whole checkout.
+"$SRC/../scripts/tdlib.sh"   # TDLib (prd §1575): the cached link, built once
 rsync -a "$SRC/../Vendor/" "$WORK/Vendor/" >/dev/null
 xattr -rc "$WORK/project" 2>/dev/null || true
 

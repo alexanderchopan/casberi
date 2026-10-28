@@ -237,6 +237,9 @@ fi
 # Reaped with the Mac leg below, or an audit failing at second 30 leaves an
 # orphan xcodebuild churning behind a finished pass (which reads as a hang —
 # `verify-mac.sh`'s own 2026-08-02 lesson about a run that looks silent).
+# TDLib (prd §1575) is built once into a Mac-wide cache and linked, never
+# committed; a no-op once it is here.
+"$ROOT/scripts/tdlib.sh"
 BUILDPID=""
 BUILDLOG="$OUT/ios-build.log"
 "$ROOT/scripts/xcb.sh" -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
@@ -1783,6 +1786,10 @@ harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the 
 # doubles a transcript — each renders as an ordinary row. Also holds the
 # switches, the no-mark-read rule and the probes' no-words rule.
 harness "Live messages self-test" "live messages self-test" "scripts/live-messages-selftest.sh" "the live messages self-test failed — run scripts/live-messages-selftest.sh"
+# Telegram's chats through TDLib (prd §1575): a login code from the service
+# account lands in the corpus, a channel or a bot reads as somebody you talk
+# to, a service line lands as a message. Also the switch and no-write rules.
+harness "Telegram messages self-test" "telegram messages self-test" "scripts/telegram-messages-selftest.sh" "the Telegram messages self-test failed — run scripts/telegram-messages-selftest.sh"
 # Duolingo's practice-day door (prd §776) — the least-measured live seat in the
 # tree, so the harness is the only thing holding its parse at all: a JWT payload
 # read as plain base64 is nil for every token carrying a `-`, a day stamped at

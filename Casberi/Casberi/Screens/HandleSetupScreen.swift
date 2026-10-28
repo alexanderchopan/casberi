@@ -411,18 +411,31 @@ struct HandleSetupScreen: View {
         AccountPage(
             name: bridge.rawValue, seatID: bridge.bridgeID, source: bridge.rawValue,
             state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
-                                       connected: bridge.isConnected, store: store),
+                                       // Signed in to read your chats is connected
+                                       // too (prd §1575) — the page's state only:
+                                       // `isConnected` is the FOLLOW half's, and
+                                       // drives its sync, search and verb.
+                                       connected: bridge.isConnected
+                                           || (bridge == .telegram && TelegramClient.signedIn),
+                                       store: store),
             // The §315 mode, back on the page it left with §639 — every seat
             // here connects on a public name alone, which is the fact that
-            // decides whether somebody starts.
-            mode: .noAccount,
+            // decides whether somebody starts. Telegram's page says none
+            // since its chats sign in (prd §1575): "No sign-in" stays true of a
+            // channel and the catalogue, and is not of the page.
+            mode: bridge == .telegram ? nil : .noAccount,
             rows: bridge.followRoom == nil ? rows : [],
             query: query,
             onRemoveRow: removeRow,
             onOpenRow: bridge.isRichSocial ? openRow : nil,
+            // Telegram's sign-in (prd §1575), the page's one presentation.
+            cardSheet: bridge == .telegram ? { _ in
+                AnyView(TelegramSignInSheet(onSignedIn: {}))
+            } : nil,
             teardown: {
                 bridge.setName("")
                 accountNames = []
+                if bridge == .telegram { Task { await TelegramClient.shared.signOut() } }
             },
             sheet: $sheet,
             act: { omniBlock },
@@ -438,6 +451,9 @@ struct HandleSetupScreen: View {
                 // entirely rather than re-risking it here.
                 if bridge == .bluesky {
                     StarterPacksDoor(onImport: { _ in Task { await sync() } })
+                }
+                if bridge == .telegram {
+                    TelegramMessagesBlock { sheet = .card(id: "telegramSignIn") }
                 }
                 if bridge.importsArchive {
                     archiveBlock

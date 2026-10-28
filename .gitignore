@@ -40,3 +40,6 @@ design/launch-video/rec-farcaster-out/
 # remote immediately, so the noise lands in a world-readable diff.
 __pycache__/
 *.pyc
+
+# TDLib, built and cached by scripts/tdlib.sh (a symlink into ~/Library/Caches; never committed)
+Vendor/TDLib/

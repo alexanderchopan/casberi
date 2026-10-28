@@ -14,6 +14,7 @@
 		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE0000000000000000000004 /* ReownAppKit */; };
 		CE0000000000000000000007 /* P256K in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000006 /* P256K */; };
 		CE000000000000000000000B /* TorShim in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE000000000000000000000A /* TorShim */; };
+		D30000000000000000000002 /* TDJSON.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D30000000000000000000001 /* TDJSON.xcframework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,6 +78,7 @@
 		CD0000000000000000000032 /* CasberiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CF0000000000000000000003 /* NotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D20000000000000000000002 /* CasberiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D30000000000000000000001 /* TDJSON.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TDJSON.xcframework; path = ../Vendor/TDLib/TDJSON.xcframework; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -168,6 +170,7 @@
 				CE0000000000000000000001 /* WalletConnect in Frameworks */,
 				CE0000000000000000000005 /* ReownAppKit in Frameworks */,
 				CE0000000000000000000007 /* P256K in Frameworks */,
+				D30000000000000000000002 /* TDJSON.xcframework in Frameworks */,
 				CE000000000000000000000B /* TorShim in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -220,6 +223,7 @@
 				CD0000000000000000000031 /* CasberiTests */,
 				D20000000000000000000001 /* CasberiUITests */,
 				CF0000000000000000000005 /* NotificationContent */,
+				D30000000000000000000001 /* TDJSON.xcframework */,
 				CA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";

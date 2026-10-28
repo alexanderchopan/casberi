@@ -348,7 +348,8 @@ enum Corpus {
     /// export's `x:dm:` / `instagram:dm:`, so it reaches All and "Remove
     /// import" steps over it.
     static let liveRefPrefixesBySource: [String: Set<String>] = [
-        "Telegram": ["telegram:post:"],
+        // Your chats through TDLib (prd §1575), beside the followed channels.
+        "Telegram": ["telegram:post:", "telegram:dm:"],
         "X": ["x-live:notif:", "x-live:dm:"],
         "Instagram": ["ig-live:notif:", "ig-live:dm:"],
         "TikTok": ["tiktok:live:notif:"],

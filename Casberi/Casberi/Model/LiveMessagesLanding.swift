@@ -80,6 +80,15 @@ enum LiveMessagesLanding {
         return outcome
     }
 
+    /// The newest line each landed conversation holds, by ref — what a seat
+    /// that pages its own history (Telegram, §1575) reads back to.
+    static func newest(source: String, refPrefix: String,
+                       context: ModelContext) -> [String: Date] {
+        landedConversations(source: source, refPrefix: refPrefix, context: context)
+            .filter { $0.value.isLive }
+            .mapValues(\.capturedAt)
+    }
+
     /// The conversations already here, by ref — scoped by PREFIX, never by
     /// source alone: an archive is thousands of rows and the inbox is twenty.
     private static func landedConversations(source: String, refPrefix: String,

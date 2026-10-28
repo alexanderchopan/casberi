@@ -41,6 +41,8 @@ enum LiveMessages {
     enum Seat: String, CaseIterable {
         case x
         case instagram
+        /// Through TDLib signed in as you, not a web session (prd §1575).
+        case telegram
 
         /// Off by default, per seat (prd §1244 over §310): private
         /// correspondence enters the corpus only because the person turned

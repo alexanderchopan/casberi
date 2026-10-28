@@ -863,22 +863,40 @@ enum ProbeHooks {
         Hook(key: "igLiveProbe") { _, _ in
             Task { @MainActor in await InstagramLive.diagnose() }
         },
-        // `-liveMessages x|instagram|both|off` — flip the live messages
-        // switches (prd §1244) as the account pages do, so the next sweep or
-        // `-xLiveProbe`/`-igLiveProbe` reads the DM inbox. The probes print
-        // shapes and names, never a message.
+        // `-liveMessages x|instagram|telegram[,…]|both|all|off` — flip the
+        // live messages switches (prd §1244, §1575) as the account pages do,
+        // so the next sweep or `-xLiveProbe`/`-igLiveProbe`/
+        // `-telegramMessagesProbe` reads the inbox. The probes print shapes
+        // and names, never a message.
         Hook(key: "liveMessages") { spec, _ in
-            let on: Set<LiveMessages.Seat> = switch spec.lowercased() {
-            case "x": [.x]
-            case "instagram": [.instagram]
-            case "both", "yes": [.x, .instagram]
-            default: []
-            }
+            let words = Set(spec.lowercased().split(separator: ",").map(String.init))
+            let on: Set<LiveMessages.Seat> =
+                words.contains("all") ? Set(LiveMessages.Seat.allCases)
+                : words.contains("both") || words.contains("yes") ? [.x, .instagram]
+                : Set(words.compactMap(LiveMessages.Seat.init(rawValue:)))
             for seat in LiveMessages.Seat.allCases {
                 UserDefaults.standard.set(on.contains(seat), forKey: seat.defaultsKey)
             }
-            NSLog("[Casberi] liveMessages: x=%@ instagram=%@",
-                  on.contains(.x) ? "on" : "off", on.contains(.instagram) ? "on" : "off")
+            NSLog("[Casberi] liveMessages: %@", LiveMessages.Seat.allCases
+                .map { "\($0.rawValue)=\(on.contains($0) ? "on" : "off")" }.joined(separator: " "))
+        },
+        // `-telegramMessagesProbe YES` — read your Telegram chats through the
+        // signed-in TDLib session (prd §1575), landing nothing, and log the
+        // shape: where the sign-in stands, chats listed and read, and per
+        // conversation its kind and line count. Never a message.
+        Hook(key: "telegramMessagesProbe") { _, _ in
+            Task {
+                NSLog("[Casberi] telegramDM| configured=%@ signedIn=%@",
+                      TelegramClient.configured ? "yes" : "no", TelegramClient.signedIn ? "yes" : "no")
+                let reading = await TelegramMessagesRead.read(newest: [:], remember: false)
+                NSLog("[Casberi] telegramDM| step=%@ listed=%d read=%d conversations=%d failure=%@",
+                      String(describing: TelegramClient.shared.step), reading.chatsListed,
+                      reading.chatsRead, reading.conversations.count, reading.failure ?? "none")
+                for c in reading.conversations {
+                    NSLog("[Casberi] telegramDM| %@ | lines=%d | handle=%@",
+                          c.isGroup ? "group" : "one", c.lines.count, c.handle == nil ? "no" : "yes")
+                }
+            }
         },
         // `-tiktokLiveSession "<cookie header>"` — store a TikTok web session
         // lifted from a signed-in browser, exactly as the in-app sign-in would

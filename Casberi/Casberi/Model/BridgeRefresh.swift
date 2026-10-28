@@ -386,6 +386,17 @@ enum BridgeRefresh {
                 _ = await sweepTimed("x.live") { await XLiveNotifications.refresh(context: context) }
             }
         }
+        // Your Telegram chats (prd §1575): signed in AND the switch on, both
+        // read without starting TDLib, so nobody else ever starts it. The X
+        // seat's throttle and by-name pause.
+        let telegramPaused = store.bridges.contains { $0.id == "telegram" && $0.status == .paused }
+        if TelegramClient.signedIn, LiveMessages.reads(.telegram), !telegramPaused,
+           force || BridgeRefresh.dueForHeal("telegram.messages") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("telegram.messages") { await TelegramMessagesRead.refresh(context: context) }
+            }
+        }
         // Calendars you subscribe to (prd §1137): gated on the list, as RSS
         // is, so nobody who never subscribed pays for a read.
         if !CalendarSubscriptionStore.shared.calendars.isEmpty {

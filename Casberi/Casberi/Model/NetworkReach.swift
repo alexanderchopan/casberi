@@ -754,8 +754,18 @@ enum NetworkReach {
 
         Endpoint(service: "Telegram",
                  reach: .whenConnected(bridge: "Telegram"),
-                 purpose: "Reads the public channels you follow, from each channel's own public page. Never a group, never your chats — the export import reads a file and reaches nothing.",
+                 purpose: "Reads the public channels you follow, from each channel's own public page. The export import reads a file and reaches nothing.",
                  hosts: ["t.me", "telesco.pe"]),
+        // Your chats (prd §1575): TDLib, Telegram's own library, signed in as
+        // you. It speaks MTProto to Telegram's data centres BY ADDRESS, so
+        // the hosts are the ones it names only to find those addresses when
+        // they are blocked (TDLib's `ConfigManager`), never the chats' route.
+        Endpoint(service: "Telegram messages",
+                 reach: .whenConnected(bridge: "Telegram"),
+                 purpose: "Only after you sign in to read your chats: connects to Telegram's own servers, by address, as Telegram's app does. If they are blocked, TDLib asks these hosts where they moved. Reads, never sends.",
+                 hosts: ["dns.google", "mozilla.cloudflare-dns.com", "tcdnb.azureedge.net",
+                         "firebaseremoteconfig.googleapis.com", "reserve-5a846.firebaseio.com",
+                         "firestore.googleapis.com", "www.google.com"]),
         Endpoint(service: "YouTube",
                  reach: .whenConnected(bridge: "YouTube"),
                  purpose: "Reads a public channel's newest videos.",
