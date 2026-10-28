@@ -65,10 +65,9 @@ enum XPersonSource {
     static func kind(_ thing: Thing, needle: String) -> XPerson.Sighting.Kind? {
         if thing.kind == .note, let to = thing.parent?.handle,
            normalize(to) == needle { return .reply }
-        // Theirs, kept by you. `authorHandle` on a liked row is stamped by
-        // `XArchiveImport.fetchFaces` — so this arm is empty until that second
-        // act has run, which is correct rather than something to work around
-        // (the `savedAuthors` ruling one card over).
+        // Theirs, kept by you. `authorHandle` on a liked row was stamped by
+        // the archive's author pass (deleted with the importer, prd §1579), so
+        // this arm reads only rows that already carry one.
         if thing.tags.contains("Liked"), let author = thing.authorHandle,
            normalize(author) == needle { return .liked }
         // Yours, naming them. Scoped to `.note` — a LIKED post is somebody

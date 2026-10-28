@@ -120,9 +120,6 @@ struct ImportArchiveSection: View {
     var pickIcon = "folder"
     /// Whether this source already has things in the corpus — the collapse.
     let alreadyImported: Bool
-    /// Shows the private-messages decision above the pick, for the two
-    /// importers that honour it (`ImportOptions`).
-    var showsMessagesToggle = false
     /// Set on a two-verb page (prd §794): the `Import` row's detail while
     /// nothing is imported, and the switch that keeps the block closed until
     /// asked. nil keeps the one-page staging above.
@@ -130,7 +127,6 @@ struct ImportArchiveSection: View {
     let pick: () -> Void
 
     @Environment(\.accountAct) private var accountAct
-    @AppStorage(ImportOptions.messagesStorageKey) private var includeMessages = false
     /// Stage 3's re-open. Also true whenever there is nothing imported yet, so
     /// the block is open on a first visit without a second condition.
     @State private var expanded = false
@@ -207,17 +203,6 @@ struct ImportArchiveSection: View {
                                  onOpen: markDoor)
                 }
             }
-        }
-        if showsMessagesToggle {
-            // ABOVE the pick, still: this is a decision to make before the
-            // import runs, not a preference to discover afterwards (§310). What
-            // changed is only its dress — a 47-word centered gray paragraph
-            // became the switch's own one-line detail, with the full reasoning
-            // in the screen's single footer where the rest of the fine print
-            // now lives.
-            DSSlabSwitch(title: ImportOptions.messagesTitle,
-                         detail: ImportOptions.messagesDetail,
-                         isOn: $includeMessages)
         }
         // THE FIRST STEP IS A TILE (prd §1306, the catalogue sweep: every
         // import page showed "no first step" under its box, the pick sitting

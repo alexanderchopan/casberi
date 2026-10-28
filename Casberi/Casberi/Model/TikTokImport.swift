@@ -192,7 +192,7 @@ enum TikTokImport {
 
     /// One save whose failure is REPORTED — a swallowed import behind a success
     /// screen is fake status — and one batched Spotlight submission rather than
-    /// an XPC round-trip per row. Mirrors `InstagramImport.finish`.
+    /// an XPC round-trip per row.
     @MainActor
     private static func finish(_ summary: inout Summary, landed: [Thing],
                                context: ModelContext,

@@ -670,14 +670,14 @@ enum Retriever {
     /// `Liked` and `Memory` are deliberately absent — they are things you
     /// TAPPED or were handed, and counting them as your writing is the whole
     /// distinction this scope exists to draw.
-    static let mine: Set<String> = ["Post", "Reply", "Comment", "Thread", "Reel", "Story"]
+    static let mine: Set<String> = ["Post", "Reply", "Comment", "Thread", "Reel"]
 
     /// Whether a row is the person's OWN WRITING — the tag test above, minus
     /// the one thing that wears a writing tag and contains no writing.
     ///
     /// A wordless picture post carries `Post` (or `Reel`, or `Story`) BESIDE
-    /// `Photo`, because a photograph you posted is still a post — see
-    /// `XArchiveImport` and `InstagramImport.landOwnMedia`. That is right for a
+    /// `Photo`, because a photograph you posted is still a post (the X and
+    /// Instagram importers stamped both, before §1579 deleted them). That is right for a
     /// facet and wrong for this scope: "everything I wrote" must not answer
     /// with a photograph, and before 2026-08-18 it could not, because a
     /// captionless post did not land at all. Spelled as a function so the two
@@ -787,12 +787,12 @@ enum Retriever {
               "my practice", "practised", "practiced", "practice"], "Practice"),
             (["my saves", "saves", "saved"], "Saved"),
             // The read X can't answer about your own corpus: posts you kept
-            // that no longer exist there. Stamped by the author pass — see
-            // `XArchiveImport.fetchFaces`.
+            // that no longer exist there. Stamped by the caption and face
+            // passes (`InstagramCaptions`, `TikTokImport.fetchFaces`).
             (["gone", "deleted", "no longer there", "disappeared"], "Gone"),
             (["threads", "thread"], "Thread"),
-            // The media halves of an import room. `Photo` has been stamped by
-            // `XArchiveImport` since 2026-08-13 and prd §375 said in as many
+            // The media halves of an import room. `Photo` was stamped by
+            // the X archive importer from 2026-08-13 and prd §375 said in as many
             // words that it made "photos I posted" a filter rather than a
             // hope — and it never reached this table, so for five days the tag
             // existed and no sentence could name it. `Video` lands with it
@@ -805,9 +805,7 @@ enum Retriever {
             // Git merged both, which is a textual success and a semantic
             // duplicate — the second would have been dead code (the first
             // phrase match wins) in a table whose whole value is that it is
-            // curated. `XArchiveImport` stamps the tag for a wordless tweet and
-            // `InstagramImport.landOwnMedia` for a captionless post; the facet
-            // does not care which room it came from.
+            // curated. The facet does not care which room it came from.
             //
             // The gating rule matters here as much as it does for "review" and
             // "short": these are among the most ordinary words in the language
@@ -821,7 +819,8 @@ enum Retriever {
             // other screen and would be the first genuinely misleading facet
             // in the table.
             (["connected apps", "connected accounts", "app access"], "Access"),
-            (["communities", "community"], "Community"),
+            // `Community` went with the X archive importer, its only
+            // producer (prd §1579).
             // The remaining halves of the four import rooms (2026-08-05,
             // prd §309): Instagram's and TikTok's comments, and Snapchat's two.
             (["my comments", "comments", "comment"], "Comment"),
@@ -850,10 +849,11 @@ enum Retriever {
             // Its third — `Photo`, for a post with no caption — is the shared
             // row further up rather than a second entry here; see that comment
             // for why there is only one. The tag rides BESIDE
-            // `Post`/`Reel`/`Story` rather than replacing one: a wordless reel
+            // `Post`/`Reel` rather than replacing one: a wordless reel
             // is still a reel.
             (["my reels", "reels", "reel"], "Reel"),
-            (["my stories", "stories", "story"], "Story"),
+            // `Story` went with the Instagram export importer, its only
+            // producer (prd §1579).
             // App Store Connect's three halves (2026-08-06, prd §324). The
             // room mixes what Apple decided, what customers wrote, and what
             // your builds did — three genuinely different questions, and until

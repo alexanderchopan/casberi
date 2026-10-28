@@ -2320,7 +2320,7 @@ struct PostCard: View {
     /// the sheet for the rest.
     ///
     /// **Measured in CHARACTERS, not lines**, and the threshold is not 280.
-    /// `XArchiveImport.clean` expands every t.co shortening back to its real
+    /// The archive importer's `clean` expanded every t.co shortening back to its real
     /// URL, so the STORED text of a 280-character tweet with three links can
     /// run past 500 while saying exactly as much as it always did. `wholeChars`
     /// is set well clear of that: the failure to avoid is a real tweet landing

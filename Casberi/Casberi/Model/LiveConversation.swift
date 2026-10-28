@@ -6,9 +6,8 @@ import Foundation
 /// `scripts/live-messages-selftest.sh`; the landing half is
 /// `LiveMessagesLanding`.
 ///
-/// **One thing per CONVERSATION, never per message** — the imports' shape
-/// (`XArchiveImport.landMessages`, `InstagramImport.landMessages`) and their
-/// reason: a message alone is a fragment with no subject, a conversation has
+/// **One thing per CONVERSATION, never per message** — the X and Instagram
+/// imports' shape (both deleted, prd §1579) and their reason: a message alone is a fragment with no subject, a conversation has
 /// people, a span and a subject. The transcript keeps the imports' numbers
 /// too, so a live conversation and an imported one hold the same amount.
 ///

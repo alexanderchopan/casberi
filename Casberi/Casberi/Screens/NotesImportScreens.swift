@@ -18,8 +18,7 @@ import UniformTypeIdentifiers
 ///
 /// Shared by both screens rather than written twice: the two importers have the
 /// same `Summary` and the same cap, so a divergence here could only ever be a
-/// mistake. Mirrors `XArchiveImportScreen`'s wording exactly — the person
-/// reading it may have imported both.
+/// mistake.
 func journalImportReceipt(_ summary: DayOneImport.Summary) -> String {
     guard summary.imported > 0 else {
         return summary.dropped > 0
@@ -38,7 +37,7 @@ func journalImportReceipt(_ summary: DayOneImport.Summary) -> String {
 
 /// Lift the topic terms off what just landed, so the room's "What you write
 /// about" map is there when they walk into it rather than a few foregrounds
-/// later (`XArchiveImportScreen`'s pass, prd §398).
+/// later (prd §398).
 ///
 /// Bounded, and `BridgeRefresh` carries the rest on later opens — which is the
 /// half that matters for these two rooms, since a re-import skips every entry

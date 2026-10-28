@@ -318,7 +318,7 @@ enum Corpus {
     /// shape is Telegram's exactly: a notice arrives one at a time, a few a
     /// day, while an archive import lands fifteen years at once, and the two
     /// halves are already told apart by the ref namespace `XLiveNotifications`
-    /// deliberately kept separate from `XArchiveImport`'s. Without this a
+    /// deliberately kept separate from the archive importer's. Without this a
     /// notification was kept out of All — so the one X row that IS news
     /// appeared only if you went looking for it — and, one consequence over,
     /// the thing sheet called it an archive row and wrote "From your X

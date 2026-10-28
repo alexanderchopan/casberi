@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1717 of 1786 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1718 of 1787 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1564,8 +1564,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
 - §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token (amended by §1217)
 - §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
-- §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192, §1579)
-- §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page (amended by §1579)
+- §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192, §1580)
+- §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page (amended by §1580)
 - §1193 — The share sheet gets UIKit items, never a `Transferable` link
 - §1194 — Privy's Home is its balance line
 - §1195 — A checklist's last tick says "All done"
@@ -1962,7 +1962,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week
 - §1577 — The export doors are deleted from Telegram, X and Instagram; Telegram's sign-in leads its page; the misplaced databas…
 - §1578 — Round-ups save with your sends only, always in USDC: ETH is swapped for a dollar that is short, Save now and the ppET…
-- §1579 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
+- §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396)
+- §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
 
 ## Dead rulings → what replaced them (generated)
 

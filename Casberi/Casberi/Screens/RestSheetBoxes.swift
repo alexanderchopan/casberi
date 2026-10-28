@@ -88,7 +88,7 @@ struct ChatTranscriptBox: View {
     let thing: Thing
 
     /// The network, how much and the day. The messages stand under the
-    /// tiles, whole (prd §1579): two of them here were cut to two lines and
+    /// tiles, whole (prd §1580): two of them here were cut to two lines and
     /// drawn nowhere else, and stood above the chat they end.
     var body: some View {
         if thing.isLive {

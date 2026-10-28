@@ -52,18 +52,8 @@ pic("shot-3", "scene_out", (800, 600), "Wordless camera photo for 'Watch party �
 pic("shot-4", "scene_out", (800, 600), "Wordless camera photo for 'Match day — from Dani's story': fans in scarves walking toward a stadium at dusk along a street, flags", asset="sample-screenshot-4")
 pic("shot-14", "scene_home", (600, 800), "Wordless camera photo: a plant in a terracotta pot on a sunny windowsill, long shadows, no text", asset="sample-screenshot-14")
 
-# ── X archive (DemoSeedAll.xArchive) ──────────────────────────────────────
-pic("x-photo-0", "scene_out", (800, 600), "Your photo post: a Berlin canal at dusk, bridge arches, lamps coming on")
-pic("x-photo-1", "scene_home", (800, 600), "Your photo post: a coffee cup on a window ledge, morning light, city blurred outside")
-pic("x-photo-2", "scene_out", (800, 600), "Your photo post: a bicycle leaning on a pastel wall, bold shadow")
-pic("x-video-0", "scene_out", (800, 450), "Your video post's poster frame: view from a train window, fields and pylons, motion")
-
 # ── Instagram (DemoSeedAll.instagram / igNotices) ─────────────────────────
 ig = (640, 800)
-pic("ig-photo-0", "scene_out", ig, "Your photo: Lisbon rooftops, terracotta tiles, a church dome")
-pic("ig-photo-1", "scene_home", ig, "Your photo: a pastel de nata on a small plate, cinnamon, top-down")
-pic("ig-photo-2", "scene_out", ig, "Your photo: a yellow Lisbon tram climbing a steep street")
-pic("ig-photo-3", "scene_home", ig, "Your photo: a sourdough loaf, scored ear, on a linen cloth")
 ig_saves = [
     ("Cafe with the marble counter", "scene_home", "a cafe interior, white marble counter, espresso machine, pendant lamps"),
     ("Studio shelf, all wood", "scene_home", "a wooden studio shelf, books, a plant, ceramic pieces"),
@@ -80,14 +70,6 @@ ig_saves = [
 ]
 for i, (caption, fam, subject) in enumerate(ig_saves):
     pic(f"ig-save-{i}", fam, ig, f"Saved post '{caption}': {subject}")
-ig_likes = [
-    ("Every bench in the park, ranked", "scene_out", "a park bench under a tree, autumn leaves"),
-    ("One pot, forty minutes", "scene_home", "a cast-iron pot of stew on a stove, steam, wooden spoon"),
-    ("Shelf brackets that aren't ugly", "scene_home", "close-up of a slim black steel shelf bracket holding an oak shelf"),
-]
-for i, (caption, fam, subject) in enumerate(ig_likes):
-    pic(f"ig-like-{i}", fam, ig, f"Liked post '{caption}': {subject}")
-# Notices are about posts NEWER than the export, so none repeats an export photo.
 pic("ig-notice-0", "scene_out", ig, "Your newest photo (lena liked it): small fishing boats in a harbour, morning")
 pic("ig-notice-1", "scene_home", ig, "Your photo (tomas: 'that light though'): afternoon light falling across a white wall and a chair")
 pic("ig-notice-3", "scene_out", ig, "Your post (lena and 4 others liked it): steep stone stairs in Alfama, laundry lines")

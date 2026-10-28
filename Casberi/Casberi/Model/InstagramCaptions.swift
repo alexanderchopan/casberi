@@ -1,8 +1,10 @@
 import Foundation
 import SwiftData
 
-/// Captions for imported Instagram saves and likes (2026-08-02, prd §245
-/// amendment) — the pass that makes those rows findable.
+/// Captions for Instagram saves (2026-08-02, prd §245 amendment) — the pass
+/// that makes those rows findable. Written for the export's saves and likes;
+/// since that importer's deletion (prd §1579) it reads the live seat's saves
+/// (`InstagramLive.savedRefPrefix`).
 ///
 /// WHY THIS EXISTS. §245 landed saves and likes as named links: a handle, a
 /// permalink, a date, because that is the whole of what Meta's export gives
@@ -333,7 +335,7 @@ enum InstagramCaptions {
         return report
     }
 
-    /// Saves and likes this build has never asked a cover for.
+    /// Saves this build has never asked a cover for.
     ///
     /// The LEDGER is the cursor here, where the caption pass uses
     /// `enrichedText == nil` — and it has to be: the honest test would be
@@ -344,12 +346,12 @@ enum InstagramCaptions {
     @MainActor
     private static func coverCandidates(context: ModelContext,
                                         ledger: [String: Int]) -> [Thing] {
-        IngestSupport.thingsByRef(context, source: InstagramImport.source)
+        IngestSupport.thingsByRef(context, source: "Instagram")
             .filter { ref, thing in
                 thing.isLive
                     && thing.kind == .link
                     && !thing.tags.contains("Gone")
-                    && (ref.hasPrefix("instagram:saved:") || ref.hasPrefix("instagram:liked:"))
+                    && ref.hasPrefix(InstagramLive.savedRefPrefix)
                     && (ledger[ref] ?? 0) < maxAttempts
             }
             .values
@@ -392,7 +394,8 @@ enum InstagramCaptions {
         return .stored
     }
 
-    /// Saves and likes still wearing only their handle, newest first.
+    /// Saves still wearing only their handle, newest first (the export's likes
+    /// went with its importer, prd §1579).
     ///
     /// `enrichedText == nil` IS the cursor: a row this pass finishes drops out
     /// of the next one's candidates by itself, so an interrupted pass has no
@@ -405,7 +408,7 @@ enum InstagramCaptions {
                 thing.isLive
                     && thing.kind == .link
                     && thing.enrichedText == nil
-                    && (ref.hasPrefix("instagram:saved:") || ref.hasPrefix("instagram:liked:"))
+                    && ref.hasPrefix(InstagramLive.savedRefPrefix)
                     && (ledger[ref] ?? 0) < maxAttempts
             }
             .values

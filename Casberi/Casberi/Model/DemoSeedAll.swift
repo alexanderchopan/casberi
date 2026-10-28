@@ -1532,7 +1532,6 @@ enum DemoSeedAll {
         out += obsidian()
         out += fileverse()
         out += ownCaptures()
-        out += xArchive()
         out += xNotices()
         out += instagram()
         out += igNotices()
@@ -1951,9 +1950,7 @@ enum DemoSeedAll {
     /// drop the news. The post rides `quote`, which is also what sends the
     /// sheet to the notice anatomy.
     ///
-    /// The FACE is the person who acted, never yours (§707) — the demo is where
-    /// that distinction is most visible, since every archive row directly below
-    /// wears your own.
+    /// The FACE is the person who acted, never yours (§707).
     /// The rows, their shape and their dating are `xNoticeRows`' own — the list
     /// moved out of this function so `xDigestRef` can find the digest in it.
     private static func xNotices() -> [Thing] {
@@ -1981,10 +1978,9 @@ enum DemoSeedAll {
     /// post's picture, NO `quote` and NO `postText` (§704) — the inbox never
     /// names the post's author, so a card would be a guess.
     private static func igNotices() -> [Thing] {
-        // (text, actor, days ago, hour, is a follow) — newer than every
-        // export row, and never in the future (`at` is a day plus an hour).
-        // Each notice's picture is a post NEWER than the export, so it is its
-        // own (`ig-notice-N`), never one of the export's photos again.
+        // (text, actor, days ago, hour, is a follow) — never in the future
+        // (`at` is a day plus an hour). Each notice's picture is its own
+        // (`ig-notice-N`).
         let rows: [(String, String, Double, Int, Bool)] = [
             ("lena liked your photo.", "lena", 1, 21, false),
             ("tomas commented: \"that light though\"", "tomas", 1, 18, false),
@@ -2062,235 +2058,21 @@ enum DemoSeedAll {
         }
     }
 
-    private static func xArchive() -> [Thing] {
-        var out: [Thing] = [receipt("X", "412 posts · 180 liked", days: 3)]
-        // AN ARCHIVE HAS DEPTH, and the demo has to have it too (2026-08-13,
-        // prd §375). The room's head is `XRoom` — years, their subjects and
-        // the loudest one — which DECLINES under three distinct years or
-        // twenty posts, so a seven-post table all inside one season made the
-        // demo's biggest room the one place that card could never be seen.
-        // The older years are deliberately thinner than the recent ones and
-        // one year is deliberately silent: a strip where every bar is the same
-        // height demonstrates nothing about a strip whose whole job is shape.
-        let posts: [(String, [String], Double)] = [
-            ("Shipped the onboarding rewrite. Four screens became one.", ["Work"], 4),
-            ("Good design is mostly removing the second way to do something.", ["Design"], 9),
-            ("Tempelhof at 7pm is the best room in Berlin.", ["Berlin"], 16),
-            ("Hot take: the settings screen is where features go to hide.", ["Design"], 23),
-            ("Made shakshuka for six with one pan. Never again. Also, again.", ["Food"], 31),
-            ("The U8 at midnight is a whole personality.", ["Berlin"], 44),
-            ("Invoiced, shipped, slept. In that order.", ["Work"], 58),
-            ("If a screen needs a tutorial, the screen is the bug.", ["Design"], 96),
-            ("Every bakery in Neukölln sells out of cardamom buns by ten.", ["Food", "Berlin"], 140),
-            ("Deleted 2,000 lines today. Best commit of the month.", ["Work"], 190),
-            ("Typography is the interface. The rest is decoration.", ["Design"], 240),
-            ("Spent a whole afternoon on one empty state. Worth it.", ["Design", "Work"], 300),
-            // Last year — the busiest, and the one the head names.
-            ("First winter in Berlin. Nobody warned me about four o'clock.", ["Berlin"], 430),
-            ("Six months freelance. Still no regrets.", ["Work"], 455),
-            ("Learning to cook properly, one dish a week.", ["Food"], 480),
-            // On this day a year ago (census 2026-09-05): the throwback ask
-            // composes only over a bulk-import row sharing today's month and
-            // day in an earlier year, and none did.
-            ("Quillmark 1.0 is out. Launch day.", ["Work"], yearAgoDays),
-            ("Moving cities is mostly finding a new bakery.", ["Food", "Berlin"], 505),
-            ("Design reviews should end with fewer screens than they started with.", ["Design"], 530),
-            ("Found a Späti that stocks good olive oil. Life complete.", ["Berlin", "Food"], 560),
-            ("Freelance tip: send the invoice the day you ship.", ["Work"], 590),
-            ("The best tools disappear while you use them.", ["Design"], 620),
-            // Two years back — thinner.
-            ("Looking at flats in Berlin, apparently.", ["Berlin"], 900),
-            ("Redesigned my portfolio for the fourth time this year.", ["Design"], 960),
-            ("Sourdough starter is alive. Named it Gerald.", ["Food"], 1010),
-            // …and the first year, one post. The year between it and the next
-            // is SILENT on purpose — the strip draws a gap, which is the one
-            // reading no other card in this room can make.
-            ("First post. Let's see how this goes.", [], 1830),
-        ]
-        out += posts.enumerated().map { i, p in
-            row(.note, p.0, source: "X", ref: "demo:x:post:\(i)", days: p.2, hour: 12,
-                content: p.0, tags: ["Post"]) { t in
-                t.postText = p.0
-                t.ocrTopics = p.1
-                t.topicsAt = .now
-                t.authorHandle = "you"
-                // `XArchiveImport`'s face pass (`-xFaces`) stamps this, so a
-                // real archive room is a column of faces; without it every
-                // post in the busiest room in the corpus wore the X glyph.
-                t.authorAvatarURL = avatarArt("you")
-                // Floored (2026-08-13): the table is four times longer than it
-                // was, and the old straight-line formula ran negative past the
-                // tenth row — which `XRoom` would have read as a real count and
-                // ranked as this year's loudest post.
-                t.likeCount = max(1, 44 - i * 2)
-                t.replyCount = max(0, 6 - i / 2)
-                // Reposts (2026-08-17). §308's superlatives ride
-                // `likeCount`/`repostCount` straight off the archive's own
-                // `favorite_count`/`retweet_count`, and the demo set the first
-                // and never the second — so "most reposted" could never answer
-                // over the busiest room in the corpus. Floored for the reason
-                // the line above documents: a straight-line formula runs
-                // negative down a long table, and `XRoom` reads a negative as
-                // a real count.
-                t.repostCount = max(0, 12 - i)
-            }
-        }
-        // The replies, so the room's second board ("Who you reply to") and the
-        // sheet's `ReplyingToCard` both have something real — and so the demo
-        // shows what a self-reply's free context looks like beside a reply to
-        // somebody else, which is the pair `fetchReplyContext` exists for.
-        let replies: [(String, String, String, Double)] = [
-            ("Agreed — and the archive is where you find out.",
-             "lindsey", "The best product decisions are legible a year later.", 12),
-            ("This, but for empty states too.",
-             "rauno", "Latency is a design problem, not an infrastructure one.", 34),
-            ("Still true.", "lindsey", "", 210),
-            // A THIRD reply to the same person, on purpose (2026-08-18, prd
-            // §397). `XPerson.minimumSightings` is 3, so with two the person
-            // card — the whole "your years with @lindsey" reading, reached by
-            // tapping the room's own board — correctly declines and the demo
-            // becomes the one place it can never be seen. Dated years back so
-            // the card's span has a shape rather than one column.
-            ("The archive answered it. Took nine years.",
-             "lindsey", "Does anyone remember what we decided about this?", 1240),
-        ]
-        out += replies.enumerated().map { i, r in
-            row(.note, "To @\(r.1) · \(r.0)", source: "X", ref: "demo:x:reply:\(i)",
-                days: r.3, hour: 15, content: r.0, tags: ["Reply"]) { t in
-                t.postText = r.0
-                t.ocrTopics = ["Design"]
-                t.topicsAt = .now
-                t.authorHandle = "you"
-                t.authorAvatarURL = avatarArt("you")
-                t.likeCount = 9 - i
-                // The third has a permalink and NO words — the state a reply
-                // sits in until the second act names what it answered, and the
-                // one `-xReplyContext` reports as pending.
-                t.parent = SocialCard(handle: r.1, text: r.2,
-                                      avatarURL: avatarArt(r.1),
-                                      url: "https://x.com/\(r.1)/status/17\(i)0000000000000000")
-            }
-        }
-        // A wordless picture post — the room's grid half (prd §375). Seeded the
-        // way the importer lands one — pixels, the medium tag, and NO
-        // `postText` — since it is the absent `postText` that `isXPhotoTile`
-        // reads (prd §397); a demo that faked it with a title would prove
-        // nothing about the room's real membership test.
-        out += (0..<3).map { i in
-            row(.note, "Photo", source: "X", ref: "demo:x:photo:\(i)",
-                days: 20 + Double(i) * 27, hour: 18, tags: ["Post", "Photo"]) { t in
-                t.previewImageData = pixels("x-photo-\(i)")
-                t.authorHandle = "you"
-                t.authorAvatarURL = avatarArt("you")
-                t.likeCount = 30 - i
-            }
-        }
-        // A VIDEO POST (2026-08-18, prd §397). The same shape as a picture
-        // post and a different tag, because until this pass a video landed
-        // with no pixels at all and read as a row saying "Photo" — so the
-        // demo is where the poster frame, the corner mark and the fact that
-        // `Video` is its own facet are all visible at once.
-        out.append(
-            row(.note, "Video", source: "X", ref: "demo:x:video:0",
-                days: 61, hour: 18, tags: ["Post", "Video"]) { t in
-                t.previewImageData = pixels("x-video-0")
-                t.authorHandle = "you"
-                t.authorAvatarURL = avatarArt("you")
-                t.likeCount = 38
-            })
-        // The account's own record (2026-08-18, prd §397) — the three
-        // categories nothing had ever read. They are `.link` rows, so they
-        // stay out of `XRoom`'s year counts (which are your writing alone) and
-        // draw as plain bands rather than as posts nobody wrote.
-        //
-        // Plain `demo:` refs, NOT the real `x:app:`/`x:joined:` shapes the
-        // importer writes. Peer and Privacy Pools carry their bridges' real
-        // prefixes because their room heads MATCH on the ref shape; nothing
-        // here does — `FeedScreen` tells these rows apart by their tag — so a
-        // real prefix would buy nothing and cost the one thing that matters:
-        // `refPrefixes` is what `teardown` sweeps, and a row outside it
-        // outlives the demo, indistinguishable from a real grant.
-        out.append(
-            row(.link, "Tweetbot — Can post as you", source: "X", ref: "demo:x:app:0",
-                days: 3100, hour: 9, content: "https://x.com/settings/connected_apps",
-                tags: ["Access"]) { t in
-                t.summary = "Tapbots · A Twitter client."
-            })
-        out.append(
-            row(.link, "Timeline Cleaner — Can read your account", source: "X",
-                ref: "demo:x:app:1", days: 1400, hour: 11,
-                content: "https://x.com/settings/connected_apps", tags: ["Access"]))
-        out.append(
-            row(.link, "@firstname became @you", source: "X", ref: "demo:x:handle:0",
-                days: 2200, hour: 10, content: "https://x.com/you", tags: ["Account"]))
-        out.append(
-            row(.link, "You joined X", source: "X", ref: "demo:x:joined:0",
-                days: 3650, hour: 8, content: "https://x.com/you", tags: ["Account"]))
-        let likes: [(String, String, Double)] = [
-            ("A good demo is a real one", "@lindsey", 5),
-            ("On drawing data honestly", "@tufte_bot", 10),
-            ("Ship the boring version first", "@lindsey", 18),
-            ("Latency is a design problem", "@rauno", 27),
-            ("Notes on quiet interfaces", "@tufte_bot", 39),
-        ]
-        out += likes.enumerated().map { i, l in
-            row(.link, l.0, source: "X", ref: "demo:x:like:\(i)", days: l.2, hour: 22,
-                tags: ["Liked"]) { t in
-                t.postText = l.0
-                t.authorHandle = l.1
-                // The author of the post you liked — `avatarArt` strips the
-                // "@" the archive keeps.
-                t.authorAvatarURL = avatarArt(l.1)
-                t.socialContext = "liked"
-            }
-        }
-        return out
-    }
-
     /// Instagram — the room a person recognises, which means the room has to
     /// be MOSTLY OTHER PEOPLE (prd §395). The old seed was six captions and
     /// five saves across three accounts, which drew nothing this room actually
     /// looks like. (The head model it was grown for, `InstagramRoom`, is
     /// deleted, prd §821: the room leads with its newest thing.)
     ///
-    /// Four things it now carries deliberately, each exercising a branch that
-    /// otherwise renders as the same silent nothing: kept posts with WORDS and
-    /// a COVER (what `InstagramCaptions` produces, so the room draws post cards
-    /// rather than handles), a wordless PHOTO post (the grid), a save tagged
-    /// `Gone` (the head's footnote — the reading no service can make about your
-    /// own library), and a `Reel` (the facet read off Meta's own permalink).
+    /// The saves the live seat reads (prd §726), each exercising a branch
+    /// that otherwise renders as the same silent nothing: kept posts with WORDS
+    /// and a COVER (what `InstagramCaptions` produces, so the room draws post
+    /// cards rather than handles), a save tagged `Gone` (what a 404 leaves),
+    /// and a `Reel` (the facet read off Meta's own permalink). Your own posts,
+    /// likes and comments came only from the export, and went with its
+    /// importer (prd §1579).
     private static func instagram() -> [Thing] {
-        var out: [Thing] = [receipt("Instagram", "96 saved · 240 comments", days: 6)]
-        let written: [(String, [String], Double)] = [
-            ("Pastel de nata, finally right", ["Baking", "Lisbon"], 7),
-            ("Sourdough at 78% hydration", ["Baking"], 14),
-            ("Lisbon light in October", ["Lisbon", "Photography"], 21),
-            ("Shot on the 35mm, no crop", ["Photography"], 29),
-            ("Baking notes from the weekend", ["Baking"], 37),
-            ("Photography walk, blue hour", ["Photography", "Lisbon"], 50),
-        ]
-        out += written.enumerated().map { i, w in
-            row(.note, w.0, source: "Instagram", ref: "demo:ig:note:\(i)", days: w.2, hour: 19,
-                content: w.0, tags: ["Post"]) { t in
-                t.ocrTopics = w.1
-                t.topicsAt = .now
-                // The words the room's post card draws — `title` is only ever
-                // the 80-character clamp.
-                t.postText = w.0
-                t.authorHandle = "you"
-            }
-        }
-        // The wordless half: a photograph is a post with nothing to say, and
-        // its pixels are what make it a grid tile rather than a row titled
-        // "Photo" (`FeedScreen.isInstagramPhotoTile`).
-        let photos: [Double] = [9, 17, 26, 41]
-        out += photos.enumerated().map { i, days in
-            row(.note, "Photo", source: "Instagram", ref: "demo:ig:photo:\(i)",
-                days: days, hour: 20, tags: ["Post", "Photo"]) { t in
-                t.previewImageData = pixels("ig-photo-\(i)")
-                t.authorHandle = "you"
-            }
-        }
+        var out: [Thing] = []
         // Fourteen kept posts across five accounts — over `minimumKept` and
         // `minimumAccounts`, so the head composes, and unevenly spread so the
         // board has a real shape rather than five equal bars.
@@ -2332,30 +2114,6 @@ enum DemoSeedAll {
                     t.previewImageData = pixels("ig-save-\(i)")
                 }
             }
-        }
-        let liked: [(String, String, Double)] = [
-            ("Every bench in the park, ranked", "quietrooms", 11),
-            ("One pot, forty minutes", "lisboneats", 24),
-            ("Shelf brackets that aren't ugly", "workspaces", 58),
-        ]
-        out += liked.enumerated().map { i, l in
-            row(.link, l.0, source: "Instagram", ref: "demo:ig:like:\(i)",
-                days: l.2, hour: 21, content: "https://www.instagram.com/p/demolike\(i)/",
-                tags: ["Liked"]) { t in
-                t.authorHandle = l.1
-                t.socialContext = "liked"
-                t.postText = l.0
-                t.previewImageData = pixels("ig-like-\(i)")
-            }
-        }
-        let comments: [(String, String, Double)] = [
-            ("The crumb on this is unreal", "lisboneats", 12),
-            ("Which glaze is that?", "studiokoto", 31),
-        ]
-        out += comments.enumerated().map { i, c in
-            row(.note, "\(c.0) — on @\(c.1)", source: "Instagram",
-                ref: "demo:ig:comment:\(i)", days: c.2, hour: 18,
-                content: c.0, tags: ["Comment"])
         }
         return out
     }

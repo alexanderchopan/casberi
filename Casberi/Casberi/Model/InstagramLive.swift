@@ -120,8 +120,8 @@ enum InstagramLive {
     /// and keeps "Remove import" from counting it. `social-sheet-selftest.sh`
     /// holds the two spellings together.
     static let noticeRefPrefix = "ig-live:notif:"
-    /// SHARED with `InstagramImport.landSaves` on purpose — see the header. A
-    /// live save and an imported save of the same post are one thing.
+    /// The export importer's prefix, kept when that importer was deleted
+    /// (prd §1579): a live save and an imported one were one thing.
     static let savedRefPrefix = "instagram:saved:"
 
     /// The web app's own PUBLIC application id — the value every visitor's

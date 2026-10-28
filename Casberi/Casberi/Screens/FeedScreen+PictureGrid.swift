@@ -62,7 +62,7 @@ extension FeedScreen {
     /// would empty this grid on every device that isn't in English. Guarded
     /// internally for the same corollary-4 reason as its three siblings.
     static func isInstagramPhotoTile(_ thing: Thing) -> Bool {
-        thing.isLive && thing.source == InstagramImport.source && thing.kind == .note
+        thing.isLive && thing.source == "Instagram" && thing.kind == .note
             && thing.tags.contains("Photo")
             && thing.previewImageData != nil
     }
@@ -86,7 +86,7 @@ extension FeedScreen {
     /// Guarded internally for the same corollary-4 reason as its three
     /// siblings.
     static func isXPhotoTile(_ thing: Thing) -> Bool {
-        thing.isLive && thing.source == XArchiveImport.source && thing.kind == .note
+        thing.isLive && thing.source == "X" && thing.kind == .note
             && thing.postText == nil
             && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
             && thing.previewImageData != nil
@@ -133,7 +133,7 @@ extension FeedScreen {
     /// which tiles wear it, in the two rooms that can hold one.
     private static func isVideoTile(_ thing: Thing) -> Bool {
         guard thing.isLive else { return false }
-        if thing.source == XArchiveImport.source { return thing.tags.contains("Video") }
+        if thing.source == "X" { return thing.tags.contains("Video") }
         return FilesIngest.isVideoRef(thing.sourceRef)
     }
 
@@ -150,11 +150,11 @@ extension FeedScreen {
         // test that made it a tile — and its title is the placeholder word the
         // importer gave it. Printing that under every cell would be a grid of
         // identical labels saying nothing.
-        if thing.source == XArchiveImport.source { return nil }
+        if thing.source == "X" { return nil }
         // An Instagram picture post is a tile precisely BECAUSE it has no
         // caption; its title is the placeholder word the importer gave it, and
         // printing that under every cell is a grid of identical labels.
-        if thing.source == InstagramImport.source { return nil }
+        if thing.source == "Instagram" { return nil }
         // An untitled pin's title is the placeholder word the ingest gave it.
         // A titled one says its name; the line after the seam (prd §915)
         // cannot fit a third of the screen.

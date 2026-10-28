@@ -69254,7 +69254,18 @@ ENSv2 activated on mainnet on 2026-10-27. Measured that day: the `.eth` BaseRegi
 3. **The private balance takes round-ups in USDC only:** `roundUpsRideInETH` (ppETH) is deleted. Receiving ETH at a fresh address still deposits ppETH (§1567), which is not round-ups.
 4. **Not yet:** a swap on Ethereum costs dollars of gas on a ~$10 save; no fee cap is applied, so the swap rides whenever the simulation passes. A send by the spend limit's key still never carries a save (§1545).
 
-## §1579 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and the day (amends §1191 item 2, §1192 item 3) (user, 2026-10-28, of a Telegram chat's sheet: "is this how telegram messages should look. like it doesn't even show all of this person response to me", then "yes" to the recommendation) — RULED, built, not compiled
+## §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396) (user, 2026-10-27: "nobody has done imports", "don't need an upkeep") — RULED, built after 883
+
+§1577 took the export doors off both pages and left `XArchiveImport` and `InstagramImport` behind their probes; §723's rule (a feature deleted from the surface is deleted from the model) finishes it.
+
+1. **Deleted:** `XArchiveImport`, `XArchiveAccount`, `InstagramImport`, `ImportOptions` (the private-messages switch only those two honoured) and the switch's slot in `ImportArchiveSection`; `ImportMedia`'s X-only reader (`xMediaIndex`, `Media`, a job's video flag) and `resolve`, which only Instagram called; the probes `-xArchiveImport`, `-instagramImport`, `-xFaces`, `-xReplyContext`; `scripts/support/x-run-shape.py`.
+2. **The sweep's archive heals go with it** (`x.healRoom`, `x.healLinks`, `x.faces`): each read only archive rows, and `healRoom` would have stamped `postText` on a live notice (§704). X's topic heal stays.
+3. **The pages are their sign-ins alone:** the X page's "second act" (Find authors, Show what replies answered) and both pages' import-count state are deleted; connected is the live session.
+4. **The facets only the importers produced are deleted** (`Community`, `Story`); `Access`, `Photo`, `Video`, `Reel` stay, because the live seats or the demo still stamp them.
+5. **Kept:** `bulkImportSources` and `ImportRemoval` unchanged (Telegram's precedent in §1577: the demo's rooms and Instagram's live saves still ride the bulk shape); the archive-shaped rendering (thread fold, picture grid, `PostCard` ladder) that the demo's X and Instagram rooms draw. `x-selftest.sh` and `instagram-selftest.sh` keep every guard on the live seats and the rooms and drop the importer's.
+6. **Not yet:** the demo's X and Instagram rooms are still archive-shaped (your posts across years, liked posts, connected apps), a room no live seat can now produce.
+
+## §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and the day (amends §1191 item 2, §1192 item 3) (user, 2026-10-28, of a Telegram chat's sheet: "is this how telegram messages should look. like it doesn't even show all of this person response to me", then "yes" to the recommendation) — RULED, built, not compiled
 
 **What it did.** §1191's box drew the transcript's last two lines as bubbles cut at two lines (`ChatTranscriptBox`, `.lineLimit(2)`), and the transcript under the tiles dropped those two lines so they were not drawn twice (`SheetBoxDrawn.lastLines`). The newest two messages were drawn nowhere whole: on a Telegram chat with matthewb both were his replies, ending "…". They also stood above the chat they end, so the sheet read newest, then oldest onward. Under the tiles a one-to-one's other person carried no name and no bubble (`TelegramMessages`: "the other person is the title"), and your lines were set right-aligned line by line.
 

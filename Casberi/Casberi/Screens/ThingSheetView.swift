@@ -3872,7 +3872,7 @@ struct ThingSheetView: View {
 
     private var xPostVerb: Verb? {
         guard thing.isLive, thing.kind == .note,
-              thing.source == XArchiveImport.source,
+              thing.source == "X",
               let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty,
               let url = URL(string: raw), url.scheme == "https"
@@ -3964,12 +3964,12 @@ struct ThingSheetView: View {
     }
 
     /// A chat with a person in the room's frame (prd §1191): the person, the
-    /// box of how much, the tiles, then the chat whole (§1579).
+    /// box of how much, the tiles, then the chat whole (§1580).
     @ViewBuilder
     private var transcriptFrame: some View {
         // THE CENTRED HEAD (prd §1398): the app's mark, the chat's name, the
         // app with the day; the tiles; the network and the count under them,
-        // and the chat whole below (prd §1579).
+        // and the chat whole below (prd §1580).
         SheetPartyHead(name: Self.chatName(thing.title), day: thing.capturedAt,
                        line: BridgeCatalog.seatName(forSource: thing.source)) {
             BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
@@ -4087,7 +4087,7 @@ struct ThingSheetView: View {
         // agent chat's opening turns; the plain frame's picture, words and a
         // contact's face are added by `PlainBoxDrawn`, which reads the frame
         // from `linkInBox`. A chat with a person draws none of its messages in
-        // the box (prd §1579).
+        // the box (prd §1580).
         let agentConversation = self.agentConversation
         var drawn = SheetBoxDrawn()
         if let agentConversation { drawn.firstTurns = AgentChatBox.turnsDrawn(agentConversation) }

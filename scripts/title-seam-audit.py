@@ -69,7 +69,7 @@ ALLOWED = {
     # The demo's money rows and its receipts (titleMoney), the X archive's
     # `To @handle · words` reply lead (read back by `repliedTo`), and the
     # Walletbeat incident's severity, which mirrors the bridge's own line.
-    "DemoSeedAll.swift": (14, "money titles the demo lands for Polar, Dodo, Stripe, Bitrefill and the cards (titleMoney), the X reply lead the archive parses back, and Walletbeat's severity"),
+    "DemoSeedAll.swift": (13, "money titles the demo lands for Polar, Dodo, Stripe, Bitrefill and the cards (titleMoney), and Walletbeat's severity"),
 }
 
 # A `title:` argument or a `title =` assignment and the first string literal
