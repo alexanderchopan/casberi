@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1720 of 1789 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1721 of 1790 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1966,6 +1966,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1580 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
 - §1581 — Newest holds one thing per app
 - §1582 — Your X Following timeline lands as posts, and they replace the "New post" notices
+- §1583 — 0xBow's Privacy Pools v2 is watched weekly: a script compares what we pin with what 0xBow ships, and a Monday task re…
 
 ## Dead rulings → what replaced them (generated)
 

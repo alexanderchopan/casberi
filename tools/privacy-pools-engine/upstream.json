@@ -1,0 +1,14 @@
+{
+  "npm": {
+    "latest": "1.0.2"
+  },
+  "repo": {
+    "branches": {
+      "backport/fat-relayer-fixes": "c0f23bf4346d7e0dedcffb56eb46609b41a6a02c",
+      "fix/october-2026-security-updates": "90b0503a6eae2ef97bb2af816a6f56546e8a8896",
+      "fix/relayer-quote-outage-message": "0004e80c77fb06700070c49eb4cd3d5c59d9cb9b"
+    },
+    "main": "61fac03acd1fc306164ddc234f7fac4147d04493"
+  },
+  "reviewedAt": "2026-10-28"
+}
