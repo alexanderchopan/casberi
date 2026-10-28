@@ -1355,7 +1355,11 @@ enum DemoSeedAll {
         let registeredAt = Date.now.addingTimeInterval(-3 * 86_400)
         let registeredExpiry = registeredAt.addingTimeInterval(365 * 86_400)
         out.append(row(.link, "uma.eth registered", source: "ENS",
-                       ref: "ens:registered:uma.eth:\(Int(registeredAt.timeIntervalSince1970))",
+                       // A FIXED tail, never the clock: the pour skips a row
+                       // whose ref has landed, so an epoch here added another
+                       // copy on every demo entry (18 in Activity, 2026-10-28).
+                       // Still under `escapedPrefixes`' `ens:registered:uma.eth:`.
+                       ref: "ens:registered:uma.eth:demo",
                        days: 3, hour: 8,
                        content: "https://app.ens.domains/name/uma.eth",
                        tags: ["Registered"]) { thing in

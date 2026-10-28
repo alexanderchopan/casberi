@@ -155,10 +155,10 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:^Contacts, "
+     "tap": "button:^Subscriptions, "
     },
     {
-     "tap": "button:^iCloud+, Monthly"
+     "tap": "button:^iCloud+, "
     }
    ],
    "anchor": "text:=Paid so far"
@@ -262,7 +262,7 @@
      "tap": "button:^Edit"
     }
    ],
-   "anchor": "button:=Save",
+   "anchor": "text:=Next renewal",
    "afterSwipe": "button:^Hulu, ",
    "control": "button:=Back",
    "afterControl": "button:^Edit"
@@ -291,7 +291,7 @@
      "tap": "button:^Sent 0.15 ETH"
     }
    ],
-   "anchor": "button:=Share, Share",
+   "anchor": "text:=With Sam",
    "afterSwipe": "button:^Sam, ",
    "control": "button:=Back",
    "afterControl": "button:^Sent 0.15 ETH"
@@ -345,7 +345,8 @@
      "tap": "button:^Add your Google key"
     }
    ],
-   "anchor": "text:=Your Gemini key"
+   "anchor": "text:=Your Gemini key",
+   "afterSwipe": "button:=Gemini settings"
   },
   {
    "id": "app-key-door",
@@ -381,7 +382,7 @@
    "anchor": "button:=Done",
    "control": "button:=Done",
    "afterSwipe": "text:=Your Gemini key",
-   "afterControl": "text:=Your Gemini key"
+   "afterControl": "button:=Gemini settings"
   },
   {
    "id": "app-website",
@@ -450,7 +451,8 @@
      "tap": "button:^nick.eth, "
     }
    ],
-   "anchor": "button:^Share, Share"
+   "anchor": "text:=nick.eth expires Dec 2027",
+   "afterSwipe": "button:=ENS settings"
   },
   {
    "id": "app-track",
@@ -483,7 +485,8 @@
      "tap": "button:^Track a subscription, Free"
     }
    ],
-   "anchor": "button:=Track Acorns"
+   "anchor": "button:=Track Acorns",
+   "afterSwipe": "button:=Acorns settings"
   },
   {
    "id": "app-card",
@@ -556,7 +559,7 @@
    "anchor": "text:=Log in to Acorns",
    "swipe": false,
    "control": "button:=Done",
-   "afterControl": "button:^Sign in"
+   "afterControl": "button:=Acorns settings"
   },
   {
    "id": "rocket-login",
@@ -589,7 +592,7 @@
      "tap": "button:^Sign in"
     }
    ],
-   "anchor": "button:=Done",
+   "anchor": "text:^Opening Rocket Money",
    "swipe": false,
    "control": "button:=Done",
    "afterControl": "button:^Sign in"
@@ -625,7 +628,7 @@
      "tap": "button:^Sign in"
     }
    ],
-   "anchor": "button:=Done",
+   "anchor": "text:^Opening Spotify",
    "swipe": false,
    "control": "button:=Done",
    "afterControl": "button:^Sign in"
@@ -897,7 +900,7 @@
    ],
    "steps": [
     {
-     "wait": 4
+     "wait": 2
     },
     {
      "tap": "button:^Reorder,"
@@ -1376,7 +1379,7 @@
      "tap": "button:^Activity, "
     },
     {
-     "swipeUp": 5
+     "swipeUp": 30
     },
     {
      "tap": "button:^See all "
@@ -1385,7 +1388,7 @@
      "tap": "button:^Sent to Savings, "
     }
    ],
-   "anchor": "button:=Share, Share"
+   "anchor": "text:=Account"
   },
   {
    "id": "notes-trash",
