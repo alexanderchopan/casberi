@@ -209,7 +209,7 @@ struct PlaceTabBar: View {
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(verbatim: tab.label))
-        .accessibilityHint(chrome.roomsTray ? Text("Closes the apps") : Text("Shows every place"))
+        .accessibilityHint(chrome.roomsTray ? Text("Closes search") : Text("Shows every place"))
         .background { if tab == .feed { FeedTabFrame() } }
     }
 

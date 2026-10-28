@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1726 of 1795 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1727 of 1796 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1290,7 +1290,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §929 — The Privacy ring stands under the crown's reading (part superseded by §1038)
 - §930 — The dock is a tray behind the face: one button, every room, and the room names itself (amended by §932, §937, §1128)
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
-- §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (part superseded by §1014, §1058)
+- §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (amended by §1589; part superseded by §1014, §1058)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g, §1129)
 - §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
@@ -1512,7 +1512,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136, §1207) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
-- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a, §1217)
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a, §1217, §1589)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
 - §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171, §1198) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
@@ -1557,7 +1557,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals (amended by §1217)
 - §1182 — A card spend draws its card, an open transfer its steps, and an event its day
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
-- §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things (amended by §1467)
+- §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things (amended by §1467, §1589)
 - §1186 — A song, a video and a picture stand in the room's frame
 - §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted (amended by §1217)
 - §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
@@ -1595,10 +1595,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208k — A glance tile says what is new, when, how much and who
 - §1208l — The polish pass: one rule for what opens on top, sections skip what the tiles showed, the header hands off to the pil…
 - §1208m — One rule on the phone: Settings, Sources and Addresses rise as a sheet too
-- §1209 — Generative search, v1: words become a page, with no model
+- §1209 — Generative search, v1: words become a page, with no model (amended by §1589)
 - §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins (amended by §1208l)
 - §1210 — Three widgets, each a small tile: Notes, Wallet, Feed (amended by §1223)
-- §1211 — Search finds what things SAY, teaches when empty, and reaches iOS
+- §1211 — Search finds what things SAY, teaches when empty, and reaches iOS (amended by §1589)
 - §1212 — The pill above the Feed takes you to its top (amended by §1208l)
 - §1213 — Logos chat says who, then what (amended by §1214)
 - §1214 — The Node box says the stage Basecamp's bar says (amended by §1216, §1448)
@@ -1971,6 +1971,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a…
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
+- §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -197,7 +197,9 @@ enum TraySearch {
             let tiers = found.filter { match($0.0.name, query) == .exact }.map(\.0.tier.rawValue)
             if let best = tiers.min() { exact[g] = best }
         }
-        let fixed = [you, markets] + dockOrder.filter { $0 != you && $0 != markets }
+        // Contacts after You (prd §1589): the people the words name, never
+        // under your own name. Markets is deleted (§1529).
+        let fixed = [you, contacts] + dockOrder.filter { $0 != you && $0 != contacts }
         func rank(_ g: String) -> (Int, Int, Int, String) {
             let at = fixed.firstIndex(of: g) ?? fixed.count
             if g == standing { return (0, 0, 0, g) }
@@ -207,8 +209,8 @@ enum TraySearch {
         return out.sorted { rank($0.name) < rank($1.name) }
     }
 
-    /// Markets' name, spelled once for the ordering (`HomeScope.markets`).
-    static let markets = "Markets"
+    /// The people group's name (prd §1589).
+    static let contacts = "Contacts"
 
     // MARK: - When nothing matches
 

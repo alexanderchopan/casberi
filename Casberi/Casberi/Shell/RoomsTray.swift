@@ -95,6 +95,10 @@ struct RoomsTray: View {
     @State private var phoneCalendars: [PhoneCalendar] = []
     @State private var dealt = false
     @State private var bounceTick = 0
+    /// The kinds were read on this open (prd §1589).
+    @State private var kindsThisOpen = false
+    /// A finger is on the scroll (prd §1589's pull to close).
+    @State private var pulling = false
 
     private var liftMotion: Animation { reduceMotion ? DS.Motion.glide : DS.Motion.folder }
 
@@ -127,13 +131,15 @@ struct RoomsTray: View {
                     // swipe — the gesture every other tray answers — did
                     // nothing at all. Messages' menu closes on either.
                     .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in close() })
-                    .accessibilityLabel(Text("Close rooms"))
+                    .accessibilityLabel(Text("Close"))
                     .transition(.opacity)
                     panel(screen: geo.size, top: geo.safeAreaInsets.top)
                         // Out of the face's corner and back into it (§932).
                         .transition(reduceMotion
                             ? .opacity
-                            : .scale(scale: 0.06, anchor: railInset > 0 ? .topLeading : .bottomLeading)
+                            // On the phone it grows out of Search, the bar's
+                            // trailing tab (prd §1589), not the old face's corner.
+                            : .scale(scale: 0.06, anchor: railInset > 0 ? .topLeading : .bottomTrailing)
                                 .combined(with: .opacity))
                     // The search's own capsule beside the face (prd §1176):
                     // out of the face's side as the card comes out of its top.
@@ -146,6 +152,10 @@ struct RoomsTray: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner)
+            // The card AND its search capsule are the modal (prd §1589): on the
+            // panel alone, VoiceOver skipped the field beside it.
+            .accessibilityAddTraits(chrome.roomsTray ? .isModal : [])
+            .accessibilityAction(.escape) { close() }
         }
         .allowsHitTesting(chrome.roomsTray)
         .animation(liftMotion, value: chrome.roomsTray)
@@ -154,7 +164,8 @@ struct RoomsTray: View {
         // screenshot of it does not depend on a simulator tap landing.
         .task {
             guard UserDefaults.standard.bool(forKey: "openTray") else { return }
-            try? await Task.sleep(for: .seconds(1))
+            // `-openTrayDelay <s>`: after an `-openRoom` has landed (prd §1589).
+            try? await Task.sleep(for: .seconds(max(1, UserDefaults.standard.double(forKey: "openTrayDelay"))))
             // No tray where the rail stands (prd §1402, §1407): the rail is
             // the tab bar and its Search is ⌘F, so the hook says so rather
             // than photographing a door with no handle.
@@ -184,10 +195,16 @@ struct RoomsTray: View {
             if !up {
                 query = ""; searching = false; noteCorpus = []; holdings = []
                 tokens = []; suggestions = []; thingCorpus = []; preview = [:]
+                kindsThisOpen = false
             }
         }
+        // Read once an open (prd §1589): a refocus after the keyboard was
+        // swiped down read 2,000 notes again under the rising keys.
         .onChange(of: searching) { _, focused in
-            if focused { Task { await readKinds() } }
+            if focused, !kindsThisOpen {
+                kindsThisOpen = true
+                Task { await readKinds() }
+            }
         }
         // The search runs once the typing pauses, never in a body (prd
         // §1185), and again when the kinds it reads have landed.
@@ -227,7 +244,8 @@ struct RoomsTray: View {
         // stand on their own glass, the way the search capsule floats beside
         // the face, and the stack scrolls as one menu. A search's results are
         // one card under the field.
-        return ScrollView {
+        return ScrollViewReader { proxy in
+        ScrollView {
             VStack(alignment: .leading, spacing: Self.cardGap) {
                 if railInset > 0 { card { searchField } }
                 // Focused and empty, the search teaches alone, as
@@ -268,7 +286,36 @@ struct RoomsTray: View {
             }
         }
         .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize)
+        // The phone's page always gives under a pull, so a pull down past
+        // the top closes it, as a sheet does (prd §1589).
+        .scrollBounceBehavior(railInset == 0 ? .always : .basedOnSize)
+        .onScrollPhaseChange { _, phase in pulling = phase == .interacting }
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, pulled in
+            // A finger's pull only, never a fling's overshoot, and never the
+            // pull that drops the keyboard while you type.
+            if railInset == 0, pulling, !searching, pulled < -Self.pullToClose, chrome.roomsTray { close() }
+        }
+        // **OPENS ON YOUR ROOM (prd §1589):** the card you stand in is
+        // brought into view, so Life is not five Wallet lines down.
+        .onAppear {
+            // The room you stand in, or the app risen over the Feed (an app
+            // of a Feed section opens as a sheet, prd §1208a).
+            let risen = chrome.appSheet.map { CategoryFold.chipLabel(for: $0.source, folded: chrome.chipOrder) }
+            let target = standingCategory ?? risen.flatMap { CategoryFold.isCategory($0) ? $0 : nil }
+            #if DEBUG
+            NSLog("[Casberi] trayScroll? source=%@ target=%@", filter.source, target ?? "nil")
+            #endif
+            guard let here = target, here != CategoryFold.walletCategory else { return }
+            Task { @MainActor in
+                // Once the card has risen, so the move is seen as a place.
+                try? await Task.sleep(for: .milliseconds(250))
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.rowAnchor(here), anchor: .center) }
+                #if DEBUG
+                NSLog("[Casberi] trayScroll: %@", here)
+                #endif
+            }
+        }
+        }
         .scrollDismissesKeyboard(.interactively)
         .frame(width: width, height: max(height, 1))
         // The stack's own corner clips a card scrolled under its edge to the
@@ -281,8 +328,12 @@ struct RoomsTray: View {
         .padding(.leading, railInset > 0 ? railInset + DS.Space.s2 : DSRoomChassis.inset)
         .padding(.bottom, railInset > 0 ? 0 : DSDock.seatClearance)
         .padding(.top, railTopInset)
-        .accessibilityAddTraits(.isModal)
     }
+
+    /// How far past the top a pull goes before it closes the tray.
+    static let pullToClose: CGFloat = 90
+
+    static func rowAnchor(_ category: String) -> String { "tray.row." + category }
 
     /// Whether Recent has anything to show (prd §1136 item 8).
     private var hasRecent: Bool { !recentItems.isEmpty }
@@ -333,7 +384,7 @@ struct RoomsTray: View {
         let gathered: Set<String> = [RoomAccounts.dayRoom, HomeScope.notesSection]
         let order = CategoryOrder.current
         let present = chrome.chipOrder.filter {
-            $0 != Self.markets && !gathered.contains($0)
+            $0 != HomeScope.markets && !gathered.contains($0)
                 && CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
         }
         return (present + gathered.filter(CategoryFold.isCategory))
@@ -348,14 +399,6 @@ struct RoomsTray: View {
 
     /// Whether the Wallet's card stands: it holds a connected seat.
     private var walletCard: Bool { categories.contains(CategoryFold.walletCategory) }
-
-    /// Markets is a You door, not a category row (prd §1123, user: "it's only
-    /// one app tile that is important but is part of a long catalogue list
-    /// someone may not see it. it's also tied to things you have connected").
-    /// It is Casberi's own index of the companies behind your apps, so it
-    /// wears the pink of the app's own places. Since §1127 it is a place in
-    /// Home, out of the swipe and the dock's order, like Notes.
-    static let markets = HomeScope.markets
 
     /// The category the room you are standing in belongs to.
     private var standingCategory: String? {
@@ -535,9 +578,11 @@ struct RoomsTray: View {
             }
             .buttonStyle(PressSpring())
             .dsTapTarget()
-            .accessibilityLabel(Text("All of \(category)"))
+            // The name says the same door (prd §1589): one stop, not two.
+            .accessibilityHidden(true)
         }
         .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
+        .id(Self.rowAnchor(category))
     }
 
     /// The apps a row shows: a merged room's connected apps, the ones you
@@ -575,9 +620,12 @@ struct RoomsTray: View {
         var seen = Set<String>()
         var out: [FolderItem] = []
         for key in ChipMemory.recent() {
-            guard !HomeScope.contains(key), key != Self.markets,
+            // Never the app you are standing in (prd §1589), its own room or
+            // a merged room picked to it.
+            guard !HomeScope.contains(key), key != filter.source,
                   let host = RoomAccounts.host(ofSource: key),
                   RoomAccounts.connected(in: host.room, names: names).contains(where: { $0.name == host.seat.name }),
+                  !(host.room == filter.source && chrome.mergedScope[host.room] == RoomAccounts.scopeID(host.seat)),
                   seen.insert(host.seat.name).inserted else { continue }
             let seat = host.seat
             out.append(appItem(seat, id: "recent:" + seat.name, lit: false))
@@ -733,14 +781,9 @@ struct RoomsTray: View {
         /// A line under the name.
         var line: String? = nil
         var trailing: Trailing? = nil
-        /// The company a Markets row stands for, so its quote is read.
-        var company: CompanyPacks.Company? = nil
         /// The page an "Everything" row opens, so its facts can be counted
         /// under it and Return can open it (prd §1211 item 7).
         var pivot: PivotQuery? = nil
-        /// A market row (prd §1467): whether you follow it; the row's tap
-        /// follows or unfollows, and the mark says which.
-        var follow: Bool? = nil
         let mark: Mark
         let act: () -> Void
     }
@@ -761,8 +804,8 @@ struct RoomsTray: View {
         case word(String)
         /// A figure you hold or pay, already through Hide balances.
         case money(String)
-        /// A market row's price and day move, read with the row (prd §1467).
-        case market(price: Double?, change: Double?)
+        /// Return opens it: the exact name's row (prd §1589).
+        case returns
     }
 
     /// What a hit draws at its leading edge.
@@ -791,11 +834,6 @@ struct RoomsTray: View {
     /// The words `results` answers, so "nothing" is said only once the
     /// search for these words has run.
     @State private var resultsFor = ""
-    /// The groups before the market's rows join them (prd §1467), so the
-    /// market can land later without searching your things again.
-    @State private var baseResults: [Found] = []
-    /// The row whose follow just landed, so its mark bounces once.
-    @State private var justFollowed: String? = nil
     /// What you hold, read with the other kinds when the field is focused.
     @State private var holdings: [WalletPortfolio.Position] = []
     /// Bumped when the kinds have been read, so a search typed before they
@@ -862,7 +900,18 @@ struct RoomsTray: View {
                 return hits.isEmpty ? nil : Found(id: group.id, title: group.title, glyph: group.glyph, hits: hits)
             }
         }
-        baseResults = found
+        // **AN APP'S EXACT NAME LEADS, AND RETURN OPENS IT (prd §1589,
+        // amends §1209/§1211 item 7):** the tray's first job is to get you
+        // somewhere, so "spotify" puts Spotify above Everything.
+        if tokens.isEmpty, let exact = exactHit(in: found, words: words) {
+            found = found.compactMap { g in
+                let hits = g.hits.filter { $0.id != exact.id }
+                return hits.isEmpty ? nil : Found(id: g.id, title: g.title, glyph: g.glyph, hits: hits)
+            }
+            var top = exact
+            top.trailing = .returns
+            found.insert(Found(id: "exact", title: "", glyph: nil, hits: [top]), at: 0)
+        }
         results = found
         #if DEBUG
         NSLog("[Casberi] traySearchTime| %@ | %d ms", words, Int(Date.now.timeIntervalSince(began) * 1000))
@@ -887,8 +936,10 @@ struct RoomsTray: View {
     /// every app and account in it — the same items and the same acts the
     /// rows draw, so a hit lands where its icon would.
     private var nameHits: [Hit] {
-        var hits = youDoors.map { door in
-            Hit(id: "you:" + door.key, group: door.key == Self.markets ? Self.markets : TraySearch.you,
+        // A door that is a category is found as its category (prd §1589):
+        // "wallet" was Wallet under your name and again under Wallet.
+        var hits = youDoors.filter { !categories.contains($0.word) }.map { door in
+            Hit(id: "you:" + door.key, group: TraySearch.you,
                 name: door.word, mark: .face(.place(door.glyph)), act: door.act)
         }
         for category in categories {
@@ -923,19 +974,19 @@ struct RoomsTray: View {
             for item in FollowingReading.shared.items(for: room) {
                 hits.append(Hit(id: "feed:\(room.rawValue):" + item.id, group: group, name: item.name,
                                 line: item.seat, mark: .icon(item.seat, symbol: nil)) {
-                    close(); chrome.open(.followed(item.id, room))
+                    DSHaptic.selection(); close(); chrome.open(.followed(item.id, room))
                 })
             }
         }
         for item in MailSubscriptionsReading.shared.items {
             hits.append(Hit(id: "list:" + item.id, group: "Day", name: item.name, line: item.address,
-                            mark: .icon(item.name, symbol: nil)) { close(); chrome.open(.list(item.id)) })
+                            mark: .icon(item.name, symbol: nil)) { DSHaptic.selection(); close(); chrome.open(.list(item.id)) })
         }
         // People (prd §1136 item 3): they live in Settings, so the search
         // finds them by name and lands on them there.
         for contact in ContactIndexSources.contacts
             where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
-            hits.append(Hit(id: "person:" + contact.id, group: TraySearch.you, name: contact.name,
+            hits.append(Hit(id: "person:" + contact.id, group: TraySearch.contacts, name: contact.name,
                             mark: .face(.person(contact))) { landInSettings(.person(contact.name)) })
         }
         for item in SubscriptionsReading.shared.items {
@@ -946,7 +997,7 @@ struct RoomsTray: View {
                             aliases: Self.maker(item.name), tier: .money,
                             line: item.next.map { String(localized: "Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") },
                             trailing: figure.map(Trailing.money),
-                            mark: .icon(item.name, symbol: nil)) { close(); chrome.open(.plan(item.id)) })
+                            mark: .icon(item.name, symbol: nil)) { DSHaptic.selection(); close(); chrome.open(.plan(item.id)) })
         }
         hits += addHits
         return hits
@@ -1131,6 +1182,7 @@ struct RoomsTray: View {
                         name: entry.label.isEmpty ? short : entry.label, given: .exact,
                         line: entry.label.isEmpty ? nil : short, mark: .face(.wallet(entry.address))) {
                 chrome.walletScope = entry.address
+                chrome.walletSection = .home
                 pick(CategoryFold.walletRoom)
             }]
         }
@@ -1149,7 +1201,12 @@ struct RoomsTray: View {
     /// each a row that composes that page over the Feed.
     private func pivotFound(_ words: String) -> [Found] {
         let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
-        let offers = PivotCompose.resolve(words, apps: apps, categories: categories)
+        // A person is offered once, as a chip above (prd §1589): "Everything
+        // with Sam" as a row too said Sam three times.
+        let offers = PivotCompose.resolve(words, apps: apps, categories: categories).filter {
+            if case .person = $0.subject { return false }
+            return true
+        }
         guard !offers.isEmpty else { return [] }
         let hits = offers.map { q in
             Hit(id: "pivot:" + q.id, group: Self.pivotGroup, name: q.offerTitle,
@@ -1309,6 +1366,7 @@ struct RoomsTray: View {
 
     /// Open a thing's sheet or page.
     private func openThing(_ id: UUID) {
+        DSHaptic.selection()
         close()
         if let url = URL(string: "casberi://thing/\(id.uuidString)") { openURL(url) }
     }
@@ -1368,7 +1426,8 @@ struct RoomsTray: View {
         if !groups.isEmpty {
             return groups.map { g in
                 Found(id: g.name, title: g.name == TraySearch.you ? HomeScope.title : g.name,
-                      glyph: g.name == TraySearch.you ? nil : CategoryFold.glyph(for: g.name),
+                      glyph: g.name == TraySearch.you ? nil
+                          : g.name == TraySearch.contacts ? "person.2" : CategoryFold.glyph(for: g.name),
                       hits: g.hits.map { said(hits[$0.index], for: words) })
             }
         }
@@ -1394,11 +1453,15 @@ struct RoomsTray: View {
     /// An app found through its maker says so ("meta" finds Instagram,
     /// "Made by Meta"), or the row would not say why it is there.
     private func said(_ hit: Hit, for words: String) -> Hit {
-        guard hit.line == nil, TraySearch.match(hit.name, words) == nil,
-              let maker = Self.maker(hit.name).first,
-              TraySearch.match(maker, words) != nil else { return hit }
+        guard TraySearch.match(hit.name, words) == nil else { return hit }
         var out = hit
-        out.line = String(localized: "Made by \(maker)")
+        if hit.line == nil, let maker = Self.maker(hit.name).first, TraySearch.match(maker, words) != nil {
+            out.line = String(localized: "Made by \(maker)")
+        } else if let alias = hit.aliases.first(where: { TraySearch.match($0, words) != nil }) {
+            // The other name that found it, so its bold says why (prd §1589):
+            // "ethereum" lights ETH's line.
+            out.line = [alias, hit.line].compactMap { $0 }.joined(separator: " · ")
+        }
         return out
     }
 
@@ -1413,6 +1476,7 @@ struct RoomsTray: View {
             }
             ForEach(Array(results.enumerated()), id: \.element.id) { index, group in
                 VStack(alignment: .leading, spacing: 0) {
+                if !group.title.isEmpty {
                 HStack(spacing: DS.Space.s1) {
                     if let glyph = group.glyph {
                         Image(systemName: glyph).dsGlyph(.caption)
@@ -1423,6 +1487,9 @@ struct RoomsTray: View {
                 .padding(.top, DS.Space.s3)
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
+                } else {
+                    Color.clear.frame(height: DS.Space.s2)
+                }
                 ForEach(group.hits) { hit in hitRow(hit) }
                 }
                 // The groups settle in one after another (prd §1208l).
@@ -1469,7 +1536,9 @@ struct RoomsTray: View {
                         }
                     } label: {
                         Chip(text: token.label, glyph: token.glyph)
-                            .matchedGeometryEffect(id: token.id, in: tokenSpace, isSource: !tokens.contains(token))
+                            // Under Reduce Motion it fades where it goes (prd §1589).
+                            .modifier(TokenFlight(id: token.id, space: tokenSpace,
+                                                  isSource: !tokens.contains(token), flies: !reduceMotion))
                     }
                     .buttonStyle(PressSpring())
                 }
@@ -1522,12 +1591,49 @@ struct RoomsTray: View {
     /// Return opens the top page when the words make one (prd §1211 item
     /// 7), else hands them to Find.
     private func submit() {
-        if let top = results.first?.hits.first, top.pivot != nil {
+        // Results still answering older words never take Return (prd §1589).
+        guard tokens.isEmpty ? resultsFor == query.trimmingCharacters(in: .whitespaces) : true else {
+            searchThings()
+            return
+        }
+        if let top = results.first?.hits.first, top.trailing.map({ if case .returns = $0 { true } else { false } }) == true {
+            remember(top.name)
+            top.act()
+        } else if let top = results.first?.hits.first, top.pivot != nil {
             rememberSearch()
             top.act()
         } else {
             searchThings()
         }
+    }
+
+    /// Keep one name, for an empty search to offer.
+    private func remember(_ name: String) {
+        recentSearches = TraySearchHistory.add(name, to: recentSearches)
+    }
+
+    /// The hit whose name IS the words, among the places you can go: an app,
+    /// an account or a category, never a thing, an app to add or a page.
+    private func exactHit(in found: [Found], words: String) -> Hit? {
+        guard !words.isEmpty else { return nil }
+        // Only a place: a category, then an app, then an account — never a
+        // calendar, a note, a person or a thing that shares the name.
+        let named = found.filter { $0.id != Self.pivotGroup }.flatMap(\.hits).filter {
+            $0.pivot == nil && $0.name.compare(words, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+        func rank(_ hit: Hit) -> Int? {
+            if hit.id.hasPrefix("cat:") { return 0 }
+            guard categories.contains(where: { hit.id.hasPrefix($0 + ":") }) || hit.id.hasPrefix("addr:") else { return nil }
+            if case .face(let face) = hit.mark {
+                switch face {
+                case .app: return 1
+                case .wallet: return 2
+                default: return nil
+                }
+            }
+            return nil
+        }
+        return named.compactMap { h in rank(h).map { (h, $0) } }.min { $0.1 < $1.1 }?.0
     }
 
     /// Keep the words searched, tokens first, for an empty search to offer.
@@ -1553,11 +1659,16 @@ struct RoomsTray: View {
     }
 
     private func hitRow(_ hit: Hit) -> some View {
-        let words = query.trimmingCharacters(in: .whitespaces)
+        // The words these results answer, never newer ones still waiting
+        // (prd §1589): bold must say why THIS row is here.
+        let words = resultsFor.isEmpty ? query.trimmingCharacters(in: .whitespaces) : resultsFor
         let counted = hit.pivot.flatMap { preview[$0.id] }
         let line = [hit.line, counted].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         return Button {
-            rememberSearch()
+            // What you looked for, not the letters on the way (prd §1589):
+            // a page keeps its words, a thing or an app its name.
+            if hit.pivot != nil || hit.id.hasPrefix("watch:") || hit.id.hasPrefix("addr:") { rememberSearch() }
+            else if !hit.id.hasPrefix("recent:") { remember(hit.name) }
             hit.act()
         } label: {
             HStack(spacing: DS.Space.s3) {
@@ -1578,35 +1689,26 @@ struct RoomsTray: View {
                     }
                 }
                 .frame(width: Self.icon, height: Self.icon)
-                // A market row's words wrap rather than cut (prd §1467): a
-                // tiny price is long, and "Purple Pepe" beside it was "Purple
-                // Pe…"; the figure itself never truncates.
-                let wraps = hit.follow != nil
                 VStack(alignment: .leading, spacing: 1) {
                     Text(Self.marked(hit.name, words))
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(wraps ? 2 : 1)
+                        .lineLimit(1)
                     if !line.isEmpty {
                         Text(Self.marked(line, words))
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
-                            .lineLimit(wraps ? 2 : 1)
+                            .lineLimit(1)
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
                 trailing(hit.trailing)
-                if let on = hit.follow {
-                    DSFollowMark(on: on, bounce: justFollowed == hit.id)
-                        .padding(.leading, DS.Space.s1)
-                }
             }
             .frame(minHeight: Self.resultHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .accessibilityElement(children: .combine)
-        .accessibilityHint(hit.follow.map { Text($0 ? "Stop following" : "Follow") } ?? Text(""))
     }
 
     /// A hit's edge: Add, a figure, or a quote with its day's move.
@@ -1624,27 +1726,15 @@ struct RoomsTray: View {
                 .monospacedDigit()
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
-        case .market(let price, let change):
-            if let price {
-                figure(price: price, change: change)
+        case .returns:
+            HStack(spacing: DS.Space.s1) {
+                Text("Return").dsText(.subhead12)
+                Image(systemName: "return").dsGlyph(.caption)
             }
+            .foregroundStyle(DS.textTertiary)
+            .accessibilityHidden(true)
         case nil:
             EmptyView()
-        }
-    }
-
-    /// A price over its day move, the Markets rows' figure.
-    private func figure(price: Double, change: Double?) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(TokenChartStyle.priceText(price))
-                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-            if let change {
-                let flat = TokenChartStyle.isFlat(change)
-                Text(TokenChartStyle.changeText(change))
-                    .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
-                    .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
-            }
         }
     }
 
@@ -1679,6 +1769,8 @@ struct RoomsTray: View {
         let lit: Bool
         /// An app's account page, offered on a long press (prd §1159).
         var settings: (() -> Void)? = nil
+        /// An account's address: its hold copies, shows and sends (prd §1589).
+        var address: String? = nil
         let act: () -> Void
     }
 
@@ -1694,8 +1786,11 @@ struct RoomsTray: View {
                 FolderItem(id: addr.address,
                            name: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label,
                            face: .wallet(addr.address),
-                           lit: scope?.caseInsensitiveCompare(addr.address) == .orderedSame) {
+                           lit: scope?.caseInsensitiveCompare(addr.address) == .orderedSame,
+                           address: addr.address) {
                     chrome.walletScope = addr.address
+                    // On Home, as the Wallet tab lands (prd §1589).
+                    chrome.walletSection = .home
                     pick(CategoryFold.walletRoom)
                 }
             }
@@ -1829,10 +1924,13 @@ struct RoomsTray: View {
             .buttonStyle(PressSpring())
             .dsTapTarget()
             .accessibilityLabel(Text(verbatim: item.name))
+            .accessibilityValue(item.address == nil ? Text("") : Text("Account"))
             .accessibilityAddTraits(item.lit ? .isSelected : [])
             .contextMenu {
                 if let settings = item.settings {
                     AppMenu(open: item.act, settings: settings)
+                } else if let address = item.address {
+                    accountMenu(item, address: address)
                 }
             }
         }
@@ -1861,6 +1959,23 @@ struct RoomsTray: View {
                       bounces: item.lit)
         case .person(let contact):
             ContactFace(contact: contact, size: Self.icon)
+        }
+    }
+
+    /// An account's hold (prd §1589): show it, copy its address, send to it.
+    @ViewBuilder
+    private func accountMenu(_ item: FolderItem, address: String) -> some View {
+        Button { item.act() } label: { Label(String(localized: "Show in Wallet"), systemImage: "wallet.bifold") }
+        Button {
+            DSPasteboard.copy(address)
+            chrome.flash(String(localized: "Address copied"), tone: .success)
+        } label: { Label(String(localized: "Copy address"), systemImage: "doc.on.doc") }
+        if YourAccountDemo.shownAddress.map({ !WalletWatch.sameAddress($0, address) }) ?? false {
+            Button {
+                close()
+                chrome.moveDraft = MoveSentence.sendDraft(to: address)
+                chrome.moveTray = true
+            } label: { Label(String(localized: "Send to \(item.name)"), systemImage: "paperplane") }
         }
     }
 
@@ -1930,6 +2045,7 @@ struct RoomsTray: View {
         if let room = mergedRoom(in: category) {
             if room == CategoryFold.walletRoom {
                 chrome.walletScope = nil
+                chrome.walletSection = .home
             } else {
                 chrome.mergedScope[room] = nil
             }
@@ -1963,6 +2079,22 @@ enum TraySearchHistory {
     }
 
     static func clear() { DefaultsWrite.remove(key) }
+}
+
+/// A token's flight into the field, or a fade under Reduce Motion (prd §1589).
+private struct TokenFlight: ViewModifier {
+    let id: String
+    let space: Namespace.ID
+    let isSource: Bool
+    let flies: Bool
+    func body(content: Content) -> some View {
+        if flies {
+            content.matchedGeometryEffect(id: id, in: space, isSource: isSource)
+        } else {
+            // The strip's own change animates it as a fade.
+            content
+        }
+    }
 }
 
 /// The cursor drawn in the tray's idle field on the phone (prd §1280): the

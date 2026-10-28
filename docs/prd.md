@@ -69408,3 +69408,28 @@ Walked on the simulator (the eight places) and read in code. What changed, in `S
 **Not seen on the simulator:** the adds themselves (a new simulator needs the person's OK to be tapped); the counts, the one-size grid, Mail lists and the Wallet place were seen.
 
 **Mac half (§1402).** The same Library on Catalyst; the pane's box lands the list column.
+
+## §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Return opens it, people stand under Contacts, and each place shows once (amends §932's corner, §1185 item 1, §1209/§1211 item 7, §1136 item 8) (user, 2026-10-28: "how if at all would you improve our tray", then "Do all" on the canvas, both ruling changes included) — RULED, built
+
+In `Shell/RoomsTray.swift` and `Model/TraySearch.swift`:
+
+1. **Opens on your room:** the category you stand in, or of the app risen over the Feed, is scrolled into view once the card has risen (the Wallet's card is already first).
+2. **Recent skips the app you stand in**, its own room or a merged room picked to it.
+3. **It grows from Search,** the bar's trailing tab, not the old face's corner.
+4. **A pull down past the top closes it,** a finger's pull only (never a fling's overshoot) and never while typing.
+5. **Each place once:** a You door that is a category is found as its category.
+6. **Recent searches keep what you looked for:** a tapped result keeps its name, a page or an address the words; never the letters on the way.
+7. **Read once an open:** the kinds the search reads are read on the first focus of an open, not every refocus.
+8. **Bold says why this row is here:** rows mark the words their results answer, never newer words still waiting.
+9. **Every result ticks; the Wallet lands on Home** from its disc, an account or a pasted address, as the tab does.
+10. **VoiceOver:** the card and its capsule are the modal, escape closes, a category is one stop, an account says so; "Close" and "Closes search" replace stale words.
+11. **An account's hold:** Show in Wallet, Copy address, Send to it.
+12. **An alias says itself:** "ethereum" lights ETH's line with the name that found it.
+13. **Under Reduce Motion** a taken token fades, never slides.
+14. **Markets' leftovers deleted** (§1529, §723): the market rows, follow marks, quotes' state and Markets in the search's group order.
+15. **An app's exact name leads, and Return opens it (amends §1209, §1211 item 7):** a category, then an app, then an account whose name IS the words stands alone above Everything, marked Return; never a calendar, a note, a person or a thing of that name. Return on results still answering older words hands the words to Find.
+16. **People stand under Contacts, once (amends §1185 item 1):** the people the words name are a Contacts group after You, never under your own name; a person is offered once as a chip, and Everything no longer repeats them as a row.
+
+**Seen on the simulator:** "sam" (chips, one Everything row, Contacts), "kraken", "wallet" and "work" (the place leads with Return; "work" the room, not the iCloud calendar). The scroll to your room ran (logged) under an app sheet, so not seen; the pull and the hold need a hand.
+
+**Mac half (§1402).** The rail's Search is ⌘F, and the tray's search rules hold there; the phone-only parts (the corner, the pull) stay off beside the rail.
