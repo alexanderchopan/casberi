@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Steam's setup — the steps to a free Web API key, the key and profile
-/// fields, then the games that landed. Same shape as Mail (two inputs) and
-/// the token bridges (key in Keychain, proof below).
+/// Steam's setup — a sign-in on Steam's own store page since prd §1584, the
+/// key and profile fields folded under it for anyone who has a key, then the
+/// games that landed.
 struct SteamScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -11,6 +11,8 @@ struct SteamScreen: View {
     @State private var profileField = ""
     @State private var syncing = false
     @State private var result: BridgeProof?
+    /// The key path, folded under the sign-in (prd §1584).
+    @State private var manualPathOpen = false
 
     /// The credentials door, open (prd §186).
 
@@ -22,8 +24,19 @@ struct SteamScreen: View {
             name: "Steam", seatID: "steam", source: "Steam",
             state: AccountPageState.of(name: "Steam", seatID: "steam",
                                        connected: SteamBridge.connected, store: store),
-            mode: .pasteKey,
+            mode: .signIn,
             keyed: true,
+            cardSheet: { id in
+                guard id == "webSignIn" else { return AnyView(EmptyView()) }
+                return AnyView(WebSessionSignInSheet(seat: .steam, onDone: {
+                    Task { await sync(justConnected: true) }
+                }))
+            },
+            tiles: SteamBridge.connected ? [] : [
+                AccountTile(id: "signIn", label: String(localized: "Sign in"),
+                            glyph: "person.badge.key", act: startSignIn),
+            ],
+            signIn: startSignIn,
             teardown: { SteamBridge.disconnect() },
             sheet: $sheet,
             act: {
@@ -35,7 +48,13 @@ struct SteamScreen: View {
                                          syncingLine: String(localized: "Reading your games…"),
                                          proof: result)
                 } else {
-                    setupBlock
+                    if !manualPathOpen {
+                        BridgeSyncStatusRows(syncing: syncing,
+                                             syncingLine: String(localized: "Reading your games…"),
+                                             proof: result)
+                    }
+                    manualPathToggle
+                    if manualPathOpen { setupBlock }
                 }
             },
             more: { EmptyView() },
@@ -106,6 +125,32 @@ struct SteamScreen: View {
     }
 
 
+    private func startSignIn() {
+        DSHaptic.tap()
+        result = nil
+        sheet = .card(id: "webSignIn")
+    }
+
+    /// The key by hand, one quiet row under the sign-in — TokenSetupScreen's
+    /// fold, for the same reason: two full-weight ways in made a wall.
+    private var manualPathToggle: some View {
+        Button {
+            withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text("Prefer a key by hand?")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                Image(systemName: "chevron.down")
+                    .dsGlyph(.caption)
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+    }
+
     private var canConnect: Bool {
         !profileField.trimmingCharacters(in: .whitespaces).isEmpty
             && !keyField.trimmingCharacters(in: .whitespaces).isEmpty
@@ -113,6 +158,8 @@ struct SteamScreen: View {
 
     private func connect() {
         guard canConnect else { return }
+        // A key by hand replaces a sign-in: the session reads first.
+        WebSession.clear(.steam)
         SteamBridge.profile = profileField.trimmingCharacters(in: .whitespaces)
         TokenVault.set(keyField.trimmingCharacters(in: .whitespaces),
                        for: SteamBridge.tokenKey)
@@ -129,6 +176,12 @@ struct SteamScreen: View {
         guard let added else {
             // A fresh key that fails doesn't stay (same rule as the token
             // bridges) — no dead connection retrying on every foreground.
+            if justConnected, WebSession.signedIn(.steam) {
+                // A sign-in whose first read failed takes only its session.
+                WebSession.clear(.steam)
+                result = .failed(String(localized: "Steam signed you in, but didn't hand over your games — try again in a moment."))
+                return
+            }
             if justConnected { SteamBridge.disconnect() }
             result = .failed(String(localized: "Couldn't reach Steam — check the key, the profile name, and that the profile is public."))
             return
@@ -138,8 +191,11 @@ struct SteamScreen: View {
             ? String(localized: "\(added) games in")
             : String(localized: "Synced just now")
         if store.registerConnected(id: "steam", name: "Steam", proof: proof,
-                                   can: ["Reads what you've played.",
-                                         "Read-only — public profile data."]) {
+                                   can: WebSession.signedIn(.steam)
+                                    ? ["Reads what you've played, with your own sign-in.",
+                                       "Read-only — never buys, chats or changes anything."]
+                                    : ["Reads what you've played.",
+                                       "Read-only — public profile data."]) {
             DSHaptic.success()
         }
     }

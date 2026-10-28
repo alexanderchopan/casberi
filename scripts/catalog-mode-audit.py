@@ -13,7 +13,8 @@ Checks, all static:
   A. Every screen that hands `AccountPage` a LITERAL name and a LITERAL mode
      agrees with `Offer.mode` for that name.
   B. `TokenSetupScreen` covers every `TokenBridge` case: `.pasteKey`, except
-     GitHub, which is `.signIn` (its device-flow id ships).
+     GitHub, which is `.signIn` (its device-flow id ships), and every case
+     `TokenBridge.webSeat` names, which signs in on the web (prd §1584).
   C. `HandleSetupScreen` covers every `HandleBridge` case: `.noAccount`.
   D. Every name in the catalogue's five seat sets is a real offer (a renamed
      seat leaves a dead entry otherwise — the source-alias lesson).
@@ -167,12 +168,15 @@ def run(root):
         elif want != mode:
             problems.append("A  %s: `%s` screen says .%s, catalogue says .%s" % (fn, name, mode, want))
 
-    # B. TokenBridge seats.
-    for n in enum_names(read(root, TOKENS), "TokenBridge"):
+    # B. TokenBridge seats. The web sign-ins are read off `webSeat`'s own
+    # switch, so a seat added there is held to the catalogue the same day.
+    tokens_src = read(root, TOKENS)
+    web = web_seat_names(tokens_src)
+    for n in enum_names(tokens_src, "TokenBridge"):
         if n not in offers:
             continue
         want = catalog_mode(n, offers, sets)
-        expect = "signIn" if n == "GitHub" else "pasteKey"
+        expect = "signIn" if n == "GitHub" or n in web else "pasteKey"
         if want != expect:
             problems.append("B  TokenBridge `%s`: screen says .%s, catalogue says .%s" % (n, expect, want))
 
@@ -203,6 +207,16 @@ def run(root):
                             "`Offer.mode`'s fallback with nothing agreeing" % n)
 
     return problems, found, unresolved
+
+
+def web_seat_names(src):
+    """The raw names of the `TokenBridge` cases `webSeat` answers for."""
+    block = re.search(r"var webSeat: WebSession\.Seat\? \{(.*?)default: nil", src, re.S)
+    if not block:
+        return set()
+    ids = re.findall(r"case \.(\w+):", block.group(1))
+    raws = dict(re.findall(r'case (\w+)\s*=\s*"([^"]+)"', src))
+    return {raws[i] for i in ids if i in raws}
 
 
 def self_test():

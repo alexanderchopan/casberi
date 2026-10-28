@@ -6,12 +6,17 @@ import SwiftData
 /// and serves any PUBLIC profile: recently played games land as link things
 /// to their store pages. The key stays in the Keychain; the profile is public
 /// data. No OAuth, no server.
+///
+/// **Signing in leads since prd §1584.** A key needs $5 spent, a domain and a
+/// public profile; a sign-in on Steam's own store page (`SteamWeb`) needs
+/// none of those, and the key stays the Your key sheet's for anyone who has
+/// one. The session reads ahead of the key.
 enum SteamBridge {
     static let tokenKey = "token.steam"            // Web API key → Keychain
     private static let profileKey = "steam.profile"       // what the person typed
     private static let steamIDKey = "steam.steamid64"     // resolved, cached
 
-    static var connected: Bool { TokenVault.get(tokenKey) != nil }
+    static var connected: Bool { TokenVault.get(tokenKey) != nil || WebSession.signedIn(.steam) }
 
     static var profile: String {
         get { UserDefaults.standard.string(forKey: profileKey) ?? "" }
@@ -34,6 +39,7 @@ enum SteamBridge {
 
     static func disconnect() {
         TokenVault.delete(tokenKey)
+        WebSession.clear(.steam)
         UserDefaults.standard.removeObject(forKey: steamIDKey)
     }
 
@@ -73,11 +79,8 @@ enum SteamIngest {
         running = true
         defer { running = false }
 
-        guard let key = TokenVault.get(SteamBridge.tokenKey),
-              let steamID = await SteamBridge.steamID(key: key),
-              let root = await IngestSupport.getJSON(
-                "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=\(key)&steamid=\(steamID)"
-              ) as? [String: Any],
+        guard let read = await recentlyPlayedURL(),
+              let root = await IngestSupport.getJSON(read) as? [String: Any],
               let response = root["response"] as? [String: Any] else { return nil }
         let games = (response["games"] as? [[String: Any]]) ?? []   // none is a real answer
 
@@ -130,6 +133,21 @@ enum SteamIngest {
         }
         if added > 0 || backfilled { context.saveHonestly() }
         return added
+    }
+
+    /// The one read, by whichever credential there is: the store session's
+    /// access token and the SteamID it names (prd §1584), else the key and the
+    /// profile typed beside it.
+    private static func recentlyPlayedURL() async -> String? {
+        let base = "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/"
+        if let cookie = WebSession.cookieHeader(.steam) {
+            guard let steamID = SteamWeb.steamID(cookie: cookie),
+                  let token = await SteamWeb.token(cookie: cookie) else { return nil }
+            return base + "?access_token=\(token)&steamid=\(steamID)"
+        }
+        guard let key = TokenVault.get(SteamBridge.tokenKey),
+              let steamID = await SteamBridge.steamID(key: key) else { return nil }
+        return base + "?key=\(key)&steamid=\(steamID)"
     }
 
     /// The store header — the most reliably present of Steam's art assets

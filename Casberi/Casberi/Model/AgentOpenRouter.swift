@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// The four things OpenRouter can do that no direct provider in this catalog
 /// can (2026-08-23, prd §459), plus the sidecar that remembers what a chosen
@@ -308,5 +309,58 @@ struct AgentModelFacts: Codable, Equatable, Sendable {
     /// somebody set precisely to stop it.
     static func isFree(_ provider: AgentProvider, task: AgentTask = .ask) -> Bool {
         current(provider, task: task)?.free ?? false
+    }
+}
+
+/// OpenRouter's own sign-in (prd §1584): its PKCE flow hands a new API key
+/// to an app that holds no secret, so signing in IS getting a key — the key
+/// the person used to make on openrouter.ai and paste. The key is the same
+/// kind as a pasted one, so it is kept, checked and synced exactly as one.
+///
+/// The callback is a localhost address, which OpenRouter's docs allow on any
+/// port; the sign-in sheet stops the navigation before it loads
+/// (`WebSessionSignInSheet.Capture.redirect`), so nothing listens there.
+/// A custom scheme is not in the docs, so it is not relied on.
+enum OpenRouterSignIn {
+    static let callback = "http://localhost:51423/casberi"
+
+    struct Attempt {
+        let verifier: String
+        let url: URL
+    }
+
+    static func begin() -> Attempt {
+        let verifier = base64URL(SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
+        let challenge = base64URL(Data(SHA256.hash(data: Data(verifier.utf8))))
+        var parts = URLComponents(string: "https://openrouter.ai/auth")!
+        parts.queryItems = [
+            URLQueryItem(name: "callback_url", value: callback),
+            URLQueryItem(name: "code_challenge", value: challenge),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "key_label", value: "Casberi"),
+        ]
+        return Attempt(verifier: verifier, url: parts.url!)
+    }
+
+    /// The `code` a callback URL carries, or nil (a denial comes back bare).
+    static func code(in url: URL) -> String? {
+        URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "code" }?.value
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Trades the code for the key, or nil.
+    static func key(code: String, verifier: String) async -> String? {
+        let answer = await IngestSupport.postJSON("https://openrouter.ai/api/v1/auth/keys", body: [
+            "code": code, "code_verifier": verifier, "code_challenge_method": "S256",
+        ]) as? [String: Any]
+        return (answer?["key"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    private static func base64URL(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

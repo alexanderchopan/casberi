@@ -56,6 +56,10 @@ enum AccountIdentity {
 /// PagerDuty) or the read fails — a missing name draws nothing, never a guess.
 enum TokenWhoAmI {
     static func name(_ bridge: TokenBridge, token: String) async -> String? {
+        // A web sign-in (prd §1584) asks what its own web app asks.
+        if let seat = bridge.webSeat, let cookie = WebSession.cookie(inCredential: token) {
+            return await WebSession.who(seat, cookie: cookie)
+        }
         switch bridge {
         case .github:
             let me = await IngestSupport.getJSON("https://api.github.com/user", auth: "Bearer \(token)") as? [String: Any]

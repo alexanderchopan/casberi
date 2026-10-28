@@ -60,6 +60,11 @@ struct TokenSetupScreen: View {
     private var deviceFlowOffered: Bool {
         bridge == .github && GitHubDeviceFlow.isAvailable
     }
+    /// Notion's and Raindrop's own sign-in page (prd §1584), which leads
+    /// their page the way the device flow leads GitHub's.
+    private var webSeat: WebSession.Seat? { bridge.webSeat }
+    /// Any sign-in at all — the device flow or a web page.
+    private var signInOffered: Bool { deviceFlowOffered || webSeat != nil }
     /// The manual token path, folded behind a disclosure when sign-in is
     /// offered — it's the fallback, and two full-weight paths made the screen
     /// a wall (mock review 2026-07-16). Paste-only bridges show it plainly.
@@ -120,18 +125,24 @@ struct TokenSetupScreen: View {
             // connected" says nothing about what connecting will ask of you,
             // and this seat's answer changes with the bridge (GitHub offers a
             // sign-in, the other twenty-three take a pasted token).
-            mode: deviceFlowOffered ? .signIn : .pasteKey,
+            mode: signInOffered ? .signIn : .pasteKey,
             keyed: true,
             // The repos and people you watch are Work's Watching list now
             // (prd §1119); this page keeps the field that adds one, and a
             // door to the list.
             rows: [],
+            cardSheet: { id in
+                guard id == "webSignIn", let webSeat else { return AnyView(EmptyView()) }
+                return AnyView(WebSessionSignInSheet(seat: webSeat, onDone: {
+                    Task { await webSignedIn() }
+                }))
+            },
             tiles: actTiles,
             // The row does the thing (prd §1464): where GitHub's own sign-in
             // is offered, it starts as the page opens.
             signIn: deviceFlowOffered ? {
                 if case .idle = devicePhase { startDeviceFlow() }
-            } : nil,
+            } : webSeat != nil ? startWebSignIn : nil,
             teardown: {
                 TokenVault.delete(bridge.tokenKey)
                 bridge.onRemove()
@@ -183,6 +194,10 @@ struct TokenSetupScreen: View {
                                  faces: watchFaces, faceFallback: bridge.rawValue)
             DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
             if !rows.isEmpty { FollowListDoor(room: .work, count: rows.count) }
+        } else if let webSeat, WebSession.signedIn(webSeat) {
+            // Signed in on the web (prd §1584): nothing to replace here; a
+            // key by hand is the Your key sheet's.
+            statusRows
         } else {
             DSSlabField(placeholder: String(localized: "Paste a new token"), text: $tokenField,
                         actionLabel: String(localized: "Replace"),
@@ -230,6 +245,11 @@ struct TokenSetupScreen: View {
             signInBlock
             if !manualPathOpen { statusRows }
             manualPathToggle
+        } else if webSeat != nil {
+            // The web sign-in's sheet is the Sign in tile's; the page keeps
+            // only its outcome and the fold (prd §1584).
+            if !manualPathOpen { statusRows }
+            manualPathToggle
         }
         // Trello's two stages. The token stage only appears once a key is
         // stored, because its door — the authorize link — cannot be built
@@ -246,8 +266,8 @@ struct TokenSetupScreen: View {
         } else if bridge == .jira {
             jiraSiteBlock
             if jiraSite != nil { setupBlock(door: false) }
-        } else if manualPathOpen || !deviceFlowOffered {
-            setupBlock(door: false)
+        } else if manualPathOpen || !signInOffered {
+            setupBlock(door: webSeat != nil)
         }
     }
 
@@ -345,6 +365,13 @@ struct TokenSetupScreen: View {
         if deviceFlowOffered, case .idle = devicePhase {
             out.append(AccountTile(id: "signIn", label: String(localized: "Sign in"),
                                    glyph: "person.badge.key", act: startDeviceFlow))
+        }
+        // A web sign-in is the one way in on the page (prd §1584): the key
+        // it replaced waits under "Prefer a token by hand?", not on a tile.
+        if webSeat != nil {
+            out.append(AccountTile(id: "signIn", label: String(localized: "Sign in"),
+                                   glyph: "person.badge.key", act: startWebSignIn))
+            return out
         }
         if let url = doorURL {
             out.append(AccountTile(id: "getKey", label: String(localized: "Get key"),
@@ -521,6 +548,22 @@ struct TokenSetupScreen: View {
         if case .idle = devicePhase {} else {
             withAnimation(DS.Motion.standard) { devicePhase = .idle }
         }
+    }
+
+    /// Notion's or Raindrop's sign-in page, in the page's one sheet.
+    private func startWebSignIn() {
+        DSHaptic.tap()
+        result = nil
+        sheet = .card(id: "webSignIn")
+    }
+
+    /// The session landed (`WebSessionSignInSheet` kept it only once the
+    /// service said it was signed in). A key stored before stays in the vault
+    /// as it was; the session reads ahead of it (`TokenBridge.credential`).
+    private func webSignedIn() async {
+        AccountIdentity.set(nil, for: bridge.bridgeID)
+        BridgeHealth.forget(bridge.rawValue)
+        await sync(justConnected: true)
     }
 
     /// The sync proof and honest failures, surfaced beside sign-in while the
@@ -777,7 +820,7 @@ struct TokenSetupScreen: View {
             // reconnecting" over a working connection. The read below answers
             // last, so its 2xx is the verdict that stands.
             if connecting || AccountIdentity.name(for: bridge.bridgeID) == nil,
-               let token = TokenVault.get(bridge.tokenKey),
+               let token = bridge.credential,
                let name = await TokenWhoAmI.name(bridge, token: token) {
                 AccountIdentity.set(name, for: bridge.bridgeID)
             }
@@ -790,7 +833,11 @@ struct TokenSetupScreen: View {
                     // A fresh paste that fails doesn't stay: keeping it would show
                     // "Update"/"Remove token" for a connection that never worked and
                     // retry a dead token on every foreground.
-                    if let previous = replacedToken {
+                    if let webSeat, WebSession.signedIn(webSeat), replacedToken == nil {
+                        // A web sign-in whose first read failed (prd §1584):
+                        // the session goes, and a key stored before it stays.
+                        WebSession.clear(webSeat)
+                    } else if let previous = replacedToken {
                         TokenVault.set(previous, for: bridge.tokenKey)
                         AccountIdentity.set(replacedIdentity, for: bridge.bridgeID)
                     } else {

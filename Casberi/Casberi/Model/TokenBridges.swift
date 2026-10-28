@@ -105,7 +105,24 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     }
 
     var tokenKey: String { "token.\(bridgeID)" }
-    var connected: Bool { TokenVault.get(tokenKey) != nil }
+    var connected: Bool { credential != nil }
+
+    /// The web sign-in that leads this bridge's page (prd §1584), where it has
+    /// one. Its session is a second credential beside the key slot.
+    var webSeat: WebSession.Seat? {
+        switch self {
+        case .notion: .notion
+        case .raindrop: .raindrop
+        default: nil
+        }
+    }
+
+    /// What every read sends: the web session when there is one — the newer
+    /// act, since a paste clears it (`TokenSetupScreen.connect`) — else the
+    /// pasted key. A session arrives marked (`WebSession.cookie(inCredential:)`).
+    var credential: String? {
+        webSeat.flatMap(WebSession.credential) ?? TokenVault.get(tokenKey)
+    }
 
     /// Step one, as a door instead of a sentence (prd §218, 2026-07-25).
     ///
@@ -674,6 +691,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // paste may be a different account, and its own name is asked for
         // once it connects (prd §1162).
         AccountIdentity.set(nil, for: bridgeID)
+        // The web session goes on BOTH callers (prd §1584): it is read before
+        // the key (`credential`), so a key pasted over it would otherwise
+        // never be the one that reads.
+        if let webSeat { WebSession.clear(webSeat) }
         switch self {
         case .bitrefill: BitrefillBalance.clear()
         // Cleared on BOTH callers, Cloudflare's reasoning, and the PROFILE
@@ -1099,7 +1120,7 @@ enum TokenIngest {
         // Lightning owns its pass: its reads are Nostr relay requests, and the
         // balance is a state written beside the rows.
         if bridge == .lightning { return await LightningIngest.refresh(context: context) }
-        guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
+        guard let token = bridge.credential, !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
         running.insert(bridge)
@@ -1584,6 +1605,7 @@ enum TokenIngest {
     /// `/v1/search` answers with. A page's own words are a second read per page
     /// and live in `notionBodies`, which `refresh` runs after the landing loop.
     private static func notion(_ token: String) async -> [Thing]? {
+        if let cookie = WebSession.cookie(inCredential: token) { return await notionWeb(cookie) }
         guard let root = await IngestSupport.postJSON("https://api.notion.com/v1/search",
                                     auth: "Bearer \(token)",
                                     body: ["filter": ["value": "page", "property": "object"],
@@ -1632,6 +1654,20 @@ enum TokenIngest {
             thing.tags = tagList(notionTags(props))
             thing.dueAt = notionDue(props)
             return thing
+        }
+    }
+
+    /// Notion through the person's own web session (prd §1584): every page
+    /// they can open, not only those shared with an integration. Its record
+    /// map carries a title and an edit time; the key path's properties
+    /// (tags, deadline, cover) are not read here, because a page's property
+    /// names live in its database's schema, a read per database.
+    private static func notionWeb(_ cookie: String) async -> [Thing]? {
+        guard let pages = await NotionWeb.pages(cookie: cookie) else { return nil }
+        return pages.map { page in
+            Thing(kind: .note, title: page.title, content: NotionWeb.url(page.id),
+                  source: "Notion", capturedAt: page.edited ?? .now,
+                  sourceRef: "notion:\(page.id)")
         }
     }
 
@@ -1767,8 +1803,14 @@ enum TokenIngest {
 
         var bodies: [String: String] = [:]
         for ref in wanted {
-            let read = await notionPageText(String(ref.dropFirst("notion:".count)),
-                                            token: token)
+            let id = String(ref.dropFirst("notion:".count))
+            var read: (answered: Bool, text: String)
+            if let cookie = WebSession.cookie(inCredential: token) {
+                read = await NotionWeb.pageText(id, cookie: cookie)
+                read.text = String(read.text.prefix(notionBodyLimit))
+            } else {
+                read = await notionPageText(id, token: token)
+            }
             guard read.answered else { continue }
             asked.insert(ref)
             if !read.text.isEmpty { bodies[ref] = read.text }
@@ -2472,8 +2514,15 @@ enum TokenIngest {
     /// collections themselves (two more GETs) so a bookmark can name the shelf
     /// it sits on.
     private static func raindrop(_ token: String) async -> [Thing]? {
-        guard let root = await IngestSupport.getJSON("https://api.raindrop.io/rest/v1/raindrops/0?perpage=30",
-                                   auth: "Bearer \(token)") as? [String: Any],
+        // A web sign-in (prd §1584) reads the paths raindrop.io's own app
+        // reads, `/v1/`, with its cookies; a key reads the published
+        // `/rest/v1/`. Same answers, same parse.
+        let cookie = WebSession.cookie(inCredential: token)
+        let api = cookie == nil ? "https://api.raindrop.io/rest/v1/" : "https://api.raindrop.io/v1/"
+        let auth = cookie == nil ? "Bearer \(token)" : nil
+        let headers = cookie.map { ["Cookie": $0] } ?? [:]
+        guard let root = await IngestSupport.getJSON(api + "raindrops/0?perpage=30",
+                                   auth: auth, headers: headers) as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
         // Shelf names, id → title (2026-08-06). Two more GETs — Raindrop serves
         // top-level collections and nested ones on separate endpoints — in the
@@ -2485,8 +2534,7 @@ enum TokenIngest {
         var collections: [Int: String] = [:]
         for path in ["collections", "collections/childrens"] {
             guard let list = (await IngestSupport.getJSON(
-                "https://api.raindrop.io/rest/v1/\(path)",
-                auth: "Bearer \(token)") as? [String: Any])?["items"] as? [[String: Any]]
+                api + path, auth: auth, headers: headers) as? [String: Any])?["items"] as? [[String: Any]]
             else { continue }
             for collection in list {
                 guard let id = collection["_id"] as? Int, id > 0,

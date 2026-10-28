@@ -432,6 +432,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A seat never asks you to do its own work (RULE, prd §780c).** Rocket Money's sign-in view WALKS the account's pages itself to learn its queries. → docs/hooks/system.md · prd §780c
 - **The website's app count is derived (`app.js`) and rounded DOWN ("100+"; `catalog-sync.sh` fails either way), and its docs list is gated** → docs/hooks/system.md · prd §780b · §780c
 - **The website shelf's ROW placement is unchecked** — `catalog-sync.sh` compares name sets only; two seats landed in Reading off a Substack anchor → prd §780c
+- `-webSessionProbe YES` — Notion, Raindrop, Steam sign in on the web (`WebSession`); OpenRouter's sign-in mints a key; logs `webSession|`, UNMEASURED → prd §1584
 - `-privyProbe YES` `-privyForget YES` — Privy, a sign-in seat on Privy Home (Wallet group) → docs/hooks/bridges.md · prd §803c
 - `-rocketLoginProbe YES` — open Rocket Money's sign-in headlessly (with `-openSetup "Rocket Money"`) and NSLog what the page drew; the site walls anything 450px wide or narrower, so the view pins a 520px desktop viewport → docs/hooks/bridges.md · prd §781
 - **Apple Intelligence is a seat (prd §833): Apple's model on Private Cloud Compute answers the composer, one tap in the Agents catalogue, no key.** → docs/hooks/system.md · prd §833

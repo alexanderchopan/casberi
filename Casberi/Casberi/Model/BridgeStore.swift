@@ -420,7 +420,10 @@ final class BridgeStore {
                 if !bridges.contains(where: { $0.id == seat.id || $0.name == seat.name }) {
                     _ = registerConnected(id: seat.id, name: seat.name, proof: proof)
                 }
-            } else if TokenVault.syncs(seat.vaultKey) {
+            } else if TokenVault.syncs(seat.vaultKey),
+                      // A seat signed in on the web holds no key (prd §1584).
+                      TokenBridge.allCases.first(where: { $0.bridgeID == seat.id })?.webSeat
+                        .map(WebSession.signedIn) != true {
                 remove(seat.id)
             }
         }

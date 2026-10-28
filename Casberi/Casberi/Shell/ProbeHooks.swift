@@ -6687,6 +6687,14 @@ enum ProbeHooks {
         Hook(key: "duolingoProbe") { _, context in
             Task { @MainActor in await DuolingoLive.diagnose(context: context) }
         },
+        // `-webSessionProbe YES` reads each web sign-in that replaced a key
+        // (prd §1584: Notion, Raindrop, Steam) with the stored session and
+        // logs `webSession|` per seat — stored, verified, the count each read
+        // answers. Never a cookie or a title. Unmeasured until a person signs
+        // in on the phone and this runs.
+        Hook(key: "webSessionProbe") { _, _ in
+            Task { @MainActor in await WebSession.probe() }
+        },
         // `-acornsSession "<bearer>"` stores an Acorns bearer lifted from a
         // signed-in browser session — `-spotifySession`'s door, for the same
         // reason: the sign-in is a live human typing a password into Acorns'

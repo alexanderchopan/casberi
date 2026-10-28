@@ -1,7 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// OpenRouter, connected — by key (2026-07-24). One API key routes across
+/// OpenRouter, connected — by its own sign-in since prd §1584, which hands
+/// back a key (`OpenRouterSignIn`); by a pasted key before that (2026-07-24),
+/// which stays one quiet row under the sign-in. One API key routes across
 /// OpenRouter's 400+ models, so unlike every other agent here it never pins
 /// one model — it rides OpenRouter's own `openrouter/auto` router. The key
 /// is checked with OpenRouter before it saves (no dead key claiming a
@@ -22,6 +24,8 @@ struct OpenRouterSetupScreen: View {
     @State private var checking = false
     @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.openrouter)
+    /// The pasted-key path, folded under the sign-in (prd §1584).
+    @State private var manualPathOpen = false
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
@@ -31,7 +35,7 @@ struct OpenRouterSetupScreen: View {
             name: "OpenRouter", seatID: "openrouter", source: "OpenRouter",
             state: AccountPageState.of(name: "OpenRouter", seatID: "openrouter",
                                        connected: configured, store: store),
-            mode: .pasteKey,
+            mode: .signIn,
             keyed: true,
             // A KEY THAT ANSWERS NOW LANDS ITS CONVERSATIONS (prd §839) —
             // one chat thing per composer session, upserted as it grows — so
@@ -39,6 +43,18 @@ struct OpenRouterSetupScreen: View {
             // can be shut out of, and `lands: false` would now hide all three
             // (see `AccountPage.lands`).
             lands: true,
+            // The attempt is made where the sheet is, never read from this
+            // page's state: the chassis may build the sheet from a body that
+            // ran before the state landed, and an empty sheet was what rose.
+            cardSheet: { id in
+                guard id == "openRouterSignIn" else { return AnyView(EmptyView()) }
+                return AnyView(OpenRouterSignInSheet(onCallback: finishSignIn))
+            },
+            tiles: configured ? [] : [
+                AccountTile(id: "signIn", label: String(localized: "Sign in"),
+                            glyph: "person.badge.key", act: startSignIn),
+            ],
+            signIn: startSignIn,
             teardown: {
                 AgentKey.clear(.openrouter)
                 configured = false
@@ -52,7 +68,16 @@ struct OpenRouterSetupScreen: View {
                     // is replaced by exactly the path it was pasted.
                     agentRowsBlock
                 } else {
-                    setupBlock
+                    if checking {
+                        HStack(spacing: DS.Space.s2) {
+                            DSSpinner()
+                            Text("Getting your key from OpenRouter…")
+                                .dsText(.body17).foregroundStyle(DS.textTertiary)
+                        }
+                    }
+                    if !manualPathOpen { BridgeSyncStatusRows(proof: result) }
+                    manualPathToggle
+                    if manualPathOpen { setupBlock }
                 }
             },
             more: { EmptyView() },
@@ -90,11 +115,58 @@ struct OpenRouterSetupScreen: View {
         }
     }
 
-    /// Connects only after OpenRouter accepts the key — the seat registers
-    /// with what it can actually do, nothing more.
+    private func startSignIn() {
+        DSHaptic.tap()
+        result = nil
+        sheet = .card(id: "openRouterSignIn")
+    }
+
+    /// The callback arrived: trade its code for the key, then keep the key
+    /// exactly as a pasted one is kept.
+    private func finishSignIn(_ url: URL, verifier: String) {
+        guard let code = OpenRouterSignIn.code(in: url) else {
+            result = .failed(String(localized: "OpenRouter didn't hand over a key — nothing was connected."))
+            return
+        }
+        checking = true
+        Task { @MainActor in
+            guard let key = await OpenRouterSignIn.key(code: code, verifier: verifier) else {
+                checking = false
+                result = .failed(String(localized: "Couldn't reach OpenRouter to finish signing in — try again."))
+                return
+            }
+            accept(key)
+        }
+    }
+
+    /// The pasted key by hand, one quiet row under the sign-in.
+    private var manualPathToggle: some View {
+        Button {
+            withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text("Prefer a key by hand?")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                Image(systemName: "chevron.down")
+                    .dsGlyph(.caption)
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+    }
+
     private func connect() {
         let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return }
+        accept(candidate)
+    }
+
+    /// Connects only after OpenRouter accepts the key — the seat registers
+    /// with what it can actually do, nothing more.
+    private func accept(_ candidate: String) {
         checking = true
         result = nil
         Task { @MainActor in
@@ -147,4 +219,22 @@ struct OpenRouterSetupScreen: View {
     }
 
 
+}
+
+/// OpenRouter's sign-in sheet: the PKCE attempt is born with the sheet and
+/// lives as long as it does, so the verifier that trades the code is the one
+/// whose challenge opened the page.
+private struct OpenRouterSignInSheet: View {
+    let onCallback: (URL, String) -> Void
+    @State private var attempt = OpenRouterSignIn.begin()
+
+    var body: some View {
+        WebSessionSignInSheet(
+            title: String(localized: "Sign in to OpenRouter"), start: attempt.url,
+            domain: "openrouter.ai",
+            capture: .redirect(prefix: OpenRouterSignIn.callback, onURL: { url in
+                onCallback(url, attempt.verifier)
+            }),
+            onDone: {})
+    }
 }
