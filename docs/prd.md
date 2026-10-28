@@ -69389,3 +69389,22 @@ Activity mixing units ("+21,000 sats", "−246.31 USDT0", "Moved 0.5 ETH" as dol
 **Not verified on the simulator:** Send opening Move with To filled (the demo's person transfers carry no address); the arrival flash (the demo pours, nothing arrives); the cleared beat.
 
 **Mac half (§1402).** The same Wallet on Catalyst; `PasteButton` is available there; the pane's box keeps its own key.
+
+## §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and the moments after an add are felt (amends §1150, §1292, §1388, §1029's way back) (user, 2026-10-28: "now i'd like to do the same walk on the library screens and walks between them", then "Do all" on the canvas) — RULED, built
+
+Walked on the simulator (the eight places) and read in code. What changed, in `Screens/SettingsHome.swift` unless named:
+
+1. **What you add shows at once.** Library read its counts once, on open; now every add's close (Track a subscription, Track a mail list, Follow an account, New contact, a Track tray, Subscribe by link) reads them again (`landAdded`, `FirstRun.refresh`), and a connect re-reads too. A count that grew lands its list; on iPad and Mac the pane's box lands the list column (`settingsLanding`).
+2. **All eight words at one size** (`DSCountTile`): the name takes its room from the gaps and the count never squeezes, so "Subscriptions" stands at 17pt.
+3. **Mail lists with no mail app** shows Comes from (Gmail, iCloud Mail), as Calendars and Contacts do.
+4. **Cards' +** opens Apps with the Wallet folder sprung, where the card apps are (keeps §1388's landing).
+5. **A followed wallet's row** opens the Wallet on that account.
+6. **A subscribed calendar is a fact (amends §1150's tap-to-unsubscribe):** Unsubscribe is its hold, and the flash offers Undo; the confirmation dialog is deleted.
+7. **Track a mail list from Library** opens a list you already track over Library (`onOpen`), never in Life.
+8. **Paste** on Subscribe to a calendar's link and New contact's address.
+9. **One success buzz per add:** the success flash carries it (§1587); Track a subscription, Track a mail list and Subscribe by link now say success, New contact, the Track tray and a one-tap connect no longer buzz twice. Track a mail list's flash offers Open, to the list in Life.
+10. **Delight:** a subscription you just tracked glows in Library's list (`arrivalWash`, as on the Wallet); the first add crossfades the four ways in into the counts; an app's green dot springs in when it becomes yours (`SourcesLibrary`); a connect started in Library lands in its room (§1029) with a flash whose Library action brings you back.
+
+**Not seen on the simulator:** the adds themselves (a new simulator needs the person's OK to be tapped); the counts, the one-size grid, Mail lists and the Wallet place were seen.
+
+**Mac half (§1402).** The same Library on Catalyst; the pane's box lands the list column.

@@ -60,7 +60,20 @@ struct SourcesLibrary: View {
 /// on, so the dot reads apart from the icon under it.
 private extension View {
     func sourcesYours(_ yours: Bool, size: CGFloat, ring: Color) -> some View {
-        overlay(alignment: .bottomTrailing) {
+        modifier(SourcesYoursDot(yours: yours, size: size, ring: ring))
+    }
+}
+
+/// The dot, which springs in the moment an app becomes yours (prd §1588):
+/// back in its folder after a connect, the new one is the one that moves.
+private struct SourcesYoursDot: ViewModifier {
+    let yours: Bool
+    let size: CGFloat
+    let ring: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottomTrailing) {
             if yours {
                 Circle()
                     .fill(DS.confirm)
@@ -72,8 +85,10 @@ private extension View {
                                                    lineWidth: max(1.5, size * 0.18)))
                     .offset(x: size * 0.3, y: size * 0.3)
                     .accessibilityHidden(true)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.1).combined(with: .opacity))
             }
         }
+        .animation(reduceMotion ? nil : DS.Motion.folder, value: yours)
     }
 }
 

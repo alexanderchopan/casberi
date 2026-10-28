@@ -57,7 +57,6 @@ struct SettingsHome: View {
     /// the Wallet, Day or Reading, and only the tray led back.
     @State private var sheet: SettingsSheet?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var unsubscribing: CalendarSubscriptionStore.Entry?
     /// Add a calendar's two ways (prd §1166): the phone's, or one by link.
     @State private var calendarChoice = false
     /// The Track tray of an app that needs only a name (prd §1119), raised
@@ -70,6 +69,10 @@ struct SettingsHome: View {
     @State private var landCategory: String?
     /// Bumped when a person is kept by hand, so People's list reads again.
     @State private var peopleRevision = 0
+    /// **AN ADD SHOWS WHAT IT ADDED (prd §1588).** The kind a tray or sheet
+    /// adds to, and its count when it rose: once it closes, every reading is
+    /// read again, and a count that grew lands its list.
+    @State private var adding: (kind: SettingsScope, before: Int)?
 
 
     /// Casberi's folder: a card of tiles over the page on the phone (§1321),
@@ -112,9 +115,12 @@ struct SettingsHome: View {
                 // The kinds you connected; Casberi's own settings are its
                 // folder's tiles since prd §1321, never the box.
                 Group {
-                    if startsInBox { startBox }
-                    else { countsBox }
+                    if startsInBox { startBox.transition(.opacity) }
+                    else { countsBox.transition(.opacity) }
                 }
+                // Your first add turns the four ways in into the counts, a
+                // crossfade, never a cut (prd §1588).
+                .animation(reduceMotion ? nil : DS.Motion.standard, value: startsInBox)
                 .dsRoomLeadListRow()
             }
             if !boxOnly {
@@ -175,6 +181,10 @@ struct SettingsHome: View {
                         // the Wallet, a mail list in Life, a feed in Media. Under
                         // the box is the same list drawn again, its rows and
                         // their sheets, never a copy of what it holds (§1317).
+                        // No mail app, no lists and no plus: where they come
+                        // from, one tap each (prd §1588).
+                        case .newsletters where !hasMailApp:
+                            comesFrom(Self.mailApps)
                         case .feeds, .newsletters, .subscriptions:
                             EmptyView()
                         }
@@ -302,16 +312,6 @@ struct SettingsHome: View {
             }
         }
         #endif
-        .confirmationDialog(Text("Unsubscribe from this calendar?"),
-                            isPresented: Binding(get: { unsubscribing != nil },
-                                                 set: { if !$0 { unsubscribing = nil } }),
-                            presenting: unsubscribing) { entry in
-            Button("Unsubscribe", role: .destructive) {
-                CalendarSubscriptionIngest.remove(entry.id, context: context)
-            }
-        } message: { entry in
-            Text("Its events leave Coming up and Day.")
-        }
         // One sheet at a time (prd §1238): inside Settings' sheet these push.
         .sheet(isPresented: Binding(get: { calendarAdd && route.sheet == nil },
                                     set: { calendarAdd = $0 })) {
@@ -325,6 +325,23 @@ struct SettingsHome: View {
             Button("Your phone’s calendars") { setup("Calendar") }
             Button("Subscribe by link") { calendarAdd = true }
         }
+        // Every add's way in, and its close: the readings read again and a
+        // count that grew lands its list (prd §1588).
+        .onChange(of: sheet) { was, now in
+            if was == nil, let now, let kind = Self.adds(now) { adding = (kind, count(kind)) }
+            if was != nil, now == nil, adding != nil { Task { await landAdded() } }
+        }
+        .onChange(of: trackPick?.id) { was, now in
+            if was == nil, now != nil { adding = (.feeds, count(.feeds)) }
+            if was != nil, now == nil { Task { await landAdded() } }
+        }
+        .onChange(of: calendarAdd) { was, now in
+            if now { adding = (.calendars, count(.calendars)) }
+            if was, !now { Task { await landAdded() } }
+        }
+        // An app connected from here (Calendar's one tap, a folder's app)
+        // changes what the counts read.
+        .onChange(of: bridges.bridges.count) { _, _ in if !boxOnly { Task { await read() } } }
         .modifier(DSOneSheet(route: $sheet, pushes: { _ in route.sheet != nil },
                              raised: { settingsSheet($0) },
                              pushed: { settingsSheet($0).environment(\.dsInPane, true) }))
@@ -458,7 +475,7 @@ struct SettingsHome: View {
         }
         BridgeConnect.connect(offer, store: bridges, context: context) { ok in
             if ok {
-                DSHaptic.success()
+                // The success flash carries the one buzz (prd §1587).
                 chrome.flash(BridgeConnect.landingMessage(offer), tone: .success)
             } else {
                 chrome.flash("Couldn't connect \(offer.name).", tone: .failure)
@@ -498,8 +515,11 @@ struct SettingsHome: View {
         case .calendars:
             calendarChoice = true
         // A card arrives through its app, so Add opens Apps, here (§1234).
+        // ...its folder sprung open: the card apps live in the Wallet's (prd §1588).
         case .cards:
-            withAnimation(DS.Motion.standard) { scope = .apps; query = "" }
+            withAnimation(DS.Motion.standard) { casberiOpen = false; scope = .apps; query = "" }
+            landCategory = Self.cardApps.lazy.compactMap { c in BridgeCatalog.offers.first { $0.name == c.app } }
+                .first.map(BridgeCatalog.category(of:))
         // Each kind's own add tray, over Settings (prd §1143).
         // Following and People list their apps (`addMenu`), as the Feed's
         // Media and Social do (prd §1300); People opened the Wallet's tray.
@@ -585,15 +605,47 @@ struct SettingsHome: View {
     }
 
     private func read() async {
-        // The readings the box's kinds keep, read once for Library and the
-        // Feed (`FirstRun`, prd §1365).
+        // The readings the box's kinds keep, for Library and the Feed
+        // (`FirstRun`, prd §1365); read again after every add (§1588).
         await FirstRun.shared.refresh(context)
-        phoneCalendars = FirstRun.shared.phoneCalendars
-        people = FirstRun.shared.people
+        withAnimation(DS.Motion.standard) {
+            phoneCalendars = FirstRun.shared.phoneCalendars
+            people = FirstRun.shared.people
+        }
         // A calendar subscribed elsewhere (or before this page existed) reads
         // its count fresh.
         if CalendarSubscriptionStore.shared.calendars.contains(where: { $0.lastRead == nil }) {
             await CalendarSubscriptionIngest.refresh(context: context)
+        }
+    }
+
+    /// The kind each sheet adds to, nil for one that only shows.
+    static func adds(_ raised: SettingsSheet) -> SettingsScope? {
+        switch raised {
+        case .subscriptionAdd: .subscriptions
+        case .mailAdd:         .newsletters
+        case .walletFollow:    .wallets
+        case .newContact:      .people
+        default:               nil
+        }
+    }
+
+    /// An add has closed: every reading is read again, so the count and the
+    /// list say what was added, and a count that grew lands its list.
+    private func landAdded() async {
+        let was = adding
+        adding = nil
+        await read()
+        peopleRevision += 1
+        guard let was, count(was.kind) > was.before else { return }
+        // The pane's box lands the list column's instance, where the list is.
+        if boxOnly { chrome.settingsLanding = .kind(was.kind); return }
+        guard scope != was.kind else { return }
+        withAnimation(DS.Motion.standard) {
+            casberiOpen = false
+            openFolder = nil
+            scope = was.kind
+            query = ""
         }
     }
 
@@ -618,19 +670,25 @@ struct SettingsHome: View {
     /// figure and its whole word on one line, as Reminders' grid draws them,
     /// so nothing is shortened. Pressing one lists that kind below; the box
     /// never moves. The bar keeps the verbs.
+    /// A kind's count, as the box draws it.
+    private func count(_ kind: SettingsScope) -> Int {
+        switch kind {
+        case .apps: connectedApps.count
+        case .calendars: phoneCalendars.count + CalendarSubscriptionStore.shared.calendars.count
+        case .cards: connectedCards.count
+        case .feeds: feeds.count
+        case .newsletters: MailSubscriptionsReading.shared.items.count
+        case .people: people
+        case .subscriptions: SubscriptionsReading.shared.items.count
+        case .wallets: WalletStore.shared.addresses.count
+        }
+    }
+
+    private var hasMailApp: Bool { connectedApps.contains { Self.mailApps.contains($0.name) } }
+
     private var countsBox: some View {
         let counts: [(SettingsScope, Int, String)] = SettingsScope.kinds.map { kind in
-            let n: Int = switch kind {
-            case .apps: connectedApps.count
-            case .calendars: phoneCalendars.count + CalendarSubscriptionStore.shared.calendars.count
-            case .cards: connectedCards.count
-            case .feeds: feeds.count
-            case .newsletters: MailSubscriptionsReading.shared.items.count
-            case .people: people
-            case .subscriptions: SubscriptionsReading.shared.items.count
-            case .wallets: WalletStore.shared.addresses.count
-            }
-            return (kind, n, kind.label)
+            (kind, count(kind), kind.label)
         }
         // A broken connection says so in its kind's WORD (the tiles' rule,
         // never a dot), so it shows from every other kind too.
@@ -677,15 +735,13 @@ struct SettingsHome: View {
     private func sheetContent(_ route: SettingsSheet) -> some View {
         switch route {
         case .subscriptionAdd:      SubscriptionAddTray()
-        case .mailAdd:              MailSubscriptionAddTray()
+        // A list you already track opens here, over Library (prd §1143, §1588).
+        case .mailAdd:              MailSubscriptionAddTray(onOpen: { id in sheet = .list(id) })
         case .walletFollow:         WalletFollowSheet()
         case .newContact:
-            // The list re-reads, and People is what shows, so the person
-            // just kept is on screen.
-            NewContactSheet {
-                withAnimation(DS.Motion.standard) { scope = .people; query = "" }
-                peopleRevision += 1
-            }
+            // The close lands People with the person in it (`landAdded`),
+            // even when keeping them named someone already counted.
+            NewContactSheet { adding?.before = -1 }
         case .follow(let id, let room): FollowingSheet(id: id, room: room)
         case .list(let id):         MailSubscriptionSheet(id: id)
         case .plan(let id):         SubscriptionSheet(id: id)
@@ -1012,7 +1068,10 @@ struct SettingsHome: View {
                     DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
                               subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address)),
                               opens: false) {
-                        route.openSetup(forOffer: CategoryFold.walletRoom)
+                        // The Wallet, on this account (prd §1588): the room
+                        // this place feeds, never one page for every wallet.
+                        chrome.openWallet()
+                        chrome.walletScope = addr.address
                     } leading: {
                         // A face keeps its own ramp (face-ramp audit), centred in the
                         // Feed's 46pt column (prd §1170, §1265).
@@ -1190,6 +1249,8 @@ struct SettingsHome: View {
             ForEach(items) { item in
                 kindRow({ sheet = .plan(item.id) }) {
                     WalletSubscriptionRow(item: item, writes: FeedScreen.walletSubscriptionWrites(item))
+                        // What you just tracked glows, as on the Wallet (prd §1588).
+                        .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
                 } menu: {
                     StopMenus.plan(item, context: context, chrome: chrome)
                 }
@@ -1239,16 +1300,33 @@ struct SettingsHome: View {
         .listRowSeparator(.hidden)
     }
 
+    /// **A TAP NEVER LEAVES (prd §1588).** A subscribed calendar is a fact,
+    /// as the phone's are; Unsubscribe is its hold, as what you follow goes
+    /// (§1302), and the flash offers it back.
     private func calendarRow(_ entry: CalendarSubscriptionStore.Entry) -> some View {
-        DSPushRow(title: Text(verbatim: entry.displayName),
-                  subtitle: Text(calendarLine(entry)), opens: false) {
-            unsubscribing = entry
-        } leading: {
+        DSPushRowLabel(title: Text(verbatim: entry.displayName),
+                       subtitle: Text(calendarLine(entry)), opens: false) {
             Image(systemName: ScopeTileGlyph.calendars)
                 .dsGlyph(.body, weight: .regular)
                 .foregroundStyle(DS.brandInk)
                 .frame(width: DS.Mark.row, height: DS.Mark.row)
         }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button(role: .destructive) { unsubscribe(entry) } label: {
+                Label(String(localized: "Unsubscribe"), systemImage: "minus.circle")
+            }
+        }
+    }
+
+    private func unsubscribe(_ entry: CalendarSubscriptionStore.Entry) {
+        let url = entry.url
+        withAnimation(DS.Motion.standard) { CalendarSubscriptionIngest.remove(entry.id, context: context) }
+        chrome.flash(String(localized: "Unsubscribed from \(entry.displayName)"),
+                     action: ShellChrome.ToastAction(label: String(localized: "Undo")) {
+            guard let back = CalendarSubscriptionStore.shared.add(url) else { return }
+            Task { @MainActor in await CalendarSubscriptionIngest.refresh(context: context, only: back.id) }
+        })
     }
 
     private func rows<Item: Identifiable, Row: View>(_ items: [Item],
@@ -1324,6 +1402,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
 struct CalendarSubscribeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
     @State private var link = ""
     @State private var refused: String?
     @FocusState private var focused: Bool
@@ -1334,7 +1413,9 @@ struct CalendarSubscribeSheet: View {
                 DSSlabField(placeholder: String(localized: "webcal:// or https:// link"),
                             text: $link, actionLabel: String(localized: "Subscribe"),
                             focus: $focused, glyph: "calendar", clearable: true,
-                            size: .slab, submitLabel: .go) { subscribe() }
+                            size: .slab, submitLabel: .go,
+                            // A link is copied, never typed (prd §1588).
+                            paste: { link = $0 }) { subscribe() }
                 if let refused {
                     Text(refused).dsText(.label12).foregroundStyle(DS.attentionInk)
                 }
@@ -1354,6 +1435,8 @@ struct CalendarSubscribeSheet: View {
             return
         }
         Task { @MainActor in await CalendarSubscriptionIngest.refresh(context: context, only: entry.id) }
+        // Said, and felt once, as every add is (prd §1588).
+        chrome?.flash(String(localized: "Subscribed to \(entry.displayName)"), tone: .success)
         dismiss()
     }
 }

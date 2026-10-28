@@ -286,7 +286,7 @@ struct FollowTrackTray: View {
 
     /// Says so, and closes onto the list the follow joined.
     private func landed(_ name: String) {
-        DSHaptic.success()
+        // The success flash carries the one buzz (prd §1587).
         chrome?.flash(room == .work ? String(localized: "Following \(name)")
                                     : String(localized: "Following \(name)"), tone: .success)
         dismiss()

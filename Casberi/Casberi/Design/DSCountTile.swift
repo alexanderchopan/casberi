@@ -177,7 +177,10 @@ struct DSCountTile: View {
             action()
         } label: {
             if inline {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                // The name's room comes out of the gaps, not its type: all
+                // eight words stand at 17pt (prd §1588, "Subscriptions"
+                // shrank beside its count and plus on the phone).
+                HStack(alignment: .firstTextBaseline, spacing: glyph == nil ? DS.Space.s1 : DS.Space.s2) {
                     if let glyph {
                         // Markets' tiles: the glyph leads, in the column a
                         // two-digit figure took (prd §1180), so its words
@@ -208,11 +211,15 @@ struct DSCountTile: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                             .foregroundStyle(tone == .none ? (isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary) : wordInk)
-                        Spacer(minLength: DS.Space.s2)
+                            .layoutPriority(1)
+                        Spacer(minLength: DS.Space.s1)
                         Text((count ?? 0).formatted())
                             .dsText(.body17)
                             .fontWeight(.semibold)
                             .monospacedDigit()
+                            // Never squeezed by the name beside it.
+                            .lineLimit(1)
+                            .fixedSize()
                             .contentTransition(countRoll)
                             .animation(countAnimation, value: count)
                             .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textSecondary)

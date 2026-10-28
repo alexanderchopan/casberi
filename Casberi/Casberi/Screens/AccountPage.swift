@@ -151,6 +151,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
+    /// Opened while Library stood under it (prd §1588).
+    @State private var fromLibrary = false
     @Environment(\.openURL) private var openURL
 
     @State private var today = 0
@@ -339,6 +341,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             note = AccountNotes.note(for: seatID) ?? ""
             onScreen = true
             if seat == nil { landingArmed = true }
+            // Opened from Library: the landing offers the way back (prd §1588).
+            fromLibrary = route.shownPlace == .settings
             startSignInIfAsked()
         }
         .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
@@ -358,7 +362,20 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 try? await Task.sleep(for: .milliseconds(900))
                 guard onScreen, landed else { return }
                 chrome.connectLanding = source
+                let backToLibrary = fromLibrary
                 enterRoom()
+                // **ONE TAP BACK (prd §1588, keeps §1029's landing):** adding
+                // several apps from Library is one trip each, not a hunt.
+                if backToLibrary {
+                    let chrome = chrome, route = route
+                    chrome.flash(String(localized: "\(name) is connected"),
+                                 action: ShellChrome.ToastAction(label: String(localized: "Library")) {
+                        // A Feed section's app rises as a sheet over Library:
+                        // closing it is the way back.
+                        chrome.appSheet = nil
+                        PlaceTab.open(.library, chrome: chrome, route: route)
+                    }, seconds: 4)
+                }
             }
         }
         // The visit is stamped on the way OUT: the ring a row wears is "since

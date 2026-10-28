@@ -261,6 +261,9 @@ struct MailSubscriptionAddTray: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
+    /// Where a list you already track opens: over the place that raised the
+    /// tray (Library, prd §1588); nil opens it in Life.
+    var onOpen: ((String) -> Void)? = nil
     @State private var query = ""
     @FocusState private var fieldFocused: Bool
 
@@ -360,6 +363,7 @@ struct MailSubscriptionAddTray: View {
 
     private func openList(_ item: MailSubscriptions.Item) {
         DSHaptic.selection()
+        if let onOpen { onOpen(item.id); return }
         dismiss()
         chrome.open(.list(item.id))
     }
@@ -367,9 +371,11 @@ struct MailSubscriptionAddTray: View {
     /// The one write, `-mailSubscriptionAdd`'s and the mail sheet's: the
     /// sender's address joins the store, and the toast says it.
     private func track(_ candidate: MailSubscriptions.Candidate) {
-        guard MailSubscriptionStore.shared.add(address: candidate.address, name: candidate.name) != nil else { return }
-        DSHaptic.selection()
-        chrome.flash(String(localized: "Tracking \(candidate.name)"))
+        guard let key = MailSubscriptionStore.shared.add(address: candidate.address, name: candidate.name) else { return }
+        // One success, and a way to the room it feeds (prd §1588).
+        let chrome = chrome
+        chrome.flash(String(localized: "Tracking \(candidate.name)"), tone: .success,
+                     action: ShellChrome.ToastAction(label: String(localized: "Open")) { chrome.open(.list(key)) })
         dismiss()
     }
 }

@@ -26,7 +26,9 @@ struct NewContactSheet: View {
                             actionLabel: String(localized: "Save"), keyboard: .emailAddress,
                             isArmed: !name.trimmingCharacters(in: .whitespaces).isEmpty
                                 && NewContact.reach(reach) != nil,
-                            submitLabel: .done, action: save)
+                            submitLabel: .done,
+                            // Usually copied, never typed (prd §1588).
+                            paste: { reach = $0 }, action: save)
                 if let failure {
                     DSFootnote(Text(verbatim: failure))
                 }
@@ -45,7 +47,7 @@ struct NewContactSheet: View {
             failure = String(localized: "An email, an account address or a name like vitalik.eth.")
             return
         }
-        DSHaptic.success()
+        // The success flash carries the one buzz (prd §1587).
         chrome?.flash(String(localized: "Added \(name.trimmingCharacters(in: .whitespaces))."), tone: .success)
         dismiss()
         onSaved()

@@ -503,8 +503,8 @@ struct SubscriptionAddTray: View {
                                          anchor: anchor, paysWith: paysWith, site: site)
         }
         guard kept != nil else { return }
-        DSHaptic.selection()
-        chrome.flash(String(localized: "Tracking \(name)"))
+        // One success (prd §1588): the list behind the tray shows the row.
+        chrome.flash(String(localized: "Tracking \(name)"), tone: .success)
         // One app's tray is done; a list goes back to the list, ticked.
         guard prefill == nil else { dismiss(); return }
         // The search stays as typed, so the row you just ticked is still in

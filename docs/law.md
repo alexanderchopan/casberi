@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1725 of 1794 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1726 of 1795 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1380,7 +1380,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1025 — Addresses gets smarter: four more suggestion rules, a named author, the first transfer, a book anchor, and Shortcuts (part superseded by §1181)
 - §1026 — The demo is one person's life, not one subject in every room
 - §1027 — An entry field's placeholder wraps, and its well spans the column
-- §1029 — A connect LANDS YOU IN THE ROOM, on every account page (amended by §1162)
+- §1029 — A connect LANDS YOU IN THE ROOM, on every account page (amended by §1162, §1588)
 - §1030 — GitHub's next step after a connect is a tray, and watching stands in the room (amended by §1031)
 - §1031 — GitHub's watch verb is a TILE, last in the grid, as Reminders' New is (part superseded by §1121)
 - §1032 — An account page's commit is a check INSIDE the well, where Paste is
@@ -1523,7 +1523,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1147 — A renamed app's records take its current name and merge into one
 - §1148 — A catalogue row says something only when its name can't
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
-- §1150 — Calendars counts every calendar Casberi reads
+- §1150 — Calendars counts every calendar Casberi reads (amended by §1588)
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
 - §1152 — Home is by category, in your dock order (amended by §1156, §1207)
 - §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind (amended by §1171)
@@ -1679,7 +1679,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1289 — A watched row's alert is one tray: tap to change or delete, one field to add (amends §1081's menu and §1250's custom…
 - §1290 — Following's rows, tightened: the line under its name, a line on every row, one coloured figure (amends §1081, §1230 i…
 - §1291 — Track keeps your search: a row you tracked from a search stays in view, ticked (amends §1164)
-- §1292 — Add from where you land: a plus on Sources' counts (amends §1164 item 5, §1166 item 6, §1265, §1274)
+- §1292 — Add from where you land: a plus on Sources' counts (amends §1164 item 5, §1166 item 6, §1265, §1274) (amended by §1588)
 - §1293 — Every Feed section adds from its header, and Following leaves it (amends §1251, §1292) [+1 sub-entries]
 - §1294 — Search in the band is a disc beside the Wallet (amends §1209a item 1, §1280)
 - §1295 — Search sits with the face in one glass pill (amends §1294)
@@ -1771,7 +1771,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links
 - §1386 — The seams of the audit week: one More row, one Add, one section gap, a pinned header for the pill, one row in Day, th…
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
-- §1388 — Where no name stands beside it, a wallet's face says who; the counts box takes one gutter and a card gets its add (am… (amended by §1487)
+- §1388 — Where no name stands beside it, a wallet's face says who; the counts box takes one gutter and a card gets its add (am… (amended by §1487, §1588)
 - §1389 — The Holdings map is not painted and leads with the money; Exit demo stands on the title's line (amends §1081's fill r…
 - §1390 — In a counts box the name leads and the count trails (amends §1180's figure column, §1166's "each figure and its whole…
 - §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a…
@@ -1970,6 +1970,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a…
+- §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 
 ## Dead rulings → what replaced them (generated)
 

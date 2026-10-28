@@ -3893,7 +3893,7 @@ struct MoveSentence: View {
                             // "can't tell", never as landed (§83).
                             if f.receipt == nil, f.nonceMoved == true {
                                 withAnimation(DS.Motion.standard) {
-                                    receipt?.detail = String(localized: "Went through · check Activity before sending again")
+                                    receipt?.detail = String(localized: "Went through · check your activity before sending again")
                                 }
                                 return
                             }
