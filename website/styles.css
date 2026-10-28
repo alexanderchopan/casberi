@@ -2163,5 +2163,3 @@ body { overflow-x: clip; }
 .private-money { max-width: 1040px; margin: 0 auto; text-align: center; }
 .private-money .m-h2 { margin-left: auto; margin-right: auto; margin-bottom: 26px; }
 .private-money .showreel { margin-top: 0; }
-.hero-keep { text-wrap: balance; }
-@media (max-width: 560px) { .hero-keep .kb { display: none; } }
