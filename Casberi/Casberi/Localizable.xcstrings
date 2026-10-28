@@ -6912,6 +6912,34 @@
         }
       }
     },
+    "%@ is connected" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está conectado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を接続しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 연결됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 已连接"
+          }
+        }
+      }
+    },
     "%@ is connected." : {
       "localizations" : {
         "es" : {
@@ -9162,6 +9190,40 @@
         }
       }
     },
+    "%@ of round-ups bought %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of round-ups bought %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ de redondeos compraron %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端数 %1$@ で %2$@ を購入しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잔돈 %1$@으로 %2$@ 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "零钱 %1$@ 买入了 %2$@"
+          }
+        }
+      }
+    },
     "%@ of round-ups buys %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -11106,6 +11168,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 零钱存入私密"
+          }
+        }
+      }
+    },
+    "%@ rounded up · %@ toward %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ rounded up · %2$@ toward %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ redondeado · %2$@ para %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ を切り上げ · %3$@ まで %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 올림 · %3$@까지 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向上取整 %1$@ · 累计 %2$@ 用于 %3$@"
           }
         }
       }
@@ -26436,6 +26532,40 @@
         }
       }
     },
+    "%lld of about %lld seconds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of about %2$lld seconds"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de unos %2$lld segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "約 %2$lld 秒中 %1$lld 秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "약 %2$lld초 중 %1$lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / 约 %2$lld 秒"
+          }
+        }
+      }
+    },
     "%lld of these months had no recurring subject." : {
       "localizations" : {
         "es" : {
@@ -28669,6 +28799,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这里有 %lld 张截屏"
+          }
+        }
+      }
+    },
+    "%lld seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 秒"
           }
         }
       }
@@ -48866,6 +49024,34 @@
         }
       }
     },
+    "All seen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo visto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて確認済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모두 확인함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已全部查看"
+          }
+        }
+      }
+    },
     "All through Tor" : {
       "localizations" : {
         "es" : {
@@ -61084,6 +61270,34 @@
         }
       }
     },
+    "Casberi none" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi none"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi none"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi none"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi none"
+          }
+        }
+      }
+    },
     "Casberi note" : {
       "localizations" : {
         "es" : {
@@ -67407,6 +67621,34 @@
         }
       }
     },
+    "Copy approval and renewal" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar aprobación y renovación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "承認と更新をコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "승인 및 갱신 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制授权和续费"
+          }
+        }
+      }
+    },
     "Copy calldata" : {
       "localizations" : {
         "es" : {
@@ -69898,6 +70140,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 NerdWallet — 请检查网络。"
+          }
+        }
+      }
+    },
+    "Couldn't reach OpenRouter to finish signing in — try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo contactar con OpenRouter para terminar de iniciar sesión. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サインインを完了するために OpenRouter に接続できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인을 마치기 위해 OpenRouter에 연결할 수 없습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接 OpenRouter 完成登录，请重试。"
           }
         }
       }
@@ -84103,6 +84373,34 @@
         }
       }
     },
+    "Fee %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comisión %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手数料 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수수료 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "费用 %@"
+          }
+        }
+      }
+    },
     "Fee to revoke" : {
       "localizations" : {
         "es" : {
@@ -84217,6 +84515,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "手续费最多 %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Fee ≈ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fee ≈ %1$@ %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comisión ≈ %1$@ %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手数料 ≈ %1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수수료 ≈ %1$@ %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "费用 ≈ %1$@ %2$@"
           }
         }
       }
@@ -91610,6 +91942,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在获取你的代码…"
+          }
+        }
+      }
+    },
+    "Getting your key from OpenRouter…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obteniendo tu clave de OpenRouter…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter からキーを取得中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter에서 키를 받는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在从 OpenRouter 获取你的密钥…"
           }
         }
       }
@@ -103857,6 +104217,34 @@
         }
       }
     },
+    "Looking up %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscando %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を検索中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 찾는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在查找 %@"
+          }
+        }
+      }
+    },
     "Looking up %@…" : {
       "localizations" : {
         "es" : {
@@ -105344,6 +105732,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "3月"
+          }
+        }
+      }
+    },
+    "Mark as seen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar como visto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認済みにする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인함으로 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标记为已查看"
           }
         }
       }
@@ -108995,6 +109411,34 @@
         }
       }
     },
+    "Moving to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moviendo a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ へ移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@(으)로 이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在转到 %@"
+          }
+        }
+      }
+    },
     "Moving…" : {
       "localizations" : {
         "es" : {
@@ -110115,6 +110559,34 @@
         }
       }
     },
+    "Named %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombrado %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ と名付けました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@(으)로 이름 지정함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已命名为 %@"
+          }
+        }
+      }
+    },
     "Named · %lld" : {
       "localizations" : {
         "es" : {
@@ -110762,6 +111234,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "网络手续费"
+          }
+        }
+      }
+    },
+    "Network under a cent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Red: menos de un centavo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネットワーク料 1 セント未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네트워크 수수료 1센트 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络费不到 1 美分"
+          }
+        }
+      }
+    },
+    "Network up to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Red: hasta %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネットワーク料 最大 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네트워크 수수료 최대 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络费最多 %@"
           }
         }
       }
@@ -112344,6 +112872,34 @@
         }
       }
     },
+    "Next time it is one tap in To." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La próxima vez es un toque en Para."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回からは「宛先」でワンタップです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음에는 받는 사람에서 한 번만 탭하면 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下次在“收款人”中轻点一下即可。"
+          }
+        }
+      }
+    },
     "Next week" : {
       "localizations" : {
         "es" : {
@@ -113158,6 +113714,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目前在你的链上未找到活动记录——请再次核对地址，或稍等片刻。"
+          }
+        }
+      }
+    },
+    "No address answers to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ninguna dirección responde a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ に対応するアドレスがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 해당하는 주소가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有地址对应 %@"
           }
         }
       }
@@ -119468,6 +120052,62 @@
         }
       }
     },
+    "Not verified by Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No verificado por Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay で未確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay에서 확인되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未经 Relay 验证"
+          }
+        }
+      }
+    },
+    "Not verified by Relay." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No verificado por Relay."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay で未確認です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay에서 확인되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未经 Relay 验证。"
+          }
+        }
+      }
+    },
     "Not watched · Watch it" : {
       "localizations" : {
         "es" : {
@@ -125536,6 +126176,34 @@
         }
       }
     },
+    "Older transactions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transacciones anteriores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前の取引"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이전 거래"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更早的交易"
+          }
+        }
+      }
+    },
     "Oldest still here" : {
       "localizations" : {
         "es" : {
@@ -129786,6 +130454,34 @@
         }
       }
     },
+    "OpenRouter didn't hand over a key — nothing was connected." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter no entregó una clave; no se conectó nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter からキーが渡されませんでした。何も接続されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter에서 키를 받지 못해 아무것도 연결되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter 未提供密钥，未连接任何内容。"
+          }
+        }
+      }
+    },
     "OpenRouter routes around anyone who stores or trains on it. A model nobody will serve that way can't answer at all — you'll be told which." : {
       "localizations" : {
         "es" : {
@@ -132739,6 +133435,62 @@
         }
       }
     },
+    "Paid in %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagado en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ で支払い。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@(으)로 결제."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以 %@ 支付。"
+          }
+        }
+      }
+    },
+    "Paid in %@. Your wallet first approves exactly this amount for ENS, then renews." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagado en %@. Tu billetera primero aprueba exactamente este importe para ENS y luego renueva."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ で支払い。ウォレットはまず ENS にこの金額ちょうどを承認し、その後更新します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@(으)로 결제. 지갑이 먼저 ENS에 정확히 이 금액을 승인한 뒤 갱신합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以 %@ 支付。你的钱包会先为 ENS 授权恰好这笔金额，然后续费。"
+          }
+        }
+      }
+    },
     "Paid in Wallet" : {
       "localizations" : {
         "es" : {
@@ -135514,6 +136266,34 @@
         }
       }
     },
+    "Pays less than Relay quoted" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paga menos de lo que Relay cotizó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay の見積もりより少ない支払い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay 견적보다 적게 지급"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "低于 Relay 的报价"
+          }
+        }
+      }
+    },
     "Pays less than the exchange quoted" : {
       "localizations" : {
         "es" : {
@@ -137874,6 +138654,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "预订"
+          }
+        }
+      }
+    },
+    "Prefer a key by hand?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Prefieres una clave manual?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを手動で入力しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키를 직접 입력하시겠어요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想手动输入密钥？"
           }
         }
       }
@@ -146514,6 +147322,68 @@
         }
       }
     },
+    "Relay %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %@"
+          }
+        }
+      }
+    },
+    "Relay %@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Relay %1$@ (%2$@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %1$@ (%2$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %1$@（%2$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %1$@ (%2$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay %1$@（%2$@）"
+          }
+        }
+      }
+    },
     "Relay asked for something other than this swap, so nothing was signed" : {
       "localizations" : {
         "es" : {
@@ -146762,6 +147632,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Relay 未为来自 %2$@ 的 %1$@ 开设地址"
+          }
+        }
+      }
+    },
+    "Relay's route would pay less than it quoted, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La ruta de Relay pagaría menos de lo cotizado, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay の経路では見積もりより少なく支払われるため、何も署名されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay 경로가 견적보다 적게 지급되어 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay 的路线支付会低于报价，因此未签署任何内容"
           }
         }
       }
@@ -154116,6 +155014,34 @@
         }
       }
     },
+    "Scan with …%@ in its wallet, then approve." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escanea con …%@ en su billetera y luego aprueba."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "…%@ のウォレットでスキャンして承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "…%@ 지갑으로 스캔한 다음 승인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 …%@ 的钱包扫描，然后批准。"
+          }
+        }
+      }
+    },
     "Scanned" : {
       "localizations" : {
         "es" : {
@@ -160979,6 +161905,34 @@
         }
       }
     },
+    "Sign in to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iniciar sesión en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录 %@"
+          }
+        }
+      }
+    },
     "Sign in to %@ as your Safe." : {
       "localizations" : {
         "es" : {
@@ -161143,6 +162097,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "登录 Instagram"
+          }
+        }
+      }
+    },
+    "Sign in to OpenRouter" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Iniciar sesión en OpenRouter"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录 OpenRouter"
           }
         }
       }
@@ -161619,6 +162601,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "登录已取消 — 未连接任何内容。"
+          }
+        }
+      }
+    },
+    "Sign-in didn't finish — nothing was connected." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El inicio de sesión no terminó; no se conectó nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サインインが完了しませんでした。何も接続されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인이 완료되지 않아 아무것도 연결되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录未完成，未连接任何内容。"
           }
         }
       }
@@ -166315,6 +167325,34 @@
         }
       }
     },
+    "Steam signed you in, but didn't hand over your games — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steam inició tu sesión, pero no entregó tus juegos. Inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steam にサインインしましたが、ゲームが渡されませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steam에 로그인했지만 게임 목록을 받지 못했습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steam 已让你登录，但未提供你的游戏，请稍后重试。"
+          }
+        }
+      }
+    },
     "Step" : {
       "localizations" : {
         "es" : {
@@ -168253,6 +169291,34 @@
         }
       }
     },
+    "Subscribed to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suscrito a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を購読しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 구독함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已订阅 %@"
+          }
+        }
+      }
+    },
     "Subscription" : {
       "localizations" : {
         "es" : {
@@ -168897,6 +169963,40 @@
         }
       }
     },
+    "Swaps %@ %@ for at least %@ %@ through Relay" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Swaps %1$@ %2$@ for at least %3$@ %4$@ through Relay"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia %1$@ %2$@ por al menos %3$@ %4$@ a través de Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay 経由で %1$@ %2$@ を少なくとも %3$@ %4$@ に交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relay를 통해 %1$@ %2$@을(를) 최소 %3$@ %4$@(으)로 교환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 Relay 将 %1$@ %2$@ 兑换为至少 %3$@ %4$@"
+          }
+        }
+      }
+    },
     "Swaps %@ %@ of round-ups for at least %@ %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -169089,6 +170189,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "清扫低于 $%lld 的资产"
+          }
+        }
+      }
+    },
+    "Swept" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barrido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スイープ済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정리함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已清扫"
           }
         }
       }
@@ -171529,6 +172657,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这不是 LEZ 账户或密钥，可能是 Logos 聊天地址。"
+          }
+        }
+      }
+    },
+    "That isn't an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eso no es una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "それはアドレスではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주소가 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是地址"
           }
         }
       }
@@ -183087,6 +184243,34 @@
         }
       }
     },
+    "Top-ups need a phone number, which Buy can't send yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las recargas necesitan un número de teléfono, que Comprar aún no puede enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャージには電話番号が必要ですが、購入ではまだ送信できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "충전에는 전화번호가 필요하지만 구매에서는 아직 보낼 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "充值需要电话号码，而“购买”暂时无法发送"
+          }
+        }
+      }
+    },
     "Top-ups need a phone number: a later pass" : {
       "localizations" : {
         "es" : {
@@ -186195,6 +187379,34 @@
         }
       }
     },
+    "Unsubscribed from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelaste la suscripción a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ の購読を解除しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 구독 취소함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取消订阅 %@"
+          }
+        }
+      }
+    },
     "Untick %@" : {
       "localizations" : {
         "es" : {
@@ -186813,6 +188025,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用 Casberi 的列表"
+          }
+        }
+      }
+    },
+    "Use all %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use all %1$@ %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar todo: %1$@ %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて使う：%1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모두 사용: %1$@ %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部使用 %1$@ %2$@"
           }
         }
       }
@@ -193319,6 +194565,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "支出 · %@"
+          }
+        }
+      }
+    },
+    "Went through · check your activity before sending again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se completó · revisa tu actividad antes de volver a enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了しました · 再送する前にアクティビティを確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처리됨 · 다시 보내기 전에 활동을 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成 · 再次发送前请查看你的活动"
           }
         }
       }
@@ -208789,6 +210063,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包创下新高 📈"
+          }
+        }
+      }
+    },
+    "Your wallet holds less than this in USDC or DAI, so the renewal would fail." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera tiene menos que esto en USDC o DAI, así que la renovación fallaría."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォレットの USDC または DAI がこの金額に足りないため、更新は失敗します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지갑의 USDC 또는 DAI가 이 금액보다 적어 갱신이 실패합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包中 USDC 或 DAI 少于此金额，因此续费会失败。"
           }
         }
       }
