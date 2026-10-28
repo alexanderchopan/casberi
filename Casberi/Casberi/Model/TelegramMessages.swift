@@ -27,6 +27,14 @@ enum TelegramMessages {
     /// file's, and "Remove import" removes it.
     static let refPrefix = "telegram:dm:"
 
+    /// A person's public photo, by username: Telegram's own redirect to its
+    /// CDN (`telesco.pe`), keyless, and a 404 for anyone without a public
+    /// username or photo — the row then keeps the Telegram mark. TDLib's own
+    /// photos are files on this device, which no other device of yours has.
+    static func face(handle: String) -> String {
+        "https://t.me/i/userpic/320/\(handle).jpg"
+    }
+
     /// Telegram's service notifications — login codes among them.
     static let serviceUserID: Int64 = 777000
 
@@ -175,7 +183,8 @@ enum TelegramMessages {
             id: String(chatID),
             title: title,
             handle: handle,
-            avatar: nil,
+            // A one-to-one's face; a group keeps the source mark (§707).
+            avatar: handle.map(face(handle:)),
             isGroup: kind == .group,
             lines: lines.sorted { $0.at < $1.at })
     }

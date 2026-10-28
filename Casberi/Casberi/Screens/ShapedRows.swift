@@ -403,6 +403,13 @@ struct BandRow: View {
     ]
 
     private var identityAvatarURL: String? {
+        // A Telegram chat with one person leads with their face (prd §1575),
+        // never the channel mark below. Read off the handle the row already
+        // holds, so a conversation landed before faces has one too.
+        if thing.source == "Telegram",
+           thing.sourceRef?.hasPrefix(TelegramMessages.refPrefix) == true {
+            return thing.authorHandle.map(TelegramMessages.face(handle:))
+        }
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
         return Self.faceSources.contains(thing.source) ? avatar : nil
     }

@@ -41,6 +41,8 @@ code "$REFRESH" | grep -F 'if TelegramClient.signedIn, LiveMessages.reads(.teleg
   || { echo "✗ the sweep no longer gates on sign-in and the switch — it would start TDLib for everyone"; exit 1; }
 code "$READ" | grep -F 'LiveMessagesLanding.land(' >/dev/null \
   || { echo "✗ the Telegram read no longer lands through LiveMessagesLanding"; exit 1; }
+grep -F 'thing.sourceRef?.hasPrefix(TelegramMessages.refPrefix)' Casberi/Casberi/Screens/ShapedRows.swift >/dev/null \
+  || { echo "✗ a Telegram chat row no longer leads with the person's face — it draws the channel mark"; exit 1; }
 code "$THING" | grep -F '"Telegram": ["telegram:post:", "telegram:dm:"]' >/dev/null \
   || { echo "✗ telegram:dm: is not a live prefix — chats stay out of All and \"Remove import\" deletes them"; exit 1; }
 # Reading never marks anything read, and this seat never writes.
@@ -137,6 +139,7 @@ let one = TelegramMessages.conversation(chat: ana, messages: [
 ], users: users, me: me)
 check(one?.id == "20" && one?.title == "Messages with Ana Lima" && one?.handle == "ana" && one?.isGroup == false,
       "a one-to-one by the person's name and handle")
+check(one?.avatar == "https://t.me/i/userpic/320/ana.jpg", "a one-to-one's face is the person's public photo, by username")
 check(one?.lines.map(\.text) == ["dinner? at Rosa's", "You: see you at 8"],
       "oldest first, theirs unnamed, yours You, a service line and a repeat dropped")
 check(one?.lines.first?.at == Date(timeIntervalSince1970: 1_757_890_000), "TDLib's seconds read as seconds")
@@ -150,8 +153,11 @@ let climbing = TelegramMessages.conversation(chat: group, messages: [
     message(1, 1_757_890_000, from: 30, text("Saturday?")),
     obj(#"{"id":3,"date":1757890120,"is_outgoing":false,"sender_id":{"@type":"messageSenderChat","chat_id":-1002},"content":\#(text("pinned the plan"))}"#),
 ], users: users, chatTitles: [-1002: "News"], me: me)
-check(climbing?.title == "Messages in Climbing" && climbing?.isGroup == true && climbing?.handle == nil,
-      "a group by its title, no face")
+check(climbing?.title == "Messages in Climbing" && climbing?.isGroup == true && climbing?.handle == nil
+      && climbing?.avatar == nil, "a group by its title, no face")
+let nameless = TelegramMessages.conversation(chat: chat(30, #"{"@type":"chatTypePrivate","user_id":30}"#, title: "Bo"),
+    messages: [message(1, 1_757_890_000, from: 30, text("hey"))], users: users, me: me)
+check(nameless?.avatar == nil, "no username, no face — never a guessed URL")
 check(climbing?.lines.map(\.text) == ["Bo: Saturday?", "You: in", "News: pinned the plan"],
       "members by name, yours You, a chat sender by its title")
 check(TelegramMessages.conversation(chat: group, messages: [

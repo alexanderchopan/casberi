@@ -754,7 +754,7 @@ enum NetworkReach {
 
         Endpoint(service: "Telegram",
                  reach: .whenConnected(bridge: "Telegram"),
-                 purpose: "Reads the public channels you follow, from each channel's own public page. The export import reads a file and reaches nothing.",
+                 purpose: "Reads the public channels you follow, from each channel's own public page, and once you read your chats, the public photo of each person you talk to who has a username. The export import reads a file and reaches nothing.",
                  hosts: ["t.me", "telesco.pe"]),
         // Your chats (prd §1575): TDLib, Telegram's own library, signed in as
         // you. It speaks MTProto to Telegram's data centres BY ADDRESS, so

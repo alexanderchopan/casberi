@@ -54814,6 +54814,34 @@
         }
       }
     },
+    "Audio" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Audio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オーディオ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오디오"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "音频"
+          }
+        }
+      }
+    },
     "August" : {
       "localizations" : {
         "es" : {
@@ -61168,6 +61196,34 @@
         }
       }
     },
+    "Casberi reads your chats on this device and never sends a message." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi lee tus chats en este dispositivo y nunca envía un mensaje."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi はこのデバイス上でチャットを読み取り、メッセージを送信することはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi는 이 기기에서 채팅을 읽으며 메시지를 보내지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 在此设备上读取你的聊天，绝不发送消息。"
+          }
+        }
+      }
+    },
     "Casberi settings" : {
       "localizations" : {
         "es" : {
@@ -64628,6 +64684,34 @@
         }
       }
     },
+    "Code" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Código"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "验证码"
+          }
+        }
+      }
+    },
     "Code for the new address" : {
       "localizations" : {
         "es" : {
@@ -66507,6 +66591,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在连接"
+          }
+        }
+      }
+    },
+    "Connecting to Telegram…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectando con Telegram…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram に接続中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에 연결 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在连接 Telegram…"
           }
         }
       }
@@ -70294,6 +70406,34 @@
         }
       }
     },
+    "Couldn't reach Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram に接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Telegram"
+          }
+        }
+      }
+    },
     "Couldn't reach Telegram to play this." : {
       "localizations" : {
         "es" : {
@@ -71808,6 +71948,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法从你的 Observer 读取此对话。"
+          }
+        }
+      }
+    },
+    "Couldn't read this device's Telegram key. Try again later." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer la clave de Telegram de este dispositivo. Inténtalo más tarde."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスの Telegram キーを読み取れませんでした。後でもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기의 Telegram 키를 읽을 수 없습니다. 나중에 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取此设备的 Telegram 密钥。请稍后再试。"
           }
         }
       }
@@ -78752,6 +78920,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入任意域名（casberi.app 即可）并复制密钥。"
+          }
+        }
+      }
+    },
+    "Enter the code Telegram emailed you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Introduce el código que Telegram te envió por correo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram からメールで届いたコードを入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 이메일로 보낸 코드를 입력하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "输入 Telegram 通过邮件发送给你的验证码。"
+          }
+        }
+      }
+    },
+    "Enter the code Telegram sent to %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Introduce el código que Telegram envió a %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram が %@ に送信したコードを入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 %@(으)로 보낸 코드를 입력하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "输入 Telegram 发送到 %@ 的验证码。"
+          }
+        }
+      }
+    },
+    "Enter the code Telegram sent you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Introduce el código que te envió Telegram."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram から届いたコードを入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 보낸 코드를 입력하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "输入 Telegram 发送给你的验证码。"
           }
         }
       }
@@ -103063,6 +103315,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "加载中…"
+          }
+        }
+      }
+    },
+    "Location" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ubicación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "位置情報"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "位置"
           }
         }
       }
@@ -135690,6 +135970,34 @@
         }
       }
     },
+    "Phone number, with country code" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Número de teléfono, con prefijo del país"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "電話番号（国番号付き）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전화번호(국가 코드 포함)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手机号码（含国家代码）"
+          }
+        }
+      }
+    },
     "Photo" : {
       "localizations" : {
         "es" : {
@@ -137061,6 +137369,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Polar 未接受该令牌。请确认你完整复制了它，并且它是生产环境令牌而非沙盒令牌。"
+          }
+        }
+      }
+    },
+    "Poll" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encuesta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投票"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "투표"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投票"
+          }
+        }
+      }
+    },
+    "Poll: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encuesta: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投票: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "투표: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投票：%@"
           }
         }
       }
@@ -153045,6 +153409,34 @@
         }
       }
     },
+    "Saved Messages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensajes guardados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存済みメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저장된 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收藏夹"
+          }
+        }
+      }
+    },
     "Saved to Casberi" : {
       "localizations" : {
         "es" : {
@@ -155604,6 +155996,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "两笔都发送"
+          }
+        }
+      }
+    },
+    "Send code" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar código"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コードを送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코드 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送验证码"
           }
         }
       }
@@ -160699,6 +161119,34 @@
         }
       }
     },
+    "Sign in to Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar sesión en Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Telegram"
+          }
+        }
+      }
+    },
     "Sign in to Threads" : {
       "localizations" : {
         "es" : {
@@ -160863,6 +161311,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用 GitHub 登录 — 或粘贴令牌 — 你选择的信息源以及你关注的任何仓库都会持续到达。这里的关注是私密的。"
+          }
+        }
+      }
+    },
+    "Sign out of Telegram" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cerrar sesión de Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram からサインアウト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에서 로그아웃"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出 Telegram"
           }
         }
       }
@@ -165873,6 +166349,34 @@
         }
       }
     },
+    "Sticker" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sticker"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スタンプ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스티커"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "贴纸"
+          }
+        }
+      }
+    },
     "Still active — %@ can manage this collection" : {
       "localizations" : {
         "es" : {
@@ -169236,6 +169740,90 @@
         }
       }
     },
+    "Telegram asks for a login email for this account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram pide un correo de inicio de sesión para esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram はこのアカウントのログイン用メールを求めています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 이 계정의 로그인 이메일을 요청합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram 要求为此账户设置登录邮箱。"
+          }
+        }
+      }
+    },
+    "Telegram didn't answer. Close and try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram no respondió. Cierra e inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram から応答がありません。閉じてもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 응답하지 않았습니다. 닫고 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram 没有响应。请关闭后重试。"
+          }
+        }
+      }
+    },
+    "Telegram ended this sign-in. Close and try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram terminó este inicio de sesión. Cierra e inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram がこのサインインを終了しました。閉じてもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 이 로그인을 종료했습니다. 닫고 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram 已结束此次登录。请关闭后重试。"
+          }
+        }
+      }
+    },
     "Telegram plays this video only in its app." : {
       "localizations" : {
         "es" : {
@@ -169260,6 +169848,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此视频只能在 Telegram 应用中播放。"
+          }
+        }
+      }
+    },
+    "Telegram wants a pause. Try again later." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram pide una pausa. Inténtalo más tarde."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram から待機を求められています。後でもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram이 잠시 기다리라고 합니다. 나중에 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram 要求稍等。请稍后再试。"
           }
         }
       }
@@ -169825,6 +170441,62 @@
         }
       }
     },
+    "That code expired. Close and sign in again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese código caducó. Cierra e inicia sesión de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコードは期限切れです。閉じてもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코드가 만료되었습니다. 닫고 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该验证码已过期。请关闭后重新登录。"
+          }
+        }
+      }
+    },
+    "That code isn't right." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese código no es correcto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コードが正しくありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코드가 올바르지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "验证码不正确。"
+          }
+        }
+      }
+    },
     "That code wasn't approved in time — tap Connect for a fresh one." : {
       "localizations" : {
         "es" : {
@@ -170157,6 +170829,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这看起来不像地址。"
+          }
+        }
+      }
+    },
+    "That email isn't valid." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese correo no es válido."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのメールアドレスは無効です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이메일이 유효하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该邮箱无效。"
           }
         }
       }
@@ -171085,6 +171785,34 @@
         }
       }
     },
+    "That number isn't valid. Start with + and the country code." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese número no es válido. Empieza con + y el prefijo del país."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "その番号は無効です。+ と国番号から入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "번호가 유효하지 않습니다. +와 국가 코드로 시작하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该号码无效。请以 + 和国家代码开头。"
+          }
+        }
+      }
+    },
     "That one's yours" : {
       "localizations" : {
         "es" : {
@@ -171165,6 +171893,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "该配对码已被使用。请在 Observer 上生成新的配对码。"
+          }
+        }
+      }
+    },
+    "That password isn't right." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa contraseña no es correcta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パスワードが正しくありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비밀번호가 올바르지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "密码不正确。"
           }
         }
       }
@@ -179474,6 +180230,34 @@
         }
       }
     },
+    "This number has no Telegram account. Make one in Telegram first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este número no tiene cuenta de Telegram. Crea una en Telegram primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この番号には Telegram アカウントがありません。先に Telegram で作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 번호에는 Telegram 계정이 없습니다. 먼저 Telegram에서 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此号码没有 Telegram 账户。请先在 Telegram 中创建。"
+          }
+        }
+      }
+    },
     "This one" : {
       "localizations" : {
         "es" : {
@@ -186707,6 +187491,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "视频"
+          }
+        }
+      }
+    },
+    "Video message" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Videomensaje"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ビデオメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "동영상 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "视频消息"
           }
         }
       }
@@ -207612,6 +208424,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "轮到你了"
+          }
+        }
+      }
+    },
+    "Your two-step password, set in Telegram." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu contraseña de verificación en dos pasos, configurada en Telegram."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram で設定した2段階認証のパスワード。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram에서 설정한 2단계 인증 비밀번호."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 Telegram 中设置的两步验证密码。"
+          }
+        }
+      }
+    },
+    "Your two-step password. Your hint: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu contraseña de verificación en dos pasos. Tu pista: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2段階認証のパスワード。ヒント: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2단계 인증 비밀번호. 힌트: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的两步验证密码。提示：%@"
           }
         }
       }
@@ -230151,6 +231019,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 %@ 余额现在会计入钱包。"
+          }
+        }
+      }
+    },
+    "your Telegram app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu app de Telegram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram アプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Telegram 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Telegram 应用"
           }
         }
       }

@@ -21,12 +21,17 @@
 set -euo pipefail
 
 TDLIB_COMMIT=4c6377aa7386c39217878a9a56d581922ad37ca4
+# Built for SIZE, not speed: -Os took the iPhone binary from 34.6 MB to
+# 28.4 MB installed and the download from 11.5 MB to 9.4 MB (measured, prd
+# §1575), and a library that reads chats a few times an hour never notices.
+# Part of the cache key, so a change of flavour never reuses old slices.
+BUILD_TYPE=MinSizeRel
 # Upstream's own OpenSSL recipe pin (td/example/ios/build-openssl.sh).
 MIN_IOS=18.0
 JOBS=${TDLIB_JOBS:-4}
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
-CACHE=${TDLIB_CACHE:-$HOME/Library/Caches/casberi/tdlib}/$TDLIB_COMMIT
+CACHE=${TDLIB_CACHE:-$HOME/Library/Caches/casberi/tdlib}/$TDLIB_COMMIT-$BUILD_TYPE
 SRC=$CACHE/src
 XCF=$CACHE/TDJSON.xcframework
 LINK=$REPO/Vendor/TDLib/TDJSON.xcframework
@@ -106,7 +111,7 @@ build_slice() {
   local build=$CACHE/build-$slice
   [[ -f $CACHE/out/$slice/libTDJSON.a ]] && return
   say "building TDLib for $slice (the long part)"
-  cmake -S $SRC -B $build -DCMAKE_BUILD_TYPE=Release \
+  cmake -S $SRC -B $build -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
     -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$ssl/include \
     -DOPENSSL_CRYPTO_LIBRARY=$ssl/lib/libcrypto.a -DOPENSSL_SSL_LIBRARY=$ssl/lib/libssl.a \
     -DOPENSSL_LIBRARIES="$ssl/lib/libcrypto.a;$ssl/lib/libssl.a" \
