@@ -26,6 +26,11 @@ struct RocketMoneyScreen: View {
     @State private var cancelled = false
     @State private var showLogin = false
     @State private var harvestedThisCover = false
+    /// The next read is the first of a session this sign-in just captured.
+    /// Refused there, nothing was ever connected, so it is never "signed
+    /// you out" (§83): the web view can hand back a visitor's cookies when
+    /// the sign-in is left before it finishes.
+    @State private var firstReadOfSignIn = false
     @State private var reading = RocketMoneyIngest.lastReading
 
     @State private var sheet: AccountPageSheet?
@@ -134,6 +139,7 @@ struct RocketMoneyScreen: View {
 
     private func harvested() {
         harvestedThisCover = true
+        firstReadOfSignIn = true
         cancelled = false
         result = nil
         Task {
@@ -150,8 +156,13 @@ struct RocketMoneyScreen: View {
         syncing = false
         reading = RocketMoneyIngest.lastReading
 
+        let fresh = firstReadOfSignIn
+        firstReadOfSignIn = false
         guard let added else {
-            if reading.refused {
+            if reading.refused, fresh {
+                store.remove("rocketmoney")
+                result = .failed(String(localized: "Sign-in didn't finish — nothing was connected."))
+            } else if reading.refused {
                 result = .failed(String(localized: "Rocket Money signed you out — connect again."))
             } else {
                 result = .failed(String(localized: "Couldn't reach Rocket Money — try again in a moment."))
