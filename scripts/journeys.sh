@@ -90,6 +90,11 @@ if [[ -n "${JOURNEYS_APPS:-}" ]]; then
   print -l -- ${(s:,:)JOURNEYS_APPS} > "$CATALOG"
 fi
 
+# TDLib (prd §1575) is linked from the Mac-wide cache, never committed, so a
+# fresh worktree (nightly-mac.sh cuts one each night) has no framework until
+# this runs; without it the test build fails and no journey reports at all.
+"$ROOT/scripts/tdlib.sh" || { print -P "%F{red}✗ TDLib could not be linked (scripts/tdlib.sh)%f"; exit 1; }
+
 TEST_RUNNER_JOURNEYS_OUT="$OUT" TEST_RUNNER_JOURNEYS_CATALOG="$CATALOG" \
 TEST_RUNNER_JOURNEYS_SHEETS="$ROOT/scripts/sheet-sweep.json" TEST_RUNNER_JOURNEYS_SHEET_IDS="${JOURNEYS_SHEETS:-}" \
 "$ROOT/scripts/xcb.sh" \

@@ -60,6 +60,12 @@ def allowed(rel: str, lines: list, i: int) -> bool:
         return True
     if name == "SourcesLibrary.swift" and "SourcesFolderWords" in "\n".join(lines[max(0, i - 10):i]):
         return True
+    # A tray's own body (a sentence, its example, then the tray's control) is
+    # a paragraph inside the tray, not a list row: the stack opens directly
+    # inside `DSTray(...) {` (Round-ups, MoveSecurity.swift, prd §1578).
+    prev = next((l for l in reversed(lines[:i]) if l.strip()), "")
+    if "DSTray(" in prev:
+        return True
     return False
 
 
@@ -137,6 +143,10 @@ def self_test() -> bool:
     case("a gap of s1 is flagged", findings([("R.swift", SELF_TEST.replace("spacing: 2", "spacing: DS.Space.s1"))]), True)
     case("a 64pt head is flagged", findings([("R.swift", SELF_TEST.replace("minHeight: DSFeed.headHeight", "minHeight: 64"))]), True)
     case("a slab is allowed", findings([("DSSlab.swift", SELF_TEST.replace("spacing: 2", "spacing: 1"))]), False)
+    tray = SELF_TEST.replace("        HStack {", "        DSTray(title: \"T\", height: 420) {").replace("spacing: 2", "spacing: DS.Space.s3")
+    case("a tray's own body is allowed", findings([("R.swift", tray)]), False)
+    case("a row INSIDE a tray's body is still flagged",
+         findings([("R.swift", tray.replace("spacing: DS.Space.s3) {", "spacing: DS.Space.s3) {\n            VStack(alignment: .leading, spacing: 1) {\n                Text(\"A\").dsText(.body17)\n                Text(\"B\").dsText(.subhead12)\n            }", 1))]), True)
     good = ("static let rowPitch: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir",
             "static let height: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir")
     case("the two named pitches on the template's are clean", pitch_findings(*good), False)

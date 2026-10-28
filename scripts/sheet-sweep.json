@@ -155,7 +155,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:~, Contacts"
+     "tap": "button:^Contacts, "
     },
     {
      "tap": "button:^iCloud+, Monthly"
@@ -179,7 +179,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:~, Contacts"
+     "tap": "button:^Contacts, "
     },
     {
      "tap": "button:^Ana Kovač, "
@@ -203,7 +203,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:~, Mail lists"
+     "tap": "button:^Mail lists, "
     },
     {
      "tap": "button:^Uber Eats, "
@@ -227,7 +227,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:~, Media"
+     "tap": "button:^Media, "
     },
     {
      "tap": "button:^Hacker News, "
@@ -253,7 +253,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:~, Subscriptions"
+     "tap": "button:^Subscriptions, "
     },
     {
      "tap": "button:^Hulu, "
@@ -283,6 +283,9 @@
     },
     {
      "tap": "button:^Sam, "
+    },
+    {
+     "wait": 2
     },
     {
      "tap": "button:^Sent 0.15 ETH"
@@ -336,6 +339,9 @@
      "tap": "button:=Gemini"
     },
     {
+     "tap": "button:=Gemini settings"
+    },
+    {
      "tap": "button:^Add your Google key"
     }
    ],
@@ -361,6 +367,9 @@
     },
     {
      "tap": "button:=Gemini"
+    },
+    {
+     "tap": "button:=Gemini settings"
     },
     {
      "tap": "button:^Add your Google key"
@@ -399,6 +408,9 @@
      "tap": "button:=Stripe"
     },
     {
+     "tap": "button:=Stripe settings"
+    },
+    {
      "tap": "button:^Website"
     }
    ],
@@ -427,6 +439,9 @@
     },
     {
      "tap": "button:=ENS"
+    },
+    {
+     "tap": "button:=ENS settings"
     },
     {
      "swipeUp": 1
@@ -462,6 +477,9 @@
      "tap": "button:=Acorns"
     },
     {
+     "tap": "button:=Acorns settings"
+    },
+    {
      "tap": "button:^Track a subscription, Free"
     }
    ],
@@ -483,10 +501,16 @@
      "tap": "button:=Library"
     },
     {
+     "swipeUp": 1
+    },
+    {
      "tap": "button:^Media, "
     },
     {
      "tap": "button:=Walletbeat"
+    },
+    {
+     "tap": "button:=Walletbeat settings"
     },
     {
      "swipeUp": 2
@@ -523,6 +547,9 @@
      "tap": "button:=Acorns"
     },
     {
+     "tap": "button:=Acorns settings"
+    },
+    {
      "tap": "button:^Sign in"
     }
    ],
@@ -556,6 +583,9 @@
      "tap": "button:=Rocket Money"
     },
     {
+     "tap": "button:=Rocket Money settings"
+    },
+    {
      "tap": "button:^Sign in"
     }
    ],
@@ -580,10 +610,16 @@
      "tap": "button:=Library"
     },
     {
+     "swipeUp": 1
+    },
+    {
      "tap": "button:^Media, "
     },
     {
      "tap": "button:=Spotify"
+    },
+    {
+     "tap": "button:=Spotify settings"
     },
     {
      "tap": "button:^Sign in"
@@ -648,7 +684,7 @@
      "tap": "button:^Needs you. "
     },
     {
-     "tap": "button:~Needs attention · £200"
+     "tap": "button:~£200 → €235"
     }
    ],
    "anchor": "button:=Wise, Wise"
@@ -861,7 +897,7 @@
    ],
    "steps": [
     {
-     "wait": 2
+     "wait": 4
     },
     {
      "tap": "button:^Reorder,"
@@ -885,7 +921,7 @@
      "tap": "button:=Move"
     }
    ],
-   "anchor": "text:=Your account"
+   "anchor": "button:=Receive"
   },
   {
    "id": "person-by-link",
@@ -1289,6 +1325,9 @@
      "tap": "button:=Wallet"
     },
     {
+     "tap": "button:^Spending, "
+    },
+    {
      "tap": "button:^Subscriptions. "
     },
     {
@@ -1308,6 +1347,9 @@
    "steps": [
     {
      "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Spending, "
     },
     {
      "tap": "button:^Subscriptions. "
@@ -1331,7 +1373,7 @@
      "tap": "button:=Wallet"
     },
     {
-     "tap": "button:^Home, The line"
+     "tap": "button:^Activity, "
     },
     {
      "swipeUp": 5
@@ -1416,6 +1458,54 @@
    ],
    "anchor": "text:=Link something",
    "afterSwipe": "button:=Format"
+  },
+  {
+   "id": "your-account-round-ups",
+   "covers": [
+    "Screens/MoveSecurity.swift:roundUpsTray"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:=Account"
+    },
+    {
+     "tap": "button:^Round-ups"
+    }
+   ],
+   "anchor": "text:=Your spare change is saved privately in dollars, and earns interest."
+  },
+  {
+   "id": "your-account-co-signer",
+   "covers": [
+    "Screens/MoveSecurity.swift:coSignerTray"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:=Account"
+    },
+    {
+     "tap": "switch:=Co-signer required"
+    }
+   ],
+   "anchor": "text:=Require co-signer"
   }
  ],
  "exempt": [
@@ -1593,8 +1683,7 @@
    "why": "the document camera needs a camera; the simulator has none, so Attach offers no Scan there"
   },
   {
-   "covers": [
-   ],
+   "covers": [],
    "why": "NOT WALKED YET: a watched chart's Alert tile (prd §1363) raises the same price-alert tray Markets does; the journey to a demo chart sheet is not written (2026-10-16)"
   },
   {

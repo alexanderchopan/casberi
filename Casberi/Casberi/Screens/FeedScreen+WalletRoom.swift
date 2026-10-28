@@ -1423,6 +1423,10 @@ extension FeedScreen {
         // truncated the title to do so. The column stays for dollars.
         let trailing = !amount.dollars && amount.known && who.contains(thing.transferAmount ?? "\u{0}")
             ? "" : amount.text
+        // A folded app's row (a Wise transfer, prd §1067): no address, no
+        // card, no token, so its title is the fact and names no counterparty.
+        let folded = (thing.counterpartyAddress ?? "").isEmpty && !WalletCards.isSpend(thing)
+            && WalletFlow.parseAmount(thing.transferAmount ?? "").symbol.isEmpty && thing.source != "Wallet"
         Button {
             openThing(thing)
         } label: {
@@ -1477,7 +1481,11 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .dsHover()
         .modifier(rowEntrance(index))
-        .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(trailing)"))
+        // Read as drawn for a folded app's row, never "Sent to £200".
+        .accessibilityLabel(Text(verbatim: (folded
+            ? [who, line, trailing]
+            : ["\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who)", trailing])
+            .filter { !$0.isEmpty }.joined(separator: ", ")))
         .walletListRow()
     }
 

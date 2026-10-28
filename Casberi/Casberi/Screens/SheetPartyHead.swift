@@ -32,6 +32,7 @@ struct SheetPartyHead<Face: View>: View {
                     onFace()
                 } label: { face() }
                 .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(verbatim: name))
                 .dsHover()
             } else {
                 face()
