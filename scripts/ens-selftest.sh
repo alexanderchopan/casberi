@@ -85,13 +85,20 @@ done
 # ONE ladder. `ENSExpiry`'s title/cliff must come from `ENSName`, never a
 # second spelling — two ladders is how a wallet-found name and a followed name
 # disagree about where they stand.
-grep -q 'ENSName.title(name: name, expiry: expiry)' "$TMP/expiry.stripped" \
+grep -q 'ENSName.title(name: name, expiry: expiry, migrated: migrated)' "$TMP/expiry.stripped" \
   || { echo "✗ ENSExpiry no longer builds its title through ENSName — a second"; \
        echo "  wording is how the wallet room and the ENS room start disagreeing"; exit 1; }
-grep -q 'ENSName.nextCliff(expiry: expiry)' "$TMP/expiry.stripped" \
+grep -q 'ENSName.nextCliff(expiry: expiry, migrated: migrated)' "$TMP/expiry.stripped" \
   || { echo "✗ ENSExpiry no longer stamps dueAt from ENSName.nextCliff — a lapsed"; \
        echo "  name would sit overdue against its EXPIRY forever instead of stepping"; \
        echo "  to the next real cliff (grace ending)"; exit 1; }
+
+# ONE PARSE. The wallet half reads the metadata through `ENSName.facts`, so an
+# unmigrated name's v1 date and a migrated name's grace (prd §1585) reach both
+# rooms; a second parser would read the wire's ENSv2 date as the expiry.
+grep -q 'ENSName.facts(name: name, json:' "$TMP/expiry.stripped" \
+  || { echo "✗ ENSExpiry no longer parses through ENSName.facts — the wallet room"; \
+       echo "  would show an unmigrated name expiring 62 days after it stops working"; exit 1; }
 
 # ONE-NAME-ONE-ROW. `ENSExpiry` must stand down for a name the seat follows,
 # or the two halves land two rows counting down to the same moment.
@@ -233,10 +240,18 @@ check("exactly at the horizon boundary is expiring",
       ENSName.stage(expiry: ref.addingTimeInterval(Double(ENSName.horizonDays) * day), now: ref) == .expiring)
 check("one second past expiry is grace, not expiring",
       ENSName.stage(expiry: ref.addingTimeInterval(-1), now: ref) == .grace)
-check("59 days lapsed is still grace (under the 90-day window)",
+check("59 days lapsed is still grace (an unmigrated name's 90 days)",
       ENSName.stage(expiry: ref.addingTimeInterval(-59 * day), now: ref) == .grace)
 check("91 days lapsed is past grace — premium",
       ENSName.stage(expiry: ref.addingTimeInterval(-91 * day), now: ref) == .premium)
+// prd §1585, MEASURED 2026-10-28: a migrated name gets `ETHRegistrar`'s 28 days
+// from its ENSv2 expiry, an unmigrated one `ETHRenewerV1`'s 90 from its v1 one.
+check("a migrated name 26 days lapsed is still grace",
+      ENSName.stage(expiry: ref.addingTimeInterval(-26 * day), migrated: true, now: ref) == .grace)
+check("a migrated name 30 days lapsed is premium, not v1's 90-day grace",
+      ENSName.stage(expiry: ref.addingTimeInterval(-30 * day), migrated: true, now: ref) == .premium)
+check("the two windows are 90 and 28 days",
+      ENSName.graceDays(migrated: false) == 90 && ENSName.graceDays(migrated: true) == 28)
 // DERIVED FROM THE SHIPPED CONSTANTS, AND NEVER ON THE BOUNDARY ITSELF.
 // `graceDays + premiumDays` days lapsed IS the release moment, and the two
 // fixtures here used to spell it `91 + 20` — 111 days, exactly that moment.
@@ -250,7 +265,7 @@ check("91 days lapsed is past grace — premium",
 // So each fixture sits two days INSIDE the window it names, which no DST
 // shift can cross, and both are spelled from `ENSName`'s own constants so a
 // change to either one moves the fixtures with it.
-let releaseDay = Double(ENSName.graceDays + ENSName.premiumDays)
+let releaseDay = Double(ENSName.unmigratedGraceDays + ENSName.premiumDays)
 check("two days before the premium decays away it is still premium",
       ENSName.stage(expiry: ref.addingTimeInterval(-(releaseDay - 2) * day), now: ref) == .premium)
 check("two days after it, the name is released — the premium has decayed",
@@ -267,6 +282,9 @@ check("grace: the cliff is when grace ends, not the expiry that already passed",
 check("premium: the cliff is when the premium decays away",
       ENSName.nextCliff(expiry: ref.addingTimeInterval(-100 * day), now: ref)
         == ENSName.premiumEnd(expiry: ref.addingTimeInterval(-100 * day)))
+check("a migrated name's cliff steps on ITS grace",
+      ENSName.nextCliff(expiry: ref.addingTimeInterval(-10 * day), migrated: true, now: ref)
+        == ENSName.graceEnd(expiry: ref.addingTimeInterval(-10 * day), migrated: true))
 check("released: nothing is ahead — nil, not a stale date",
       ENSName.nextCliff(expiry: ref.addingTimeInterval(-200 * day), now: ref) == nil)
 check("unregistered: nothing is ahead",
@@ -331,6 +349,52 @@ check("not a dictionary at all yields nil", ENSName.facts(name: "x.eth", json: "
 check("a zero-valued expiry is dropped, never read as epoch zero",
       ENSName.facts(name: "x.eth",
                     json: ["attributes": [["trait_type": "Expiration Date", "value": 0.0]]])?.expiry == nil)
+
+// ── ENSv2's copy — the bonus and the re-stamped dates (prd §1585) ──────────
+print("\nENSv2's copy — not a renewal, not a registration")
+// vitalik.eth, measured 2026-10-28: v1 2464042424, ENSv2 2469399224.
+let v1Expiry = Date(timeIntervalSince1970: 2_464_042_424)
+let v2Expiry = Date(timeIntervalSince1970: 2_469_399_224)
+check("the measured 62-day move is ENSv2's bonus, not a renewal",
+      ENSName.isMigrationBonus(from: v1Expiry, to: v2Expiry))
+check("a one-year renewal is a renewal",
+      !ENSName.isMigrationBonus(from: v1Expiry, to: v1Expiry.addingTimeInterval(365 * day)))
+check("a renewal on top of the bonus is a renewal",
+      !ENSName.isMigrationBonus(from: v1Expiry, to: v2Expiry.addingTimeInterval(365 * day)))
+// The copy stamped vitalik.eth 2026-10-03 (read 2026-10-28); this is that day.
+let restamped: [String: Any] = [
+    "attributes": [
+        ["trait_type": "Created Date", "value": 1_791_001_680_000.0],
+        ["trait_type": "Registration Date", "value": 1_791_001_680_000.0],
+        ["trait_type": "Expiration Date", "value": 2_469_399_224_000.0],
+    ],
+]
+let copied = ENSName.facts(name: "vitalik.eth", json: restamped)
+check("a registration date ENSv2's copy stamped is dropped", copied?.registered == nil)
+check("a created date ENSv2's copy stamped is dropped", copied?.created == nil)
+check("with no Migration Status the wire's date is kept", copied?.expiry == v2Expiry)
+func status(_ value: String) -> [String: Any] {
+    ["attributes": [["trait_type": "Expiration Date", "value": 2_469_399_224_000.0],
+                    ["trait_type": "Migration Status", "value": value]]]
+}
+// vitalik.eth is "unmigrated"; ENS's Explorer shows Expires Jan 30, 2048 —
+// the v1 date, which the wire's ENSv2 date is 62 days past.
+let unmigrated = ENSName.facts(name: "vitalik.eth", json: status("unmigrated"))
+check("an unmigrated name expires on its v1 date", unmigrated?.expiry == v1Expiry)
+check("an unmigrated name is not migrated", unmigrated?.migrated == false)
+let migrated = ENSName.facts(name: "nick.eth", json: status("migrated"))
+check("a migrated name expires on the wire's ENSv2 date", migrated?.expiry == v2Expiry)
+check("a migrated name says so", migrated?.migrated == true)
+// Both end grace the same day (62 + 28 = 90): the moment anyone may register
+// the name does not depend on which date we show as its expiry.
+if let a = ENSName.graceEnd(expiry: v1Expiry, migrated: false),
+   let b = ENSName.graceEnd(expiry: v2Expiry, migrated: true) {
+    check("the two readings end grace on the same day", abs(a.timeIntervalSince(b)) < 2 * 3600)
+} else { check("the two readings end grace on the same day", false) }
+check("a name registered after activation keeps its date",
+      ENSName.facts(name: "x.eth", json: ["attributes": [
+          ["trait_type": "Registration Date", "value": 1_793_100_000_000.0]]])?.registered
+        == Date(timeIntervalSince1970: 1_793_100_000))
 
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
@@ -412,7 +476,7 @@ mutate "grace collapsed into active" \
 # 6. nextCliff returns the raw expiry through grace — a lapsed name sits
 #    overdue forever instead of stepping to when grace actually ends.
 mutate "nextCliff never advances past the expiry" \
-  'case .grace:            return graceEnd(expiry: expiry)' \
+  'case .grace:            return graceEnd(expiry: expiry, migrated: migrated)' \
   'case .grace:            return expiry'
 
 # 7. A released name still returns a cliff — a stale deadline for something
@@ -451,6 +515,29 @@ mutate "the metadata URL keyed by name" \
 mutate "the name hashed, not the label" \
   'return "0x" + Keccak256.hexString(Keccak256.hash(Array(label.utf8)))' \
   'return "0x" + Keccak256.hexString(Keccak256.hash(Array(name.utf8)))'
+
+# 13. v1's 90-day grace back — 62 days of "can still be renewed" about a name
+#     anyone may register (prd §1585).
+mutate "a migrated name given v1's 90-day grace" \
+  'static let migratedGraceDays = 28' \
+  'static let migratedGraceDays = 90'
+
+# 13b. The wire's ENSv2 date taken as an unmigrated name's expiry — it reads
+#      as working for 62 days after it stopped.
+mutate "an unmigrated name's v1 date not restored" \
+  'expiry: status == "unmigrated" ? wire?.addingTimeInterval(-migrationBonus) : wire,' \
+  'expiry: wire,'
+
+# 14. The bonus read as a renewal — "was renewed" on every followed name the
+#     day the stored v1 readings are read again.
+mutate "the migration bonus counts as a renewal" \
+  'abs(now.timeIntervalSince(was) - migrationBonus) < 60' \
+  'false'
+
+# 15. ENSv2's copy date kept as the term's start.
+mutate "a re-stamped registration date kept" \
+  'registered: date("Registration Date").flatMap { isReservationStamp($0) ? nil : $0 },' \
+  'registered: date("Registration Date"),'
 
 echo
 echo "✓ ens-selftest passed"

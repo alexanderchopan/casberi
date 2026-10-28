@@ -2797,7 +2797,7 @@ enum ProbeHooks {
                 guard !names.isEmpty else { NSLog("ensProbe: nothing followed"); return }
                 for name in names {
                     let reading = ENSState.reading(name)
-                    let stage = reading?.expiry.map { ENSName.stage(expiry: $0) }
+                    let stage = reading?.expiry.map { ENSName.stage(expiry: $0, migrated: reading?.isMigrated ?? false) }
                     NSLog("ensRow| %@ stage=%@ expiry=%@ registered=%@ unregistered=%@",
                           name,
                           stage.map { "\($0)" } ?? (reading?.unregistered == true ? "unregistered" : "unread"),

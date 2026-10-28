@@ -4,9 +4,11 @@ import SwiftUI
 /// §112 preparing surface, drawn. `ApprovalPrepareCard`'s shape with one
 /// difference that changes everything: **this one's transaction moves money.**
 ///
-/// Everything here is a read or a hand-off. The price and the fee are read
-/// live; the two doors go to ENS's own app (where the renewal actually
-/// happens) and to the pasteboard (the prepared transaction, for any wallet).
+/// Everything here is a read or a hand-off. The price, the balance, the
+/// allowance and the fee are read live; the two doors go to ENS's own app
+/// (where the renewal actually happens) and to the pasteboard (the prepared
+/// approval and renewal, for any wallet). Since ENSv2 the money is a
+/// stablecoin (prd §1585).
 /// No control on this card can spend anything, and the footer says so in the
 /// same words the rest of the app uses.
 ///
@@ -59,7 +61,8 @@ struct ENSRenewCard: View {
             }
             if let json = quote.transactionJSON {
                 DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
-                          label: copied ? "Copied" : "Copy renewal transaction") {
+                          label: copied ? "Copied"
+                              : quote.needsApproval ? "Copy approval and renewal" : "Copy renewal transaction") {
                     copy(json)
                 }
             }
@@ -76,9 +79,9 @@ struct ENSRenewCard: View {
     private var standingLine: String {
         guard let reading = ENSState.reading(quote.name), let expiry = reading.expiry
         else { return quote.name }
-        switch ENSName.stage(expiry: expiry) {
+        switch ENSName.stage(expiry: expiry, migrated: reading.isMigrated) {
         case .grace:
-            guard let end = ENSName.graceEnd(expiry: expiry) else { return quote.name }
+            guard let end = ENSName.graceEnd(expiry: expiry, migrated: reading.isMigrated) else { return quote.name }
             return String(localized: "Expired \(ENSName.dateWord(expiry)) — it can still be renewed until \(ENSName.dateWord(end)).")
         default:
             return String(localized: "Expires \(ENSName.dateWord(expiry)).")
@@ -108,24 +111,35 @@ struct ENSRenewCard: View {
         }
     }
 
-    /// The price, and the fact that it is a QUOTE. ENS prices in USD and
-    /// converts through an oracle at execution time, so this number drifts
-    /// between now and the signature — which is why `value` carries a buffer,
-    /// and why the line says "about" rather than stating a figure as fixed
-    /// (§83, on a screen where somebody is deciding to spend).
-    ///
-    /// The explanation sits under BOTH rows: the fee is a live read too.
+    /// The price, exact: ENSv2 prices in dollars at a fixed ratio per token,
+    /// so what is read here is what `renew` takes, with no "~" (§540's ETH
+    /// price drifted; this one cannot). The fee is still an estimate.
     private var priceTable: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSpecTable {
                 DSSpecRow(label: Text("Renewal"),
-                          value: Text(verbatim: "~" + ENSRenew.ethLine(quote.price.base)))
+                          value: Text(verbatim: ENSRenew.tokenLine(quote.amount, quote.token)))
                 if let fee = quote.feeLine {
                     DSSpecRow(label: Text("Network fee"), value: Text(verbatim: fee))
                 }
             }
-            DSFootnote("Priced in dollars and paid in ETH, so the exact amount moves. Your wallet sends a little over and ENS refunds the difference.")
+            DSFootnote(footnote)
         }
+    }
+
+    /// The one sentence under the price, and only the one that matters: a
+    /// shortfall first, because that renewal would revert after the approval
+    /// was paid for; then the approval, because it is a second signature
+    /// somebody did not expect; else what it is paid in.
+    private var footnote: Text {
+        let symbol = quote.token.symbol
+        if quote.covered == false {
+            return Text("Your wallet holds less than this in USDC or DAI, so the renewal would fail.")
+        }
+        if quote.needsApproval {
+            return Text("Paid in \(symbol). Your wallet first approves exactly this amount for ENS, then renews.")
+        }
+        return Text("Paid in \(symbol).")
     }
 
     // `doorRow` was HERE and is `DSDoorRow` (prd §560, 2026-09-01) — the third
@@ -147,12 +161,11 @@ struct ENSRenewCard: View {
     }
 }
 
-/// What stands in the card's place while `ENSRenew.prepares` is off (prd
-/// §1573): ENS's own app, where the renewal happens. No deadline line — the
-/// sheet's title already says it (measured on screen). ENSv2
-/// removed the controller the card's transaction calls, so a prepared renewal
-/// would revert after the person paid gas; the stablecoin renewal through
-/// `ETHRenewerV1` is not built yet.
+/// What stands in the card's place when there is no quote (prd §1573,
+/// §1585): while it is read, when neither contract says the name is
+/// renewable, or while `ENSRenew.prepares` is off. ENS's own app, where the
+/// renewal happens. No deadline line — the sheet's title already says it
+/// (measured on screen).
 struct ENSRenewDoor: View {
     let thing: Thing
     let name: String

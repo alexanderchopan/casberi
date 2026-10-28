@@ -181,8 +181,9 @@ struct ThingSheetView: View {
     @State private var ensRenewTerm: ENSRenew.Term = .oneYear
     @State private var ensRenewQuote: ENSRenewPrepare.Quote?
     @State private var ensRenewIsYours = false
-    /// The name whose renewal is ENS's own app's to do (prd §1573), while
-    /// `ENSRenew.prepares` is off.
+    /// The name whose renewal is ENS's own app's to do (prd §1573): drawn
+    /// while there is no quote, so the door never vanishes behind a read
+    /// that failed (prd §1585).
     @State private var ensRenewDoorName: String?
     @State private var safeCheck: SafeBridge.Check?
     /// The money receipt (prd §369) and what the app says about it. Held in
@@ -1143,7 +1144,7 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                 }
-                if let name = ensRenewDoorName {
+                if ensRenewQuote == nil, let name = ensRenewDoorName {
                     ENSRenewDoor(thing: thing, name: name)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
@@ -1511,9 +1512,10 @@ struct ThingSheetView: View {
             }
             // The gate is a string check plus a stored reading — a name that
             // isn't expiring, and every non-ENS thing, spends nothing.
-            if ENSRenewPrepare.applies(to: thing), !ENSRenew.prepares {
+            if ENSRenewPrepare.applies(to: thing) {
                 ensRenewDoorName = ENSName.name(fromRef: thing.sourceRef ?? "")
-            } else if ENSRenewPrepare.applies(to: thing) {
+            }
+            if ENSRenewPrepare.applies(to: thing), ENSRenew.prepares {
                 ensRenewIsYours = ENSRenewPrepare.isYours(
                     name: ENSName.name(fromRef: thing.sourceRef ?? "") ?? "",
                     context: modelContext)

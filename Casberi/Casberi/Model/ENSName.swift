@@ -42,10 +42,50 @@ enum ENSName {
 
     // MARK: - The ladder's constants
 
-    /// ENS gives a lapsed name a grace period in which the owner — and only
-    /// the owner — can still renew. Inherited from `ENSExpiry`, which measured
-    /// it in the same place and for the same reason.
-    static let graceDays = 90
+    /// The grace period after a name's expiry, in which nobody else can
+    /// register it and anyone can still renew it — which depends on whether
+    /// its owner has moved it to ENSv2 (prd §1585, MEASURED 2026-10-28).
+    ///
+    /// **An unmigrated name keeps v1's 90 days from its v1 expiry.**
+    /// `ETHRenewerV1.GRACE_PERIOD` answers 90 days and a second, counted from
+    /// the v1 date, and ENS's own Explorer shows that date as "Expires"
+    /// (vitalik.eth: Jan 30, 2048). **A migrated name gets 28 days from its
+    /// ENSv2 expiry** (`ETHRegistrar.GRACE_PERIOD`). ENSv2 set every v2 expiry
+    /// to the v1 one plus `migrationBonus`, so both end grace on the same day
+    /// (62 + 28 = 90); what differs is the date a name stops working, and the
+    /// metadata service reports the ENSv2 one for both (see `facts`).
+    static let unmigratedGraceDays = 90
+    static let migratedGraceDays = 28
+
+    static func graceDays(migrated: Bool) -> Int {
+        migrated ? migratedGraceDays : unmigratedGraceDays
+    }
+
+    /// What ENSv2's activation added to every v1 name's expiry: exactly 62
+    /// days, measured on vitalik.eth, nick.eth, casberi.eth and
+    /// accountless.eth (v2 expiry minus `BaseRegistrar.nameExpires`).
+    static let migrationBonus: TimeInterval = 62 * 86_400
+
+    /// Whether an expiry that moved from `was` to `now` moved by ENSv2's
+    /// bonus rather than by anybody renewing. A migrated name's reading
+    /// stored before the activation comes back exactly 62 days later on its
+    /// next read, and calling that a renewal lands "was renewed" on it. A
+    /// real renewal is bought in whole 365-day years, so it never lands on 62
+    /// days to the minute.
+    static func isMigrationBonus(from was: Date, to now: Date) -> Bool {
+        abs(now.timeIntervalSince(was) - migrationBonus) < 60
+    }
+
+    /// The days ENSv2 re-stamped every name's "Registration Date" and
+    /// "Created Date" with the moment it was copied into the new registry
+    /// (2026-10-03 to 10-04 on every name sampled 2026-10-28, vitalik.eth's
+    /// 2017 registration included). A date inside this window is that copy,
+    /// not a term's start, so it is dropped: no window beats one that begins
+    /// in October 2026 for a name held since 2017.
+    static let reservationWindow = Date(timeIntervalSince1970: 1_790_812_800)   // 2026-10-01
+        ..< Date(timeIntervalSince1970: 1_793_059_200)                           // 2026-10-27, activation
+
+    static func isReservationStamp(_ date: Date) -> Bool { reservationWindow.contains(date) }
 
     /// After release a temporary premium decays to nothing over three weeks.
     /// DOC-DERIVED, never measured here: this project can't make a name lapse,
@@ -207,13 +247,17 @@ enum ENSName {
     /// which this seat only ever concludes from an explicit 404, never from a
     /// read that failed (a service hiccup reported as "nobody owns this" is the
     /// most expensive wrong answer this file could give).
-    static func stage(expiry: Date?, now: Date = .now) -> Stage {
+    ///
+    /// `migrated` picks the grace period (`graceDays(migrated:)`). Every caller
+    /// with a reading passes `reading.migrated`; the default is the unmigrated
+    /// case, which is most names and every reading stored before ENSv2.
+    static func stage(expiry: Date?, migrated: Bool = false, now: Date = .now) -> Stage {
         guard let expiry else { return .unregistered }
         if now < expiry {
             guard let horizon = date(byAddingDays: horizonDays, to: now) else { return .active }
             return expiry <= horizon ? .expiring : .active
         }
-        guard let graceEnd = date(byAddingDays: graceDays, to: expiry) else { return .grace }
+        guard let graceEnd = graceEnd(expiry: expiry, migrated: migrated) else { return .grace }
         if now < graceEnd { return .grace }
         guard let premiumEnd = date(byAddingDays: premiumDays, to: graceEnd) else { return .released }
         return now < premiumEnd ? .premium : .released
@@ -221,11 +265,13 @@ enum ENSName {
 
     /// When the grace period ends — the moment the name stops being protected
     /// and anyone can register it.
-    static func graceEnd(expiry: Date) -> Date? { date(byAddingDays: graceDays, to: expiry) }
+    static func graceEnd(expiry: Date, migrated: Bool = false) -> Date? {
+        date(byAddingDays: graceDays(migrated: migrated), to: expiry)
+    }
 
     /// When the premium decays away.
-    static func premiumEnd(expiry: Date) -> Date? {
-        graceEnd(expiry: expiry).flatMap { date(byAddingDays: premiumDays, to: $0) }
+    static func premiumEnd(expiry: Date, migrated: Bool = false) -> Date? {
+        graceEnd(expiry: expiry, migrated: migrated).flatMap { date(byAddingDays: premiumDays, to: $0) }
     }
 
     /// The next moment this name's standing CHANGES — what a row carries as
@@ -236,12 +282,12 @@ enum ENSName {
     /// a name nobody has registered, both have no next moment. Returning a
     /// stale date there would keep a row in a deadline lane forever about
     /// something that has finished happening.
-    static func nextCliff(expiry: Date?, now: Date = .now) -> Date? {
+    static func nextCliff(expiry: Date?, migrated: Bool = false, now: Date = .now) -> Date? {
         guard let expiry else { return nil }
-        switch stage(expiry: expiry, now: now) {
+        switch stage(expiry: expiry, migrated: migrated, now: now) {
         case .active, .expiring: return expiry
-        case .grace:            return graceEnd(expiry: expiry)
-        case .premium:          return premiumEnd(expiry: expiry)
+        case .grace:            return graceEnd(expiry: expiry, migrated: migrated)
+        case .premium:          return premiumEnd(expiry: expiry, migrated: migrated)
         case .released, .unregistered: return nil
         }
     }
@@ -255,18 +301,18 @@ enum ENSName {
     /// is the whole of `grace` — a name inside its grace period has already
     /// lapsed, it just hasn't been released yet, so "expires" would be the
     /// present tense about something that already happened.
-    static func title(name: String, expiry: Date?, now: Date = .now) -> String {
-        switch stage(expiry: expiry, now: now) {
+    static func title(name: String, expiry: Date?, migrated: Bool = false, now: Date = .now) -> String {
+        switch stage(expiry: expiry, migrated: migrated, now: now) {
         case .unregistered:
             return String(localized: "\(name) — nobody has registered it")
         case .active, .expiring:
             guard let expiry else { return name }
             return String(localized: "\(name) expires \(dateWord(expiry, from: now))")
         case .grace:
-            guard let expiry, let end = graceEnd(expiry: expiry) else { return name }
+            guard let expiry, let end = graceEnd(expiry: expiry, migrated: migrated) else { return name }
             return String(localized: "\(name) expired \(dateWord(expiry, from: now)) — it can still be renewed until \(dateWord(end, from: now))")
         case .premium:
-            guard let expiry, let end = graceEnd(expiry: expiry) else { return name }
+            guard let expiry, let end = graceEnd(expiry: expiry, migrated: migrated) else { return name }
             return String(localized: "\(name) was released \(dateWord(end, from: now)) — anyone can register it")
         case .released:
             return String(localized: "\(name) is free to register")
@@ -315,7 +361,15 @@ enum ENSName {
         /// Epoch milliseconds on the wire (`ENSExpiry` measured this; reading
         /// it as seconds puts every expiry in 1970 and makes every name
         /// permanently, silently overdue).
+        ///
+        /// The date the name STOPS WORKING, which for an unmigrated name is
+        /// not the date on the wire (prd §1585): the service reports the
+        /// ENSv2 expiry, its v1 date plus `migrationBonus`, and the v1 date is
+        /// the one ENS's own Explorer and app show.
         let expiry: Date?
+        /// "Migration Status" is `migrated`: the owner moved the name to
+        /// ENSv2, so its expiry is the ENSv2 one and its grace 28 days.
+        let migrated: Bool
         /// When the CURRENT term began — not when the name first existed.
         let registered: Date?
         /// When the name was first created, which for a long-held name is
@@ -348,10 +402,15 @@ enum ENSName {
             }
             return nil
         }
+        // Only an explicit "unmigrated" moves the date back. A payload without
+        // the attribute predates ENSv2, when the wire's date was the v1 one.
+        let status = attributes.first { $0["trait_type"] as? String == "Migration Status" }?["value"] as? String
+        let wire = date("Expiration Date")
         return Facts(name: name,
-                     expiry: date("Expiration Date"),
-                     registered: date("Registration Date"),
-                     created: date("Created Date"),
+                     expiry: status == "unmigrated" ? wire?.addingTimeInterval(-migrationBonus) : wire,
+                     migrated: status == "migrated",
+                     registered: date("Registration Date").flatMap { isReservationStamp($0) ? nil : $0 },
+                     created: date("Created Date").flatMap { isReservationStamp($0) ? nil : $0 },
                      // Absent reads as normalized: the service states the flag
                      // for every name it knows, so a missing key is a payload
                      // we don't understand, and warning about a lookalike on

@@ -522,6 +522,26 @@ else
 fi
 hr
 
+# ── ENS renewal (ETHRenewerV1, prd §1585) ────────────────────────────────────
+# The renew card prices through `getRenewPrice(label, duration, USDC)` on
+# ETHRenewerV1. ENS moved renewals once already (§1573: the v1 controller lost
+# its seat and every prepared transaction reverted after gas). A revert or a
+# zero here means the card's next quote is gone, and its door falls back to
+# ENS's own app. vitalik.eth is unmigrated, so the renewer is the contract that
+# renews it; the calldata is `ens-renew-selftest.sh`'s viem vector.
+print -P "%BENS renewal%b  (keyless, ETHRenewerV1 price in USDC)"
+ensr=$(curl -s --max-time "$TIMEOUT" -X POST "https://ethereum-rpc.publicnode.com" \
+  -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x56c447F308F463A01121C41E72b0E7e7557fCb68","data":"0xddf0effc00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000001e13380000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000000000000000000000000000000000000000000007766974616c696b00000000000000000000000000000000000000000000000000"},"latest"]}' 2>/dev/null)
+if [[ -z "$ensr" ]]; then
+  warn "ENS renewal — the mainnet host did not answer"
+elif [[ "$ensr" =~ '"result":"0x0{40,}[1-9a-f][0-9a-f]*"' ]]; then
+  pass "ENS renewal — ETHRenewerV1 prices a year of vitalik.eth in USDC"
+else
+  fail "ENS renewal — ETHRenewerV1 did not price vitalik.eth in USDC: $(print -r -- "$ensr" | cut -c1-120)"
+fi
+hr
+
 # ── Wei / Gwei name services (prd §597) ─────────────────────────────────────
 # The drift class `wei-names-selftest.sh` structurally cannot see: that harness
 # proves the ENCODING is right against fixtures, never that the two contracts

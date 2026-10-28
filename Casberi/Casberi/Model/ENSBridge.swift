@@ -246,7 +246,13 @@ enum ENSState {
         /// The trap `WalletStore.WatchedAddress.updatedAt` documents, and the
         /// one §312 hit in `RSSStore.Feed`.
         var fromWallet: Bool? = nil
+        /// The owner moved this name to ENSv2 (prd §1585), which decides its
+        /// grace period. Optional for the reason `fromWallet` is.
+        var migrated: Bool? = nil
         var readAt: Date
+
+        /// What every ladder call on a stored reading passes as `migrated:`.
+        var isMigrated: Bool { migrated ?? false }
     }
 
     private static let key = "ens.readings"
@@ -350,7 +356,10 @@ enum ENSIngest {
         let readings = ENSState.all()
         let now = Date.now
         return ENSWatch.followed(context: context)
-            .filter { now.timeIntervalSince(readings[$0]?.readAt ?? .distantPast) >= readWindow }
+            // A reading with no migration status predates §1585 and holds the
+            // ENSv2 date the ladder would read as v1's: re-read it at once.
+            .filter { readings[$0]?.migrated == nil && readings[$0]?.unregistered != true
+                || now.timeIntervalSince(readings[$0]?.readAt ?? .distantPast) >= readWindow }
             .sorted { (readings[$0]?.readAt ?? .distantPast) < (readings[$1]?.readAt ?? .distantPast) }
             .prefix(perPass)
             .map { $0 }
@@ -368,21 +377,26 @@ enum ENSIngest {
             registered: facts?.registered,
             isNormalized: facts?.isNormalized ?? true,
             unregistered: unregistered,
+            migrated: facts?.migrated,
             readAt: .now))
 
         let ref = ENSName.ref(for: name)
         if let row = try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.sourceRef == ref })).first, row.isLive {
-            let title = ENSName.title(name: name, expiry: expiry)
-            let cliff = ENSName.nextCliff(expiry: expiry)
+            let migrated = facts?.migrated ?? false
+            let title = ENSName.title(name: name, expiry: expiry, migrated: migrated)
+            let cliff = ENSName.nextCliff(expiry: expiry, migrated: migrated)
             if row.title != title { row.title = title }
             if row.dueAt != cliff { row.dueAt = cliff }
             // The term's start, on the field built for exactly this shape — a
             // date stamped only when it is really known (see `Thing.grantedAt`).
             if let registered = facts?.registered, row.grantedAt != registered {
                 row.grantedAt = registered
+            } else if let stamped = row.grantedAt, ENSName.isReservationStamp(stamped) {
+                // Stamped by a read between ENSv2's copy and this fix (prd §1585).
+                row.grantedAt = nil
             }
-            retag(row, stage: ENSName.stage(expiry: expiry))
+            retag(row, stage: ENSName.stage(expiry: expiry, migrated: migrated))
         }
 
         // FIRST SIGHT IS SILENT. A name followed today whose expiry we have
@@ -395,7 +409,8 @@ enum ENSIngest {
         // reading rather than the row, because the row carries the next CLIFF
         // and a name crossing into grace moves that date without anybody
         // renewing anything.
-        if let was = previous.expiry, let now = expiry, now > was.addingTimeInterval(60) {
+        if let was = previous.expiry, let now = expiry, now > was.addingTimeInterval(60),
+           !ENSName.isMigrationBonus(from: was, to: now) {
             added += moment(
                 ref: "ens:renewed:\(name):\(Int(now.timeIntervalSince1970))",
                 name: name,

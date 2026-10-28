@@ -40,7 +40,9 @@ enum ENSExpiry {
     /// Found by verification: a watched wallet's own reverse name (`031.eth`)
     /// had expired a month earlier and landed a row reading "expires Jun 20",
     /// present tense, about something already gone.
-    private static var graceDays: Int { ENSName.graceDays }
+    /// The longer of the two periods (prd §1585): a migrated name past its 28
+    /// days is caught by the ladder's own stage, never by this floor.
+    private static var graceDays: Int { ENSName.unmigratedGraceDays }
 
     /// Lands (or reconciles) an expiry row per readable name. Returns the
     /// number of NEW things, or nil if nothing could be read at all — the same
@@ -57,17 +59,18 @@ enum ENSExpiry {
         var added = 0
         var reached = false
         for name in names {
-            guard let expiry = await expiryDate(for: name) else { continue }
+            guard let (expiry, migrated) = await expiryDate(for: name) else { continue }
             reached = true
             let ref = ENSName.walletRef(for: name)
             // Reconcile before landing: a renewal MOVES the date, and the row
             // has to follow it rather than keep claiming the old one (the
             // lesson the 1Claw bridge recorded for grants).
             if existing.contains(ref) {
-                let fresh = ENSName.title(name: name, expiry: expiry)
+                let fresh = ENSName.title(name: name, expiry: expiry, migrated: migrated)
+                let cliff = ENSName.nextCliff(expiry: expiry, migrated: migrated)
                 if let landed = try? context.fetch(
                     FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })).first,
-                   landed.dueAt != ENSName.nextCliff(expiry: expiry) || landed.title != fresh {
+                   landed.dueAt != cliff || landed.title != fresh {
                     // The TITLE is compared too, not just the date: a row
                     // crossing from "expires" to "expired" does so with its
                     // date unchanged — only `now` moved past it. Reconciling on
@@ -76,21 +79,24 @@ enum ENSExpiry {
                     // used to sit ninety days overdue against a date that had
                     // stopped being the question, while the moment that
                     // actually mattered — grace ending — passed unannounced.
-                    landed.dueAt = ENSName.nextCliff(expiry: expiry)
+                    landed.dueAt = cliff
                     landed.title = fresh
                 }
                 continue
             }
-            guard expiry <= horizon, expiry >= graceFloor else { continue }
+            guard expiry <= horizon, expiry >= graceFloor,
+                  ENSName.stage(expiry: expiry, migrated: migrated) != .premium,
+                  ENSName.stage(expiry: expiry, migrated: migrated) != .released
+            else { continue }
             let thing = Thing(
                 kind: .link,
-                title: ENSName.title(name: name, expiry: expiry),
+                title: ENSName.title(name: name, expiry: expiry, migrated: migrated),
                 content: "https://app.ens.domains/\(name)",
                 source: "Wallet",
                 capturedAt: .now,
                 sourceRef: ref
             )
-            thing.dueAt = ENSName.nextCliff(expiry: expiry)
+            thing.dueAt = ENSName.nextCliff(expiry: expiry, migrated: migrated)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -138,16 +144,14 @@ enum ENSExpiry {
     /// (`.com`, `.xyz`) has no labelhash here, so `metadataURL` is nil and the
     /// name is skipped rather than guessed at. Keyed by labelhash since ENSv2
     /// (prd §1573).
-    private static func expiryDate(for name: String) async -> Date? {
+    /// Through `ENSName.facts`, the seat's own parse, so an unmigrated name's
+    /// date is its v1 one here too (prd §1585) — two parsers is how the
+    /// wallet room and the ENS room start disagreeing about one name.
+    private static func expiryDate(for name: String) async -> (Date, Bool)? {
         guard let url = ENSName.metadataURL(for: name),
-              let root = await IngestSupport.getJSON(url) as? [String: Any],
-              let attributes = root["attributes"] as? [[String: Any]]
+              let facts = ENSName.facts(name: name, json: await IngestSupport.getJSON(url)),
+              let expiry = facts.expiry
         else { return nil }
-        for attribute in attributes where attribute["trait_type"] as? String == "Expiration Date" {
-            if let ms = attribute["value"] as? Double, ms > 0 {
-                return Date(timeIntervalSince1970: ms / 1000)
-            }
-        }
-        return nil
+        return (expiry, facts.migrated)
     }
 }

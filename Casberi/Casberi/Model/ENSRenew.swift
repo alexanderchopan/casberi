@@ -1,68 +1,99 @@
 import Foundation
 
 /// Renewing a followed name — PREPARED here, signed somewhere else
-/// (2026-08-31, prd §540). The §112 preparing surface, second instance:
-/// `WalletPrepare` does this for an approval's revoke, and this does it for a
-/// `.eth` renewal. Casberi reads the price, encodes the transaction, quotes
-/// the fee, and hands the whole thing to the person's own wallet. It signs
-/// nothing and holds no key.
+/// (2026-08-31, prd §540; paid in a stablecoin since ENSv2, prd §1585). The
+/// §112 preparing surface, second instance: `WalletPrepare` does this for an
+/// approval's revoke, and this does it for a `.eth` renewal. Casberi reads the
+/// price, encodes the transactions, quotes the fee, and hands them to the
+/// person's own wallet. It signs nothing and holds no key.
 ///
 /// Foundation-only BY DESIGN so `scripts/ens-renew-selftest.sh` compiles it
 /// WHOLE and unmodified. Nothing here fetches; `ENSRenewPrepare` does the
 /// reads and calls in.
 ///
-/// **WHY THIS FILE IS THE DANGEROUS ONE.** Every prepared transaction this app
-/// has ever produced carries `"value": "0x0"` — a revoke costs gas and moves
-/// nothing. This one moves REAL MONEY when signed, and a wrong byte here is
-/// not a crash: it is a well-formed transaction that a wallet will happily
-/// sign and a chain will happily execute, doing something nobody asked for.
-/// That is why the ABI encoding below is pinned against vectors produced by an
-/// independent implementation rather than merely eyeballed.
+/// **WHY THIS FILE IS THE DANGEROUS ONE.** Its transactions move REAL MONEY
+/// when signed, and a wrong byte here is not a crash: it is a well-formed
+/// transaction that a wallet will happily sign and a chain will happily
+/// execute, doing something nobody asked for. That is why the ABI encoding
+/// below is pinned against vectors produced by an independent implementation
+/// (viem) rather than merely eyeballed.
 ///
-/// **EVERY CONSTANT HERE WAS MEASURED ON MAINNET 2026-08-31**, not recalled,
-/// and two of them would have shipped as bugs from memory alone. See each.
+/// **EVERY CONSTANT HERE WAS MEASURED ON MAINNET 2026-10-28**, the day after
+/// ENSv2 activated, against the verified sources Sourcify holds for both
+/// contracts. See each.
 enum ENSRenew {
 
-    // MARK: - The contract
+    // MARK: - The contracts
 
-    /// The `.eth` registrar controller. **MEASURED 2026-08-31**: this address
-    /// holds 9,739 bytes of code and `BaseRegistrar.controllers(…)` answers
-    /// `1` for it.
+    /// Who renews a name depends on whether its owner has moved it to ENSv2.
     ///
-    /// **THE TRAP, and it is the expensive one.** The long-standing controller
-    /// everybody's notes and blog posts name —
-    /// `0x253553366Da8546fC250F225fe3d25d0C782303b` — is **NO LONGER
-    /// AUTHORIZED**: `controllers(…)` answers `0` for it today, measured the
-    /// same minute as the above. Calldata built against it still ENCODES
-    /// perfectly, still looks right in a wallet's confirm screen, and reverts
-    /// on submission after the person has already approved spending money.
-    /// A hardcoded "well-known" address is exactly how that ships.
-    static let controller = "0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547"
+    /// **MEASURED 2026-10-28.** An unmigrated name is `RESERVED` in the ENSv2
+    /// registry and only `ETHRenewerV1` will renew it (`isRenewable` answers 1
+    /// there and 0 on the registrar, casberi.eth and vitalik.eth); a migrated
+    /// one is `REGISTERED` and only `ETHRegistrar` will (nick.eth, the other
+    /// way round). Both take the same `renew` and the same price read, so the
+    /// one fact that differs is the address, and it is asked of the chain per
+    /// quote rather than guessed: a name can migrate between two reads.
+    enum Contract: String, CaseIterable {
+        case renewer
+        case registrar
 
-    /// **OFF since ENSv2 activated (2026-10-27, prd §1573).** The activation
-    /// removed `controller` from the BaseRegistrar (`controllers(…)` answers
-    /// `0`, measured that day) and handed renewals of unmigrated names to
-    /// `ETHRenewerV1` (`0x56c447F308F463A01121C41E72b0E7e7557fCb68`), whose
-    /// `renew(tuple,address)` is paid in an approved stablecoin, not ETH. Every
-    /// transaction this file encodes now reverts after the person pays gas, so
-    /// the sheet draws `ENSRenewDoor` (ENS's own app) instead of the card
-    /// until the stablecoin renewal is built.
-    static let prepares = false
+        var address: String {
+            switch self {
+            // Owns the v1 BaseRegistrar since ENSv2's activation.
+            case .renewer:   return "0x56c447F308F463A01121C41E72b0E7e7557fCb68"
+            // ENSv2's `.eth` registrar (ENS's deployments page, mainnet).
+            case .registrar: return "0xD6D8369e55c94Ae8AFA714E6cF7AB5bE54D5CC81"
+            }
+        }
+    }
 
-    /// `renew(string,uint256,bytes32)` — **THREE arguments, not two.** The old
-    /// controller took `renew(string,uint256)`; the live one takes a third
-    /// `referrer` word (ENS's referral programme). Measured by reading the
-    /// deployed bytecode for both selectors: the two-argument form is ABSENT
-    /// from the live controller and the three-argument form is PRESENT.
-    ///
-    /// Derived from the signature rather than pasted as a magic constant
-    /// (`AerodromeDeFi`'s precedent), so the harness can pin the derivation
-    /// against the measured value instead of pinning a number to itself.
-    static var renewSignature: String { "renew(string,uint256,bytes32)" }
-    static var rentPriceSignature: String { "rentPrice(string,uint256)" }
+    /// The tokens ENS takes for a renewal. **MEASURED 2026-10-28**:
+    /// `StandardRentPriceOracle.isPaymentToken` answers 1 for USDC and DAI and
+    /// 0 for USDT, USDS, PYUSD, USDe, GHO, FRAX, RLUSD, EURC and WETH. ETH is
+    /// not one: `renew` is nonpayable, so a transaction carrying ETH reverts.
+    enum Token: String, CaseIterable {
+        case usdc
+        case dai
 
-    static var renewSelector: String { selector(renewSignature) }
-    static var rentPriceSelector: String { selector(rentPriceSignature) }
+        var symbol: String {
+            switch self {
+            case .usdc: return "USDC"
+            case .dai:  return "DAI"
+            }
+        }
+
+        var address: String {
+            switch self {
+            case .usdc: return "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+            case .dai:  return "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+            }
+        }
+
+        /// The oracle's own ratios agree (USDC 1/10⁶, DAI 10⁶/1 over a
+        /// 12-decimal dollar), and so does each token's `decimals()`.
+        var decimals: Int {
+            switch self {
+            case .usdc: return 6
+            case .dai:  return 18
+            }
+        }
+    }
+
+    /// Kept as a switch rather than deleted, so turning the card off again is
+    /// one line if ENS moves the renewal a second time (§1573 did exactly
+    /// that, and the sheet drew `ENSRenewDoor` in its place).
+    static let prepares = true
+
+    /// Derived from the signatures rather than pasted as magic constants
+    /// (`AerodromeDeFi`'s precedent), so the harness pins each derivation
+    /// against the selector found in BOTH deployed contracts' bytecode.
+    static var renewSignature: String { "renew((string,uint64,bytes32),address)" }
+    static var priceSignature: String { "getRenewPrice(string,uint64,address)" }
+    static var isRenewableSignature: String { "isRenewable(string)" }
+    static var approveSignature: String { "approve(address,uint256)" }
+    static var allowanceSignature: String { "allowance(address,address)" }
+    static var balanceSignature: String { "balanceOf(address)" }
 
     /// No referrer. A zero word — this app is nobody's referrer and inventing
     /// one would silently attribute somebody's renewal to a party they never
@@ -94,128 +125,198 @@ enum ENSRenew {
         }
     }
 
-    // MARK: - What it costs
+    // MARK: - Amounts
 
-    /// The controller's price for a term, as read. Both words are kept even
-    /// though only one is charged — see `payable`.
-    struct Price: Equatable {
-        /// The registration fee, in wei.
-        let base: Double
-        /// The temporary premium on a name inside its post-release decay
-        /// window, in wei.
-        ///
-        /// **NOT charged on a renewal, and that is measured, not assumed.**
-        /// The controller's own `renew` reverts only on
-        /// `msg.value < price.base` — the premium never enters the comparison,
-        /// because a premium is what you pay to REGISTER a released name, and
-        /// a released name cannot be renewed at all. Kept so the card can
-        /// explain a nonzero premium rather than silently ignore it.
-        let premium: Double
+    /// A token amount as the chain wrote it: one 32-byte word, never a
+    /// `Double`. Five years of a three-letter name in DAI is 3,200 × 10¹⁸, past
+    /// what a `UInt64` holds, and a `Double` rounds a wei figure; either way
+    /// the approval would no longer match what `renew` pulls.
+    struct Amount: Equatable, Comparable {
+        /// 64 lowercase hex digits.
+        let word: String
+
+        /// From an `eth_call` reply. nil for a revert or an empty reply ("0x"),
+        /// which would otherwise read as ZERO — a free renewal shown to
+        /// somebody about to sign.
+        init?(reply: String) {
+            guard reply.hasPrefix("0x") else { return nil }
+            let hex = reply.dropFirst(2).lowercased()
+            guard hex.count >= 64 else { return nil }
+            let first = String(hex.prefix(64))
+            guard first.allSatisfy(\.isHexDigit) else { return nil }
+            word = first
+        }
+
+        var isZero: Bool { word.allSatisfy { $0 == "0" } }
+
+        /// Equal-length lowercase hex compares as the numbers it spells.
+        static func < (a: Amount, b: Amount) -> Bool { a.word < b.word }
+
+        /// The amount in whole tokens, exactly.
+        func decimal(_ token: Token) -> Decimal {
+            var units = Decimal(0)
+            for c in word { units = units * 16 + Decimal(Int(String(c), radix: 16) ?? 0) }
+            var scale = Decimal(1)
+            for _ in 0..<token.decimals { scale *= 10 }
+            return units / scale
+        }
     }
 
-    /// What to actually put in `value`: the base plus a small buffer.
-    ///
-    /// **Why a buffer at all.** ENS prices in USD and converts through an
-    /// oracle at execution time, so the wei figure drifts between the quote
-    /// and the signature. Sending exactly the quote is a transaction that
-    /// reverts the moment ETH ticks down — after the person has approved it.
-    ///
-    /// **Why the buffer is SAFE.** The controller refunds the difference:
-    /// `if (msg.value > price.base) payable(msg.sender).transfer(msg.value -
-    /// price.base)`. Read from the deployed contract's source, not assumed.
-    ///
-    /// **Why the buffer is SMALL.** That refund is a `.transfer()`, which
-    /// forwards 2,300 gas — enough for an EOA and NOT necessarily enough for a
-    /// smart-account wallet with a real `receive()`. A failed refund reverts
-    /// the whole renewal. So the buffer covers oracle drift and no more; a
-    /// generous one would turn "I paid a little extra" into "it didn't go
-    /// through" on exactly the wallets that are hardest to debug.
-    static let bufferPercent: Double = 5
-
-    static func payable(base: Double) -> Double {
-        base * (1 + bufferPercent / 100)
+    /// "8.000021 USDC". Up to six places, trailing zeros trimmed to two, and
+    /// ROUNDED UP: the price really is $8.000021 (measured), and a figure
+    /// shown as less than what the approval takes is a number people believe
+    /// (§83) on the one screen where they are deciding to spend.
+    static func tokenLine(_ amount: Amount, _ token: Token) -> String {
+        var value = amount.decimal(token)
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &value, 6, .up)
+        let figure = tokenFormatter.string(from: rounded as NSDecimalNumber) ?? "\(rounded)"
+        return "\(figure) \(token.symbol)"
     }
 
-    // MARK: - The transaction
+    private static let tokenFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 6
+        return formatter
+    }()
 
-    /// The `renew` calldata for one label and one term.
+    // MARK: - The calldata
+
+    /// `renew((label, duration, referrer), paymentToken)`.
     ///
-    /// **THE LABEL, NEVER THE NAME.** The controller hashes what it is given —
-    /// `keccak256(bytes(label))` — so handing it `"vitalik.eth"` renews the
-    /// label *"vitalik.eth"*, a different (and almost certainly unregistered)
-    /// entry, while the transaction succeeds and the money leaves. Callers
-    /// pass `ENSName.label(of:)`, and this refuses anything with a dot in it
-    /// rather than trusting them.
-    static func calldata(label: String, term: Term) -> String? {
-        guard !label.isEmpty, !label.contains("."), !label.contains(where: \.isWhitespace)
-        else { return nil }
-        // Head: offset to the string's data, the duration, the referrer. The
-        // offset is 0x60 because three head words precede the tail — not 0x40
-        // as in the two-argument form the old controller took.
-        return "0x" + renewSelector
+    /// **THE LABEL, NEVER THE NAME.** The contract hashes what it is given, so
+    /// handing it `"vitalik.eth"` renews the label *"vitalik.eth"* — a
+    /// different, almost certainly unregistered entry — and this refuses
+    /// anything with a dot in it rather than trusting callers.
+    ///
+    /// The tuple holds a string, so it is DYNAMIC: the head is an offset to
+    /// it (0x40, two head words) and the token; inside the tuple the string's
+    /// own offset is 0x60 (three words: offset, duration, referrer), relative
+    /// to the tuple, not to the calldata.
+    static func calldata(label: String, term: Term, token: Token) -> String? {
+        guard isLabel(label) else { return nil }
+        return "0x" + selector(renewSignature)
+            + word(0x40)
+            + addressWord(token.address)
             + word(0x60)
             + word(term.seconds)
             + noReferrer
             + encodedString(label)
     }
 
-    /// The `rentPrice` calldata. Two head words here, so the offset is 0x40 —
-    /// spelled out rather than shared with `calldata` above, because the two
-    /// functions have different arities and a shared constant would silently
-    /// be wrong for one of them.
-    static func priceCalldata(label: String, term: Term) -> String? {
-        guard !label.isEmpty, !label.contains("."), !label.contains(where: \.isWhitespace)
-        else { return nil }
-        return "0x" + rentPriceSelector
-            + word(0x40)
+    /// `getRenewPrice(label, duration, paymentToken)`: three head words, the
+    /// string's offset 0x60. Spelled out rather than shared with `calldata`,
+    /// whose offsets differ — a shared constant would be wrong for one.
+    static func priceCalldata(label: String, term: Term, token: Token) -> String? {
+        guard isLabel(label) else { return nil }
+        return "0x" + selector(priceSignature)
+            + word(0x60)
             + word(term.seconds)
+            + addressWord(token.address)
             + encodedString(label)
     }
 
-    /// The wallet-ready transaction, as the same JSON object shape
-    /// `WalletPrepare` hands out for a revoke — so anything that already knows
-    /// how to take one of ours knows how to take this.
+    static func isRenewableCalldata(label: String) -> String? {
+        guard isLabel(label) else { return nil }
+        return "0x" + selector(isRenewableSignature) + word(0x20) + encodedString(label)
+    }
+
+    /// An approval for EXACTLY the renewal price, never more.
     ///
-    /// `value` is a real amount here, which is the whole difference.
-    static func transactionJSON(from: String, label: String, term: Term,
-                                base: Double) -> String? {
-        guard let data = calldata(label: label, term: term), base > 0 else { return nil }
-        let value = weiHex(payable(base: base))
-        return """
+    /// `renew` pulls the price with `safeTransferFrom` (read from the verified
+    /// source), so the contract needs an allowance first. The oracle prices in
+    /// dollars at a fixed ratio per token — no oracle drift, unlike §540's ETH
+    /// price — so the price read now is the price taken, and a buffer would
+    /// only leave a standing allowance behind. An open-ended one is what this
+    /// app's own approvals card flags as exposure.
+    static func approveCalldata(spender: Contract, amount: Amount) -> String {
+        "0x" + selector(approveSignature) + addressWord(spender.address) + amount.word
+    }
+
+    static func allowanceCalldata(owner: String, spender: Contract) -> String? {
+        guard isAddress(owner) else { return nil }
+        return "0x" + selector(allowanceSignature) + addressWord(owner) + addressWord(spender.address)
+    }
+
+    static func balanceCalldata(owner: String) -> String? {
+        guard isAddress(owner) else { return nil }
+        return "0x" + selector(balanceSignature) + addressWord(owner)
+    }
+
+    // MARK: - The transactions
+
+    /// The wallet-ready renewal, in the same JSON object shape `WalletPrepare`
+    /// hands out for a revoke.
+    ///
+    /// **`value` is 0x0 and must stay so.** `renew` is nonpayable: the money
+    /// moves as a token transfer the contract pulls, and any ETH attached
+    /// reverts the call after the person has paid gas.
+    static func renewJSON(from: String, contract: Contract, label: String, term: Term,
+                          token: Token) -> String? {
+        guard isAddress(from), let data = calldata(label: label, term: term, token: token)
+        else { return nil }
+        return object(from: from, to: contract.address, data: data)
+    }
+
+    static func approveJSON(from: String, contract: Contract, token: Token,
+                            amount: Amount) -> String? {
+        guard isAddress(from), !amount.isZero else { return nil }
+        return object(from: from, to: token.address,
+                      data: approveCalldata(spender: contract, amount: amount))
+    }
+
+    /// What Copy hands over: the renewal alone when the allowance already
+    /// covers it, else the approval and then the renewal, in that order, as
+    /// one JSON array — the order a wallet must send them in, and the shape
+    /// `wallet_sendCalls` takes.
+    static func handoffJSON(from: String, contract: Contract, label: String, term: Term,
+                            token: Token, amount: Amount, needsApproval: Bool) -> String? {
+        guard let renew = renewJSON(from: from, contract: contract, label: label,
+                                    term: term, token: token) else { return nil }
+        guard needsApproval else { return renew }
+        guard let approve = approveJSON(from: from, contract: contract, token: token,
+                                        amount: amount) else { return nil }
+        return "[" + approve + ", " + renew + "]"
+    }
+
+    private static func object(from: String, to: String, data: String) -> String {
+        """
         {"chainId": \(chainID), "data": "\(data)", "from": "\(from)", \
-        "to": "\(controller)", "value": "\(value)"}
+        "to": "\(to)", "value": "0x0"}
         """
     }
 
     // MARK: - Words
 
-    /// "0.0020 ETH". Never a fiat figure: this app has no ETH price it trusts
-    /// on this path, and a dollar number quoted beside a transaction somebody
-    /// is about to sign is the §83 number-people-believe in its most expensive
-    /// form.
+    /// "0.0020 ETH" — the network fee, which is still paid in ETH.
     static func ethLine(_ wei: Double) -> String {
-        let eth = wei / 1e18
-        // Four places carries the 5-plus-character tier (0.0020 ETH) without
-        // rounding it to nothing; more places is noise nobody reads.
-        return String(format: "%.4f ETH", eth)
+        String(format: "%.4f ETH", wei / 1e18)
     }
 
     /// The one sentence this card owes that no other prepare surface does.
     ///
-    /// **Renewing is PERMISSIONLESS** — measured by reading the deployed
-    /// controller's `renew`, which has no owner check of any kind: it takes
-    /// the money, extends the registration, and never asks who is paying. So
-    /// this card can genuinely offer to renew a name somebody else owns.
-    ///
-    /// That is a real capability and a real footgun, and the difference is one
-    /// sentence: **paying does not transfer the name.** A person who renews a
-    /// name they follow has bought that name's owner another year, and gets
-    /// nothing. Nobody should learn that after signing.
+    /// **Renewing is PERMISSIONLESS** — read in the verified ENSv2 source:
+    /// `renew` takes the token from whoever calls and extends the name, with
+    /// no owner check. So this card can genuinely renew a name somebody else
+    /// owns, and **paying does not transfer the name.** Nobody should learn
+    /// that after signing.
     static func ownershipNote(isYours: Bool) -> String? {
         isYours ? nil : String(localized: "Renewing pays for this name and does not transfer it — it stays with its current owner.")
     }
 
     // MARK: - ABI
+
+    private static func isLabel(_ label: String) -> Bool {
+        !label.isEmpty && !label.contains(".") && !label.contains(where: \.isWhitespace)
+    }
+
+    private static func isAddress(_ s: String) -> Bool {
+        s.count == 42 && s.hasPrefix("0x") && s.dropFirst(2).allSatisfy(\.isHexDigit)
+    }
 
     /// A `String` as an ABI dynamic `string`: a length word, then the UTF-8
     /// bytes, right-padded to a whole number of words.
@@ -223,14 +324,12 @@ enum ENSRenew {
         let bytes = Array(s.utf8)
         // THE LENGTH IS IN BYTES, NOT CHARACTERS. `"café"` is four characters
         // and five bytes; encoding `4` there produces a transaction that is
-        // well-formed, signable, and renews a truncated label. Pinned as a
-        // harness vector for exactly that reason.
+        // well-formed, signable, and renews a truncated label. Pinned.
         var hex = word(bytes.count)
         hex += bytes.map { String(format: "%02x", $0) }.joined()
         // Pad to the next word boundary — and add NOTHING when the length is
         // already a multiple of 32. The naive `32 - count % 32` appends a
-        // whole dead word on a 32-byte label, which no ordinary name would
-        // ever reveal. Also pinned.
+        // whole dead word on a 32-byte label. Also pinned.
         let remainder = bytes.count % 32
         if remainder != 0 { hex += String(repeating: "00", count: 32 - remainder) }
         return hex
@@ -239,20 +338,9 @@ enum ENSRenew {
     /// A `UInt` as a 32-byte ABI word.
     static func word(_ n: Int) -> String { String(format: "%064x", n) }
 
-    /// A wei amount as a minimal `0x`-prefixed hex quantity, which is what the
-    /// JSON-RPC `value` field takes.
-    ///
-    /// The amount is ROUNDED UP. A `Double` cannot hold a wei figure exactly,
-    /// and rounding down lands below `price.base` — a transaction that reverts
-    /// for the sake of a fraction of a wei, which is the one rounding
-    /// direction that can actually fail.
-    static func weiHex(_ wei: Double) -> String {
-        guard wei > 0, wei.isFinite else { return "0x0" }
-        let rounded = wei.rounded(.up)
-        // Above 2^63 a UInt64 conversion traps; no ENS price approaches it,
-        // but a prepared transaction must never be the thing that crashes.
-        guard rounded < 9.2e18 else { return "0x0" }
-        return "0x" + String(UInt64(rounded), radix: 16)
+    /// An address left-padded to a word, lowercased (ABI does not checksum).
+    static func addressWord(_ address: String) -> String {
+        String(repeating: "0", count: 24) + address.dropFirst(2).lowercased()
     }
 
     /// A function selector: the first four bytes of the signature's Keccak-256.

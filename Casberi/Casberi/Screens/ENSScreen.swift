@@ -154,11 +154,11 @@ struct ENSScreen: View {
         guard let reading = readings[name] else { return nil }
         if reading.unregistered { return String(localized: "Nobody has registered it") }
         guard let expiry = reading.expiry else { return nil }
-        switch ENSName.stage(expiry: expiry) {
+        switch ENSName.stage(expiry: expiry, migrated: reading.isMigrated) {
         case .active, .expiring:
             return String(localized: "Expires \(ENSName.dateWord(expiry))")
         case .grace:
-            guard let end = ENSName.graceEnd(expiry: expiry) else { return nil }
+            guard let end = ENSName.graceEnd(expiry: expiry, migrated: reading.isMigrated) else { return nil }
             return String(localized: "Expired — can still be renewed until \(ENSName.dateWord(end))")
         case .premium, .released:
             return String(localized: "Released — anyone can register it")
