@@ -16,7 +16,7 @@ struct DSChatBubble: View {
     }
 
     /// Words with their links already painted (`ProseLinks.rendered`), so an
-    /// address in a chat opens (prd §1578).
+    /// address in a chat opens (prd §1579).
     init(attributed: AttributedString, fromSelf: Bool, faded: Bool = false) {
         self.text = attributed
         self.fromSelf = fromSelf

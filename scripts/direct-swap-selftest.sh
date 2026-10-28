@@ -375,6 +375,23 @@ check(RoundUps.soldUnits(usd: nil, wrap: false) == nil && RoundUps.soldUnits(usd
 let ruSwap = RoundUps.plan(dollarSent: RoundUps.soldUnits(usd: 41.38, wrap: false)!, saved: "0", step: 1)
 check(ruSwap.change == "620000" && ruSwap.buy == nil && ruSwap.savedAfter == "620000", "a $41.38 swap does not set aside $0.62")
 
+// ── ETH pays when the dollar is short (prd §1578) ─────────────────────────
+// What a save lacks counts the send's own dollar; ETH is sold for it at a
+// fiftieth more, rounded up to the wei.
+check(RoundUps.dollarShort(spends: "10400000", leaving: "3400000", held: "20000000") == nil, "a save with the dollar there swaps ETH")
+check(RoundUps.dollarShort(spends: "10400000", leaving: "3400000", held: "13800000") == nil, "a save with exactly enough swaps ETH")
+check(RoundUps.dollarShort(spends: "10400000", leaving: "3400000", held: "5000000") == "8800000", "a save short of the dollar lacks the wrong amount")
+check(RoundUps.dollarShort(spends: "10400000", leaving: "0", held: "0") == "10400000", "a save with no dollar lacks the wrong amount")
+check(RoundUps.ethFor(short: "10000000", ethPrice: 4000) == "2550000000000000", "$10 at $4,000 does not sell 0.00255 ETH")
+check(RoundUps.ethFor(short: "1", ethPrice: 3000) == "340000000", "a millionth of a dollar is not rounded up to the wei")
+check(RoundUps.ethFor(short: "10000000", ethPrice: 0) == nil && RoundUps.ethFor(short: "10000000", ethPrice: .nan) == nil
+      && RoundUps.ethFor(short: "0", ethPrice: 4000) == nil, "ETH is sold with no price, or for nothing")
+// The swap takes at most half the ETH left after the operation's own: the
+// fee check never counts the ride.
+check(RoundUps.ethCovers(swap: "2550000000000000", leaving: "0", held: "5100000000000000"), "ETH twice the swap does not cover it")
+check(!RoundUps.ethCovers(swap: "2550000000000000", leaving: "0", held: "5099999999999999"), "the swap takes more than half the ETH")
+check(!RoundUps.ethCovers(swap: "2550000000000000", leaving: "1000000000000000", held: "5100000000000000"), "the ETH the send sends is not counted")
+
 // ── WETH and ETH, one for one (prd §1559) ─────────────────────────────────
 // Every vector written by the independent encoder and simulated from the
 // account made a real SafeL2 proxy: deposit() wraps; the WETH's transfer to

@@ -517,7 +517,7 @@ struct ThingContentView: View {
                 }
             } else {
                 // The whole chat, oldest first, every message whole (prd
-                // §1578): the box draws none of it, so nothing is cut and
+                // §1579): the box draws none of it, so nothing is cut and
                 // nothing is drawn twice.
                 let rest = SheetRepeat.dropping(thing.content, heads: heads)
                 if !rest.isEmpty {
@@ -1433,7 +1433,7 @@ struct ChatBubbles: View {
     }
 }
 
-/// A chat with a person, as Messages draws it (prd §1578): every message in a
+/// A chat with a person, as Messages draws it (prd §1579): every message in a
 /// `DSChatBubble`, oldest first, yours on the trailing edge, theirs on the
 /// leading. The side says who, so a one-to-one names nobody; a group names a
 /// sender over the first of their run. The newest stand at the foot, so a

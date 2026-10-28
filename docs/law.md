@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1716 of 1785 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1717 of 1786 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1564,8 +1564,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
 - §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token (amended by §1217)
 - §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
-- §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192, §1578)
-- §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page (amended by §1578)
+- §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192, §1579)
+- §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page (amended by §1579)
 - §1193 — The share sheet gets UIKit items, never a `Transferable` link
 - §1194 — Privy's Home is its balance line
 - §1195 — A checklist's last tick says "All done"
@@ -1955,13 +1955,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the…
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
-- §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum…
+- §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578)
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
-- §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157…
+- §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157… (amended by §1578)
 - §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape) (amended by §1577)
 - §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week
 - §1577 — The export doors are deleted from Telegram, X and Instagram; Telegram's sign-in leads its page; the misplaced databas…
-- §1578 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
+- §1578 — Round-ups save with your sends only, always in USDC: ETH is swapped for a dollar that is short, Save now and the ppET…
+- §1579 — A chat with a person draws every message whole, in bubbles, oldest first; the box keeps the network, the count and th…
 
 ## Dead rulings → what replaced them (generated)
 

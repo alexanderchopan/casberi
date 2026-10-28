@@ -3455,6 +3455,12 @@ struct MoveSentence: View {
                         ride = net.chainId == RoundUps.ethereumPool
                             ? try await PrivateOnEthereum.roundUpsRide(units: rideUnits)
                             : try await PrivateBridge.ride(budget: rideUnits, from: net, account: account)
+                        // Short of the dollar, ETH is swapped for it first (prd §1578).
+                        if let made = ride {
+                            ride = await PrivateOnEthereum.fundedByETH(made, units: rideUnits, on: net, account: account,
+                                                                       leaving: Self.leaving(batch, Op.dollar(on: net)),
+                                                                       ethLeaving: Self.leaving(batch, Op.eth))
+                        }
                     } catch {
                         NSLog("roundUpsPrivate| kept counting | %@", String(describing: error))
                     }
@@ -3594,6 +3600,18 @@ struct MoveSentence: View {
         }
         return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
                                         roundUp: roundUp, renew: true, ride: ride, stage: stage)
+    }
+
+    /// What this operation's own sends and swaps take of `token`, so a
+    /// round-up's ride knows what is left of it (prd §1578).
+    static func leaving(_ batch: [Chain.Item], _ token: Op.Token) -> String {
+        batch.reduce("0") { sum, item in
+            switch item {
+            case .send(let p) where p.token == token: Op.sum(sum, p.amount)
+            case .swap(let s) where s.sell == token: Op.sum(sum, s.amount)
+            default: sum
+            }
+        }
     }
 
     /// Round-ups that rode a landed operation (prd §1567): the note kept
