@@ -697,7 +697,7 @@
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Casberi/Casberi-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -751,7 +751,7 @@
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Casberi/Casberi-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -804,7 +804,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/ShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -831,7 +831,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/ShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -858,7 +858,7 @@
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "CasberiWidgets/CasberiWidgets-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -885,7 +885,7 @@
 				CODE_SIGN_ENTITLEMENTS = CasberiWidgets/CasberiWidgets.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "CasberiWidgets/CasberiWidgets-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CasberiWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -910,7 +910,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 3.0.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
@@ -927,7 +927,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 3.0.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiTests;
@@ -944,7 +944,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationContent/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -969,7 +969,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationContent/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -993,7 +993,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 3.0.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiUITests;
@@ -1009,7 +1009,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 884;
+				CURRENT_PROJECT_VERSION = 885;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 3.0.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.casberi.app.CasberiUITests;
