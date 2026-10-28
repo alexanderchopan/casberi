@@ -87,30 +87,19 @@ struct AgentChatBox: View {
 struct ChatTranscriptBox: View {
     let thing: Thing
 
+    /// The network, how much and the day. The messages stand under the
+    /// tiles, whole (prd §1578): two of them here were cut to two lines and
+    /// drawn nowhere else, and stood above the chat they end.
     var body: some View {
         if thing.isLive {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
-                    Text(verbatim: metaLine)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                ForEach(Array(lastExchange.enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line.words)
-                        .dsText(.body17)
-                        .foregroundStyle(line.mine ? Color.white : DS.textPrimary)
-                        .lineLimit(2)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, DS.Space.s2)
-                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(line.mine ? DS.pickInk : DS.fillStrong))
-                        .frame(maxWidth: .infinity, alignment: line.mine ? .trailing : .leading)
-                }
+            HStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
+                Text(verbatim: metaLine)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
         }
     }
@@ -121,24 +110,6 @@ struct ChatTranscriptBox: View {
         if let n = thing.messageCount, n > 0 { parts.append(String(localized: "\(n) messages")) }
         parts.append(FeedScreen.dayWord(thing.capturedAt))
         return parts.joined(separator: " · ")
-    }
-
-    /// How many of the chat's closing lines this box draws, so the chat
-    /// under the tiles ends before them (the sweep's P7).
-    static func linesDrawn(_ thing: Thing) -> Int {
-        min(2, thing.content.split(whereSeparator: \.isNewline)
-            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count)
-    }
-
-    /// The last two lines of the transcript, who said each.
-    private var lastExchange: [(words: String, mine: Bool)] {
-        let lines = thing.content.split(whereSeparator: \.isNewline)
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        return lines.suffix(Self.linesDrawn(thing)).map { line in
-            let said = ChatBubbles.speaker(of: line)
-            return (said.words, said.name.map(ChatBubbles.isMine) ?? false)
-        }
     }
 }
 
@@ -287,9 +258,6 @@ struct SheetBoxDrawn: Equatable {
     /// An agent chat's opening turns the box drew (the ask and the reply's
     /// first words), so the transcript under the tiles starts after them.
     var firstTurns = 0
-    /// A chat's closing lines the box drew (the last exchange), so the
-    /// transcript under the tiles ends before them.
-    var lastLines = 0
     /// A contact's face and role line stand in the box; the card under the
     /// tiles is their numbers and addresses alone.
     var person = false

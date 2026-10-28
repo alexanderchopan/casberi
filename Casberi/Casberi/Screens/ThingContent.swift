@@ -516,14 +516,12 @@ struct ThingContentView: View {
                     ChatBubbles(text: thing.content)
                 }
             } else {
-                // The last exchange stands in the box; the chat under the
-                // tiles ends before it.
-                let lines = thing.content.split(separator: "\n")
-                    .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-                let rest = SheetRepeat.dropping(lines.dropLast(boxDrawn.lastLines).joined(separator: "\n"),
-                                                heads: heads)
+                // The whole chat, oldest first, every message whole (prd
+                // §1578): the box draws none of it, so nothing is cut and
+                // nothing is drawn twice.
+                let rest = SheetRepeat.dropping(thing.content, heads: heads)
                 if !rest.isEmpty {
-                    ChatBubbles(text: rest)
+                    PersonChatBubbles(text: rest)
                 }
             }
         case .voice:
@@ -1432,6 +1430,74 @@ struct ChatBubbles: View {
 
     static func isMine(_ name: String) -> Bool {
         ["you", "me"].contains(name.lowercased())
+    }
+}
+
+/// A chat with a person, as Messages draws it (prd §1578): every message in a
+/// `DSChatBubble`, oldest first, yours on the trailing edge, theirs on the
+/// leading. The side says who, so a one-to-one names nobody; a group names a
+/// sender over the first of their run. The newest stand at the foot, so a
+/// long chat hides its OLDEST behind "Show N earlier", never its newest.
+///
+/// Liveness: holds a plain string sliced off a live model by the caller.
+struct PersonChatBubbles: View {
+    let text: String
+    @State private var expanded = false
+
+    private static let collapsedCount = 20
+
+    private struct Message {
+        var name: String?
+        var words: String
+        var mine: Bool
+    }
+
+    private var messages: [Message] {
+        text.split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { line in
+                let said = ChatBubbles.speaker(of: line)
+                let mine = said.name.map(ChatBubbles.isMine) ?? false
+                return Message(name: mine ? nil : said.name, words: said.words, mine: mine)
+            }
+    }
+
+    var body: some View {
+        let all = messages
+        let shown = expanded ? all : Array(all.suffix(Self.collapsedCount))
+        let hiddenCount = all.count - shown.count
+        // Names only where the side cannot say who: two or more people
+        // besides you.
+        let named = Set(all.compactMap(\.name)).count > 1
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            if hiddenCount > 0 {
+                Button {
+                    withAnimation(DS.Motion.standard) { expanded = true }
+                } label: {
+                    Text("Show \(hiddenCount) earlier")
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, DS.Space.s2)
+            }
+            ForEach(Array(shown.enumerated()), id: \.offset) { index, message in
+                let previous = index > 0 ? shown[index - 1] : nil
+                let turn = previous.map { $0.mine != message.mine || $0.name != message.name } ?? false
+                if named, let name = message.name, turn || previous == nil {
+                    Text(verbatim: name)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .padding(.leading, DS.Space.s3)
+                        .padding(.top, previous == nil ? 0 : DS.Space.s2)
+                }
+                DSChatBubble(attributed: ProseLinks.rendered(message.words), fromSelf: message.mine)
+                    .padding(.top, turn && !(named && message.name != nil) ? DS.Space.s2 : 0)
+            }
+        }
+        .padding(.horizontal, DSRoomChassis.leadInset)
+        .padding(.bottom, DS.Space.s3)
     }
 }
 
