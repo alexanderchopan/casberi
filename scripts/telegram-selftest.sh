@@ -32,8 +32,7 @@
 # Every one of those renders as an ordinary, plausible feed. Nothing in a build,
 # a screen sweep or a nightly host check can see any of them.
 #
-# The export half (`Model/TelegramExport.swift`) is deliberately NOT covered
-# here — it is its own file with its own shapes.
+# The export half (`TelegramExport`) is deleted with its door (prd §1577).
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.

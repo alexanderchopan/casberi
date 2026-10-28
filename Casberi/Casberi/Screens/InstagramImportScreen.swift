@@ -46,7 +46,6 @@ import UniformTypeIdentifiers
 struct InstagramImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @State private var importing = false
     @State private var result: BridgeProof?
     /// How old this import is, and how much of it is here (2026-08-05,
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
@@ -88,15 +87,8 @@ struct InstagramImportScreen: View {
             sheet: $sheet,
             act: {
                 liveBlock
-                setupBlock
             },
-            more: {
-                ImportUpkeepSection(source: "Instagram", held: held,
-                                    staleness: staleness, plain: true) { gone in
-                    reread()
-                    result = .says(String(localized: "\(gone) removed"))
-                }
-            },
+            more: { EmptyView() },
             keySheet: { EmptyView() }
         )
         .onAppear {
@@ -108,11 +100,6 @@ struct InstagramImportScreen: View {
             if liveConnected, BridgeRefresh.dueForHeal("instagram.live") {
                 Task { await syncLive() }
             }
-        }
-        .fileImporter(isPresented: $importing,
-                      allowedContentTypes: [.folder]) { outcome in
-            guard case .success(let url) = outcome else { return }
-            Task { await runImport(url) }
         }
     }
 
@@ -158,35 +145,6 @@ struct InstagramImportScreen: View {
         }
     }
 
-    @ViewBuilder private var setupBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ImportArchiveSection(
-                source: "Instagram",
-                doorTitle: "Open Instagram",
-                doorURL: URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/"),
-                // JSON is called out because the default is HTML, and an
-                // HTML export parses into nothing here. The REASON for that
-                // ("an HTML export can't be read") left the step in the §315
-                // pass and lives in `nothingNewLine` — the moment it can
-                // actually be acted on. A step says what to do; an error
-                // says why it didn't work.
-                steps: [
-                    "Download or transfer → Some of your info",
-                    "Tick Saved, Likes, Posts, Stories, Reels",
-                    "Format JSON, not HTML → Download",
-                    // "then pick the unzipped folder below" was the button
-                    // beneath it read out loud (2026-07-31).
-                    "A link arrives in about an hour",
-                ],
-                pickTitle: "Choose folder",
-                alreadyImported: held > 0,
-                showsMessagesToggle: true,
-                // Two verbs, Connect then Import (prd §794).
-                closedDetail: String(localized: "Your export: saves, likes and posts")) { importing = true }
-            BridgeSyncStatusRows(proof: result)
-        }
-    }
-
     /// One re-read of what this screen shows about the corpus — on appear,
     /// after an import and after a removal, so the three can never disagree.
     private func reread() {
@@ -225,79 +183,4 @@ struct InstagramImportScreen: View {
 
     // MARK: - Run
 
-    /// The security-scoped grant covers the picked folder for as long as
-    /// access is held, and the importer reads several files from inside it — so
-    /// the read must finish before the `defer` releases the grant.
-    ///
-    /// That used to mean this had to be SYNCHRONOUS. It doesn't (2026-08-05,
-    /// prd §310): awaiting here holds the grant across the suspension exactly
-    /// as a synchronous read held it across the call, because `defer` fires
-    /// when the function returns and not when it suspends. What must never
-    /// happen is handing the URL to a task that outlives this scope — which is
-    /// still true, and still the reason the await is here rather than detached.
-    private func runImport(_ url: URL) async {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-
-        let summary = await InstagramImport.run(folder: url, context: modelContext,
-                                                 progress: { count in
-            // A running count in the status row the receipt will replace — a
-            // large archive lands in chunks now (prd §310), and without this
-            // the stretch between the tap and the receipt says nothing at all.
-            result = .says(String(localized: "\(count) landed…"))
-        })
-        if summary.failed {
-            result = .failed(String(localized: "Couldn't read that folder. Pick the folder you unzipped — the one containing your_instagram_activity."))
-            return
-        }
-        DSHaptic.success()
-        // `held` is what collapses the archive block now, so a screen that
-        // didn't re-read it would leave the tutorial open after a successful
-        // import until the next visit.
-        reread()
-        result = summary.imported > 0 ? .says(landedLine(summary)) : .says(nothingNewLine(summary))
-        let proof = summary.imported > 0
-            ? String(localized: "\(summary.imported) in")
-            : String(localized: "Imported just now")
-        store.registerConnected(id: "instagram", name: "Instagram", proof: proof,
-                                can: ["Imports the export you choose."])
-        // Lift the topic terms off what just landed, so the room's "What you
-        // write about" map is there when they walk into it rather than a few
-        // foregrounds later. Detached from the scoped-folder read above (it
-        // touches only the store), and bounded — `BridgeRefresh` carries the
-        // rest on later opens.
-        if summary.posts + summary.comments > 0 {
-            Task { @MainActor in
-                _ = await ScreenshotTopics.healTopics(source: "Instagram",
-                                                      context: modelContext, limit: 400)
-            }
-        }
-    }
-
-    /// Names each category that actually landed rather than one total — the
-    /// counts differ in KIND (captions are text, saves are links), and a
-    /// single number would hide that the text half may be empty.
-    private func landedLine(_ summary: InstagramImport.Summary) -> String {
-        var parts: [String] = []
-        if summary.posts > 0    { parts.append("\(summary.posts) posts") }
-        // The wordless half, named apart (2026-08-18, prd §389). A subset of
-        // `posts`, never added to it — an export that is mostly photographs
-        // otherwise reports one number that reads as captions.
-        if summary.photos > 0   { parts.append("\(summary.photos) photos") }
-        if summary.comments > 0 { parts.append("\(summary.comments) comments") }
-        if summary.saved > 0    { parts.append("\(summary.saved) saved") }
-        if summary.liked > 0    { parts.append("\(summary.liked) liked") }
-        var landed = parts.joined(separator: " · ")
-        if summary.skipped > 0 { landed += " · \(summary.skipped) already here" }
-        // A capped import says so on the screen that ran it — this is the one
-        // moment the person could still act on it (prd §309).
-        if summary.dropped > 0 { landed += " · \(summary.dropped) older not imported" }
-        return landed
-    }
-
-    private func nothingNewLine(_ summary: InstagramImport.Summary) -> String {
-        summary.skipped > 0
-            ? "Nothing new — all \(summary.skipped) were already here."
-            : "That export had nothing in it. Check you ticked Saved, Likes, Posts, Stories, Reels or Comments — and chose JSON, not HTML, which can't be read."
-    }
 }

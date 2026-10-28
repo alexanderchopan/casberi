@@ -74,6 +74,36 @@ final class TelegramClient: @unchecked Sendable {
         URL.applicationSupportDirectory.appending(path: "Telegram", directoryHint: .isDirectory)
     }
 
+    /// A file-system path, never `URL.path()`, which PERCENT-ENCODES: build
+    /// 882 handed TDLib `…/Application%20Support/Telegram/db`, TDLib made a
+    /// folder by that literal name, and sign-out removed the real (empty)
+    /// folder and the key — so the next sign-in found a database with no key
+    /// and refused. The misplaced folder also sat outside the backup
+    /// exclusion.
+    static func fsPath(_ url: URL) -> String { url.path(percentEncoded: false) }
+
+    /// Where build 882 put the database: the percent-encoded path, taken
+    /// literally.
+    static var misplacedDirectory: URL { URL(fileURLWithPath: directory.path()) }
+
+    /// Moves an 882 database home while its key is still here, so that
+    /// session survives the update; removes it when it can no longer be
+    /// opened (no key) or a database is already home. Once, before TDLib
+    /// opens anything.
+    static func healMisplacedDirectory() {
+        let fm = FileManager.default
+        let stray = misplacedDirectory
+        guard stray != directory, fm.fileExists(atPath: fsPath(stray)) else { return }
+        if TokenVault.get(databaseKeyName) != nil,
+           !fm.fileExists(atPath: fsPath(directory.appending(path: "db"))) {
+            try? fm.createDirectory(at: directory.deletingLastPathComponent(),
+                                    withIntermediateDirectories: true)
+            try? fm.removeItem(at: directory)
+            if (try? fm.moveItem(at: stray, to: directory)) != nil { return }
+        }
+        try? fm.removeItem(at: stray)
+    }
+
     // MARK: Start
 
     /// Creates the client and its receiving thread, once. Safe to call again.
@@ -247,6 +277,7 @@ final class TelegramClient: @unchecked Sendable {
     }
 
     private func sendParameters() async {
+        Self.healMisplacedDirectory()
         guard let key = Self.databaseKey() else {
             publish(.unavailable(String(localized: "Couldn't read this device's Telegram key. Try again later.")))
             return
@@ -261,8 +292,8 @@ final class TelegramClient: @unchecked Sendable {
         let answer = await send([
             "@type": "setTdlibParameters",
             "use_test_dc": false,
-            "database_directory": dir.appending(path: "db").path(),
-            "files_directory": dir.appending(path: "files").path(),
+            "database_directory": Self.fsPath(dir.appending(path: "db")),
+            "files_directory": Self.fsPath(dir.appending(path: "files")),
             "database_encryption_key": key,
             // Chats and their history are kept, so a read asks Telegram only
             // for what is new; files are never downloaded.
@@ -287,7 +318,7 @@ final class TelegramClient: @unchecked Sendable {
     /// read, which is never answered with a new key.
     private static func databaseKey() -> String? {
         if let key = TokenVault.get(databaseKeyName) { return key }
-        if FileManager.default.fileExists(atPath: directory.appending(path: "db").path()) { return nil }
+        if FileManager.default.fileExists(atPath: fsPath(directory.appending(path: "db"))) { return nil }
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return nil }
         let key = Data(bytes).base64EncodedString()
@@ -336,6 +367,7 @@ final class TelegramClient: @unchecked Sendable {
         }
         lock.withLock { clientID = nil; stepValue = .idle }
         try? FileManager.default.removeItem(at: Self.directory)
+        try? FileManager.default.removeItem(at: Self.misplacedDirectory)
         TokenVault.delete(Self.databaseKeyName)
         DefaultsWrite.remove(TelegramMessagesRead.lastSeenKey)
         await MainActor.run {

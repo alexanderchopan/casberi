@@ -1820,19 +1820,6 @@ harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the 
 # sheet. The key reaches a wallet's agent; that is why its scope is a test.
 harness "Bankr key-mint self-test" "Bankr key-mint self-test" "scripts/bankr-mint-selftest.sh" "the Bankr key-mint self-test failed — run scripts/bankr-mint-selftest.sh"
 
-# The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
-# whole. UNMEASURED against a real Telegram archive more strongly than any
-# other harness in this file: no export has ever been held by this project, so
-# this is not the best proof its rules hold, it is the ONLY one. Every failure
-# it catches renders as a perfectly ordinary import — a message dated 21 years
-# off because `date` (local time, no offset) was trusted over the authoritative
-# `date_unixtime`; a message silently dropped because it carried a `text_link`
-# beside a bare link the fallback path can't reach; a whole archive refusing to
-# parse because Telegram's own generator writes control bytes as `\xNN`, which
-# is not valid JSON; or a group message misread as yours because the self-id
-# check fell back to comparing display names instead of ids.
-harness "Telegram export pure-logic self-test" "Telegram export pure-logic self-test" "scripts/telegram-export-selftest.sh" "the Telegram export logic self-test failed — run scripts/telegram-export-selftest.sh"
-
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive
 # and every one of them renders as a perfectly good fork: leading with the

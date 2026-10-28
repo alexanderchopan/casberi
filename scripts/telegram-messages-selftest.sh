@@ -58,6 +58,12 @@ done
 if grep -rE 'TelegramClient\.shared\.start\(\)' Casberi/Casberi --include='*.swift' | grep -v "$CLIENT" >/dev/null; then
   echo "✗ something outside TelegramClient starts TDLib directly — go through settled()"; exit 1
 fi
+# TDLib's paths are file-system paths, never `URL.path()` (percent-encoded):
+# build 882 put the database in a folder literally named `Application%20Support`
+# and sign-out then orphaned it (prd §1577).
+if code "$CLIENT" | grep -E '"(database|files)_directory"' | grep -vF 'Self.fsPath(' >/dev/null; then
+  echo "✗ TDLib is handed a path that is not fsPath() — a percent-encoded path makes a folder by that literal name"; exit 1
+fi
 # The probe prints shapes, never words.
 if code "$HOOKS" | grep -E 'telegramDM\|' | grep -E '\.text\b|lines\.map|\.content|\.title' >/dev/null; then
   echo "✗ the Telegram messages probe prints message words or titles"; exit 1

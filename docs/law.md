@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1714 of 1783 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1715 of 1784 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -759,7 +759,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §453 — Nothing in the app shouts
 - §454 — The wallet room gets one card recipe
 - §455 — The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that s… (amended by §1050d)
-- §456 — Telegram returns, through the two doors §57 never weighed
+- §456 — Telegram returns, through the two doors §57 never weighed (amended by §1577)
 - §457 — The agent rooms get a head, Claude Code gets measured, and two registries that answered nil
 - §458 — WhatsApp is passed on, and the reasons are of two grades
 - §459 — What more can we do with OpenRouter
@@ -1022,7 +1022,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §698 — The Frames scope is one reading in three rooms
 - §699 — The GitHub room is ONE FEED: the head card is deleted, the type becomes a tag under the timestamp, and the faces you… (part superseded by §815)
 - §700 — Only the avatar is fixed: the catalogue is the strip's LAST item (part superseded by §793, §798)
-- §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined
+- §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined (amended by §1577)
 - §702 — "What it reaches" leaves the account pages; the app's hosts are stated once, in settings
 - §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows (amended by §1158)
 - §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it
@@ -1050,7 +1050,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §723 — The ranked board is deleted from every room, and the newest thing takes its slot
 - §724 — A scope chip's word never accepts a narrower width
 - §725 — The dock froze because the caps were for a hand, and the hand is what they landed on
-- §726 — Instagram grows a live door: notifications and saved posts, read with the person's own session cookies, and the expor… (amended by §731)
+- §726 — Instagram grows a live door: notifications and saved posts, read with the person's own session cookies, and the expor… (amended by §731, §1577)
 - §727 — A token that came in with no price is a row on Wallet Home, not a reason to draw nothing (part superseded by §942)
 - §728b — Every Frames send carries a deadline, and the sheet sends tokens
 - §728c — Somebody else can pay: a Frames send can be signed as a request, and the phone asked pays for it from a link
@@ -1958,8 +1958,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum…
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
 - §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157…
-- §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape)
+- §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape) (amended by §1577)
 - §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week
+- §1577 — The export doors are deleted from Telegram, X and Instagram; Telegram's sign-in leads its page; the misplaced databas…
 
 ## Dead rulings → what replaced them (generated)
 

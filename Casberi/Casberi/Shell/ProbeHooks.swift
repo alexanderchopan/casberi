@@ -1069,24 +1069,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-telegramImport <path>` imports an unzipped Telegram Desktop export
-        // folder (result.json at its root). Chats and groups ride
-        // `ImportOptions.includeMessages` exactly as they do in the UI, so a
-        // run without it lands Saved Messages and channels alone.
-        Hook(key: "telegramImport") { path, context in
-            Task { @MainActor in
-                let summary = await TelegramImport.run(folder: URL(fileURLWithPath: path),
-                                                       context: context)
-                NSLog("Telegram probe: saved=%d channels=%d conversations=%d",
-                      summary.saved, summary.channelPosts, summary.conversations)
-                NSLog("Telegram probe: %d imported, %d skipped, %d dropped by cap, failed=%d",
-                      summary.imported, summary.skipped, summary.dropped,
-                      summary.failed ? 1 : 0)
-                if let reason = summary.reason {
-                    NSLog("Telegram probe: reason=%@", reason)
-                }
-            }
-        },
         // `-snapchatImport <path>` imports an unzipped Snapchat data export
         // folder (chat_history.json + memories_history.json, at the root or
         // one level down). Lands metadata only — the memories' pictures are
