@@ -60,6 +60,9 @@ struct MoveFreshSentence<Head: View>: View {
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         .animation(DS.Motion.standard, value: entry)
+        .onChange(of: beat) { was, now in
+            if now > was { DSHaptic.success() }
+        }
         .task {
             book.ensureCurrent()
             #if DEBUG
@@ -78,6 +81,18 @@ struct MoveFreshSentence<Head: View>: View {
                 await book.check(context: context)
                 await PrivateMoneyStore.shared.refresh()
             }
+        }
+    }
+
+    /// The beats a person feels (prd §1586): money arrived at the address,
+    /// then approved, private now. 0 is nothing yet.
+    private var beat: Int {
+        guard let entry else { return 0 }
+        switch entry.state {
+        case .waiting: return 0
+        case .moved(_, let tx):
+            return PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })?.status == .approved ? 2 : 1
+        default: return 1
         }
     }
 

@@ -48,6 +48,7 @@ struct MoveSentence: View {
         _fresh = State(initialValue: arrival != nil)
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
+        picksUpDraft = mode == nil && !toFresh && opening == nil && arrival == nil
     }
 
     /// **SEND, PRIVATELY (prd §1554): a recipient and a switch, never a
@@ -126,6 +127,29 @@ struct MoveSentence: View {
     /// A swap to another network that landed: its fill is read until it
     /// arrives (prd §1555).
     @State private var crossingWatch: YourAccountAcross.Crossing?
+    /// Across's "about N seconds" for the move being watched, counted
+    /// against on the receipt (prd §1586).
+    @State private var crossingSeconds: Int?
+    /// The receipt the watched move wrote: the count goes on that one only.
+    @State private var crossingReceipt: UUID?
+    /// The address the receipt's "Name …a3f1" is naming, and the name typed.
+    @State private var naming: String?
+    @State private var nameDraft = ""
+    /// The pairs priced once this visit: the first price lands with a tick.
+    @State private var pricedPairs: Set<String> = []
+    /// The figure For showed before a re-price, kept breathing until the
+    /// new one lands so the sentence never re-wraps mid-slide (prd §1586).
+    @State private var staleBack: (id: String, text: String)?
+    /// Who To held when it opened: opening it to look and closing it again
+    /// gives them back (prd §1586).
+    @State private var toBefore: (text: String, resolved: Recipient?)?
+    /// To's Paste put the field's text there: once it resolves, the list
+    /// closes on its own.
+    @State private var pastedTo = false
+    /// A name in To being asked of its resolver, or one none answered for:
+    /// said under the sentence, never a grey word left to guess (prd §1586).
+    enum Lookup: Equatable { case looking(String), missing(String) }
+    @State private var lookup: Lookup?
     @State private var amount = ""
     /// Dollars first (§1442a, user: "user may want to say a dollar value
     /// before they choose token"): the amount can be typed before anything
@@ -160,7 +184,13 @@ struct MoveSentence: View {
     /// What the sentence says back for a moment — what is missing, what
     /// failed — in its own line, because a toast draws under the tray
     /// (§1442c). Cleared after a few seconds, or by the next one.
-    struct Hint: Equatable { let text: String; let failure: Bool; var from: String? = nil; let id = UUID() }
+    struct Hint: Equatable {
+        let text: String; let failure: Bool; var from: String? = nil
+        /// A refusal with a way forward carries its door (prd §1586):
+        /// over the limit with no co-signer opens Your account's keys.
+        var opensKeys = false
+        let id = UUID()
+    }
     @State private var hint: Hint?
 
     // MARK: - Details (prd §1509)
@@ -220,10 +250,13 @@ struct MoveSentence: View {
     @State private var sweepLeftOut: Set<String> = []
 
     private func say(_ text: String, failure: Bool = false, seconds: Double = 3, from: String? = nil) {
-        let h = Hint(text: text, failure: failure, from: from)
+        let h = Hint(text: text, failure: failure, from: from, opensKeys: text == Self.needsCoSigner)
         withAnimation(DS.Motion.standard) { hint = h }
+        // A refusal is felt as well as read (prd §1586).
+        if failure { DSHaptic.failure() }
         Task {
-            try? await Task.sleep(for: .seconds(seconds))
+            // A door stays long enough to be taken.
+            try? await Task.sleep(for: .seconds(h.opensKeys ? max(seconds, 12) : seconds))
             if hint?.id == h.id { withAnimation(DS.Motion.standard) { hint = nil } }
         }
     }
@@ -250,15 +283,30 @@ struct MoveSentence: View {
     }
 
     private func hintText(_ h: Hint) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            if let from = h.from { Self.mark(of: from) }
-            Text(verbatim: h.text)
-                .dsText(.body17)
-                .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                if let from = h.from { Self.mark(of: from) }
+                Text(verbatim: h.text)
+                    .dsText(.body17)
+                    .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if h.opensKeys {
+                Button {
+                    DSHaptic.selection()
+                    chrome.moveTray = false
+                    chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
+                } label: {
+                    Text("Add a co-signer").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+            }
         }
         .transition(.opacity)
     }
+
+    /// Over the limit with no co-signer (`spend`): said with a door to it.
+    static let needsCoSigner = String(localized: "Add a signer first: over the limit, a send waits on it")
 
     /// Bumped to shake the To word once: an address that imitates a book entry.
     @State private var shake = 0
@@ -281,10 +329,97 @@ struct MoveSentence: View {
         var linkName: String? = nil
         /// Said instead of "View on <name>" when the door is not an explorer.
         var linkTitle: String? = nil
+        /// Addresses this landed send paid that have no name yet: the
+        /// receipt offers to name each (prd §1586).
+        var names: [String] = []
+        /// Which move this receipt is: two alike sentences are two receipts,
+        /// and a watch writes only on its own.
+        var id = UUID()
+    }
+
+    /// **"SWEPT 3 TOKENS FOR 0.0004 ETH ON BASE." (prd §1586).** A sweep's
+    /// receipt counts what it took; the tokens are the list it just showed.
+    static func swept(_ r: Receipt, count: Int) -> Receipt {
+        let back = r.lines.first { $0.glue == String(localized: "for") }
+        let on = r.lines.last
+        let n = count == 1 ? String(localized: "1 token") : String(localized: "\(count) tokens")
+        return Receipt(past: String(localized: "Swept"),
+                       lines: [Receipt.Line(glue: nil, text: n)] + [back, on].compactMap { $0 },
+                       detail: r.detail, link: r.link, linkName: r.linkName, linkTitle: r.linkTitle)
+    }
+
+    /// What round-ups did with this send, in a few words, or nil when there
+    /// is nothing to say (prd §1586). Private round-ups say it in Holdings.
+    static func roundUpWords(_ plan: RoundUps.Plan, bought: Bool, toPrivate: Bool, on chainId: Int) -> String? {
+        guard !toPrivate, plan.change != "0" else { return nil }
+        let target = RoundUps.setting.target.symbol
+        if bought, let buy = plan.buy {
+            let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
+            return String(localized: "\(money(usd)) of round-ups bought \(target)")
+        }
+        let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
+        let saved = Op.dollars(RoundUps.saved(on: chainId), decimals: RoundUps.dollarDecimals, price: 1)
+        return String(localized: "\(money(change)) rounded up · \(money(saved)) toward \(target)")
+    }
+
+    /// The addresses a batch sent to that your book has no name for.
+    static func unnamed(_ batch: [Chain.Item]) -> [String] {
+        var out: [String] = []
+        for item in batch {
+            guard case .send(let p) = item, p.toName == nil, AddressBook.shared.name(for: p.to) == nil,
+                  !out.contains(where: { WalletWatch.sameAddress($0, p.to) }) else { continue }
+            out.append(p.to)
+        }
+        return out
     }
     #if DEBUG
     @State private var drafted = false
     #endif
+
+    /// **A SWIPE DOWN IS NOT A CANCEL (prd §1586).** What the tray held when
+    /// it closed, picked up by the next open within five minutes: the line
+    /// being filled only, since a kept line's quote goes stale.
+    struct Draft {
+        let verb: Verb
+        let network: Op.Network
+        let networkPicked: Bool
+        let amount: String
+        let inDollars: Bool
+        let withID: String?
+        let buy: Tokens.Listed?
+        let buyOn: Op.Network?
+        let to: String
+        let at: Date
+    }
+
+    /// Opened plainly, from the tab: no arrival, no private mode, no verb
+    /// asked for. Only such an open picks a draft up.
+    private let picksUpDraft: Bool
+    @State private var draftWithID: String?
+
+    private var keptDraft: Draft? {
+        guard receipt == nil, stage == nil, privateMode == nil, !freshReceive, !fresh else { return nil }
+        let filled = !amount.isEmpty || with != nil || buy != nil || !to.isEmpty
+        guard filled || verb != .swap else { return nil }
+        return Draft(verb: verb, network: network, networkPicked: networkPicked, amount: amount, inDollars: inDollars,
+                     withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date())
+    }
+
+    private func pickUpDraft() {
+        guard picksUpDraft, let d = chrome.moveDraft else { return }
+        chrome.moveDraft = nil
+        guard Date().timeIntervalSince(d.at) < 5 * 60 else { return }
+        verb = d.verb
+        network = d.network
+        networkPicked = d.networkPicked
+        inDollars = d.inDollars
+        // The token is matched once the holdings land (`readHoldings`).
+        draftWithID = d.withID
+        buy = d.buy
+        buyOn = d.buyOn
+        amount = d.amount
+        to = d.to
+    }
 
     // MARK: - What the sentence says
 
@@ -311,13 +446,19 @@ struct MoveSentence: View {
     /// Read, and nothing anywhere: there is nothing to spend yet. A network
     /// no node answered for is not nothing, so it never says so.
     private var emptyEverywhere: Bool {
-        !heldBy.isEmpty && unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+        heldEverywhere && unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+    }
+
+    /// Every network has answered or been given up on: networks fill in
+    /// one by one (prd §1586), and one answered is not all.
+    private var heldEverywhere: Bool {
+        Op.networks.allSatisfy { heldBy[$0.chainId] != nil }
     }
 
     /// Nothing found, because a read failed: the line says which networks
     /// and offers the read again, never "Receive something first".
     private var readFailed: Bool {
-        !heldBy.isEmpty && !unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+        heldEverywhere && !unread.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
     }
 
     private var unreadNames: String {
@@ -704,7 +845,30 @@ struct MoveSentence: View {
         // While a blank is open the foot steps aside: its verb cannot sign a
         // half-picked sentence, and the list takes its room (§1442a).
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil, !rawOpen { foot.transition(.opacity) } }
-        .task(id: network.chainId) { await readNetwork() }
+        // A network picked is read again; the first pass is `readHoldings`'
+        // (prd §1586: Base was read twice on every open).
+        .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
+        // Never closed by a swipe while Face ID or the network has it.
+        .interactiveDismissDisabled(stage != nil)
+        .onDisappear { chrome.moveDraft = keptDraft }
+        .alert("Name this address", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+            TextField("Name", text: $nameDraft)
+                .textInputAutocapitalization(.words)
+            Button("Save") {
+                let name = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let address = naming, !name.isEmpty else { return }
+                AddressBook.shared.setName(name, for: address)
+                CounterpartyRetitle.applyCurrentName(for: address, in: context)
+                withAnimation(DS.Motion.standard) {
+                    receipt?.names.removeAll { WalletWatch.sameAddress($0, address) }
+                }
+                DSHaptic.success()
+                say(String(localized: "Named \(name)"))
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Next time it is one tap in To.")
+        }
         .task {
             // The sentence finishes itself a moment after it lands (§1442j);
             // with Reduce Motion it is simply finished.
@@ -725,6 +889,21 @@ struct MoveSentence: View {
             details = false
             rawOpen = false
         }
+        .onChange(of: open) { was, now in
+            guard was == .to, now != .to else { return }
+            if to.isEmpty, let before = toBefore {
+                to = before.text
+                resolved = before.resolved
+            }
+            toBefore = nil
+            pastedTo = false
+        }
+        .onChange(of: resolved) { _, now in
+            // A pasted address that resolved is the pick (prd §1586).
+            guard pastedTo, open == .to, let now, now.imitates == nil else { return }
+            pastedTo = false
+            pick {}
+        }
         .onChange(of: scenePhase) { _, now in
             if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
         }
@@ -739,9 +918,19 @@ struct MoveSentence: View {
         .task(id: checkKey) { await recheck() }
         .task(id: to) { await resolve() }
         .task {
-            await readAll()
+            // What you hold opens the first list; Uniswap's lists, which only
+            // For and a pasted contract need, follow (prd §1586).
+            pickUpDraft()
+            await readHoldings()
+            if with == nil, let id = draftWithID {
+                with = heldBy[network.chainId]?.first { $0.id == id }
+            }
+            draftWithID = nil
             #if DEBUG
-            draft()
+            if Self.drafting {
+                await readLists()
+                draft()
+            }
             #endif
             // **THE FIRST BLANK OPENS ITSELF (prd §1534, user: "make sure …
             // that its very easy to use").** Swap and Send landed as a grey
@@ -755,6 +944,7 @@ struct MoveSentence: View {
             // No keyboard on its own: Move is a page, and a keyboard raised
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
+            if listedBy.isEmpty { await readLists() }
         }
     }
 
@@ -872,7 +1062,7 @@ struct MoveSentence: View {
     private var layoutKey: String {
         [amount, with?.token.symbol ?? "", buy?.token.symbol ?? "", String(network.chainId),
          String(items.count), String(slot), to, resolved?.name ?? "", inDollars ? "$" : "",
-         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token.symbol ?? "",
+         quote?.buyAmount ?? staleBack?.text ?? "", String(reach?.count ?? -1), elsewhere?.token.symbol ?? "",
          buyGroup?.rawValue ?? "", buyProduct?.id ?? ""].joined(separator: "|")
     }
 
@@ -1139,7 +1329,7 @@ struct MoveSentence: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-        } else if heldBy.isEmpty {
+        } else if heldBy[network.chainId] == nil {
             Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
         }
     }
@@ -1330,15 +1520,17 @@ struct MoveSentence: View {
             }
             // What arrives is your pick (prd §1470): Relay swaps on the way.
             MoveClause(glue: String(localized: "as")) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Button {
-                        withAnimation(DS.Motion.standard) { open = .arrives }
-                        DSHaptic.selection()
-                    } label: { word(route.arrives.symbol, ink: DS.pickInk) }
-                        .buttonStyle(RowPress())
-                        .accessibilityHint(Text("Picks what you receive"))
-                    word(String(localized: "on \(route.to.name)."), ink: DS.textPrimary)
-                }
+                Button {
+                    withAnimation(DS.Motion.standard) { open = .arrives }
+                    DSHaptic.selection()
+                } label: { word(route.arrives.symbol, ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Picks what you receive"))
+            }
+            // Its own clause, so "on Base." moves to the next line whole
+            // rather than hanging under "as" (prd §1586).
+            MoveClause(glue: String(localized: "on")) {
+                word(route.to.name + ".", ink: DS.textPrimary)
             }
         } else if fresh {
             MoveClause {
@@ -1379,6 +1571,44 @@ struct MoveSentence: View {
             }
             MoveClause(glue: String(localized: "on")) { receiveNetworkWord }
         }
+    }
+
+    /// **THE ADDRESS, READABLE (prd §1586, user: "five digits per section
+    /// that doesn't lead to a wrap").** "0x" stands apart; the forty
+    /// characters are eight groups of five, two rows of four, the first and
+    /// last bright — the ones a person checks. A tap copies it, as the foot does.
+    private func addressBlock(_ address: String) -> some View {
+        let groups = Self.addressGroups(address)
+        return Button { copy() } label: {
+            if groups.count == 8 {
+                Grid(alignment: .leading, horizontalSpacing: DS.Space.s3, verticalSpacing: DS.Space.s1) {
+                    ForEach(0..<2, id: \.self) { row in
+                        GridRow {
+                            Text(verbatim: row == 0 ? "0x" : "").foregroundStyle(DS.textSecondary)
+                            ForEach(0..<4, id: \.self) { col in
+                                let n = row * 4 + col
+                                Text(verbatim: groups[n]).foregroundStyle(n == 0 || n == 7 ? DS.textPrimary : DS.textSecondary)
+                            }
+                        }
+                    }
+                }
+                .dsText(.mono17)
+            } else {
+                Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text(verbatim: address))
+        .accessibilityHint(Text("Copies the address"))
+    }
+
+    /// An EVM address's forty characters in eight groups of five; empty for
+    /// anything else.
+    static func addressGroups(_ address: String) -> [String] {
+        guard address.count == 42, address.lowercased().hasPrefix("0x") else { return [] }
+        let hex = Array(address.dropFirst(2))
+        return stride(from: 0, to: 40, by: 5).map { String(hex[$0..<$0 + 5]) }
     }
 
     /// Receive's one blank (prd §1486): the list it opens is your own
@@ -1466,6 +1696,7 @@ struct MoveSentence: View {
                     // ("Same as above", §1442h): what the line carried is a
                     // choice there, not a filter.
                     if which == .to {
+                        toBefore = (to, resolved)
                         to = ""
                         resolved = nil
                     }
@@ -1813,6 +2044,7 @@ struct MoveSentence: View {
             // Short in the sentence, the ≈ and the exact figure in the
             // print (§1479), so the clause stays whole at the biggest rung.
             let back = buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
+                ?? (pricing && staleBack?.id == buy.id ? staleBack?.text : nil)
             // The whole swap's result, pink like every value; locked by a
             // kept swap (§1442c), a tap says so (§1442g).
             let symbol = crossBuy?.symbol ?? buy.token.symbol
@@ -1838,7 +2070,8 @@ struct MoveSentence: View {
         let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
             ?? (to.isEmpty ? String(localized: "address")
                 : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
-        return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
+        let missing: Bool = { if case .missing = lookup { true } else { false } }()
+        return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.
                 .keyframeAnimator(initialValue: 0.0, trigger: shake) { content, x in
@@ -2014,6 +2247,15 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                 }
+                // A first send to an unnamed address: name it here, and the
+                // next send is a pick from your book (prd §1586).
+                ForEach(receipt.names, id: \.self) { address in
+                    DSDoorRow(icon: "person.crop.circle.badge.plus", title: Text("Name \(AddressTail.short(address))")) {
+                        nameDraft = ""
+                        naming = address
+                    }
+                    .transition(.opacity)
+                }
             }
         } else if emptyEverywhere, verb != .receive {
             Button {
@@ -2045,11 +2287,7 @@ struct MoveSentence: View {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 if let route = elsewhere {
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        Text(verbatim: route.address)
-                            .dsText(.mono12)
-                            .foregroundStyle(DS.textSecondary)
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
+                        addressBlock(route.address)
                         // A wrong token sent here can be lost, so the line names
                         // the one it takes; a swap on the way is said (§83), since
                         // what lands is set by the price when it lands.
@@ -2069,11 +2307,7 @@ struct MoveSentence: View {
                         // The arrival names no one network, so it shows no address to
                         // copy (prd §1488).
                         if !fresh {
-                            Text(verbatim: account)
-                                .dsText(.mono12)
-                                .foregroundStyle(DS.textSecondary)
-                                .textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
+                            addressBlock(account)
                             // The network the sentence names (prd §1486).
                             Text("Any coin on \(network.name).")
                                 .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -2130,6 +2364,26 @@ struct MoveSentence: View {
             // The exchange's credit is the foot's, and the slider, the amount's own
             // control, stands under it here rather than stranded at the foot.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
+                if verb == .send, let lookup { lookupLine(lookup) }
+                // **MORE THAN YOU HAVE, WITH THE FIX (prd §1586):** the slider
+                // stays, and the note is a door to all of it.
+                if verb == .send || verb == .swap, over {
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text("More than you have").dsText(.body17).foregroundStyle(DS.attentionInk)
+                        Button {
+                            // In the token's units: dollars round, and could
+                            // land a cent over what is there.
+                            inDollars = false
+                            shareBinding(with).wrappedValue = 100
+                            DSHaptic.snap()
+                        } label: {
+                            Text("Use all \(Op.spoken(left(with), decimals: with.token.decimals)) \(with.token.symbol)")
+                                .dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                        }
+                        .buttonStyle(RowPress())
+                        .disabled(stage != nil)
+                    }
+                }
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
@@ -2170,7 +2424,7 @@ struct MoveSentence: View {
             .fixedSize(horizontal: false, vertical: true)
         } else if !networkPicked {
             EmptyView()
-        } else if heldBy.isEmpty {
+        } else if heldBy[network.chainId] == nil {
             Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
         } else if held.isEmpty, unread.contains(network.chainId) {
             Text("Couldn't read \(network.name)").dsText(.body17).foregroundStyle(DS.attentionInk)
@@ -2179,8 +2433,28 @@ struct MoveSentence: View {
         }
     }
 
+    /// "Looking up uma.eth", or "No address answers to uma.eth" with a way
+    /// on: paste one (prd §1586).
+    @ViewBuilder private func lookupLine(_ l: Lookup) -> some View {
+        switch l {
+        case .looking(let name):
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                DSSpinner()
+                Text("Looking up \(name)").dsText(.body17).foregroundStyle(DS.textSecondary)
+            }
+        case .missing(let name):
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("No address answers to \(name)").dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                pasteRow { to = $0 }
+            }
+        }
+    }
+
     private var lineNote: String? {
-        if verb != .receive, over { return String(localized: "More than you have") }
+        // With a token picked, "More than you have" stands over its own fix
+        // in the token's block (prd §1586).
+        if verb != .receive, over, with == nil || !(verb == .send || verb == .swap) { return String(localized: "More than you have") }
         if verb == .swap, let quoteNote { return quoteNote }
         if verb == .send {
             if malformed { return String(localized: "Check the address") }
@@ -2644,7 +2918,7 @@ struct MoveSentence: View {
                 }
             }
             if rows.isEmpty {
-                Text(verbatim: heldBy.isEmpty ? String(localized: "Reading…")
+                Text(verbatim: !heldEverywhere && (!networkPicked || heldBy[network.chainId] == nil) ? String(localized: "Reading…")
                      : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
                      : networkPicked && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
                      : networkPicked ? String(localized: "Nothing on \(network.name) yet")
@@ -2776,7 +3050,7 @@ struct MoveSentence: View {
                     pick {}
                 }
             }
-            pasteRow { to = $0 }
+            pasteRow { to = $0; pastedTo = true }
         }
     }
 
@@ -3166,6 +3440,9 @@ struct MoveSentence: View {
                     Button { sign() } label: {
                         Text(verbatim: footVerb)
                             .dsText(.heading34)
+                            // Each stage's words morph into the next (prd §1586).
+                            .contentTransition(.interpolate)
+                            .animation(DS.Motion.standard, value: footVerb)
                             .foregroundStyle(!footOn ? DS.textTertiary
                                              : warned && stage == nil ? (leadWarning?.red == true ? DS.destructiveInk : DS.attentionInk)
                                              : DS.pickInk)
@@ -3472,7 +3749,7 @@ struct MoveSentence: View {
                 let done = try await Chain.$following.withValue(followed) {
                     try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
                                          said: { line in await MainActor.run { say(line) } }) { s in
-                        await MainActor.run { stage = s }
+                        await MainActor.run { advance(to: s) }
                     }
                 }
                 // The change is counted once the send has landed; a buy
@@ -3520,7 +3797,15 @@ struct MoveSentence: View {
                 // Landed or still on its way, the transaction is gone from the
                 // page, so a second tap cannot pay it twice. The sentence
                 // turns past tense in its place (§1438b): no toast.
-                let made = Self.receipt(for: batch, done: done, on: net)
+                var made = Self.receipt(for: batch, done: done, on: net)
+                if sweeping { made = Self.swept(made, count: batch.count) }
+                // What round-ups did, said on the receipt it rode (prd §1586).
+                if case .landed = sent.outcome, let roundUp, let said = Self.roundUpWords(roundUp, bought: done.roundUpWaits ? false : carried != nil,
+                                                                                      toPrivate: toPrivate, on: net.chainId) {
+                    made.detail = [made.detail, said].filter { !$0.isEmpty }.joined(separator: " · ")
+                }
+                // A first send to an address with no name offers one (prd §1586).
+                if case .landed = sent.outcome, !sweeping { made.names = Self.unnamed(batch) }
                 // A token a swap just bought is spendable now, not when the
                 // Wallet next reads the account (§1442l).
                 if case .landed = sent.outcome {
@@ -3544,7 +3829,58 @@ struct MoveSentence: View {
                     chrome.rain(sources: ["Wallet"])
                 }
                 // A swap to another network: its arrival is read (prd §1555).
-                if let crossing = done.crossing, crossing.tx != nil { crossingWatch = crossing }
+                if let crossing = done.crossing, crossing.tx != nil {
+                    crossingSeconds = batch.lazy.compactMap { item -> Int? in
+                        if case .swap(let x) = item { return x.quote.across?.seconds } else { return nil }
+                    }.first
+                    crossingReceipt = made.id
+                    crossingWatch = crossing
+                }
+                // Not seen yet is followed for two minutes more, and the
+                // receipt turns past tense by itself (prd §1586).
+                if case .pending = sent.outcome, let id = followed.id {
+                    let key = followed.nonceKey, nonce = followed.nonce, account = account
+                    Task { @MainActor in
+                        for _ in 0..<24 {
+                            try? await Task.sleep(for: .seconds(5))
+                            guard receipt?.id == made.id else { return }
+                            let f = await Chain.followup(id: id, nonceKey: key, nonce: nonce, account: account, on: net)
+                            if f.receipt == false {
+                                withAnimation(DS.Motion.standard) {
+                                    receipt?.detail = String(localized: "It reached \(net.name) and failed: nothing moved but the fee")
+                                }
+                                DSHaptic.failure()
+                                return
+                            }
+                            // The nonce moving alone could be a revert: said as
+                            // "can't tell", never as landed (§83).
+                            if f.receipt == nil, f.nonceMoved == true {
+                                withAnimation(DS.Motion.standard) {
+                                    receipt?.detail = String(localized: "Went through · check Activity before sending again")
+                                }
+                                return
+                            }
+                            guard f.receipt == true else { continue }
+                            var landed = Self.receipt(for: batch, done: Chain.Transacted(sent: .init(outcome: .landed(transaction: f.tx, rotated: false), network: net)), on: net)
+                            if sweeping { landed = Self.swept(landed, count: batch.count) }
+                            if !sweeping { landed.names = Self.unnamed(batch) }
+                            withAnimation(DS.Motion.standard) { receipt = landed }
+                            // A swap to another network that landed late is watched to its arrival.
+                            if var c = done.crossing, let tx = f.tx {
+                                c.tx = tx
+                                crossingSeconds = batch.lazy.compactMap { item -> Int? in
+                                    if case .swap(let x) = item { return x.quote.across?.seconds } else { return nil }
+                                }.first
+                                crossingReceipt = landed.id
+                                crossingWatch = c
+                            }
+                            DSHaptic.success()
+                            chrome.rain(sources: ["Wallet"])
+                            chrome.refreshRooms()
+                            return
+                        }
+                    }
+                }
                 await readNetwork()
             } catch let failure as Chain.Failure {
                 stage = nil
@@ -3561,6 +3897,13 @@ struct MoveSentence: View {
                 say(String(localized: "Not sent"), failure: true)
             }
         }
+    }
+
+    /// **FACE ID PASSING IS FELT (prd §1586).** One light tap as the foot's
+    /// words turn from "Confirm with Face ID" to "Sending…".
+    private func advance(to s: Chain.Stage) {
+        if stage == .signing, s == .sending { DSHaptic.tap() }
+        stage = s
     }
 
     /// **UNDER THE LIMIT, FACE ID ALONE; OVER IT, THE SIGNER TOO (prd §1455).**
@@ -3596,7 +3939,7 @@ struct MoveSentence: View {
             }
         }
         guard let signer = try await Chain.signers(net, account).first else {
-            throw Chain.Failure(message: String(localized: "Add a signer first: over the limit, a send waits on it"))
+            throw Chain.Failure(message: needsCoSigner)
         }
         return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
                                         roundUp: roundUp, renew: true, ride: ride, stage: stage)
@@ -3667,7 +4010,7 @@ struct MoveSentence: View {
             let lines = [Line(glue: nil, text: amount(x.amount, x.sell)), Line(glue: String(localized: "on"), text: net.name),
                          Line(glue: String(localized: "for"), text: amount(x.quote.buyAmount, x.buy)),
                          Line(glue: String(localized: "on"), text: dest.name + ".")]
-            let waiting = [String(localized: "Arriving on \(dest.name)"), YourAccountAcross.about(x.quote.across?.seconds)]
+            let waiting = [String(localized: "Moving to \(dest.name)"), YourAccountAcross.about(x.quote.across?.seconds)]
             return made(String(localized: "Swapped"), lines, waiting.compactMap { $0 })
         }
 
@@ -3789,8 +4132,22 @@ struct MoveSentence: View {
     private func watchCrossing() async {
         guard let c = crossingWatch else { return }
         let name = YourAccountAcross.networkName(c.to)
-        let until = Date().addingTimeInterval(15 * 60)
+        let start = Date()
+        let until = start.addingTimeInterval(15 * 60)
+        var tick = 0
         while !Task.isCancelled, Date() < until {
+            // The receipt counts while it moves (prd §1586): "Moving to
+            // Ethereum · 6 of about 10 seconds", then the seconds alone.
+            let elapsed = Int(Date().timeIntervalSince(start))
+            if receipt?.id == crossingReceipt, elapsed > 0 {
+                let counted = crossingSeconds.map { about in
+                    elapsed <= about ? String(localized: "\(elapsed) of about \(about) seconds") : String(localized: "\(elapsed) seconds")
+                } ?? String(localized: "\(elapsed) seconds")
+                receipt?.detail = String(localized: "Moving to \(name)") + " · " + counted
+            }
+            tick += 1
+            // Asked every four seconds; the count moves every one.
+            guard tick % 4 == 1 else { try? await Task.sleep(for: .seconds(1)); continue }
             if await Chain.acrossFill(c) == .filled {
                 YourAccountAcross.update(c.id) { x in
                     if x.state == .waiting { x.state = .filled; x.settledAt = .now }
@@ -3798,26 +4155,26 @@ struct MoveSentence: View {
                 #if DEBUG
                 NSLog("moveAcross| filled %@ → %@", YourAccountAcross.networkName(c.from), name)
                 #endif
-                if receipt != nil {
-                    withAnimation(DS.Motion.standard) { receipt?.detail = String(localized: "Arrived on \(name)") }
+                let took = Int(Date().timeIntervalSince(start))
+                if receipt?.id == crossingReceipt {
+                    withAnimation(DS.Motion.standard) {
+                        receipt?.detail = String(localized: "Arrived on \(name)") + " · " + String(localized: "\(took) seconds")
+                    }
+                } else {
+                    // Done was tapped while it moved: said in place all the same.
+                    say(String(localized: "Arrived on \(name)"))
                 }
                 DSHaptic.success()
+                chrome.rain(sources: ["Wallet"])
                 chrome.refreshRooms()
                 crossingWatch = nil
                 return
             }
-            try? await Task.sleep(for: .seconds(4))
+            try? await Task.sleep(for: .seconds(1))
         }
     }
 
     // MARK: - Reads
-
-    /// Every network's holdings at once; the sentence starts on the one
-    /// holding the most, and spends its biggest token.
-    private func readAll() async {
-        await readHoldings()
-        await readLists()
-    }
 
     /// What the account holds, everywhere, read again whenever money may
     /// have arrived since (user: "i have money in my account but casberi
@@ -3835,6 +4192,9 @@ struct MoveSentence: View {
             for await (id, held) in group {
                 found[id] = held ?? []
                 if held == nil { failed.insert(id) }
+                // Each network's tokens show as it answers (prd §1586): the
+                // fast ones never wait on the slowest.
+                if let held { heldBy[id] = held }
             }
         }
         // **A FAILED NETWORK IS ASKED ONCE MORE, ON ITS OWN (prd §1532, user:
@@ -3893,10 +4253,11 @@ struct MoveSentence: View {
     }
 
     private func requote() async {
+        if let total = buyTotal, let buy { staleBack = (buy.id, Self.short(total, decimals: buy.token.decimals) + " ") }
         quote = nil
         quoteNote = nil
         quoteFrom = nil
-        guard verb == .swap, let with, let buy, YourAccountSwap.supported(network), let units, !over else { return }
+        guard verb == .swap, let with, let buy, YourAccountSwap.supported(network), let units, !over else { staleBack = nil; return }
         try? await Task.sleep(for: .milliseconds(500))
         guard !Task.isCancelled else { return }
         do {
@@ -3909,7 +4270,13 @@ struct MoveSentence: View {
                 q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
             }
             guard !Task.isCancelled else { return }
-            withAnimation(DS.Motion.standard) { quote = q }
+            withAnimation(DS.Motion.standard) { quote = q; staleBack = nil }
+            // A pair's first price lands with one tick; a re-price is silent.
+            let pair = "\(network.chainId)|\(with.id)|\(buy.id)"
+            if !pricedPairs.contains(pair) {
+                pricedPairs.insert(pair)
+                DSHaptic.selection()
+            }
             #if DEBUG
             // `moveSwapQuote|` (prd §1542): which pools won, in words and as a route.
             let hops = q.route?.hops.map { "\($0.from.suffix(6))>\($0.step)>\($0.to.suffix(6))" }.joined(separator: " ") ?? "-"
@@ -3919,9 +4286,12 @@ struct MoveSentence: View {
             #endif
         } catch let failure as Chain.Failure {
             guard !Task.isCancelled else { return }
+            staleBack = nil
             quoteNote = failure.message
             quoteFrom = failure.from
-        } catch {}
+        } catch {
+            if !Task.isCancelled { staleBack = nil }
+        }
     }
 
     /// The list's matches as you type, after a pause, on every network the
@@ -3958,9 +4328,10 @@ struct MoveSentence: View {
 
     private func resolve() async {
         let text = to.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let r = resolved, r.name?.caseInsensitiveCompare(text) == .orderedSame { return }
+        if let r = resolved, r.name?.caseInsensitiveCompare(text) == .orderedSame { lookup = nil; return }
         resolved = nil
         malformed = false
+        lookup = nil
         guard !text.isEmpty else { return }
         if text.lowercased().hasPrefix("0x") {
             guard ENS.isHexAddress(text), AddressSafety.checksum(text) != .failed else {
@@ -4000,11 +4371,20 @@ struct MoveSentence: View {
         }
         guard text.contains(".") else { return }
         try? await Task.sleep(for: .milliseconds(400))
-        guard !Task.isCancelled, let address = await NameResolve.resolve(text), ENS.isHexAddress(address) else { return }
+        guard !Task.isCancelled else { return }
+        withAnimation(DS.Motion.standard) { lookup = .looking(text) }
+        let answer = await NameResolve.resolve(text)
         // The field may have changed while the resolver answered: an old
         // name's address must never stand for what the field says now.
         guard !Task.isCancelled, text == to.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-        resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
+        guard let address = answer, ENS.isHexAddress(address) else {
+            withAnimation(DS.Motion.standard) { lookup = .missing(text) }
+            return
+        }
+        withAnimation(DS.Motion.standard) {
+            lookup = nil
+            resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
+        }
     }
 
 
@@ -4219,7 +4599,7 @@ struct MoveSentence: View {
     }
 
     private var buyReady: Bool {
-        guard verb == .buy, let with, Self.paysBuy(with, on: network), let package = buyPackage,
+        guard verb == .buy, buyProduct?.needsPhoneNumber != true, let with, Self.paysBuy(with, on: network), let package = buyPackage,
               let cost = Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: with.token.decimals) else { return false }
         return Op.atMost(cost, left(with))
     }
@@ -4229,10 +4609,12 @@ struct MoveSentence: View {
         guard verb == .buy else { return nil }
         if !buyAvailable { return String(localized: "Make your account first") }
         if with == nil {
-            if held.isEmpty && heldBy.isEmpty { return String(localized: "Reading…") }
+            if heldBy[network.chainId] == nil { return String(localized: "Reading…") }
             return unread.contains(Op.base.chainId) ? String(localized: "Couldn't read Base") : String(localized: "You have no USDC on Base")
         }
         if buyProduct == nil { return String(localized: "Pick a merchant") }
+        // Said before the tap, not refused at it (prd §1586).
+        if buyProduct?.needsPhoneNumber == true { return String(localized: "Top-ups need a phone number, which Buy can't send yet") }
         if let p = buyProduct, let v = buyValue, let why = p.refusal(v) { return why }
         if amount.isEmpty { return String(localized: "Type an amount first") }
         if !buyReady { return String(localized: "More than you have") }
@@ -4261,7 +4643,7 @@ struct MoveSentence: View {
             return
         }
         guard !product.needsPhoneNumber else {
-            say(String(localized: "Top-ups need a phone number: a later pass"), failure: true)
+            say(String(localized: "Top-ups need a phone number, which Buy can't send yet"), failure: true)
             return
         }
         let spoken = Op.spoken(Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: 6) ?? "0", decimals: 6)
@@ -4273,7 +4655,7 @@ struct MoveSentence: View {
         Task { @MainActor in
             do {
                 let invoice = try await BitrefillX402.buy(product: product, value: value, account: account, reason: reason) { s in
-                    await MainActor.run { stage = s }
+                    await MainActor.run { advance(to: s) }
                 }
                 stage = .landing
                 delivering = true
@@ -4291,8 +4673,17 @@ struct MoveSentence: View {
                     buyProduct = nil
                     receipt = made
                 }
-                DSHaptic.success()
-                chrome.rain(sources: ["Wallet"])
+                // **SUCCESS ONLY FOR A CARD THAT ARRIVED (prd §1586, §83).** A
+                // card Bitrefill could not deliver is felt as a refusal and
+                // rains nothing; one still on its way is a plain tap.
+                if standing?.delivered == true {
+                    DSHaptic.success()
+                    chrome.rain(sources: ["Wallet"])
+                } else if standing?.failed == true {
+                    DSHaptic.failure()
+                } else {
+                    DSHaptic.tap()
+                }
                 await readNetwork()
             } catch let failure as Chain.Failure {
                 stage = nil
@@ -4332,6 +4723,12 @@ struct MoveSentence: View {
     // MARK: - DEBUG drafts
 
     #if DEBUG
+    /// A launch hook fills the sentence, so the lists are read before it.
+    static var drafting: Bool {
+        ["moveWarnProbe", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft"]
+            .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
+    }
+
     /// `-moveSwapDraft "<amount>|<SELL>[|<BUY>]"` and `-moveSendDraft
     /// "<amount>|<to>"`: the sentence filled, because a `simctl`-booted
     /// simulator drops typed characters (prd §1424, §1438). Both given: the
@@ -4502,6 +4899,8 @@ struct MoveSentence: View {
                 amount = parts.first ?? ""
                 inDollars = false
                 to = parts.count > 1 ? parts[1] : ""
+                // Filled, so the list the first open raised steps aside.
+                open = nil
                 NSLog("moveSendDraft: amount=%@ %@ to=%@", amount, with?.token.symbol ?? "-", to)
                 guard n < lines.count - 1 else { break }
                 for _ in 0..<50 where pendingItem == nil { try? await Task.sleep(for: .milliseconds(100)) }

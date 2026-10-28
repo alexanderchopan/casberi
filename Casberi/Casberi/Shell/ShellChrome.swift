@@ -237,6 +237,10 @@ final class ShellChrome {
     /// Move opens on Receive with its Private switch on: a fresh address
     /// (prd §1560). Cleared when the tray closes.
     var moveFreshReceive = false
+    /// The sentence Move was holding when the tray closed (prd §1586): a
+    /// swipe down is not a cancel, so the next open picks it up. Memory
+    /// only, and only for a few minutes.
+    var moveDraft: MoveSentence.Draft?
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: SettingsFace?

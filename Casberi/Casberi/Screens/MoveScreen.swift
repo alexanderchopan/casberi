@@ -343,13 +343,21 @@ struct MoveScreen: View {
                     creating = false
                     return
                 }
+                // Every network asked at once (prd §1586), kept in their order.
+                var answers: [Int: Bool?] = [:]
+                await withTaskGroup(of: (Int, Bool?).self) { group in
+                    for net in YourAccountOp.networks {
+                        group.addTask { (net.chainId, try? await YourAccountChain.isDeployed(net, found.address)) }
+                    }
+                    for await (id, deployed) in group { answers[id] = deployed }
+                }
                 var targets: [YourAccountOp.Network] = []
                 var failed: [String] = []
                 for net in YourAccountOp.networks {
-                    do {
-                        if try await YourAccountChain.isDeployed(net, found.address) { targets.append(net) }
-                    } catch {
-                        failed.append(String(localized: "\(net.name) did not answer"))
+                    switch answers[net.chainId] ?? nil {
+                    case true?: targets.append(net)
+                    case false?: break
+                    case nil: failed.append(String(localized: "\(net.name) did not answer"))
                     }
                 }
                 failed += await MoveRecovery.move(targets, to: index)
@@ -358,6 +366,8 @@ struct MoveScreen: View {
                     withAnimation(DS.Motion.standard) { address = found.address }
                 if failed.isEmpty {
                     note = (ThisDevice.ready, false)
+                    // Brought back is felt, as made is (prd §1586).
+                    DSHaptic.success()
                 } else {
                     note = (failed.joined(separator: " · "), true)
                 }

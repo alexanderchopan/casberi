@@ -69343,3 +69343,24 @@ Measured on mainnet 2026-10-28 against the verified sources Sourcify holds for `
 7. **Proven.** `ens-renew-selftest.sh` pins viem 2.56.7 vectors for every calldata and 12 mutations; the shipped `ENSRenew.swift` calldata for casberi.eth (renewer, USDC) and nick.eth (registrar, DAI) succeeds in `eth_call` with a balance and allowance overridden. `live-integrations.sh` checks that `ETHRenewerV1` still prices vitalik.eth in USDC. **UNMEASURED:** no renewal has been signed or submitted, and the card has not been seen on a name inside its 90-day horizon (nothing this project follows is expiring).
 
 **Mac half (§1402).** The same card and ladder in the Catalyst build; nothing Mac-only.
+
+## §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and the receipt keeps going (Moving, Landed, Name it, round-ups, Swept) (amends §1438b, §1442c, §1466's Receive clause, §1555's waiting words) (user, 2026-10-28: "walk all the wallet move screens and journeys, are there places wee could make it more smooth", "and can we add surprise and delight anywhere", then "do all" on the canvas; "DO NOT WRITE 'CROSSING'" / "just say Moving"; on the address: "is there a way to do the address with five digits per section that doesn't lead to a wrap") — RULED, built
+
+Walked on the simulator (twelve screens) and read in code. What changed:
+
+1. **A swipe down is not a cancel.** The tray cannot be swiped away while Face ID or the network has the move (`interactiveDismissDisabled(stage != nil)`). Closed any other time, the line being filled (verb, network, amount, token, For, To) is kept on `ShellChrome.moveDraft` in memory for five minutes and picked up by the next plain open; kept lines are not, since their quotes go stale.
+2. **The lists stop waiting on the slowest.** Each network's holdings show as it answers; the first list opens off the holdings, and Uniswap's lists are read after. Base is no longer read twice on open. "Nothing to spend" waits until every network has answered.
+3. **For keeps its figure while it re-prices**, breathing, so the sentence never re-wraps mid-slide; a pair's first price lands with one selection tick.
+4. **To says what it is doing.** "Looking up uma.eth" while a resolver is asked; "No address answers to uma.eth", the name in attention ink, with Paste an address under it. Opening To to look and closing it gives the person back. A pasted address that resolves is the pick.
+5. **More than you have stands over its fix:** the slider stays, and "Use all 248.4 USDC" sets it to all (Send and Swap).
+6. **Every refusal is felt** (`say(failure:)` plays the failure haptic), and "Add a signer first" carries a door, Add a co-signer, to Your account's keys.
+7. **Face ID passing is felt:** one tap as the foot turns from Confirm with Face ID to Sending…, the foot's words morphing between stages.
+8. **The receipt keeps going.** "Sent, not yet seen" is followed two minutes more and turns to the landed receipt by itself, with the rain, or says it failed. A landed send to an address with no name offers "Name …a3f1" (the book's own name alert). A landed send or swap says its round-up: "$0.50 rounded up · $4.60 toward ETH", or "$5.00 of round-ups bought ETH"; private round-ups say it in Holdings. A sweep reads "Swept 3 tokens for 0.0004 ETH on Base.", never "Swapped" and every token.
+9. **A swap to another network says Moving, never Crossing** (user). "Moving to Ethereum · 6 of about 10 seconds", counted each second, then "Arrived on Ethereum · 9 seconds" with the success haptic and the rain; after Done, said in place.
+10. **Buy is honest at the end:** success and rain only for a delivered card; a card Bitrefill could not deliver is a failure haptic; still delivering, a tap. A top-up greys Buy before the tap: "Top-ups need a phone number, which Buy can't send yet".
+11. **Receive's address is readable:** 17pt mono, "0x" apart, eight groups of five in two rows of four, the first and last bright; a tap copies it. "as USDC" and "on Base." are separate clauses, so "on Base." moves whole instead of hanging under "as".
+12. **Smaller:** private money's deposit and its approval are felt (Send privately, Receive privately); a private send's done sentence ends with Done; a pasted non-address says "That isn't an address"; recovering asks every network at once and is felt; the keys walk says Copied in place, not under the tray.
+
+**Not verifiable on the simulator:** the demo signs nothing (§1475), so the receipt changes (items 6–10) were read in code, not seen.
+
+**Mac half (§1402).** The same Move on Catalyst; nothing Mac-only.

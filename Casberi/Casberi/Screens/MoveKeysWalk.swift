@@ -22,11 +22,12 @@ struct MoveKeysWalk: View {
     enum Step: Int { case recovery = 1, signer, limit, roundUps, created }
     typealias Period = MoveSecurity.LimitPeriod
 
-    @Environment(ShellChrome.self) private var chrome
     @State private var step: Step
     @State private var choice = YourAccountSetup.Choice()
     @State private var connecting = false
     @State private var note: String?
+    /// What a copy says, in place: a toast draws under the tray (§1442c).
+    @State private var said: String?
     @State private var roundUps = RoundUps.Setting(on: true)
 
     init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery,
@@ -72,6 +73,12 @@ struct MoveKeysWalk: View {
                         .dsText(.body17).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s3)
+                } else if let said {
+                    Text(verbatim: said)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s3)
+                        .transition(.opacity)
                 }
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
@@ -151,10 +158,17 @@ struct MoveKeysWalk: View {
 
     private func copyAddress() {
         // The demo's address holds no key: never copied (§1475).
-        if YourAccountDemo.isDemo(account) { chrome.flash(YourAccountDemo.actsLater); return }
-        UIPasteboard.general.string = account
-        DSHaptic.tap()
-        chrome.flash(String(localized: "Copied · only on \(networks.map(\.name).formatted(.list(type: .or)))"))
+        let words = YourAccountDemo.isDemo(account) ? YourAccountDemo.actsLater
+            : String(localized: "Copied · only on \(networks.map(\.name).formatted(.list(type: .or)))")
+        if !YourAccountDemo.isDemo(account) {
+            UIPasteboard.general.string = account
+            DSHaptic.tap()
+        }
+        withAnimation(DS.Motion.standard) { said = words }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if said == words { withAnimation(DS.Motion.standard) { said = nil } }
+        }
     }
 
     private func small(_ words: String) -> some View {

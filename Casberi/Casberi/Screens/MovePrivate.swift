@@ -113,6 +113,12 @@ struct MovePrivateSentence<Head: View>: View {
         .onChange(of: doneHash) { _, hash in
             guard let hash else { return }
             land(hash)
+            // Money moved is felt, as Move's own sends are (prd §1586).
+            DSHaptic.success()
+        }
+        // Approved is the moment it became private: felt once (prd §1586).
+        .onChange(of: note?.status) { _, now in
+            if now == .approved { DSHaptic.success() }
         }
         // Done, the ASP is asked again while a deposit's sentence stands, so
         // the approval lands here as well as in Holdings.
@@ -133,6 +139,9 @@ struct MovePrivateSentence<Head: View>: View {
     private var isDone: Bool { doneHash != nil }
 
     /// The note a deposit made, once it has.
+    /// A paste or a submit that was not an address.
+    @State private var notAnAddress = false
+
     private var note: PrivateMoney.Note? {
         guard let doneHash else { return nil }
         // By its commitment on Ethereum (kept even when no transaction was
@@ -368,6 +377,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// Switch on: an address, typed or pasted, and nothing else (a book
     /// entry is Send's list, before the switch).
     @ViewBuilder private var recipients: some View {
+        if notAnAddress {
+            Text("That isn't an address").dsText(.body17).foregroundStyle(DS.attentionInk)
+                .padding(.top, DS.Space.s2)
+        }
         TextField(text: $typed, prompt: Text("0x…").foregroundStyle(DS.textTertiary)) { Text("Address") }
             .dsText(.body17)
             .textInputAutocapitalization(.never)
@@ -389,8 +402,11 @@ struct MovePrivateSentence<Head: View>: View {
         guard PrivateMoney.isAddress(address) else {
             typed = address
             DSHaptic.failure()
+            // Said, not only felt (prd §1586).
+            withAnimation(DS.Motion.standard) { notAnAddress = !address.isEmpty }
             return
         }
+        notAnAddress = false
         withAnimation(DS.Motion.standard) {
             move.recipient = address
             open = nil
@@ -421,7 +437,13 @@ struct MovePrivateSentence<Head: View>: View {
                 .buttonStyle(RowPress())
                 Spacer(minLength: DS.Space.s3)
                 footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
-            case .done, .nothingPrivate:
+            case .done:
+                // Done ends it, as every receipt does (prd §1586).
+                Spacer(minLength: 0)
+                footButton(String(localized: "Done"), on: true) {
+                    if inTray { chrome.moveTray = false } else { leave(.switchOff) }
+                }
+            case .nothingPrivate:
                 Spacer(minLength: 0)
             case .failed:
                 Spacer(minLength: 0)
