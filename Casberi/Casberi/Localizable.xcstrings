@@ -96951,6 +96951,34 @@
         }
       }
     },
+    "It goes back to your account on Ethereum, in public. This deposit won't be private." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vuelve a tu cuenta en Ethereum, en público. Este depósito no será privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum上のあなたのアカウントに、公開で戻ります。この入金はプライベートになりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 내 계정으로 공개적으로 돌아갑니다. 이 입금은 비공개가 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它会公开退回到你在 Ethereum 上的账户。这笔存款不会是私密的。"
+          }
+        }
+      }
+    },
     "It has transacted with more than one of your wallets." : {
       "localizations" : {
         "es" : {
@@ -159500,6 +159528,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "显示 %@"
+          }
+        }
+      }
+    },
+    "Show %lld earlier" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrar %lld anteriores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前の%lld件を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전 %lld개 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示更早的 %lld 条"
           }
         }
       }
