@@ -742,6 +742,15 @@ enum ProbeHooks {
         Hook(key: "xLiveProbe") { _, _ in
             Task { @MainActor in await XLiveNotifications.diagnose() }
         },
+        // `-xFollowingProbe YES|get` [`-xFollowingQueryID <id>`] — ONE read
+        // of the Following timeline (`HomeLatestTimeline`) with the live X
+        // session, no transaction-id header, no paging (2026-10-27). Logs
+        // status, rate-limit headers and entry counts by kind, never a post
+        // (`Model/XLiveFollowingProbe.swift`).
+        Hook(key: "xFollowingProbe") { spec, _ in
+            let override = UserDefaults.standard.string(forKey: "xFollowingQueryID")
+            Task { @MainActor in await XLiveFollowingProbe.run(mode: spec, queryOverride: override) }
+        },
         // `-igLiveSession "<sessionid>:<csrftoken>:<ds_user_id>"` — store an
         // Instagram web session lifted from a browser, exactly as the in-app
         // sign-in would (prd §726; `-spotifySession`'s door, three cookies

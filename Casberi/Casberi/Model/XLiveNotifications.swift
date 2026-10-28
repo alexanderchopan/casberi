@@ -445,7 +445,7 @@ enum XLiveNotifications {
 
     /// The headers x.com's own web client sends — shared by the notices and
     /// the messages read (prd §1244), so the two can never drift apart.
-    private static func headers(_ auth: (authToken: String, ct0: String)) -> [String: String] {
+    static func headers(_ auth: (authToken: String, ct0: String)) -> [String: String] {
         [
             "Cookie": "auth_token=\(auth.authToken); ct0=\(auth.ct0)",
             "X-Csrf-Token": auth.ct0,
