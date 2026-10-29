@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// The addresses Zerion watches (PRD Zerion ruling) — the person pastes an
 /// address, it joins the watch list, its activity lands as things. Add, remove,
@@ -824,15 +825,61 @@ final class WalletStore {
         return false
     }
 
+    /// Whether `addresses` stands on the saved list (prd §1592, the §1361
+    /// lesson). iOS can start the app before the phone's first unlock, when
+    /// the defaults read as empty: the Wallet then knew no account, not even
+    /// yours, until a relaunch (user: "it's like it doesn't even register i
+    /// have an account", "i have to restart the app a few times"), and any
+    /// write in that state would have saved the empty list over yours. An
+    /// unhydrated store writes nothing until it has read the disk again.
+    private var hydrated = true
+    @ObservationIgnored private var unlockWatch: NSObjectProtocol?
+
+    private static func savedList() -> [WatchedAddress]? {
+        guard let data = ScratchDefaults.standard.data(forKey: key),
+              let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) else { return nil }
+        return saved
+    }
+
+    /// Whether the saved list can be read now: the phone has been unlocked
+    /// since it started. Asked on the main thread, where every write to
+    /// this store happens; elsewhere it answers yes.
+    private static var defaultsReadable: Bool {
+        guard Thread.isMainThread else { return true }
+        return MainActor.assumeIsolated { UIApplication.shared.isProtectedDataAvailable }
+    }
+
+    /// Reads the saved list once it can be read, keeping any wallet this run
+    /// added before then, and puts your account back (prd §1592). Called
+    /// before every write, at every foreground sweep and when the phone
+    /// unlocks.
+    func hydrateIfNeeded() {
+        guard !hydrated, Self.defaultsReadable else { return }
+        hydrated = true
+        if let saved = Self.savedList() {
+            let have = Set(saved.map { $0.address.lowercased() })
+            addresses = saved + addresses.filter { !have.contains($0.address.lowercased()) }
+        }
+        keepYourAccount()
+    }
+
     private init() {
-        if let data = ScratchDefaults.standard.data(forKey: Self.key),
-           let saved = try? JSONDecoder().decode([WatchedAddress].self, from: data) {
+        if let saved = Self.savedList() {
             addresses = saved
         } else if DemoState.seedsDemoData {
             // The demo bridge's status line names this address — keep them in step.
             addresses = [WatchedAddress(label: "Main", address: Self.debugSeedAddress)]
         } else {
             addresses = []
+            // Empty because the phone is still locked is not empty.
+            if !Self.defaultsReadable {
+                hydrated = false
+                unlockWatch = NotificationCenter.default.addObserver(
+                    forName: UIApplication.protectedDataDidBecomeAvailableNotification,
+                    object: nil, queue: .main) { _ in
+                        MainActor.assumeIsolated { WalletStore.shared.hydrateIfNeeded() }
+                    }
+            }
         }
         // The iCloud mirror, one runloop turn later (prd §372) — `attach`
         // reads `WalletStore.shared`, which does not exist until this
@@ -1057,6 +1104,8 @@ final class WalletStore {
     }
 
     private func persist() {
+        hydrateIfNeeded()
+        guard hydrated else { return }
         if let data = try? JSONEncoder().encode(addresses) {
             ScratchDefaults.standard.set(data, forKey: Self.key)
         }

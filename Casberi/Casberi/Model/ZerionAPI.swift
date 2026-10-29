@@ -120,6 +120,7 @@ enum ZerionAPI {
         // waited out rather than read as "unreached".
         var attempt = 0
         var json: Any?
+        var lastStatus = 0
         while true {
             attempt += 1
             // The day's pool is one for every install (300, measured): once
@@ -153,9 +154,15 @@ enum ZerionAPI {
             if status != 200 { NSLog("[Casberi] zerion: HTTP %d for %@", status, url.prefix(90).description) }
             #endif
             json = body
+            lastStatus = status
             break
         }
-        guard let root = json as? [String: Any],
+        // **ONLY A 200 IS AN ANSWER (prd §1592).** Zerion answers a wallet it
+        // is still indexing with 202 and a partial or empty `data`; read as an
+        // answer, your account stood empty beside its private balance until a
+        // relaunch (user: "it shows my private balance but not my main").
+        // Anything else is unreached, which hands the wallet to Alchemy.
+        guard lastStatus == 200, let root = json as? [String: Any],
               let data = root["data"] as? [[String: Any]] else { return nil }
         return data
     }

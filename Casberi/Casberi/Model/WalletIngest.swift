@@ -2790,7 +2790,10 @@ enum WalletIngest {
             inFlight[key] = nil
             // A nil (nothing reached) is never stored, so a rate-limited or
             // offline miss isn't remembered and stays free to heal next try.
-            if let result { store(key, Entry(tokens: result, at: Date())) }
+            // An empty read is never kept (prd §1592): the window outlives a
+            // relaunch, so one wrong "holds nothing" stood ten minutes over
+            // your account however often you opened the app again.
+            if let result, !result.isEmpty { store(key, Entry(tokens: result, at: Date())) }
             return result
         }
 
@@ -3095,6 +3098,13 @@ enum WalletIngest {
         var answered: [String] = []
         for (i, result) in holdings.enumerated() {
             guard let result else {   // this wallet unreached — Alchemy asks for it (§934), the set stands
+                unreached.append(routed[i].address)
+                continue
+            }
+            // An empty answer is checked, never believed alone (prd §1592): a
+            // wallet Zerion has not indexed reads as holding nothing, and a
+            // phone that just made an account is exactly that wallet.
+            guard !result.isEmpty else {
                 unreached.append(routed[i].address)
                 continue
             }

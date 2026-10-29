@@ -148,6 +148,10 @@ enum BridgeRefresh {
         // below registers a seat into it (prd §1361); then, once, the seats
         // the lost list dropped come back from what their apps brought in.
         store.hydrateIfNeeded()
+        // The watched wallets too, and your account back in them, every
+        // foreground: a locked launch read neither (prd §1592).
+        WalletStore.shared.hydrateIfNeeded()
+        WalletStore.shared.keepYourAccount()
         store.restoreSeatsFromRows(context: context)
         store.reconcileKeyedSeats()
         // Returns this slot's DELAY IN MILLISECONDS, not its index — so every

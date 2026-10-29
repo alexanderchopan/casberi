@@ -102,6 +102,8 @@ FILES = {
     "ZerionAPI": ROOT / "Casberi/Casberi/Model/ZerionAPI.swift",
     "DefiLlamaPrices": ROOT / "Casberi/Casberi/Model/DefiLlamaPrices.swift",
     "DexPrices": ROOT / "Casberi/Casberi/Model/DexPrices.swift",
+    "WalletStore": ROOT / "Casberi/Casberi/Model/WalletStore.swift",
+    "BridgeRefresh": ROOT / "Casberi/Casberi/Model/BridgeRefresh.swift",
 }
 
 # Chains whose Alchemy Portfolio answer carries balances and NO prices —
@@ -368,6 +370,24 @@ def audit(texts: dict) -> list:
     if "asOf: portfolio?.asOf" not in code["FeedScreen"]:
         bad.append("the wallet room no longer passes `asOf` to its crown — the stamp exists "
                    "and reaches nobody (prd §825)")
+
+    # 6 — a failure never reads as an empty wallet (prd §1592).
+    if "guard lastStatus == 200," not in body(code["ZerionAPI"], "func dataRows("):
+        bad.append("ZerionAPI.dataRows takes a non-200 `data` as an answer — a wallet Zerion "
+                   "is still indexing (202) reads as holding nothing (prd §1592)")
+    if "guard !result.isEmpty else {" not in body(code["WalletIngest"], "func collectCandidatesZerion("):
+        bad.append("an empty Zerion answer is believed alone — your account can stand empty "
+                   "beside its private balance (prd §1592)")
+    if "if let result, !result.isEmpty { store(" not in code["WalletIngest"]:
+        bad.append("HoldingsCache keeps an empty read — one wrong 'holds nothing' outlives a "
+                   "relaunch for ten minutes (prd §1592)")
+    if "guard hydrated else { return }" not in body(code["WalletStore"], "private func persist("):
+        bad.append("WalletStore saves before it has read the disk — a locked launch writes an "
+                   "empty list over every wallet you follow (prd §1592)")
+    if "WalletStore.shared.hydrateIfNeeded()" not in code["BridgeRefresh"] \
+            or "WalletStore.shared.keepYourAccount()" not in code["BridgeRefresh"]:
+        bad.append("the foreground sweep no longer re-reads the watched wallets and puts your "
+                   "account back — a locked launch knows no account until a relaunch (prd §1592)")
     return bad
 
 
@@ -413,6 +433,16 @@ def self_test() -> int:
         ("the fallback stops being gated on unreached", "WalletIngest",
          lambda t: t.replace("if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet() }",
                              "if groups.isEmpty { groups = lastKnownHoldingsByWallet() }")),
+        ("a 202 is an answer again", "ZerionAPI",
+         lambda t: t.replace("guard lastStatus == 200, let root", "guard let root", 1)),
+        ("an empty Zerion answer is believed", "WalletIngest",
+         lambda t: t.replace("guard !result.isEmpty else {", "guard true else {", 1)),
+        ("the cache keeps an empty read", "WalletIngest",
+         lambda t: t.replace("if let result, !result.isEmpty { store(", "if let result { store(", 1)),
+        ("WalletStore saves unhydrated", "WalletStore",
+         lambda t: t.replace("        guard hydrated else { return }\n", "", 1)),
+        ("the sweep stops putting your account back", "BridgeRefresh",
+         lambda t: t.replace("WalletStore.shared.keepYourAccount()", "", 1)),
         ("the portfolio loses its stamp", "WalletPortfolio",
          lambda t: t.replace("var asOf: Date? = nil", "var stampedAt: Date? = nil", 1)),
         ("the crown stops passing the stamp", "FeedScreen",

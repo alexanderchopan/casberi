@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1729 of 1798 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1730 of 1799 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -495,7 +495,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §211 — Catalog & manage-sheet prose breaks into short paragraphs
 - §212 — The wallet room's Cash App pass — six surfaces become two, and one row shape
 - §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (amended by §1047)
-- §216 — The holdings read gets a freshness window — and the news does not
+- §216 — The holdings read gets a freshness window — and the news does not (amended by §1592)
 - §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (amended by §424, §527)
 - §218 — The All feed says what things are (amended by §1132)
 - §218b — Connect stops being a page you read on the way to the page you use
@@ -1292,7 +1292,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (amended by §1589; part superseded by §1014, §1058)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g, §1129)
-- §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused…
+- §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused… (amended by §1592)
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
@@ -1746,7 +1746,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1358 — Notion is the Notes category's (amends §1347 item 6, §1235's "Notion stays Work's")
 - §1359 — One day word everywhere (amends §882's divider form, §1349, §1352, §1357 item 2)
 - §1360 — An approval says itself once, and is Active, never a visit
-- §1361 — A list the phone could not read is never saved over the one it holds
+- §1361 — A list the phone could not read is never saved over the one it holds (amended by §1592)
 - §1363 — A thing sheet says each thing once, says only what is true, and offers the door it lands on (the redundancy sweep)
 - §1364 — The Wallet tab always lands, and a Wallet with no account starts with any address (amends §611's "no door" for Home)
 - §1365 — The empty Feed's box is Library's "Start with any of these" (amends §1166's note, §1314) (amended by §1469)
@@ -1974,6 +1974,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
 - §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
 - §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line
+- §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
 
 ## Dead rulings → what replaced them (generated)
 
