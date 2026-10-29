@@ -2063,6 +2063,10 @@ enum WalletIngest {
         /// carries — kept beside the amounts so the COMBINED treemap can rebuild
         /// its own cells (merged across wallets) without a second network read.
         var routeBySymbol: [String: String] = [:]
+        /// symbol → contract key (`HiddenTokens.contractKey`) → USD: the
+        /// contracts behind each symbol, so one can be hidden apart (prd
+        /// §1591). Empty on a last-known group (a sample keeps symbols only).
+        var partsBySymbol: [String: [String: Double]] = [:]
         /// Set only on a LAST-KNOWN group (an unreachable wallet showing its
         /// cached treemap): the moment it was sampled, so the subline can say
         /// "as of 2h ago" instead of claiming the number is current
@@ -2493,7 +2497,8 @@ enum WalletIngest {
                                     tokenCount: g.count,
                                     topBySymbol: topBySymbol(g.bySymbol),
                                     bySymbolAll: g.bySymbol,
-                                    routeBySymbol: g.routes))
+                                    routeBySymbol: g.routes,
+                                    partsBySymbol: g.parts))
     }
 
     /// One address that is NOT on the watch list, read for what it holds
@@ -2550,7 +2555,8 @@ enum WalletIngest {
     /// last-known card; the second is correct-and-empty (2026-07-17).
     private static func holdings(addresses: [String])
         async -> (reached: Bool, group: (cells: [String], total: Double, count: Int,
-                                         bySymbol: [String: Double], routes: [String: String])?) {
+                                         bySymbol: [String: Double], routes: [String: String],
+                                         parts: [String: [String: Double]])?) {
         // THE DEMO REACHES NOTHING, at the FUNNEL (2026-08-12). Gating
         // `ZerionAPI` alone was not enough and the measurement said so: this
         // path falls back to Alchemy the moment Zerion is unreached, so the
@@ -2575,8 +2581,13 @@ enum WalletIngest {
         // screen's own holdings/treemap moved to the Feed (2026-07-20) —
         // tapping ETH landed on wallet management, not anything about ETH.
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
+        // Each symbol's contracts apart (prd §1591): a spam token wearing a
+        // real symbol sums into the real one's row, so a hide must be able
+        // to take the one contract and leave the rest.
+        var parts: [String: [String: Double]] = [:]
         for token in tokens {
             bySymbol[token.symbol, default: 0] += token.usd
+            parts[token.symbol, default: [:]][HiddenTokens.contractKey(network: token.network, contract: token.contract), default: 0] += token.usd
             guard token.usd > (routeBySymbol[token.symbol]?.usd ?? 0),
                   let slug = chainSlug[token.network] else { continue }
             if let contract = token.contract {
@@ -2604,7 +2615,7 @@ enum WalletIngest {
 
         let routes = routeBySymbol.mapValues(\.route)
         return (true, (treemapCells(bySymbol: bySymbol, routes: routes),
-                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes))
+                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes, parts))
     }
 
     /// The top-5-by-value treemap cells for a by-symbol map. Extracted

@@ -33,65 +33,6 @@ extension FeedScreen {
         DemoMode.isActive ? HoldingMoves.demo : HoldingMoves.current()
     }
 
-    /// The tokens you hid, named as one row: how many, and a menu that
-    /// brings each back. Their money is out of the total; this row is where
-    /// that is said.
-    func walletHiddenTokensRow(_ hidden: [WalletPortfolio.Position]) -> some View {
-        Menu {
-            ForEach(hidden) { position in
-                Button {
-                    walletSetHidden(position.symbol, hidden: false)
-                } label: {
-                    Label(String(localized: "Show \(position.symbol)"), systemImage: "eye")
-                }
-            }
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: "eye.slash")
-                    .dsGlyph(.body, weight: .medium)
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(String(localized: "Hidden · \(hidden.count)"))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Text(String(localized: "\(WalletValue.money(hidden.reduce(0) { $0 + $1.usd })), not in the total"))
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(minHeight: DSFeed.headHeight)
-            .contentShape(Rectangle())
-        }
-        .walletListRow()
-    }
-
-    /// One token: the cell's own door, at row scale — a token's chart when it
-    /// is watched, the quick sheet when it is only held (the 2026-07-14
-    /// split) — and Markets' alerts from its long press (prd §1090).
-    func walletTokenRow(_ position: WalletPortfolio.Position, portfolio: WalletPortfolio,
-                        moves: [String: Double]) -> some View {
-        Button {
-            walletOpenToken(position)
-        } label: {
-            WalletTokenRowLabel(position: position, total: portfolio.totalUSD,
-                                move: moves[HoldingMoves.key(position.symbol)])
-                .frame(minHeight: DSFeed.headHeight)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .dsHover()
-        .contextMenu {
-            // Out of the list, the map and the total (user: "should be able
-            // to long press and hide a token"); the Hidden row brings it back.
-            Button {
-                walletSetHidden(position.symbol, hidden: true)
-            } label: {
-                Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
-            }
-        }
-        .walletListRow()
-    }
-
     func walletOpenToken(_ position: WalletPortfolio.Position) {
         guard let route = position.route,
               let r = TokenQuickRoute.from(sentinel: "@token:\(route):\(position.symbol)") else { return }

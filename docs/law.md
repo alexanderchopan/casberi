@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1728 of 1797 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1729 of 1798 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1482,7 +1482,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114, §1136)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
-- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468, §1480)
+- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468, §1480, §1591)
 - §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
@@ -1908,7 +1908,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1523 — Round-ups is Spending's fourth door: what the change bought, kept out of the total, and the buy is never spending (bu…
 - §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amended by §1526)
 - §1525 — Holdings' doors show their top three (amended by §1530)
-- §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587, §1590)
+- §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587, §1590, §1591)
 - §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 - §1528 — Logos, the record to 2026-10-25: a chat nobody is known in can be named, and the Observer becomes a Basecamp module (…
 - §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §…
@@ -1972,7 +1972,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a…
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
-- §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit…
+- §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
+- §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line
 
 ## Dead rulings → what replaced them (generated)
 

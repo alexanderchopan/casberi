@@ -669,7 +669,7 @@ struct FeedScreen: View {
     @State var holdingsReads = 0
     /// The tokens hidden from Holdings (`HiddenTokens`), held here so a hide
     /// redraws the list, the map and the total at once.
-    @State var walletHidden: Set<String> = HiddenTokens.symbols
+    @State var walletHidden: HiddenTokens.Choice = HiddenTokens.current
     /// Chains the person follows that the last holdings read could not reach
     /// (prd §827) — the crown states them, because a total that quietly leaves
     /// a chain out is §83's false number. Filled by `streamBlock`.

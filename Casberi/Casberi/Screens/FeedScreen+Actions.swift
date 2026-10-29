@@ -373,7 +373,7 @@ extension FeedScreen {
                 // the tallest late-arriving block, so ITS unanimated insert
                 // was the most jarring of the pops.
                 // The tokens you hid stay out of the map (`HiddenTokens`).
-                let hides = read.portfolio.positions.contains { walletHidden.contains($0.symbol.uppercased()) }
+                let hides = !read.portfolio.hiddenItems(walletHidden).isEmpty
                 let shown = read.portfolio.hiding(walletHidden)
                 withAnimation(DS.Motion.standard) {
                     blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))

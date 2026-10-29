@@ -422,6 +422,13 @@ struct WalletBalanceHeadline: View {
                     }
                     .padding(.top, whose && ranges.count < 2 ? DS.Space.s2 : 0)
                 }
+            } else if whose {
+                // **THE SWITCH NEVER WAITS ON THE LINE (prd §1591, user: "i
+                // follow then it won't show my Yours balance").** A scope with
+                // fewer than two readings draws no line; the switch rode inside
+                // it, so a new Yours stood with no way back to All or Following.
+                WalletWhoseSwitch()
+                    .padding(.top, DS.Space.s2)
             }
         }
     }

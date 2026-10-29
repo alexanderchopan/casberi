@@ -334,7 +334,7 @@ extension FeedScreen {
         // Public balances only: private money is its own section (prd §1554).
         let tokens = (portfolioShown?.positions ?? []).filter { $0.symbol != PrivateMoney.walletSymbol }
         // Every token hidden still leaves the door, to the Hidden row.
-        let anyHidden = portfolioUnhidden?.positions.contains { walletHidden.contains($0.symbol.uppercased()) } ?? false
+        let anyHidden = !(portfolioUnhidden?.hiddenItems(walletHidden).isEmpty ?? true)
         let positions = walletPositionCount
         let money = { (holders: [WalletPortfolio.Holder]) in
             mask ?? WalletValue.money(holders.reduce(0) { $0 + $1.usd })
@@ -435,6 +435,9 @@ extension FeedScreen {
             walletPreviewRow(token.symbol, figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
                 AssetMark(name: token.symbol, size: DS.Mark.badge)
             }
+            // Hide from the row you see first, as from the Tokens list
+            // (prd §1591); the list's Hidden row brings it back.
+            .contextMenu { TokenHideMenu(position: token) { walletSetHidden($0, hidden: $1) } }
         }
     }
 

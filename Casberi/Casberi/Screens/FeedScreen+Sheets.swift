@@ -288,7 +288,7 @@ extension FeedScreen {
             // tray standing on its Hidden row instead of emptying it.
             if let whole = portfolioUnhidden {
                 let portfolio = whole.hiding(walletHidden)
-                let hidden = whole.positions.filter { walletHidden.contains($0.symbol.uppercased()) }
+                let hidden = whole.hiddenItems(walletHidden)
                 // Public balances only: private money is its own section (prd §1554).
                 WalletTokensSheet(positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol },
                                   total: portfolio.totalUSD,
@@ -298,8 +298,8 @@ extension FeedScreen {
                         try? await Task.sleep(for: .milliseconds(450))
                         walletOpenToken(position)
                     }
-                } onHide: { position, hide in
-                    walletSetHidden(position.symbol, hidden: hide)
+                } onHide: { target, hide in
+                    walletSetHidden(target, hidden: hide)
                 }
             }
         case .subscription(let id):

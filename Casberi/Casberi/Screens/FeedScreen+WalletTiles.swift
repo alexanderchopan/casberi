@@ -70,11 +70,11 @@ extension FeedScreen {
 
     /// Hide or show a token, and repaint the map the read painted (it is a
     /// document drawn once per read) over what is now shown.
-    func walletSetHidden(_ symbol: String, hidden: Bool) {
-        HiddenTokens.set(symbol, hidden: hidden)
+    func walletSetHidden(_ target: HiddenTokens.Target, hidden: Bool) {
+        HiddenTokens.set(target, hidden: hidden)
         DSHaptic.selection()
         withAnimation(DS.Motion.standard) {
-            walletHidden = HiddenTokens.symbols
+            walletHidden = HiddenTokens.current
             if let shown = portfolioShown { blockStream.paint(WalletIngest.holdingsDoc(shown)) }
             else if portfolio != nil { blockStream.paint([]) }
         }

@@ -33,7 +33,27 @@ struct WalletPortfolio: Equatable {
         /// Which wallets hold it, biggest stake first. One entry with a single
         /// wallet watched — the caller decides whether that's worth saying.
         let holders: [Holder]
+        /// The contracts behind this symbol in watched wallets, biggest first
+        /// (prd §1591): one key (`HiddenTokens.contractKey`) per contract per
+        /// wallet. A spam token wearing a real symbol is one of these, so it
+        /// can be hidden without the real one. Empty where nothing was read
+        /// by contract (a venue, a last-known sample).
+        var parts: [Part] = []
         var id: String { symbol }
+
+        /// The distinct contracts, summed across wallets, biggest first.
+        var contracts: [(key: String, usd: Double)] {
+            Dictionary(parts.map { ($0.key, $0.usd) }, uniquingKeysWith: +)
+                .map { (key: $0.key, usd: $0.value) }
+                .sorted { $0.usd == $1.usd ? $0.key < $1.key : $0.usd > $1.usd }
+        }
+    }
+
+    /// One contract's stake in a position, in one wallet.
+    struct Part: Equatable {
+        let key: String
+        let holder: String
+        let usd: Double
     }
 
     var totalUSD: Double = 0
@@ -144,6 +164,7 @@ struct WalletPortfolio: Equatable {
         var usdBySymbol: [String: Double] = [:]
         var holdersBySymbol: [String: [Holder]] = [:]
         var routeBySymbol: [String: (usd: Double, route: String)] = [:]
+        var partsBySymbol: [String: [Part]] = [:]
 
         // Cash accounts and Privy apps (prd §1048): places, like the exchanges
         // below, each under its own holder id and name.
@@ -176,6 +197,9 @@ struct WalletPortfolio: Equatable {
                 usdBySymbol[symbol, default: 0] += usd
                 holdersBySymbol[symbol, default: []]
                     .append(Holder(address: address, label: label, usd: usd))
+                for (key, partUSD) in group.partsBySymbol[symbol] ?? [:] {
+                    partsBySymbol[symbol, default: []].append(Part(key: key, holder: address, usd: partUSD))
+                }
                 guard usd > (routeBySymbol[symbol]?.usd ?? 0),
                       let route = group.routeBySymbol[symbol] else { continue }
                 routeBySymbol[symbol] = (usd, route)
@@ -187,7 +211,8 @@ struct WalletPortfolio: Equatable {
             .map { symbol, usd in
                 Position(symbol: symbol, usd: usd,
                          route: routeBySymbol[symbol]?.route,
-                         holders: (holdersBySymbol[symbol] ?? []).sorted { $0.usd > $1.usd })
+                         holders: (holdersBySymbol[symbol] ?? []).sorted { $0.usd > $1.usd },
+                         parts: (partsBySymbol[symbol] ?? []).sorted { $0.usd > $1.usd })
             }
         return WalletPortfolio(totalUSD: usdBySymbol.values.reduce(0, +),
                                positions: positions,
@@ -240,7 +265,8 @@ struct WalletPortfolio: Equatable {
             let holders = position.holders.filter { keeps($0.address) }
             let usd = holders.reduce(0) { $0 + $1.usd }
             guard usd > 0 else { return nil }
-            return Position(symbol: position.symbol, usd: usd, route: position.route, holders: holders)
+            return Position(symbol: position.symbol, usd: usd, route: position.route, holders: holders,
+                            parts: position.parts.filter { keeps($0.holder) })
         }
         .sorted { $0.usd > $1.usd }
         return WalletPortfolio(totalUSD: kept.reduce(0) { $0 + $1.usd }, positions: kept,

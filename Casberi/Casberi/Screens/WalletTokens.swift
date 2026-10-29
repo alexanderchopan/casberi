@@ -131,10 +131,11 @@ struct WalletTokensSheet: View {
     let moves: [String: Double]
     /// The tokens you hid (`HiddenTokens`): out of the list and the total,
     /// named in one row at the foot that brings each back (§83).
-    var hidden: [WalletPortfolio.Position] = []
+    var hidden: [WalletPortfolio.HiddenItem] = []
     let onOpen: (WalletPortfolio.Position) -> Void
-    /// Hide (true) or show (false) a token, from a row's long press.
-    var onHide: ((WalletPortfolio.Position, Bool) -> Void)? = nil
+    /// Hide (true) or show (false) a token or one contract of it, from a
+    /// row's long press (prd §1591).
+    var onHide: ((HiddenTokens.Target, Bool) -> Void)? = nil
 
     @State private var query = ""
     @State private var dustOpen = false
@@ -195,13 +196,7 @@ struct WalletTokensSheet: View {
         .contextMenu {
             // Out of the list and the total (user: "when i open tokens i
             // should be able to long press and hide tokens").
-            if let onHide {
-                Button {
-                    onHide(position, true)
-                } label: {
-                    Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
-                }
-            }
+            if let onHide { TokenHideMenu(position: position, onHide: onHide) }
         }
         .padding(.horizontal, DS.Space.s4)
     }
@@ -210,11 +205,15 @@ struct WalletTokensSheet: View {
     /// its menu brings each back.
     private var hiddenRow: some View {
         Menu {
-            ForEach(hidden) { position in
+            ForEach(hidden) { item in
                 Button {
-                    onHide?(position, false)
+                    onHide?(item.target, false)
                 } label: {
-                    Label(String(localized: "Show \(position.symbol)"), systemImage: "eye")
+                    if let place = item.place {
+                        Label(String(localized: "Show \(item.symbol) on \(place)"), systemImage: "eye")
+                    } else {
+                        Label(String(localized: "Show \(item.symbol)"), systemImage: "eye")
+                    }
                 }
             }
         } label: {
@@ -273,5 +272,53 @@ struct WalletTokensSheet: View {
         }
         .buttonStyle(RowPress())
         .padding(.horizontal, DS.Space.s4)
+    }
+}
+
+/// A token's Hide, from a long press (prd §1591): the Tokens list's rows and
+/// Holdings' own. A row made of one source hides by its symbol, as before. A
+/// row made of more (a spam token wearing the real one's symbol, or a wallet
+/// beside an exchange) lists each contract with its place and worth, so the
+/// spam goes and the real money stays, and "Every <symbol>" hides them all.
+struct TokenHideMenu: View {
+    let position: WalletPortfolio.Position
+    let onHide: (HiddenTokens.Target, Bool) -> Void
+
+    /// Contracts, plus one for any exchange, bank or app holding the symbol.
+    static func sources(_ position: WalletPortfolio.Position) -> Int {
+        position.contracts.count + (position.holders.contains { WalletPortfolio.isVenue($0.address) } ? 1 : 0)
+    }
+
+    var body: some View {
+        if Self.sources(position) > 1 {
+            Menu {
+                ForEach(position.contracts, id: \.key) { contract in
+                    Button {
+                        onHide(.contract(contract.key), true)
+                    } label: {
+                        Text(verbatim: line(contract))
+                    }
+                }
+                Button {
+                    onHide(.symbol(position.symbol), true)
+                } label: {
+                    Text("Every \(position.symbol)")
+                }
+            } label: {
+                Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
+            }
+        } else {
+            Button {
+                onHide(.symbol(position.symbol), true)
+            } label: {
+                Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
+            }
+        }
+    }
+
+    /// "Base · ...e07a · $512", the worth left out under Hide balances.
+    private func line(_ contract: (key: String, usd: Double)) -> String {
+        let place = HiddenTokens.place(contract.key)
+        return BalancePrivacy.shared.withheld ? place : "\(place) · \(WalletValue.money(contract.usd))"
     }
 }
