@@ -119,6 +119,9 @@ KNOWN_NON_REACH=(
   # address is copied and the exchange opens in the browser to withdraw to
   # it. Never fetched.
   www.coinbase.com
+  # Move › Buy's sellers (prd §1599): Stripe's and Ramp's own pages,
+  # opened in the in-app Safari sheet for the card, never fetched.
+  crypto.link.com app.ramp.network
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
   # www.binance.us — Binance.US's key page, the door for a US person

@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1736 of 1805 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1737 of 1806 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1855,7 +1855,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
-- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build…
+- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599)
 - §1474 — A Logos node row names no address, and an unreachable node is "Not on the same network as your node"
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
@@ -1980,7 +1980,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
-- §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di…
+- §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599)
+- §1599 — Buy is a card buying crypto; gift cards are Spend
 
 ## Dead rulings → what replaced them (generated)
 

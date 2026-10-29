@@ -90,8 +90,11 @@ struct MoveSentence: View {
     typealias Chain = YourAccountChain
     typealias Tokens = YourAccountTokens
 
-    enum Verb: CaseIterable { case swap, send, receive, buy, sweep }
-    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant }
+    /// `buy` is Bitrefill's gift cards, drawn **Spend**; `deposit` is a card
+    /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
+    /// is Spend). The cases keep their first names.
+    enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit }
+    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -223,6 +226,8 @@ struct MoveSentence: View {
     /// 2026-10-24: "it takes a second or two before it does so it looks like
     /// an error").
     @State private var buyAvailable = BitrefillX402.available
+    /// What a card buys on Buy (prd §1599).
+    @State private var depositCoin: CardOnramp.Coin = .usdc
     @State private var buyGroup: BitrefillBuy.Group?
     @State private var buyProduct: BitrefillBuy.Product?
     /// Bitrefill's 25 most popular in the country, read once per visit.
@@ -266,6 +271,13 @@ struct MoveSentence: View {
     @ViewBuilder static func mark(of service: String) -> some View {
         if service == "Bitrefill" {
             Image("brand-bitrefill")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 16, height: 16)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: service))
+        } else if service == "Stripe" {
+            Image("brand-stripe")
                 .resizable()
                 .scaledToFill()
                 .frame(width: 16, height: 16)
@@ -646,7 +658,7 @@ struct MoveSentence: View {
             // §1438b): it warns, and the verb takes a second tap.
             guard let r = resolved, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
-        case .receive, .buy, .sweep:
+        case .receive, .buy, .sweep, .deposit:
             return nil
         }
     }
@@ -761,7 +773,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)
         case .receive: elsewhere != nil
-        case .buy: false
+        case .buy, .deposit: false
         case .sweep: false
         }
     }
@@ -932,6 +944,7 @@ struct MoveSentence: View {
         .onChange(of: verb) { was, now in
             if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
             if now == .buy { enterBuy() }
+            if now == .deposit { enterDeposit() }
             if now == .sweep { enterSweep() }
             // Back from Receive: what was sent meanwhile is spendable.
             if was == .receive { Task { await readHoldings() } }
@@ -1045,7 +1058,7 @@ struct MoveSentence: View {
             MoveFlow {
                 if let receipt {
                     receiptClauses(receipt)
-                } else if emptyEverywhere, verb != .receive {
+                } else if emptyEverywhere, verb != .receive, verb != .deposit {
                     MovePhrase(nothingYet, ink: DS.textSecondary)
                 } else {
                     switch verb {
@@ -1058,6 +1071,7 @@ struct MoveSentence: View {
                     case .receive: receiveClauses
                     case .buy: buyClauses
                     case .sweep: sweepClauses
+                    case .deposit: depositClauses
                     }
                 }
             }
@@ -1255,7 +1269,7 @@ struct MoveSentence: View {
         case .swap: String(localized: "Nothing to swap yet.")
         case .buy: String(localized: "Nothing to pay with yet.")
         case .sweep: String(localized: "Nothing to sweep yet.")
-        case .send, .receive: String(localized: "Nothing to send yet.")
+        case .send, .receive, .deposit: String(localized: "Nothing to send yet.")
         }
     }
 
@@ -1785,7 +1799,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap: line.id.hasPrefix("to|")
         case .send: line.id.hasPrefix("for|")
-        case .receive, .buy, .sweep: true
+        case .receive, .buy, .sweep, .deposit: true
         }
     }
 
@@ -2040,8 +2054,9 @@ struct MoveSentence: View {
         case .swap: String(localized: "Swap")
         case .send: String(localized: "Send")
         case .receive: String(localized: "Receive")
-        case .buy: String(localized: "Buy")
+        case .buy: String(localized: "Spend")
         case .sweep: String(localized: "Sweep")
+        case .deposit: String(localized: "Buy")
         }
     }
 
@@ -2231,6 +2246,8 @@ struct MoveSentence: View {
                             case .arrives: arrivesList
                             case .group: groupList
                             case .merchant: merchantList
+                            case .depositCoin: depositCoinList
+                            case .depositNetwork: depositNetworkList
                             }
                         }
                         .id(open)
@@ -2308,6 +2325,8 @@ struct MoveSentence: View {
                     .transition(.opacity)
                 }
             }
+        } else if verb == .deposit {
+            depositLine
         } else if emptyEverywhere, verb != .receive {
             Button {
                 withAnimation(DS.Motion.standard) { verb = .receive }
@@ -2444,7 +2463,7 @@ struct MoveSentence: View {
                 case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpPlan?.buy != nil ? roundUpPrint : [])
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
-                case .receive, .sweep: []
+                case .receive, .sweep, .deposit: []
                 case .buy: buyPrint + roundUpPrint
                 }
                 // "$25.00 · Fee up to $0.01 · Details" (prd §1509): the last
@@ -3468,6 +3487,18 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(ready ? Text("Copies your address") : Text("Pick a network first"))
+                } else if verb == .deposit {
+                    // **Buy's one act opens the seller's page (prd §1599).**
+                    Spacer(minLength: 0)
+                    let seller = depositSeller
+                    Button { deposit() } label: {
+                        Text(verbatim: footVerb)
+                            .dsText(.heading34)
+                            .foregroundStyle(seller != nil ? DS.pickInk : DS.textTertiary)
+                            .frame(minHeight: 48, alignment: .trailing)
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(seller != nil ? Text("Opens \(seller?.name ?? "")'s page") : Text("Pick a network first"))
                 } else if nothingToMove {
                     // Nothing to swap, send or pay with: the sentence says so
                     // and offers Receive (prd §1518); no Add, no verb.
@@ -3486,7 +3517,7 @@ struct MoveSentence: View {
                     .disabled(stage != nil)
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
-                if verb != .receive, !nothingToMove {
+                if verb != .receive, verb != .deposit, !nothingToMove {
                     Spacer(minLength: DS.Space.s3)
                     Button { sign() } label: {
                         Text(verbatim: footVerb)
@@ -3548,6 +3579,18 @@ struct MoveSentence: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s1)
             }
+            // The seller signs Buy's foot (prd §1599): its page is where
+            // the card is typed.
+            if verb == .deposit, let seller = depositSeller {
+                HStack(spacing: DS.Space.s1) {
+                    Text("Powered by \(seller.name)")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    Self.mark(of: seller.name)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s1)
+            }
             // Bitrefill's credit signs Buy's foot the same way (§1473, user:
             // "put bitrefill logo like we do w/ relay").
             if verb == .buy, receipt == nil {
@@ -3578,7 +3621,7 @@ struct MoveSentence: View {
     /// Read, nothing anywhere, and nothing under way: the foot has no act
     /// to draw (prd §1518). A move landing keeps its foot.
     private var nothingToMove: Bool {
-        verb != .receive && emptyEverywhere && stage == nil && all.isEmpty
+        verb != .receive && verb != .deposit && emptyEverywhere && stage == nil && all.isEmpty
     }
 
     private var footOn: Bool {
@@ -3599,7 +3642,8 @@ struct MoveSentence: View {
         case nil: break
         }
         if verb == .receive { return String(localized: "Copy address") }
-        if verb == .buy { return String(localized: "Buy") }
+        if verb == .deposit { return String(localized: "Buy") }
+        if verb == .buy { return String(localized: "Spend") }
         if verb == .sweep {
             return sweepItems.count < 2 ? String(localized: "Sweep") : String(localized: "Sweep all \(sweepItems.count)")
         }
@@ -3665,7 +3709,7 @@ struct MoveSentence: View {
             if quote == nil { return String(localized: "Waiting for the price") }
         case .send:
             if resolved == nil { return String(localized: "Pick who it goes to") }
-        case .receive, .buy, .sweep:
+        case .receive, .buy, .sweep, .deposit:
             break
         }
         return nil
@@ -4165,7 +4209,7 @@ struct MoveSentence: View {
     }
 
     /// The address Receive shows: your own, or a route's (prd §1453).
-    private var receiveAddress: String { elsewhere?.address ?? account }
+    private var receiveAddress: String { verb == .deposit ? account : elsewhere?.address ?? account }
 
     private func copy() {
         // The demo's address holds no key: money sent there is lost, so it
@@ -4454,6 +4498,125 @@ struct MoveSentence: View {
     /// Buy's sentence: "$50 gift card for Travel at Delta with USDC on Base."
     /// — the amount is the card's value, the category and the merchant are
     /// words that open their lists, and the payment is a fact, not a choice.
+    // MARK: - Buy with a card (prd §1599)
+
+    /// **BUY IS A SENTENCE (prd §1599):** "$50 of USDC on Ethereum." A
+    /// card buys it on the network's one seller's page (`CardOnramp`): Stripe
+    /// on Ethereum, Ramp on Base. Only networks a card can buy on are
+    /// offered, so the act never opens a page that cannot sell.
+    @ViewBuilder private var depositClauses: some View {
+        MoveClause {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk)
+                amountField
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { focus = .amount }
+            .dsCardLead(Text("Edits the amount")) { focus = .amount }
+        }
+        MoveClause(glue: String(localized: "of")) {
+            blank(depositCoin.symbol, ink: DS.pickInk, .depositCoin, label: Text("\(depositCoin.symbol), change"))
+        }
+        MoveClause(glue: String(localized: "on")) {
+            if depositSeller != nil {
+                blank(network.name + ".", ink: DS.pickInk, .depositNetwork, label: Text("On \(network.name), change"))
+            } else {
+                blank(String(localized: "network."), ink: DS.textTertiary, .depositNetwork, label: Text("Pick a network"))
+            }
+        }
+    }
+
+    /// The seller for the picked network; nil until one a card can buy on is picked.
+    private var depositSeller: CardOnramp.Seller? {
+        // Only where this phone can use the account (§1442k): a network
+        // carried over from another verb may not be one.
+        networkPicked && depositNetworks.contains(network) ? CardOnramp.seller(chainId: network.chainId) : nil
+    }
+
+    /// Your networks a card can buy on, most held first.
+    private var depositNetworks: [Op.Network] {
+        networksByWorth.filter { !$0.isTest && CardOnramp.seller(chainId: $0.chainId) != nil }
+    }
+
+    private var depositCoinList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(CardOnramp.Coin.allCases, id: \.self) { coin in
+                listRow(coin.symbol, sub: coin == .usdc ? String(localized: "Dollars") : String(localized: "Ether"),
+                        mark: coin.symbol, dim: coin == depositCoin) {
+                    pick { depositCoin = coin }
+                }
+            }
+        }
+    }
+
+    private var depositNetworkList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(depositNetworks) { n in
+                if let seller = CardOnramp.seller(chainId: n.chainId) {
+                    listRow(n.name, sub: String(localized: "with \(seller.name)"), image: Self.networkMark(n),
+                            dim: depositSeller != nil && n == network) {
+                        // One transaction is one network, as the network blank says.
+                        if n != network, !items.isEmpty {
+                            say(String(localized: "One transaction is one network. Sign this one first"))
+                        } else {
+                            pick { switchNetwork(n) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Under the sentence: the whole address, to check against the seller's
+    /// page, and the one line saying what that page does.
+    @ViewBuilder private var depositLine: some View {
+        if let seller = depositSeller {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                addressBlock(account)
+                Text(seller.takesAddress
+                     ? "\(seller.name)'s page shows its fee before you pay, with this address filled in."
+                     : "\(seller.name)'s page shows its fee before you pay. This address is copied for you to paste there.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// Dollars, and the one network a card can buy on picked when there is
+    /// only one.
+    private func enterDeposit() {
+        if !inDollars { amount = "" }
+        inDollars = true
+        if depositSeller == nil, items.isEmpty, depositNetworks.count == 1, let only = depositNetworks.first { switchNetwork(only) }
+    }
+
+    /// The seller's page (prd §1599). Stripe's cannot take the address, so it
+    /// is copied first and the hint says where it goes; Ramp's is handed it.
+    private func deposit() {
+        guard let seller = depositSeller else {
+            say(String(localized: "Pick a network first"))
+            withAnimation(DS.Motion.standard) { open = .depositNetwork }
+            return
+        }
+        // The demo's address holds no key (§1475), so nothing is bought into it.
+        if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
+        guard let url = CardOnramp.url(depositCoin, chainId: network.chainId, address: account, dollars: amount) else { return }
+        focus = nil
+        DSHaptic.tap()
+        if !seller.takesAddress {
+            UIPasteboard.general.string = account
+            say(String(localized: "Address copied. Paste it on \(seller.name)'s page."), seconds: 6)
+        }
+        #if DEBUG
+        NSLog("moveDeposit| %@ | %@ on %@ | %@", seller.name, depositCoin.symbol, network.name, url.absoluteString)
+        #endif
+        // The page covers Move, so the hint is read first.
+        Task { @MainActor in
+            if !seller.takesAddress { try? await Task.sleep(for: .milliseconds(1200)) }
+            CardOnrampDoor.open(url)
+        }
+    }
+
     @ViewBuilder private var buyClauses: some View {
         MoveClause {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -4776,7 +4939,7 @@ struct MoveSentence: View {
     #if DEBUG
     /// A launch hook fills the sentence, so the lists are read before it.
     static var drafting: Bool {
-        ["moveWarnProbe", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft"]
+        ["moveWarnProbe", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
             .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
     }
 
@@ -4815,6 +4978,24 @@ struct MoveSentence: View {
         } else if let buyDraft = d.string(forKey: "moveBuyDraft"), !buyDraft.isEmpty {
             verb = .buy
             self.buyDraft(buyDraft)
+        } else if let deposit = d.string(forKey: "moveDepositDraft"), !deposit.isEmpty {
+            // `-moveDepositDraft "<dollars>|<USDC|ETH>[@<network>]"` (prd §1599):
+            // Buy filled; logs `moveDeposit|` with the page it would open.
+            verb = .deposit
+            let parts = deposit.split(separator: "@", maxSplits: 1).map(String.init)
+            let fields = parts[0].split(separator: "|").map(String.init)
+            inDollars = true
+            amount = fields.first ?? ""
+            if fields.count > 1, let coin = CardOnramp.Coin(rawValue: fields[1].lowercased()) { depositCoin = coin }
+            let named = parts.count > 1 ? Op.networks.first { $0.name.lowercased() == parts[1].lowercased() } : nil
+            if let n = named ?? depositNetworks.first { switchNetwork(n) }
+            open = nil
+            if let seller = depositSeller,
+               let url = CardOnramp.url(depositCoin, chainId: network.chainId, address: account, dollars: amount) {
+                NSLog("moveDeposit| %@ | %@ on %@ | %@", seller.name, depositCoin.symbol, network.name, url.absoluteString)
+            } else {
+                NSLog("moveDeposit| none | %@ on %@", depositCoin.symbol, network.name)
+            }
         } else if let sweep = d.string(forKey: "moveSweepDraft"), !sweep.isEmpty {
             // `-moveSweepDraft YES|1|5[@<network>]` (prd §1537): Sweep on
             // Base, or the named network, at that line; logs `moveSweep|`
