@@ -160514,6 +160514,34 @@
         }
       }
     },
+    "Show %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrar %1$@ en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ の %1$@ を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$@ 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示 %2$@ 上的 %1$@"
+          }
+        }
+      }
+    },
     "Show %lld earlier" : {
       "localizations" : {
         "es" : {
