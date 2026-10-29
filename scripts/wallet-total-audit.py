@@ -104,6 +104,7 @@ FILES = {
     "DexPrices": ROOT / "Casberi/Casberi/Model/DexPrices.swift",
     "WalletStore": ROOT / "Casberi/Casberi/Model/WalletStore.swift",
     "BridgeRefresh": ROOT / "Casberi/Casberi/Model/BridgeRefresh.swift",
+    "RootShell": ROOT / "Casberi/Casberi/Shell/RootShell.swift",
 }
 
 # Chains whose Alchemy Portfolio answer carries balances and NO prices —
@@ -388,6 +389,21 @@ def audit(texts: dict) -> list:
             or "WalletStore.shared.keepYourAccount()" not in code["BridgeRefresh"]:
         bad.append("the foreground sweep no longer re-reads the watched wallets and puts your "
                    "account back — a locked launch knows no account until a relaunch (prd §1592)")
+
+    # 7 — the Wallet opens on a number (prd §1593).
+    fg = code["RootShell"].split("let runForegroundWork", 1)[-1].split("await GestureGate.idle()", 1)[0]
+    if "TorClient.shared.start()" not in fg:
+        bad.append("Tor no longer starts with the foreground, ahead of the hand-still wait — a "
+                   "cold launch waits out the whole connect before any balance (prd §1593)")
+    sb = body(code["FeedScreen"], "func streamBlock(")
+    if "WalletLastReading.reading(scope: scopeKey" not in sb.split("holdingsReads += 1", 1)[0]:
+        bad.append("streamBlock no longer draws the last reading before the live read — the "
+                   "Wallet stands on Reading for as long as Tor takes (prd §1593)")
+    if "WalletLastReading.remember(read.portfolio" not in sb:
+        bad.append("streamBlock no longer keeps a live reading — the next open has nothing to "
+                   "draw at once (prd §1593)")
+    if "read.portfolio.asOf == nil" not in sb:
+        bad.append("a last-known reading can overwrite the kept live one (prd §1593)")
     return bad
 
 
@@ -443,6 +459,12 @@ def self_test() -> int:
          lambda t: t.replace("        guard hydrated else { return }\n", "", 1)),
         ("the sweep stops putting your account back", "BridgeRefresh",
          lambda t: t.replace("WalletStore.shared.keepYourAccount()", "", 1)),
+        ("Tor waits for the first wallet read again", "RootShell",
+         lambda t: t.replace("{ TorClient.shared.start() }", "{ }", 1)),
+        ("the last reading is not drawn", "FeedScreen",
+         lambda t: t.replace("WalletLastReading.reading(scope: scopeKey", "WalletLastReading.unread(scope: scopeKey", 1)),
+        ("a live reading is not kept", "FeedScreen",
+         lambda t: t.replace("WalletLastReading.remember(read.portfolio", "WalletLastReading.noop(read.portfolio", 1)),
         ("the portfolio loses its stamp", "WalletPortfolio",
          lambda t: t.replace("var asOf: Date? = nil", "var stampedAt: Date? = nil", 1)),
         ("the crown stops passing the stamp", "FeedScreen",

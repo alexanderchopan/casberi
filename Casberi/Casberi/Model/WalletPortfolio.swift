@@ -13,10 +13,10 @@ import Foundation
 /// didn't price this pass simply isn't in `groups`, so it contributes nothing
 /// rather than a zero — and `walletCount` reports how many actually answered,
 /// so a caller can tell "everything, together" from "what we could reach".
-struct WalletPortfolio: Equatable {
+struct WalletPortfolio: Equatable, Codable {
 
     /// One wallet's stake in a single symbol — the "held in" read.
-    struct Holder: Equatable, Identifiable {
+    struct Holder: Equatable, Identifiable, Codable {
         let address: String
         let label: String
         let usd: Double
@@ -24,7 +24,7 @@ struct WalletPortfolio: Equatable {
     }
 
     /// One symbol across every wallet, biggest first.
-    struct Position: Equatable, Identifiable {
+    struct Position: Equatable, Identifiable, Codable {
         let symbol: String
         let usd: Double
         /// "chain:address" — the route a treemap cell's tap opens, nil for a
@@ -50,7 +50,7 @@ struct WalletPortfolio: Equatable {
     }
 
     /// One contract's stake in a position, in one wallet.
-    struct Part: Equatable {
+    struct Part: Equatable, Codable {
         let key: String
         let holder: String
         let usd: Double

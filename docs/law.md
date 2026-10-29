@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1730 of 1799 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1731 of 1800 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1171,7 +1171,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §822 — A room's kind tiles show when a pick would change the list, not only at two kinds
 - §823 — A dock capsule the faces already hold up shows the category's rooms
 - §824 — A long social face rail draws eight faces, most recent poster first, and the rest behind `+N`
-- §825 — The wallet room showed an app wallet's money and none of your own: one chain may not empty every read, and a wallet w…
+- §825 — The wallet room showed an app wallet's money and none of your own: one chain may not empty every read, and a wallet w… (amended by §1593)
 - §826 — The wallet crown counted an app's money and missed a whole chain: Privy comes out, Robinhood comes on, and $1.99 stop… (part superseded by §1048)
 - §827 — The `seeded` mechanism never reached the wire: one rule for which chains are on, and a total may not silently omit one
 - §827a — The `.v1` seed flags are poisoned, so every key bumps to `.v2`
@@ -1877,7 +1877,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1492 — One account with nothing on Home says so (amends §1491)
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
-- §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546)
+- §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
@@ -1969,12 +1969,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
-- §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a…
+- §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
 - §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
 - §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
+- §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
 
 ## Dead rulings → what replaced them (generated)
 

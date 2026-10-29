@@ -352,6 +352,18 @@ extension FeedScreen {
         let seat = selectedSeat
         let scopeKey = chrome.walletScope
         let only = walletFollowingOnly
+        let watched = wallet.addresses.map(\.address)
+        // **THE LAST READING, AT ONCE (prd §1593).** A scope with nothing on
+        // screen draws what it last read, stamped with when, while the live
+        // read waits on Tor; the live answer replaces it, and a failed one
+        // keeps it, stamped, as §825 does.
+        if portfolio == nil || portfolioScope != scopeKey, !DemoMode.isActive,
+           let last = WalletLastReading.reading(scope: scopeKey, wallets: watched) {
+            let shown = last.hiding(walletHidden)
+            blockStream.paint(shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
+            portfolio = last
+            portfolioScope = scopeKey
+        }
         holdingsReads += 1
         Task { @MainActor in
             defer { holdingsReads -= 1 }
@@ -379,6 +391,11 @@ extension FeedScreen {
                     blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
                     portfolio = read.portfolio
                     portfolioScope = scopeKey
+                }
+                // Kept for the next open (prd §1593): a live reading only,
+                // never one already standing on last-known samples.
+                if read.portfolio.asOf == nil, !DemoMode.isActive {
+                    WalletLastReading.remember(read.portfolio, scope: scopeKey, wallets: watched)
                 }
             } else if reading.failed, portfolio != nil, portfolioScope == scopeKey {
                 // A read that could not look keeps the map this scope already

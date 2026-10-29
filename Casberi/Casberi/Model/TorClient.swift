@@ -55,8 +55,9 @@ final class TorClient: @unchecked Sendable {
     /// a foreground renew and a network reset share it.
     private let controlLock = NSLock()
 
-    /// Nothing starts here: the first wallet request does (`session`), so a
-    /// person with no wallet never runs Tor.
+    /// Nothing starts here: the foreground does when a wallet is watched
+    /// (`RootShell`, prd §1593), else the first wallet request (`session`),
+    /// so a person with no wallet never runs Tor.
     private init() {}
 
     /// Starts tor if no run is going; every later call is free. After a run
