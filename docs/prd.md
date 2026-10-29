@@ -69601,3 +69601,14 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 6. **Not built:** the web view that captures a payment app's session, `/buyer/verify`, signalling and fulfilling, the verb on Move and its name (§1599 item 7).
 
 **Mac half (§1402).** None yet: Deposit is not on Move. The core compiles for the Mac (Security and CryptoKit both).
+
+## §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orchestrator takes them (continues §1603) (user, 2026-10-29: "what else can we do?" → "ok continue", after "i don't have a revolut account") — BUILT, NOTHING CALLS IT YET; NOT SEEN ON A PHONE
+
+1. **`Model/PeerIntent.swift` builds, never sends.** The `/v3/sign` request for the person's own account as caller, with no referral fee of ours; `signalIntent(SignalIntentParams)` and `fulfillIntent(FulfillIntentParams)` calldata for OrchestratorV3 on Base (`0x0140…b5c7`), no attribution tag (Peer's SDK appends an ERC-8021 one, 39 bytes); the `/buyer/verify` request; the intent's hash read off the `IntentSignaled` log, never computed.
+2. **Read strictly.** The curator's answer is refused unless it signed the very order asked (orchestrator, escrow, deposit, amount, recipient, method, currency, rate, caller, chain): a signature over anything else is one the chain honours for someone else's trade. A 409 is the on-chain-gating case only when it says "enforced on-chain"; any other is a refusal, never an ungated signal. The enclave's answer is refused unless it attests this intent, is signed by `0xe078…f0bd` (the attestation service's `expectedSigner`), and releases more than nothing and no more than was reserved. Peer's 0.95% arrives as a referral fee the curator adds and is passed on as returned.
+3. **Measured against the chain.** The signal encoder's output simulated clean from a Safe while the curator's signature lived, and reverted `SignatureExpired` once it had not (70 minutes). Three real `fulfillIntent` transactions on Base (2026-10-29) rebuild byte for byte from their attestation fields alone. Several other fulfils came through ERC-4337's EntryPoint (`handleOps`): smart accounts already buy on Peer.
+4. **Checks.** `peer-intent-selftest.sh` over `scripts/support/peer-intent-vectors.json` (the curator's real answer, the simulated calldata, three fulfils, a real signal's receipt); 15 mutations.
+5. **The launch app is open again.** §1598 led with Revolut for its rate, but the user has no Revolut account, so it cannot be tried with real money here. Which app leads is for the user to rule from the ones they use; everything in §1603 and this ruling is the same for every app but the template.
+6. **Not built:** the web view's capture, any caller of these builders, the send through the account (`YourAccountChain`), the Move page.
+
+**Mac half (§1402).** None: Deposit is not on Move.

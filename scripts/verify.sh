@@ -2655,6 +2655,9 @@ harness "Card onramp" "card onramp" "scripts/card-onramp-selftest.sh" "the card 
 # the clock, PCR8, AWS's root, the chain and the signature all prove it, and
 # the session sealed exactly as the enclave reads it, over a recorded document.
 harness "Peer attestation" "peer attestation" "scripts/peer-attest-selftest.sh" "the Peer attestation self-test failed — run scripts/peer-attest-selftest.sh"
+# Deposit's on-chain half (prd §1604): the curator's signature read strictly,
+# signalIntent as it simulated from a Safe, three real fulfils rebuilt byte for byte.
+harness "Peer intent" "peer intent" "scripts/peer-intent-selftest.sh" "the Peer intent self-test failed — run scripts/peer-intent-selftest.sh"
 
 # Buy, Move's fourth verb (prd §1473): Bitrefill's accountless door — the fold
 # of its forty category slugs, the sign-in message the server took byte for
