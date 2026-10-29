@@ -28,7 +28,11 @@ use() { grep -q -- "$2" "$1" || { echo "✗ $3"; exit 1; } }
 use "$FUNNEL" 'let way = TorRoute.way(for: request)' "IngestSupport.send no longer asks TorRoute before sending"
 use "$FUNNEL" 'answer = await torData(for: request, isolation: tor)' "a Tor request no longer goes through torData"
 use "$FUNNEL" 'NetworkLedger.shared.record(request, as: service, throughTor: tor != nil)' "the receipts no longer count what went through Tor"
-use "$FUNNEL" '(again.1 as? HTTPURLResponse)?.statusCode != 403 else { return nil }' "an exit's second 403 no longer reads as an outage"
+use "$FUNNEL" '(again.1 as? HTTPURLResponse)?.statusCode != 403 else {' "an exit's second 403 no longer reads as an outage"
+# A circuit that gave no answer is retired, so the next ask builds another (prd §1597).
+use "$FUNNEL" 'TorClient.shared.retire(first, isolation: key)' "a first circuit that failed is asked again by the next request"
+use "$FUNNEL" 'if !Task.isCancelled { TorClient.shared.retire(second, isolation: retry) }' "a second circuit that failed is asked again by the next request"
+use "$CLIENT" 'guard sessions\[current\] === failed else' "a late failure retires a circuit newer than the one it rode"
 use "$CLIENT" 'proxy.allowFailover = false' "a Tor proxy may fail over to a direct read"
 if grep -q 'allowFailover = true' "$FUNNEL" "$CLIENT"; then echo "✗ a proxy fails over to a direct read"; exit 1; fi
 # torData must not reach the plain session: everything after its guard rides Tor.

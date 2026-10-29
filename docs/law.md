@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1734 of 1803 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1735 of 1804 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1928,10 +1928,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
-- §1546 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new…
+- §1546 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new… (amended by §1597)
 - §1547 — Move's verbs read A–Z; Move opens on Swap
 - §1548 — Your account's keys read until every network answers, and a failed read keeps the last one
-- §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends…
+- §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends… (amended by §1597)
 - §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §14…
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
@@ -1979,6 +1979,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
+- §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
 
 ## Dead rulings → what replaced them (generated)
 

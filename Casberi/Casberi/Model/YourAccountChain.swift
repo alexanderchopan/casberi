@@ -36,16 +36,16 @@ enum YourAccountChain {
     // MARK: - JSON-RPC
 
     private static func post(_ url: String, _ method: String, _ params: [Any],
-                             as caller: String = service, wait: TimeInterval? = nil) async -> (result: Any?, error: String?) {
+                             as caller: String = service, wait: TimeInterval? = nil) async -> (result: Any?, error: String?, refused: Bool) {
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": method, "params": params]
         let (json, status) = await IngestSupport.$torWait.withValue(wait) {
             await IngestSupport.postJSONBody(url, body: body, service: caller)
         }
-        guard let root = json as? [String: Any] else { return (nil, status == 0 ? nil : "HTTP \(status)") }
+        guard let root = json as? [String: Any] else { return (nil, status == 0 ? nil : "HTTP \(status)", false) }
         if let error = root["error"] as? [String: Any] {
-            return (nil, (error["message"] as? String) ?? "\(error)")
+            return (nil, (error["message"] as? String) ?? "\(error)", true)
         }
-        return (root["result"], nil)
+        return (root["result"], nil, false)
     }
 
     /// A node's answer: the first host that answers wins; a refusal (an
@@ -56,7 +56,7 @@ enum YourAccountChain {
         // nothing else, directly — falling back to the list would send your
         // address where you said not to.
         if let own = OwnNodeStore.settings.address(for: net.chainId) {
-            let (result, error) = await post(own, method, params, as: OwnNodeStore.service)
+            let (result, error, _) = await post(own, method, params, as: OwnNodeStore.service)
             if let result, !(result is NSNull) { return result }
             throw Failure(message: error ?? String(localized: "Your node for \(net.name) did not answer"))
         }
@@ -64,9 +64,15 @@ enum YourAccountChain {
         // A node's read is small: 20s over Tor, then a fresh circuit. The
         // bundler keeps the long wait, since pricing an operation is not.
         for url in net.rpcs {
-            let (result, error) = await post(url, method, params, wait: 20)
+            let (result, error, refused) = await post(url, method, params, wait: 20)
             if let result, !(result is NSNull) { return result }
-            if let error { last = error; if method == "eth_call" { break } }
+            if let error { last = error }
+            // **A BUSY NODE IS NOT A REFUSAL (prd §1597).** A call the node
+            // itself refused (a revert) would be refused by the next the same
+            // way; a 429 is the node's load, not the call: `mainnet.base.org`
+            // answered 20 of 60 balance reads in a burst over one circuit
+            // with a 429, and every one the next node was never asked.
+            if refused, method == "eth_call" { break }
         }
         throw Failure(message: last)
     }
@@ -76,7 +82,7 @@ enum YourAccountChain {
     static func bundler(_ net: Network, _ method: String, _ params: [Any]) async throws -> Any {
         var last = "No bundler answered on \(net.name)"
         for url in net.bundlers {
-            let (result, error) = await post(url, method, params)
+            let (result, error, _) = await post(url, method, params)
             if let result, !(result is NSNull) { return result }
             if let error {
                 last = worded(error, on: net)

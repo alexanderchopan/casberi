@@ -69515,3 +69515,16 @@ In `Model/WalletDelegation.swift`, `Screens/WalletDelegationSheet.swift`, `Scree
 **Seen (eth_simulateV1 on Robinhood, 2026-10-28):** MUSEGOD for ETH, MUSEGOD for USDG (Sushi's WETH/USDG 0.05%) and ETH for MUSEGOD each paid exactly the quote, ETH into a SafeL2 1.4.1 proxy included; a minimum over the quote reverted in RedSnwapper. Those bytes are `scripts/fixtures/direct-swap/sushi-robinhood.json`, which `direct-swap-selftest.sh` holds the calls to, with mutations for the surplus flag and a pool's direction. **Not seen:** a swap signed from a funded account in the app; the simulation before Face ID still refuses anything short.
 
 **Mac half (§1402).** The same swap; nothing on screen changes but the exchange's name.
+
+## §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 429, and every network failing at once says Tor (amends §1546's return, §1549's wording) (user, 2026-10-28, on "Couldn't read Base, Ethereum and Robinhood: try again": "but why", then "Measure and fix") — RULED, built
+
+**Measured from the Mac (tor 0.4.9.14, 2026-10-28).** Every node Move reads answered over Tor: 360 of 360 reads across ten circuits (`eth_getBalance` and a dollar `balanceOf` on all six hosts, three at a time per host), ~1.3–2.2s each. In a burst of 240 at once on one circuit, `mainnet.base.org` answered 20 of 60 `balanceOf` reads with a 429; every other host answered all. A Tor connection reset (`DisableNetwork` off and on) reads its new port in 0.02s and costs ~1.5s on the first read after it (2.3–3.1s against ~1.4s). Not measured: the phone itself (its log needs root to collect), so the return's cause below is read off tor's own behaviour, not seen.
+
+1. **A return resets, never only NEWNYM (amends §1546).** Back after `awayBeforeRenew`, `TorClient.cameBack` resets tor's connections (`resetNetwork`) where it sent `NEWNYM`, which builds new circuits over the guard connection a suspension outlives the NAT of: tor still said ready, every read stalled 20s, and all three networks failed at once.
+2. **A circuit that gave no answer is retired.** `TorClient.retire(_:isolation:)` moves the key to a new circuit when the session still current for it failed, first or second; the second circuit is `retryKey`, no longer one a minute, so Move's ask two seconds on and a Try again ride circuits never tried. A late failure never retires a newer circuit, and a retired circuit's other reads run out on their own.
+3. **A busy node is not a refusal.** `YourAccountChain.rpc` stops at the first node only when it refused the call itself (a JSON-RPC error, e.g. a revert); a 429 or another HTTP status asks the next node.
+4. **Every network at once says Tor (amends §1549).** With Tor ready and every network unread through it, Move says "Tor couldn't get through: try again"; a network on your own node is not read through Tor and keeps the networks' names.
+
+Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-selftest.sh` (both circuits retired, only the current one).
+
+**Mac half (§1402).** The Mac has no Tor (`TorRoute.available` false), so it keeps the networks' names; item 3 holds there.

@@ -8,7 +8,7 @@
 # half — what tor's answers mean, what the Wallet is told, when circuits are
 # renewed or tor's connections reset, how many runs a process gets — so this
 # compiles it alone and drives it. It also asserts the USE in `TorClient`: the
-# watch keeps asking after the connect, a return renews, a changed network
+# watch keeps asking after the connect, a return resets, a changed network
 # resets, a run that ends clears the port and lets `start` run again — or the
 # rule is a type nothing calls. Seven mutations prove the assertions bite, each
 # checked to have CHANGED the source.
@@ -40,7 +40,11 @@ use "$CLIENT" 'forName: UIApplication.willEnterForegroundNotification' "nothing 
 use "$CLIENT" 'forName: UIApplication.didEnterBackgroundNotification' "the client no longer knows how long the app was away"
 in_fn "$CLIENT" 'private func cameBack()' 'TorHealth.onForeground(away: away) == .renew' "a return no longer asks TorHealth whether to renew"
 in_fn "$CLIENT" 'private func cameBack()' 'dropSessions()' "a return keeps the sessions, whose kept-alive streams ride old circuits"
-in_fn "$CLIENT" 'private func cameBack()' '"SIGNAL NEWNYM"' "a return no longer asks tor for new circuits"
+# NEWNYM keeps the guard connection a suspension outlives the NAT of (prd §1597).
+in_fn "$CLIENT" 'private func cameBack()' 'self?.resetNetwork(why: "back after' "a return no longer resets tor's connections"
+if awk '/private func cameBack\(\)/,/^    }$/' "$CLIENT" | grep -q 'NEWNYM'; then
+    echo "✗ a return asks only for new circuits, over the guard connection it may have lost"; exit 1
+fi
 in_fn "$CLIENT" 'private func network(_ signature: String?)' 'path.moved(to: signature)' "a changed network no longer reaches the rule"
 in_fn "$CLIENT" 'private func network(_ signature: String?)' 'resetNetwork(why:' "a changed network no longer resets tor's connections"
 in_fn "$CLIENT" 'private func resetNetwork(why: String)' '"SETCONF DisableNetwork=1"' "a reset no longer closes tor's connections"
@@ -69,7 +73,7 @@ if grep -nE 'URLSession\.shared|allowFailover = true' "$CLIENT" >/dev/null; then
 fi
 # The row's word follows the state: a lost circuit is "Connecting", never "On".
 use "$ROWS" 'case .connecting: String(localized: "Connecting")' "the Tor row no longer says Connecting"
-echo "  ok   the watch keeps asking, a return renews, a new network resets, an ended run runs again"
+echo "  ok   the watch keeps asking, a return resets, a new network resets, an ended run runs again"
 
 TMP=$(mktemp -d /tmp/tor-health-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT

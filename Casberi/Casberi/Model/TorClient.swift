@@ -45,6 +45,8 @@ final class TorClient: @unchecked Sendable {
     /// The current run reached 100% and read its port; a reset waits for it.
     private var connected = false
     private var sessions: [String: URLSession] = [:]
+    /// Circuits given up on, per isolation key (`retire(_:isolation:)`).
+    private var generations: [String: Int] = [:]
     private var control: Int32 = -1
     private var startedAt = Date()
     private var awayAt: Date?
@@ -153,11 +155,37 @@ final class TorClient: @unchecked Sendable {
         }
     }
 
-    /// A fresh circuit for a request an exit refused or a circuit dropped:
-    /// same wallet, another key — one a minute, so a burst of failed reads
-    /// shares one new circuit rather than building one each.
-    func retrySession(isolation key: String) async -> URLSession? {
-        await session(isolation: key + "#retry-\(Int(Date().timeIntervalSince1970 / 60))")
+    /// The second circuit a request tries when its first gave no answer:
+    /// same wallet, another key.
+    static func retryKey(_ key: String) -> String { key + "#retry" }
+
+    /// **A CIRCUIT THAT GAVE NO ANSWER IS NEVER ASKED AGAIN (prd §1597, user,
+    /// on "Couldn't read Base, Ethereum and Robinhood": "but why").** The
+    /// second circuit was one a minute, so Move's ask two seconds on and a
+    /// Try again rode the same two dead circuits. Retired, the key's next
+    /// request builds another; only the session still current for the key
+    /// retires it, so a burst of failures on one circuit builds one new one,
+    /// and a request already on the newer circuit never retires that. Its
+    /// tasks run out on their own: a sibling that would have answered is not
+    /// cancelled.
+    func retire(_ failed: URLSession, isolation key: String) {
+        lock.lock()
+        let current = circuitKey(key)
+        guard sessions[current] === failed else { lock.unlock(); return }
+        sessions[current] = nil
+        generations[key, default: 0] += 1
+        let generation = generations[key] ?? 0
+        lock.unlock()
+        NSLog("tor: a circuit gave no answer · the next request builds circuit %ld", generation)
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + Self.requestTimeout * 2) {
+            failed.finishTasksAndInvalidate()
+        }
+    }
+
+    /// The key a circuit is built under, once its earlier circuits retired.
+    /// Under `lock`.
+    private func circuitKey(_ key: String) -> String {
+        generations[key].map { "\(key)#\($0)" } ?? key
     }
 
     /// A run ended (`tor_run_main` returned): nothing points at its port any
@@ -197,9 +225,10 @@ final class TorClient: @unchecked Sendable {
 
     // MARK: - Sessions
 
-    private func ready(_ key: String) -> URLSession? {
+    private func ready(_ isolation: String) -> URLSession? {
         lock.lock(); defer { lock.unlock() }
         guard let port = socksPort else { return nil }
+        let key = circuitKey(isolation)
         if let s = sessions[key] { return s }
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = Self.requestTimeout
@@ -334,9 +363,16 @@ final class TorClient: @unchecked Sendable {
     /// iOS suspended the tor thread while the app was away, and tor keeps
     /// believing in circuits whose connections may be gone (see `TorHealth`).
     /// Back after `awayBeforeRenew`, the sessions go, so no request reuses a
-    /// kept-alive stream on an old circuit, and tor is told to build new ones
-    /// (`SIGNAL NEWNYM`) and that it is in use (`SIGNAL ACTIVE`). Runs on
-    /// `willEnterForeground`, before the activation's reads.
+    /// kept-alive stream on an old circuit, and tor's connections are closed
+    /// and opened again (`resetNetwork`). Runs on `willEnterForeground`,
+    /// before the activation's reads.
+    ///
+    /// **A RETURN RESETS, NEVER ONLY NEWNYM (prd §1597).** `NEWNYM` builds new
+    /// circuits over the connection to the guard, and that connection is what
+    /// a suspension outlives the NAT of: tor still said ready, every read
+    /// stalled 20s, and Base, Ethereum and Robinhood failed at once. A reset
+    /// costs ~1.5s on the first read after it (2.3–3.1s against ~1.4s,
+    /// measured 2026-10-28, tor 0.4.9.14 from the Mac).
     private func cameBack() {
         lock.lock()
         let away = awayAt.map { Date().timeIntervalSince($0) }
@@ -346,12 +382,7 @@ final class TorClient: @unchecked Sendable {
         guard running, TorHealth.onForeground(away: away) == .renew else { return }
         dropSessions()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self, let fd = self.controlSocket() else { return }
-            _ = self.command(fd, "SIGNAL ACTIVE")
-            _ = self.command(fd, "SIGNAL NEWNYM")
-            let health = self.command(fd, TorHealth.healthQuery).flatMap(TorHealth.reading(in:))
-            NSLog("tor: back after %.0fs · new circuits asked · %@", away ?? 0,
-                  health.map { $0.live ? "tor says live" : "tor says no circuit" } ?? "no answer")
+            self?.resetNetwork(why: "back after \(Int(away ?? 0))s")
         }
     }
 

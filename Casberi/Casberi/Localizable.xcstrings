@@ -184495,6 +184495,34 @@
         }
       }
     },
+    "Tor couldn't get through: try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor no pudo conectar: inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor経由で接続できませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor로 연결할 수 없습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor 无法连通：请重试"
+          }
+        }
+      }
+    },
     "Total" : {
       "localizations" : {
         "es" : {

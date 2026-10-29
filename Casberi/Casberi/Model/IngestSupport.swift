@@ -653,9 +653,16 @@ enum IngestSupport {
         if let answer = try? await first.data(for: request),
            (answer.1 as? HTTPURLResponse)?.statusCode != 403 { return answer }
         guard !Task.isCancelled else { return nil }
-        guard let second = await TorClient.shared.retrySession(isolation: key),
-              let again = try? await second.data(for: request),
-              (again.1 as? HTTPURLResponse)?.statusCode != 403 else { return nil }
+        // Each circuit that failed is retired (prd §1597), so the next ask —
+        // Move's two seconds on, a Try again — rides circuits never tried.
+        TorClient.shared.retire(first, isolation: key)
+        let retry = TorClient.retryKey(key)
+        guard let second = await TorClient.shared.session(isolation: retry) else { return nil }
+        guard let again = try? await second.data(for: request),
+              (again.1 as? HTTPURLResponse)?.statusCode != 403 else {
+            if !Task.isCancelled { TorClient.shared.retire(second, isolation: retry) }
+            return nil
+        }
         return again
     }
 

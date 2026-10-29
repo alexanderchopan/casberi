@@ -510,7 +510,21 @@ struct MoveSentence: View {
         switch TorStatus.shared.state {
         case .connecting: String(localized: "Connecting to Tor: try again")
         case .failed: String(localized: "Couldn't reach Tor: try again")
-        default: String(localized: "Couldn't read \(unreadNames): try again")
+        // **EVERY NETWORK AT ONCE IS TOR'S CIRCUIT (prd §1597, user: "but
+        // why").** Tor said ready and every node failed together; each
+        // answers over ten circuits from a desk (360 of 360, measured
+        // 2026-10-28), so naming the three networks blamed the wrong thing.
+        // Try again builds new circuits. A network on your own node is not
+        // read through Tor and keeps its name.
+        default: unreadThroughTor ? String(localized: "Tor couldn't get through: try again")
+                                  : String(localized: "Couldn't read \(unreadNames): try again")
+        }
+    }
+
+    /// Every network went unread, and every one is read through Tor.
+    private var unreadThroughTor: Bool {
+        TorRoute.available && Op.networks.allSatisfy {
+            unread.contains($0.chainId) && OwnNodeStore.settings.address(for: $0.chainId) == nil
         }
     }
 
