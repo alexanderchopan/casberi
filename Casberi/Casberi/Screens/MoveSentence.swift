@@ -174,6 +174,8 @@ struct MoveSentence: View {
     /// a service's rather than the app's.
     @State private var quoteFrom: String?
     @State private var stage: Chain.Stage?
+    /// Where this send's time is going, from the tap (prd §1602).
+    @State private var clock: MoveClock?
     /// What a signed transaction became, said in the sentence's place (§1438b).
     @State private var receipt: Receipt?
     /// Receiving from another network (prd §1453): the route picked, the
@@ -969,6 +971,10 @@ struct MoveSentence: View {
             if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
+        // What the account is on this network, read before the tap (prd §1602).
+        .task(id: "\(network.chainId)|\(account)") {
+            if !YourAccountDemo.isDemo(account) { await Chain.readAhead(account, on: network) }
+        }
         .task(id: crossingWatch?.id) { await watchCrossing() }
         .task(id: sweepKey) { await resweep() }
         .task(id: previewKey) { await repreview() }
@@ -3822,6 +3828,7 @@ struct MoveSentence: View {
         let toPrivate = privateRoundUps
         let rideUnits = privateRide
         stage = .preparing
+        clock = MoveClock()
         Task {
             do {
                 let buy = carried
@@ -3895,6 +3902,7 @@ struct MoveSentence: View {
                 }
                 let sent = done.sent
                 stage = nil
+                let took = timed(sent.outcome)
                 chrome.refreshRooms()
                 // Landed or still on its way, the transaction is gone from the
                 // page, so a second tap cannot pay it twice. The sentence
@@ -3908,6 +3916,7 @@ struct MoveSentence: View {
                 }
                 // A first send to an address with no name offers one (prd §1586).
                 if case .landed = sent.outcome, !sweeping { made.names = Self.unnamed(batch) }
+                if let took { made.detail = [made.detail, took].filter { !$0.isEmpty }.joined(separator: " · ") }
                 // A token a swap just bought is spendable now, not when the
                 // Wallet next reads the account (§1442l).
                 if case .landed = sent.outcome {
@@ -3986,12 +3995,16 @@ struct MoveSentence: View {
                 await readNetwork()
             } catch let failure as Chain.Failure {
                 stage = nil
+                _ = timed(nil)
+                // A stale fact could explain it (prd §1602): read afresh.
+                Task { await Chain.forgetFacts(net, account); await Chain.readAhead(account, on: net) }
                 #if DEBUG
                 NSLog("moveSign: failed %@", failure.message)
                 #endif
                 say(failure.message, failure: true, seconds: 6, from: failure.from)
             } catch {
                 stage = nil
+                _ = timed(nil)
                 #if DEBUG
                 NSLog("moveSign: not sent %@", String(describing: error))
                 #endif
@@ -4006,6 +4019,37 @@ struct MoveSentence: View {
     private func advance(to s: Chain.Stage) {
         if stage == .signing, s == .sending || s == .cosigning { DSHaptic.tap() }
         stage = s
+        clock?.enter(Self.clockMark(s))
+    }
+
+    static func clockMark(_ s: Chain.Stage) -> MoveClock.Mark {
+        switch s {
+        case .preparing: .preparing
+        case .signing: .faceID
+        case .cosigning: .signer
+        case .sending: .sending
+        case .landing: .landing
+        }
+    }
+
+    /// **THE PHONE'S OWN NUMBER (prd §1602).** The send's stages, kept in
+    /// `PerfReadings` and logged however it ended; on a landed or pending
+    /// receipt in a pre-release build, "Took 12s: preparing 2.1s, …".
+    private func timed(_ outcome: Chain.Sent.Outcome?) -> String? {
+        defer { clock = nil }
+        let ended: String = switch outcome {
+        case .landed?: "landed"
+        case .pending?: "pending"
+        case .dryRun?: "dry run"
+        case nil: "not sent"
+        }
+        guard let words = clock?.words(until: .now), let total = clock?.total(until: .now) else { return nil }
+        NSLog("moveClock| %@ | %@ | %@", network.name, ended, words)
+        PerfReadings.record("MoveSend", ms: total * 1000, note: "\(ended) on \(network.name) · \(words)")
+        if BuildChannel.isPreRelease, let took = clock?.words(until: .now), outcome != nil {
+            return String(localized: "Took \(took)")
+        }
+        return nil
     }
 
     /// **UNDER THE LIMIT, FACE ID ALONE; OVER IT, THE SIGNER TOO (prd §1455).**
@@ -4020,7 +4064,7 @@ struct MoveSentence: View {
                       stage: @escaping @Sendable (Chain.Stage) async -> Void) async throws -> Chain.Transacted {
         // The Signer is read beside the limit (prd §1601), not after it, and
         // only where a limit can be on: this phone set its plan.
-        func signersIfLimited() async throws -> [String] { Chain.plan(net) == nil ? [] : try await Chain.signers(net, account) }
+        func signersIfLimited() async throws -> [String] { Chain.plan(net) == nil ? [] : try await Chain.knownSigners(net, account) }
         async let signers = signersIfLimited()
         guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
             return try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
@@ -4344,6 +4388,8 @@ struct MoveSentence: View {
     }
 
     private func readNetwork() async {
+        // The send forgot what the account is; read again for the next one.
+        Task { [account, network] in await Chain.readAhead(account, on: network) }
         let read = await Tokens.read(account, on: network)
         let now = read ?? []
         heldBy[network.chainId] = now

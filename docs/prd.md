@@ -69579,3 +69579,14 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 10. **Seen on the simulator** (iPhone 17 Pro, iOS 27): the Signer sheet with its Cancel row, and Cancel taking it down. **Not seen:** a real send or swap, the kept-session path, a declined connection, and the time any of it takes. Measure the next real send with the Signer before claiming a number.
 
 **Mac half (§1402).** The same sheet and foot; not walked on the Mac.
+
+## §1602 — A send is timed on the phone, and what the account is is read once, ahead (amends §1601; user, 2026-10-29: "what else would you do to optimize speed and easy"; "i don't want to limit Tor, and i don't want swaps under a limit to be different than other swaps"; "Yes, start") — BUILT, MOVE SEEN ON THE SIMULATOR; NO REAL SEND TIMED YET
+
+1. **The bounds.** Every read stays on Tor, and every swap is signed by both keys whatever its size. Speed comes from reading less and earlier, never from either.
+2. **The clock (`MoveClock`).** Every send is timed from the tap through preparing, Face ID, the Signer, sending and landing. It is logged (`moveClock|`) and kept in `PerfReadings` as `MoveSend` however it ended. On a landed or still-pending receipt in a pre-release build only (`BuildChannel.isPreRelease`: DEBUG or TestFlight), the receipt says "Took 12s: preparing 2.1s, Face ID 1.4s, your Signer 6s, sending 0.8s, landing 1.9s". The App Store build shows no stopwatch. `move-clock-selftest.sh` guards it.
+3. **What the account is, kept (`YourAccountChain+Facts.swift`).** Whether it is on the network (only "on it" is kept), its contract (module or adapter), its threshold, whether it has spend-limit sessions, and its Signer. The spend limit's state, `operate`, the preview and Move's Signer read them as kept. The nonce, the balances, the module's hash, the passkey factory and `checkSignatures` are still asked fresh every time, so a stale fact can only refuse, never sign the wrong thing.
+4. **Forgotten** when any operation of the account is sent and again once it settles (`submit`, so Security's changes clear it), when a send fails (then read afresh), and after five minutes regardless (`factsLife`), for a change made on another device.
+5. **Read ahead.** Move reads them for its network when it opens or the network changes, and again after each send (`readAhead`); the Signer only where both keys can be needed. The tap is left with the nonce, the balances and the hash.
+6. **Not seen:** a real send's numbers. Read the first TestFlight receipt's "Took …" before choosing the next pass.
+
+**Mac half (§1402).** The same Move; not walked on the Mac.

@@ -2482,6 +2482,7 @@ harness "Direct-swap self-test" "direct swap self-test" "scripts/direct-swap-sel
 # network; the account as depositor and recipient, ETH through the handler's
 # message; Across's terms bounded; the relay hash a real pool's; one row.
 harness "Across-swap self-test" "across swap self-test" "scripts/across-swap-selftest.sh" "Move's swap to another network drifted — run scripts/across-swap-selftest.sh"
+harness "Move-clock self-test" "move clock self-test" "scripts/move-clock-selftest.sh" "Move's stage clock drifted — run scripts/move-clock-selftest.sh"
 harness "Private-bridge self-test" "private bridge self-test" "scripts/private-bridge-selftest.sh" "round-ups saved from Base or Robinhood drifted — run scripts/private-bridge-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 

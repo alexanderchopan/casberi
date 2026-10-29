@@ -622,12 +622,13 @@ enum YourAccountChain {
         // send asked this before anything else, three round trips over Tor
         // one after another; the four reads are one now.
         guard let plan = plan(net) else { return .off }
-        async let deployed = isDeployed(net, account)
-        async let threshold = threshold(net, account)
-        async let entry = accountEntry(net, account)
-        async let sessions = sessionIds(net, account)
+        // Kept once read (prd §1602): a send asks none of them again.
+        async let deployed = knownDeployed(net, account)
+        async let threshold = knownThreshold(net, account)
+        async let entry = knownEntry(net, account)
+        async let sessions = knownHasSessions(net, account)
         guard try await deployed else { return .off }
-        guard try await threshold == 2, try await entry == .adapter, try await !sessions.isEmpty else { return .off }
+        guard try await threshold == 2, try await entry == .adapter, try await sessions else { return .off }
         return .on(plan, current: plan.window(at: Int(Date().timeIntervalSince1970)))
     }
 
@@ -2069,8 +2070,9 @@ enum YourAccountChain {
             if !kept.contains(where: { $0.contract!.lowercased() == token.contract!.lowercased() }) { kept.append(token) }
         }
         let given = coSigner
-        func entryNow() async throws -> YourAccountOp.Entry { deployed ? try await accountEntry(net, account) : .module4337 }
-        func needsSigner() async throws -> Bool { given == nil && deployed ? try await threshold(net, account) >= 2 : false }
+        // The account's contract and threshold as kept (prd §1602).
+        func entryNow() async throws -> YourAccountOp.Entry { deployed ? try await knownEntry(net, account) : .module4337 }
+        func needsSigner() async throws -> Bool { given == nil && deployed ? try await knownThreshold(net, account) >= 2 : false }
         func nonceNow() async throws -> UInt64? { deployed ? try await nonce(net, account) : nil }
         func depositNow() async -> String { deployed ? await feeDeposit(net, of: account) : "0" }
         func tokensNow() async -> [String: String?] {
@@ -2339,6 +2341,10 @@ enum YourAccountChain {
             followed.nonce = op.nonce
         }
         await stage(.sending)
+        // What the account is may change with this operation (prd §1602):
+        // forgotten now, and again once it settles.
+        await forgetFacts(net, account)
+        defer { Task { await forgetFacts(net, account) } }
         var refusal: String?
         do {
             _ = try await bundler(net, "eth_sendUserOperation", [op.json, YourAccount.entryPoint])

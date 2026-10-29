@@ -119,18 +119,18 @@ extension YourAccountChain {
             let parts = try await assemble(items, account: account, roundUp: roundUp, renew: route == .bothKeys)
             written = parts.assembled
             let a = parts.assembled
-            let entry: YourAccountOp.Entry = a.deployed ? try await accountEntry(net, account) : .module4337
+            let entry: YourAccountOp.Entry = a.deployed ? try await knownEntry(net, account) : .module4337
             // Who signs beside this phone: the Signer over the limit, or the
             // one `operate` asks itself when the account already needs both.
             var coSigner: String?
             if route == .bothKeys {
-                guard let first = try await signers(net, account).first else {
+                guard let first = try await knownSigners(net, account).first else {
                     return empty(a, route: route, refusal: String(localized: "Add a signer first: over the limit, a send waits on it"))
                 }
                 coSigner = first
-            } else if a.deployed, entry == .adapter, try await threshold(net, account) >= 2 {
+            } else if a.deployed, entry == .adapter, try await knownThreshold(net, account) >= 2 {
                 // `operate` refuses this at signing; say so now.
-                guard let first = try await signers(net, account).first else {
+                guard let first = try await knownSigners(net, account).first else {
                     return empty(a, route: route, refusal: String(localized: "Your Signer signs this too, and none is on \(net.name)"))
                 }
                 coSigner = first
