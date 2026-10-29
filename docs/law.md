@@ -1980,15 +1980,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
-- §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1605)
+- §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
 - §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
-- §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc… (amended by §1605)
+- §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc… (amended by §1606)
 - §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line cou…
-- §1605 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits
+- §1606 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits
 
 ## Dead rulings → what replaced them (generated)
 

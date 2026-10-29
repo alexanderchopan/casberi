@@ -358,6 +358,6 @@ Venmo and PayPal buys need USDC staked equal to the order (`disputeProtectionReq
 - `signalIntent` reverts `SignatureExpired(expiration, now)` (`0xf88f0490`) once the curator's signature is past its 70 minutes: sign, then signal at once.
 - `Model/PeerIntent.swift` (prd §1604) builds both calls and reads both answers; nothing calls it yet.
 
-## Cash App, 2026-10-29 (prd §1605)
+## Cash App, 2026-10-29 (prd §1606)
 
-- The user's payment app is Cash App, so it leads. Template, sign-in and liquidity are in §1605: the sign-in draws in a WKWebView; one seller quotes, nothing under $50, $100 buys 86.13 USDC (rate 1.15).
+- The user's payment app is Cash App, so it leads. Template, sign-in and liquidity are in §1606: the sign-in draws in a WKWebView; one seller quotes, nothing under $50, $100 buys 86.13 USDC (rate 1.15).

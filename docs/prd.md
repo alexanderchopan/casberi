@@ -69624,7 +69624,7 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 
 **Mac half (§1402).** The same Move and sheet; Open wallet is not automatic off the phone.
 
-## §1605 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits (amends §1598 item 3's Revolut lead and §1604 item 5) (user, 2026-10-29: "i don't have a revolut account"; of which app: "Cash App") — RULED, MEASURED, NOT BUILT
+## §1606 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits (amends §1598 item 3's Revolut lead and §1604 item 5) (user, 2026-10-29: "i don't have a revolut account"; of which app: "Cash App") — RULED, MEASURED, NOT BUILT
 
 1. **Cash App first.** Deposit is built and first tried on the app the person building it uses. Revolut, Zelle and the rest follow on the same core (§1603, §1604); only the template differs.
 2. **Its door (template `transfer_cashapp`, unchanged 2026-10-28 → 29).** Sign in at `cash.app/account/activity`; the page's own `POST cash.app/cash-app/activity/v1.0/page` (body: the customer token as `SENDER_ID`, `MY_ACTIVITY_WEB_V2`, 15 rows) is captured as it is made, no replay; the payment is the row's `transaction_id`, `amount`, `display_date`, the recipient's `cashtag`; the person pays in Cash App itself through `cash.app/{cashtag}/{amount}`. Peer's mobile SDK loads it with a desktop Safari user agent.
