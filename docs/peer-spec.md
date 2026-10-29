@@ -336,3 +336,10 @@ Venmo and PayPal buys need USDC staked equal to the order (`disputeProtectionReq
 - **Guidelines.** The live risk is 5.2.2: access to a third-party service must be permitted by that service's terms, and "authorization must be provided upon request". 3.1.5 fits, since the account is a wallet and Peer's contract trades.
 - **Cash App's terms** (XXIII.5) bar letting "any third party" access its systems by "any manual process or robot, spider, scraper, or other automated means". The user rules this a known risk (prd §1598 item 4).
 - **Revolut's terms were not read.** Its site bot-checks scripted fetches.
+
+## Measured, 2026-10-29
+
+- **A Safe can be the buyer.** `POST api.zkp2p.xyz/v3/sign` signed a $20 Revolut intent (deposit 5298) with a Safe on Base as `callerAddress`, as it did for an ordinary address. `signalIntent` simulated from the Safe returned cleanly; the same signature sent from another address reverted `InvalidSignature` (0x8baa579f), so the curator's signature binds the caller. No transaction was sent.
+- **Peer's fee is a referral fee the curator adds.** The signed intent carried `referralFees: [{recipient: 0x0bc26ff515411396dd588abd6ef6846e04470227, fee: 9500000000000000}]` (0.95%) though we sent none. The signature expires 70 minutes after it is made.
+- **The attestation and the seal, in Swift.** `Model/PeerAttestation.swift` and `Model/PeerSessionEnvelope.swift` (prd §1603) verify a live document and seal a session; a Swift seal opened in Python's `cryptography`, and both computed the same enclave-key hash. The service also advertises `disputeWindowPolicy` (Venmo and PayPal 14 days, every other platform 0) and one relayer, `0xa4152975230b5dc505A96CB24bDe2a15a3678e8E`.
+- **Still Peer's to answer:** may a third-party wallet run the proof (terms, rate limits, `x-pp-key`), and has App Review asked about the in-app sign-in.

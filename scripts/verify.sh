@@ -2651,6 +2651,10 @@ harness "Rating ask" "rating ask" "scripts/rating-ask-selftest.sh" "the rating a
 # Move's Buy (prd §1599): one card seller per network — Stripe on Ethereum, Ramp
 # on Base only with its key — and the page told the coin, network and dollars.
 harness "Card onramp" "card onramp" "scripts/card-onramp-selftest.sh" "the card onramp self-test failed — run scripts/card-onramp-selftest.sh"
+# Deposit's proof (prd §1603): Peer's enclave key refused unless the nonce,
+# the clock, PCR8, AWS's root, the chain and the signature all prove it, and
+# the session sealed exactly as the enclave reads it, over a recorded document.
+harness "Peer attestation" "peer attestation" "scripts/peer-attest-selftest.sh" "the Peer attestation self-test failed — run scripts/peer-attest-selftest.sh"
 
 # Buy, Move's fourth verb (prd §1473): Bitrefill's accountless door — the fold
 # of its forty category slugs, the sign-in message the server took byte for

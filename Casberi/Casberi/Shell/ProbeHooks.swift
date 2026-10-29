@@ -1107,6 +1107,25 @@ enum ProbeHooks {
                 await BitrefillX402.payProbe(account: account) { NSLog("bitrefillPayProbe| %@", $0) }
             }
         },
+        // `-peerAttestProbe YES` — Deposit's proof, its first half (prd
+        // §1603): one fresh document from Peer's enclave, proven
+        // (`PeerAttestation`), and a stand-in session sealed to its key — no
+        // payment app, no cookies, nothing sent on. Logs `peerAttest|`.
+        Hook(key: "peerAttestProbe") { _, _ in
+            Task { @MainActor in
+                do {
+                    let key = try await PeerAttestation.fetch()
+                    NSLog("peerAttest| proven key=%@ stamped=%@", key.boundKeyHex,
+                          ISO8601DateFormatter().string(from: key.timestamp))
+                    let sealed = try PeerSessionEnvelope.seal(platform: "revolut", actionType: "transfer_revolut",
+                                                              session: ["Cookie": "probe=1"], to: key)
+                    NSLog("peerAttest| sealed parts=%d chars=%d",
+                          sealed.split(separator: ".").count, sealed.count)
+                } catch {
+                    NSLog("peerAttest| refused %@", String(describing: error))
+                }
+            }
+        },
         Hook(key: "bitrefillBalanceProbe") { _, _ in
             guard let token = TokenVault.get(TokenBridge.bitrefill.tokenKey) else {
                 NSLog("[Casberi] bitrefillBalanceProbe: no stored token — connect via -tokenBridge \"Bitrefill:<key>\"")

@@ -503,6 +503,17 @@ enum NetworkReach {
                  hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"],
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
+        // Peer's enclave (prd §1603): the key Deposit seals a payment app's
+        // session to, asked fresh for each proof with a nonce of ours and
+        // refused unless AWS's root and Peer's PCR8 prove it
+        // (`PeerAttestation`). DEBUG reaches it today (`-peerAttestProbe`);
+        // nothing else does until Deposit ships. Answered through Tor
+        // (2026-10-28). Reach WALLET: Deposit is Move's, not the Peer seat's.
+        Endpoint(service: "Peer enclave",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Asks Peer's enclave for its public key, with a random number of ours it must sign back, and checks Amazon's and Peer's signatures on the answer. Carries nothing about you.",
+                 hosts: ["attestation-service.zkp2p.xyz"],
+                 throughTor: true),
         // Gnosis Chain's two public nodes, kept when the Gnosis Pay seat that
         // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
         // Chain for its own transaction hash through them (`GnosisChainRPC`),
