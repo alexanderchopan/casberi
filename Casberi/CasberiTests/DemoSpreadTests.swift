@@ -72,7 +72,10 @@ struct DemoSpreadTests {
     }
 
     /// The checks above can only fail if the demo carries topic rows at all.
+    /// Five rooms carry them (Photos, Obsidian, TikTok, YouTube, Files) since
+    /// prd §1579 deleted the demo's X and Instagram archive rooms, which were
+    /// the sixth and seventh.
     @Test func theDemoHasTopicRooms() {
-        #expect(Set(Self.topical.map(\.source)).count >= 6)
+        #expect(Set(Self.topical.map(\.source)).count >= 5)
     }
 }
