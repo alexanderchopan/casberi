@@ -91833,6 +91833,34 @@
         }
       }
     },
+    "Get it on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibir en"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取り先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받을 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在以下网络获得"
+          }
+        }
+      }
+    },
     "Get it on %@, change" : {
       "localizations" : {
         "es" : {
@@ -170389,6 +170417,34 @@
         }
       }
     },
+    "Swaps on %@ stay on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los intercambios en %1$@ se quedan en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ でのスワップは %2$@ のまま"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 스왑은 %2$@에 머뭅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 上的兑换留在 %2$@"
+          }
+        }
+      }
+    },
     "Swaps, private moves and getting your account back need it too." : {
       "localizations" : {
         "es" : {
@@ -221217,6 +221273,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要重新连接"
+          }
+        }
+      }
+    },
+    "network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "网络"
           }
         }
       }

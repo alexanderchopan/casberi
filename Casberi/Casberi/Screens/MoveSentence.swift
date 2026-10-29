@@ -490,7 +490,8 @@ struct MoveSentence: View {
     /// the other networks' token in for").** Once what is sold is picked,
     /// For lists this network's tokens, then each other network's that
     /// Across reaches, named by network; picking one sets where it arrives.
-    private var crossesInFor: Bool { verb == .swap && networkPicked && with != nil }
+    /// A network picked for it to arrive on counts as well (prd §1600).
+    private var crossesInFor: Bool { verb == .swap && networkPicked && (with != nil || buyOn != nil) }
 
     /// Read, and nothing anywhere: there is nothing to spend yet. A network
     /// no node answered for is not nothing, so it never says so.
@@ -612,14 +613,6 @@ struct MoveSentence: View {
 
     /// The network `buy` belongs to.
     private var buyHome: Op.Network { buyOn ?? network }
-
-    /// The token Swap buys could arrive on another network: the sentence's
-    /// last network then opens "Get <token> on" (prd §1555), never a list
-    /// with nothing to pick.
-    private var buyCrosses: Bool {
-        guard verb == .swap, with != nil, items.isEmpty, buy != nil else { return false }
-        return destinations.count > 1
-    }
 
     /// Where a swap's token can arrive from this network: this network
     /// first, then every network of the account's that Across reaches and
@@ -1144,16 +1137,12 @@ struct MoveSentence: View {
             case .current: currentSellClauses(glue: glue, trail: join.trail, leads: n == 0 && lead != nil)
             }
         }
-        if let on = crossTo {
-            // "Swap 0.01 ETH on Ethereum for USDC on Base." (prd §1555): both
-            // networks are words, the first the one it leaves.
-            MoveClause(glue: String(localized: "on")) { originWord }
-            MoveClause(glue: String(localized: "for")) { buyWord }
-            MoveClause(glue: String(localized: "on")) { destinationWord(on) }
-        } else {
-            MoveClause(glue: String(localized: "for")) { buyWord }
-            MoveClause(glue: String(localized: "on")) { networkWord }
-        }
+        // "Swap 0.01 ETH on Ethereum for USDC on Base." (prd §1555): both
+        // networks are words, the first the one it leaves — always, so a
+        // swap to another network is a choice you can see (prd §1600).
+        MoveClause(glue: String(localized: "on")) { originWord }
+        MoveClause(glue: String(localized: "for")) { buyWord }
+        MoveClause(glue: String(localized: "on")) { destinationWord }
     }
 
     /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
@@ -1746,6 +1735,12 @@ struct MoveSentence: View {
                 say(String(localized: "A swap to another network goes alone"))
                 return
             }
+            // Nowhere else to arrive: the word says so rather than opening a
+            // list of one (prd §83, §1600).
+            if which == .destination, destinations.count < 2 {
+                say(String(localized: "Swaps on \(network.name) stay on \(network.name)"))
+                return
+            }
             if which == .buy, lockedBuy != nil {
                 say(String(localized: "One token for the whole swap"))
                 return
@@ -2155,11 +2150,7 @@ struct MoveSentence: View {
 
     private var networkWord: some View {
         Group {
-            if networkPicked, buyCrosses {
-                // The token could arrive elsewhere: its network is a choice
-                // of where it arrives (prd §1555).
-                blank(network.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(network.name), change"))
-            } else if networkPicked {
+            if networkPicked {
                 blank(network.name + ".", ink: DS.pickInk, .network, label: Text("On \(network.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
@@ -2167,14 +2158,28 @@ struct MoveSentence: View {
         }
     }
 
-    /// The network a swap to another network leaves (prd §1555).
+    /// The network a swap leaves (prd §1555, §1600).
     private var originWord: some View {
-        blank(network.name, ink: DS.pickInk, .network, label: Text("From \(network.name), change"))
+        Group {
+            if networkPicked {
+                blank(network.name, ink: DS.pickInk, .network, label: Text("From \(network.name), change"))
+            } else {
+                blank(String(localized: "network"), ink: DS.textTertiary, .network, label: Text("Pick a network"))
+            }
+        }
     }
 
-    /// The network it arrives on: opens "Get <token> on".
-    private func destinationWord(_ on: Op.Network) -> some View {
-        blank(on.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(on.name), change"))
+    /// The network it arrives on, the sending one until another is picked:
+    /// opens "Get <token> on" (prd §1600). Before a network is picked it is
+    /// the same blank as the first.
+    private var destinationWord: some View {
+        Group {
+            if networkPicked {
+                blank(buyHome.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
+            } else {
+                blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
+            }
+        }
     }
 
     /// A token list's search, its first row: the sentence's word never turns
@@ -3016,7 +3021,8 @@ struct MoveSentence: View {
         // This network, then each other it can arrive on (prd §1566): what
         // can arrive there, a head of four until something is typed.
         if crossesInFor {
-            for n in destinations {
+            // The network picked to arrive on leads (prd §1600).
+            for n in [buyHome] + destinations.filter({ $0 != buyHome }) {
                 let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
                 var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: majorToken)
                 if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
@@ -3026,7 +3032,7 @@ struct MoveSentence: View {
                     // Never its WETH: ETH is ETH there (prd §1559).
                     let weth = YourAccountSwap.book(n.chainId)?.weth
                     rows = rows.filter { Self.arrives($0.token, from: network, on: n) && $0.token.contract?.lowercased() != weth }
-                    if !typed { rows = Array(rows.prefix(4)) }
+                    if !typed, n != buyHome { rows = Array(rows.prefix(4)) }
                 }
                 for l in rows {
                     let key = "\(n.chainId)|\(l.id)"
@@ -3258,21 +3264,21 @@ struct MoveSentence: View {
     /// token that cannot never opens this list.
     private var destinationList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let buy {
-                listHeader(String(localized: "Get \(buy.token.symbol) on"))
-                ForEach(destinations) { n in
-                    // The same token there, or none: For then opens on that
-                    // network's list (prd §1566).
-                    let there = n == buyHome ? buy : equivalent(buy.token, from: buyHome, to: n)
-                    let sub: String? = n == network ? String(localized: "Same network")
-                        : there.map { $0.token.symbol != buy.token.symbol ? String(localized: "As \($0.token.symbol)") : nil } ?? nil
-                    listRow(n.name, sub: sub, image: Self.networkMark(n), dim: buyHome == n) {
-                        pick {
-                            self.buy = there
-                            buyOn = n == network ? nil : n
-                        }
-                        if there == nil { open = .buy }
+            // Before a token is picked the list is just the networks; For then
+            // opens on the one picked (prd §1600).
+            listHeader(buy.map { String(localized: "Get \($0.token.symbol) on") } ?? String(localized: "Get it on"))
+            ForEach(destinations) { n in
+                // The same token there, or none: For then opens on that
+                // network's list (prd §1566).
+                let there = buy.flatMap { b in n == buyHome ? b : equivalent(b.token, from: buyHome, to: n) }
+                let sub: String? = n == network ? String(localized: "Same network")
+                    : there.flatMap { t in buy.flatMap { t.token.symbol != $0.token.symbol ? String(localized: "As \(t.token.symbol)") : nil } }
+                listRow(n.name, sub: sub, image: Self.networkMark(n), dim: buyHome == n) {
+                    pick {
+                        self.buy = there
+                        buyOn = n == network ? nil : n
                     }
+                    if there == nil { open = .buy }
                 }
             }
         }
