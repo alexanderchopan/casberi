@@ -745,10 +745,9 @@ extension FeedScreen {
     /// wallets (prd §514; Permissions' until §1107).
     ///
     /// Separate from `walletApprovalsSection` because the two come from
-    /// different reads and only one of them can be tapped: a grant opens its
-    /// own prepare card (live allowance, revoke calldata, a Revoke.cash door)
-    /// and a delegate has no such destination, so folding them into one list
-    /// would give half its rows a chevron and half none.
+    /// different reads: a grant opens its own prepare card (live allowance,
+    /// revoke calldata, a Revoke.cash door) and a delegate its own sheet
+    /// (prd §1594), whose Revoke opens the wallet app that set it.
     @ViewBuilder
     var walletActingSection: some View {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
@@ -757,9 +756,15 @@ extension FeedScreen {
             walletCard(String(localized: "Delegations"), glyph: WalletWarning.Kind.delegation.glyph, anchor: SecurityAnchor.delegations.id) {
                 WalletActingPartiesRows(holders: holders,
                                         cap: Self.walletHomeCap, open: walletSecurityOpen(.delegations),
-                                        more: { walletSecurityToggle(.delegations) })
+                                        more: { walletSecurityToggle(.delegations) },
+                                        onOpen: { key in
+                                            if let d = WalletDelegation.find(key, in: walletLive.acting) {
+                                                feedSheet = .delegation(d)
+                                            }
+                                        })
                     .modifier(rowEntrance(2))
                     .walletStackRow()
+                    .task(id: holders.count) { delegationSheetProbe() }
             }
         }
     }

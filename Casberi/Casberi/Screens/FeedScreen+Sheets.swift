@@ -78,6 +78,8 @@ extension FeedScreen {
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
         /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
+        /// One EIP-7702 delegation, from Permissions (prd §1594). Values only.
+        case delegation(WalletDelegation)
 
         var id: String {
             switch self {
@@ -105,6 +107,7 @@ extension FeedScreen {
             case .logosSend: "logosSend"
             case .logosChat(let id, _): "logosChat:\(id)"
             case .githubWatch: "githubWatch"
+            case .delegation(let d): "delegation:\(d.delegate)"
             }
         }
     }
@@ -336,6 +339,8 @@ extension FeedScreen {
             NavigationStack { CategoryOrderSheet() }
         case .githubWatch:
             GitHubWatchTray()
+        case .delegation(let d):
+            WalletDelegationSheet(delegation: d)
         case .worthALook:
             // The two walk doors (prd §449). Each is handed over ONLY
             // when its card is really on screen — the sheet falls back to

@@ -40,6 +40,33 @@ extension FeedScreen {
         #endif
     }
 
+    /// `-delegationSheet YES|unknown|<0x…>` — with `-openRoom Wallet -openSection
+    /// permissions`, raise the first delegation's sheet (or the named
+    /// contract's) once the read has landed (DEBUG; NSLogs `delegationSheet:`
+    /// with every delegation), because a `simctl`-launched capture has no tap
+    /// (prd §1594).
+    func delegationSheetProbe() {
+        #if DEBUG
+        guard !Self.delegationSheetProbed,
+              let raw = UserDefaults.standard.string(forKey: "delegationSheet"), !raw.isEmpty else { return }
+        let all = WalletDelegation.all(walletLive.acting)
+        guard !all.isEmpty else { return }
+        Self.delegationSheetProbed = true
+        NSLog("[Casberi] delegationSheet: %@ (%d: %@)", raw, all.count,
+              all.map { "\($0.name ?? "unknown") \($0.delegate) \($0.networks.joined(separator: ",")) app=\($0.app?.scheme ?? "-")" }
+                .joined(separator: " | "))
+        // `unknown` draws the red sheet over the first one's accounts: the
+        // demo's only delegate is MetaMask's, and nothing names this contract.
+        if raw == "unknown" {
+            feedSheet = .delegation(WalletDelegation(delegate: "0x5e1d0c7a2b9f4e3d8c6a1b0f7e2d9c4a3b8f9f2c",
+                                                     name: nil, vendor: nil,
+                                                     networks: all[0].networks, accounts: all[0].accounts))
+            return
+        }
+        feedSheet = .delegation(all.first { $0.delegate == raw.lowercased() } ?? all[0])
+        #endif
+    }
+
     /// `-subscriptionsCategory "<Category>"` — press that category's tile on
     /// the Subscriptions map once the tile has read ("Other" for the one
     /// Other tile), because a `simctl`-launched capture has no tap (DEBUG;

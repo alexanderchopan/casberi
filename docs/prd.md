@@ -69477,3 +69477,17 @@ In `Shell/RoomsTray.swift` and `Model/TraySearch.swift`:
 **Checks.** `CasberiTests/WalletLastReadingTests` (6): stamped with its read time, another set of wallets gets nothing, each scope its own, an older stamp kept, only the newest eight kept, a portfolio survives storage. `wallet-total-audit.py` rule 7 (Tor in the foreground before the wait, drawn before the live read, kept after it, last-known never kept), three mutations caught; `tor-health-selftest.sh`, `tor-route-selftest.sh`; `wallet-viz-selftest.sh`'s stand-in `HoldingsGroup` gains §1591's `partsBySymbol`, the one harness verify found red on 3.0.17 (890) that this work broke (the other, `agent-keyed-selftest.sh`, is §1584's `AgentOpenRouter` reaching `IngestSupport`). **Not seen:** the stamped number on a cold launch, which needs live chains and a phone; the simulator's demo reads nothing.
 
 **Mac half (§1402).** The Mac links no Tor (§1495 item 9), so `start()` is a no-op there; the last reading is drawn at once on the Mac too.
+
+## §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it (amends §514's "a list, not a control", keeps §112) (user, 2026-10-28: "how would someone be able to know what they delegated to if they are told in permissions that they have and how would they be able to revoke the delegation", then "Mock it up", "'revoke' is better" than Undo, "don't say 'not one we know' say 'unknown'", "we don't want to be using 'we' in the app", "Build it") — RULED, built
+
+In `Model/WalletDelegation.swift`, `Screens/WalletDelegationSheet.swift`, `Screens/WalletActingPartiesRows.swift`:
+
+1. **A delegate row in Permissions opens its sheet** (`FeedSheetRoute.delegation`, values only); a Safe module row stays still, since only the Safe's owners remove one.
+2. **The money sheet's anatomy (§1394, §1396):** the delegate's face and name centred, "Acts as your account" as the figure (attention ink; red when unknown), the networks it is set on under it, then the tiles, then Details (Status, Account, Contract). No "Since": a delegation set before the watch has no date.
+3. **Unknown is said once:** a contract neither the verified table nor your own label names draws "Unknown" under the line, and the one money line (§748): "If you didn't sign this, move your money to a new account." It has no Revoke tile, since there is no app to name.
+4. **Revoke is a door, never a signature (keeps §112):** only the account's own key undoes an EIP-7702 delegation, and Casberi holds none for a wallet it watches. Revoke wears `arrow.up.right` and opens the wallet app that set it, drawn only while that app answers its scheme (§792's rule): MetaMask today (`metamask` joined `HandOffState`'s probe). Your own account is a Safe and carries no delegation, so no sheet signs.
+5. **No "we" in the app's words** (user): the state is "Unknown", never "not one we know".
+
+`-delegationSheet YES|unknown|<0x…>` with `-openRoom Wallet -openSection permissions` raises the sheet (NSLogs `delegationSheet:`).
+
+**Mac half (§1402).** The same sheet from the same row; Revoke draws only where the app answers its scheme, which a Mac without MetaMask does not.

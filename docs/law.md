@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1731 of 1800 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1732 of 1801 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -817,7 +817,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §512 — Three more chains, and one that was already there
 - §512a — The chain that shipped and never said so
 - §513 — Altana's Connect button did nothing, and the seat it guarded had nobody to show (part superseded by §1038)
-- §514 — The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (amended by §943)
+- §514 — The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (amended by §943, §1594)
 - §515 — Five icons, one room: the wallet's DeFi seats stop being apps [+1 sub-entries]
 - §515a — Vibenet went dark, and the chain being reset was only half of it (part superseded by §1038)
 - §516 — A transaction row says what it DID
@@ -1976,6 +1976,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
 - §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
+- §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
 
 ## Dead rulings → what replaced them (generated)
 

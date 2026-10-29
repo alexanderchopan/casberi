@@ -1340,6 +1340,27 @@
    "anchor": "text:=Paid so far"
   },
   {
+   "id": "wallet-delegation",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#delegation"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Permissions"
+    },
+    {
+     "tap": "button:^Metamask Delegator"
+    }
+   ],
+   "anchor": "text:=Contract"
+  },
+  {
    "id": "wallet-track-subscription",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscriptionAdd"

@@ -12,12 +12,11 @@ import SwiftUI
 /// over an empty page — six things with the most unbounded power in the scope,
 /// four of them unreachable in the app at all.
 ///
-/// **A list, not a control** — §293's shape, and §112's rule: nothing here
-/// signs and nothing here revokes. A row carries no chevron because there is
-/// no honest destination: a delegate is undone by re-delegating from the
-/// wallet app that set it, and a module by the Safe's own owners. A door that
-/// looked live and landed on a block explorer would be §83's dead control
-/// wearing a chevron.
+/// **Nothing here signs and nothing here revokes** — §293's shape, and §112's
+/// rule. A delegate row OPENS (prd §1594): its sheet says what it is, where
+/// it is set, and offers the wallet app that set it, where it is undone. A
+/// module row stays still: a module is removed by the Safe's own owners, and
+/// a door with nowhere honest to land would be §83's dead control.
 ///
 /// **No header.** The drawing directly above already says "Who can act for
 /// you"; a second display line here is §447's two stacked headings, and it is
@@ -37,6 +36,9 @@ struct WalletActingPartiesRows: View {
     var cap: Int? = nil
     var open = false
     var more: (() -> Void)? = nil
+    /// A delegate row's door (prd §1594), handed the holder's key — the
+    /// delegate contract. Nil leaves every row still.
+    var onOpen: ((String) -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -61,9 +63,19 @@ struct WalletActingPartiesRows: View {
 
     /// **ONE ROW, THE WALLET LIST'S ANATOMY (prd §944).** Mark, name, and one
     /// line: the power's word — red only when it has no limit, the only red on
-    /// the row — then whose wallet. No chevron: a delegation is undone in the
-    /// wallet app that set it (§112), so a door here would be a dead one.
+    /// the row — then whose wallet. A delegate opens its sheet (prd §1594),
+    /// with no chevron, as every list row since §1272.
+    @ViewBuilder
     private func row(_ holder: WalletPermissions.Holder) -> some View {
+        if holder.power == .actsAsWallet, let onOpen {
+            Button { onOpen(holder.key) } label: { rowBody(holder).contentShape(Rectangle()) }
+                .buttonStyle(RowPress())
+        } else {
+            rowBody(holder)
+        }
+    }
+
+    private func rowBody(_ holder: WalletPermissions.Holder) -> some View {
         HStack(spacing: DS.Space.s3) {
             AssetMark(name: holder.name, size: DS.Face.list)
             VStack(alignment: .leading, spacing: 2) {

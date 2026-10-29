@@ -979,12 +979,15 @@ enum HandOffState {
     /// `worldapp` joined 2026-09-16 with the World ID grant door (prd §792):
     /// watching a World App wallet says nothing about whether World App is on
     /// THIS phone — it may be somebody else's wallet, or read on a Mac.
+    /// `metamask` joined 2026-10-28 with the delegation sheet's Revoke (prd
+    /// §1594), for the same reason: a delegation to MetaMask's contract says
+    /// nothing about whether MetaMask is on this phone.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
                                      "chatgpt", "music", "spotify", "mobilenotes",
                                      "shareddocuments", "message", "duolingo",
-                                     "worldapp"]
+                                     "worldapp", "metamask"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than
