@@ -33,6 +33,11 @@ struct SignerRequestSheet: View {
                     pairing(url)
                 }
                 waiting
+                // No answer yet: the same question again, and the wallet
+                // reopened onto it (prd §1609).
+                if ask.canAskAgain {
+                    DSDoorRow(icon: "arrow.clockwise", label: "Ask again") { ask.again() }
+                }
                 DSDoorRow(icon: "xmark", label: "Cancel") { ask.cancel() }
             }
         }
@@ -146,7 +151,7 @@ struct SignerRequestSheet: View {
             do {
                 return try await asking(signer: owner) { ask in
                     try await YourAccountSignerLink.sign(typedData: typedData, signer: owner, chainId: chainId,
-                                                         kept: { ask.ask(kept: $0) }, show: { ask.pair($0) })
+                                                         kept: { ask.ask(kept: $0) }, resend: ask.resends, show: { ask.pair($0) })
                 }
             } catch {
                 throw YourAccountChain.Failure(message: words(error))
@@ -217,7 +222,8 @@ struct SignerRequestSheet: View {
             let owner = self.owner
             return try await SignerRequestSheet.asking(signer: owner) { ask in
                 await ask.ask(kept: nil)
-                return try await YourAccountSignerLink.request(pairing, typedData: typedData, chainId: chainId)
+                return try await YourAccountSignerLink.request(pairing, typedData: typedData, chainId: chainId,
+                                                               resend: ask.resends)
             }
         }
 
@@ -295,11 +301,21 @@ final class SignerAsk {
     private(set) var door: URL?
     private(set) var kept = false
     private(set) var cancelled = false
+    /// Ask again is offered once the wallet has had `askAgainAfter` to answer.
+    private(set) var canAskAgain = false
+    static let askAgainAfter: Duration = .seconds(10)
+    /// Each Ask again, for the request waiting on the wallet (prd §1609).
+    let resends: AsyncStream<Void>
+    @ObservationIgnored private let resend: AsyncStream<Void>.Continuation
+    @ObservationIgnored private var offer: Task<Void, Never>?
     @ObservationIgnored var stop: @Sendable () -> Void = {}
     @ObservationIgnored private var close: (@MainActor () -> Void)?
     @ObservationIgnored private var closing = false
 
-    init(signer: String?) { self.signer = signer }
+    init(signer: String?) {
+        self.signer = signer
+        (resends, resend) = AsyncStream<Void>.makeStream()
+    }
 
     func pair(_ url: URL) {
         link = url
@@ -319,6 +335,25 @@ final class SignerAsk {
         raise()
         if let door, UIDevice.current.userInterfaceIdiom == .phone, !closing {
             UIApplication.shared.open(door)
+        }
+        offerAgain()
+    }
+
+    /// Ask the wallet the same question again and open it onto it.
+    func again() {
+        guard !closing else { return }
+        resend.yield()
+        if let door, UIDevice.current.userInterfaceIdiom == .phone { UIApplication.shared.open(door) }
+        offerAgain()
+    }
+
+    private func offerAgain() {
+        canAskAgain = false
+        offer?.cancel()
+        offer = Task { [weak self] in
+            try? await Task.sleep(for: Self.askAgainAfter)
+            guard !Task.isCancelled, let self, !self.closing else { return }
+            withAnimation(DS.Motion.standard) { self.canAskAgain = true }
         }
     }
 
@@ -341,6 +376,8 @@ final class SignerAsk {
 
     func done() {
         closing = true
+        offer?.cancel()
+        resend.finish()
         close?()
         close = nil
     }

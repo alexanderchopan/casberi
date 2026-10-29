@@ -69654,3 +69654,12 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 4. **Reopen only on a measurement**: more than one Cash App or Zelle seller under 3% at $20 or less, or the user asking for a no-card way in.
 
 **Mac half (§1402).** Buy's Mac half (§1599) holds; nothing of Peer's is on the Mac.
+
+## §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again (amends §1591's long press, §1601's sheet; user, 2026-10-29: "should we make it so that if you long press a token in holdings you get option to also send or swap it not just hide it?" → "Yes, build it"; of build 897's send, "what takes a while is the signature after connecting, sometimes it doesn't fire w/ rainbow" → "great") — BUILT, UNIT-TESTED, THE SHEET SEEN ON THE SIMULATOR
+
+1. **Measured.** Build 897's send: "Took 36s: preparing 1.3s (8 requests, slowest 0.8s), Face ID 0.5s (1 request), your Signer 31s (1 request), sending 0.4s (1 request), landing 2.9s (2 requests, slowest 1.3s)". Everything but the Signer is now about 5s; the user judged the speed very good.
+2. **Send and Swap on a holding's long press (`TokenHideMenu`).** On a token your own account holds (`YourAccountDemo.shownAddress`) on a network Move signs on, the long press leads with "Send USDC" and "Swap USDC", then Hide. Each opens Move with that token picked on the network you hold the most of it on and the amount blank (`MoveSentence.holdingDraft`, `chrome.moveDraft`). A holding Move cannot spend (a watched wallet, an exchange, an app, a network Move does not sign on) keeps Hide alone (§83). `CasberiTests/HoldingDraftTests` holds the rule.
+3. **Ask again (`SignerAsk`).** Once the request is with the wallet, the sheet offers "Ask again" after ten seconds with no answer: the same question is asked again on the same session (a new request id; the answer to any of them is the answer, `YourAccountSignerLink.Asked`) and the wallet reopened onto it. A first pairing turns to the same "Approve in your wallet" sheet once it connects, the code gone.
+4. **Seen.** On the simulator, `-signerSheetPreview kept[:0x…]`: Approve in the wallet, Waiting, Cancel, and Ask again appearing ten seconds on. In the demo, Holdings' long press offers Hide alone, rightly: the demo's own account holds none of the demo's tokens. **Not seen:** Send/Swap from a real holding, Ask again against Rainbow.
+
+**Mac half (§1402).** The same long press (a right click) and sheet; the wallet is not reopened off the phone.

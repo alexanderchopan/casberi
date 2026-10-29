@@ -280,9 +280,12 @@ struct WalletTokensSheet: View {
 /// row made of more (a spam token wearing the real one's symbol, or a wallet
 /// beside an exchange) lists each contract with its place and worth, so the
 /// spam goes and the real money stays, and "Every <symbol>" hides them all.
+/// A holding's long press: Send and Swap where it is your own account's
+/// (prd §1609), then Hide (prd §1591).
 struct TokenHideMenu: View {
     let position: WalletPortfolio.Position
     let onHide: (HiddenTokens.Target, Bool) -> Void
+    @Environment(ShellChrome.self) private var chrome
 
     /// Contracts, plus one for any exchange, bank or app holding the symbol.
     static func sources(_ position: WalletPortfolio.Position) -> Int {
@@ -290,6 +293,25 @@ struct TokenHideMenu: View {
     }
 
     var body: some View {
+        // Opened in Move with the token picked on the network you hold most
+        // of it on, the amount yours to type; nothing for a holding Move
+        // cannot spend (a watched wallet, an exchange, an app).
+        let account = YourAccountDemo.shownAddress
+        if let send = MoveSentence.holdingDraft(.send, symbol: position.symbol, parts: position.parts, account: account) {
+            Button { move(send) } label: { Label(String(localized: "Send \(position.symbol)"), systemImage: "arrow.up.right") }
+        }
+        if let swap = MoveSentence.holdingDraft(.swap, symbol: position.symbol, parts: position.parts, account: account) {
+            Button { move(swap) } label: { Label(String(localized: "Swap \(position.symbol)"), systemImage: "arrow.left.arrow.right") }
+        }
+        hide
+    }
+
+    private func move(_ draft: MoveSentence.Draft) {
+        chrome.moveDraft = draft
+        chrome.moveTray = true
+    }
+
+    @ViewBuilder private var hide: some View {
         if Self.sources(position) > 1 {
             Menu {
                 ForEach(position.contracts, id: \.key) { contract in

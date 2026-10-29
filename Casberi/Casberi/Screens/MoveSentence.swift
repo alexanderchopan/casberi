@@ -427,6 +427,24 @@ struct MoveSentence: View {
               withID: nil, buy: nil, buyOn: nil, to: address, at: Date())
     }
 
+    /// **SEND OR SWAP FROM A HOLDING'S LONG PRESS (prd §1609).** The token on
+    /// the network where `account` holds the most of it, picked, the amount
+    /// left blank; nil when `account` holds none of it on a network Move
+    /// signs on, so a holding Move cannot spend offers no verb (§83).
+    static func holdingDraft(_ verb: Verb, symbol: String, parts: [WalletPortfolio.Part], account: String?) -> Draft? {
+        guard let account, verb == .send || verb == .swap else { return nil }
+        for part in parts.filter({ WalletWatch.sameAddress($0.holder, account) }).sorted(by: { $0.usd > $1.usd }) {
+            let bits = part.key.split(separator: ":", maxSplits: 1).map(String.init)
+            guard bits.count == 2,
+                  let net = Op.networks.first(where: { !$0.isTest && Op.appName($0)?.lowercased() == bits[0] }) else { continue }
+            // `Tokens.Held.id`: a contract, lowercased, or the coin's symbol.
+            let withID = bits[1] == "native" ? symbol : bits[1].lowercased()
+            return Draft(verb: verb, network: net, networkPicked: true, amount: "", inDollars: true,
+                         withID: withID, buy: nil, buyOn: nil, to: "", at: Date())
+        }
+        return nil
+    }
+
     /// The network a wallet row moved on, read off its explorer link; nil
     /// when the row names none Move sends on, so the sentence asks.
     static func network(of thing: Thing) -> Op.Network? {

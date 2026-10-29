@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1746 of 1815 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1747 of 1816 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1973,7 +1973,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
 - §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
-- §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line
+- §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line (amended by §1609)
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
 - §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
 - §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
@@ -1983,7 +1983,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
-- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605)
+- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
 - §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc… (amended by §1606)
@@ -1991,6 +1991,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1606 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits
 - §1607 — Deposit's capture: Cash App's own sign-in in our web view, its activity request caught as the page makes it, the sess…
 - §1608 — Peer's Deposit is parked: money in is Buy alone, one verb, the coin and network chosen and the seller picked by the a…
+- §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again
 
 ## Dead rulings → what replaced them (generated)
 

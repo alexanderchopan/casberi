@@ -55,6 +55,7 @@ enum YourAccountSignerLink {
     /// `kept` gets the wallet's own door, if it named one (prd §1601).
     static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = wait,
                      kept: @escaping @MainActor (URL?) -> Void = { _ in },
+                     resend: AsyncStream<Void>? = nil,
                      show: @MainActor (URL) -> Void) async throws -> [UInt8] {
         if let (pairing, door) = keptSession(signer: signer, chainId: chainId) {
             trace("asking the kept session")
@@ -62,7 +63,7 @@ enum YourAccountSignerLink {
                 // The request goes first, then the wallet is opened onto it
                 // (prd §1605): it is waiting there when the wallet comes up.
                 return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout,
-                                         sent: { kept(door) })
+                                         resend: resend, sent: { kept(door) })
             } catch Failure.gone {
                 trace("the kept session is gone: pairing afresh")
             } catch Failure.timedOut {
@@ -73,8 +74,13 @@ enum YourAccountSignerLink {
             }
         }
         let pairing = try await connect(signer: signer, chainIds: [chainId], timeout: timeout, show: show)
+        // Connected: the code has done its work, so the sheet says to approve
+        // in the wallet, as for a kept session, with its door and Ask again
+        // (prd §1609).
+        let door = keptSession(signer: signer, chainId: chainId)?.1
         do {
-            return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+            return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout,
+                                     resend: resend, sent: { kept(door) })
         } catch let failure as Failure where failure == .timedOut || failure == .gone {
             // Never kept unanswered: the next send would wait on it again.
             if !Task.isCancelled { close(pairing) }
@@ -167,11 +173,29 @@ enum YourAccountSignerLink {
 
     /// One signature over a settled pairing, on one of its networks.
     static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = wait,
+                        resend: AsyncStream<Void>? = nil,
                         sent: @MainActor () -> Void = {}) async throws -> [UInt8] {
         guard pairing.chainIds.contains(chainId), let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
-        let request = try Request(topic: pairing.topic, method: method,
-                                  params: AnyCodable([pairing.signer, typedData]), chainId: chain)
-        async let answer = answer(to: request.id, topic: pairing.topic, timeout: timeout)
+        func make() throws -> Request {
+            try Request(topic: pairing.topic, method: method, params: AnyCodable([pairing.signer, typedData]), chainId: chain)
+        }
+        let request = try make()
+        let ids = Asked(request.id)
+        async let answer = answer(to: ids, topic: pairing.topic, timeout: timeout)
+        // **ASK AGAIN (prd §1609, user: "sometimes it doesn't fire w/
+        // rainbow").** A wallet in the background can miss a request; the
+        // same question is asked again on the same session, and whichever
+        // asking it answers is the answer.
+        let again = Task {
+            guard let resend else { return }
+            for await _ in resend {
+                guard let next = try? make() else { continue }
+                ids.add(next.id)
+                try? await Sign.instance.request(params: next)
+                trace("asked again on \(chainId)")
+            }
+        }
+        defer { again.cancel() }
         do {
             try await Sign.instance.request(params: request)
         } catch {
@@ -264,8 +288,18 @@ enum YourAccountSignerLink {
     }
 
     static func response(to id: RPCID, timeout: Duration) async -> RPCResult? {
-        if case .answered(let r) = await answer(to: id, topic: nil, timeout: timeout) { return r }
+        if case .answered(let r) = await answer(to: Asked(id), topic: nil, timeout: timeout) { return r }
         return nil
+    }
+
+    /// Every id one question was asked under (prd §1609): an Ask again is a
+    /// new request with a new id, and the answer to any of them is the answer.
+    final class Asked: @unchecked Sendable {
+        private let lock = NSLock()
+        private var ids: [RPCID]
+        init(_ id: RPCID) { ids = [id] }
+        func add(_ id: RPCID) { lock.lock(); ids.append(id); lock.unlock() }
+        func contains(_ id: RPCID) -> Bool { lock.lock(); defer { lock.unlock() }; return ids.contains(id) }
     }
 
     enum Answer { case answered(RPCResult), gone, none }
@@ -273,10 +307,10 @@ enum YourAccountSignerLink {
     /// The wallet's answer to `id`; `.gone` the moment the wallet deletes
     /// the session `topic` (prd §1601), `.none` once `timeout` passes or the
     /// task is cancelled.
-    static func answer(to id: RPCID, topic: String?, timeout: Duration) async -> Answer {
+    static func answer(to ids: Asked, topic: String?, timeout: Duration) async -> Answer {
         await withTaskGroup(of: Answer.self) { group in
             group.addTask {
-                for await response in Sign.instance.sessionResponsePublisher.values where response.id == id {
+                for await response in Sign.instance.sessionResponsePublisher.values where ids.contains(response.id) {
                     return .answered(response.result)
                 }
                 return .none
