@@ -4312,6 +4312,34 @@
         }
       }
     },
+    "%@ did not answer, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no respondió, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ から応答がなかったため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 응답하지 않아 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 没有响应，因此未发送任何内容"
+          }
+        }
+      }
+    },
     "%@ did not take the change yet: try again in a minute" : {
       "localizations" : {
         "es" : {
@@ -52897,6 +52925,34 @@
         }
       }
     },
+    "Approve in your wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprueba en tu cartera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットで承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑에서 승인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请在你的钱包中批准。"
+          }
+        }
+      }
+    },
     "Approve on twitch.tv/activate" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -60442,6 +60498,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已取消"
+          }
+        }
+      }
+    },
+    "Cancelled, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelado, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセルしたため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소되어 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消，因此未发送任何内容"
           }
         }
       }
@@ -68376,6 +68460,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法确认 %1$@ 会到达 %2$@，因此没有签署任何内容"
+          }
+        }
+      }
+    },
+    "Could not reach your Signer's wallet, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con la cartera de tu firmante, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者のウォレットに接続できなかったため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자의 지갑에 연결할 수 없어 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接你的签名者钱包，因此未发送任何内容"
           }
         }
       }
@@ -83697,6 +83809,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "出口合规"
+          }
+        }
+      }
+    },
+    "Face ID" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "面容 ID"
           }
         }
       }
@@ -173809,6 +173949,34 @@
         }
       }
     },
+    "That wallet is not your Signer, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa cartera no es tu firmante, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットは署名者ではないため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑은 서명자가 아니어서 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包不是你的签名者，因此未发送任何内容"
+          }
+        }
+      }
+    },
     "That was sample data. Now with your own things." : {
       "localizations" : {
         "es" : {
@@ -184579,6 +184747,34 @@
         }
       }
     },
+    "Took %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tardó %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所要時間 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "소요 시간 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用时 %@"
+          }
+        }
+      }
+    },
     "Top up" : {
       "localizations" : {
         "es" : {
@@ -190165,6 +190361,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在等待你的签名者"
+          }
+        }
+      }
+    },
+    "Waiting for your Signer…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a tu firmante…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者を待っています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자를 기다리는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待你的签名者…"
           }
         }
       }
@@ -205499,6 +205723,62 @@
         }
       }
     },
+    "Your Signer declined, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu firmante lo rechazó, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者が拒否したため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자가 거부하여 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的签名者拒绝了，因此未发送任何内容"
+          }
+        }
+      }
+    },
+    "Your Signer did not answer, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu firmante no respondió, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者から応答がなかったため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자가 응답하지 않아 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的签名者没有响应，因此未发送任何内容"
+          }
+        }
+      }
+    },
     "Your Signer signs this too" : {
       "localizations" : {
         "es" : {
@@ -219570,6 +219850,34 @@
         }
       }
     },
+    "landing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "confirmando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "反映"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "반영"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "落账"
+          }
+        }
+      }
+    },
     "lands within %@ min or never" : {
       "localizations" : {
         "es" : {
@@ -225408,6 +225716,34 @@
         }
       }
     },
+    "preparing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "preparando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "준비"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "准备"
+          }
+        }
+      }
+    },
     "price" : {
       "localizations" : {
         "es" : {
@@ -227932,6 +228268,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转账"
+          }
+        }
+      }
+    },
+    "sending" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "enviando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送"
           }
         }
       }
@@ -232825,6 +233189,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 %@ 余额现在会计入钱包。"
+          }
+        }
+      }
+    },
+    "your Signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的签名者"
           }
         }
       }
