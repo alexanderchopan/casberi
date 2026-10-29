@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1745 of 1814 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1746 of 1815 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1990,6 +1990,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line cou…
 - §1606 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits
 - §1607 — Deposit's capture: Cash App's own sign-in in our web view, its activity request caught as the page makes it, the sess…
+- §1608 — Peer's Deposit is parked: money in is Buy alone, one verb, the coin and network chosen and the seller picked by the a…
 
 ## Dead rulings → what replaced them (generated)
 

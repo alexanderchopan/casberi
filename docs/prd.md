@@ -69645,3 +69645,12 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 7. **Next:** a real sign-in by the person who has Cash App, reporting names and counts only; then the Move page, and the send through the account (`PeerIntent`).
 
 **Mac half (§1402).** None: Deposit is not on Move.
+
+## §1608 — Peer's Deposit is parked: money in is Buy alone, one verb, the coin and network chosen and the seller picked by the app; Apple Pay through Monetic (parks §1598, §1606; keeps §1603, §1604, §1607 as built, DEBUG only) (user, 2026-10-29: "like we are goign to give user a menu and it'll be confusing"; "user expects to choose what coin to get"; "this seems tooo convoluted to use peer … we will have add eth with stripe, add base with ramp, and then another provider i knwo we can use for apple pay for base or eth"; "ya. lets stop w/ peer"; "the provider for apple pay we will use is monetic.xyz who uses worldpay") — RULED
+
+1. **Why parked.** Two money-in verbs plus a choice of provider is a menu nobody should read, and Peer is the costly one: Cash App, the user's own app, had one seller at about 14% under par with nothing below $50 (§1606); a buy is a sign-in to the payment app inside ours (App Review 5.2.2, §1598 item 4) and one to two more weeks of work. A card or Apple Pay onramp covers both networks the account holds.
+2. **Money in is Buy, one verb (§1599).** You choose the coin and the network ("$100 of ETH on Base"), as Swap names its networks (§1600); the app picks the seller behind them — Stripe on Ethereum, Ramp on Base once its key ships, and Apple Pay through **Monetic** (`monetic.xyz`, on Worldpay) for Base or Ethereum — and names it only at the foot ("Powered by …"). A coin and network nothing sells is not offered. Monetic is unmeasured: its no-server door, its networks, coins and fees are to be read before it is built.
+3. **What stays.** `PeerAttestation`, `PeerSessionEnvelope`, `PeerIntent`, `PeerCapture` and `PeerCaptureSheet` stay as built, DEBUG only, with their self-tests in the pass, reached by no shipping surface: the work is checked and ready if Peer's liquidity changes. The Peer seat (reading your settled trades, §207) is untouched. No message to Peer is owed.
+4. **Reopen only on a measurement**: more than one Cash App or Zelle seller under 3% at $20 or less, or the user asking for a no-card way in.
+
+**Mac half (§1402).** Buy's Mac half (§1599) holds; nothing of Peer's is on the Mac.

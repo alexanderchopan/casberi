@@ -1,13 +1,6 @@
 # Peer: cash out and add cash — a proposal for a Mac session to explore
 
-**Status: PARTLY RULED by prd §1598 (2026-10-28).** Deposit (add cash) comes
-before Cash out, the proof runs in the app and is never handed to Peer's app,
-and Phase 2a below is declined. What was measured that day is in "Measured,
-2026-10-28" at the end, and it overrides anything above it. The rest is still
-a proposal. The Mac session
-measures, mocks, and brings the user a ruling to approve; the ruling goes in
-`docs/prd.md` first (then `python3 scripts/law-digest.py`), and only then is
-anything built.
+**Status: PARKED by prd §1608 (2026-10-29).** Money in is Buy alone (Stripe, Ramp, Monetic for Apple Pay). The Deposit core built under §1603, §1604 and §1607 stays DEBUG only and tested. Before that, prd §1598 ruled add cash first, the proof in the app and never handed to Peer's app, and declined Phase 2a; what was measured is in the dated sections at the end, which override anything above them. The rest is a proposal kept for the record.
 
 Written 2026-10-29 in a cloud session that could read the code and Peer's
 published npm packages, but could not build, run a simulator, or reach
