@@ -69498,3 +69498,20 @@ In `Model/WalletDelegation.swift`, `Screens/WalletDelegationSheet.swift`, `Scree
 3. **The coin keeps its name.** When the tile's ticker and the resolved token's differ (ETH charting through WETH), the sheet is titled with the tile's (`$ETH`), never "Wrapped Ether · $WETH".
 
 **Mac half (§1402).** The same map and sheet; a click is the tap.
+
+## §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG (amends §1542's Robinhood book)
+
+**The report (user, 2026-10-28):** "i was trying to swap musegod for eth on robinhood and was told there is no pool to swap, that is just wrong"; "i also coudln't swap for usdg".
+
+**Measured.** GeckoTerminal lists one MUSEGOD pool on Robinhood Chain: SushiSwap v3 MUSEGOD/WETH 1% (`0x071ee139…`, ~$93K). §1542's Robinhood book asked Uniswap v3 alone, so every MUSEGOD route answered nothing and the sentence said "No pool on Robinhood swaps MUSEGOD for ETH". USDG failed the same way, its route needing that pool first.
+
+**Ruled.** Robinhood's book gains a `.sushi` venue after Uniswap (a tie still goes to Uniswap):
+
+1. **Who.** From Sushi's own config (sushi-labs/sushi `sushiswap-v3.ts`, `red-snwapper.ts`) and its web app's direct-pool swap (sushi-labs/sushiswap `lib/swap/direct-pool`): factory `0xe51960f1…` (the pool's own `factory()`), QuoterV2 `0x3e290e5e…` (Uniswap's call), RedSnwapper `0x8e6fd69a…` as the pinned router, RouteProcessor `0x0e867974…` as its executor. Sushi has no plain swap router on Robinhood.
+2. **The calls.** An exact approval to RedSnwapper, then `snwap`, which hands the tokens to the RouteProcessor and refuses unless the account's balance of what it bought rose by the minimum. The route is Sushi's direct-pool packing, one step per pool, ETH wrapped first or unwrapped last (`YourAccountSwap.sushiRoute`); a route's pools are read off the factory (`Route.pools`), and one without them is not written.
+3. **The surplus is yours.** Sushi's site sends `takeSurplus = true`, which (measured) hands Sushi everything over the quote; we send `false` with the minimum as the floor, and no fee transfer.
+4. **Words.** "On Sushi · 1% pool fee"; a grant to RedSnwapper is named Sushi.
+
+**Seen (eth_simulateV1 on Robinhood, 2026-10-28):** MUSEGOD for ETH, MUSEGOD for USDG (Sushi's WETH/USDG 0.05%) and ETH for MUSEGOD each paid exactly the quote, ETH into a SafeL2 1.4.1 proxy included; a minimum over the quote reverted in RedSnwapper. Those bytes are `scripts/fixtures/direct-swap/sushi-robinhood.json`, which `direct-swap-selftest.sh` holds the calls to, with mutations for the surplus flag and a pool's direction. **Not seen:** a swap signed from a funded account in the app; the simulation before Face ID still refuses anything short.
+
+**Mac half (§1402).** The same swap; nothing on screen changes but the exchange's name.

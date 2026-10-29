@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1733 of 1802 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1734 of 1803 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1924,7 +1924,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv…
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
-- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces…
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
@@ -1978,6 +1978,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
 - §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
+- §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 
 ## Dead rulings → what replaced them (generated)
 

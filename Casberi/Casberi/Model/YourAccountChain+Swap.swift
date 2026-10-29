@@ -52,12 +52,21 @@ extension YourAccountChain {
 
     /// An Aerodrome route's pool fees, read off its pools (Slipstream's are
     /// each pool's own, v2's the factory's); a route whose fees cannot be
-    /// read keeps none, and its words name the exchange alone.
+    /// read keeps none, and its words name the exchange alone. A Sushi
+    /// route's pools are read here too, since its calls name them; one
+    /// without them cannot be written ("This swap could not be written").
     private static func withFees(_ route: YourAccountSwap.Route, _ net: Network) async -> YourAccountSwap.Route {
         typealias S = YourAccountSwap
         let finds = route.hops.compactMap { S.poolCall(route.venue, $0) }
         guard finds.count == route.hops.count, let pools = try? await aggregate(net, finds) else { return route }
         let addresses = pools.map { $0.ok ? S.pool(fromAnswer: $0.data) : nil }
+        if route.venue.kind == .sushi {
+            let found = addresses.compactMap { $0 }
+            guard found.count == route.hops.count else { return route }
+            var r = route
+            r.pools = found
+            return r
+        }
         let reads = zip(route.hops, addresses).compactMap { hop, pool in pool.flatMap { S.feeCall(route.venue, hop, pool: $0) } }
         guard reads.count == route.hops.count, let answers = try? await aggregate(net, reads) else { return route }
         let fees = answers.compactMap { $0.ok ? S.fee(route.venue, answer: $0.data) : nil }

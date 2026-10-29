@@ -52,7 +52,7 @@ WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 TYPED="Casberi/Casberi/Model/SafeTypedData.swift"
 ROUNDUPS="Casberi/Casberi/Model/RoundUps.swift"
 FIXTURES="$PWD/scripts/fixtures/direct-swap"
-for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json"; do
+for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json" "$FIXTURES/sushi-robinhood.json"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -87,7 +87,14 @@ check(base.venues.map(\.router) == ["0x2626664c2603336e57b271c5c0b26f421741e481"
                                     "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43"],
       "Base's routers are not the five read on chain (Uniswap SwapRouter02, Slipstream ×3, Aerodrome v2)")
 check(S.ethereum.venues.map(\.router) == ["0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45"], "Ethereum's router is not Uniswap's SwapRouter02")
-check(S.robinhood.venues.map(\.router) == ["0xcaf681a66d020601342297493863e78c959e5cb2"], "Robinhood Chain's router is not Uniswap's SwapRouter02 there")
+check(S.robinhood.venues.map(\.router) == ["0xcaf681a66d020601342297493863e78c959e5cb2", "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a"],
+      "Robinhood Chain's routers are not Uniswap's SwapRouter02 and Sushi's RedSnwapper there")
+check(S.robinhood.venues.map(\.kind) == [.uniswap, .sushi]
+      && S.robinhood.venues[1].executor == "0x0e867974275cd31c25015c2753c9d75f9f355379"
+      && S.robinhood.venues[1].quoter == "0x3e290e5e01818002a0b672148bdc7514d861c7b3"
+      && S.robinhood.venues[1].factory == "0xe51960f1b45f1c9fb6d166e6a884f866fc70433b",
+      "Sushi on Robinhood is not its QuoterV2, factory and RouteProcessor (MUSEGOD's only pool is Sushi's)")
+check(S.exchange(ofRouter: "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a") == "Sushi", "Sushi's RedSnwapper is not named Sushi")
 check(S.robinhood.weth == "0x0bd7d308f8e1639fab988df18a8011f41eacad73", "Robinhood Chain's WETH is not its router's WETH9()")
 check(S.books.allSatisfy { b in b.venues.allSatisfy { $0.router == $0.router.lowercased() && $0.quoter == $0.quoter.lowercased() } },
       "a pinned address is not lowercase, so a comparison against a lowercased call misses it")
@@ -199,6 +206,34 @@ let tieOne = [S.Priced(route: S.Route(venue: base.venues[4], hops: [S.Hop(from: 
 check(S.best(tieOne, in: base)?.route.venue.kind == .uniswap, "a tie did not go to the book's order")
 check(S.best([S.Priced(route: tieOne[0].route, out: "10"), S.Priced(route: tieOne[1].route, out: "9")], in: base)?.out == "10",
       "a longer number lost to a shorter one")
+
+// ── Sushi on Robinhood, byte for byte against simulated vectors ──────────
+let sushiFixture = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: dir + "/sushi-robinhood.json"))) as! [String: Any]
+let sushi = S.robinhood.venues[1]
+for v in sushiFixture["vectors"] as! [[String: Any]] {
+    let name = v["name"] as! String
+    let hops = (v["hops"] as! [[Any]]).map { S.Hop(from: $0[0] as! String, to: $0[2] as! String, step: $0[1] as! Int) }
+    let want = (v["calls"] as! [[String: String]]).map { S.Call(to: $0["to"]!, value: $0["value"]!, data: SafeABI.hexBytes($0["data"]!)!) }
+    var route = S.Route(venue: sushi, hops: hops)
+    let sellsETH = v["sellsETH"] as! Bool, buysETH = v["buysETH"] as! Bool, amount = v["amount"] as! String
+    let minimum = sushiFixture["minimum"] as! String, acct = sushiFixture["account"] as! String
+    check(S.calls(route, in: S.robinhood, sellsETH: sellsETH, buysETH: buysETH, amount: amount, minimum: minimum,
+                  account: acct, deadline: deadline) == nil, "\(name): a Sushi route without its pools was written")
+    route.pools = v["pools"] as! [String]
+    let got = S.calls(route, in: S.robinhood, sellsETH: sellsETH, buysETH: buysETH, amount: amount, minimum: minimum,
+                      account: acct, deadline: deadline)
+    check(got == want, "\(name): Sushi's calls are not the simulated bytes")
+    if let got {
+        let quote = S.Quote(sellAmount: amount, buyAmount: minimum, minimumBuy: minimum, route: route, calls: got)
+        let sell = YourAccountOp.Token(symbol: "X", decimals: 18, contract: sellsETH ? nil : hops[0].from)
+        check(S.checked(quote, sell: sell, amount: amount, chainId: 4663) != nil, "\(name): Sushi's calls do not pass the check")
+    }
+}
+check(S.words(S.Route(venue: sushi, hops: [S.Hop(from: "a", to: "b", step: 10000)])) == "On Sushi · 1% pool fee",
+      "a Sushi pool is not said with its tier")
+let sushiHop = S.Hop(from: S.robinhood.weth, to: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", step: 500)
+check(S.poolCall(sushi, sushiHop)?.to == sushi.factory && S.feeCall(sushi, sushiHop, pool: sushi.factory) == nil,
+      "Sushi's pools are not found on its factory, or its fee is read off the pool rather than the tier")
 
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
@@ -505,6 +540,10 @@ mutate "the check stops reading the approved amount" "$SWAP" \
   'SafeCalldata.decimal(Array(call.data[36..<68])) == amount else { return nil }' 'call.data.count > 0 else { return nil }'
 mutate "ETH may leave with any value" "$SWAP" \
   'guard call.value == (sell.contract == nil ? amount : "0") else { return nil }' 'guard !call.value.isEmpty else { return nil }'
+mutate "Sushi keeps the surplus over the minimum" "$SWAP" \
+  '                                .uint(0), .uint(0)])' '                                .uint(1), .uint(0)])'
+mutate "a Sushi pool swaps the wrong way round" "$SWAP" \
+  'let zeroForOne: UInt8 = hop.from.lowercased() < hop.to.lowercased() ? 1 : 0' 'let zeroForOne: UInt8 = hop.from.lowercased() < hop.to.lowercased() ? 0 : 1'
 mutate "two swap calls pass as one" "$SWAP" \
   'guard calls.count == 1 else { return nil }' 'guard !calls.isEmpty else { return nil }'
 mutate "the minimum keeps the whole quote" "$SWAP" \

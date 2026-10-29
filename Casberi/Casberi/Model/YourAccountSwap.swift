@@ -53,6 +53,14 @@ enum YourAccountSwap {
         case slipstream
         /// Aerodrome's v2 pools: a pool is stable (1) or volatile (0).
         case aerodromeV2
+        /// SushiSwap v3, a Uniswap v3 fork with no swap router of its own on
+        /// Robinhood: a pool is its fee tier, quoted by Sushi's QuoterV2 (the
+        /// same call as Uniswap's), swapped through Sushi's RedSnwapper
+        /// handing the tokens to its RouteProcessor (`Venue.executor`).
+        case sushi
+
+        /// Whether a pool's fee is its tier, the step itself, read off nothing.
+        var feeIsTier: Bool { self == .uniswap || self == .sushi }
     }
 
     /// One place to swap on one network: who quotes, who swaps, which pools.
@@ -65,8 +73,17 @@ enum YourAccountSwap {
         let factory: String
         /// The pools asked: fee tiers, tick spacings, or stable/volatile.
         let steps: [Int]
+        /// Sushi's RouteProcessor, which the router hands the tokens to and
+        /// which swaps them in the pools; nil for every other venue.
+        var executor: String? = nil
         /// The exchange's name, as the sentence says it.
-        var exchange: String { kind == .uniswap ? "Uniswap" : "Aerodrome" }
+        var exchange: String {
+            switch kind {
+            case .uniswap: "Uniswap"
+            case .sushi: "Sushi"
+            case .slipstream, .aerodromeV2: "Aerodrome"
+            }
+        }
     }
 
     /// One network's exchanges, its WETH, the tokens a two-pool route passes
@@ -152,6 +169,15 @@ enum YourAccountSwap {
     /// 0x33e885ed…, SwapRouter02 0xcaf681a6…); WETH is the router's own
     /// `WETH9()`. Measured 2026-10-26: its WETH/USDG pools hold about $10M,
     /// 0.1 ETH quoting within 0.01% across the 0.01% and 0.05% tiers.
+    ///
+    /// SushiSwap v3 from Sushi's own config (github.com/sushi-labs/sushi,
+    /// `sushiswap-v3.ts`: factory 0xe51960f1…, QuoterV2 0x3e290e5e…;
+    /// `red-snwapper.ts`: RedSnwapper 0x8e6fd69a…) and its web app's
+    /// direct-pool swap (sushi-labs/sushiswap, `lib/swap/direct-pool`:
+    /// RouteProcessor 0x0e867974…). Measured 2026-10-28: MUSEGOD's only pool
+    /// on the network is Sushi's MUSEGOD/WETH 1% (~$93K), so without it "No
+    /// pool on Robinhood swaps MUSEGOD for ETH"; Sushi's own WETH/USDG pools
+    /// carry it on to USDG.
     static let robinhood = Book(
         chainId: 4663,
         weth: "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
@@ -160,6 +186,10 @@ enum YourAccountSwap {
             Venue(kind: .uniswap, quoter: "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
                   router: "0xcaf681a66d020601342297493863e78c959e5cb2",
                   factory: "0x1f7d7550b1b028f7571e69a784071f0205fd2efa", steps: uniswapFees),
+            Venue(kind: .sushi, quoter: "0x3e290e5e01818002a0b672148bdc7514d861c7b3",
+                  router: "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a",
+                  factory: "0xe51960f1b45f1c9fb6d166e6a884f866fc70433b", steps: uniswapFees,
+                  executor: "0x0e867974275cd31c25015c2753c9d75f9f355379"),
         ],
         slippageBps: 50)
 
@@ -257,6 +287,9 @@ enum YourAccountSwap {
         /// Each pool's fee in millionths, as the pool charges it; empty when
         /// it could not be read (the words then name the exchange alone).
         var fees: [Int] = []
+        /// Each pool's address, read off the factory: Sushi's route names
+        /// its pools, so a Sushi route without them cannot be written.
+        var pools: [String] = []
     }
 
     /// One question to a quoter: what the last hop of `hops` pays for `amount`.
@@ -274,7 +307,7 @@ enum YourAccountSwap {
             guard let amount = Arg.amount(amount) else { return nil }
             let h = hop
             switch venue.kind {
-            case .uniswap:
+            case .uniswap, .sushi:
                 return (venue.quoter, YourAccountSwap.call("quoteExactInputSingle((address,address,uint256,uint24,uint160))",
                                                            [.tuple([.address(h.from), .address(h.to), amount, .uint(h.step), .uint(0)])]))
             case .slipstream:
@@ -365,7 +398,7 @@ enum YourAccountSwap {
     static func amountOut(_ kind: Kind, ok: Bool, data: [UInt8]) -> String? {
         guard ok, data.count >= 32 else { return nil }
         switch kind {
-        case .uniswap, .slipstream:
+        case .uniswap, .slipstream, .sushi:
             return SafeCalldata.decimal(Array(data[0..<32]))
         case .aerodromeV2:
             guard let offset = small(data, at: 0), let count = small(data, at: offset), count > 0,
@@ -636,12 +669,54 @@ enum YourAccountSwap {
                 data = call("swapExactTokensForTokens(uint256,uint256,(address,address,bool,address)[],address,uint256)",
                             [amountIn, least, routes, .address(account), .uint(deadline)])
             }
+        case .sushi:
+            guard let executor = venue.executor, route.pools.count == route.hops.count,
+                  let quoted = Arg.amount(minimum) else { return nil }
+            let tokenIn: Arg = .address(sellsETH ? sushiNative : first.from)
+            let tokenOut: Arg = .address(buysETH ? sushiNative : last.to)
+            // The RouteProcessor's own floor is the minimum, and the surplus
+            // is the account's (`takeSurplus` false: measured 2026-10-28, true
+            // hands everything over that floor to Sushi). No fee is
+            // transferred (`amountValueTransfer` 0). RedSnwapper then refuses
+            // unless the account's balance of what it bought rose by at least
+            // the minimum.
+            let process = call("processRouteWithTransferValueOutput(address,uint256,address,uint256,address,uint256,address,bytes,bool,uint32)",
+                               [.address(account), .uint(0), tokenIn, amountIn, tokenOut, quoted, .address(account),
+                                .bytes(sushiRoute(route, weth: book.weth, executor: executor, sellsETH: sellsETH, buysETH: buysETH)),
+                                .uint(0), .uint(0)])
+            data = call("snwap(address,uint256,address,address,uint256,address,bytes)",
+                        [tokenIn, amountIn, .address(account), tokenOut, least, .address(executor), .bytes(process)])
         }
         var out: [Call] = []
         if !sellsETH {
             out.append(Call(to: first.from, value: "0", data: approveSelector + YourAccount.w(router) + SafeABI.word(uint256: amount)!))
         }
         out.append(Call(to: router, value: sellsETH ? amount : "0", data: data))
+        return out
+    }
+
+    /// Sushi's word for the network's own coin, in `snwap` and the route.
+    static let sushiNative = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+    /// **SUSHI'S ROUTE, PACKED.** Sushi's direct-pool encoding (its web app's
+    /// `encodeDirectPoolSwap`), one step per pool: a header; ETH sold is
+    /// wrapped first; each pool takes what the RouteProcessor holds of its
+    /// token, all of it (share 0xffff), through a v3 pool (type 1) in the
+    /// direction the token order says, paying the RouteProcessor; ETH bought
+    /// is unwrapped last, and the RouteProcessor pays the account. Two pools
+    /// chain the same step, the shape Sushi's own API writes for MUSEGOD to
+    /// USDG. Every shape here simulated on Robinhood, 2026-10-28, paying
+    /// exactly the quote, ETH into a SafeL2 1.4.1 proxy included.
+    static func sushiRoute(_ route: Route, weth: String, executor: String, sellsETH: Bool, buysETH: Bool) -> [UInt8] {
+        let a = YourAccount.addressBytes
+        let all: [UInt8] = [0xFF, 0xFF]
+        var out: [UInt8] = [1, 0, 0, 0, 0, 0, 0, 2]
+        if sellsETH { out += [3, 1] + all + [2, 1] + a(executor) + a(weth) }
+        for (hop, pool) in zip(route.hops, route.pools) {
+            let zeroForOne: UInt8 = hop.from.lowercased() < hop.to.lowercased() ? 1 : 0
+            out += [1] + a(hop.from) + [1] + all + [1] + a(pool) + [zeroForOne] + a(executor) + [0] + [UInt8](repeating: 0, count: 6)
+        }
+        if buysETH { out += [1] + a(weth) + [1] + all + [2, 0] + a(executor) }
         return out
     }
 
@@ -737,10 +812,12 @@ enum YourAccountSwap {
     // MARK: - Each pool's fee
 
     /// The question that finds a pool's address, for a venue whose fee is
-    /// the pool's own; nil for Uniswap, whose fee is its tier.
+    /// the pool's own or whose route names its pools; nil for Uniswap.
     static func poolCall(_ venue: Venue, _ hop: Hop) -> (to: String, data: [UInt8])? {
         switch venue.kind {
         case .uniswap: nil
+        case .sushi:
+            (venue.factory, call("getPool(address,address,uint24)", [.address(hop.from), .address(hop.to), .uint(hop.step)]))
         case .slipstream:
             (venue.factory, call("getPool(address,address,int24)", [.address(hop.from), .address(hop.to), .uint(hop.step)]))
         case .aerodromeV2:
@@ -751,7 +828,7 @@ enum YourAccountSwap {
     /// The question that reads a found pool's fee.
     static func feeCall(_ venue: Venue, _ hop: Hop, pool: String) -> (to: String, data: [UInt8])? {
         switch venue.kind {
-        case .uniswap: nil
+        case .uniswap, .sushi: nil
         case .slipstream: (pool, YourAccount.sel("fee()"))
         case .aerodromeV2: (venue.factory, call("getFee(address,bool)", [.address(pool), .uint(hop.step == 1 ? 1 : 0)]))
         }
@@ -795,7 +872,7 @@ enum YourAccountSwap {
     /// pool fee is part of the price: there is no middleman's fee to add.
     static func words(_ route: Route) -> String {
         let name = route.venue.exchange
-        let fees = route.venue.kind == .uniswap ? route.hops.map(\.step) : route.fees
+        let fees = route.venue.kind.feeIsTier ? route.hops.map(\.step) : route.fees
         guard fees.count == route.hops.count, !fees.isEmpty else { return on(name) }
         if fees.count == 1 { return String(localized: "On \(name) · \(percent(pips: fees[0])) pool fee") }
         let list = fees.map { percent(pips: $0) }.formatted(.list(type: .and))
@@ -808,7 +885,7 @@ enum YourAccountSwap {
     /// be read. The row's name ("Swaps", "Round-up") says what it is.
     static func brief(_ route: Route) -> String {
         let name = route.venue.exchange
-        let fees = route.venue.kind == .uniswap ? route.hops.map(\.step) : route.fees
+        let fees = route.venue.kind.feeIsTier ? route.hops.map(\.step) : route.fees
         guard fees.count == route.hops.count, !fees.isEmpty else { return name }
         return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")
     }
