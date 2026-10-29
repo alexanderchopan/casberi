@@ -17186,6 +17186,62 @@
         }
       }
     },
+    "%@'s page shows its fee before you pay, with this address filled in." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La página de %@ muestra su comisión antes de pagar, con esta dirección ya completada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のページでは支払い前に手数料が表示され、このアドレスが入力済みです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 페이지에서 결제 전에 수수료가 표시되며, 이 주소가 미리 입력되어 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的页面会在付款前显示费用，并已填好此地址。"
+          }
+        }
+      }
+    },
+    "%@'s page shows its fee before you pay. This address is copied for you to paste there." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La página de %@ muestra su comisión antes de pagar. Esta dirección se copia para que la pegues allí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のページでは支払い前に手数料が表示されます。このアドレスはコピーされるので、そこに貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 페이지에서 결제 전에 수수료가 표시됩니다. 이 주소가 복사되니 그곳에 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的页面会在付款前显示费用。此地址已复制，可粘贴到那里。"
+          }
+        }
+      }
+    },
     "%@'s registration" : {
       "localizations" : {
         "es" : {
@@ -47100,6 +47156,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "地址已复制"
+          }
+        }
+      }
+    },
+    "Address copied. Paste it on %@'s page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección copiada. Pégala en la página de %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスをコピーしました。%@ のページに貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소가 복사되었습니다. %@ 페이지에 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "地址已复制。请粘贴到 %@ 的页面。"
           }
         }
       }
@@ -79558,6 +79642,34 @@
         }
       }
     },
+    "Ether" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ether"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "イーサ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以太币"
+          }
+        }
+      }
+    },
     "Ethereum could not be reached" : {
       "localizations" : {
         "es" : {
@@ -94758,6 +94870,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "如果规则被改成对你不利，你有多长时间把钱取出来？"
+          }
+        }
+      }
+    },
+    "If you didn’t sign this, move your money to a new account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si no firmaste esto, mueve tu dinero a una cuenta nueva."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これに署名していない場合は、資金を新しいアカウントに移してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "직접 서명하지 않았다면 자금을 새 계정으로 옮기세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果这不是你签署的，请把资金转到新账户。"
           }
         }
       }
@@ -130712,6 +130852,34 @@
         }
       }
     },
+    "Opens %@'s page" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre la página de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のページを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 페이지를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 %@ 的页面"
+          }
+        }
+      }
+    },
     "Opens AWS" : {
       "localizations" : {
         "es" : {
@@ -138598,6 +138766,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "提到他们的帖子"
+          }
+        }
+      }
+    },
+    "Powered by %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tecnología de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を利用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 제공"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 %@ 提供支持"
           }
         }
       }
@@ -165579,6 +165775,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "说话"
+          }
+        }
+      }
+    },
+    "Spend" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gastar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "消费"
           }
         }
       }
