@@ -54,13 +54,15 @@ enum YourAccountSignerLink {
     /// A session kept from an earlier send is asked first, with no scan:
     /// `kept` gets the wallet's own door, if it named one (prd §1601).
     static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = wait,
-                     kept: @MainActor (URL?) -> Void = { _ in },
+                     kept: @escaping @MainActor (URL?) -> Void = { _ in },
                      show: @MainActor (URL) -> Void) async throws -> [UInt8] {
         if let (pairing, door) = keptSession(signer: signer, chainId: chainId) {
             trace("asking the kept session")
-            await kept(door)
             do {
-                return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+                // The request goes first, then the wallet is opened onto it
+                // (prd §1605): it is waiting there when the wallet comes up.
+                return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout,
+                                         sent: { kept(door) })
             } catch Failure.gone {
                 trace("the kept session is gone: pairing afresh")
             } catch Failure.timedOut {
@@ -164,7 +166,8 @@ enum YourAccountSignerLink {
     }
 
     /// One signature over a settled pairing, on one of its networks.
-    static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = wait) async throws -> [UInt8] {
+    static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = wait,
+                        sent: @MainActor () -> Void = {}) async throws -> [UInt8] {
         guard pairing.chainIds.contains(chainId), let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
         let request = try Request(topic: pairing.topic, method: method,
                                   params: AnyCodable([pairing.signer, typedData]), chainId: chain)
@@ -177,6 +180,7 @@ enum YourAccountSignerLink {
             throw Failure.gone
         }
         trace("asked on \(chainId)")
+        await sent()
         let result: RPCResult
         switch await answer {
         case .answered(let r): result = r

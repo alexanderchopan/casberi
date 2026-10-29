@@ -69612,3 +69612,14 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 6. **Not built:** the web view's capture, any caller of these builders, the send through the account (`YourAccountChain`), the Move page.
 
 **Mac half (§1402).** None: Deposit is not on Move.
+
+## §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line counts requests (amends §1601, §1602) (user, 2026-10-29, from build 896's first send: "preparing took 5.6s, signer took 15s, landing took 2.5s sending took .6s total 24s"; "yes it was my first send since updating"; on recommending all three, "Yes, start them"; of the "Took" line in the App Store: "i don't think we should use it in app store builds") — BUILT, SELF-TESTED; NOT YET SEEN ON A REAL SEND
+
+1. **Measured first.** Build 896's first send after the update: preparing 5.6s, your Signer 15s (the first pairing: the code, then two approvals; later sends on that network ask the kept session, one approval, §1601 item 3), sending 0.6s, landing 2.5s, 24s in all.
+2. **The module's answer, asked with the preview.** The preview asks the account's module for its operation's hash (`moduleAnswer`) beside the fee's balance read, and keeps it with the operation (`Prepared.moduleAnswer`). Signing that operation unchanged reuses it: it stands only when the operation hashes alike (nonce, gas, calls) through the same entry. Anything else is asked at the tap, as before. The nonce, the balances, the recheck and the passkey factory are still asked at signing.
+3. **The request first, then the wallet.** On a kept Signer session the request is sent, then, on the phone, the wallet's own app is opened onto it (`SignerAsk.ask(kept:)`). The sheet keeps Open wallet for the way back. A Signer wallet on another device is approved there; if the same wallet app is also on this phone, it opens with nothing waiting in it.
+4. **Requests, counted.** One send's requests are logged in `IngestSupport.TripLog` (when each began and how long it took, nothing else) with every circuit retried. The "Took" line names each stage's requests, its slowest and its retries: "preparing 2.1s (3 requests, slowest 1.2s, 1 retried)". A request belongs to the stage it began in.
+5. **The "Took" line stays pre-release only (§1602 item 2, confirmed).** The App Store build shows no timer.
+6. **Not seen:** a real send's numbers after this change. Expected: preparing about one round trip.
+
+**Mac half (§1402).** The same Move and sheet; Open wallet is not automatic off the phone.

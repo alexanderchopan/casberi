@@ -174,8 +174,10 @@ struct MoveSentence: View {
     /// a service's rather than the app's.
     @State private var quoteFrom: String?
     @State private var stage: Chain.Stage?
-    /// Where this send's time is going, from the tap (prd §1602).
+    /// Where this send's time is going, from the tap (prd §1602), and its
+    /// requests (prd §1605).
     @State private var clock: MoveClock?
+    @State private var trips: IngestSupport.TripLog?
     /// What a signed transaction became, said in the sentence's place (§1438b).
     @State private var receipt: Receipt?
     /// Receiving from another network (prd §1453): the route picked, the
@@ -3829,6 +3831,8 @@ struct MoveSentence: View {
         let rideUnits = privateRide
         stage = .preparing
         clock = MoveClock()
+        let tripLog = IngestSupport.TripLog()
+        trips = tripLog
         Task {
             do {
                 let buy = carried
@@ -3855,10 +3859,12 @@ struct MoveSentence: View {
                 // way can be told landed or failed later (the review of
                 // 2026-10-26, findings 2 and 3).
                 let followed = Chain.Followed()
-                let done = try await Chain.$following.withValue(followed) {
-                    try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
-                                         said: { line in await MainActor.run { say(line) } }) { s in
-                        await MainActor.run { advance(to: s) }
+                let done = try await IngestSupport.$tripLog.withValue(tripLog) {
+                    try await Chain.$following.withValue(followed) {
+                        try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
+                                             said: { line in await MainActor.run { say(line) } }) { s in
+                            await MainActor.run { advance(to: s) }
+                        }
                     }
                 }
                 // The change is counted once the send has landed; a buy
@@ -4036,18 +4042,20 @@ struct MoveSentence: View {
     /// `PerfReadings` and logged however it ended; on a landed or pending
     /// receipt in a pre-release build, "Took 12s: preparing 2.1s, …".
     private func timed(_ outcome: Chain.Sent.Outcome?) -> String? {
-        defer { clock = nil }
+        defer { clock = nil; trips = nil }
+        let counted = trips?.read ?? (trips: [], retries: [])
         let ended: String = switch outcome {
         case .landed?: "landed"
         case .pending?: "pending"
         case .dryRun?: "dry run"
         case nil: "not sent"
         }
-        guard let words = clock?.words(until: .now), let total = clock?.total(until: .now) else { return nil }
+        guard let words = clock?.words(until: .now, trips: counted.trips, retries: counted.retries),
+              let total = clock?.total(until: .now) else { return nil }
         NSLog("moveClock| %@ | %@ | %@", network.name, ended, words)
         PerfReadings.record("MoveSend", ms: total * 1000, note: "\(ended) on \(network.name) · \(words)")
-        if BuildChannel.isPreRelease, let took = clock?.words(until: .now), outcome != nil {
-            return String(localized: "Took \(took)")
+        if BuildChannel.isPreRelease, outcome != nil {
+            return String(localized: "Took \(words)")
         }
         return nil
     }

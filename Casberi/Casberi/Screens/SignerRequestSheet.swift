@@ -308,11 +308,18 @@ final class SignerAsk {
         raise()
     }
 
+    /// A Signer paired before: its request is already sent, so on the
+    /// phone its wallet is opened onto it at once (prd §1605); the sheet's
+    /// Open wallet stays for the way back, and a wallet on another device
+    /// is approved there.
     func ask(kept door: URL?) {
         self.door = door
         link = nil
         kept = true
         raise()
+        if let door, UIDevice.current.userInterfaceIdiom == .phone, !closing {
+            UIApplication.shared.open(door)
+        }
     }
 
     private func raise() {

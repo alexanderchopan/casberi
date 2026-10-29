@@ -1635,6 +1635,7 @@ enum YourAccountChain {
         let outcome = try await operate(net, account: account, deployed: a.deployed, calls: a.calls,
                                         rotateTo: a.nextKey, payments: a.payments, signer: a.signer, coSigner: coSigner,
                                         reason: reason + a.reasonTail, dryRun: dryRun, pinned: kept?.op,
+                                        pinnedAnswer: kept?.moduleAnswer,
                                         beforeSigning: {
                                             if let recheckTask { try require(await recheckTask.value, on: net, swaps: mustCheck) }
                                             _ = await beforeRead.value
@@ -2056,6 +2057,7 @@ enum YourAccountChain {
                                 rotateTo next: (x: [UInt8], y: [UInt8])?, payments: [YourAccountOp.Payment],
                                 signer: Signer, coSigner: CoSigner? = nil, reason: String, dryRun: Bool = false,
                                 pinned: YourAccountOp.Op? = nil,
+                                pinnedAnswer: (entry: YourAccountOp.Entry, bytes: [UInt8])? = nil,
                                 beforeSigning: @escaping @Sendable () async throws -> Void = {},
                                 report: @escaping @Sendable (String) -> Void = { _ in },
                                 stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
@@ -2115,14 +2117,20 @@ enum YourAccountChain {
         // Asked now, beside the balances still on their way.
         let hash = YourAccountOp.safeOpHash(op, chainId: net.chainId)
         let opNow = op
+        // **ASKED WITH THE PREVIEW, WHEN IT IS THIS OPERATION (prd §1605).**
+        // The same bytes to the same contract give the same answer: one the
+        // preview asked for its own operation stands for this one only when
+        // the two hash alike (nonce, gas and calls included) through the
+        // same entry; anything else is asked now.
+        let asked = pinnedAnswer.flatMap { kept -> [UInt8]? in
+            guard let pinned, kept.entry == entry,
+                  YourAccountOp.safeOpHash(pinned, chainId: net.chainId) == hash else { return nil }
+            return kept.bytes
+        }
+        if asked != nil { report("the module's answer: asked with the preview") }
         func theirsNow() async throws -> [UInt8]? {
-            switch entry {
-            case .module4337:
-                return SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337, data: YourAccountOp.operationHashCall(opNow)))
-            case .adapter:
-                return SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(opNow)))
-                    .flatMap(YourAccountOp.firstBytes)
-            }
+            if let asked { return asked }
+            return try await moduleAnswer(net, entry: entry, op: opNow)
         }
         async let theirsRead = theirsNow()
 
@@ -2215,6 +2223,19 @@ enum YourAccountChain {
         }
         if dryRun { return .dryRun }
         return try await submit(op, net, account: account, stage: stage)
+    }
+
+    /// What the account's module says of `op`: its operation hash (the 4337
+    /// module), or `getSafeOp`'s `operationData` (the adapter), which the
+    /// phone hashes itself. The signature is no part of either.
+    static func moduleAnswer(_ net: Network, entry: YourAccountOp.Entry, op: YourAccountOp.Op) async throws -> [UInt8]? {
+        switch entry {
+        case .module4337:
+            return SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337, data: YourAccountOp.operationHashCall(op)))
+        case .adapter:
+            return SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(op)))
+                .flatMap(YourAccountOp.firstBytes)
+        }
     }
 
     /// The operation `operate` signs, built and priced but unsigned: its

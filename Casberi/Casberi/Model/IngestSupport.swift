@@ -587,8 +587,25 @@ enum IngestSupport {
     /// `session.data(for:)` themselves, which meant no single point could
     /// observe the host. Nothing about the request or the response is
     /// recorded except which host was contacted; see `NetworkLedger`.
+    /// **A SEND'S REQUESTS, COUNTED (prd §1605).** Set by Move for one send:
+    /// every request this funnel makes in that task tree, when it began and
+    /// how long it took, and every circuit retried, so the receipt can say
+    /// whether a stage was many reads or one slow one. Nothing about the
+    /// request is kept: its time only.
+    final class TripLog: @unchecked Sendable {
+        private let lock = NSLock()
+        private var trips: [MoveClock.Trip] = []
+        private var retries: [Date] = []
+        func add(_ trip: MoveClock.Trip) { lock.lock(); trips.append(trip); lock.unlock() }
+        func retried(at: Date) { lock.lock(); retries.append(at); lock.unlock() }
+        var read: (trips: [MoveClock.Trip], retries: [Date]) { lock.lock(); defer { lock.unlock() }; return (trips, retries) }
+    }
+    @TaskLocal static var tripLog: TripLog?
+
     private static func send(_ request: URLRequest,
                              service: String? = nil) async -> (Data, HTTPURLResponse)? {
+        let began = Date()
+        defer { tripLog?.add(MoveClock.Trip(start: began, seconds: Date().timeIntervalSince(began))) }
         // A request naming a wallet goes through Tor (prd §1495, `TorRoute`).
         let way = TorRoute.way(for: request)
         let tor: String? = if case .tor(let key) = way { key } else { nil }
@@ -656,6 +673,7 @@ enum IngestSupport {
         // Each circuit that failed is retired (prd §1597), so the next ask —
         // Move's two seconds on, a Try again — rides circuits never tried.
         TorClient.shared.retire(first, isolation: key)
+        tripLog?.retried(at: Date())
         let retry = TorClient.retryKey(key)
         guard let second = await TorClient.shared.session(isolation: retry) else { return nil }
         guard let again = try? await second.data(for: request),

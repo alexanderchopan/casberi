@@ -48,6 +48,10 @@ extension YourAccountChain {
         let op: YourAccountOp.Op
         let assembled: AssembledParts?
         let made: Date
+        /// The module's own answer for `op` exactly, asked with the preview
+        /// (prd §1605): signing this operation unchanged checks its hash
+        /// against it with no round trip of its own.
+        var moduleAnswer: (entry: YourAccountOp.Entry, bytes: [UInt8])? = nil
 
         /// How long a kept operation may be signed as it stands: inside
         /// it a gas price, a quote and a nonce have rarely moved; the nonce
@@ -137,17 +141,20 @@ extension YourAccountChain {
             }
             let op = try await build(net, account: account, deployed: a.deployed, entry: entry, calls: a.calls,
                                      rotateTo: a.nextKey, signerOwner: a.signer.owner, coSignerOwner: coSigner)
+            let fee = op.maxCost.map(String.init)
+            // The module asked for this operation's hash now, beside the
+            // balances (prd §1605), so the tap need not ask it.
+            async let answer = try? moduleAnswer(net, entry: entry, op: op)
+            let refusal = await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed)
             // A preview the sentence has moved past is never kept: it would
             // take the place of the one now on screen.
             if !Task.isCancelled {
-                await Prepared.keep(Prepared(items: items, roundUp: roundUp, route: route, op: op, assembled: parts, made: Date()))
+                await Prepared.keep(Prepared(items: items, roundUp: roundUp, route: route, op: op, assembled: parts, made: Date(),
+                                             moduleAnswer: (await answer).map { (entry: entry, bytes: $0) }))
             }
-            let fee = op.maxCost.map(String.init)
             return Preview(network: net, route: route, feeWei: fee, nonce: op.nonce, checked: a.simulated.checked,
                            words: a.words, approvals: a.approvals, sold: a.sold, hash: YourAccountOp.safeOpHash(op, chainId: net.chainId),
-                           hashKind: .eip712, callData: op.callData,
-                           refusal: await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed),
-                           signerSigns: coSigner != nil)
+                           hashKind: .eip712, callData: op.callData, refusal: refusal, signerSigns: coSigner != nil)
         } catch let failure as Failure {
             if let written { return empty(written, route: route, refusal: failure.message) }
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],

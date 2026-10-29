@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1742 of 1811 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1743 of 1812 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1983,10 +1983,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
-- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602)
-- §1602 — A send is timed on the phone, and what the account is is read once, ahead
+- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605)
+- §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
 - §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc…
+- §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line cou…
 
 ## Dead rulings → what replaced them (generated)
 

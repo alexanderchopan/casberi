@@ -29,6 +29,12 @@ struct MoveClock: Equatable, Sendable {
         let at: Date
     }
 
+    /// One request a send made, from `IngestSupport.TripLog` (prd §1605).
+    struct Trip: Equatable, Sendable {
+        let start: Date
+        let seconds: TimeInterval
+    }
+
     private(set) var entries: [Entry]
 
     init(at start: Date = .now) { entries = [Entry(mark: .preparing, at: start)] }
@@ -53,10 +59,29 @@ struct MoveClock: Equatable, Sendable {
 
     func total(until end: Date) -> TimeInterval { max(0, end.timeIntervalSince(entries[0].at)) }
 
-    /// "12s: preparing 2.1s, Face ID 1.4s, your Signer 6s, sending 0.8s, landing 1.9s".
-    func words(until end: Date) -> String {
-        let parts = spans(until: end).map { "\($0.mark.words) \(Self.seconds($0.seconds))" }
+    /// "12s: preparing 2.1s (3 requests, slowest 1.2s), Face ID 1.4s, …";
+    /// a stage's requests are the ones that began in it, and a retried
+    /// circuit is counted where it was retried (prd §1605).
+    func words(until end: Date, trips: [Trip] = [], retries: [Date] = []) -> String {
+        let parts = spans(until: end).map { span -> String in
+            let mine = trips.filter { stage(at: $0.start) == span.mark }
+            let retried = retries.filter { stage(at: $0) == span.mark }.count
+            var line = "\(span.mark.words) \(Self.seconds(span.seconds))"
+            guard !mine.isEmpty else { return line }
+            var detail = [String(localized: "\(mine.count) requests")]
+            if mine.count > 1, let slowest = mine.map(\.seconds).max() {
+                detail.append(String(localized: "slowest \(Self.seconds(slowest))"))
+            }
+            if retried > 0 { detail.append(String(localized: "\(retried) retried")) }
+            line += " (" + detail.joined(separator: ", ") + ")"
+            return line
+        }
         return Self.seconds(total(until: end)) + ": " + parts.joined(separator: ", ")
+    }
+
+    /// The stage that held at `date`; before the tap, the first.
+    func stage(at date: Date) -> Mark {
+        entries.last { $0.at <= date }?.mark ?? entries[0].mark
     }
 
     /// Under ten seconds to a tenth, then whole seconds.
