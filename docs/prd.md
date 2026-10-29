@@ -69623,3 +69623,13 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 6. **Not seen:** a real send's numbers after this change. Expected: preparing about one round trip.
 
 **Mac half (§1402).** The same Move and sheet; Open wallet is not automatic off the phone.
+
+## §1605 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits (amends §1598 item 3's Revolut lead and §1604 item 5) (user, 2026-10-29: "i don't have a revolut account"; of which app: "Cash App") — RULED, MEASURED, NOT BUILT
+
+1. **Cash App first.** Deposit is built and first tried on the app the person building it uses. Revolut, Zelle and the rest follow on the same core (§1603, §1604); only the template differs.
+2. **Its door (template `transfer_cashapp`, unchanged 2026-10-28 → 29).** Sign in at `cash.app/account/activity`; the page's own `POST cash.app/cash-app/activity/v1.0/page` (body: the customer token as `SENDER_ID`, `MY_ACTIVITY_WEB_V2`, 15 rows) is captured as it is made, no replay; the payment is the row's `transaction_id`, `amount`, `display_date`, the recipient's `cashtag`; the person pays in Cash App itself through `cash.app/{cashtag}/{amount}`. Peer's mobile SDK loads it with a desktop Safari user agent.
+3. **The sign-in draws in a WKWebView** with an iPhone or a desktop user agent alike (2026-10-29): `cash.app/login`, phone or email with a texted code, or a passkey. What follows a real sign-in is unseen.
+4. **Its liquidity is thin, and the page must say so (measured 2026-10-29, every quote mode).** One seller (deposit 4390): nothing under $50; $50 → 43.06, $100 → 86.13, $200 → 172.26 USDC (a rate of 1.15, about 14% under par, Peer's 0.95% inside it); 74 of its 296 intents fulfilled. So Deposit with Cash App draws its minimum and what you get before anything is signed, never a "from" price it cannot fill, and the first real test costs at least $50 for about 43 USDC.
+5. **The mockup (`design/mockups/peer-add-cash.html`) still draws Revolut**; it is redrawn for Cash App when the page is designed.
+
+**Mac half (§1402).** None: Deposit is not on Move.
