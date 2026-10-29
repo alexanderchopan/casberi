@@ -1,6 +1,10 @@
 # Peer: cash out and add cash — a proposal for a Mac session to explore
 
-**Status: PROPOSED, NOT RULED.** Nothing here is law yet. The Mac session
+**Status: PARTLY RULED by prd §1598 (2026-10-28).** Deposit (add cash) comes
+before Cash out, the proof runs in the app and is never handed to Peer's app,
+and Phase 2a below is declined. What was measured that day is in "Measured,
+2026-10-28" at the end, and it overrides anything above it. The rest is still
+a proposal. The Mac session
 measures, mocks, and brings the user a ruling to approve; the ruling goes in
 `docs/prd.md` first (then `python3 scripts/law-digest.py`), and only then is
 anything built.
@@ -291,3 +295,44 @@ non-Base destination.
 > each state, the Needs you sheet) and bring the user the five questions at
 > the end of the spec with your measurements beside them. Do not write a prd
 > ruling or build Move UI until the user has answered.
+
+## Measured, 2026-10-28
+
+This was done from the Mac with no money moved. The rulings are in prd §1598. Questions still open for Peer: whether a third-party wallet may run the proof, template stability, what the enclave keeps, App Review history, and notice of PCR8 rotation.
+
+**Add cash, by handoff: declined.** `app.peer.xyz/buy` reads `referrer`, `referrerLogo`, `inputCurrency`, `inputAmount`, `paymentPlatform`, `toToken`, `recipientAddress` and `callbackUrl`. At phone width it said "You've arrived from Casberi" with the address filled in. Its step list draws the authenticate step on a phone only for methods with `verifiesByEmail` (today `transfer_zelle_capitalone`). Every other method sends a phone to Peer's iOS app ("Peer: Pay & Earn", id 6749191100, Finance 4+, on the US store since 2025-11). The docs' "redirect onramp" page now covers the desktop extension only, and the deeplink API is removed.
+
+**The buyer's proof.**
+- **Capture.** Provider templates are public JSON at `https://api.zkp2p.xyz/providers/<platform>/<actionType>.json`. Each gives `authLink`, the request `url` and `method`, and JSONPath selectors for the payment list. Revolut's are `https://app.revolut.com/home` and `/api/retail/user/current/transactions/last?count=20`.
+- **What gets encrypted.** The session material is every captured request header plus `Cookie` (every cookie for the host, HttpOnly included) and `body`. The plaintext is `JSON.stringify({platform, actionType, sessionMaterial, boundPubKeySha256})`.
+- **Encryption.** Compact JWE: `RSA-OAEP-256` wraps a random 32-byte key, and `A256GCM` uses a 12-byte IV with the base64url protected header as AAD.
+- **The enclave key.** It comes from `GET https://attestation-service.zkp2p.xyz/attestation?nonce=<32-byte hex>` as an AWS Nitro COSE_Sign1 (ES384). It is verified against the AWS Nitro root (SHA-256 `641a0321…79bb5b`, fetched from AWS and matching Peer's pin) and checked for the nonce in `user_data`, a timestamp within 5 minutes, and PCR8 = `41a4ae0b…cea3f40e`. The RSA-2048 key is the document's `public_key`.
+- **Verified live, end to end, with our own decoder.** The payload map is indefinite-length CBOR. The leaf certificate lives for hours, so the app fetches a fresh document every time and never caches one.
+- **What PCR8 trusts.** It pins Peer's image-signing certificate, not one build. The React Native SDK falls back to an unpinned Railway proxy; a port must not.
+- **Verify and fulfil.** `POST /buyer/verify/<platform>/<actionType>` takes `{encryptedSessionMaterial, params, chainId, intent}` and no key. Its EIP-712 `PaymentAttestation` is checked on chain against the witness (`expectedSigner` `0xe078d93b…f0bd`, verifier `0xC6F4a193…502B`). There is no replay protection: a leaked JWE lasts as long as the payment session does.
+- **Source.** `@zkp2p/sdk` and `@zkp2p/zkp2p-attestation` ship source maps with full `sourcesContent` on npm, so the TypeScript can be read although their repositories are private. `zkp2p/zkp2p-contracts` is public.
+- **Swift port.** CryptoKit and `SecKeyCreateEncryptedData` cover the crypto, CBOR/COSE is about 200–300 lines by hand, and SecTrust takes a custom anchor. That is 3–5 days for the core and 1–2 weeks for the first platform end to end.
+
+**The contracts (OrchestratorV3 `0x014025fD…cb5c7`, EscrowV2 `0x77777777…300Ef`).**
+- **A Safe can own an intent.** `signalIntent` stores `owner = msg.sender`, and anyone may call `fulfillIntent`.
+- **Peer's curator can refuse.** A deposit with a gating service needs the curator's signature from `POST https://api.zkp2p.xyz/v3/sign`, which is keyless, and the curator can refuse.
+- **The hold is 6 hours.** `intentExpirationPeriod` = 21600 s. The deposit's intent guardian can extend it to 5 days at most.
+- **Fees.** `protocolFee` is 0 on chain. Quotes carry `serviceFeeBps` 95.
+
+**Live quotes** (`POST /v3/quote/exact-fiat`, USD to USDC on Base, `mode: eligible_with_chargeback`):
+
+| | $5 | $20 | $100 | $500 |
+|---|---|---|---|---|
+| Revolut | 4.95 | 19.81 | 99.05 | 495.25 |
+| Zelle | 4.95 | 18.00 | 95.24 | 476.20 |
+| Cash App | none | none | 86.13 | 430.65 |
+| Venmo (stake) | 4.95 | 19.81 | 99.05 | 495.25 |
+
+Venmo and PayPal buys need USDC staked equal to the order (`disputeProtectionRequiresStake`); Cash App, Zelle and Revolut need none. The amount is in 6-decimal units.
+
+**Tor.** `api.zkp2p.xyz`, `indexer.zkp2p.xyz`, `attestation-service.zkp2p.xyz` and `app.peer.xyz` all answered through Tor, three tries each.
+
+**App Review and terms.**
+- **Guidelines.** The live risk is 5.2.2: access to a third-party service must be permitted by that service's terms, and "authorization must be provided upon request". 3.1.5 fits, since the account is a wallet and Peer's contract trades.
+- **Cash App's terms** (XXIII.5) bar letting "any third party" access its systems by "any manual process or robot, spider, scraper, or other automated means". The user rules this a known risk (prd §1598 item 4).
+- **Revolut's terms were not read.** Its site bot-checks scripted fetches.

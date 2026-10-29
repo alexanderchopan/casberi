@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Adding cash through Peer</title><style>
+:root{color-scheme:light dark;--ground:#e4e3ea;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
+--p:#000;--w:#fff;--g2:#8e8e93;--g3:#636366;--pick:#ff2d55;--amber:#ff9f0a;--red:#ff453a;--green:#30d158;--fill:#1c1c1e;
+--tagCas:#ff2d55;--tagCash:#00a63e;--line:#cfcdd8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--tagCash:#2fd36b;--line:#34333d}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--tagCash:#2fd36b;--line:#34333d}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;padding:28px 16px 64px}
+main{max-width:1240px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:940px;margin-top:6px} .desc b{color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px}
+.stage{display:flex;flex-wrap:wrap;gap:34px 30px;margin-top:22px;align-items:flex-start}
+figure{width:322px;flex:none}
+@media (max-width:360px){figure{width:100%}}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 4px 0} figcaption b{color:var(--ink)} figcaption p+p{margin-top:8px}
+figcaption code{font-family:var(--mono);font-size:12px}
+.tag{display:inline-flex;align-items:center;gap:6px;font:600 12px/16px var(--rounded);margin:0 0 8px 2px}
+.tag i{width:9px;height:9px;border-radius:50%;display:block}
+.tag.cas{color:var(--tagCas)} .tag.cas i{background:var(--tagCas)}
+.tag.cash{color:var(--tagCash)} .tag.cash i{background:var(--tagCash)}
+.tag.none{color:var(--ink2)} .tag.none i{background:var(--ink2)}
+.step{font:700 13px/18px var(--rounded);color:var(--ink);margin-right:4px}
+/* the phone */
+.ph{width:402px;height:874px;zoom:.8;border-radius:56px;overflow:hidden;position:relative;background:var(--p);color:var(--w);font-family:var(--rounded);box-shadow:0 24px 70px #00000040}
+.status{position:relative;z-index:3;display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.behind{position:absolute;inset:0;background:#141416}
+/* Move's tray: large detent, untitled (DSTray titled:false, §1442) */
+.tray{position:absolute;left:0;right:0;bottom:0;top:62px;background:#000;border-radius:38px 38px 0 0;padding:12px 20px 0}
+.grab{width:36px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 14px}
+.verbs{display:flex;justify-content:space-between;font:600 15px/26px var(--rounded);color:var(--g3);min-height:44px;align-items:center;white-space:nowrap}
+.verbs .on{color:var(--w)}
+.new{outline:2px dashed #ff2d5588;outline-offset:4px;border-radius:6px}
+.sent{font:600 52px/60px var(--rounded);margin-top:10px;font-variant-numeric:tabular-nums}
+.sent div{white-space:nowrap}
+.sent .pk{color:var(--pick)} .sent .gy{color:var(--g2)} .sent .open{color:#ff2d5599}
+.print{font:400 17px/22px var(--rounded);color:var(--g2);margin-top:12px}
+.print b{font-weight:400;color:var(--w)}
+.foot{position:absolute;left:20px;right:20px;bottom:44px;display:flex;align-items:baseline;justify-content:space-between}
+.foot .v{font:600 34px/40px var(--rounded);color:var(--pick)}
+/* the choices glass (§1442b) */
+.glass{border-radius:28px;background:#2a2a2dcc;box-shadow:inset 0 0 0 .5px #ffffff1a;padding:6px 16px 8px;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.row{display:flex;align-items:center;gap:14px;min-height:56px;font:400 17px/22px var(--rounded)}
+.row .two{display:flex;flex-direction:column;min-width:0} .row .two small{font-size:13px;line-height:18px;color:var(--g2)}
+.row .f{margin-left:auto;flex:none;color:var(--g2);font-variant-numeric:tabular-nums}
+.row .f.pk{color:var(--pick)}
+.row.dim{color:var(--g3)} .row.dim .mk{opacity:.4}
+.mk{width:30px;height:30px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;font:700 15px var(--rounded);color:#fff}
+.mk.cash{background:#00d632} .mk.zelle{background:#6d1ed4} .mk.rev{background:#fff;color:#000} .mk.venmo{background:#008cff} .mk.pp{background:#003087}
+.mk.round{border-radius:50%}
+.grp{font:400 15px/20px var(--rounded);color:var(--g2);margin:14px 0 2px}
+.title{padding:26px 20px 0;font:700 34px/40px var(--rounded)} .title span{color:var(--g3)}
+.pad{padding:8px 20px 0}
+.tab{position:absolute;left:20px;right:20px;bottom:28px;display:flex;align-items:center;gap:12px}
+.tab .bar{flex:1;height:62px;border-radius:40px;background:#2a2a2dd9;display:flex;justify-content:space-around;align-items:center;font:500 12px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pick);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 14px}
+.tab .s{width:62px;height:62px;border-radius:50%;background:#2a2a2dd9}
+/* Face ID: the system's */
+.faceid{position:absolute;left:50%;top:360px;transform:translateX(-50%);width:150px;height:150px;border-radius:34px;background:#3a3a3ce6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font:500 15px -apple-system,sans-serif;color:#fff;z-index:5}
+/* our sheet with Revolut's page inside */
+.oursheet{position:absolute;left:0;right:0;bottom:0;top:54px;background:#1c1c1e;border-radius:38px 38px 0 0;padding:12px 20px 0;overflow:hidden}
+.eye{font:400 15px/20px var(--rounded);color:var(--g2)}
+.oursheet h4{font:700 28px/34px var(--rounded);margin-top:2px}
+.web{position:absolute;left:12px;right:12px;top:126px;bottom:0;background:#fff;border-radius:22px 22px 0 0;color:#000;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;overflow:hidden}
+.web .host{font:500 12px/16px -apple-system,sans-serif;color:#8a8a8e;text-align:center;padding:9px 0 0}
+.cashlogo{width:58px;height:58px;border-radius:14px;background:#191c1f;color:#fff;display:flex;align-items:center;justify-content:center;font:800 34px Arial,sans-serif;margin:34px auto 0}
+.web h5{font:700 26px/32px "Helvetica Neue",Arial,sans-serif;text-align:center;margin-top:18px}
+.web p{font:400 15px/21px Arial,sans-serif;color:#555;text-align:center;margin:6px 26px 0}
+.cfield{margin:22px 22px 0;height:52px;border-radius:12px;background:#f2f2f4;display:flex;align-items:center;padding:0 16px;font:400 17px Arial,sans-serif;color:#8a8a8e}
+.cbtn{margin:14px 22px 0;height:52px;border-radius:26px;background:#191c1f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 17px Arial,sans-serif}
+.spin{display:inline-block;width:16px;height:16px;border-radius:50%;border:2.5px solid #48484a;border-top-color:#fff;vertical-align:-3px;margin-right:8px}
+/* the declined note, a frame of its own */
+.note{width:322px;height:699px;border-radius:45px;border:2px dashed var(--line);padding:34px 26px;display:flex;flex-direction:column;justify-content:center;gap:12px;font-size:14.5px;line-height:21px;color:var(--ink2)}
+.note h3{font:700 22px/28px var(--rounded);color:var(--ink)} .note b{color:var(--ink)}
+/* who draws what */
+.who{margin-top:40px;max-width:940px}
+.who h2{font:700 21px/27px var(--rounded)}
+.strip{display:flex;flex-wrap:wrap;gap:10px 36px;margin-top:12px}
+.strip div{min-width:260px;flex:1}
+.strip .k{font:600 15px/20px var(--rounded);display:flex;align-items:center;gap:7px}
+.strip .k i{width:10px;height:10px;border-radius:50%;display:block}
+.strip p{font-size:14.5px;line-height:22px;color:var(--ink2);margin-top:4px}
+.notes{margin-top:30px;max-width:940px;font-size:14.5px;line-height:21px;color:var(--ink2)}
+.notes h2{font:700 20px/26px var(--rounded);color:var(--ink);margin-bottom:6px}
+.notes li{margin:0 0 6px 20px} .notes b{color:var(--ink)}
+</style></head><body><main>
+
+<h1>Adding cash through Peer</h1>
+<p class="desc">Dollars from Revolut, Zelle or Cash App become <b>USDC on Base in your account</b>, bought from a person on Peer (peer.xyz). <b>Casberi draws every step</b> in Move's words; the only page that is not ours is the payment app's own sign-in, inside our sheet. Peer is the contract underneath, never a screen. Above each frame, who draws it. A dashed pink outline marks what is new in Move.</p>
+<div class="legend">
+<span class="tag cas"><i></i>Casberi draws</span>
+<span class="tag cash"><i></i>Revolut's page</span>
+</div>
+
+<div class="stage">
+
+<!-- 1 · the sentence and Face ID -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="tray"><div class="grab"></div>
+<div class="verbs"><span>Buy</span><span class="new">Cash out</span><span class="on new">Deposit</span><span>Receive</span><span>Send</span><span>Swap</span><span>Sweep</span></div>
+<div class="sent">
+<div>Deposit <span class="pk">$100</span></div>
+<div>with <span class="pk">Revolut</span></div>
+<div>as <span class="pk">USDC</span></div>
+<div>on <span class="pk">Base</span>.</div>
+</div>
+<div class="print">≈ 99.05 USDC · through Peer · 0.95% fee</div>
+<div class="faceid"><svg width="56" height="56" viewBox="0 0 56 56" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M4 16V9a5 5 0 015-5h7M40 4h7a5 5 0 015 5v7M52 40v7a5 5 0 01-5 5h-7M16 52H9a5 5 0 01-5-5v-7"/><path d="M19 20v5M37 20v5M28 21v11h-3M20 38c4.5 4 11.5 4 16 0"/></svg>Face ID</div>
+<div class="foot"><span class="v new">Deposit</span></div>
+</div></div>
+<figcaption><p><span class="step">1</span><b>Two new verbs, one sentence.</b> Deposit and Cash out join Move's line, A–Z: Buy · Cash out · Deposit · Receive · Send · Swap · Sweep. Seven words do not fit at <code>heading24</code>, so the line shrinks evenly to the width (§1558), about 15pt here.</p><p>"Deposit $100 with Revolut as USDC on Base." Each pink word opens its choices; "as USDC" and "on Base." are two clauses (§1586 item 11). The print line: ≈ the best seller's price now, and Peer's fee (about 1%, measured on a live $20 quote: 19.80). The foot's Deposit and one Face ID sign the order on Peer's contract, which holds a seller's 99.05 USDC for you.</p></figcaption></figure>
+
+<!-- 1b · the with blank, open -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="tray"><div class="grab"></div>
+<div class="verbs"><span>Buy</span><span>Cash out</span><span class="on">Deposit</span><span>Receive</span><span>Send</span><span>Swap</span><span>Sweep</span></div>
+<div class="sent">
+<div>Deposit <span class="pk">$100</span></div>
+<div>with <span class="open">Revolut</span></div>
+</div>
+<div class="glass" style="margin-top:14px">
+<div class="row"><span class="mk cash">$</span><span class="two">Cash App<small>From $100 · one seller today</small></span></div>
+<div class="row"><span class="mk rev">R</span><span class="two">Revolut<small>Pays a seller's Revtag</small></span><span class="f pk">✓</span></div>
+<div class="row"><span class="mk zelle">Z</span><span class="two">Zelle<small>Pays a seller's email or phone</small></span></div>
+<div class="row dim"><span class="mk pp">P</span><span class="two">PayPal<small>Needs USDC staked first</small></span></div>
+<div class="row dim"><span class="mk venmo">V</span><span class="two">Venmo<small>Needs USDC staked first</small></span></div>
+</div>
+</div></div>
+<figcaption><p><span class="step">1b</span><b>The "with" blank, open.</b> The choices glass every blank uses (§1442b), each row with its mark (§1534). A–Z among the apps that can act, then the two that cannot, grey with their reason.</p><p>Measured: Peer asks a Venmo or PayPal buyer to stake as much as the order, and a new account has none. Grey, never hidden, so nobody wonders where Venmo went.</p><p>Revolut leads: the best rate on 2026-10-28 (Peer's 0.95% and nothing more). Cash App had no seller under $100, and its one seller asked about 14% more.</p></figcaption></figure>
+
+<!-- 2 · pay -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="tray"><div class="grab"></div>
+<div class="verbs"><span>Buy</span><span>Cash out</span><span class="on">Deposit</span><span>Receive</span><span>Send</span><span>Swap</span><span>Sweep</span></div>
+<div class="sent">
+<div><span class="gy">Pay</span> @tomasr</div>
+<div>$100</div>
+<div><span class="gy">on</span> Revolut.</div>
+</div>
+<div class="print">Held for you · <b>6 hours</b> · Tap the Revtag to copy it</div>
+<div class="foot"><span class="v">Open Revolut</span></div>
+</div></div>
+<figcaption><p><span class="step">2</span><b>Pay the seller.</b> "Pay @tomasr $100 on Revolut." White, not pink: facts to follow, not blanks. The print line counts the six-hour hold down.</p><p>Open Revolut leaves for Revolut. Coming back raises step 3.</p></figcaption></figure>
+
+<!-- 3 · prove: Revolut's page -->
+<figure><div class="tag cash"><i></i>Revolut's page</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="oursheet"><div class="grab"></div>
+<div class="eye">Did you pay?</div>
+<h4>Prove it</h4>
+<div class="web">
+<div class="host">app.revolut.com</div>
+<div class="cashlogo">R</div>
+<h5>Sign in to Revolut</h5>
+<p>Enter your phone number or email</p>
+<div class="cfield">Phone or email</div>
+<div class="cbtn">Continue</div>
+</div>
+</div></div>
+<figcaption><p><span class="step">3</span><b>Did you pay? Prove it.</b> Our sheet and our words; inside it, Revolut's own sign-in page in a web view. You sign in to Revolut, not to us: the password goes to app.revolut.com.</p><p>The one page Casberi does not draw, and the one App Review will look at: a payment app's sign-in inside our web view. Peer's own iOS app does the same.</p></figcaption></figure>
+
+<!-- 3b · pick the payment -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="oursheet"><div class="grab"></div>
+<div class="eye">Did you pay?</div>
+<h4>Which one was it?</h4>
+<div class="grp" style="margin-top:16px">Your Revolut payments</div>
+<div class="row"><span class="mk rev">R</span><span class="two">To @tomasr<small>Today, 9:44</small></span><span class="f" style="color:var(--w)">$100.00</span></div>
+<div class="row dim"><span class="mk rev">R</span><span class="two">To Dana<small>Yesterday</small></span><span class="f">$24.00</span></div>
+<div class="row dim"><span class="mk rev">R</span><span class="two">From $jules<small>Oct 26</small></span><span class="f">$40.00</span></div>
+<div class="print" style="margin-top:22px;color:var(--w)"><span class="spin"></span>Checking with Revolut…</div>
+<div class="print">Only this payment goes into the proof.</div>
+</div></div>
+<figcaption><p><span class="step">3b</span><b>Pick the payment.</b> Signed in, your recent Revolut payments are read from that page and drawn as our rows; the one to @tomasr for $100 leads and is the pick. The proof runs on the phone, and the print line says what it is doing.</p><p>This is Peer's proof flow ported to Swift: the build's weeks, and it must be seen with real money on a phone.</p></figcaption></figure>
+
+<!-- 4 · claim and receipt -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="tray"><div class="grab"></div>
+<div class="verbs"><span>Buy</span><span>Cash out</span><span class="on">Deposit</span><span>Receive</span><span>Send</span><span>Swap</span><span>Sweep</span></div>
+<div class="sent">
+<div><span class="gy">Added</span> 99.05</div>
+<div>USDC</div>
+<div><span class="gy">with</span> Revolut</div>
+<div><span class="gy">on</span> Base.</div>
+</div>
+<div class="print">$100 paid to @tomasr · through Peer</div>
+<div class="foot"><span class="v">Done</span></div>
+</div></div>
+<figcaption><p><span class="step">4</span><b>One Face ID, then the receipt.</b> Proven, the foot reads Claim; one Face ID sends the proof and Peer's contract releases the USDC to your account. The receipt is the sentence in the past tense, every value white (§1466 item 5), with the rain.</p><p>Activity gets one row, "Added 99.05 USDC with Revolut", from the fill the app already reads off chain (§113; today titled "Bought … on Peer").</p></figcaption></figure>
+
+<!-- ✕ · not proven -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div>
+<div class="title">Wallet <span>·</span> Needs you</div>
+<div class="pad">
+<div class="row" style="margin-top:14px"><span class="mk rev">R</span><span class="two" style="white-space:normal">Your $100 Revolut payment isn't proven yet<small>Held for you · 4 hours</small></span><span class="f pk">Prove again</span></div>
+<div class="row"><span class="mk round" style="background:#2c2c2e;color:var(--amber)">!</span><span class="two">Safe transaction waiting<small>Your signature · Base</small></span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s"></div></div>
+</div>
+<figcaption><p><span class="step">✕</span><b>Paid, not proven.</b> A closed sheet, a refused sign-in, Revolut's page changing: it stands in Needs you with the time still held, and Prove again reopens step 3 where it left off.</p></figcaption></figure>
+
+<!-- ✕ · hold ran out -->
+<figure><div class="tag cas"><i></i>Casberi draws</div>
+<div class="ph"><div class="status"><span>9:41</span><span>●●●</span></div><div class="behind"></div>
+<div class="tray"><div class="grab"></div>
+<div class="verbs"><span>Buy</span><span>Cash out</span><span class="on">Deposit</span><span>Receive</span><span>Send</span><span>Swap</span><span>Sweep</span></div>
+<div class="sent">
+<div><span class="gy">The hold</span></div>
+<div><span class="gy">ran out.</span></div>
+<div>Nothing</div>
+<div>was taken.</div>
+</div>
+<div class="print">The seller's 99.05 USDC went back. If you paid @tomasr, that $100 is between you and them on Revolut.</div>
+<div class="foot"><span class="v">Try again</span></div>
+</div></div>
+<figcaption><p><span class="step">✕</span><b>Reservation ran out; nothing was taken.</b> Past the hold, the order lapses on Peer's contract and nothing left your account. Said once, felt as a failure (§1586 item 6), with a way on: Try again keeps the sentence and asks for a new seller.</p><p>The Needs you row goes when the hold ends.</p></figcaption></figure>
+
+<!-- the declined note -->
+<figure><div class="tag none"><i></i>Not drawn</div>
+<div class="note">
+<h3>Declined: handing off to Peer's app</h3>
+<p><b>User, 2026-10-28.</b> "We can't do it where it requires hand off to peer's app."</p>
+<p>Measured: Peer's mobile web cannot verify a Cash App, Venmo or Revolut payment; it sends a phone to Peer's own app. A handoff would make adding cash three apps (Casberi, Peer, Cash App), so the in-app way above is the only one drawn.</p>
+</div>
+</figure>
+
+</div>
+
+<div class="who">
+<h2>Who draws what</h2>
+<div class="strip">
+<div><div class="k" style="color:var(--tagCas)"><i style="background:var(--tagCas)"></i>Casberi draws</div><p>The sentence, the quote, Face ID, the pay step, the payment list, the progress, the receipt, and both failures.</p></div>
+<div><div class="k" style="color:var(--tagCash)"><i style="background:var(--tagCash)"></i>Revolut's page</div><p>The sign-in only, inside our sheet.</p></div>
+</div>
+</div>
+
+<div class="notes">
+<h2>What stands under it</h2>
+<ul>
+<li><b>No custody.</b> Peer's contract holds the seller's USDC and releases it straight to your account. Casberi holds no money and keeps no Revolut sign-in.</li>
+<li><b>Venmo and PayPal are grey, never missing,</b> because Peer asks for a stake equal to the order and a new account has none.</li>
+<li><b>Cost:</b> about two weeks for the first app, a Swift port of Peer's proof flow (3–5 days of it the encryption), seen with real money on a phone. <b>Review risk:</b> a payment app's sign-in in our web view, as Peer's own iOS app does. <b>Not ours to control:</b> Peer's prices, sellers and fee, and Revolut's page.</li>
+</ul>
+</div>
+
+</main></body></html>

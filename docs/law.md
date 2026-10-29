@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1735 of 1804 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1736 of 1805 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1980,6 +1980,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
+- §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di…
 
 ## Dead rulings → what replaced them (generated)
 

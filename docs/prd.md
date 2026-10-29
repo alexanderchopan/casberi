@@ -69528,3 +69528,15 @@ In `Model/WalletDelegation.swift`, `Screens/WalletDelegationSheet.swift`, `Scree
 Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-selftest.sh` (both circuits retired, only the current one).
 
 **Mac half (§1402).** The Mac has no Tor (`TorRoute.available` false), so it keeps the networks' names; item 3 holds there.
+
+## §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (direction for `docs/peer-spec.md`) (user, 2026-10-28: "add cash first. deposit and cash out", "we can't do it where it requires hand off to peer's app", and on the payment apps' terms, "i'm sure they work or peer wouldn't be able to provide this service and get app store approval") — RULED, not built
+
+**Measured from the Mac, no money moved (2026-10-28).** The full record is `docs/peer-spec.md` § "Measured, 2026-10-28".
+
+1. **Deposit ships before Cash out.** The two are Move's new verbs (Buy · Cash out · Deposit · Receive · Send · Swap · Sweep, §1547), drawn only where the phone holds an account (§83, as Buy).
+2. **The proof runs in Casberi, never in Peer's app.** Peer's mobile web verifies only methods that prove by email (today Zelle through Capital One); every other method sends a phone to Peer's own app, so a handoff is declined. Deposit signs the intent, shows the seller to pay, captures the payment app's session in our own web view from Peer's public provider template, encrypts it to Peer's attestation enclave and fulfils the intent. The canvas is `design/mockups/peer-add-cash.html`.
+3. **Revolut leads; Venmo and PayPal are grey, never hidden.** Revolut quoted Peer's 0.95% fee and nothing more; Cash App had no seller under $100. Peer asks a Venmo or PayPal buyer to stake as much as the order, so both read "Needs USDC staked first".
+4. **The payment apps' terms are a known risk, not a blocker.** Cash App's terms (XXIII.5) bar letting a third party access its systems by "any manual process or robot, spider, scraper, or other automated means"; Peer's approved iOS app does the same capture. The risk falls on the person's payment account, and App Review's 5.2.2 may ask for authorization.
+5. **Nothing is built until Peer answers whether a third-party wallet may run the proof** (spec question 1). The attestation and encryption core may be built first, DEBUG only.
+
+**Mac half (§1402).** The Mac holds no account key, so neither verb is drawn there, as Buy (§1473).
