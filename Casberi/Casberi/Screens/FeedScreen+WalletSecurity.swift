@@ -303,6 +303,7 @@ extension FeedScreen {
         switch stage {
         case .preparing: String(localized: "Preparing…")
         case .signing: String(localized: "Confirm with Face ID")
+        case .cosigning: String(localized: "Waiting for your Signer…")
         case .sending: String(localized: "Sending…")
         case .landing: String(localized: "Waiting…")
         }

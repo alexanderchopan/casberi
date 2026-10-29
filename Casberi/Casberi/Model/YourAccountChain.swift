@@ -81,8 +81,12 @@ enum YourAccountChain {
     /// (an AA code, a signature) is the answer, never an outage to route past.
     static func bundler(_ net: Network, _ method: String, _ params: [Any]) async throws -> Any {
         var last = "No bundler answered on \(net.name)"
+        // **ONLY PRICING TAKES LONG (prd §1601).** A send, a receipt or a gas
+        // price is as small as a node's read: 20s over Tor, then the next
+        // circuit, never the minute (twice) every bundler call waited.
+        let wait: TimeInterval? = method == "eth_estimateUserOperationGas" ? nil : 20
         for url in net.bundlers {
-            let (result, error, _) = await post(url, method, params)
+            let (result, error, _) = await post(url, method, params, wait: wait)
             if let result, !(result is NSNull) { return result }
             if let error {
                 last = worded(error, on: net)
@@ -204,7 +208,9 @@ enum YourAccountChain {
     // MARK: - The send
 
     /// Where a send stands, for the page to say.
-    enum Stage: Equatable { case preparing, signing, sending, landing }
+    /// `cosigning`: Face ID has passed and the Signer's wallet is asked
+    /// (prd §1601: the foot said "Confirm with Face ID" for all of it).
+    enum Stage: Equatable { case preparing, signing, cosigning, sending, landing }
 
     struct Sent: Equatable {
         enum Outcome: Equatable {
@@ -590,12 +596,18 @@ enum YourAccountChain {
     /// contract, nor a key exported from this phone (prd §1493), which no
     /// wallet here is asked to sign with.
     static func signers(_ net: Network, _ account: String) async throws -> [String] {
-        var out: [String] = []
-        for owner in try await owners(net, account) where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame
-            && !YourAccountExport.isExported(owner, for: account) {
-            if try await !isContract(net, owner) { out.append(owner) }
+        let asked = try await owners(net, account).filter { owner in
+            owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame
+                && !YourAccountExport.isExported(owner, for: account)
         }
-        return out
+        // Every owner's code at once (prd §1601), in the account's order.
+        let contract = try await withThrowingTaskGroup(of: (Int, Bool).self) { group in
+            for (i, owner) in asked.enumerated() { group.addTask { (i, try await isContract(net, owner)) } }
+            var found: [Int: Bool] = [:]
+            for try await (i, c) in group { found[i] = c }
+            return found
+        }
+        return asked.indices.filter { contract[$0] == false }.map { asked[$0] }
     }
 
     /// Where the spend limit stands on a network: off, on (its plan and the
@@ -606,8 +618,17 @@ enum YourAccountChain {
     }
 
     static func limitState(_ net: Network, _ account: String) async throws -> LimitState {
-        guard try await isDeployed(net, account) else { return .off }
-        return try await limitState(net, account, threshold: try await threshold(net, account))
+        // **NO PLAN, NOTHING ASKED; THE REST AT ONCE (prd §1601).** Every
+        // send asked this before anything else, three round trips over Tor
+        // one after another; the four reads are one now.
+        guard let plan = plan(net) else { return .off }
+        async let deployed = isDeployed(net, account)
+        async let threshold = threshold(net, account)
+        async let entry = accountEntry(net, account)
+        async let sessions = sessionIds(net, account)
+        guard try await deployed else { return .off }
+        guard try await threshold == 2, try await entry == .adapter, try await !sessions.isEmpty else { return .off }
+        return .on(plan, current: plan.window(at: Int(Date().timeIntervalSince1970)))
     }
 
     /// The same, for a reader that already holds the threshold of an account
@@ -1520,14 +1541,18 @@ enum YourAccountChain {
         let kept = ride.isEmpty ? await Prepared.take(items, roundUp: roundUp, route: route) : nil
         var a: Assembled
         var approvalCount = 0
+        // **THE PREVIEW'S RECHECK RUNS BESIDE THE OPERATION'S OWN READS (prd
+        // §1601)**, and Face ID waits for it: nothing is signed that the
+        // simulation refused, and nothing waits on it that need not.
+        var recheck: Task<Simulated, Never>?
         if let kept, let held = kept.assembled {
             approvalCount = held.approvalCount
             // The preview's own calls, checked once more against the state now.
-            let again = await check(net, account: account, approvals: Array(held.calls.prefix(held.approvalCount)),
-                                    steps: held.steps, symbols: held.symbols)
-            try require(again, on: net, swaps: held.assembled.mustCheck)
+            recheck = Task {
+                await check(net, account: account, approvals: Array(held.calls.prefix(held.approvalCount)),
+                            steps: held.steps, symbols: held.symbols)
+            }
             a = held.assembled
-            a.simulated = again
             report("signing the preview from \(Int(Date().timeIntervalSince(kept.made)))s ago")
         } else {
             let parts = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil, report: report)
@@ -1567,29 +1592,56 @@ enum YourAccountChain {
            a.arrives != true {
             throw Failure(message: String(localized: "Could not check that \(crossing.symbol) arrives on \(YourAccountAcross.networkName(crossing.to)), so nothing was signed"))
         }
-        // The crossing is kept before Face ID, so the Wallet shows it however
-        // the app is left; it gets its transaction once it lands.
-        if let crossing = a.crossing, !dryRun { YourAccountAcross.note(crossing) }
         let swaps = a.steps.compactMap(\.swap)
-        // An exchange buy is known later by its own transaction (prd §1545):
-        // kept before Face ID, so a send that lands while the app is away
-        // still reads as the buy.
-        if let roundUp, !dryRun, !a.roundUpWaits, roundUp.target.onExchanges(from: net.chainId) {
-            RoundUps.noteSwapBuy(account: account, network: YourAccountOp.appName(net) ?? net.name, dollar: net.dollar, units: roundUp.units,
-                                 target: roundUp.target)
+        // Kept before Face ID, and only once the recheck has passed (prd
+        // §1601: a kept preview's recheck now runs beside the reads, and a
+        // refused one must leave no crossing or buy behind).
+        let crossingNow = a.crossing, waits = a.roundUpWaits
+        let keepBeforeFaceID: @Sendable () -> Void = {
+            // The crossing is kept before Face ID, so the Wallet shows it however
+            // the app is left; it gets its transaction once it lands.
+            if let crossing = crossingNow, !dryRun { YourAccountAcross.note(crossing) }
+            // An exchange buy is known later by its own transaction (prd §1545):
+            // kept before Face ID, so a send that lands while the app is away
+            // still reads as the buy.
+            if let roundUp, !dryRun, !waits, roundUp.target.onExchanges(from: net.chainId) {
+                RoundUps.noteSwapBuy(account: account, network: YourAccountOp.appName(net) ?? net.name, dollar: net.dollar, units: roundUp.units,
+                                     target: roundUp.target)
+            }
         }
         report("simulated: \(a.simulated.paid.compactMap { $0 }.joined(separator: ", "))")
 
-        // What the bought tokens hold now, to measure what landed.
-        var before: [String: String] = [:]
-        for buy in swaps.map(\.buy) where before[buy.contract ?? ""] == nil {
-            before[buy.contract ?? ""] = await balance(net, buy, of: account) ?? "0"
+        // What the bought tokens hold now, to measure what landed: read at
+        // once, beside the operation's reads, and in hand before Face ID.
+        var bought: [YourAccountOp.Token] = []
+        for buy in swaps.map(\.buy) where !bought.contains(where: { ($0.contract ?? "") == (buy.contract ?? "") }) { bought.append(buy) }
+        let beforeRead = Task {
+            await withTaskGroup(of: (String, String).self) { group in
+                for buy in bought { group.addTask { (buy.contract ?? "", await balance(net, buy, of: account) ?? "0") } }
+                var out: [String: String] = [:]
+                for await (key, units) in group { out[key] = units }
+                return out
+            }
         }
         report("account=\(account) deployed=\(a.deployed) signer=key\(a.signerIndex) next=key\(a.next) swaps=\(swaps.count)")
+        let mustCheck = a.mustCheck
+        let recheckTask = recheck
+        // Done with by Face ID; a send refused before it leaves them asking nothing.
+        defer {
+            recheckTask?.cancel()
+            beforeRead.cancel()
+        }
         let outcome = try await operate(net, account: account, deployed: a.deployed, calls: a.calls,
                                         rotateTo: a.nextKey, payments: a.payments, signer: a.signer, coSigner: coSigner,
                                         reason: reason + a.reasonTail, dryRun: dryRun, pinned: kept?.op,
+                                        beforeSigning: {
+                                            if let recheckTask { try require(await recheckTask.value, on: net, swaps: mustCheck) }
+                                            _ = await beforeRead.value
+                                            keepBeforeFaceID()
+                                        },
                                         report: report, stage: stage)
+        if let recheck { a.simulated = await recheck.value }
+        let before = await beforeRead.value
         if let renewed = a.renewed, case .landed = outcome { savePlan(renewed, on: net) }
         if let setupPlan = a.setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
         let sent = Sent(outcome: await settle(outcome, net, account, next: a.next, x: a.nextKey.x), network: net)
@@ -1602,17 +1654,25 @@ enum YourAccountChain {
         guard case .landed = sent.outcome, !swaps.isEmpty else {
             return Transacted(sent: sent, bought: a.simulated.paid, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: rode)
         }
-        // A token bought by one swap alone: what actually arrived.
-        var bought = a.simulated.paid
-        for (i, step) in a.steps.enumerated() {
-            guard let swap = step.swap else { continue }
-            let key = swap.buy.contract ?? ""
-            guard swaps.filter({ ($0.buy.contract ?? "") == key }).count == 1,
-                  let then = before[key], let now = await balance(net, swap.buy, of: account) else { continue }
-            let arrived = YourAccountOp.difference(now, then)
-            if arrived != "0" { bought[i] = arrived }
+        // A token bought by one swap alone: what actually arrived, every
+        // token read at once.
+        var paid = a.simulated.paid
+        let alone = a.steps.enumerated().compactMap { i, step -> (Int, YourAccountOp.Token)? in
+            guard let swap = step.swap, swaps.filter({ ($0.buy.contract ?? "") == (swap.buy.contract ?? "") }).count == 1 else { return nil }
+            return (i, swap.buy)
         }
-        return Transacted(sent: sent, bought: bought, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: rode)
+        let now = await withTaskGroup(of: (Int, String?).self) { group in
+            for (i, token) in alone { group.addTask { (i, await balance(net, token, of: account)) } }
+            var out: [Int: String] = [:]
+            for await (i, units) in group { if let units { out[i] = units } }
+            return out
+        }
+        for (i, token) in alone {
+            guard let then = before[token.contract ?? ""], let held = now[i] else { continue }
+            let arrived = YourAccountOp.difference(held, then)
+            if arrived != "0" { paid[i] = arrived }
+        }
+        return Transacted(sent: sent, bought: paid, roundUpWaits: a.roundUpWaits, crossing: crossing, rode: rode)
     }
 
     /// Whether a round-up ride joins the operation (finding 5): its calls
@@ -1995,37 +2055,82 @@ enum YourAccountChain {
                                 rotateTo next: (x: [UInt8], y: [UInt8])?, payments: [YourAccountOp.Payment],
                                 signer: Signer, coSigner: CoSigner? = nil, reason: String, dryRun: Bool = false,
                                 pinned: YourAccountOp.Op? = nil,
+                                beforeSigning: @escaping @Sendable () async throws -> Void = {},
                                 report: @escaping @Sendable (String) -> Void = { _ in },
                                 stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
+        // **EVERY READ BEFORE FACE ID AT ONCE (prd §1601, user: "it should be
+        // seamless and lightning fast").** Each is a round trip of a second
+        // or more over Tor, and they were asked one after another: the
+        // account's contract, its threshold, its nonce, the ETH and the fee
+        // deposit, every token sent. None needs another's answer.
+        var out: [String: String] = [:]
+        for p in payments { out[p.token.contract ?? "", default: "0"] = YourAccountOp.sum(out[p.token.contract ?? "", default: "0"], p.amount) }
+        let tokens = dryRun ? [] : payments.map(\.token).filter { $0.contract != nil }.reduce(into: [YourAccountOp.Token]()) { kept, token in
+            if !kept.contains(where: { $0.contract!.lowercased() == token.contract!.lowercased() }) { kept.append(token) }
+        }
+        let given = coSigner
+        func entryNow() async throws -> YourAccountOp.Entry { deployed ? try await accountEntry(net, account) : .module4337 }
+        func needsSigner() async throws -> Bool { given == nil && deployed ? try await threshold(net, account) >= 2 : false }
+        func nonceNow() async throws -> UInt64? { deployed ? try await nonce(net, account) : nil }
+        func depositNow() async -> String { deployed ? await feeDeposit(net, of: account) : "0" }
+        func tokensNow() async -> [String: String?] {
+            await withTaskGroup(of: (String, String?).self) { group in
+                for token in tokens { group.addTask { (token.contract!, await balance(net, token, of: account)) } }
+                var held: [String: String?] = [:]
+                for await (contract, units) in group { held[contract] = units }
+                return held
+            }
+        }
+        async let entryRead = entryNow()
+        async let bothRead = needsSigner()
+        async let nonceRead = nonceNow()
+        async let ethRead = balance(net, YourAccountOp.eth, of: account)
+        async let depositRead = depositNow()
+        async let tokenRead = tokensNow()
         // Which contract this account answers through on this network
         // (prd §1447 item 11): the 4337 module, or the 7579 adapter.
-        let entry: YourAccountOp.Entry = deployed ? try await accountEntry(net, account) : .module4337
+        let entry = try await entryRead
         // **BOTH KEYS MEAN BOTH KEYS, FOR EVERYTHING (prd §1456).** With the
         // spend limit on, every operation the owners sign — a recovery key
         // set up, a Signer added, an approval revoked, recovery itself — needs
         // the Signer as well; one that came without it is given it here.
         var coSigner = coSigner
-        if coSigner == nil, deployed, entry == .adapter, try await threshold(net, account) >= 2 {
+        if coSigner == nil, deployed, entry == .adapter, try await bothRead {
             guard let asked = await defaultCoSigner(net, account) else {
                 throw Failure(message: String(localized: "Your Signer signs this too, and none is on \(net.name)"))
             }
             coSigner = asked
         }
         var op = try await build(net, account: account, deployed: deployed, entry: entry, calls: calls, rotateTo: next,
-                                 signerOwner: signer.owner, coSignerOwner: coSigner?.owner, pinned: pinned, report: report)
+                                 signerOwner: signer.owner, coSignerOwner: coSigner?.owner, pinned: pinned,
+                                 knownNonce: try await nonceRead, report: report)
         guard let maxCost = op.maxCost else {
             throw Failure(message: String(localized: "\(net.name) could not price this send"))
         }
 
+        // What the person approves is computed HERE, and the module must
+        // agree: a node's word alone never chooses the bytes this phone signs.
+        // Asked now, beside the balances still on their way.
+        let hash = YourAccountOp.safeOpHash(op, chainId: net.chainId)
+        let opNow = op
+        func theirsNow() async throws -> [UInt8]? {
+            switch entry {
+            case .module4337:
+                return SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337, data: YourAccountOp.operationHashCall(opNow)))
+            case .adapter:
+                return SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(opNow)))
+                    .flatMap(YourAccountOp.firstBytes)
+            }
+        }
+        async let theirsRead = theirsNow()
+
         // Enough of each token for everything it sends, and ETH for the most
         // the fee can be too.
         let fee = String(maxCost)
-        var out: [String: String] = [:]
-        for p in payments { out[p.token.contract ?? "", default: "0"] = YourAccountOp.sum(out[p.token.contract ?? "", default: "0"], p.amount) }
-        guard let onHand = await balance(net, YourAccountOp.eth, of: account) else {
+        guard let onHand = await ethRead else {
             throw Failure(message: String(localized: "\(net.name) did not answer"))
         }
-        let held = YourAccountOp.sum(onHand, deployed ? await feeDeposit(net, of: account) : "0")
+        let held = YourAccountOp.sum(onHand, await depositRead)
         report("held=\(held) fee<=\(fee)")
         let ethNeed = YourAccountOp.sum(out[""] ?? "0", fee)
         if !YourAccountOp.atMost(ethNeed, held) {
@@ -2035,56 +2140,62 @@ enum YourAccountChain {
         }
         // Every token the transaction moves, whatever list it came from
         // (prd §1438: the sentence sends and swaps any token you hold).
-        var checked = Set<String>()
-        for token in payments.map(\.token) where token.contract != nil && !dryRun {
-            guard checked.insert(token.contract!.lowercased()).inserted, let total = out[token.contract!] else { continue }
-            guard let tokenHeld = await balance(net, token, of: account), YourAccountOp.atMost(total, tokenHeld) else {
+        let tokensHeld = await tokenRead
+        for token in tokens {
+            guard let total = out[token.contract!] else { continue }
+            guard let tokenHeld = tokensHeld[token.contract!] ?? nil, YourAccountOp.atMost(total, tokenHeld) else {
                 throw Failure(message: String(localized: "Not enough \(token.symbol) on \(net.name)"))
             }
         }
 
-        // What the person approves is computed HERE, and the module must
-        // agree: a node's word alone never chooses the bytes this phone signs.
-        let hash = YourAccountOp.safeOpHash(op, chainId: net.chainId)
-        let theirs: [UInt8]?
-        switch entry {
-        case .module4337:
-            theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337, data: YourAccountOp.operationHashCall(op)))
-        case .adapter:
-            theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(op)))
-                .flatMap(YourAccountOp.firstBytes).map(Keccak256.hash)
-        }
+        // The adapter's `getSafeOp` zeroes the signature, so its
+        // `operationData` is the one the Signer's check needs too.
+        let answer = try await theirsRead
+        let operationData = entry == .adapter ? answer : nil
+        let theirs = entry == .adapter ? answer.map(Keccak256.hash) : answer
         guard theirs == hash, let digest = SafeWebAuthn.signingDigest(challenge: hash) else {
             throw Failure(message: String(localized: "Safe's module disagrees with this iPhone about what is signed, so nothing was"))
         }
+        // The caller's own gate (a kept preview's recheck), already asked.
+        try await beforeSigning()
 
         await stage(.signing)
         let feeText = YourAccountOp.spoken(fee, decimals: 18)
         let (r, s) = try await signer.sign(digest, reason + " · " + String(localized: "fee up to \(feeText) ETH"))
-        // The exact bytes, checked by Safe's passkey factory before they go.
+        // The exact bytes, checked by Safe's passkey factory before they go:
+        // asked while the Signer is (prd §1601), and answered before anything is sent.
         guard let assertion = SafeWebAuthn.signatureBytes(r: r, s: s),
               let check = SafeWebAuthn.isValidSignatureForSignerCalldata(message: hash, signature: assertion, x: signer.x, y: signer.y),
               let checkBytes = SafeABI.hexBytes(check),
-              SafeWebAuthn.isMagic(try await ethCall(net, to: SafeWebAuthn.factory, data: checkBytes)),
               let signature = YourAccountOp.signature(r: r, s: s, owner: signer.owner) else {
             throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
         }
+        let factoryCheck = Task { (try? await ethCall(net, to: SafeWebAuthn.factory, data: checkBytes)).map(SafeWebAuthn.isMagic) }
+        func passkeyChecks() async throws {
+            switch await factoryCheck.value {
+            case true?: break
+            case false?: throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
+            case nil: throw Failure(message: String(localized: "\(net.name) did not answer, so nothing was sent"))
+            }
+            report("signed: the passkey factory verifies it")
+        }
         op.signature = signature
-        report("signed: the passkey factory verifies it")
         if let coSigner {
             // The second key, over the same hash; then the Safe itself is
             // asked whether the two together are its signatures.
             guard let typedData = YourAccountOp.safeOpTypedData(op, chainId: net.chainId) else {
+                factoryCheck.cancel()
                 throw Failure(message: String(localized: "This send could not be written"))
             }
-            let ecdsa = try await coSigner.sign(hash, typedData)
+            await stage(.cosigning)
+            let ecdsa: [UInt8]
+            do { ecdsa = try await coSigner.sign(hash, typedData) } catch { factoryCheck.cancel(); throw error }
+            try await passkeyChecks()
             guard let both = YourAccountOp.bothSignatures(r: r, s: s, owner: signer.owner, signer: coSigner.owner, ecdsa: ecdsa) else {
                 throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
             }
             // Both keys live on the adapter (prd §1447 item 16).
-            guard entry == .adapter,
-                  let operationData = SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(op)))
-                    .flatMap(YourAccountOp.firstBytes) else {
+            guard entry == .adapter, let operationData else {
                 throw Failure(message: String(localized: "A spend limit is not available yet"))
             }
             let check = YourAccount.sel("checkSignatures(bytes32,bytes,bytes)") + hash + YourAccount.w(96)
@@ -2097,6 +2208,8 @@ enum YourAccountChain {
             }
             op.signature = both
             report("cosigned: the account takes both signatures")
+        } else {
+            try await passkeyChecks()
         }
         if dryRun { return .dryRun }
         return try await submit(op, net, account: account, stage: stage)
@@ -2109,6 +2222,7 @@ enum YourAccountChain {
     static func build(_ net: Network, account: String, deployed: Bool, entry: YourAccountOp.Entry,
                       calls: [YourAccountOp.Call], rotateTo next: (x: [UInt8], y: [UInt8])?,
                       signerOwner: String, coSignerOwner: String?, pinned: YourAccountOp.Op? = nil,
+                      knownNonce: UInt64? = nil,
                       report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> YourAccountOp.Op {
         // A token approved to Multicall3 would ride every spend limit's ETH
         // route (prd §1447 item 15): never, from any operation.
@@ -2121,7 +2235,7 @@ enum YourAccountChain {
         var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
         op.entry = entry
         if deployed {
-            op.nonce = try await nonce(net, account)
+            if let knownNonce { op.nonce = knownNonce } else { op.nonce = try await nonce(net, account) }
         } else {
             guard let origin = YourAccountKey.origin else {
                 throw Failure(message: String(localized: "This send could not be written"))
@@ -2233,12 +2347,21 @@ enum YourAccountChain {
             // validation): it can land nowhere, so the refusal is final now.
             // Anything else — a nonce already used, an outage — is followed.
             if failure.message.range(of: #"AA(2[0-4]|3\d)"#, options: .regularExpression) != nil { throw failure }
-            refusal = failure.message
+            // No bundler answering in time is not a refusal (prd §1601): one
+            // may have taken it late, so it is followed the full two minutes.
+            if failure.message != "No bundler answered on \(net.name)" { refusal = failure.message }
         }
         await stage(.landing)
         func landed() async -> Bool { ((try? await nonce(net, account, key: op.nonceKey)) ?? op.nonce) > op.nonce }
-        for tick in 1...60 {
-            try await Task.sleep(nanoseconds: 2_000_000_000)
+        // **ASKED EVERY SECOND, BY THE CLOCK (prd §1601).** Base makes a block
+        // every two seconds; the receipt was first asked two seconds after the
+        // send and then every two seconds plus the round trip. Two minutes in
+        // all, as before, and a refusal stands after thirty seconds.
+        let start = Date()
+        var tick = 0
+        while Date().timeIntervalSince(start) < 120 {
+            try await Task.sleep(for: .seconds(1))
+            tick += 1
             if let receipt = try? await bundler(net, "eth_getUserOperationReceipt", [id]) as? [String: Any] {
                 let tx = (receipt["receipt"] as? [String: Any])?["transactionHash"] as? String
                 guard (receipt["success"] as? Bool) == true else {
@@ -2251,7 +2374,7 @@ enum YourAccountChain {
             // one refusing the same operation.
             if let refusal, tick.isMultiple(of: 3) {
                 if await landed() { return .landed(transaction: nil, rotated: false) }
-                if tick >= 15 { throw Failure(message: refusal) }
+                if Date().timeIntervalSince(start) >= 30 { throw Failure(message: refusal) }
             }
         }
         if await landed() { return .landed(transaction: nil, rotated: false) }

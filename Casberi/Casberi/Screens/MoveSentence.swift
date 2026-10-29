@@ -3643,6 +3643,7 @@ struct MoveSentence: View {
         switch stage {
         case .preparing: return String(localized: "Preparing…")
         case .signing: return String(localized: "Confirm with Face ID")
+        case .cosigning: return String(localized: "Waiting for your Signer…")
         case .sending: return String(localized: "Sending…")
         case .landing: return delivering ? String(localized: "Waiting for Bitrefill…") : String(localized: "Waiting for \(network.name)…")
         case nil: break
@@ -4003,7 +4004,7 @@ struct MoveSentence: View {
     /// **FACE ID PASSING IS FELT (prd §1586).** One light tap as the foot's
     /// words turn from "Confirm with Face ID" to "Sending…".
     private func advance(to s: Chain.Stage) {
-        if stage == .signing, s == .sending { DSHaptic.tap() }
+        if stage == .signing, s == .sending || s == .cosigning { DSHaptic.tap() }
         stage = s
     }
 
@@ -4017,6 +4018,10 @@ struct MoveSentence: View {
                       ride: [(to: String, data: String, value: String)] = [],
                       reason: String, said: @escaping @Sendable (String) async -> Void,
                       stage: @escaping @Sendable (Chain.Stage) async -> Void) async throws -> Chain.Transacted {
+        // The Signer is read beside the limit (prd §1601), not after it, and
+        // only where a limit can be on: this phone set its plan.
+        func signersIfLimited() async throws -> [String] { Chain.plan(net) == nil ? [] : try await Chain.signers(net, account) }
+        async let signers = signersIfLimited()
         guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
             return try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
         }
@@ -4039,7 +4044,7 @@ struct MoveSentence: View {
                 await said(String(localized: "Over your limit: your Signer signs too"))
             }
         }
-        guard let signer = try await Chain.signers(net, account).first else {
+        guard let signer = try await signers.first else {
             throw Chain.Failure(message: needsCoSigner)
         }
         return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),

@@ -584,8 +584,10 @@ wire "Casberi/Casberi/Screens/MoveSentence.swift" 'buyOn = row.net == network ? 
 wire "$CHAIN" 'var mustCheck: Bool { steps.contains { $0.swap != nil } || crossing != nil }' \
   "a crossing signs with no simulation that answered"
 wire "$CHAIN" 'guard items.count == 1, let dest = s.to else {' "a crossing is batched with other moves"
-wire "$CHAIN" 'if let crossing = a.crossing, !dryRun { YourAccountAcross.note(crossing) }' \
+wire "$CHAIN" 'if let crossing = crossingNow, !dryRun { YourAccountAcross.note(crossing) }' \
   "the crossing is not kept before Face ID (or a dry run keeps one)"
+# prd §1601: kept only once the recheck has passed, inside operate's gate.
+wire "$CHAIN" 'keepBeforeFaceID()' "the crossing is kept before its recheck passed, or never"
 wire "$INGEST" 'guard let hit = YourAccountAcross.take(ref: leg.ref, hash: leg.hash, received: leg.received,' \
   "the Wallet lands a crossing's legs as rows of their own"
 wire "$INGEST" 'var added = await WalletAcross.sync(context: context)' "the crossing's row is never written"

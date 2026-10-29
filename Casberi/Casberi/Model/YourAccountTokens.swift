@@ -221,30 +221,27 @@ enum YourAccountTokens {
         }
         for token in remembered(on: net) where !has(token) { candidates.append(token) }
         let listed = await list(net)
+        var unread: [String] = []
         for r in reading.prefix(30) {
             guard let contract = r.contract, ENS.isHexAddress(contract),
-                  !candidates.contains(where: { $0.contract?.lowercased() == contract.lowercased() }) else { continue }
+                  !candidates.contains(where: { $0.contract?.lowercased() == contract.lowercased() }),
+                  !unread.contains(where: { $0.lowercased() == contract.lowercased() }) else { continue }
             if let known = listed.first(where: { $0.token.contract?.lowercased() == contract.lowercased() }) {
                 candidates.append(known.token)
-            } else if let token = await readToken(contract, on: net) {
-                candidates.append(token)
+            } else {
+                unread.append(contract)
             }
         }
-        let tokens = candidates
-        var found: [Held] = []
-        var answered = false
-        await withTaskGroup(of: (answered: Bool, held: Held?).self) { group in
-            for token in tokens {
-                group.addTask {
-                    guard let units = await YourAccountChain.balance(net, token, of: account) else { return (false, nil) }
-                    return (true, units == "0" ? nil : Held(token: token, units: units, price: nil))
-                }
-            }
-            for await r in group {
-                answered = answered || r.answered
-                if let h = r.held { found.append(h) }
-            }
+        // The list's strangers read off the chain at once (prd §1601), not
+        // one after another.
+        let strangers = await withTaskGroup(of: (Int, Op.Token?).self) { group in
+            for (i, contract) in unread.enumerated() { group.addTask { (i, await readToken(contract, on: net)) } }
+            var out: [Int: Op.Token] = [:]
+            for await (i, token) in group { if let token { out[i] = token } }
+            return out
         }
+        candidates += unread.indices.compactMap { strangers[$0] }
+        var (found, answered) = await balances(account, candidates, on: net)
         #if DEBUG
         let samples = await sampleHoldings(on: net)
         found = found.filter { h in !samples.contains { $0.token == h.token } } + samples
@@ -267,6 +264,46 @@ enum YourAccountTokens {
         return priced
             .sorted { ($0.usd ?? -1, $0.token.symbol) > ($1.usd ?? -1, $1.token.symbol) }
             .filter { seen.insert($0.id).inserted }
+    }
+
+    /// **EVERY BALANCE IN ONE CALL (prd §1601, user: "it takes way too long
+    /// … to read networks").** One `eth_call` per token was a request over
+    /// Tor each, all on one circuit, which a node answers with 429s in a
+    /// burst (prd §1597); Multicall3 asks for all of them at once, ETH through
+    /// its `getEthBalance`. A network the pools are not read on, or a call
+    /// that fails, is read token by token as before. `answered` is false
+    /// only when no node answered at all.
+    private static func balances(_ account: String, _ tokens: [Op.Token], on net: Op.Network) async -> (held: [Held], answered: Bool) {
+        if YourAccountSwap.book(net.chainId) != nil, !tokens.isEmpty {
+            let owner = YourAccount.w(account)
+            let calls = tokens.map { token -> (to: String, data: [UInt8]) in
+                token.contract.map { ($0, YourAccount.sel("balanceOf(address)") + owner) }
+                    ?? (YourAccountSwap.multicall3, YourAccount.sel("getEthBalance(address)") + owner)
+            }
+            if let answers = try? await YourAccountChain.aggregate(net, calls) {
+                let held = zip(tokens, answers).compactMap { token, answer -> Held? in
+                    guard answer.ok, answer.data.count >= 32,
+                          let units = Op.decimal(hexQuantity: SafeABI.hex(Array(answer.data.prefix(32)))), units != "0" else { return nil }
+                    return Held(token: token, units: units, price: nil)
+                }
+                return (held, true)
+            }
+        }
+        var found: [Held] = []
+        var answered = false
+        await withTaskGroup(of: (answered: Bool, held: Held?).self) { group in
+            for token in tokens {
+                group.addTask {
+                    guard let units = await YourAccountChain.balance(net, token, of: account) else { return (false, nil) }
+                    return (true, units == "0" ? nil : Held(token: token, units: units, price: nil))
+                }
+            }
+            for await r in group {
+                answered = answered || r.answered
+                if let h = r.held { found.append(h) }
+            }
+        }
+        return (found, answered)
     }
 
     #if DEBUG

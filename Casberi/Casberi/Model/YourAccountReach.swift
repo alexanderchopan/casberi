@@ -27,11 +27,19 @@ enum YourAccountReach {
         // The demo's account is on every network, read off no node (§1475).
         if YourAccountDemo.isDemo(account) { return live }
         if YourAccountKey.holdsOrigin { return live }
-        var out: [Op.Network] = []
-        for net in live where (try? await YourAccountChain.isDeployed(net, account)) == true {
-            out.append(net)
+        return await everyNetwork { (try? await YourAccountChain.isDeployed($0, account)) == true }
+    }
+
+    /// The networks `holds` is true of, asked at once (prd §1601), in order.
+    private static func everyNetwork(_ holds: @escaping @Sendable (Op.Network) async -> Bool) async -> [Op.Network] {
+        let nets = live
+        let yes = await withTaskGroup(of: (Int, Bool).self) { group in
+            for (i, net) in nets.enumerated() { group.addTask { (i, await holds(net)) } }
+            var out: Set<Int> = []
+            for await (i, ok) in group where ok { out.insert(i) }
+            return out
         }
-        return out
+        return nets.indices.filter(yes.contains).map { nets[$0] }
     }
 
     /// The networks the recovery key can bring the account to this phone on.
@@ -39,11 +47,7 @@ enum YourAccountReach {
     static func recoverable(_ account: String) async -> [Op.Network] {
         guard let key = YourAccountRecovery.publicKey(for: account),
               let signer = try? await YourAccountChain.recoverySigner(x: key.x, y: key.y) else { return [] }
-        var out: [Op.Network] = []
-        for net in live where (try? await YourAccountChain.recoveryState(net, account, signer: signer)) == .added {
-            out.append(net)
-        }
-        return out
+        return await everyNetwork { (try? await YourAccountChain.recoveryState($0, account, signer: signer)) == .added }
     }
 
     /// Whether this is every network the account is on.

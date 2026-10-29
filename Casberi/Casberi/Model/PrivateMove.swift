@@ -448,7 +448,7 @@ final class PrivateMove {
                     await MainActor.run {
                         switch s {
                         case .preparing: self?.stage = .preparing
-                        case .signing: self?.stage = .opening
+                        case .signing, .cosigning: self?.stage = .opening
                         case .sending, .landing: self?.stage = .sending
                         }
                     }

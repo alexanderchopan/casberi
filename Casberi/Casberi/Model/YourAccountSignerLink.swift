@@ -15,8 +15,11 @@ import WalletConnectSign
 ///   method, `eth_signTypedData_v4`, no events;
 /// - the settled session must name the Signer's address on that chain, or
 ///   nothing is asked;
-/// - one request, the answer read, the session torn down — answered,
-///   refused or timed out — before the signature reaches the caller.
+/// - **the session is KEPT for the next send (prd §1601, user: "it took me
+///   ten minutes to send b/c i had to go back and forth")**: one chain, one
+///   method, the Signer's own address, so a later send asks it again with no
+///   scan and the wallet still asks the person each time. A session that is
+///   gone or never answers is torn down and the next send pairs afresh.
 ///
 /// The caller still checks the signature with the Safe before anything goes
 /// (`YourAccountChain.operate`), so a wallet that signs something else is
@@ -33,18 +36,66 @@ enum YourAccountSignerLink {
         /// The wallet's answer to the proof is not a signature by the
         /// Signer's key (prd §1516): another key's, or a contract's.
         case notProven
+        /// The wallet turned the connection down (prd §1601).
+        case declined
+        /// A kept session the wallet no longer has (prd §1601).
+        case gone
     }
+
+    /// How long the Signer is waited for, connecting and then signing (prd
+    /// §1601; was five minutes each, the screen frozen for all of it).
+    static let wait: Duration = .seconds(120)
 
     static let method = "eth_signTypedData_v4"
 
     /// Ask the Signer for `typedData`'s signature on `chainId`. `show` gets
     /// the pairing link at once (a QR for a wallet on another device, a link
     /// for one on this phone); the answer is `r ‖ s ‖ v`, `v` 27 or 28.
-    static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = .seconds(300),
+    /// A session kept from an earlier send is asked first, with no scan:
+    /// `kept` gets the wallet's own door, if it named one (prd §1601).
+    static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = wait,
+                     kept: @MainActor (URL?) -> Void = { _ in },
                      show: @MainActor (URL) -> Void) async throws -> [UInt8] {
+        if let (pairing, door) = keptSession(signer: signer, chainId: chainId) {
+            trace("asking the kept session")
+            await kept(door)
+            do {
+                return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+            } catch Failure.gone {
+                trace("the kept session is gone: pairing afresh")
+            } catch Failure.timedOut {
+                // Never answered: stale, so the next send pairs afresh. A
+                // Cancel is the person's, never the session's fault.
+                if !Task.isCancelled { close(pairing) }
+                throw Failure.timedOut
+            }
+        }
         let pairing = try await connect(signer: signer, chainIds: [chainId], timeout: timeout, show: show)
-        defer { close(pairing) }
-        return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+        do {
+            return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+        } catch let failure as Failure where failure == .timedOut || failure == .gone {
+            // Never kept unanswered: the next send would wait on it again.
+            if !Task.isCancelled { close(pairing) }
+            throw failure
+        }
+    }
+
+    /// A live session with `signer` on `chainId` that asks for this
+    /// signature and nothing else, and the wallet's own door (prd §1601).
+    /// A watch-only session asks for nothing, and Receive's asks for a send,
+    /// so neither is ever taken for this.
+    static func keptSession(signer: String, chainId: Int) -> (Pairing, URL?)? {
+        guard WalletConnectBridge.isAvailable else { return nil }
+        WalletConnectBridge.configureIfNeeded()
+        for session in Sign.instance.getSessions() where session.expiryDate > Date().addingTimeInterval(120) {
+            guard let ns = session.namespaces[WalletConnectBridge.evmNamespace], ns.methods == [method] else { continue }
+            let agreed = Set(ns.accounts.filter { $0.address.caseInsensitiveCompare(signer) == .orderedSame }
+                                        .compactMap { Int($0.blockchain.reference) })
+            guard agreed.contains(chainId) else { continue }
+            let door = session.peer.redirect?.native.flatMap(URL.init(string:))
+            return (Pairing(topic: session.topic, signer: signer, chainIds: agreed), door)
+        }
+        return nil
     }
 
     /// A settled session with the Signer's wallet: its topic and the
@@ -89,9 +140,14 @@ enum YourAccountSignerLink {
         guard let uri else { throw Failure.unavailable }
         trace("proposed")
         guard let url = URL(string: uri.absoluteString) else { throw Failure.malformedURI }
-        async let settled = WalletConnectBridge.firstSettledSession(timeout: timeout)
+        async let settled = settlement(of: uri.topic, timeout: timeout)
         await show(url)
-        guard let session = await settled else { throw Failure.timedOut }
+        let session: Session
+        switch await settled {
+        case .settled(let s): session = s
+        case .declined: throw Failure.declined
+        case .none: throw Failure.timedOut
+        }
         trace("settled")
         let accounts = session.namespaces[WalletConnectBridge.evmNamespace]?.accounts ?? []
         guard let signer = signer ?? accounts.first.map({ EIP55.checksum($0.address) }) else {
@@ -108,14 +164,25 @@ enum YourAccountSignerLink {
     }
 
     /// One signature over a settled pairing, on one of its networks.
-    static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = .seconds(300)) async throws -> [UInt8] {
+    static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = wait) async throws -> [UInt8] {
         guard pairing.chainIds.contains(chainId), let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
         let request = try Request(topic: pairing.topic, method: method,
                                   params: AnyCodable([pairing.signer, typedData]), chainId: chain)
-        async let answer = response(to: request.id, timeout: timeout)
-        try await Sign.instance.request(params: request)
+        async let answer = answer(to: request.id, topic: pairing.topic, timeout: timeout)
+        do {
+            try await Sign.instance.request(params: request)
+        } catch {
+            // A session the SDK no longer holds: asked of a fresh pairing.
+            trace("the request was not sent: \(error)")
+            throw Failure.gone
+        }
         trace("asked on \(chainId)")
-        guard let result = await answer else { throw Failure.timedOut }
+        let result: RPCResult
+        switch await answer {
+        case .answered(let r): result = r
+        case .gone: throw Failure.gone
+        case .none: throw Failure.timedOut
+        }
         switch result {
         case .error(let error):
             throw Failure.refused(error.message)
@@ -129,7 +196,7 @@ enum YourAccountSignerLink {
     /// signature over the account, the key and a fresh challenge, which must
     /// recover to `pairing.signer`; asked on Base when the wallet agreed to
     /// it. Throws `.notProven` for any other answer.
-    static func prove(_ pairing: Pairing, account: String, timeout: Duration = .seconds(300)) async throws {
+    static func prove(_ pairing: Pairing, account: String, timeout: Duration = wait) async throws {
         var challenge = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, 32, &challenge) == errSecSuccess,
               let chainId = YourAccountSignerProof.chain(of: pairing.chainIds, preferring: YourAccountOp.base.chainId),
@@ -193,18 +260,65 @@ enum YourAccountSignerLink {
     }
 
     static func response(to id: RPCID, timeout: Duration) async -> RPCResult? {
-        await withTaskGroup(of: RPCResult?.self) { group in
+        if case .answered(let r) = await answer(to: id, topic: nil, timeout: timeout) { return r }
+        return nil
+    }
+
+    enum Answer { case answered(RPCResult), gone, none }
+
+    /// The wallet's answer to `id`; `.gone` the moment the wallet deletes
+    /// the session `topic` (prd §1601), `.none` once `timeout` passes or the
+    /// task is cancelled.
+    static func answer(to id: RPCID, topic: String?, timeout: Duration) async -> Answer {
+        await withTaskGroup(of: Answer.self) { group in
             group.addTask {
                 for await response in Sign.instance.sessionResponsePublisher.values where response.id == id {
-                    return response.result
+                    return .answered(response.result)
                 }
-                return nil
+                return .none
+            }
+            if let topic {
+                group.addTask {
+                    for await (deleted, _) in Sign.instance.sessionDeletePublisher.values where deleted == topic {
+                        return .gone
+                    }
+                    return .none
+                }
             }
             group.addTask {
                 try? await Task.sleep(for: timeout)
-                return nil
+                return .none
             }
-            let first = await group.next() ?? nil
+            let first = await group.next() ?? .none
+            group.cancelAll()
+            return first
+        }
+    }
+
+    enum Settlement { case settled(Session), declined, none }
+
+    /// The session the wallet settles, or `.declined` the moment it turns
+    /// the proposal on `pairingTopic` down (prd §1601: a refusal used to be
+    /// waited out for the whole five minutes).
+    static func settlement(of pairingTopic: String, timeout: Duration) async -> Settlement {
+        await withTaskGroup(of: Settlement.self) { group in
+            group.addTask {
+                for await settled in Sign.instance.sessionSettlePublisher.values {
+                    return .settled(settled.session)
+                }
+                return .none
+            }
+            group.addTask {
+                for await (proposal, _) in Sign.instance.sessionRejectionPublisher.values where proposal.pairingTopic == pairingTopic {
+                    return .declined
+                }
+                return .none
+            }
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+                return .none
+            }
+            let first = await group.next() ?? .none
             group.cancelAll()
             return first
         }

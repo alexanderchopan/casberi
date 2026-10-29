@@ -100,6 +100,9 @@ extension YourAccountChain {
         }
         let from = sell.contract?.lowercased() ?? book.weth
         let to = buy.contract?.lowercased() ?? book.weth
+        let key = [String(net.chainId), sell.contract?.lowercased() ?? "eth", buy.contract?.lowercased() ?? "eth", amount, account.lowercased()]
+            .joined(separator: "|")
+        if let kept = await quotes.fresh(key) { return kept }
         guard let best = try await bestRoute(net, sell: from, buy: to, amount: amount) else {
             throw Failure(message: String(localized: "No pool on \(net.name) swaps \(sell.symbol) for \(buy.symbol)"))
         }
@@ -109,10 +112,34 @@ extension YourAccountChain {
                                                 amount: amount, minimum: least, account: account, deadline: deadline) else {
             throw Failure(message: String(localized: "This swap could not be written"))
         }
-        return YourAccountSwap.Quote(sellAmount: amount, buyAmount: best.out, minimumBuy: least, route: best.route, calls: calls)
+        let quote = YourAccountSwap.Quote(sellAmount: amount, buyAmount: best.out, minimumBuy: least, route: best.route, calls: calls)
+        await quotes.keep(quote, key)
+        return quote
+    }
+
+    /// **ONE QUOTE, ASKED ONCE (prd §1601).** The sentence's quote, its
+    /// preview's and signing's assembly asked the pools for the same swap one
+    /// after another, two to four round trips over Tor each; a quote younger
+    /// than `quoteLife` is taken again. Never older: the preview, asked again
+    /// every 40 seconds, asks the pools afresh, and every quote signed is
+    /// still simulated against the chain first.
+    static let quoteLife: TimeInterval = 20
+    private static let quotes = Quotes()
+
+    private actor Quotes {
+        private var kept: [String: (quote: YourAccountSwap.Quote, at: Date)] = [:]
+        func fresh(_ key: String) -> YourAccountSwap.Quote? {
+            kept = kept.filter { -$0.value.at.timeIntervalSinceNow < YourAccountChain.quoteLife }
+            return kept[key]?.quote
+        }
+        func keep(_ quote: YourAccountSwap.Quote, _ key: String) { kept[key] = (quote, Date()) }
     }
 
     @MainActor private static var ethPrices: [Int: (price: Double, at: Date)] = [:]
+    /// A token's pool price, kept a minute as ETH's is (prd §1601): Move
+    /// reads the holdings again on every return, and each price was two to
+    /// four rounds over Tor.
+    @MainActor private static var tokenPrices: [String: (price: Double, at: Date)] = [:]
 
     /// **A DOLLAR PRICE OFF THE POOLS (prd §1542; was Relay's price API).**
     /// ETH: what 0.01 ETH buys of the network's dollar, times a hundred, kept
@@ -135,10 +162,14 @@ extension YourAccountChain {
             ethPrices[net.chainId] = (ethPrice, .now)
         }
         guard let contract = token.contract?.lowercased() else { return ethPrice }
+        let key = "\(net.chainId)|\(contract)"
+        if let kept = tokenPrices[key], kept.at.timeIntervalSinceNow > -60 { return kept.price }
         let one = "1" + String(repeating: "0", count: max(token.decimals, 0))
         guard let r = try? await bestRoute(net, sell: contract, buy: book.weth, amount: one),
               let wei = Double(r.out) else { return nil }
         let price = wei / 1e18 * ethPrice
-        return price.isFinite && price > 0 ? price : nil
+        guard price.isFinite, price > 0 else { return nil }
+        tokenPrices[key] = (price, .now)
+        return price
     }
 }
