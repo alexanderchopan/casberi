@@ -2658,6 +2658,9 @@ harness "Peer attestation" "peer attestation" "scripts/peer-attest-selftest.sh" 
 # Deposit's on-chain half (prd §1604): the curator's signature read strictly,
 # signalIntent as it simulated from a Safe, three real fulfils rebuilt byte for byte.
 harness "Peer intent" "peer intent" "scripts/peer-intent-selftest.sh" "the Peer intent self-test failed — run scripts/peer-intent-selftest.sh"
+# Deposit's capture (prd §1607): Peer's Cash App template read, the one request
+# told apart, the session assembled as the enclave reads it.
+harness "Peer capture" "peer capture" "scripts/peer-capture-selftest.sh" "the Peer capture self-test failed — run scripts/peer-capture-selftest.sh"
 
 # Buy, Move's fourth verb (prd §1473): Bitrefill's accountless door — the fold
 # of its forty category slugs, the sign-in message the server took byte for

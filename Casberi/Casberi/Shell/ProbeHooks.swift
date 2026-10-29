@@ -1111,6 +1111,33 @@ enum ProbeHooks {
         // §1603): one fresh document from Peer's enclave, proven
         // (`PeerAttestation`), and a stand-in session sealed to its key — no
         // payment app, no cookies, nothing sent on. Logs `peerAttest|`.
+        // `-peerCapture cashapp` — Deposit's capture (prd §1607): Peer's template
+        // read fresh, the payment app's sign-in in our web view, its activity
+        // request caught as the page makes it, the session sealed to the
+        // proven enclave key. Nothing is verified, signed or sent. Logs
+        // `peerCapture|` with names and counts, never a value.
+        Hook(key: "peerCapture") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("peerCapture| %@", line) }
+                // `cashapp|<path>` reads a recorded template from a file: the
+                // simulator's Tor never connects, and the template host is
+                // read through Tor.
+                let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+                let platform = parts.first?.lowercased() == "yes" ? "cashapp" : (parts.first ?? "").lowercased()
+                guard platform == "cashapp" else { log("only cashapp so far"); return }
+                let fetched: Any? = if parts.count == 2 {
+                    (try? Data(contentsOf: URL(fileURLWithPath: parts[1]))).flatMap { try? JSONSerialization.jsonObject(with: $0) }
+                } else {
+                    await IngestSupport.getJSON("https://api.zkp2p.xyz/providers/cashapp/transfer_cashapp.json")
+                }
+                guard let json = fetched as? [String: Any], let template = PeerCapture.template(json: json) else {
+                    log("template unreadable"); return
+                }
+                log("template \(template.actionType) auth=\(template.authLink.host() ?? "-") ua=\(template.userAgent == nil ? "own" : "template's")")
+                try? await Task.sleep(for: .seconds(2))
+                PeerCaptureSheet.present(PeerCaptureModel(template: template, appName: "Cash App", log: log))
+            }
+        },
         Hook(key: "peerAttestProbe") { _, _ in
             Task { @MainActor in
                 do {

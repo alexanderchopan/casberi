@@ -514,6 +514,20 @@ enum NetworkReach {
                  purpose: "Asks Peer's enclave for its public key, with a random number of ours it must sign back, and checks Amazon's and Peer's signatures on the answer. Carries nothing about you.",
                  hosts: ["attestation-service.zkp2p.xyz"],
                  throughTor: true),
+        // Deposit's capture (prd §1607): Peer's public template for the
+        // payment app, read fresh each time (answered through Tor, 2026-10-28),
+        // and the payment app's own sign-in, opened in the app's web view —
+        // the page is Cash App's, loaded the way a browser would, so it does
+        // not go through Tor. DEBUG reaches both today (`-peerCapture`).
+        Endpoint(service: "Peer templates",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads Peer's public description of how a payment app's page lists your payments, before each Deposit. Carries nothing about you.",
+                 hosts: ["api.zkp2p.xyz"],
+                 throughTor: true),
+        Endpoint(service: "Cash App sign-in",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Opens Cash App's own sign-in page inside the app when you Deposit with Cash App. Casberi reads the list of recent payments that page loads, to find the one you made, and seals it so only Peer's enclave can read it; nothing of it is kept.",
+                 hosts: ["cash.app"]),
         // Gnosis Chain's two public nodes, kept when the Gnosis Pay seat that
         // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
         // Chain for its own transaction hash through them (`GnosisChainRPC`),

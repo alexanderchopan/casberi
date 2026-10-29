@@ -1,0 +1,48 @@
+{
+  "actionType": "transfer_cashapp",
+  "authLink": "https://cash.app/account/activity",
+  "body": "{\"activity_token\":{\"activity_token_type\":\"CUSTOMER_TOKEN\",\"token\":\"{{SENDER_ID}}\"},\"activity_scope\":\"MY_ACTIVITY_WEB_V2\",\"page_size\":15,\"request_context\":{}}",
+  "metadata": {
+    "fallbackMethod": "",
+    "fallbackUrlRegex": "",
+    "method": "POST",
+    "platform": "cashapp",
+    "preprocessRegex": "",
+    "transactionsExtraction": {
+      "transactionJsonPathListSelector": "$.activity_rows",
+      "transactionJsonPathSelectors": {
+        "recipient": "$.payment_history_inputs_row.recipient.cashtag",
+        "amount": "$.payment_history_inputs_row.payment.amount.amount",
+        "date": "$.payment_history_inputs_row.payment.display_date",
+        "paymentId": "$.payment_history_inputs_row.payment.history_data.transaction_id",
+        "currency": "$.payment_history_inputs_row.payment.amount.currency_code",
+        "state": "$.payment_history_inputs_row.payment.state"
+      }
+    },
+    "urlRegex": "https://cash.app/cash-app/activity/v1.0/page"
+  },
+  "method": "POST",
+  "mobile": {
+    "external": {
+      "actionLink": "https://cash.app/{{RECIPIENT_ID}}/{{AMOUNT}}",
+      "appStoreLink": "https://apps.apple.com/us/app/cash-app-mobile-banking/id711923939",
+      "playStoreLink": "https://play.google.com/store/apps/details?id=com.squareup.cash"
+    },
+    "includeAdditionalCookieDomains": [],
+    "useExternalAction": true,
+    "userAgent": {
+      "android": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+      "ios": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15"
+    }
+  },
+  "paramNames": [
+    "SENDER_ID"
+  ],
+  "paramSelectors": [
+    {
+      "type": "jsonPath",
+      "value": "$.activity_rows[{{INDEX}}].payment_history_inputs_row.payment.sender_id"
+    }
+  ],
+  "url": "https://cash.app/cash-app/activity/v1.0/page"
+}
