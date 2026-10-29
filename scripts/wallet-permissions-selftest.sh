@@ -398,11 +398,19 @@ print -r -- "$order" | sed -n '2p' | grep -q 'walletApprovalsSection' \
 strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 'func walletNeedsYouPage(' | grep -q 'walletSignaturesSection' \
   || fail "signatures waiting on you no longer lead Needs you (prd §947, §1480)"
 
-# A LIST, NOT A CONTROL (§112/§293): nothing here signs, revokes or opens.
-# A delegate is undone from the wallet app that set it, so a chevron here
-# would be §83's dead control.
-strip "$ROWS" | grep -qE 'openURL|Button|onTap|sheet' \
-  && fail "the acting-parties list grew a control — §112: it is an inventory with no verb"
+# NOTHING HERE SIGNS OR REVOKES (§112/§293), AND ONE ROW OPENS (prd §1594,
+# amending §514's "a list, not a control"): a delegate row hands its key to
+# `onOpen`, whose sheet says what it is and offers the wallet app that set it.
+# Nothing else in the list is a control — no page, no sheet, no tap of its own
+# — and a module row stays still, since only the Safe's owners remove one.
+strip "$ROWS" | grep -qE 'openURL|onTap|sheet' \
+  && fail "the acting-parties list grew a control — §112: it opens no page and no sheet of its own"
+[[ $(strip "$ROWS" | grep -c 'Button') -le 1 ]] \
+  || fail "the acting-parties list grew a second control — only a delegate row opens (prd §1594)"
+if strip "$ROWS" | grep -q 'Button'; then
+  strip "$ROWS" | grep -B1 'Button' | grep -q 'holder.power == .actsAsWallet, let onOpen' \
+    || fail "a row other than a delegate opens — a module stays still (prd §1594)"
+fi
 
 # The row's words are the RUNG's, so a row and the crown above it can never
 # describe the same holder differently. Since prd §944 the row says the power's

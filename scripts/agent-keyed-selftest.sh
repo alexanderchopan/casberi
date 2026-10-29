@@ -507,6 +507,12 @@ enum AgentProvider: String, CaseIterable {
     // AgentAnswer.swift and is unrelated to this fixture.
     var seesImages: Bool { self == .anthropic }
 }
+// The sign-in's key trade (prd §1584) posts through the app's one network
+// helper; nothing here reaches it, so it answers nothing.
+enum IngestSupport {
+    static func postJSON(_ url: String, auth: String? = nil, body: [String: Any],
+                         headers: [String: String] = [:], service: String? = nil) async -> Any? { nil }
+}
 SWIFT
 
 # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
