@@ -117,7 +117,11 @@ struct TokenQuickSheet: View {
     /// show the ticker the holding carried in; only a token with neither
     /// (no cell symbol, unresolved) falls back to the short address.
     private var headerTitle: String {
-        if let resolved { return "\(resolved.name) · $\(resolved.symbol)" }
+        // A native coin charts through its wrapped token (prd §1595): the
+        // ETH you tapped keeps its name, never "Wrapped Ether · $WETH".
+        if let resolved, route.symbol.map({ $0.caseInsensitiveCompare(resolved.symbol) == .orderedSame }) ?? true {
+            return "\(resolved.name) · $\(resolved.symbol)"
+        }
         if let symbol = route.symbol { return "$\(symbol)" }
         return shortAddress
     }

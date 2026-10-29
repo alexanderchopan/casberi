@@ -69491,3 +69491,10 @@ In `Model/WalletDelegation.swift`, `Screens/WalletDelegationSheet.swift`, `Scree
 `-delegationSheet YES|unknown|<0x…>` with `-openRoom Wallet -openSection permissions` raises the sheet (NSLogs `delegationSheet:`).
 
 **Mac half (§1402).** The same sheet from the same row; Revoke draws only where the app answers its scheme, which a Mac without MetaMask does not.
+
+## §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too (amends §939's press, retires the 2026-07-10 "@wallet" fallback for the treemap) (user, 2026-10-28: "i tapped on a token in my holdings treemap twice and it took me to wallet settings is that what is supposed to happen? i did it on another token in holdins treemap and it didn't"; then "first tap should open the token chart. second tap should not even be an action") — RULED, built
+1. **One tap opens.** A treemap tile with a chart route opens the token's page (`TokenQuickSheet`) on the first press; no lit state comes first (`HoldingsTreemap.tileView`). Only a tile with nothing to open, "Other" or a coin with no route, lights to read its value, and a second press puts it out. Nothing on the map opens the Wallet's account page.
+2. **Why a tile had no route.** A last reading (§825, §1593) keeps symbols and dollars only, so every tile drawn from one went routeless, and the second press fell back to `"@wallet"`, which since the tab bar pushes the account page. A native coin now takes its wrapped token's route by symbol (`WalletIngest.nativeRoute`: ETH, BTC via WBTC, POL/MATIC, HYPE, MON, SOL); any other token on a last reading still lights.
+3. **The coin keeps its name.** When the tile's ticker and the resolved token's differ (ETH charting through WETH), the sheet is titled with the tile's (`$ETH`), never "Wrapped Ether · $WETH".
+
+**Mac half (§1402).** The same map and sheet; a click is the tap.

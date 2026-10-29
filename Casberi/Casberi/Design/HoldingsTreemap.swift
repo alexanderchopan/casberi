@@ -19,9 +19,10 @@ import SwiftUI
 /// - **The tail folds.** Anything under `foldShare`, and anything the layout
 ///   would draw narrower than a tap, joins one "Other" tile that shows its
 ///   share only; that tile is never narrower than `minSide`.
-/// - **Grey, blue when pressed.** Every tile is the same neutral fill; a
-///   press lights one in the tint, quiets the rest, and the number above
-///   reads that token's value. A second press on a lit tile opens the token.
+/// - **A tap opens the token (prd §1595).** A tile with a chart route opens
+///   it on the first press. A tile with nothing to open ("Other", a coin
+///   with no route) lights in the tint, quiets the rest, and the number
+///   above reads its value; a second press puts it out.
 enum HoldingsTreemapLayout {
     struct Tile: Equatable {
         let id: String
@@ -286,10 +287,17 @@ struct HoldingsTreemap: View {
         let shareLine: CGFloat = 15
         let showsMark = !isOther && inner >= mark + worthLine
         let showsShare = inner >= (showsMark ? mark : 0) + worthLine + shareLine
+        // **ONE TAP OPENS THE TOKEN (prd §1595, user: "first tap should open
+        // the token chart. second tap should not even be an action").** Only
+        // a tile with nothing to open — "Other", a coin with no chart route —
+        // lights to read its value. A routeless tile used to open the Wallet's
+        // account page on its second press.
+        let door = isOther ? nil : holdings.first { $0.id == tile.id && $0.route != nil }
         Button {
             DSHaptic.selection()
-            if isLit, !isOther, let holding = holdings.first(where: { $0.id == tile.id }) {
-                onOpen?(holding)
+            if let door, let onOpen {
+                lit = nil
+                onOpen(door)
             } else {
                 lit = isLit ? nil : tile.id
                 litShare = tile.share

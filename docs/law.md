@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1732 of 1801 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1733 of 1802 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1297,7 +1297,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
 - §938 — A day whose only row is the cover draws no header
-- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (amended by §1090; part superseded by §957)
+- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (amended by §1090, §1595; part superseded by §957)
 - §940 — The Wallet's Accounts: the crown counts what it draws, the list is yours then the accounts tied to them, a row names… (part superseded by §941, §954)
 - §941 — The Wallet's Accounts crown is your accounts, face by face, and a face picks the account
 - §942 — The Wallet's Activity is the moves in time: one number over one noun, bars to the floor, the window as slim text, and…
@@ -1977,6 +1977,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
 - §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
 - §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
+- §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 
 ## Dead rulings → what replaced them (generated)
 

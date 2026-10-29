@@ -2644,7 +2644,10 @@ enum WalletIngest {
         let other = rest > 0 ? ["\(HoldingsTreemapLayout.otherID) \(treemapWeight(rest))"] : []
         return sorted.prefix(5)
             .map { sym, usd in
-                let route = routes[sym].map { " @t:\($0)" } ?? ""
+                // A last reading (prd §825) keeps no routes, so a native coin
+                // takes its wrapped token's by symbol (prd §1595): ETH charted
+                // on a fresh read and opened nothing on a stale one.
+                let route = (routes[sym] ?? nativeRoute[sym.uppercased()]).map { " @t:\($0)" } ?? ""
                 // A spoofed symbol (prd §160) is marked HERE, on the display
                 // cell, never on the `bySymbol` key it came from — the key is
                 // the token's identity and is persisted in value samples. The
@@ -3763,6 +3766,21 @@ enum WalletIngest {
     /// on the Wallet screen — and the backstop prices an unpriced native coin
     /// through it (`backstopPrices`, prd §828). `robinhood-mainnet` has no
     /// `chainSlug` entry (no Dexscreener coverage), so it stays routeless.
+    /// A native coin's chart route by SYMBOL (prd §1595), for cells drawn
+    /// from a last reading, which keeps symbols and dollars only. Each is the
+    /// wrapped token on its home chain, from `wrappedNativeContract` and
+    /// `CoinFollow.wrapped` (WBTC for BTC); a symbol the map never names stays
+    /// routeless.
+    private static let nativeRoute: [String: String] = [
+        "ETH": "ethereum:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "BTC": "ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "POL": "polygon:0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+        "MATIC": "polygon:0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+        "HYPE": "hyperevm:0x5555555555555555555555555555555555555555",
+        "MON": "monad:0x3bd359c1119da7da1d913d1c4d2b7c461115433a",
+        "SOL": "solana:So11111111111111111111111111111111111111112",
+    ]
+
     private static let wrappedNativeContract: [String: String] = [
         "eth-mainnet": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
         "base-mainnet": "0x4200000000000000000000000000000000000006",
