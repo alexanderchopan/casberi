@@ -45,6 +45,14 @@ struct WalletWhoseSwitch: View {
         }
     }
 
+    /// With nothing followed there is no switch, so a Yours or Following
+    /// pick would strand the Wallet narrowed with no way back (prd §1590).
+    /// An app's pick stays: its menu is its own way back.
+    @MainActor static func settleUnfollowed(_ chrome: ShellChrome) {
+        guard let scope = chrome.walletScope, !RoomAccounts.isSeat(scope) else { return }
+        chrome.walletScope = nil
+    }
+
     /// Where a launch opens the Wallet (prd §1526 item 2): yours unless you
     /// last chose Everything. Once per launch, and never over a pick
     /// something else already made.
@@ -58,6 +66,7 @@ struct WalletWhoseSwitch: View {
         let start = remembered == .following && followed.isEmpty ? .everything : remembered
         chrome.walletScope = WalletWhose.launchScope(current: chrome.walletScope,
                                                      yours: yours,
-                                                     remembered: start)
+                                                     remembered: start,
+                                                     hasFollowing: !followed.isEmpty)
     }
 }

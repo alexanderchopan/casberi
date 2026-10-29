@@ -631,6 +631,13 @@ guard WalletWhose.swift "case yours, following, everything" \
   "the switch lost a word (prd §1536)"
 guard WalletWhose.swift 'case .everything: return String(localized: "All")' \
   "the switch says Everything again; it is All (prd §1536)"
+# No followed wallet, no switch (prd §1590): All alone, unlabelled.
+guard WalletWhose.swift "guard hasFollowing else { return \[.everything\] }" \
+  "the switch offers Yours · All with nothing followed again (prd §1590)"
+guard WalletWhose.swift "guard hasFollowing else { return nil }" \
+  "a launch with nothing followed opens on Yours again, leaving out cash and exchanges (prd §1590)"
+guard FeedScreen+WalletRoom.swift "if none { WalletWhoseSwitch.settleUnfollowed(chrome) }" \
+  "unfollowing the last wallet strands the Wallet on Yours with no switch (prd §1590)"
 guard WalletWhoseSwitch.swift "repicks: true" \
   "a tap on the lit Following no longer leaves one followed wallet (prd §1536)"
 guard FeedScreen.swift "scope: walletOnFollowing ? nil : chrome.walletScope" \

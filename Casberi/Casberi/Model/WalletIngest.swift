@@ -2227,8 +2227,11 @@ enum WalletIngest {
         // that may not stand alone.
         // Private money (prd §1554): your own, approved, on a network whose
         // coins have value; one block, never folded into the token it is. It
-        // may stand alone only where no wallet went unread.
-        let privately = combined ? await PrivateMoneyStore.shared.walletHolding() : []
+        // may stand alone only where no wallet went unread. It is your Casberi
+        // account's, so Yours counts it as All does (prd §1590, user:
+        // "shouldn't my private balance number be part of my Yours?").
+        let yours = address.map(YourAccountDemo.isYours) ?? false
+        let privately = combined || yours ? await PrivateMoneyStore.shared.walletHolding() : []
         guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || (!privately.isEmpty && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
@@ -2248,7 +2251,8 @@ enum WalletIngest {
         // builds its doc by indexing INTO `groups`, so with none to index a
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
-        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
+        // Yours with private money is two places too (prd §1590).
+        if address == nil || !privately.isEmpty, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
             + (privy.isEmpty ? 0 : 1) + (privately.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.

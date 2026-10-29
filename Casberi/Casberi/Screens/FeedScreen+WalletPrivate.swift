@@ -22,7 +22,10 @@ extension FeedScreen {
     var walletPrivateRows: some View {
         let store = PrivateMoneyStore.shared
         let rows = store.rows
-        if selectedSeat == nil, PrivateMove.available || !rows.isEmpty {
+        // Yours and All only (prd §1590): private money is your Casberi
+        // account's, never a followed wallet's.
+        if selectedSeat == nil, !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true,
+           PrivateMove.available || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
                 walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.prices))

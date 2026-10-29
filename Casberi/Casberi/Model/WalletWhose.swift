@@ -38,9 +38,15 @@ enum WalletWhose: String, CaseIterable, Hashable, Sendable {
     }
 
     /// The words the switch offers: Yours when your Casberi account is in
-    /// the Wallet, Following when you follow a wallet, All always.
+    /// the Wallet, Following and All when you follow a wallet.
+    ///
+    /// **NO FOLLOWED WALLET, NO SWITCH (prd §1590, user: "Should the app even
+    /// show 'all' if you arne't following a wallet? i don't think so").** With
+    /// nothing followed, everything in the Wallet is yours: the Wallet stands
+    /// on All, unlabelled, so a bank or an exchange still counts.
     static func offered(hasYours: Bool, hasFollowing: Bool) -> [WalletWhose] {
-        allCases.filter { $0 == .everything || ($0 == .yours && hasYours) || ($0 == .following && hasFollowing) }
+        guard hasFollowing else { return [.everything] }
+        return allCases.filter { $0 != .yours || hasYours }
     }
 
     /// Which word is lit for the Wallet's pick: All for no pick, Yours for
@@ -56,8 +62,10 @@ enum WalletWhose: String, CaseIterable, Hashable, Sendable {
 
     /// The scope a launch opens the Wallet on: yours unless you last chose
     /// another word; untouched when something already picked a scope.
-    static func launchScope(current: String?, yours: String?, remembered: WalletWhose?) -> String? {
+    static func launchScope(current: String?, yours: String?, remembered: WalletWhose?,
+                            hasFollowing: Bool) -> String? {
         guard current == nil else { return current }
+        guard hasFollowing else { return nil }
         switch remembered {
         case .everything: return nil
         case .following: return followingScope

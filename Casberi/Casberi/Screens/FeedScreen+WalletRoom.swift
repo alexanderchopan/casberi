@@ -305,6 +305,11 @@ extension FeedScreen {
             // Where a launch opens the Wallet: Yours, unless you last chose
             // Everything (prd §1526).
             .task { WalletWhoseSwitch.applyLaunchChoice(chrome) }
+            // The last followed wallet gone takes the switch with it, so a
+            // Yours or Following pick returns to All (prd §1590).
+            .onChange(of: WalletWhoseSwitch.followed.isEmpty) { _, none in
+                if none { WalletWhoseSwitch.settleUnfollowed(chrome) }
+            }
             // The tray's Wallet folder leads with Follow a wallet (prd §1133)
             // and can be opened from any room, so it asks; the room raises.
             .onChange(of: chrome.walletFollowPending, initial: true) { _, pending in
