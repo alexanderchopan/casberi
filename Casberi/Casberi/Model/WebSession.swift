@@ -26,10 +26,10 @@ enum WebSession {
     static let safariUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
     enum Seat: String, CaseIterable {
-        /// Muse and ChatGPT are agents, not token bridges (prd §1619,
-        /// §1623): their sessions are used by their own pages (`MuseWeb`,
-        /// `ChatGPTWeb`), never sent as a header.
-        case notion, raindrop, steam, muse, chatgpt
+        /// Muse, ChatGPT and Claude are agents, not token bridges (prd
+        /// §1619, §1623, §1624): their sessions are used by their own pages
+        /// (`MuseWeb`, `AgentChatPage`), never sent as a header.
+        case notion, raindrop, steam, muse, chatgpt, claude
 
         /// The catalogue name, for the sheet's title.
         var name: String {
@@ -39,6 +39,7 @@ enum WebSession {
             case .steam: "Steam"
             case .muse: "Muse"
             case .chatgpt: "ChatGPT"
+            case .claude: "Claude"
             }
         }
 
@@ -51,6 +52,7 @@ enum WebSession {
             case .muse: MuseWeb.home
             // OpenAI's own sign-in (auth.openai.com), back to chatgpt.com.
             case .chatgpt: URL(string: "https://chatgpt.com/auth/login")!
+            case .claude: URL(string: "https://claude.ai/login")!
             }
         }
 
@@ -62,6 +64,7 @@ enum WebSession {
             case .steam: "steampowered.com"
             case .muse: MuseWeb.domain
             case .chatgpt: ChatGPTWeb.domain
+            case .claude: ClaudeWeb.domain
             }
         }
 
@@ -74,6 +77,7 @@ enum WebSession {
             case .steam: "store.steampowered.com"
             case .muse: "muse.ai"
             case .chatgpt: "chatgpt.com"
+            case .claude: "claude.ai"
             }
         }
 
@@ -87,7 +91,7 @@ enum WebSession {
             case .steam: "steamLoginSecure"
             // Muse's session cookies are HttpOnly and named nowhere it
             // publishes; its own check is asked on any jar.
-            case .muse, .chatgpt: nil
+            case .muse, .chatgpt, .claude: nil
             }
         }
 
@@ -159,6 +163,8 @@ enum WebSession {
             return await MuseWeb.shared.signedIn()
         case .chatgpt:
             return await ChatGPTWeb.shared.signedIn()
+        case .claude:
+            return await ClaudeWeb.shared.signedIn()
         }
     }
 
@@ -189,7 +195,7 @@ enum WebSession {
                 } else {
                     read = "token=nil"
                 }
-            case .muse, .chatgpt:
+            case .muse, .chatgpt, .claude:
                 read = "-"
             }
             NSLog("webSession| %@ | stored=yes | verified=%@ | %@", seat.rawValue,
@@ -207,7 +213,7 @@ enum WebSession {
             return (user?["fullName"] as? String) ?? (user?["email"] as? String)
         case .notion:
             return await NotionWeb.spaces(cookie: cookie).first?.name
-        case .steam, .muse, .chatgpt:
+        case .steam, .muse, .chatgpt, .claude:
             return nil
         }
     }

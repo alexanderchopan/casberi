@@ -440,6 +440,7 @@ enum AgentKey {
             case .ownModel: OwnModel.address != nil
             case .meta: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.muse)
             case .openai: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.chatgpt)
+            case .anthropic: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.claude)
             default: TokenVault.get($0.vaultKey) != nil
             }
         }
@@ -506,6 +507,11 @@ enum AgentKey {
         if provider == .openai {
             WebSession.clear(.chatgpt)
             Task { @MainActor in ChatGPTWeb.shared.forget() }
+        }
+        // Claude's the same way (prd §1624).
+        if provider == .anthropic {
+            WebSession.clear(.claude)
+            Task { @MainActor in ClaudeWeb.shared.forget() }
         }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
@@ -1147,7 +1153,11 @@ enum AgentAnswer {
         }
         // ChatGPT signed in on chatgpt.com, with no key (prd §1623).
         if provider == .openai, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.chatgpt) {
-            return await chatGPTAnswer(query: query, history: history)
+            return await chatPageAnswer(await ChatGPTWeb.shared, agent: "ChatGPT", query: query, history: history)
+        }
+        // Claude signed in on claude.ai, with no key (prd §1624).
+        if provider == .anthropic, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.claude) {
+            return await chatPageAnswer(await ClaudeWeb.shared, agent: "Claude", query: query, history: history)
         }
         let key: String
         switch AgentKey.requestKey(for: provider) {
@@ -2902,17 +2912,19 @@ extension AgentAnswer {
 }
 
 extension AgentAnswer {
-    /// ChatGPT through the person's own chatgpt.com session (prd §1623).
-    /// Only the question goes, as with Muse; `history`'s first question only
-    /// picks which ChatGPT chat continues, so ChatGPT holds the context.
-    fileprivate static func chatGPTAnswer(query: String, history: [AgentTurn])
+    /// ChatGPT or Claude through the person's own session (prd §1623,
+    /// §1624). Only the question goes, as with Muse; `history`'s first
+    /// question only picks which of the site's chats continues, so the site
+    /// holds the context.
+    fileprivate static func chatPageAnswer(_ page: AgentChatPage, agent: String, query: String,
+                                           history: [AgentTurn])
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         let first = history.first?.question ?? query
-        switch await ChatGPTWeb.shared.ask(SecretScan.redacted(query), firstQuestion: first) {
+        switch await page.ask(SecretScan.redacted(query), firstQuestion: first) {
         case .success(let text):
-            return .success(AgentAnswerResult(text: text, picks: [], model: "ChatGPT"))
+            return .success(AgentAnswerResult(text: text, picks: [], model: agent))
         case .failure(.signedOut):
-            return .failure(.signedOut(agent: "ChatGPT"))
+            return .failure(.signedOut(agent: agent))
         case .failure(.noReply):
             return .failure(.empty)
         case .failure(.noPage), .failure(.couldNotSend):

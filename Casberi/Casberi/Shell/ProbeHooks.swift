@@ -377,6 +377,27 @@ enum ProbeHooks {
         let run: @MainActor (String, ModelContext) -> Void
     }
 
+    /// `-chatgptProbe` / `-claudeProbe` (prd §1623, §1624): signed in, then
+    /// one question in a new chat, logged with the answer's length and first
+    /// 60 characters.
+    @MainActor
+    private static func chatPageProbe(_ tag: String, _ page: AgentChatPage, seat: WebSession.Seat,
+                                      _ value: String) async {
+        try? await Task.sleep(for: .seconds(3))
+        let signedIn = await page.signedIn()
+        NSLog("%@| signedIn=%@ | stored=%@", tag, signedIn ? "yes" : "no", WebSession.signedIn(seat) ? "yes" : "no")
+        guard signedIn, value.uppercased() != "YES" else { return }
+        let started = Date()
+        switch await page.ask(value, firstQuestion: value) {
+        case .success(let reply):
+            NSLog("%@| reply | chars=%d | seconds=%.0f | %@", tag, reply.count,
+                  Date().timeIntervalSince(started), String(reply.prefix(60)))
+        case .failure(let failure):
+            NSLog("%@| failed=%@ | seconds=%.0f", tag, "\(failure)", Date().timeIntervalSince(started))
+        }
+        NSLog("%@| page | %@", tag, await page.debugState())
+    }
+
     private static let hooks: [Hook] = [
         // `-secretScanProbe "<text>"|corpus` runs the credential tripwire
         // (prd §277) and reports what it found: the KINDS, and the REDACTED
@@ -6776,22 +6797,11 @@ enum ProbeHooks {
         // §1623): signed in, then one question in a new chat, logged as
         // `chatgptProbe|` with the answer's length and first 60 characters.
         Hook(key: "chatgptProbe") { value, _ in
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
-                let signedIn = await ChatGPTWeb.shared.signedIn()
-                NSLog("chatgptProbe| signedIn=%@ | stored=%@", signedIn ? "yes" : "no",
-                      WebSession.signedIn(.chatgpt) ? "yes" : "no")
-                guard signedIn, value.uppercased() != "YES" else { return }
-                let started = Date()
-                switch await ChatGPTWeb.shared.ask(value, firstQuestion: value) {
-                case .success(let reply):
-                    NSLog("chatgptProbe| reply | chars=%d | seconds=%.0f | %@", reply.count,
-                          Date().timeIntervalSince(started), String(reply.prefix(60)))
-                case .failure(let failure):
-                    NSLog("chatgptProbe| failed=%@ | seconds=%.0f", "\(failure)", Date().timeIntervalSince(started))
-                }
-                NSLog("chatgptProbe| page | %@", await ChatGPTWeb.shared.debugState())
-            }
+            Task { @MainActor in await chatPageProbe("chatgptProbe", ChatGPTWeb.shared, seat: .chatgpt, value) }
+        },
+        // `-claudeProbe YES|"<question>"` — the same for Claude (prd §1624).
+        Hook(key: "claudeProbe") { value, _ in
+            Task { @MainActor in await chatPageProbe("claudeProbe", ClaudeWeb.shared, seat: .claude, value) }
         },
         // `-acornsSession "<bearer>"` stores an Acorns bearer lifted from a
         // signed-in browser session — `-spotifySession`'s door, for the same

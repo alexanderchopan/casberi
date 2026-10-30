@@ -1046,6 +1046,11 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "ChatGPT"),
                  purpose: "Only when you ask ChatGPT, sends what you typed into your own ChatGPT through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
                  hosts: ["chatgpt.com", "auth.openai.com"]),
+        // Claude signed in on claude.ai (prd §1624), the same way.
+        Endpoint(service: "Claude",
+                 reach: .whenConnected(bridge: "Claude"),
+                 purpose: "Only when you ask Claude, sends what you typed into your own Claude through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
+                 hosts: ["claude.ai"]),
 
         // Your own model (prd §1478) — the person's own OpenAI-compatible
         // server. No fixed host: the address is TYPED (the §289 case, as the

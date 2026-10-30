@@ -1840,6 +1840,10 @@ harness "Muse thread self-test" "Muse thread self-test" "scripts/muse-thread-sel
 # current node once finished and newer than the question, the session's
 # bearer never leaves the page, and only the question is typed in.
 harness "ChatGPT thread self-test" "ChatGPT thread self-test" "scripts/chatgpt-thread-selftest.sh" "the ChatGPT thread self-test failed — run scripts/chatgpt-thread-selftest.sh"
+# Claude through the person's own claude.ai (prd §1624) — the answer is the
+# last message once stopped and newer than the question, its text and never
+# its thinking, and only the question is typed in.
+harness "Claude thread self-test" "Claude thread self-test" "scripts/claude-thread-selftest.sh" "the Claude thread self-test failed — run scripts/claude-thread-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive

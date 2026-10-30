@@ -17,26 +17,31 @@ cd "$(dirname "$0")/.."
 
 THREAD="Casberi/Casberi/Model/ChatGPTThread.swift"
 WEB="Casberi/Casberi/Model/ChatGPTWeb.swift"
+LOOP="Casberi/Casberi/Model/AgentChatPage.swift"
 ANSWER="Casberi/Casberi/Model/AgentAnswer.swift"
-for f in "$THREAD" "$WEB" "$ANSWER"; do
+for f in "$THREAD" "$WEB" "$LOOP" "$ANSWER"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
 code() { grep -vE '^[[:space:]]*(//|///)' "$1"; }
-if code "$WEB" | grep -qE 'NSLog|print\('; then
-  echo "✗ ChatGPTWeb logs — the person's chats must never reach a log"; exit 1
-fi
+# Swift outside the page's scripts (the triple-quoted strings).
+swiftOnly() { awk 'BEGIN{js=0} /"""/{js=!js; next} !js' "$1" | grep -vE '^[[:space:]]*(//|///)'; }
+for f in "$WEB" "$LOOP"; do
+  if code "$f" | grep -qE 'NSLog|print\('; then
+    echo "✗ $f logs — the person's chats must never reach a log"; exit 1
+  fi
+done
 # The bearer is fetched and spent inside the page; Swift only ever gets the
 # conversation back. A Swift line naming the token would mean it crossed.
-if code "$WEB" | grep -vF 'j.accessToken' | grep -qiE 'accessToken'; then
+if swiftOnly "$WEB" | grep -qiE 'accessToken'; then
   echo "✗ ChatGPTWeb's Swift side touches the session's access token"; exit 1
 fi
-body="$(awk '/static func chatGPTAnswer/,/^    }/' "$ANSWER")"
-[[ -n "$body" ]] || { echo "✗ chatGPTAnswer not found in AgentAnswer.swift"; exit 1; }
-print -r -- "$body" | grep -qF 'ChatGPTWeb.shared.ask(SecretScan.redacted(query), firstQuestion: first)' \
-  || { echo "✗ chatGPTAnswer no longer sends only the redacted question"; exit 1; }
+body="$(awk '/static func chatPageAnswer/,/^    }/' "$ANSWER")"
+[[ -n "$body" ]] || { echo "✗ chatPageAnswer not found in AgentAnswer.swift"; exit 1; }
+print -r -- "$body" | grep -qF 'page.ask(SecretScan.redacted(query), firstQuestion: first)' \
+  || { echo "✗ chatPageAnswer no longer sends only the redacted question"; exit 1; }
 if print -r -- "$body" | grep -qE 'candidates|numberedCandidates|\.answer\b'; then
-  echo "✗ chatGPTAnswer sends saved things or earlier answers into ChatGPT"; exit 1
+  echo "✗ chatPageAnswer sends saved things or earlier answers into the site"; exit 1
 fi
 grep -qF 'if provider == .openai, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.chatgpt) {' "$ANSWER" \
   || { echo "✗ the ChatGPT session fork is gone or no longer yields to a stored key"; exit 1; }
