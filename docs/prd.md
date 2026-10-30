@@ -69738,3 +69738,10 @@ Not done: the Tor share in the proof line (the receipts insight carries no Tor c
 **Not built / not seen.** The demo's own account is not in the demo's holdings read, so the demo's Safe figure leaves its money out (a real install follows your account, §1442l). The "Your Safes" door the canvas drew for a busy box. Your account's threshold off Base on a real install, and an Earning slice (the sample's yield rate was not read).
 
 **Mac half (§1402):** the same views in the list column; Catalyst compiles. Not run on the Mac. The design canvas: `design/mockups/safe-private-rethink.html`.
+
+## §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes two of §1614's "not built") (user, 2026-10-29: "do we need to fix the known gaps?", then "ok" to these two) — BUILT, seen on the simulator with the demo
+
+1. **Your Safes, while a signature waits on you.** The box turns into the queue, which hid the Safes it lists at rest until you signed. Under Needs you, "Your Safes" (`person.badge.key`, the section rung) lists every Safe in the roster: its name, its owners as faces (`SafeFaces`), "k of n" at the money rung; a row opens your account's keys or the Safe in Safe's app, as the box's rows do. At rest it does not stand: the box already lists them. It reads the queue again when a Safe row lands, is signed or leaves (`safeQueueKey`).
+2. **The demo's Safe figure counts the demo's account.** The demo's holdings read never reads `YourAccountDemo.address`, so the Safe pick's figure adds `YourAccountDemo.totalUSD` (its held tokens at their demo prices) in the demo only; a real install's read already counts your account (§1442l, §1614 item 3). Seen: "$5K in 2 Safes", was "$4K".
+
+**Still not built:** an Earning slice seen with a real rate; `PoolsSplit` and Holdings' Private head still spell the private total twice.

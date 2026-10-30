@@ -17,7 +17,11 @@ extension FeedScreen {
 
     /// The box's money, masked under Hide balances; nil before a read.
     var walletBoxTotal: String? {
-        guard let total = portfolioShown?.totalUSD, total > 0 else { return nil }
+        // The demo's account is not in the demo's read; a real one is (§1442l).
+        let demoAccount = DemoMode.isActive && selectedSeat?.source == SafeBridge.sourceName
+            ? YourAccountDemo.totalUSD : 0
+        let total = (portfolioShown?.totalUSD ?? 0) + demoAccount
+        guard total > 0 else { return nil }
         return BalancePrivacy.shared.withheld ? BalancePrivacy.mask : WalletValue.money(total)
     }
 
@@ -68,7 +72,8 @@ extension FeedScreen {
     @ViewBuilder
     var walletPickSection: some View {
         switch selectedSeat?.source {
-        case SafeBridge.sourceName?: WalletUnsignedSection(onOpenSafe: walletOpenSafe)
+        case SafeBridge.sourceName?:
+            WalletUnsignedSection(onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
         case PrivacyPoolsBridge.sourceName?: walletHiddenSection
         default: EmptyView()
         }
@@ -147,12 +152,71 @@ enum PrivacyPoolsReading {
 /// module says None; a module on another Safe is red. A row opens the Safe.
 struct WalletUnsignedSection: View {
     var onOpenSafe: (SafeRoster.Safe) -> Void
+    /// The queue's rows, so a signature landing re-reads whether the box is busy.
+    var queueKey: Int = 0
     /// Read from the first frame (stored reads, no network), so the header
     /// never stands without its rows.
     @State private var roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
+    /// Whether the box is the queue, which hides the roster it lists at rest.
+    @State private var busy = Self.queueWaitsOnYou()
 
     var body: some View {
-        if !roster.isEmpty { section }
+        if !roster.isEmpty {
+            // **YOUR SAFES WHILE THE BOX IS BUSY (prd §1614a).** The box turns
+            // into the queue when a signature waits on you, and the Safes it
+            // listed at rest would be out of reach until you sign: they stand
+            // here instead, each with its keys and how many must sign.
+            if busy { yourSafes }
+            section
+        }
+    }
+
+    private static func queueWaitsOnYou() -> Bool {
+        SafeRoomSource.compose()?.entries.contains(where: \.yourTurn) ?? false
+    }
+
+    private var yourSafes: some View {
+        SectionPanelGroup(anchor: nil) {
+            SectionPanelName(name: String(localized: "Your Safes"), glyph: "person.badge.key")
+        } rows: {
+            Section {
+                ForEach(roster.safes) { safe in
+                    Button {
+                        DSHaptic.selection()
+                        onOpenSafe(safe)
+                    } label: {
+                        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                            Image(systemName: safe.isYourAccount ? "person.crop.circle" : "person.2")
+                                .dsGlyph(.body)
+                                .foregroundStyle(DS.textSecondary)
+                                .frame(width: DSRoomChassis.headGlyph)
+                                .accessibilityHidden(true)
+                            Text(verbatim: safe.name)
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            SafeFaces(faces: safe.faces)
+                            if let need = SafeRoster.need(safe) {
+                                Text(verbatim: need)
+                                    .dsText(.price17)
+                                    .monospacedDigit()
+                                    .foregroundStyle(DS.textSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .walletRowPitch()
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .dsHover()
+                    .accessibilityLabel(Text(verbatim: [safe.name, SafeRoster.line(safe), SafeRoster.need(safe)]
+                        .compactMap { $0 }.joined(separator: ", ")))
+                    .walletListRow()
+                }
+            }
+        }
+        .environment(\.feedSectionPanelFilled, false)
     }
 
     private var section: some View {
@@ -163,7 +227,8 @@ struct WalletUnsignedSection: View {
         }
         // Bare, as the Feed's (prd §1382), and as `walletCard` draws it.
         .environment(\.feedSectionPanelFilled, false)
-        .task {
+        .task(id: queueKey) {
+            busy = Self.queueWaitsOnYou()
             roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
             await SafeRosterReading.shared.refresh()
             roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)

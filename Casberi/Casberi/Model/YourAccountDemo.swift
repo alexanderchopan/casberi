@@ -80,6 +80,16 @@ enum YourAccountDemo {
         }
     }
 
+    /// The demo account's dollars across its networks (prd §1614): the demo's
+    /// holdings read never reads this address, so the Safe pick's figure adds
+    /// it, as a real install's read already counts your account.
+    static var totalUSD: Double {
+        Op.networks.flatMap(held(on:)).reduce(0) { sum, h in
+            guard let price = h.price, let units = Decimal(string: h.units) else { return sum }
+            return sum + NSDecimalNumber(decimal: units / pow(10, h.token.decimals)).doubleValue * price
+        }
+    }
+
     /// What the swap picker offers in the demo: what it holds, and a few more.
     static func list(_ net: Op.Network) -> [Listed] {
         // The dust is listed below as Uniswap's list carries it: PEPE2 is not on it.
