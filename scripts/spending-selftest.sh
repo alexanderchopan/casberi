@@ -138,6 +138,9 @@ check(week.total == 90, "the week runs from the calendar's week start (\(week.to
 check(week.earlier == 10, "last week to the same point (\(String(describing: week.earlier)))")
 check(week.places.first { $0.name == "Uber" }?.earlier == 10, "a place against last week")
 check(week.places.first { $0.name == "Amazon" } == nil, "a place with nothing this week is not listed")
+// The running line (prd §1480 item 14): Mon Oct 19 → Thu Oct 22, one point a day.
+check(week.running == [12, 42, 90, 90], "the running line adds each day's charges (\(week.running))")
+check(month.running.count == 22 && month.running.last == month.total, "the month's line ends on its total")
 
 // A subscription says its newest charge and what paid it.
 let paid = Spending.read([C(place: "Netflix", usd: 13, at: day(8), via: "Apple Card"),
@@ -271,6 +274,7 @@ mutate "one arrival answers every send"   's/arrivals\.remove\(at: i\)//'
 mutate "the recurring half never told apart"   's/p\.recurring = isRecurring\(place\.name\)/p.recurring = false/'
 mutate "a week reads as a month"              's/case \.week:\n            guard let week = calendar\.dateInterval\(of: \.weekOfYear, for: now\)/case .week:\n            guard let week = calendar.dateInterval(of: .month, for: now)/'
 mutate "last window whole, not to this point" 's/let lastEnd = calendar\.date\(byAdding: \.month, value: -1, to: now\) \?\? month\.start/let lastEnd = month.start.addingTimeInterval(-1)/'
+mutate "the running line forgets earlier days"  's/var sum: Double = 0\n        reading\.running = perDay\.map \{ sum \+= \$0; return sum \}/reading.running = perDay/'
 mutate "a place forgets its last-window figure" 's/p\.earlier = earlierUSD\.map \{ max\(0, \$0\) \}/p.earlier = nil/'
 mutate "a plan also stands in Places"          's/if p\.recurring \{ subscriptions\.append\(p\) \} else \{ places\.append\(p\) \}/places.append(p); if p.recurring { subscriptions.append(p) }/'
 mutate "a subscription names its oldest charge" 's/charge\.at > \(place\.lastAt \?\? \.distantPast\)/charge.at < (place.lastAt ?? .distantFuture)/'

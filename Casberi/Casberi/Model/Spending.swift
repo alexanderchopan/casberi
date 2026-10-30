@@ -104,6 +104,12 @@ enum Spending {
         var roundUpsWaiting: Double = 0
         var roundUpsFrom: Date? = nil
 
+        /// **THE RUNNING LINE (prd §1480 item 14):** what the window had
+        /// spent by the end of each day, from its first day through today,
+        /// so the last point is `total`. A place whose refunds cancelled it
+        /// is left out here as it is from `total`.
+        var running: [Double] = []
+
         var rest: Double { max(0, total - recurring) }
         var earlierRest: Double? { earlier.map { max(0, $0 - (earlierRecurring ?? 0)) } }
     }
@@ -389,6 +395,20 @@ enum Spending {
                               subscriptions: subscriptions,
                               recurring: recurring,
                               earlierRecurring: sawEarlier ? earlierRecurring : nil)
+        // The running line: each counted place's charges, by day.
+        let counted = Set(byPlace.filter { $0.value.usd >= 0.005 }.keys)
+        let firstDay = calendar.startOfDay(for: start)
+        let dayCount = (calendar.dateComponents([.day], from: firstDay,
+                                                to: calendar.startOfDay(for: now)).day ?? 0) + 1
+        var perDay = [Double](repeating: 0, count: max(1, dayCount))
+        for charge in charges where charge.at >= start && charge.at <= now
+            && counted.contains(charge.place.lowercased()) {
+            let i = calendar.dateComponents([.day], from: firstDay,
+                                            to: calendar.startOfDay(for: charge.at)).day ?? 0
+            perDay[min(max(0, i), perDay.count - 1)] += charge.usd
+        }
+        var sum: Double = 0
+        reading.running = perDay.map { sum += $0; return sum }
         // Fees (prd §1476): by network, this window and the last.
         var byNetwork: [String: Place] = [:]
         var earlierByNetwork: [String: Double] = [:]
