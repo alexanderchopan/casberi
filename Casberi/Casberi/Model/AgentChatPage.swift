@@ -109,7 +109,11 @@ final class AgentChatPage {
     /// Whether the site says this jar is signed in.
     func signedIn() async -> Bool {
         guard await page.open() else { return false }
-        let ok = await page.run("return window.casberiChat ? await window.casberiChat.signedIn() : false")
+        // The site's check runs as its own body, not through the installed
+        // script: on claude.ai the check through `casberiChat` answered no
+        // while the same request run directly answered 200 (measured
+        // 2026-10-30), the script not yet there when the page said loaded.
+        let ok = await page.run(site.signedInJS)
         return (ok as? Bool) == true
     }
 

@@ -1851,6 +1851,10 @@ harness "Claude Code cloud self-test" "Claude Code cloud self-test" "scripts/cla
 # response once not partial and newer than the question; grok.com only, never
 # x.com, and only the question is typed in.
 harness "Grok thread self-test" "Grok thread self-test" "scripts/grok-thread-selftest.sh" "the Grok thread self-test failed — run scripts/grok-thread-selftest.sh"
+# Gemini through the person's own gemini.google.com (prd §1627) — the answer
+# is the newest model-response once there is one more than before; only the
+# question is typed in, and the sheet never clears Google's cookies.
+harness "Gemini thread self-test" "Gemini thread self-test" "scripts/gemini-thread-selftest.sh" "the Gemini thread self-test failed — run scripts/gemini-thread-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive

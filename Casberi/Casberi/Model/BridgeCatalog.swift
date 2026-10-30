@@ -1048,15 +1048,16 @@ enum BridgeSetupMode {
         // A sign-in that replaced a pasted key (prd §1584).
         "Notion", "Raindrop", "Steam", "OpenRouter",
         // Muse signs in on muse.ai, as Beeper connects it (prd §1619), and
-        // ChatGPT on chatgpt.com (§1623), Claude on claude.ai (§1624) and Grok
-        // on grok.com (§1626): no key, no export.
-        "Muse", "ChatGPT", "Claude", "Grok"]
+        // ChatGPT on chatgpt.com (§1623), Claude on claude.ai (§1624), Grok
+        // on grok.com (§1626) and Gemini on gemini.google.com (§1627): no key,
+        // no export.
+        "Muse", "ChatGPT", "Claude", "Grok", "Gemini"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed
     /// the same way; the audit is why that cannot recur. (Instagram and TikTok
     /// moved to `signInSeats` with their live doors, prd §726/§731.)
-    static let importSeats: Set<String> = ["Claude Code", "Gemini",
+    static let importSeats: Set<String> = ["Claude Code",
         "Day One", "Apple Journal", "Kindle", "Bookmarks",
         "Snapchat"]
 

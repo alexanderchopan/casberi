@@ -29,7 +29,7 @@ enum WebSession {
         /// Muse, ChatGPT and Claude are agents, not token bridges (prd
         /// §1619, §1623, §1624): their sessions are used by their own pages
         /// (`MuseWeb`, `AgentChatPage`), never sent as a header.
-        case notion, raindrop, steam, muse, chatgpt, claude, grok
+        case notion, raindrop, steam, muse, chatgpt, claude, grok, gemini
 
         /// The catalogue name, for the sheet's title.
         var name: String {
@@ -41,6 +41,7 @@ enum WebSession {
             case .chatgpt: "ChatGPT"
             case .claude: "Claude"
             case .grok: "Grok"
+            case .gemini: "Gemini"
             }
         }
 
@@ -56,6 +57,8 @@ enum WebSession {
             case .claude: URL(string: "https://claude.ai/login")!
             // xAI's own sign-in, back to grok.com (prd §1626).
             case .grok: URL(string: "https://accounts.x.ai/sign-in?redirect=grok-com")!
+            // Google's own sign-in, back to Gemini (prd §1627).
+            case .gemini: URL(string: "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fgemini.google.com%2Fapp")!
             }
         }
 
@@ -69,6 +72,7 @@ enum WebSession {
             case .chatgpt: ChatGPTWeb.domain
             case .claude: ClaudeWeb.domain
             case .grok: GrokWeb.domain
+            case .gemini: GeminiWeb.domain
             }
         }
 
@@ -83,6 +87,7 @@ enum WebSession {
             case .chatgpt: "chatgpt.com"
             case .claude: "claude.ai"
             case .grok: "grok.com"
+            case .gemini: "gemini.google.com"
             }
         }
 
@@ -96,9 +101,17 @@ enum WebSession {
             case .steam: "steamLoginSecure"
             // Muse's session cookies are HttpOnly and named nowhere it
             // publishes; its own check is asked on any jar.
-            case .muse, .chatgpt, .claude, .grok: nil
+            case .muse, .chatgpt, .claude, .grok, .gemini: nil
             }
         }
+
+        /// Whether the sheet clears the domain's old cookies before the page
+        /// loads (`InstagramLoginWebView`'s lesson: a refused session is never
+        /// captured back). Not Google's: its cookies are every Google sign-in
+        /// in the app, and a Google sign-in can cost a backup code — clearing
+        /// them threw away a session that had just answered (prd §1627). A
+        /// Google jar that is already signed in closes the sheet instead.
+        var clearsFirst: Bool { self != .gemini }
 
         fileprivate var vaultKey: String { "\(rawValue).web.session" }
     }
@@ -172,6 +185,8 @@ enum WebSession {
             return await ClaudeWeb.shared.signedIn()
         case .grok:
             return await GrokWeb.shared.signedIn()
+        case .gemini:
+            return await GeminiWeb.signedIn()
         }
     }
 
@@ -202,7 +217,7 @@ enum WebSession {
                 } else {
                     read = "token=nil"
                 }
-            case .muse, .chatgpt, .claude, .grok:
+            case .muse, .chatgpt, .claude, .grok, .gemini:
                 read = "-"
             }
             NSLog("webSession| %@ | stored=yes | verified=%@ | %@", seat.rawValue,
@@ -220,7 +235,7 @@ enum WebSession {
             return (user?["fullName"] as? String) ?? (user?["email"] as? String)
         case .notion:
             return await NotionWeb.spaces(cookie: cookie).first?.name
-        case .steam, .muse, .chatgpt, .claude, .grok:
+        case .steam, .muse, .chatgpt, .claude, .grok, .gemini:
             return nil
         }
     }

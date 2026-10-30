@@ -83,8 +83,10 @@ private struct WebSessionLoginView: UIViewRepresentable {
         let coordinator = context.coordinator
         let domain = domain
         let start = start
+        var clears = true
+        if case .session(let seat) = capture { clears = seat.clearsFirst }
         store.getAllCookies { cookies in
-            let stale = cookies.filter { $0.domain.hasSuffix(domain) }
+            let stale = clears ? cookies.filter { $0.domain.hasSuffix(domain) } : []
             let group = DispatchGroup()
             for cookie in stale {
                 group.enter()

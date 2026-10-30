@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1762 of 1834 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1763 of 1835 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1224,7 +1224,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §868 — ether.fi Cash gets the head its two siblings have had, and the room it shares is why it needed more than a copy (amended by §1311)
 - §869 — The icon colour setting is declined, and the light icon was the dark one
 - §870 — Quiet hours are deleted
-- §871 — "Your key" leaves Settings, because every other account is connected on its own page (amended by §1623, §1624)
+- §871 — "Your key" leaves Settings, because every other account is connected on its own page (amended by §1623, §1624, §1627)
 - §872 — every sheet the Settings rows raise carries the shell's environment with it, because on Catalyst it does not inherit one
 - §873 — A wider window widens the detail pane, not the list
 - §874 — The Mac honours the app's Theme, and every tray has a way out
@@ -2008,6 +2008,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1624 — Claude signs in on claude.ai and answers in your own Claude, as §1623 does ChatGPT; its page drops the key and the ex…
 - §1625 — Claude Code reads your cloud sessions live through the claude.ai sign-in: each lands saying where Claude says it stands
 - §1626 — Grok signs in on grok.com and answers in your own Grok, on the loop ChatGPT and Claude share; its page drops the key
+- §1627 — Gemini signs in with Google and answers in your own Gemini, read off its page; its page drops the key and the Takeout…
 
 ## Dead rulings → what replaced them (generated)
 

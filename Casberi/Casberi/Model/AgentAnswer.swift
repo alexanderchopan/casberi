@@ -442,6 +442,7 @@ enum AgentKey {
             case .openai: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.chatgpt)
             case .anthropic: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.claude)
             case .grok: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.grok)
+            case .google: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.gemini)
             default: TokenVault.get($0.vaultKey) != nil
             }
         }
@@ -518,6 +519,11 @@ enum AgentKey {
         if provider == .grok {
             WebSession.clear(.grok)
             Task { @MainActor in GrokWeb.shared.forget() }
+        }
+        // Gemini's the same way (prd §1627).
+        if provider == .google {
+            WebSession.clear(.gemini)
+            Task { @MainActor in GeminiWeb.forget() }
         }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
@@ -1168,6 +1174,10 @@ enum AgentAnswer {
         // Grok signed in on grok.com, with no key (prd §1626).
         if provider == .grok, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.grok) {
             return await chatPageAnswer(await GrokWeb.shared, agent: "Grok", query: query, history: history)
+        }
+        // Gemini signed in on gemini.google.com, with no key (prd §1627).
+        if provider == .google, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.gemini) {
+            return await geminiAnswer(query: query, history: history)
         }
         let key: String
         switch AgentKey.requestKey(for: provider) {
@@ -2935,6 +2945,25 @@ extension AgentAnswer {
             return .success(AgentAnswerResult(text: text, picks: [], model: agent))
         case .failure(.signedOut):
             return .failure(.signedOut(agent: agent))
+        case .failure(.noReply):
+            return .failure(.empty)
+        case .failure(.noPage), .failure(.couldNotSend):
+            return .failure(.unreachable)
+        }
+    }
+}
+
+extension AgentAnswer {
+    /// Gemini through the person's own gemini.google.com session (prd
+    /// §1627), read off its page. Only the question goes, as with Muse.
+    fileprivate static func geminiAnswer(query: String, history: [AgentTurn])
+    async -> Result<AgentAnswerResult, AgentAnswerFailure> {
+        let first = history.first?.question ?? query
+        switch await GeminiWeb.ask(SecretScan.redacted(query), firstQuestion: first) {
+        case .success(let text):
+            return .success(AgentAnswerResult(text: text, picks: [], model: "Gemini"))
+        case .failure(.signedOut):
+            return .failure(.signedOut(agent: "Gemini"))
         case .failure(.noReply):
             return .failure(.empty)
         case .failure(.noPage), .failure(.couldNotSend):

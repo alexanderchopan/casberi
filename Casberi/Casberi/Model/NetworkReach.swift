@@ -1057,6 +1057,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Grok"),
                  purpose: "Only when you ask Grok, sends what you typed into your own Grok through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
                  hosts: ["grok.com", "accounts.x.ai"]),
+        // Gemini signed in on gemini.google.com (prd §1627), Google's own
+        // sign-in.
+        Endpoint(service: "Gemini",
+                 reach: .whenConnected(bridge: "Gemini"),
+                 purpose: "Only when you ask Gemini, sends what you typed into your own Gemini through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
+                 hosts: ["gemini.google.com", "accounts.google.com"]),
 
         // Your own model (prd §1478) — the person's own OpenAI-compatible
         // server. No fixed host: the address is TYPED (the §289 case, as the

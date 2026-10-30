@@ -6847,6 +6847,49 @@ enum ProbeHooks {
                 NSLog("grokProbe| shape | %@", shape(json))
             }
         },
+        // `-geminiProbe YES` — what gemini.google.com shows this jar (prd
+        // §1627): signed in or not, and the page's own markers, never words.
+        Hook(key: "geminiProbe") { value, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                defer {
+                    if value.uppercased() != "YES" {
+                        Task { @MainActor in
+                            let started = Date()
+                            switch await GeminiWeb.ask(value, firstQuestion: value) {
+                            case .success(let reply):
+                                NSLog("geminiProbe| reply | chars=%d | seconds=%.0f | %@", reply.count,
+                                      Date().timeIntervalSince(started), String(reply.prefix(60)))
+                            case .failure(let failure):
+                                NSLog("geminiProbe| failed=%@ | seconds=%.0f", "\(failure)", Date().timeIntervalSince(started))
+                            }
+                        }
+                    }
+                }
+                let signedIn = await GeminiWeb.signedIn()
+                let state = await GeminiWeb.page.run("""
+                    const labels = [...document.querySelectorAll('[aria-label]')].map(e => e.getAttribute('aria-label')).filter(l => /account|sign/i.test(l)).slice(0, 6);
+                    const signIn = document.querySelectorAll('a[href*="accounts.google.com"]').length;
+                    return location.host + location.pathname + ' signInLinks=' + signIn + ' labels=' + labels.join('/') + ' editor=' + !!document.querySelector('.ql-editor');
+                    """) as? String
+                NSLog("geminiProbe| signedIn=%@ | stored=%@ | %@", signedIn ? "yes" : "no",
+                      WebSession.signedIn(.gemini) ? "yes" : "no", state ?? "no page")
+            }
+        },
+        // `-claudeSessionProbe YES` — what claude.ai answers this jar's
+        // `/api/account`, status and error code only.
+        Hook(key: "claudeSessionProbe") { _, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                let state = await ClaudeWeb.shared.read("""
+                    const r = await fetch('/api/account', { credentials: 'include' });
+                    const t = await r.text();
+                    const code = (t.match(/"error_code":"([a-z_]+)"/) || [])[1] || '-';
+                    return location.host + location.pathname + ' status=' + r.status + ' code=' + code + ' title=' + document.title.slice(0, 40);
+                    """) as? String
+                NSLog("claudeSessionProbe| %@", state ?? "no page")
+            }
+        },
         // `-claudeProbe YES|"<question>"` — the same for Claude (prd §1624).
         Hook(key: "claudeProbe") { value, _ in
             Task { @MainActor in await chatPageProbe("claudeProbe", ClaudeWeb.shared, seat: .claude, value) }
