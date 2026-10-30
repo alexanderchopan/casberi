@@ -13,6 +13,12 @@ import UniformTypeIdentifiers
 ///
 /// Safe to re-run, and worth re-running: a session that gained turns since the
 /// last import is updated in place rather than skipped.
+///
+/// **Live, by Claude's sign-in** (prd §1625): with claude.ai signed in, your
+/// Claude Code sessions in Anthropic's cloud land on their own
+/// (`ClaudeCodeCloudIngest`), each saying where Claude says it stands. The
+/// folder stays for sessions run on a computer, which the cloud list does not
+/// hold.
 struct ClaudeCodeImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -22,6 +28,9 @@ struct ClaudeCodeImportScreen: View {
     @State private var held = 0
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
+    /// Signed in on claude.ai: the cloud sessions read themselves (§1625).
+    /// Mirrored, not read in a body (a Keychain read, prd §628).
+    @State private var cloud = WebSession.signedIn(.claude)
 
 
     var body: some View {
@@ -30,11 +39,20 @@ struct ClaudeCodeImportScreen: View {
             // An import has no live connection, so "is anything here" is the
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Claude Code", seatID: "claudecode",
-                                       connected: held > 0, store: store),
+                                       connected: held > 0 || cloud, store: store),
             mode: .oneTimeImport,
+            cardSheet: { id in
+                guard id == "claudeSignIn" else { return AnyView(EmptyView()) }
+                return AnyView(WebSessionSignInSheet(seat: .claude, onDone: finishSignIn))
+            },
             teardown: {},
             sheet: $sheet,
-            act: { setupBlock },
+            act: {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    cloudBlock
+                    setupBlock
+                }
+            },
             more: {
                 ImportUpkeepSection(source: "Claude Code", held: held,
                                     staleness: staleness, plain: true) { gone in
@@ -59,6 +77,37 @@ struct ClaudeCodeImportScreen: View {
     private func reread() {
         staleness = ImportRemoval.stalenessLine(source: "Claude Code", context: modelContext)
         held = ImportRemoval.count(source: "Claude Code", context: modelContext)
+    }
+
+    /// The live half: signed out, the door to claude.ai's sign-in. Signed
+    /// in it draws nothing: the seat's own lines say the cloud sessions land
+    /// (`finishSignIn`), and the page holds one explaining sentence (§748).
+    @ViewBuilder private var cloudBlock: some View {
+        if !cloud {
+            DSSlabDoor(title: "Sign in to Claude",
+                       detail: String(localized: "Your cloud sessions"),
+                       systemImage: "person.badge.key") {
+                DSHaptic.tap()
+                sheet = .card(id: "claudeSignIn")
+            }
+        }
+    }
+
+    /// claude.ai said the jar is signed in; read the sessions now rather
+    /// than at the next foreground.
+    private func finishSignIn() {
+        guard WebSession.signedIn(.claude) else { return }
+        cloud = true
+        DSHaptic.success()
+        store.registerConnected(id: "claudecode", name: "Claude Code",
+                                proof: String(localized: "Signed in on claude.ai"),
+                                can: ["Reads your cloud sessions and where each stands.",
+                                      "Imports the session transcripts you choose."])
+        Task { @MainActor in
+            let added = await ClaudeCodeCloudIngest.refresh(context: modelContext)
+            reread()
+            if let added { result = .says(String(localized: "\(added) sessions in")) }
+        }
     }
 
     @ViewBuilder private var setupBlock: some View {

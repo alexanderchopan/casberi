@@ -342,6 +342,16 @@ enum BridgeRefresh {
                 _ = await sweepTimed("fileverse") { await FileverseLive.refresh(context: context) }
             }
         }
+        // Claude Code's cloud sessions (prd §1625) ride Claude's claude.ai
+        // sign-in, on the same ten-minute throttle and by-name pause.
+        let claudeCodePaused = store.bridges.contains { $0.id == "claudecode" && $0.status == .paused }
+        if WebSession.signedIn(.claude), !claudeCodePaused,
+           force || BridgeRefresh.dueForHeal("claudecode.cloud") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("claudecode.cloud") { await ClaudeCodeCloudIngest.refresh(context: context) }
+            }
+        }
         // Instagram's live door (prd §726) — the person's own session, read
         // on `dueForHeal`'s ten-minute throttle and NEVER every foreground:
         // Meta flags a busy session harder than X or Spotify do, and the cost

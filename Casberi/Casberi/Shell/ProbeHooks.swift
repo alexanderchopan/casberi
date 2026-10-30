@@ -6799,6 +6799,27 @@ enum ProbeHooks {
         Hook(key: "chatgptProbe") { value, _ in
             Task { @MainActor in await chatPageProbe("chatgptProbe", ChatGPTWeb.shared, seat: .chatgpt, value) }
         },
+        // `-claudeCodeCloudProbe YES` — read your Claude Code cloud sessions
+        // with the claude.ai sign-in and land them (prd §1625); logs
+        // `claudeCodeCloud|` with how many are new and how many stand in each
+        // state, never a title.
+        Hook(key: "claudeCodeCloudProbe") { _, context in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                let added = await ClaudeCodeCloudIngest.refresh(context: context)
+                let rows = IngestSupport.thingsByRef(context, source: ClaudeCodeCloud.source)
+                    .filter { $0.key.hasPrefix("claudecode:cloud:") }.values
+                var states: [String: Int] = [:]
+                for row in rows {
+                    for state in ["Needs you", "Running", "Failed", "Completed"] where row.tags.contains(state) {
+                        states[state, default: 0] += 1
+                    }
+                }
+                NSLog("claudeCodeCloud| added=%@ | rows=%d | failure=%@ | %@",
+                      added.map(String.init) ?? "nil", rows.count, ClaudeCodeCloudIngest.lastFailure ?? "-",
+                      states.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+            }
+        },
         // `-claudeProbe YES|"<question>"` — the same for Claude (prd §1624).
         Hook(key: "claudeProbe") { value, _ in
             Task { @MainActor in await chatPageProbe("claudeProbe", ClaudeWeb.shared, seat: .claude, value) }

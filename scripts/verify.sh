@@ -1844,6 +1844,9 @@ harness "ChatGPT thread self-test" "ChatGPT thread self-test" "scripts/chatgpt-t
 # last message once stopped and newer than the question, its text and never
 # its thinking, and only the question is typed in.
 harness "Claude thread self-test" "Claude thread self-test" "scripts/claude-thread-selftest.sh" "the Claude thread self-test failed — run scripts/claude-thread-selftest.sh"
+# Claude Code's cloud sessions (prd §1625) — state, line and repo are
+# Claude's own, the read is GETs inside claude.ai's page, and nothing logs.
+harness "Claude Code cloud self-test" "Claude Code cloud self-test" "scripts/claude-code-cloud-selftest.sh" "the Claude Code cloud self-test failed — run scripts/claude-code-cloud-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive

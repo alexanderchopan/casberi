@@ -144,6 +144,15 @@ final class AgentChatPage {
         return .failure(.noReply)
     }
 
+    /// Runs `js` (an async function body) in the site's own page, opening it
+    /// first — a read that rides the same sign-in (Claude Code's sessions,
+    /// §1625). nil while an ask holds the page, or on any failure.
+    func read(_ js: String) async -> Any? {
+        guard !asking else { return nil }
+        guard await page.open() else { return nil }
+        return await page.run(js)
+    }
+
     #if DEBUG
     /// A probe's look at the page: where it is and what its composer holds,
     /// as counts, never words.

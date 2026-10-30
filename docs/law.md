@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1760 of 1832 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1761 of 1833 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -760,7 +760,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §454 — The wallet room gets one card recipe
 - §455 — The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that s… (amended by §1050d)
 - §456 — Telegram returns, through the two doors §57 never weighed (amended by §1577)
-- §457 — The agent rooms get a head, Claude Code gets measured, and two registries that answered nil
+- §457 — The agent rooms get a head, Claude Code gets measured, and two registries that answered nil (amended by §1625)
 - §458 — WhatsApp is passed on, and the reasons are of two grades
 - §459 — What more can we do with OpenRouter
 - §460 — Every connect page gets a door back to its room [+2 sub-entries]
@@ -2006,6 +2006,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1622 — A nightly sweep opens every app page and fails one that did not land or stands empty
 - §1623 — ChatGPT signs in on chatgpt.com and answers in your own ChatGPT, as §1619 does Muse; its page drops the key and the e…
 - §1624 — Claude signs in on claude.ai and answers in your own Claude, as §1623 does ChatGPT; its page drops the key and the ex…
+- §1625 — Claude Code reads your cloud sessions live through the claude.ai sign-in: each lands saying where Claude says it stands
 
 ## Dead rulings → what replaced them (generated)
 
