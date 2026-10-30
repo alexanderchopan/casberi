@@ -1051,6 +1051,12 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Claude"),
                  purpose: "Only when you ask Claude, sends what you typed into your own Claude through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
                  hosts: ["claude.ai"]),
+        // Grok signed in on grok.com (prd §1626), the same way; xAI's own
+        // sign-in page.
+        Endpoint(service: "Grok",
+                 reach: .whenConnected(bridge: "Grok"),
+                 purpose: "Only when you ask Grok, sends what you typed into your own Grok through its page, signed in as you, and reads its answer. Nothing you keep is sent.",
+                 hosts: ["grok.com", "accounts.x.ai"]),
 
         // Your own model (prd §1478) — the person's own OpenAI-compatible
         // server. No fixed host: the address is TYPED (the §289 case, as the

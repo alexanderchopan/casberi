@@ -1847,6 +1847,10 @@ harness "Claude thread self-test" "Claude thread self-test" "scripts/claude-thre
 # Claude Code's cloud sessions (prd §1625) — state, line and repo are
 # Claude's own, the read is GETs inside claude.ai's page, and nothing logs.
 harness "Claude Code cloud self-test" "Claude Code cloud self-test" "scripts/claude-code-cloud-selftest.sh" "the Claude Code cloud self-test failed — run scripts/claude-code-cloud-selftest.sh"
+# Grok through the person's own grok.com (prd §1626) — the answer is the last
+# response once not partial and newer than the question; grok.com only, never
+# x.com, and only the question is typed in.
+harness "Grok thread self-test" "Grok thread self-test" "scripts/grok-thread-selftest.sh" "the Grok thread self-test failed — run scripts/grok-thread-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive

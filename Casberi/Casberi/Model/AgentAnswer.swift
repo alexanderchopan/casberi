@@ -441,6 +441,7 @@ enum AgentKey {
             case .meta: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.muse)
             case .openai: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.chatgpt)
             case .anthropic: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.claude)
+            case .grok: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.grok)
             default: TokenVault.get($0.vaultKey) != nil
             }
         }
@@ -512,6 +513,11 @@ enum AgentKey {
         if provider == .anthropic {
             WebSession.clear(.claude)
             Task { @MainActor in ClaudeWeb.shared.forget() }
+        }
+        // Grok's the same way (prd §1626).
+        if provider == .grok {
+            WebSession.clear(.grok)
+            Task { @MainActor in GrokWeb.shared.forget() }
         }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
@@ -1158,6 +1164,10 @@ enum AgentAnswer {
         // Claude signed in on claude.ai, with no key (prd §1624).
         if provider == .anthropic, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.claude) {
             return await chatPageAnswer(await ClaudeWeb.shared, agent: "Claude", query: query, history: history)
+        }
+        // Grok signed in on grok.com, with no key (prd §1626).
+        if provider == .grok, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.grok) {
+            return await chatPageAnswer(await GrokWeb.shared, agent: "Grok", query: query, history: history)
         }
         let key: String
         switch AgentKey.requestKey(for: provider) {

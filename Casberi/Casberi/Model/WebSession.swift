@@ -29,7 +29,7 @@ enum WebSession {
         /// Muse, ChatGPT and Claude are agents, not token bridges (prd
         /// §1619, §1623, §1624): their sessions are used by their own pages
         /// (`MuseWeb`, `AgentChatPage`), never sent as a header.
-        case notion, raindrop, steam, muse, chatgpt, claude
+        case notion, raindrop, steam, muse, chatgpt, claude, grok
 
         /// The catalogue name, for the sheet's title.
         var name: String {
@@ -40,6 +40,7 @@ enum WebSession {
             case .muse: "Muse"
             case .chatgpt: "ChatGPT"
             case .claude: "Claude"
+            case .grok: "Grok"
             }
         }
 
@@ -53,6 +54,8 @@ enum WebSession {
             // OpenAI's own sign-in (auth.openai.com), back to chatgpt.com.
             case .chatgpt: URL(string: "https://chatgpt.com/auth/login")!
             case .claude: URL(string: "https://claude.ai/login")!
+            // xAI's own sign-in, back to grok.com (prd §1626).
+            case .grok: URL(string: "https://accounts.x.ai/sign-in?redirect=grok-com")!
             }
         }
 
@@ -65,6 +68,7 @@ enum WebSession {
             case .muse: MuseWeb.domain
             case .chatgpt: ChatGPTWeb.domain
             case .claude: ClaudeWeb.domain
+            case .grok: GrokWeb.domain
             }
         }
 
@@ -78,6 +82,7 @@ enum WebSession {
             case .muse: "muse.ai"
             case .chatgpt: "chatgpt.com"
             case .claude: "claude.ai"
+            case .grok: "grok.com"
             }
         }
 
@@ -91,7 +96,7 @@ enum WebSession {
             case .steam: "steamLoginSecure"
             // Muse's session cookies are HttpOnly and named nowhere it
             // publishes; its own check is asked on any jar.
-            case .muse, .chatgpt, .claude: nil
+            case .muse, .chatgpt, .claude, .grok: nil
             }
         }
 
@@ -165,6 +170,8 @@ enum WebSession {
             return await ChatGPTWeb.shared.signedIn()
         case .claude:
             return await ClaudeWeb.shared.signedIn()
+        case .grok:
+            return await GrokWeb.shared.signedIn()
         }
     }
 
@@ -195,7 +202,7 @@ enum WebSession {
                 } else {
                     read = "token=nil"
                 }
-            case .muse, .chatgpt, .claude:
+            case .muse, .chatgpt, .claude, .grok:
                 read = "-"
             }
             NSLog("webSession| %@ | stored=yes | verified=%@ | %@", seat.rawValue,
@@ -213,7 +220,7 @@ enum WebSession {
             return (user?["fullName"] as? String) ?? (user?["email"] as? String)
         case .notion:
             return await NotionWeb.spaces(cookie: cookie).first?.name
-        case .steam, .muse, .chatgpt, .claude:
+        case .steam, .muse, .chatgpt, .claude, .grok:
             return nil
         }
     }

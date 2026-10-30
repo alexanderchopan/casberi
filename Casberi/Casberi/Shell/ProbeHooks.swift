@@ -382,13 +382,13 @@ enum ProbeHooks {
     /// 60 characters.
     @MainActor
     private static func chatPageProbe(_ tag: String, _ page: AgentChatPage, seat: WebSession.Seat,
-                                      _ value: String) async {
+                                      _ value: String, timeout: Double = AgentChatPage.wholeReplyTimeout) async {
         try? await Task.sleep(for: .seconds(3))
         let signedIn = await page.signedIn()
         NSLog("%@| signedIn=%@ | stored=%@", tag, signedIn ? "yes" : "no", WebSession.signedIn(seat) ? "yes" : "no")
         guard signedIn, value.uppercased() != "YES" else { return }
         let started = Date()
-        switch await page.ask(value, firstQuestion: value) {
+        switch await page.ask(value, firstQuestion: value, timeout: timeout) {
         case .success(let reply):
             NSLog("%@| reply | chars=%d | seconds=%.0f | %@", tag, reply.count,
                   Date().timeIntervalSince(started), String(reply.prefix(60)))
@@ -6818,6 +6818,33 @@ enum ProbeHooks {
                 NSLog("claudeCodeCloud| added=%@ | rows=%d | failure=%@ | %@",
                       added.map(String.init) ?? "nil", rows.count, ClaudeCodeCloudIngest.lastFailure ?? "-",
                       states.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+            }
+        },
+        // `-grokProbe YES|"<question>"` — the same for Grok (prd §1626), and
+        // then the SHAPE of the chat's JSON (keys and the last response's
+        // fields, never words), what Grok's reader was checked against.
+        Hook(key: "grokProbe") { value, _ in
+            Task { @MainActor in
+                await chatPageProbe("grokProbe", GrokWeb.shared, seat: .grok, value, timeout: 60)
+                guard let id = GrokWeb.shared.lastChatID else {
+                    NSLog("grokProbe| shape | no chat id"); return
+                }
+                let js = "const id = \"\(id)\";\n" + GrokWeb.conversationJS
+                guard let text = await GrokWeb.shared.read(js) as? String,
+                      let json = try? JSONSerialization.jsonObject(with: Data(text.utf8)) else {
+                    NSLog("grokProbe| shape | unreadable"); return
+                }
+                func shape(_ value: Any?, depth: Int = 0) -> String {
+                    if let d = value as? [String: Any] {
+                        guard depth < 2 else { return "{…\(d.count)}" }
+                        return "{" + d.keys.sorted().map { "\($0):\(shape(d[$0], depth: depth + 1))" }.joined(separator: ",") + "}"
+                    }
+                    if let a = value as? [Any] { return "[\(a.count)×\(shape(a.last, depth: depth + 1))]" }
+                    if let s = value as? String { return "str\(s.count)" }
+                    if value is NSNumber { return "\(value!)" }
+                    return value == nil ? "nil" : "?"
+                }
+                NSLog("grokProbe| shape | %@", shape(json))
             }
         },
         // `-claudeProbe YES|"<question>"` — the same for Claude (prd §1624).

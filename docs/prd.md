@@ -69900,3 +69900,16 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 **Measured in the app** (simulator, the user's account, demo left): 20 sessions landed, Completed 15, Needs you 3, Running 1, Failed 1; the room drew them with Claude's line ("recommends read-only sign-in; asking stays on API keys") and the repo.
 
 **Not built:** Work's Needs you reads Work's rows and Claude Code sits in Agents, so a session waiting on you says so on its row only; moving Claude Code to Work is the user's call. Starting or steering a session (the second half) is unmeasured and unbuilt. Only the first page (20) is read. **Mac half (§1402):** not compiled in this pass.
+
+## §1626 — Grok signs in on grok.com and answers in your own Grok, on the loop ChatGPT and Claude share; its page drops the key (amends §242's Grok seat, retiring its xAI key field from the page; never X, which stays read-only) (user, 2026-10-30: "lets do grok next"; "cloudflare not accepting verification"; "there is no sign in there") — BUILT, signed in and asked on the simulator with a real account
+
+**Measured 2026-10-30, on the user's account.** grok.com chats signed out; `/rest/auth/get-user` and `/rest/app-chat/…` answer 401 `code 16` "No credentials presented", `/api/auth/session` `{"status":"unauthenticated"}`. Sign-in is xAI's own (`accounts.x.ai/sign-in?redirect=grok-com`: email, Google, X, Apple, GitHub); grok.com's phone page shows no sign-in of its own. **Cloudflare refused the desktop browser pane's sign-in and let iOS's WebKit through** (the simulator's Safari, then the app's sheet). A chat reads as its response nodes (`GET /rest/app-chat/conversations/<id>/response-node`) then the responses (`POST …/load-responses`, a read the page itself makes): `{responses: [2 × 45 keys]}`.
+
+1. **`GrokWeb`** is an `AgentChatPage` site: the composer is the labelled editor or text box, Send the submit button, the chat `/c/<id>`, signed in when `/rest/auth/get-user` answers 200. The shared loop now fills a plain text box too (value set, page told) as well as a rich editor.
+2. **`GrokThread`** takes the last response once the assistant's, not `partial` and no older than the question, and its `message`.
+3. **The page** is sign-in only, as Muse's: the xAI key field and the Your key row are gone; a stored key keeps the API path until Disconnect. The catalogue calls Grok a sign-in seat, tagline "Grok, signed in as you" (website shelf too). Grok's own site only: `GrokWeb` never reaches x.com (guarded).
+4. `grok-thread-selftest.sh` (in `verify.sh`); `NetworkReach` names `grok.com` and `accounts.x.ai`; `-grokProbe YES|"<question>"` asks, then logs the chat JSON's SHAPE (keys and counts, never words).
+
+**Measured in the app:** `-grokProbe "Reply with the single word: lodestar"` answered "lodestar" in 4 s, and the shape matched the reader.
+
+**UNMEASURED (§780b).** A follow-up; how long a session lasts; whether Cloudflare challenges a long-lived hidden page. xAI's terms on other clients were not read; the risk is the person's account. **Mac half (§1402):** not compiled in this pass.

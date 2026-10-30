@@ -413,7 +413,7 @@ enum BridgeCatalog {
         // reasonably expect the same here and be wrong. Same shape as
         // Privacy.com's "Requires a paid Privacy plan" — a cost precondition
         // belongs in the offer, not discovered after connecting.
-        Offer(name: "Grok",        tagline: "With your own key",            group: "Agent",     connectable: true,
+        Offer(name: "Grok",        tagline: "Grok, signed in as you",         group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "NEAR AI",     tagline: "Answers it can prove it wrote",       group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
@@ -1048,9 +1048,9 @@ enum BridgeSetupMode {
         // A sign-in that replaced a pasted key (prd §1584).
         "Notion", "Raindrop", "Steam", "OpenRouter",
         // Muse signs in on muse.ai, as Beeper connects it (prd §1619), and
-        // ChatGPT on chatgpt.com (§1623) and Claude on claude.ai (§1624): no
-        // key, no export.
-        "Muse", "ChatGPT", "Claude"]
+        // ChatGPT on chatgpt.com (§1623), Claude on claude.ai (§1624) and Grok
+        // on grok.com (§1626): no key, no export.
+        "Muse", "ChatGPT", "Claude", "Grok"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

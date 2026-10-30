@@ -45,6 +45,8 @@ final class AgentChatPage {
     /// Casberi conversation (`ChatGPTThread.chatKey`) → the site's chat id,
     /// for this run of the app. After a relaunch a follow-up starts a new chat.
     private var chats: [String: String] = [:]
+    /// The chat the last ask wrote in, for a probe that measures its JSON.
+    private(set) var lastChatID: String?
 
     /// The site says when it is done, so there is one ceiling and no quiet
     /// rule: past it, the ask has no answer.
@@ -76,10 +78,17 @@ final class AgentChatPage {
             // nothing (measured 2026-10-30, in the app). Its words are set as
             // one paragraph instead and the editor told, which also drops any
             // draft left in the box.
-            const line = document.createElement('p');
-            line.textContent = text;
-            box.replaceChildren(line);
-            box.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+            if (box.tagName === 'TEXTAREA') {
+              // A plain box (Grok's): its value is set and the page told.
+              const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+              setter.call(box, text);
+              box.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+              const line = document.createElement('p');
+              line.textContent = text;
+              box.replaceChildren(line);
+              box.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+            }
             // A phone layout's Enter is a new line (ChatGPT, measured); Send
             // sends everywhere.
             for (let i = 0; i < 20; i++) {
@@ -107,7 +116,8 @@ final class AgentChatPage {
     /// Sends `text` into a chat — the one `firstQuestion`'s conversation
     /// started, else a new one — and returns the answer once the site's own
     /// chat says it finished.
-    func ask(_ text: String, firstQuestion: String) async -> Result<String, Failure> {
+    func ask(_ text: String, firstQuestion: String,
+             timeout: Double = AgentChatPage.wholeReplyTimeout) async -> Result<String, Failure> {
         guard !asking else { return .failure(.couldNotSend) }
         asking = true
         defer { asking = false }
@@ -124,7 +134,7 @@ final class AgentChatPage {
         }
         let started = Date()
         var chatID: String?
-        while Date().timeIntervalSince(started) < Self.wholeReplyTimeout {
+        while Date().timeIntervalSince(started) < timeout {
             try? await Task.sleep(for: .seconds(Self.poll))
             if chatID == nil {
                 chatID = await page.run("return window.casberiChat.chatID()") as? String
@@ -134,6 +144,7 @@ final class AgentChatPage {
                     continue
                 }
                 chats[key] = chatID
+                lastChatID = chatID
             }
             guard let chatID,
                   let json = await page.run("return await window.casberiChat.conversation(id)", ["id": chatID]) as? String,
