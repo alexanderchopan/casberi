@@ -188,6 +188,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 .scrollTargetLayout()
             }
             .scrollClipDisabled()
+            // A row of four or fewer fits: it stands still under the finger.
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             // **THE PICK IS ON SCREEN (prd §1468):** a tile past the fourth
             // (the Wallet's Spending) landed hidden off the edge when a door
             // opened it; the row rolls to show it, clamped at the end.
