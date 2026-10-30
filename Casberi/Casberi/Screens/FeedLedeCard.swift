@@ -492,6 +492,9 @@ struct FeedLedeCard: View {
         if isPost, !castFace, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
             RemoteThumb(urlString: avatar, size: DS.Face.list,
                         fallback: thing.source, circular: true)
+        } else if ChatFace.isPersonChat(thing) {
+            // Who the chat is with, as its row leads (prd §1615).
+            ChatFaceMark(thing: thing, size: DS.Face.list)
         } else {
             BridgeIcon(name: thing.source, size: DS.Face.list, circular: true,
                        symbol: BridgeIcon.noteSymbol(for: thing))
@@ -508,7 +511,10 @@ struct FeedLedeCard: View {
     private var words: String {
         // A title's seam (prd §915): the object is the statement, and the
         // qualifier after ` — ` is `qualifier`, drawn under it.
-        isPost ? SocialRoomSource.words(of: thing) : TitleSeam.name(thing.title)
+        if isPost { return SocialRoomSource.words(of: thing) }
+        // "Ada", never "Chat with Ada" (prd §1615).
+        if ChatFace.isPersonChat(thing) { return ChatFace.name(thing) }
+        return TitleSeam.name(thing.title)
     }
 
     /// What the title said after its seam — the game, the board, the verb —

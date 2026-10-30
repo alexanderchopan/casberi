@@ -3987,9 +3987,16 @@ struct ThingSheetView: View {
         // THE CENTRED HEAD (prd §1398): the app's mark, the chat's name, the
         // app with the day; the tiles; the network and the count under them,
         // and the chat whole below (prd §1580).
+        // Who it's with leads, the network its badge, and the count rides the
+        // head's line (prd §1615): the row under the tiles that said
+        // "Telegram · 6,310 messages" beside a second logo is deleted.
         SheetPartyHead(name: Self.chatName(thing.title), day: thing.capturedAt,
-                       line: BridgeCatalog.seatName(forSource: thing.source)) {
-            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                       line: Self.chatLine(thing)) {
+            if ChatFace.isPersonChat(thing) {
+                ChatFaceMark(thing: thing, size: DS.Face.sheet, badge: true)
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+            }
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
@@ -3998,10 +4005,6 @@ struct ThingSheetView: View {
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
-        ChatTranscriptBox(thing: thing)
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, DS.Space.s6)
-            .settleIn(delay: 0.1)
     }
 
     /// Anything else in the room's frame (prd §1191): its title, the box of

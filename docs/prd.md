@@ -69745,3 +69745,20 @@ Not done: the Tor share in the proof line (the receipts insight carries no Tor c
 2. **The demo's Safe figure counts the demo's account.** The demo's holdings read never reads `YourAccountDemo.address`, so the Safe pick's figure adds `YourAccountDemo.totalUSD` (its held tokens at their demo prices) in the demo only; a real install's read already counts your account (§1442l, §1614 item 3). Seen: "$5K in 2 Safes", was "$4K".
 
 **Still not built:** an Earning slice seen with a real rate; `PoolsSplit` and Holdings' Private head still spell the private total twice.
+
+## §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with, and a quiet Wallet app opens on Activity (amends §1059, §1612, §1492, §1213; user, 2026-10-29: "i feel like the quality of the individual rooms has degraded since we made the combined feed", "telegram … if i tap on it in the app library, it takes me to settings and doesn't register that i'm already signed in", "in the X room it shows all the posts cleanly but no avatars", "tapping on calendar in the app library also opened its settings", "another example of a poor page is the photos room", "i'd still like to make the actual telegram messages look better when you open the sheet"; "Build it" to the mock; "yes" to item 6) — BUILT, seen on the simulator with the demo
+
+**Why.** §1059 deleted every view only a folded app's own room reached, because no door led there; §1418 then made each app's page a door again from Library, and nobody put the shapes back. A sweep of all 77 demo app pages found what it cost.
+
+1. **Telegram is yours once you sign in to your chats.** The sign-in registered no seat, so Library offered "Add" and opened the page. `TelegramSignInSheet`'s `onSignedIn` registers it; a session from before this registers on the next foreground (`BridgeRefresh`).
+2. **A live network's row leads with the face it stamped.** X, Instagram, TikTok and Threads join `ShapedRows.faceSources` (Bluesky, Stocktwits, GitHub, Twitch already there): the same bug the set's doc records twice before.
+3. **Photos' and Files' own pages tile again**, as Media draws them: the newest leads, a day's pictures tile under its header, a file with no picture is a row (`Self.isMediaTile`, square).
+4. **Calendar of yours opens its events** from Library (amends §1612); the calendars list stays the door for a Calendar not yet added.
+5. **A chat with people reads as Messages' list** (`ChatFace`, `ChatFaceMark`): the person's face (or the group's initial, `SenderInitial`) leads the row and the room's lead card, never the network's mark; the name, never "Chat with"; the line is the last message, "You:" on yours, the sender's name in a group. The sheet's head is the face with the network as a badge, its line "Telegram · 6,310 messages" with the day; `ChatTranscriptBox`'s second row with a second logo is deleted. Your bubbles take the tint, theirs the fill (amends §1213's ink; `ds-template-audit.py` E allows the one line). The demo's chat is Mia's, with her face.
+6. **A Wallet app picked with nothing on Home opens on Activity, once per pick** (reverses §1492's "never jumps to Activity"): ten apps opened on "Nothing needs you on Peer" with their rows a tap away. The Home tile still stands on Home (`ShellChrome.walletPickLanding`).
+
+**Not built.** Times between a chat's turns: a conversation is stored as "Name: words" lines with no per-message time. **Checked, not broken:** seven pages that drew black in the sweep were slow launches at load 73 and draw at 15s; Calendar's days are its events' starts.
+
+**Not seen.** A real Telegram sign-in registering the seat; Library › Calendar by tap; the in-Wallet account menu's pick (the Library door's `pickSeat` was seen turning to Activity; the `-walletScope` probe fires before the room reads and does not). **Mac half:** the same shared views; Catalyst not compiled in this pass.
+
+Mock: `design/mockups/telegram-chat.html`.

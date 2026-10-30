@@ -371,7 +371,13 @@ final class ShellChrome {
     /// Cleared when the watched list can no longer honour it (a scoped wallet
     /// removed, or the list falling back to one) — a scope pointing at a gone
     /// wallet is a feed with no rows and no way to explain itself.
-    var walletScope: String?
+    var walletScope: String? {
+        didSet { if walletScope != oldValue { walletPickLanding = walletScope != nil } }
+    }
+
+    /// A Wallet pick not yet landed: Home turns to Activity once if the
+    /// pick has nothing on Home (prd §1615 item 6). Never observed; Home reads it.
+    @ObservationIgnored var walletPickLanding = false
 
     /// The app picked in every other merged room (prd §1050k), keyed by room
     /// and held as a `RoomAccounts` scope id — the Wallet keeps `walletScope`,

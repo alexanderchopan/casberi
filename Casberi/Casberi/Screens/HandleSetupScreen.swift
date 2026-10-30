@@ -417,7 +417,12 @@ struct HandleSetupScreen: View {
             onOpenRow: bridge.isRichSocial ? openRow : nil,
             // Telegram's sign-in (prd §1575), the page's one presentation.
             cardSheet: bridge == .telegram ? { _ in
-                AnyView(TelegramSignInSheet(onSignedIn: {}))
+                // Signed in to your chats makes Telegram yours, as a followed
+                // channel does: Library's tap then lands in its room (§1418).
+                AnyView(TelegramSignInSheet(onSignedIn: {
+                    store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                            proof: String(localized: "Signed in"))
+                }))
             } : nil,
             teardown: {
                 bridge.setName("")

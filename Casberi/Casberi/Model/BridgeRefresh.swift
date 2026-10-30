@@ -154,6 +154,12 @@ enum BridgeRefresh {
         WalletStore.shared.keepYourAccount()
         store.restoreSeatsFromRows(context: context)
         store.reconcileKeyedSeats()
+        // A Telegram chat session from before its sign-in wrote a seat: the
+        // feed filled while Library offered "Add" (user, 2026-10-29).
+        if TelegramClient.signedIn, !store.bridges.contains(where: { $0.name == "Telegram" }) {
+            store.registerConnected(id: "telegram", name: "Telegram",
+                                    proof: String(localized: "Signed in"))
+        }
         // Returns this slot's DELAY IN MILLISECONDS, not its index — so every
         // `stagger(s)` below carries its pass's pace with it.
         var nextSlot = 0

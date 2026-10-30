@@ -204,6 +204,9 @@ extension FeedScreen {
         let needs = walletNeedsCount(upcoming: upcoming)
         let counts = walletSecurityCounts
         let permissions = counts.delegations + counts.approvals
+        // One account with nothing on Home (prd §1492's quiet state).
+        let quiet = !onAll && !walletOnFollowing && !(yours != nil && yoursPicked)
+            && !walletPickHasOwnSection && needs == 0 && permissions == 0 && counts.flagged == 0
         walletDoorsSection {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
@@ -250,12 +253,20 @@ extension FeedScreen {
             // to "Nothing needs you on Railgun").** With Following and Markets
             // on All only (§1491), an app with no asks, grants or threats left
             // Home blank under the tiles. §769's empty state fills it: what
-            // would stand here, empty, and the account named. The pick still
-            // lands on Home; it never jumps to Activity.
-            if !onAll, !walletOnFollowing, !(yours != nil && yoursPicked), !walletPickHasOwnSection,
-               needs == 0, permissions == 0, counts.flagged == 0 {
+            // would stand here, empty, and the account named. Reached by the
+            // Home tile; a fresh pick turns to Activity first (below).
+            if quiet {
                 walletHomeQuiet
             }
+        }
+        // **AN APP PICKED WITH NOTHING ON HOME OPENS ON ITS ACTIVITY (prd
+        // §1615 item 6, user: "yes", reversing §1492's "never jumps").** Ten Wallet
+        // apps opened on "Nothing needs you on Peer" with their rows a tap
+        // away. Once per pick, so the Home tile still stands on Home.
+        .task(id: chrome.walletScope) {
+            guard chrome.walletPickLanding else { return }
+            chrome.walletPickLanding = false
+            if quiet { chrome.walletSection = .activity }
         }
         // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1480 item 11):**
         // they are Home's only list, so the list column keeps them and the

@@ -119,7 +119,7 @@ FLOW_LINE = re.compile(r"^\s*(?:\}\s*)?(?:if\b|else\b|switch\b|case\b|default\b|
 EXEMPT = {
     # ── Owned elsewhere on 2026-09-15: left untouched by §746, tightened as
     #    those sessions land.
-    "Screens/ShapedRows.swift": (3, "feed rows — being rewritten by another session"),
+    "Screens/ShapedRows.swift": (2, "feed rows — being rewritten by another session"),
     "Screens/PrivacyPoolsRoomCard.swift": (1, "a room head — being migrated by another session"),
     "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
     # ── A real pill, kept on a stated reason and OWED.
@@ -150,6 +150,8 @@ EXEMPT_TINT = {
     "Screens/NoteSheetViews.swift": (2, "a note's wikilinks and markdown links"),
     "Screens/FileverseDocPage.swift": (1, "a doc's markdown links, through .tint"),
     "Screens/WalletRow.swift": (1, "the sparkline's dots"),
+    "Design/DSChatBubble.swift": (1, "your message's fill, as Messages draws it (prd §1615): a side "
+                                     "of the conversation, not a pick, a state or a verb"),
     "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
     "Screens/WalletSpendingFigure.swift": (1, "Spending's running line, a chart (prd §1480 item 14)"),
     "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),

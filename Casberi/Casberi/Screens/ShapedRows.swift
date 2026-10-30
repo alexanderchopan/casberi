@@ -372,8 +372,14 @@ struct BandRow: View {
     /// already holds its live FRAME on `previewImageURL`, so this is the
     /// "both" pattern — the streamer's face leads, the frame rides after the
     /// title — rather than a swap.
+    ///
+    /// X, INSTAGRAM, TIKTOK AND THREADS JOINED 2026-10-29, the same bug a
+    /// third time (user: "in the X room it shows all the posts cleanly but no
+    /// avatars of who it is from"): each live door stamps the author's or
+    /// actor's face, and the rows drew the app's glyph.
     static let faceSources: Set<String> = [
         "Bluesky", "Stocktwits", "GitHub", "Twitch",
+        "X", "Instagram", "TikTok", "Threads",
     ]
     /// The sources whose leading slot is a publisher's MARK — a logo, so a
     /// squircle, not a circle.
@@ -614,6 +620,12 @@ struct BandRow: View {
     }
 
     private var leader: Leader {
+        // A chat with people leads with who it's with, whichever row draws it
+        // (prd §1615): Snapchat's conversations stand on this row.
+        if ChatFace.isPersonChat(thing) {
+            if let url = ChatFace.url(thing) { return .avatar(url) }
+            return .initial(ChatFace.name(thing))
+        }
         if let avatar = identityAvatarURL {
             // Whose post this is, when several accounts are followed.
             return .avatar(avatar)
@@ -2237,8 +2249,16 @@ struct ExcerptRow: View {
 
     @ViewBuilder private var liveBody: some View {
         // ONE ANATOMY (prd §744): the excerpt is the line, clamped at `lines`.
-        DSFeedRow(name: thing.title, line: DSFeed.line(excerpt), lineLines: lines) {
-            BridgeIcon(name: thing.source, size: DS.Mark.row)
+        // A chat with people is who it's with over its last message (§1615).
+        let personChat = ChatFace.isPersonChat(thing)
+        DSFeedRow(name: personChat ? ChatFace.name(thing) : thing.title,
+                  line: DSFeed.line(personChat ? ChatFace.lastLine(thing) : excerpt),
+                  lineLines: personChat ? 1 : lines) {
+            if personChat {
+                ChatFaceMark(thing: thing)
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Mark.row)
+            }
         } trailing: {
             // No age and no length (prd §902): a count is not a fact you
             // decide on, and the day header says when.

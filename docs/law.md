@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1750 of 1822 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1751 of 1823 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1428,7 +1428,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1056 — Life splits into Life and Day, each one room, and Notes is no category, built (amended by §1344)
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080, §1118)
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu (amended by §1122)
-- §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
+- §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every… (amended by §1615)
 - §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072, §1614)
 - §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094, §1122, §1123, §1133)
 - §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the t… (amended by §1125)
@@ -1600,7 +1600,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1210 — Three widgets, each a small tile: Notes, Wallet, Feed (amended by §1223)
 - §1211 — Search finds what things SAY, teaches when empty, and reaches iOS (amended by §1589)
 - §1212 — The pill above the Feed takes you to its top (amended by §1208l)
-- §1213 — Logos chat says who, then what (amended by §1214)
+- §1213 — Logos chat says who, then what (amended by §1214, §1615)
 - §1214 — The Node box says the stage Basecamp's bar says (amended by §1216, §1448)
 - §1215 — Logos chat is two-way, on the phone, as its own client (amended by §1313)
 - §1216 — The Node box reads the stake: Funded, aging, Eligible to propose (amended by §1448)
@@ -1872,7 +1872,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot (amended by §1490)
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
-- §1492 — One account with nothing on Home says so (amends §1491)
+- §1492 — One account with nothing on Home says so (amends §1491) (amended by §1615)
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
@@ -1992,10 +1992,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again
 - §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept…
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
-- §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (…
+- §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (… (amended by §1615)
 - §1613 — Licenses is one row per library, each opening its page
 - §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i…
 - §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes…
+- §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with,…
 
 ## Dead rulings → what replaced them (generated)
 

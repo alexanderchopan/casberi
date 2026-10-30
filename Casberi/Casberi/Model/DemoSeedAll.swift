@@ -2183,6 +2183,9 @@ enum DemoSeedAll {
                 content: "Saved messages with \(c.0).", tags: ["Conversation"]) { t in
                 t.authorHandle = c.0
                 t.messageCount = c.1
+                // A chat leads with who it's with (prd §1615): the demo's
+                // people wear their faces; Dad and a group draw an initial.
+                if ["Sam", "Mia", "Uma"].contains(c.0) { t.authorAvatarURL = avatarArt(c.0.lowercased()) }
             }
         }
         out += (0..<6).map { i in
@@ -2251,8 +2254,8 @@ enum DemoSeedAll {
         // text", oldest first — so the row's line is the latest message
         // (prd §1005). It said "Messages with Ada." under "Chat with Ada".
         let chats: [(String, Int, Double, String)] = [
-            ("Ada", 6_310, 0.8,
-             "Ada: Are we still on for Saturday?\nYou: Yes, 10am at the wall.\nAda: Perfect. I'll bring the rope."),
+            ("Mia", 6_310, 0.8,
+             "Mia: Are we still on for Saturday?\nYou: Yes, 10am at the wall.\nMia: Perfect. I'll bring the rope."),
             ("Climbing crew", 2_480, 2.6,
              "Sam: The wall's shut Thursday for a reset.\nJo: Friday at 7 then?\nYou: Friday works for me."),
             ("Mum", 1_140, 6.0,
@@ -2266,6 +2269,9 @@ enum DemoSeedAll {
                 content: c.3, tags: ["Conversation"]) { t in
                 t.authorHandle = c.0
                 t.messageCount = c.1
+                // A chat leads with who it's with (prd §1615): Mia is the
+                // demo's own face; a group and Mum draw their initial.
+                if c.0 == "Mia" { t.authorAvatarURL = avatarArt("mia") }
             }
         }
         return out

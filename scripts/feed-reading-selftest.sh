@@ -326,11 +326,12 @@ grep -qE '\b(ListeningLede|ReadingLede|listeningLedeSection|readingLedeSection)\
 # Apple Music and Spotify fold into Media, whose plain path covers its newest.
 # Every picture-grid room leads with its newest thing, lifted out ABOVE the
 # grid (`newestLead`): X and Instagram since prd §821, Snapchat and Telegram
-# since §832 (Photos and Files folded into Media and Life, prd §1059). No grid
-# declines the cover any more.
+# since §832, and Photos' and Files' own pages again (folded into Media and
+# Life by §1059, reachable from Library by §1418). No grid declines the cover
+# any more.
 grep -qE 'cover: heroShown \|\| !(memoryTiles|tiles|photoTiles|imageTiles)\.isEmpty' "$FEED" \
   && { echo "✗ a picture grid declines the cover again (prd §832)"; exit 1; }
-[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 4 ] \
+[ "$(grep -c 'let (cover, uncovered) = newestLead(visible, heroShown: heroShown)' "$FEED")" -eq 5 ] \
   || { echo "✗ a picture-grid room no longer leads with its newest thing above the grid (prd §821, §832)"; exit 1; }
 grep -q 'photoGridSection' "$FEED" \
   && { echo "✗ a room draws one grid of every picture it holds again — the tiles stand under the rows' day headers since prd §910"; exit 1; }

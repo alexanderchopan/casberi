@@ -398,7 +398,10 @@ struct SettingsHome: View {
         // lists Library's box held that live nowhere else are their apps'
         // pages, each with its own way in, whether or not the app is yours.
         if name == "Contacts" { route.push(.contacts("")); return }
-        if name == "Calendar" { route.push(.calendars); return }
+        // Calendar of yours GOES, to its events, like every app of yours
+        // (user, 2026-10-29: tapping it "just showed me what calendars i was
+        // subscribed to"); the calendars list stays for one you haven't added.
+        if name == "Calendar", yours(name) == nil { route.push(.calendars); return }
         if let app = yours(name) {
             openYours(app)
         } else {

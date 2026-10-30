@@ -82,37 +82,6 @@ struct AgentChatBox: View {
     }
 }
 
-// MARK: - A chat with a person
-
-struct ChatTranscriptBox: View {
-    let thing: Thing
-
-    /// The network, how much and the day. The messages stand under the
-    /// tiles, whole (prd §1580): two of them here were cut to two lines and
-    /// drawn nowhere else, and stood above the chat they end.
-    var body: some View {
-        if thing.isLive {
-            HStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
-                Text(verbatim: metaLine)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-        }
-    }
-
-    /// "Snapchat · 214 messages · since Mar 2024".
-    private var metaLine: String {
-        var parts = [thing.source]
-        if let n = thing.messageCount, n > 0 { parts.append(String(localized: "\(n) messages")) }
-        parts.append(FeedScreen.dayWord(thing.capturedAt))
-        return parts.joined(separator: " · ")
-    }
-}
-
 // MARK: - A journal entry
 
 struct JournalEntryBox: View {

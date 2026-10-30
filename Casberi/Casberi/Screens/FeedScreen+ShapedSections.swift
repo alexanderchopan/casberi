@@ -194,6 +194,21 @@ extension FeedScreen {
         // launch by a feed that draws none of them (`roomBody`'s doc, PERF
         // 2026-10-17). A new arm goes in `AnyView(Group { … })` too.
         switch shape {
+        case .photos, .files:
+            AnyView(Group {
+                // AN APP'S OWN PAGE KEEPS ITS GRID (user, 2026-10-29: "another
+                // example of a poor page is the photos room"). §1059 deleted
+                // these arms when Photos and Files folded into Media and Life,
+                // and §1418 then made each app's page reachable again from
+                // Library, where it fell to the plain rows. The page draws what
+                // Media draws for them: the newest leads, a day's pictures tile
+                // under its header, a file with no picture stays a row.
+                let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+                if let cover { Section { ledeListRow(cover) } }
+                let days = chronoGroups(uncovered)
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                                isTile: Self.isMediaTile, tileShape: .square)
+            })
         case .snapchat:
             AnyView(Group {
                 // The memories whose pictures actually came back tile; everything
