@@ -69805,6 +69805,33 @@ Canvas: "Move coin pickers" (claude.ai artifact, boards Now · A · B · C · D)
 
 **Not done:** a check that opens every app pick, so this cannot slide unseen again (proposed: `journeys.sh` gains a Wallet-pick sweep). **Mac half:** the same views on Catalyst; not compiled in this pass.
 
+## §1619 — Muse signs in on muse.ai, as Beeper connects it, and answers in your own Muse chat; an agent seat may send what you typed through its session (amends the 2026-09-24 read-only rule for session seats, for agents only; amends §854's key-only connect and §1584's "the other agents keep their keys" for Muse) (user, 2026-10-30, sending Beeper's "Connect to Muse" screen: "Beeper does this and is on the app store. so why can't we? lets do this for all the agents we have"; then "Yes, Muse first": "Amend the read-only rule so you can chat with your own agent through its session. Build Muse first, measured on a real account, then measure ChatGPT, Claude, Gemini and Grok one at a time"; "you are on meta ai not muse", "muse.ai"; on the signed-in page, "i don't think we need 'Your key' any more") — BUILT, signed in and asked on the simulator with a real account
+
+Muse is muse.ai, Meta's agent (not Meta AI at meta.ai). Its account page took a Model API key from dev.meta.ai; it now has **Sign in** and nothing else. The key field and the Your key row are gone from the page; a key already stored keeps answering until Disconnect clears it.
+
+**Measured 2026-10-30, on the user's account in a browser.**
+- **Sign-in** is Meta's email-or-phone code on muse.ai itself (`/api/auth/native/send-otp`, `/confirm-password`, `/save-account`). `POST /api/auth/check` answers 200 `ok: true` signed in and 401 `reason: session` signed out. The session cookies are HttpOnly.
+- **Chat** goes over `wss://hatch.metaaivm.com/v1/noise`: binary frames inside a Noise handshake, opened with a session token and a Meta "notary" endorsement. No client outside the page can speak it, so there is no API to call.
+- **The page draws plainly.** Each message is a `[data-message-item]` with `data-message-id` and `data-message-role`; an assistant's words sit in `[data-hatch-assistant-message-body]`; the composer is the one `textarea`, and a synthetic Enter sends it (measured: "Reply with the single word: ready" came back as news of Muse's own, then "ready").
+- **One thread.** Muse keeps one chat per person, answers in several messages, and may open with something of its own.
+
+1. **The sign-in is `WebSessionSignInSheet(seat: .muse)`**, Muse's own page in the sheet. It closes once muse.ai's own check says the jar is signed in (`WebSession.verify(.muse)` asks `MuseWeb`'s page, never a cookie name). Sessions stay device-only.
+2. **Asking is `MuseWeb`**: muse.ai kept open in WebKit's default jar, inside the window UNDER the app's own opaque screen, video inline and never autoplaying (the signed-out page's video went full screen over the app otherwise, seen on the simulator). Off the window's edge, the first cut, WebKit counted the page as not visible: its chat never loaded and the question was never sent (measured: 121 s, no reply, nothing new in the chat). It waits for the chat's history to stop growing first (the composer draws before the history does, and history that lands after the question looks new), types the question, then reads every assistant message after it once the page has been unchanged for four reads 1.5 s apart (`MuseThread`). It gives up after 120 s with no word, and after 240 s returns what Muse has said so far.
+3. **Only the question goes.** Muse keeps its chat for good and acts on it, so no saved thing, candidate or earlier turn is pasted in; the question passes `SecretScan.redacted` first. The answer is badged "Muse".
+4. **A pasted key keeps the Model API path.** The session answers only when no key is stored. `complete` (titles, the librarian) still needs a key.
+5. **The write is narrow.** An agent seat may type what the person wrote into their OWN assistant's chat. No post, reply, like or message to another person goes out through any session; X, Instagram, TikTok and the rest stay read-only.
+6. **Disconnect** clears the stored mark, closes the page and deletes muse.ai's cookies.
+7. **A signed-out session says so**: "You're signed out of Muse — sign in again on its account page." (`AgentAnswerFailure.signedOut`), never "your key was turned down".
+8. `muse-thread-selftest.sh` (in `verify.sh`) pins the reply rule and guards that Muse is sent only the redacted question and that `MuseWeb` never logs or reads a cookie value. `NetworkReach` names `muse.ai` and `hatch.metaaivm.com`. `-museProbe YES|"<question>"` logs `museProbe|` with the reply's length and first 60 characters.
+
+**Measured in the app** (simulator, the user's account, 2026-10-30): signed in through the sheet, then `-museProbe "Reply with the single word: lighthouse"` answered "lighthouse" in 13 s.
+
+**UNMEASURED (§780b).** The composer's own ask on a phone (the probe calls the same `MuseWeb.ask`). How long a muse.ai session lasts; whether muse.ai changes the attributes the page reads (the seat then fails as "came back with nothing", never a wrong answer). Muse's terms say nothing found here about other clients; the risk is the person's account.
+
+**Next (the user's order):** measure ChatGPT, Claude, Gemini and Grok one at a time before building any of them.
+
+**Mac half (§1402).** The same sheet and page on Catalyst; not compiled in this pass.
+
 ## §1620 — Every Feed section's + ends with "More <category> apps" (amends §1300's follow-by-name list, moves §1303's Social row from first to last; user, 2026-10-30, of Work's +: "it only shows a handful of apps, why those only and not all of them?", then "same with notes and really any of the plus signs on the feed. should they show all?", and "ok" to one last row) — BUILT
 
 A + lists what you make in the section (Notes' New note, Day's event) and what you follow there by name (§1300: Work's six: GitHub, Hugging Face, npm, PostHog, PyPI, Radicle), and so read as the category's whole roster: Work has 20 apps. The last row, set apart, is "More <category> apps · All N in the catalogue", opening the catalogue on that category's card (`route.openCategory`), every app there, connected or not. Never a 20-row menu. Social's "More social apps" led its + (§1303) and now ends it with the rest. A section whose name is no catalogue category (the Wallet's Subscriptions and Accounts lists) gets none.

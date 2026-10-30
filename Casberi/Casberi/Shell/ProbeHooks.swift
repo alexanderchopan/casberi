@@ -6749,6 +6749,29 @@ enum ProbeHooks {
         Hook(key: "webSessionProbe") { _, _ in
             Task { @MainActor in await WebSession.probe() }
         },
+        // `-museProbe YES|"<question>"` asks muse.ai's own page whether this
+        // jar is signed in, and with a question, sends it into the person's
+        // Muse chat the way the composer does (prd §1619). Logs `museProbe|`
+        // with the reply's length and its first 60 characters, never more.
+        Hook(key: "museProbe") { value, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                let signedIn = await MuseWeb.shared.signedIn()
+                NSLog("museProbe| signedIn=%@ | stored=%@", signedIn ? "yes" : "no",
+                      WebSession.signedIn(.muse) ? "yes" : "no")
+                guard signedIn, value.uppercased() != "YES" else { return }
+                NSLog("museProbe| before | %@", await MuseWeb.shared.debugTail())
+                let started = Date()
+                switch await MuseWeb.shared.ask(value) {
+                case .success(let reply):
+                    NSLog("museProbe| reply | chars=%d | seconds=%.0f | %@", reply.count,
+                          Date().timeIntervalSince(started), String(reply.prefix(60)))
+                case .failure(let failure):
+                    NSLog("museProbe| failed=%@ | seconds=%.0f", "\(failure)", Date().timeIntervalSince(started))
+                }
+                NSLog("museProbe| page | %@", await MuseWeb.shared.debugTail())
+            }
+        },
         // `-acornsSession "<bearer>"` stores an Acorns bearer lifted from a
         // signed-in browser session — `-spotifySession`'s door, for the same
         // reason: the sign-in is a live human typing a password into Acorns'

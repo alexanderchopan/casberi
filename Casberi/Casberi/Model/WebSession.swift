@@ -21,8 +21,14 @@ import Foundation
 /// Steam's access token is the likeliest to be short. `-webSessionProbe`
 /// logs what each answers.
 enum WebSession {
+    /// Safari's own string. Google refuses its sign-in inside a web view that
+    /// announces itself as one, and several of these pages offer it.
+    static let safariUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+
     enum Seat: String, CaseIterable {
-        case notion, raindrop, steam
+        /// Muse is an agent, not a token bridge (prd §1619): its session is
+        /// read by `MuseWeb`'s page, never sent as a header.
+        case notion, raindrop, steam, muse
 
         /// The catalogue name, for the sheet's title.
         var name: String {
@@ -30,6 +36,7 @@ enum WebSession {
             case .notion: "Notion"
             case .raindrop: "Raindrop"
             case .steam: "Steam"
+            case .muse: "Muse"
             }
         }
 
@@ -39,6 +46,7 @@ enum WebSession {
             case .notion: URL(string: "https://www.notion.so/login")!
             case .raindrop: URL(string: "https://app.raindrop.io/account/login")!
             case .steam: URL(string: "https://store.steampowered.com/login/")!
+            case .muse: MuseWeb.home
             }
         }
 
@@ -48,6 +56,7 @@ enum WebSession {
             case .notion: "notion.so"
             case .raindrop: "raindrop.io"
             case .steam: "steampowered.com"
+            case .muse: MuseWeb.domain
             }
         }
 
@@ -58,6 +67,7 @@ enum WebSession {
             case .notion: "www.notion.so"
             case .raindrop: "api.raindrop.io"
             case .steam: "store.steampowered.com"
+            case .muse: "muse.ai"
             }
         }
 
@@ -69,6 +79,9 @@ enum WebSession {
             case .notion: "token_v2"
             case .raindrop: nil
             case .steam: "steamLoginSecure"
+            // Muse's session cookies are HttpOnly and named nowhere it
+            // publishes; its own check is asked on any jar.
+            case .muse: nil
             }
         }
 
@@ -134,6 +147,10 @@ enum WebSession {
             return !(await NotionWeb.spaces(cookie: header)).isEmpty
         case .steam:
             return await SteamWeb.token(cookie: header) != nil
+        case .muse:
+            // Asked by muse.ai's own page over WebKit's jar, which holds what
+            // the sheet's page just wrote (prd §1619).
+            return await MuseWeb.shared.signedIn()
         }
     }
 
@@ -164,6 +181,8 @@ enum WebSession {
                 } else {
                     read = "token=nil"
                 }
+            case .muse:
+                read = "-"
             }
             NSLog("webSession| %@ | stored=yes | verified=%@ | %@", seat.rawValue,
                   verified ? "yes" : "no", read)
@@ -180,7 +199,7 @@ enum WebSession {
             return (user?["fullName"] as? String) ?? (user?["email"] as? String)
         case .notion:
             return await NotionWeb.spaces(cookie: cookie).first?.name
-        case .steam:
+        case .steam, .muse:
             return nil
         }
     }

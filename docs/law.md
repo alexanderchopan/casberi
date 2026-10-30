@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1757 of 1829 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1758 of 1830 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1203,7 +1203,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §851 — Two setup screens told you to mint a key that could not work, and the wallet crown ignored Zerion's own "don't count…
 - §852 — The rest of the §847 leftovers: six bridges, and every one was a window rather than a name
 - §853 — Dodo's dispute amount stays a major-unit decimal, and the naive "fix" would break it
-- §854 — Muse: Meta's model, on the branch that was already there
+- §854 — Muse: Meta's model, on the branch that was already there (amended by §1619)
 - §855 — What an outside agent can reach: a structured Find, and three sentences Siri was saying wrong (amended by §1047)
 - §856 — Muse's key check was wrong within the hour, and §854 said exactly where to look
 - §857 — MetaMask Card: the third card that settles onchain, and the file that named its addresses
@@ -1964,7 +1964,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1581 — Newest holds one thing per app
 - §1582 — Your X Following timeline lands as posts, and they replace the "New post" notices
 - §1583 — 0xBow's Privacy Pools v2 is watched weekly: a script compares what we pin with what 0xBow ships, and a Monday task re…
-- §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in
+- §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in (amended by §1619)
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593)
@@ -2000,6 +2000,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th…
 - §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and…
 - §1618 — A Wallet app's pages are its own again: an account row and Needs you on Home, what it holds in Holdings and the box,…
+- §1619 — Muse signs in on muse.ai, as Beeper connects it, and answers in your own Muse chat; an agent seat may send what you t…
 - §1620 — Every Feed section's + ends with "More <category> apps"
 - §1621 — Work's app pages hold a week in the demo (applies §1618's "demo data on every tab" to Work; user, 2026-10-30: "i want…
 - §1622 — A nightly sweep opens every app page and fails one that did not land or stands empty

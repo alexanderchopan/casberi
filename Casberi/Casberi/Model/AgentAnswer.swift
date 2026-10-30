@@ -433,8 +433,14 @@ enum AgentKey {
         // Your own model is configured by its ADDRESS, not a key (prd §1478):
         // its key is optional, so Keychain presence says nothing. The memo
         // still covers it — `OwnModel.setAddress` bumps the same generation.
+        // Muse also counts when signed in on muse.ai with no key (prd §1619);
+        // `WebSession.store` bumps the same generation.
         let value = AgentProvider.allCases.filter {
-            $0 == .ownModel ? OwnModel.address != nil : TokenVault.get($0.vaultKey) != nil
+            switch $0 {
+            case .ownModel: OwnModel.address != nil
+            case .meta: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.muse)
+            default: TokenVault.get($0.vaultKey) != nil
+            }
         }
         configuredMemo = (generation, value)
         return value
@@ -489,6 +495,12 @@ enum AgentKey {
         // Your own model's address and its tool-less memory go with the seat
         // (prd §1478): a remembered refusal describes a server that is gone.
         if provider == .ownModel { OwnModel.forget() }
+        // Muse's session goes with the seat: the stored mark, the page and
+        // muse.ai's cookies (prd §1619).
+        if provider == .meta {
+            WebSession.clear(.muse)
+            Task { @MainActor in MuseWeb.shared.forget() }
+        }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
         }
@@ -671,6 +683,8 @@ enum AgentAnswerFailure: Error, Sendable {
     /// on Ollama 0.40.9: `"… gemma3:1b does not support tools"`. Your own
     /// model retries without them; any other seat reports it as itself.
     case toolsUnsupported
+    /// Muse's session has ended on muse.ai (prd §1619) — a sign-in, not a key.
+    case signedOut
 
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
@@ -715,6 +729,8 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Pick a model on Your own model's page first.")
         case .toolsUnsupported:
             String(localized: "That model can't use tools. Pick another model on your agent's page.")
+        case .signedOut:
+            String(localized: "You're signed out of Muse — sign in again on its account page.")
         }
     }
 }
@@ -1117,6 +1133,11 @@ enum AgentAnswer {
                            onPartial: ((String) -> Void)? = nil)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         guard let provider = explicitProvider ?? AgentKey.active else { return .failure(.noKey) }
+        // Muse signed in on muse.ai, with no key: its own chat answers
+        // (prd §1619). A pasted key keeps the Model API path.
+        if provider == .meta, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.muse) {
+            return await museAnswer(query: query)
+        }
         let key: String
         switch AgentKey.requestKey(for: provider) {
         case .success(let resolved): key = resolved
@@ -2845,6 +2866,26 @@ enum AgentAnswer {
             return .success(AgentAnswerResult(text: reply.text, picks: [], model: "Bankr"))
         case .failure(let failure):
             return .failure(failure.answerFailure)
+        }
+    }
+}
+
+extension AgentAnswer {
+    /// Muse through the person's own muse.ai chat (prd §1619). Only the
+    /// question goes: Muse keeps one chat for good and acts on what is in it,
+    /// so no saved thing and no earlier turn is pasted in — Muse remembers
+    /// its own chat. `model: "Muse"` names who answered, as Bankr's does.
+    fileprivate static func museAnswer(query: String)
+    async -> Result<AgentAnswerResult, AgentAnswerFailure> {
+        switch await MuseWeb.shared.ask(SecretScan.redacted(query)) {
+        case .success(let text):
+            return .success(AgentAnswerResult(text: text, picks: [], model: "Muse"))
+        case .failure(.signedOut):
+            return .failure(.signedOut)
+        case .failure(.noReply):
+            return .failure(.empty)
+        case .failure(.noPage), .failure(.couldNotSend):
+            return .failure(.unreachable)
         }
     }
 }

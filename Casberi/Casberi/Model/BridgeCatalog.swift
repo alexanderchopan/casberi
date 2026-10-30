@@ -417,7 +417,7 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "NEAR AI",     tagline: "Answers it can prove it wrote",       group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
-        Offer(name: "Muse",        tagline: "Meta's model, on your key",           group: "Agent",     connectable: true,
+        Offer(name: "Muse",        tagline: "Meta's agent, in your own chat",       group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
         // The person's own OpenAI-compatible server (prd §1478): Ollama, LM
         // Studio, llama.cpp, vLLM, Open WebUI — an address, an optional key,
@@ -1046,7 +1046,9 @@ enum BridgeSetupMode {
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
         "Instagram", "TikTok", "Threads", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy", "Fileverse",
         // A sign-in that replaced a pasted key (prd §1584).
-        "Notion", "Raindrop", "Steam", "OpenRouter"]
+        "Notion", "Raindrop", "Steam", "OpenRouter",
+        // Muse signs in on muse.ai, as Beeper connects it (prd §1619).
+        "Muse"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

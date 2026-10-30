@@ -1035,6 +1035,13 @@ enum NetworkReach {
                          "api.venice.ai", "openrouter.ai", "api.x.ai", "cloud-api.near.ai",
                          "api.meta.ai"]),
 
+        // Muse signed in on muse.ai (prd §1619): its own page, open out of
+        // sight, sends what you type into your Muse chat and reads the reply.
+        Endpoint(service: "Muse",
+                 reach: .whenConnected(bridge: "Muse"),
+                 purpose: "Only when you ask Muse, sends what you typed into your own Muse chat through Muse's page, signed in as you, and reads its reply. Nothing you keep is sent.",
+                 hosts: ["muse.ai", "hatch.metaaivm.com"]),
+
         // Your own model (prd §1478) — the person's own OpenAI-compatible
         // server. No fixed host: the address is TYPED (the §289 case, as the
         // Logos node's), so every request names this service to

@@ -64,9 +64,7 @@ private struct WebSessionLoginView: UIViewRepresentable {
     let capture: WebSessionSignInSheet.Capture
     let onDone: () -> Void
 
-    /// Safari's own string. Google refuses its sign-in inside a web view that
-    /// announces itself as one, and several of these pages offer it.
-    static let safariUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+    static let safariUserAgent = WebSession.safariUserAgent
 
     func makeCoordinator() -> Coordinator { Coordinator(capture: capture, domain: domain, onDone: onDone) }
 

@@ -1,59 +1,18 @@
 import SwiftUI
 import SwiftData
 
-/// Muse, connected — by key (2026-09-20, prd §854). Meta's own model, through
-/// the Meta Model API, on the same BYO-key contract every agent here keeps:
-/// checked with the provider before it saves, stored in the Keychain via the
-/// same vault. Connected HERE and nowhere else since prd §871 deleted the
-/// Settings key card.
+/// Muse, connected by signing in on muse.ai (prd §1619), the way Beeper
+/// connects it: Meta's own email-or-phone code on Muse's own page
+/// (`WebSessionSignInSheet`), and Muse answers in the person's own Muse chat
+/// (`MuseWeb`). No key: the Model API key this page took since §854 is gone
+/// from it (user, 2026-10-30: "i don't think we need 'Your key' any more").
+/// A key already stored keeps answering until Disconnect clears it.
 ///
-/// Structurally this is `GrokSetupScreen` — a plain OpenAI-compatible seat
-/// with a different name and console — and that is the whole reason it was
-/// cheap to build: Meta serves `/v1/chat/completions` at `api.meta.ai/v1` with
-/// a bearer token and the OpenAI request shape, so `AgentAnswer` reaches it
-/// through the branch that already carried OpenAI, Venice, OpenRouter, xAI and
-/// NEAR AI. No new transport, no new parser.
-///
-/// **WHAT IS MEASURED, AND WHAT IS NOT (prd §780b's rule — a seat may ship
-/// ahead of its evidence only if it SAYS what it doesn't know).**
-///
-/// Measured from this machine on 2026-09-20, with no key:
-/// - `api.meta.ai/v1/models` and `/v1/chat/completions` both answer **401**
-///   with a real JSON error envelope (`invalid_api_key`,
-///   `authentication_error`). The host and both paths resolve, and the models
-///   read cannot be fooled by an empty string — which is what makes it this
-///   seat's key check, where NEAR AI's keyless-200 list could not be.
-///
-/// Read off Meta's own documentation, never measured here:
-/// - the base URL, the bearer scheme, the `LLM|` key prefix, and the model ids
-///   (`muse-spark-1.3` and its family). All four are quoted in Meta's curl
-///   example.
-///
-/// Neither measured nor documented, and therefore CLAIMED NOWHERE — not in the
-/// capability line, not on this screen:
-/// - whether this endpoint accepts a picture (Meta says Muse Spark is
-///   multimodal; whether it takes the `image_url` content part this app builds
-///   is a different question, and `AgentProvider.seesImages` stays false until
-///   somebody measures it);
-/// - the wire shape of Meta's web-search grounding;
-/// **MEASURED hours after §854 shipped, with a real key, and it changed this
-/// screen.** The unfunded case was listed above as unknown; it is not. The
-/// models list answers 200 for a key whose account has no payment method, and
-/// the first completion answers **402 `billing_not_configured`** — the exact
-/// trap NEAR AI's 402 and xAI's credit-less 200 are the other two versions of.
-/// So the check is two reads now (`AgentAnswer.metaCanSpend`), the failure has
-/// its own sentence (`AgentKeyCheck.needsBilling`) instead of `.blocked`'s
-/// hedge, and the step below says to add the payment method BEFORE minting the
-/// key, because that is the order that works.
-///
-/// **ON `AccountPage` SINCE §639.** `lands: true` since §839 — a key that
-/// answers lands its conversations as chat things, so this seat has a room, an
-/// Activity count and a corpus a reader can be shut out of. Per §844 the page
-/// carries no ask door: the room's Chat tile is the only entrance.
+/// `lands: true` since §839: an answer lands its conversation as a chat
+/// thing, so this seat has a room and an Activity count.
+
 struct MuseSetupScreen: View {
     @Environment(BridgeStore.self) private var store
-    @State private var keyDraft = ""
-    @State private var checking = false
     @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.meta)
 
@@ -65,9 +24,17 @@ struct MuseSetupScreen: View {
             name: "Muse", seatID: "muse", source: "Muse",
             state: AccountPageState.of(name: "Muse", seatID: "muse",
                                        connected: configured, store: store),
-            mode: .pasteKey,
-            keyed: true,
+            mode: .signIn,
             lands: true,
+            cardSheet: { id in
+                guard id == "museSignIn" else { return AnyView(EmptyView()) }
+                return AnyView(WebSessionSignInSheet(seat: .muse, onDone: finishSignIn))
+            },
+            tiles: configured ? [] : [
+                AccountTile(id: "signIn", label: String(localized: "Sign in"),
+                            glyph: "person.badge.key", act: startSignIn),
+            ],
+            signIn: startSignIn,
             teardown: {
                 AgentKey.clear(.meta)
                 configured = false
@@ -75,82 +42,33 @@ struct MuseSetupScreen: View {
             sheet: $sheet,
             act: {
                 if configured {
-                    agentRowsBlock
+                    AgentActiveStatusRow(provider: .meta)
                 } else {
-                    setupBlock
+                    BridgeSyncStatusRows(proof: result)
                 }
             },
             more: { EmptyView() },
-            keySheet: { setupBlock }
+            keySheet: { EmptyView() }
         )
     }
 
-    @ViewBuilder private var setupBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            // Verb over address, the 2026-08-14 anatomy.
-            // Unnumbered — the door did step one (ruling 2026-08-14).
-            BridgeSetupCard(steps: ["Add a payment method under Billing",
-                                    "Meta shows the key only once"],
-                            numbered: false) {
-                DSSlabButton(tile: .getKey, title: "Get your API key",
-                             detail: "dev.meta.ai",
-                             systemImage: "arrow.up.right",
-                             url: URL(string: "https://dev.meta.ai/"))
-            }
-            DSSlabField(placeholder: AgentProvider.meta.placeholder, text: $keyDraft,
-                        actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
-                        secure: true,
-                        isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
-                        action: connect)
-            BridgeSyncStatusRows(proof: result)
-            // Two facts, both true and neither in the header's tagline: the
-            // API is in public preview, and Meta bills per token. The key
-            // check now PROVES the account can pay (see this file's doc
-            // comment), so this line no longer has to carry that warning — the
-            // step above does, in the one place it can still help.
-            DSSlabNote(text: "Meta's Model API is in public preview, and bills this key per token.", plain: true)
-        }
-    }
-
-    /// Connects only after Meta accepts the key — the seat registers with what
-    /// it can actually do, nothing more.
-    private func connect() {
-        let candidate = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !candidate.isEmpty else { return }
-        checking = true
+    private func startSignIn() {
+        DSHaptic.tap()
         result = nil
-        Task { @MainActor in
-            let outcome = await AgentAnswer.check(candidate, provider: .meta)
-            checking = false
-            if outcome == .accepted {
-                AgentKey.set(candidate, for: .meta)
-                configured = true
-                keyDraft = ""
-                DSHaptic.success()
-                result = .connected(String(localized: "pick Muse when you ask."))
-                store.registerConnected(id: "muse", name: "Muse",
-                                        proof: String(localized: "Key in the Keychain"),
-                                        can: ["Answers with your key — only when you tap.",
-                                              "Remembers a chat's earlier answers."])
-            } else {
-                result = .failed(outcome.line(for: .meta))
-            }
-        }
+        sheet = .card(id: "museSignIn")
     }
 
-    /// Which agent answers, on which model, and what it has cost — the live
-    /// facts about a key that is already working. They render nothing when
-    /// this provider is not configured, which is why they can sit here
-    /// unconditionally.
-    @ViewBuilder private var agentRowsBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            AgentActiveStatusRow(provider: .meta)
-            AgentModelRow(provider: .meta)
-            AgentSpendRow(provider: .meta)
-            // The librarian's switch, moved off Settings with the key card
-            // (prd §871). It draws only on the ACTIVE key's page, so it
-            // cannot read as a per-seat setting.
-            AgentLibrarianRow(provider: .meta)
-        }
+    /// muse.ai said the jar is signed in (`WebSession.verify`), and the sheet
+    /// kept the mark: the seat answers through Muse's own chat from now on.
+    private func finishSignIn() {
+        guard WebSession.signedIn(.muse) else { return }
+        AgentKey.activate(.meta)
+        configured = true
+        DSHaptic.success()
+        result = .connected(String(localized: "pick Muse when you ask."))
+        store.registerConnected(id: "muse", name: "Muse",
+                                proof: String(localized: "Signed in on muse.ai"),
+                                can: ["Answers in your Muse chat — only when you ask.",
+                                      "Sends only what you type, never what you keep."])
     }
 }

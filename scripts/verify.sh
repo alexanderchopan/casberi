@@ -1832,6 +1832,10 @@ harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the 
 # stored (an ABSENT flag included), and the sign-in's jar never outlives the
 # sheet. The key reaches a wallet's agent; that is why its scope is a test.
 harness "Bankr key-mint self-test" "Bankr key-mint self-test" "scripts/bankr-mint-selftest.sh" "the Bankr key-mint self-test failed — run scripts/bankr-mint-selftest.sh"
+# Muse through the person's own muse.ai chat (prd §1619) — the reply is every
+# assistant message after the one sent, once the page goes quiet, and only the
+# question is ever typed into it: never a saved thing, never a log line.
+harness "Muse thread self-test" "Muse thread self-test" "scripts/muse-thread-selftest.sh" "the Muse thread self-test failed — run scripts/muse-thread-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive
