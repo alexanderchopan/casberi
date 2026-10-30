@@ -1277,12 +1277,14 @@ struct FeedScreen: View {
             if visible.isEmpty && !keepsChromeWhenEmpty {
                 AnyView(Group {
                     Group { filteredEmptyState }
+                        .background { appPageProbe(visible) }
                         .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
                 })
             } else {
-                populatedRoom(visible)
+                // The app-page sweep's line (prd §1622), DEBUG and asked for only.
+                AnyView(populatedRoom(visible).background { appPageProbe(visible) })
             }
         } else {
             AnyView(Group {

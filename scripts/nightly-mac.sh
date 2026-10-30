@@ -290,12 +290,37 @@ else
   print -r -- "sheets: no results — read /tmp/nightly-sheets.log"
 fi
 
+# THE APP-PAGE SWEEP (prd §1622): every app's page over the poured demo, each
+# Wallet app on its four tiles. A page that did not land, holds no rows, or
+# says "Nothing held" over money FILES, keyed `app-page-<target>`; a thin page
+# (under three rows) is reported only. Complete when every target reported.
+"$ROOT/scripts/app-pages-sweep.sh" > /tmp/nightly-app-pages.log 2>&1
+APP_PAGES_DIR=$(print -l -- "$ROOT"/scripts/output/app-pages-*(/om[1]N) 2>/dev/null)
+if [[ -n "$APP_PAGES_DIR" && -f "$APP_PAGES_DIR/report.txt" ]]; then
+  print -r -- "app pages:" && sed 's/^/  /' "$APP_PAGES_DIR/report.txt"
+  typeset -a AFIND
+  while IFS=$'\t' read -r atarget averdict anote; do
+    [[ "$averdict" == fail ]] || continue
+    aslug=$(print -r -- "$atarget" | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+    AFIND+=(--finding "app-page-$aslug" "App page \"$atarget\": $anote" "The app-page sweep on the Mac nightly at $TS on \`$SHA\` judged \`$atarget\`: $anote.
+
+Its screenshot and log: \`${APP_PAGES_DIR#$ROOT/}/$(print -r -- "$atarget" | tr ' |' '__').*\`. Re-run with \`APP_PAGES=\"$atarget\" scripts/app-pages-sweep.sh\` (a Wallet tile as \`wallet:<app>\`).")
+  done < "$APP_PAGES_DIR/results.tsv"
+  ACOMPLETE=(); grep -q "^[0-9]* pages" "$APP_PAGES_DIR/report.txt" && ACOMPLETE=(--complete)
+  python3 "$ROOT/scripts/file-findings.py" --source app-pages --sha "$SHA" $ACOMPLETE "${AFIND[@]}"
+else
+  print -r -- "app pages: no report — read /tmp/nightly-app-pages.log"
+fi
+
 # Prune: keep the most recent $KEEP mac-* dirs, drop the rest. Journeys keep
 # as many nights: each holds a screenshot per step.
 print -l -- "$ROOT"/scripts/output/mac-*(/om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -rf "$old"
 done
 print -l -- "$ROOT"/scripts/output/journeys-*(/omN) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
+  rm -rf "$old"
+done
+print -l -- "$ROOT"/scripts/output/app-pages-*(/omN) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -rf "$old"
 done
 

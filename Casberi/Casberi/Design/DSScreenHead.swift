@@ -111,7 +111,11 @@ struct DSRoomTitleRow: View {
                         .dsText(.heading34)
                         .foregroundStyle(DS.headInk)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                        // Half, not 0.6: beside the demo's Exit pill, "App
+                        // Store Connect" truncated at 0.6 (prd §1622 item 4). A
+                        // name shrinks before it is ever cut.
+                        .minimumScaleFactor(0.5)
+                        .allowsTightening(true)
                     settingsDisc
                 }
                 .contentShape(Rectangle())
