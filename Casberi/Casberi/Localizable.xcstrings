@@ -49044,6 +49044,34 @@
         }
       }
     },
+    "All %lld in the catalogue" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las %lld del catálogo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カタログの全%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카탈로그의 %lld개 전체"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目录中的全部 %lld 个"
+          }
+        }
+      }
+    },
     "All %lld places" : {
       "localizations" : {
         "es" : {
@@ -109239,6 +109267,34 @@
         }
       }
     },
+    "More %@ apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más apps de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のその他のアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 앱 더 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更多%@应用"
+          }
+        }
+      }
+    },
     "More episodes" : {
       "localizations" : {
         "es" : {
@@ -164838,6 +164894,34 @@
         }
       }
     },
+    "Signed in on muse.ai" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada en muse.ai"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "muse.aiでサインイン済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "muse.ai에 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 muse.ai 登录"
+          }
+        }
+      }
+    },
     "Signed in · %lld workspaces" : {
       "localizations" : {
         "es" : {
@@ -205501,6 +205585,34 @@
         }
       }
     },
+    "You're signed out of Muse — sign in again on its account page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se cerró tu sesión de Muse; vuelve a iniciarla en su página de cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Museからサインアウトされました。アカウントページでもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muse에서 로그아웃되었습니다. 계정 페이지에서 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已退出 Muse，请在其账户页面重新登录。"
+          }
+        }
+      }
+    },
     "You're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, nothing about your visitors." : {
       "localizations" : {
         "es" : {
@@ -215915,6 +216027,34 @@
         }
       }
     },
+    "app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用"
+          }
+        }
+      }
+    },
     "app account" : {
       "localizations" : {
         "es" : {
@@ -216219,6 +216359,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "批准执行"
+          }
+        }
+      }
+    },
+    "apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用"
           }
         }
       }
