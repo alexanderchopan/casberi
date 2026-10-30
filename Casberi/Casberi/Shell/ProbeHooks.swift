@@ -6772,6 +6772,27 @@ enum ProbeHooks {
                 NSLog("museProbe| page | %@", await MuseWeb.shared.debugTail())
             }
         },
+        // `-chatgptProbe YES|"<question>"` — `-museProbe` for ChatGPT (prd
+        // §1623): signed in, then one question in a new chat, logged as
+        // `chatgptProbe|` with the answer's length and first 60 characters.
+        Hook(key: "chatgptProbe") { value, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                let signedIn = await ChatGPTWeb.shared.signedIn()
+                NSLog("chatgptProbe| signedIn=%@ | stored=%@", signedIn ? "yes" : "no",
+                      WebSession.signedIn(.chatgpt) ? "yes" : "no")
+                guard signedIn, value.uppercased() != "YES" else { return }
+                let started = Date()
+                switch await ChatGPTWeb.shared.ask(value, firstQuestion: value) {
+                case .success(let reply):
+                    NSLog("chatgptProbe| reply | chars=%d | seconds=%.0f | %@", reply.count,
+                          Date().timeIntervalSince(started), String(reply.prefix(60)))
+                case .failure(let failure):
+                    NSLog("chatgptProbe| failed=%@ | seconds=%.0f", "\(failure)", Date().timeIntervalSince(started))
+                }
+                NSLog("chatgptProbe| page | %@", await ChatGPTWeb.shared.debugState())
+            }
+        },
         // `-acornsSession "<bearer>"` stores an Acorns bearer lifted from a
         // signed-in browser session — `-spotifySession`'s door, for the same
         // reason: the sign-in is a live human typing a password into Acorns'

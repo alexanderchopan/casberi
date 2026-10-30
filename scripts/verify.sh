@@ -1836,6 +1836,10 @@ harness "Bankr key-mint self-test" "Bankr key-mint self-test" "scripts/bankr-min
 # assistant message after the one sent, once the page goes quiet, and only the
 # question is ever typed into it: never a saved thing, never a log line.
 harness "Muse thread self-test" "Muse thread self-test" "scripts/muse-thread-selftest.sh" "the Muse thread self-test failed — run scripts/muse-thread-selftest.sh"
+# ChatGPT through the person's own chatgpt.com (prd §1623) — the answer is the
+# current node once finished and newer than the question, the session's
+# bearer never leaves the page, and only the question is typed in.
+harness "ChatGPT thread self-test" "ChatGPT thread self-test" "scripts/chatgpt-thread-selftest.sh" "the ChatGPT thread self-test failed — run scripts/chatgpt-thread-selftest.sh"
 
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive

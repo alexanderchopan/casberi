@@ -439,6 +439,7 @@ enum AgentKey {
             switch $0 {
             case .ownModel: OwnModel.address != nil
             case .meta: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.muse)
+            case .openai: TokenVault.get($0.vaultKey) != nil || WebSession.signedIn(.chatgpt)
             default: TokenVault.get($0.vaultKey) != nil
             }
         }
@@ -500,6 +501,11 @@ enum AgentKey {
         if provider == .meta {
             WebSession.clear(.muse)
             Task { @MainActor in MuseWeb.shared.forget() }
+        }
+        // ChatGPT's the same way (prd §1623).
+        if provider == .openai {
+            WebSession.clear(.chatgpt)
+            Task { @MainActor in ChatGPTWeb.shared.forget() }
         }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
@@ -683,8 +689,9 @@ enum AgentAnswerFailure: Error, Sendable {
     /// on Ollama 0.40.9: `"… gemma3:1b does not support tools"`. Your own
     /// model retries without them; any other seat reports it as itself.
     case toolsUnsupported
-    /// Muse's session has ended on muse.ai (prd §1619) — a sign-in, not a key.
-    case signedOut
+    /// The agent's session has ended on its site (prd §1619) — a sign-in,
+    /// not a key.
+    case signedOut(agent: String)
 
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
@@ -729,8 +736,8 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Pick a model on Your own model's page first.")
         case .toolsUnsupported:
             String(localized: "That model can't use tools. Pick another model on your agent's page.")
-        case .signedOut:
-            String(localized: "You're signed out of Muse — sign in again on its account page.")
+        case .signedOut(let agent):
+            String(localized: "You're signed out of \(agent) — sign in again on its account page.")
         }
     }
 }
@@ -1137,6 +1144,10 @@ enum AgentAnswer {
         // (prd §1619). A pasted key keeps the Model API path.
         if provider == .meta, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.muse) {
             return await museAnswer(query: query)
+        }
+        // ChatGPT signed in on chatgpt.com, with no key (prd §1623).
+        if provider == .openai, TokenVault.get(provider.vaultKey) == nil, WebSession.signedIn(.chatgpt) {
+            return await chatGPTAnswer(query: query, history: history)
         }
         let key: String
         switch AgentKey.requestKey(for: provider) {
@@ -2881,7 +2892,27 @@ extension AgentAnswer {
         case .success(let text):
             return .success(AgentAnswerResult(text: text, picks: [], model: "Muse"))
         case .failure(.signedOut):
-            return .failure(.signedOut)
+            return .failure(.signedOut(agent: "Muse"))
+        case .failure(.noReply):
+            return .failure(.empty)
+        case .failure(.noPage), .failure(.couldNotSend):
+            return .failure(.unreachable)
+        }
+    }
+}
+
+extension AgentAnswer {
+    /// ChatGPT through the person's own chatgpt.com session (prd §1623).
+    /// Only the question goes, as with Muse; `history`'s first question only
+    /// picks which ChatGPT chat continues, so ChatGPT holds the context.
+    fileprivate static func chatGPTAnswer(query: String, history: [AgentTurn])
+    async -> Result<AgentAnswerResult, AgentAnswerFailure> {
+        let first = history.first?.question ?? query
+        switch await ChatGPTWeb.shared.ask(SecretScan.redacted(query), firstQuestion: first) {
+        case .success(let text):
+            return .success(AgentAnswerResult(text: text, picks: [], model: "ChatGPT"))
+        case .failure(.signedOut):
+            return .failure(.signedOut(agent: "ChatGPT"))
         case .failure(.noReply):
             return .failure(.empty)
         case .failure(.noPage), .failure(.couldNotSend):

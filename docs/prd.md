@@ -69852,3 +69852,24 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 4. **A long app title shrinks to half before it is cut** (`DSRoomTitleRow`, the app-page title, 0.6 → 0.5 with tightening): "App Store Connect" truncated beside the demo's Exit pill.
 
 **Not covered:** Work, Media, Life and Social have no in-room app menu on the phone since they became Feed sections (§1343, "More from Work" adds rows in place), so each app's own page is the one door swept. **Mac half:** the sweep runs the iOS simulator only.
+
+## §1623 — ChatGPT signs in on chatgpt.com and answers in your own ChatGPT, as §1619 does Muse; its page drops the key and the export (amends §871's ChatGPT seat, retiring its OpenAI key field and its conversations.json import from the page) (user, 2026-10-30: "Build ChatGPT"; "also will need to update the set up page so it doesn't show the stuff about exporting anymore") — BUILT, signed in and asked on the simulator with a real account
+
+**Measured 2026-10-30, on the user's account.**
+- **Sign-in** is OpenAI's own (`chatgpt.com/auth/login` → `auth.openai.com`: email, phone, Google, Apple). `GET /api/auth/session` names a `user` and an `accessToken` when signed in.
+- **Sending** needs a proof of work ChatGPT's own script computes on every turn (`backend-api/sentinel/chat-requirements/prepare` → `finalize`, then `POST backend-api/f/conversation` as an event stream), so nothing outside the page can send. A first message moves the page to `/c/<id>`.
+- **Reading** is ChatGPT's own `GET /backend-api/conversation/<id>` with the session's bearer: `current_node`, and a `mapping` whose messages carry `author.role`, `status` (`finished_successfully`), `create_time` and `content.parts` (measured: "harbor").
+- **The phone layout differs from the desktop one.** Enter is a new line there (the first in-app try left the question in the box, unsent), and a script cannot FOCUS a page nobody can touch, so typing into the rich editor (`insertText`) landed nothing. Setting the editor's paragraph and telling it, then clicking Send, sends with no focus (measured in the browser, then in the app).
+
+1. **`ChatGPTWeb`** keeps chatgpt.com open under the app's screen (`AgentPage`, the host now shared with `MuseWeb`), sets the question in the composer, clicks Send, waits for `/c/<id>`, and reads the conversation every 1.5 s until the current node is the assistant's, finished and no older than the question (`ChatGPTThread`, two seconds of clock slack). It gives up after 240 s. The bearer is fetched and spent inside the page; only the conversation reaches Swift.
+2. **One ChatGPT chat per Casberi conversation**, keyed by its first question; a follow-up opens `/c/<id>` and continues it. The map lives for the run of the app, so after a relaunch a follow-up starts a new chat.
+3. **Only the question goes**, redacted, as Muse's. The answer is badged "ChatGPT". A stored OpenAI key keeps the API path until Disconnect clears it, and the session answers only without one.
+4. **The page is sign-in only**: Sign in (the tile, and the row does the thing, §1464), then "ChatGPT is your default agent". The OpenAI key field, the Your key row and the export steps are gone; chats imported before stay, and More still removes them. The catalogue calls ChatGPT a sign-in seat (`signInSeats`), not an import.
+5. **A signed-out session** says "You're signed out of ChatGPT — sign in again on its account page." (`AgentAnswerFailure.signedOut(agent:)`, now naming the agent for Muse too).
+6. `chatgpt-thread-selftest.sh` (in `verify.sh`) pins the reply rule and guards that only the redacted question is sent, `ChatGPTWeb` never logs, and Swift never touches the access token. `NetworkReach` names `chatgpt.com` and `auth.openai.com`. `-chatgptProbe YES|"<question>"` logs `chatgptProbe|` with the answer's length and first 60 characters.
+
+**Measured in the app** (simulator, the user's account): `-chatgptProbe "Reply with the single word: lantern"` answered "lantern" in 5 s; Muse still answered after the host was shared ("compass", 12 s).
+
+**UNMEASURED (§780b).** A follow-up continuing a chat; the composer's own ask on a phone; Google's sign-in inside the sheet; how long a session lasts. OpenAI's terms forbid taking output "automatically or programmatically"; the risk is the person's account, as §1619 says of Muse.
+
+**Not done:** the ChatGPT importer (`ChatGPTImport`, `-chatgptImport`, two self-tests) is now unreachable from any page; deleting it from the model is the user's call. **Mac half (§1402):** the same page on Catalyst; not compiled in this pass.

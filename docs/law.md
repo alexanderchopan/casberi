@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1758 of 1830 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1759 of 1831 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1224,7 +1224,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §868 — ether.fi Cash gets the head its two siblings have had, and the room it shares is why it needed more than a copy (amended by §1311)
 - §869 — The icon colour setting is declined, and the light icon was the dark one
 - §870 — Quiet hours are deleted
-- §871 — "Your key" leaves Settings, because every other account is connected on its own page
+- §871 — "Your key" leaves Settings, because every other account is connected on its own page (amended by §1623)
 - §872 — every sheet the Settings rows raise carries the shell's environment with it, because on Catalyst it does not inherit one
 - §873 — A wider window widens the detail pane, not the list
 - §874 — The Mac honours the app's Theme, and every tray has a way out
@@ -2004,6 +2004,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1620 — Every Feed section's + ends with "More <category> apps"
 - §1621 — Work's app pages hold a week in the demo (applies §1618's "demo data on every tab" to Work; user, 2026-10-30: "i want…
 - §1622 — A nightly sweep opens every app page and fails one that did not land or stands empty
+- §1623 — ChatGPT signs in on chatgpt.com and answers in your own ChatGPT, as §1619 does Muse; its page drops the key and the e…
 
 ## Dead rulings → what replaced them (generated)
 
