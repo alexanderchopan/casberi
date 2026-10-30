@@ -319,10 +319,13 @@ struct WalletPortfolio: Equatable, Codable {
             }
             // Cash and Privy join as they do live (prd §1048), from what their
             // seats actually hold, so the total never counts money their own
-            // rooms don't show (§837). Dollars only: the demo reaches nothing
-            // (§483), so there is no rate for anything else.
-            let cash = WalletCash.held().filter { $0.currency == "USD" }
-                .map { (symbol: $0.currency, usd: $0.amount, holderID: $0.holderID, label: $0.label) }
+            // rooms don't show (§837), at the demo's own fixed rates: it
+            // reaches nothing (§483), and `WalletCash.isSampleRate` says so.
+            let cash = WalletCash.held().compactMap { held -> (symbol: String, usd: Double, holderID: String, label: String)? in
+                let rate = held.currency == "USD" ? 1
+                    : held.currency == "BTC" ? WalletCash.demoBitcoinUSD : WalletCash.demoRates[held.currency]
+                return rate.map { (symbol: held.currency, usd: held.amount * $0, holderID: held.holderID, label: held.label) }
+            }
             for holding in cash + privy where holding.usd > 0 {
                 total += holding.usd
                 bySymbol[holding.symbol, default: 0] += holding.usd

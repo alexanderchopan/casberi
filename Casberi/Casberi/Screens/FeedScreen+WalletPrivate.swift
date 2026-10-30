@@ -28,7 +28,7 @@ extension FeedScreen {
            PrivateMove.available || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
-                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.prices))
+                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
@@ -64,7 +64,7 @@ extension FeedScreen {
                         .transition(.opacity)
                 }
                 ForEach(rows) { row in
-                    walletPrivateRow(row, mask: mask, prices: store.prices)
+                    walletPrivateRow(row, mask: mask, prices: store.shownPrices)
                 }
             }
         }

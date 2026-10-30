@@ -372,8 +372,17 @@ final class ShellChrome {
     /// removed, or the list falling back to one) — a scope pointing at a gone
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String? {
-        didSet { if walletScope != oldValue { walletPickLanding = walletScope != nil } }
+        didSet {
+            if walletScope != oldValue {
+                walletPickLanding = walletScope != nil
+                walletScopeChangedAt = .now
+            }
+        }
     }
+
+    /// When the pick last changed, so a count settling after it is no beat
+    /// (prd §1618 item 8).
+    @ObservationIgnored var walletScopeChangedAt = Date.distantPast
 
     /// A Wallet pick not yet landed: Home turns to Activity once if the
     /// pick has nothing on Home (prd §1615 item 6). Never observed; Home reads it.

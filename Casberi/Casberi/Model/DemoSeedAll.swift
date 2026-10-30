@@ -3831,6 +3831,10 @@ enum DemoSeedAll {
                 t.authorHandle = "Rocket Money"
                 t.priceValue = r.1
                 t.priceCurrency = "USD"
+                // The next charge, as Rocket Money's own read dates a bill
+                // (prd §1618 item 9): without it the demo's bills were no
+                // subscriptions at all, and its pick's box said so.
+                t.dueAt = Date().addingTimeInterval((30 - r.2) * 86_400)
             }
         }
 

@@ -158,7 +158,7 @@ struct PoolsSplit: Equatable {
         // Dollars where any row is priced (an unpriced row, test money or a
         // price not read yet, is left out rather than added as units of
         // another token); units only when every row is one token.
-        let usd = rows.map { PrivateMoney.rowUSD($0, prices: store.prices) }
+        let usd = rows.map { PrivateMoney.rowUSD($0, prices: store.shownPrices) }
         let priced = usd.contains { $0 != nil }
         let rows = priced ? zip(rows, usd).filter { $0.1 != nil }.map(\.0) : rows
         let usdKept = usd.compactMap { $0 }

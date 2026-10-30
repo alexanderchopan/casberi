@@ -106,7 +106,7 @@ extension FeedScreen {
                 }
             } else {
                 ForEach(held) { row in
-                    let notes = store.notes
+                    let notes = store.shownNotes
                         .filter { $0.symbol == row.symbol && $0.chainId == row.chainId && PrivateMoney.kind($0.status) != .refused }
                     let soon = PrivacyPoolsCrowd.tooSoon(newest: notes.map(\.at).max())
                     // The smallest crowd any of its notes is in: the honest one.

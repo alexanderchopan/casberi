@@ -237,6 +237,8 @@ enum WalletCash {
     struct Held { let currency: String; let amount: Double; let holderID: String; let label: String }
     // EMPTY, as `WalletStore.shared` is: the demo fixture is not under test.
     static func held() -> [Held] { [] }
+    static let demoRates: [String: Double] = [:]
+    static let demoBitcoinUSD = 0.0
 }
 
 enum RoomAccounts {

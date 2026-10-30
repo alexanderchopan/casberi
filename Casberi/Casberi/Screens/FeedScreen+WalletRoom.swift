@@ -82,6 +82,13 @@ extension FeedScreen {
         // decides its empty state as Subscriptions' does.
         case .spending:
             walletSpendingFigure
+        // **AN APP'S OWN MONEY IS ITS HOLDINGS (prd §1618 item 2).** An app
+        // picked whose money the portfolio does not carry (Acorns' accounts,
+        // Splits' team accounts, Privy's apps) maps what it read, never
+        // "Nothing held" over it.
+        case .holdings where selectedSeat != nil && walletScopeIsEmpty(.holdings)
+                             && !walletSeatHeld(visible).isEmpty:
+            walletSeatHeldMap(walletSeatHeld(visible), apps: !walletAppRows(visible).isEmpty)
         // **THE EMPTY STATE IS IN THE SLOT (prd §611).** A tile onto a page
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
@@ -205,9 +212,25 @@ extension FeedScreen {
                                 // draws. A Safe's waiting signatures stand in
                                 // Home's Needs you, where they already are.
                                 holdingsBlockSection
+                            } else if selectedSeat != nil, !walletSeatHeld(visible).isEmpty {
+                                // **WHAT THE APP HOLDS FOR YOU (prd §1618 item
+                                // 4):** Acorns' accounts, Splits' team, Privy's
+                                // apps, as Holdings maps them, never its newest
+                                // row, which is Activity's first.
+                                walletSeatHeldMap(walletSeatHeld(visible), apps: !walletAppRows(visible).isEmpty)
                             } else if let head = seatHead {
                                 sourceHeadCard(head, visible: visible)
                                     .environment(\.dsRoomHeadInWell, true)
+                            } else if selectedSeat != nil, !inert.contains(.spending) {
+                                // An app you spend through (Privacy.com,
+                                // Bitrefill) leads with what it spent: Spending's
+                                // statement for the pick (prd §1618 item 4).
+                                walletSpendingFigure
+                            } else if selectedSeat != nil,
+                                      visible.live.contains(where: { MoneyReceipt.isBill(source: $0.source) }) {
+                                // An app that tracks your bills (Rocket Money)
+                                // leads with what they cost a month.
+                                walletSubscriptionsFigure
                             } else if selectedSeat != nil, let newest = visible.first {
                                 // An app with no money and no head (a Wise
                                 // with nothing priced, Peer, Splits) leads
@@ -490,6 +513,12 @@ extension FeedScreen {
         }
         if SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
             out.insert(.subscriptions)
+        }
+        // **AN APP THAT READS ONLY BALANCES HAS NO ACTIVITY (prd §1618 item
+        // 5):** Acorns lands its accounts, states not moves, so its Activity
+        // dims rather than open on "0 transactions this month".
+        if !visible.live.contains(where: { !MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }) {
+            out.insert(.activity)
         }
         return out
     }
@@ -860,6 +889,32 @@ extension FeedScreen {
             return a.used > b.used
         }
         return ranked.map { (r: Ranked) -> FeedRow in r.row }
+    }
+
+    /// What an app picked holds as it read it (prd §1618 item 2): its apps
+    /// (Privy) then its accounts (Acorns, Splits), each by the figure the read
+    /// gave, or none. One tile per row; the map never sums them (§1341: two
+    /// reads may name the same money).
+    func walletSeatHeld(_ things: [Thing]) -> [HoldingsTreemap.Holding] {
+        let store = PrivyHomeStore.shared
+        let rows = Self.things(walletAppRows(things)) + Self.things(walletAccountRows(things))
+        return rows.filter(\.isLive).map { thing in
+            let ref = thing.sourceRef ?? ""
+            let usd = thing.priceValue ?? store.usd(ref) ?? 0
+            return HoldingsTreemap.Holding(id: TitleSeam.split(thing.title).name, usd: usd, route: nil,
+                                           display: usd > 0 ? nil : thing.content.isEmpty ? nil : thing.content)
+        }
+    }
+
+    /// The map of `walletSeatHeld`: sized by what each read, one size each
+    /// when none read a figure (a count, as a devnet's, prd §949).
+    func walletSeatHeldMap(_ held: [HoldingsTreemap.Holding], apps: Bool) -> some View {
+        let priced = held.contains { $0.usd > 0 }
+        let sized = priced ? held.filter { $0.usd > 0 } : held.map { .init(id: $0.id, usd: 1, route: nil, display: $0.display) }
+        let noun = apps ? (held.count == 1 ? String(localized: "app") : String(localized: "apps"))
+            : (held.count == 1 ? String(localized: "account") : String(localized: "accounts"))
+        return HoldingsTreemap(total: String(held.count), caption: noun,
+                               holdings: sized, showsShares: priced)
     }
 
     /// **AN ACCOUNT'S BALANCE STANDS IN HOLDINGS (prd §1341, user, of an

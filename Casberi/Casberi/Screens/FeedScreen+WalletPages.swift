@@ -47,6 +47,9 @@ extension FeedScreen {
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)
                     .lineLimit(1)
+                    // The name keeps its width; a trailing word gives way
+                    // ("Apple Wall…" beside "Synced 6m ago", prd §1618).
+                    .layoutPriority(1)
                 Spacer(minLength: DS.Space.s2)
                 if let figure {
                     Text(verbatim: figure)
@@ -230,9 +233,21 @@ extension FeedScreen {
                 walletDoor(.following, name: String(localized: "Follow an account"),
                            act: { feedSheet = .walletFollow })
             }
-            if needs > 0 {
+            // **EVERY APP NAMES ITS ACCOUNT (prd §1618 item 1, user: "you would
+            // think all of them have an account row naming the account too").**
+            // The line its own account page states; the row opens that page.
+            // Safe and 0xBow name theirs in their own section (§1614).
+            if let seat = selectedSeat, !walletPickHasOwnSection {
+                walletDoor(.yourAccount, name: seat.name,
+                           word: bridges.bridges.first { seat.owns($0.name) }?.statusLine,
+                           act: { openAppPage(seat.name) })
+            }
+            // **NEEDS YOU STANDS AT 0 ON AN APP (prd §1618 item 1, user: "they
+            // may not all have 'needs you' but needs you could be 0").** On All
+            // it leaves while empty, as Permissions and Threats do.
+            if needs > 0 || selectedSeat != nil {
                 // What waits on you is the pick's ink (§1385: pink says state).
-                walletDoor(.needsYou, figure: "\(needs)", figureTone: DS.pickInk)
+                walletDoor(.needsYou, figure: "\(needs)", figureTone: needs > 0 ? DS.pickInk : DS.textSecondary)
             }
             if permissions > 0 {
                 // A grant with no limit wants you (prd §1107a).
@@ -255,7 +270,8 @@ extension FeedScreen {
             // Home blank under the tiles. §769's empty state fills it: what
             // would stand here, empty, and the account named. Reached by the
             // Home tile; a fresh pick turns to Activity first (below).
-            if quiet {
+            // An app picked draws its account and Needs you instead (§1618).
+            if quiet, selectedSeat == nil {
                 walletHomeQuiet
             }
         }
@@ -279,6 +295,10 @@ extension FeedScreen {
         // a scope switch that changes the count is not one.
         .onChange(of: NeedsBeat(scope: chrome.walletScope, needs: needs)) { was, now in
             guard was.scope == now.scope, was.demo == now.demo, was.needs > 0, now.needs == 0 else { return }
+            // A pick's rows settle for a moment after it lands, and a count
+            // that falls then cleared nothing (prd §1618 item 8: "Nothing needs
+            // you" flashed on opening Railgun).
+            guard Date().timeIntervalSince(chrome.walletScopeChangedAt) > 3 else { return }
             chrome.flash(String(localized: "Nothing needs you"), tone: .success)
         }
         // A deposit's approval is asked here too, so Needs you's count is
@@ -394,6 +414,22 @@ extension FeedScreen {
             if selectedSeat == nil {
                 walletDoor(.nfts)
             }
+        }
+        // **AN APP PICKED LISTS WHAT IT HOLDS FOR YOU (prd §1618 item 2):**
+        // Privy's apps (§1124) and an app's accounts (§1341) were Holdings'
+        // and drew nowhere once its doors became All's alone.
+        if selectedSeat != nil {
+            let apps = walletAppRows(all)
+            if !apps.isEmpty {
+                walletCard(WalletSection.apps.label, glyph: WalletSection.apps.glyph) {
+                    ForEach(Array(apps.enumerated()), id: \.element.id) { i, row in
+                        if case .single(let item) = row.kind, let thing = item.live {
+                            shapedListRow(thing, index: i, nextEventID: nil)
+                        }
+                    }
+                }
+            }
+            walletAccountsSection(appAccounts, nextEventID: nil)
         }
     }
 

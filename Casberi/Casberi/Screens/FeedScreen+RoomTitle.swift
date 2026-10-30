@@ -237,6 +237,14 @@ extension FeedScreen {
             return slot.name
         }
         if mergedMenuDraws, let seat = selectedSeat { return seat.name }
+        // **AN APP PICKED IN THE WALLET IS NAMED ON EVERY TILE (prd §1618 item
+        // 10, user: "is the app pages name in the header on all their
+        // pages?").** "Wallet · Privy" on Home and on Holdings, Activity and
+        // Spending alike; the lit tile says which page. A pushed page keeps
+        // its own name.
+        if source == CategoryFold.walletRoom, pinnedWalletSection == nil, let seat = selectedSeat {
+            return seat.name
+        }
         if let host = hostRoom, host != source { return BridgeCatalog.seatName(forSource: source) }
         // The Wallet's tile, now a page (prd §1321): "Wallet · Holdings".
         if source == CategoryFold.walletRoom, pinnedWalletSection == nil,

@@ -24,6 +24,18 @@ enum WalletCash {
 
     static let holderPrefix = "cash:"
 
+    static let demoHeld: [Held] = [
+        Held(currency: "USD", amount: 1_240.50, holderID: holderPrefix + "wise", label: "Wise"),
+        Held(currency: "EUR", amount: 620, holderID: holderPrefix + "wise", label: "Wise"),
+        Held(currency: "USD", amount: 42.80, holderID: holderPrefix + "bitrefill", label: "Bitrefill"),
+        Held(currency: "BTC", amount: 0.00214, holderID: holderPrefix + "lightning", label: "Lightning"),
+        Held(currency: "USD", amount: 86.50, holderID: holderPrefix + "applewallet:Apple Cash", label: "Apple Cash"),
+        Held(currency: "USD", amount: 2_410.18, holderID: holderPrefix + "applewallet:Savings", label: "Savings"),
+    ]
+
+    /// The demo's bitcoin price, beside `demoRates`' fiat (it reaches nothing, §483).
+    static let demoBitcoinUSD = 68_000.0
+
 
     /// Every card balance owed, in words ("$812 owed on Apple Card"), for the
     /// crown's note. Never counted (prd §1078).
@@ -39,6 +51,10 @@ enum WalletCash {
     /// Every cash balance the seats hold right now. Off main: it reads the
     /// Keychain (`WiseAuth.configured`).
     static func held() -> [Held] {
+        // **THE DEMO'S CASH (prd §1618 item 7):** its Wise, Lightning,
+        // Bitrefill and Apple Wallet seats say they hold balances, so the
+        // demo holds them, where those seats' own reads put them.
+        if DemoMode.isActive { return demoHeld }
         var out: [Held] = []
         if WiseAuth.configured {
             for balance in WiseState.standing.balances {

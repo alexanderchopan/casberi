@@ -39,6 +39,11 @@ enum WalletNeedsYou {
         // subscription that went up, until the next charge at the new
         // price would land — the decision is keep it or cancel first.
         if source == WiseShape.source { return WiseShape.isStuck(tags: tags) }
+        // A Splits payment waiting on its team's signatures (prd §1618 item
+        // 3): the team is yours, so the next signature may be.
+        // `SplitsShape.source` and `.waitingTag`, spelled here because the
+        // needs-you harness compiles this file without SplitsShape.
+        if source == "Splits" { return tags.contains("Waiting") }
         // A zFi order whose escrow waits on the board (prd §1282), while
         // the live book still says so.
         if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: zfi) }

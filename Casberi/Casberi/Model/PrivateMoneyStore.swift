@@ -61,7 +61,31 @@ final class PrivateMoneyStore {
             .flatMap { try? JSONDecoder().decode([PrivateMoney.Note].self, from: $0) } ?? []
     }
 
-    var rows: [PrivateMoney.Row] { PrivateMoney.rows(notes, rates: rates) }
+    var rows: [PrivateMoney.Row] { PrivateMoney.rows(shownNotes, rates: rates) }
+
+    /// **WHAT THE SCREENS DRAW (prd §1618 item 6).** The notes, or in the
+    /// demo its own private balance, so 0xBow's box, How hidden and Holdings'
+    /// Private section agree with the demo's deposits instead of "$0" beside
+    /// them. Never saved, never watched: `notes` stays this phone's.
+    var shownNotes: [PrivateMoney.Note] { DemoMode.isActive ? Self.demoNotes : notes }
+
+    /// The prices the screens draw by: the read ones, or the demo's own.
+    var shownPrices: [String: Double] { DemoMode.isActive ? ["eth": 3_850, "usdc": 1] : prices }
+
+    private static let demoNotes: [PrivateMoney.Note] = {
+        let day: TimeInterval = 86_400
+        func note(_ id: String, _ symbol: String, _ amount: String, _ decimals: Int,
+                  daysAgo: Double, _ status: PrivateMoney.Status) -> PrivateMoney.Note {
+            .init(commitment: "0xdemo-\(id)", label: "0x\(id)", labelHash: "0", symbol: symbol, amount: amount,
+                  decimals: decimals, chainId: 1, tx: "0x", at: Date().addingTimeInterval(-daysAgo * day), status: status)
+        }
+        return [
+            note("eth1", "ETH", "250000000000000000", 18, daysAgo: 17, .approved),
+            note("eth2", "ETH", "40000000000000000", 18, daysAgo: 24, .approved),
+            note("usdc", "USDC", "250000000", 6, daysAgo: 13, .approved),
+            note("eth3", "ETH", "70000000000000000", 18, daysAgo: 2, .waiting),
+        ]
+    }()
 
     /// A private row's line (prd §1563): "1.0% on Aave" where its token earns
     /// and the rate was read; else nil, and the row says its network.
