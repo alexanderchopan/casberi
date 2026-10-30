@@ -18,11 +18,13 @@ appInfo reads `One app for your things`; the subtitle rides the app, so it chang
 The iOS description's opening line below carries the same line; the Mac description's opening is owed the same edit
 when it is next rewritten.
 
-## Next iOS version — the wallet story, AGREED 2026-10-30, NOT YET APPLIED (user: "love it")
+## iOS 3.0.19 — the wallet story, APPLIED 2026-10-30 (build 904, WAITING_FOR_REVIEW; user: "love it")
 
 Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/casberi-deck/cards/appstore9.py`, `~/Downloads/App Store 10 iPhone`): the inbox, then the wallet, all together or one at a time. Markets is gone (§1529), gift cards are Spend (§1599), Buy is a card on Stripe's page (§1599, §1608), swaps are no longer credited to Relay (§1542, §1555), private money is 0xBow on Ethereum (§1563), round-ups save with your sends in dollars (§1578), the co-signer is a switch for every send and swap (§1570). The opening carries "soon, a rewards card for your subscriptions" (user, 2026-10-30). Apply with the screenshots when the next build ships from the session that made them; the iPad set and the Mac description are not redone (user: "we can ignore ipad for now").
 
 **Subtitle (21):** `An inbox and a wallet` — rides the app, so it changes with the next submitted version.
+
+**State, 2026-10-30:** applied and read back on iOS 3.0.19 by the shipping session: description (2,405), keywords (98) and promotional text (150) from b3bddde1; the promotional text also went onto live 3.0.18 (and, through `drafts()`, is the Mac's draft too). Both iPhone sets hold the ten shots (6.9" `~/Downloads/App Store 10 iPhone`, 6.3" `… 6.3`); the iPad keeps its six, Markets shot included. **The subtitle is OWED:** the app record was locked IN_REVIEW while Mac 3.0.18 was in review; apply `An inbox and a wallet` once that review finishes (`asc-copy.py apply --platform IOS --field subtitle …`).
 
 - keywords: `crypto,swap,ethereum,usdc,privacy,tor,portfolio,budget,spending,subscriptions,feed,reader,ai,agent`
 
