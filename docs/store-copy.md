@@ -18,6 +18,55 @@ appInfo reads `One app for your things`; the subtitle rides the app, so it chang
 The iOS description's opening line below carries the same line; the Mac description's opening is owed the same edit
 when it is next rewritten.
 
+## Next iOS version — the wallet story, AGREED 2026-10-30, NOT YET APPLIED (user: "love it")
+
+Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/casberi-deck/cards/appstore9.py`, `~/Downloads/App Store 10 iPhone`): the inbox, then the wallet, all together or one at a time. Markets is gone (§1529), gift cards are Spend (§1599), Buy is a card on Stripe's page (§1599, §1608), swaps are no longer credited to Relay (§1542, §1555), private money is 0xBow on Ethereum (§1563), round-ups save with your sends in dollars (§1578), the co-signer is a switch for every send and swap (§1570). The opening carries "soon, a rewards card for your subscriptions" (user, 2026-10-30). Apply with the screenshots when the next build ships from the session that made them; the iPad set and the Mac description are not redone (user: "we can ignore ipad for now").
+
+**Subtitle (21):** `An inbox and a wallet` — rides the app, so it changes with the next submitted version.
+
+- keywords: `crypto,swap,ethereum,usdc,privacy,tor,portfolio,budget,spending,subscriptions,feed,reader,ai,agent`
+
+### Promotional text (132)
+
+New: buy USDC or ETH with a card, swap anything, and send and receive privately with 0xBow, beside every app and account you follow.
+
+### iOS description — the wallet story
+
+Your life and money are scattered across apps. Casberi gives you an inbox and a wallet for all your accounts, and soon, a rewards card for your subscriptions. Keep up with your feeds and finances on your iPhone, iPad and Mac, privately and with no server.
+
+An inbox for all your apps.
+More than 100 apps, sorted into the categories you live in: social, work, reading, media, mail, calendar and more. See them all together in one feed, or one app at a time. Apple's apps connect with one tap; other services with a read-only key.
+
+A wallet for all your accounts.
+Your wallets, exchanges, cards and cash add up to one number. See it all together, or one account at a time. Follow any wallet address without a key; following only reads.
+
+Your own account.
+Create it in a tap and sign with Face ID. Send, receive and swap on Ethereum, Base and Robinhood. Only you hold the key.
+
+Buy with a card. Swap anything.
+Buy USDC or ETH with a card, on Stripe's page. Swap any token in one sentence, even to another network. Every move is checked on the network before you sign, and Casberi adds no fee.
+
+Send and receive privately.
+Move money into your private balance with 0xBow Privacy Pools on Ethereum. Send privately, receive at a fresh address, and take a deposit back anytime while it waits for approval. Round up your sends and save the change privately, in dollars.
+
+See what you spend, and where.
+Spending by place, every subscription and what it costs, and the fees you paid. Spend USDC on gift cards, powered by Bitrefill.
+
+Catch threats before they cost you.
+Casberi flags address poisoning, fake tokens and fake transfers, and shows every app that can spend from you.
+
+Safe by design.
+Your keys stay on your iPhone. Add a recovery key in iCloud Keychain and a co-signer for every send and swap. Every wallet request goes through Tor.
+
+Your agents.
+Bring a key for the agent you use, or connect your own model running on your own computer.
+
+Try it first.
+Casberi opens with a demo you can browse, wallet included. Clear it when you're ready and connect your own.
+
+Yours.
+No server, no sign-up, no ads, no tracking. Sync through your own iCloud. Export everything to one file, or delete it all for good.
+
 ## iOS 3.0.8 — the wallet release, APPLIED 2026-10-23 (organisation account approved; prd §1439 item 4, §1440, §1473)
 
 The first version with an account of its own: send, receive, swap (Relay) and buy gift cards (Bitrefill). "Casberi can read, never spend" is gone from the page; following another wallet stays read-only, and the description says so. The opening line drops "soon, a rewards account for your subscriptions" (§1445 Stage 1 declined) for "a wallet of your own"; "no account" became "no sign-up", since the person now has an account. What's New leads with Wallet and credits Relay and Bitrefill (user, 2026-10-23). Review notes rewritten for 3.1.5(i): self-custodial, offered by an organisation, the demo's account as the no-funds path.
