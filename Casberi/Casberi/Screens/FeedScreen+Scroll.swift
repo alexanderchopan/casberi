@@ -938,14 +938,21 @@ extension FeedScreen {
         if category == Self.accountsName {
             adds = walletAccountAdds
         }
-        if category == RoomAccounts.socialRoom {
-            if !adds.isEmpty { adds[0].apart = true }
-            adds.insert(SectionAdd(label: String(localized: "More social apps"),
-                                   detail: String(localized: "X, Instagram, TikTok and more"),
+        // **EVERY + ENDS WITH ITS CATEGORY'S APPS (prd §1620, user, of Work's
+        // six: "why those only and not all of them?"; "ok" to one last row).**
+        // What you make and what you follow by name come first; the last row
+        // opens the catalogue on the category's card, every app there,
+        // connected or not. Social's row led (§1303) and now ends, as every
+        // section's does.
+        if let name = BridgeCatalog.categories.first(where: { $0.name == category })?.name {
+            let count = BridgeCatalog.offers.filter { BridgeCatalog.category(of: $0) == name }.count
+            adds.append(SectionAdd(label: String(localized: "More \(name.lowercased()) apps"),
+                                   detail: String(localized: "All \(count) in the catalogue"),
+                                   apart: !adds.isEmpty,
                                    glyph: "square.grid.2x2") {
-                route.openCategory = RoomAccounts.socialRoom
+                route.openCategory = name
                 route.present(.apps)
-            }, at: 0)
+            })
         }
         return adds
     }

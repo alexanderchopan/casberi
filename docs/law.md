@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1754 of 1826 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1755 of 1827 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1685,7 +1685,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1295 — Search sits with the face in one glass pill (amends §1294)
 - §1296 — In the Feed, Social has no To you and Work no Coming up (amends §1251, §1293)
 - §1297 — Three fixes from the UX pass, and what it declined
-- §1300 — Every + lists what its apps follow by name; People adds a person (amends §1292, §1293)
+- §1300 — Every + lists what its apps follow by name; People adds a person (amends §1292, §1293) (amended by §1620)
 - §1301 — Three journeys shortened: a connect's field first and focused, and Stop tracking from the row
 - §1302 — Two rules from the journeys: a connect page's one ask takes the keyboard, and what you added goes from a hold on its…
 - §1303 — A + menu row wears its app's mark, a picked app is not picked again, and Social's + leads with More social apps (amen…
@@ -2000,6 +2000,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th…
 - §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and…
 - §1618 — A Wallet app's pages are its own again: an account row and Needs you on Home, what it holds in Holdings and the box,…
+- §1620 — Every Feed section's + ends with "More <category> apps"
 
 ## Dead rulings → what replaced them (generated)
 

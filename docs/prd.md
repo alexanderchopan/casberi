@@ -69804,3 +69804,7 @@ Canvas: "Move coin pickers" (claude.ai artifact, boards Now · A · B · C · D)
 **No invented asks.** Acorns, ether.fi and Peer cannot raise a Needs you item in the field, so the demo gives them none; their Home says 0.
 
 **Not done:** a check that opens every app pick, so this cannot slide unseen again (proposed: `journeys.sh` gains a Wallet-pick sweep). **Mac half:** the same views on Catalyst; not compiled in this pass.
+
+## §1620 — Every Feed section's + ends with "More <category> apps" (amends §1300's follow-by-name list, moves §1303's Social row from first to last; user, 2026-10-30, of Work's +: "it only shows a handful of apps, why those only and not all of them?", then "same with notes and really any of the plus signs on the feed. should they show all?", and "ok" to one last row) — BUILT
+
+A + lists what you make in the section (Notes' New note, Day's event) and what you follow there by name (§1300: Work's six: GitHub, Hugging Face, npm, PostHog, PyPI, Radicle), and so read as the category's whole roster: Work has 20 apps. The last row, set apart, is "More <category> apps · All N in the catalogue", opening the catalogue on that category's card (`route.openCategory`), every app there, connected or not. Never a 20-row menu. Social's "More social apps" led its + (§1303) and now ends it with the rest. A section whose name is no catalogue category (the Wallet's Subscriptions and Accounts lists) gets none.
