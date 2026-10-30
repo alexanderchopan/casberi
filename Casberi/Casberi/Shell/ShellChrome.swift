@@ -1147,6 +1147,7 @@ final class ShellChrome {
     /// any page; on the Wallet itself it returns to Home.
     func openWallet() {
         roomsTray = false
+        Task { @MainActor in MoveWarm.start() }
         walletScope = nil
         walletSection = .home
         sourceRequest = CategoryFold.walletRoom

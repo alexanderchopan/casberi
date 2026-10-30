@@ -511,6 +511,7 @@ struct AccountDetailSheet: View {
                               // The Addresses ledger and saved contacts ride it too (prd §916).
                               ContactLinksStore.shared.syncNow()
                               ContactBook.shared.syncNow()
+                              ContactsRemoved.shared.syncNow()
                               // The WATCH list rides it too (prd §372) — before
                               // that, turning sync on carried your names to a
                               // second device and not the wallets behind them.

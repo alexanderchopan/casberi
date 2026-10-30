@@ -1067,6 +1067,7 @@ struct ContactSheet: View {
     @State private var cardEmail: String?
     @State private var composer: Composer?
     @State private var renaming = false
+    @State private var removing = false
     @State private var draft = ""
     /// The wallets World ID's address book marks verified (prd §785): read
     /// on open, at most three, drawn as the wallet row's fact. Lapsed and
@@ -1101,11 +1102,6 @@ struct ContactSheet: View {
                 return nil
             }
         }
-    }
-
-    /// The key this contact was saved under, when the person saved it.
-    private var savedKey: String? {
-        contact.identities.map(\.key).first { ContactBook.shared.has($0) }
     }
 
     private enum Door: Identifiable, Hashable {
@@ -1261,13 +1257,14 @@ struct ContactSheet: View {
                             }
                         }
                     }
-                    // A contact YOU saved can be un-saved here; a seat-fed one
-                    // is removed on its seat's page (§690), so no row is drawn.
-                    if let saved = savedKey {
-                        DSDoorRow(icon: "minus.circle", label: "Remove from Addresses", role: .destructive) {
-                            ContactBook.shared.remove(saved)
-                            onChanged?()
-                            dismiss()
+                    // REMOVE (prd §1610, user: "there doesn't seem to be a way
+                    // to remove a contact"): every contact on the list, however
+                    // it got there. Its wallets and saved names go, and a card
+                    // or a follow that still feeds it keeps it off the list;
+                    // Unfollow stays its own door.
+                    if ContactIndexSources.isListed(contact) {
+                        DSDoorRow(icon: "minus.circle", label: "Remove from Contacts", role: .destructive) {
+                            removing = true
                         }
                     }
                 }
@@ -1306,6 +1303,22 @@ struct ContactSheet: View {
                     MailComposer(subject: "", body: "", attachment: nil, attachmentName: "",
                                  recipients: mailAddress.map { [$0] } ?? [])
                 }
+            }
+            .confirmationDialog("Remove \(contact.name) from Contacts?", isPresented: $removing, titleVisibility: .visible) {
+                Button("Remove from Contacts", role: .destructive) {
+                    ContactsRemoved.shared.remove(contact)
+                    // Their name leaves the transfers it titled, as a blank
+                    // Rename does.
+                    for identity in contact.identities where identity.kind == .wallet {
+                        CounterpartyRetitle.applyCurrentName(for: identity.body, in: modelContext)
+                    }
+                    DSHaptic.success()
+                    onChanged?()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Naming them again brings them back.")
             }
             .alert(contact.isUnnamed ? "Name this address" : "Rename", isPresented: $renaming) {
                 TextField("Name", text: $draft)

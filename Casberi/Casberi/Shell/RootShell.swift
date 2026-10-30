@@ -2122,6 +2122,9 @@ struct RootShell: View {
         // arriving while you're present.
         AppVisit.markOpened()
         askForRatingIfDue()
+        // What Move will ask, asked now (prd §1610): Tor's circuits open and
+        // your tokens read before Move is.
+        MoveWarm.start()
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
         // ONE call site — the onboarding cover's `onDismiss` — on the

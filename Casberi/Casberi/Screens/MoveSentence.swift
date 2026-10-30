@@ -914,7 +914,8 @@ struct MoveSentence: View {
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-                .padding(.bottom, DS.Space.s4)
+                // Scrolled to the end, the last line clears the foot's fade.
+                .padding(.bottom, DS.Space.s4 + Self.footFade)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
             }
         }
@@ -984,7 +985,10 @@ struct MoveSentence: View {
             pick {}
         }
         .onChange(of: scenePhase) { _, now in
-            if now == .active, !heldBy.isEmpty { Task { await readHoldings() } }
+            if now == .active, !heldBy.isEmpty {
+                Task { await readHoldings() }
+                if !YourAccountDemo.isDemo(account) { Task { [account, network] in await Chain.readAhead(account, on: network) } }
+            }
         }
         // Tor connecting late reads what failed again, unasked (prd §1549).
         .onChange(of: TorStatus.shared.state) { _, now in
@@ -993,7 +997,15 @@ struct MoveSentence: View {
         .task(id: quoteKey) { await requote() }
         // What the account is on this network, read before the tap (prd §1602).
         .task(id: "\(network.chainId)|\(account)") {
-            if !YourAccountDemo.isDemo(account) { await Chain.readAhead(account, on: network) }
+            guard !YourAccountDemo.isDemo(account) else { return }
+            await Chain.readAhead(account, on: network)
+            // Kept fresh while Move is open, a minute before they would
+            // lapse, never mid-send (prd §1610).
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Chain.factsLife - 60))
+                guard !Task.isCancelled else { return }
+                if stage == nil { await Chain.refreshFacts(account, on: network) }
+            }
         }
         .task(id: crossingWatch?.id) { await watchCrossing() }
         .task(id: sweepKey) { await resweep() }
@@ -1004,7 +1016,7 @@ struct MoveSentence: View {
             // What you hold opens the first list; Uniswap's lists, which only
             // For and a pasted contract need, follow (prd §1586).
             pickUpDraft()
-            await readHoldings()
+            await readHoldings(shared: true)
             if with == nil, let id = draftWithID {
                 with = heldBy[network.chainId]?.first { $0.id == id }
             }
@@ -3638,9 +3650,26 @@ struct MoveSentence: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, footClearance)
-        // The page's own ground, so a long list scrolls under the foot.
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        // The page's own ground, so a long list scrolls under the foot. It
+        // fades in over `footFade` above the foot, so a line passing under
+        // it goes soft instead of being cut in half, which read as a fault
+        // (prd §1610, user: "makes it look like an error").
+        .background {
+            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                .mask {
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                            .frame(height: Self.footFade)
+                        Color.black
+                    }
+                }
+                .padding(.top, -Self.footFade)
+                .allowsHitTesting(false)
+        }
     }
+
+    /// How far above the foot its ground fades in.
+    static let footFade: CGFloat = 32
 
     /// The phone's tab bar floats over the page's bottom edge and reserves
     /// nothing, so the foot clears it by the bar's own geometry; a keyboard
@@ -4357,13 +4386,17 @@ struct MoveSentence: View {
     /// says i can't receive or swap"): the app coming back and leaving
     /// Receive (another tab unmounts Move, so its return reads anew). A
     /// token being spent keeps up.
-    private func readHoldings() async {
+    /// `shared`: Move's opening read joins the Wallet's warm-up or takes
+    /// its reading (`MoveWarm`, prd §1610); every later read is its own.
+    private func readHoldings(shared: Bool = false) async {
         // Every network at once: one slow node holds none of the others.
         var found: [Int: [Tokens.Held]] = [:]
         var failed: Set<Int> = []
         await withTaskGroup(of: (Int, [Tokens.Held]?).self) { group in
             for net in Op.networks {
-                group.addTask { @MainActor in (net.chainId, await Tokens.read(account, on: net)) }
+                group.addTask { @MainActor in
+                    (net.chainId, shared ? await Tokens.readShared(account, on: net) : await Tokens.read(account, on: net))
+                }
             }
             for await (id, held) in group {
                 found[id] = held ?? []

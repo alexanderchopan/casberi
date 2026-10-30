@@ -516,6 +516,9 @@ final class AddressBook {
             remove(address)
             return nil
         }
+        // Named again: a contact you removed comes back (prd §1610).
+        let identity = Identity.key(.wallet, address)
+        Task { @MainActor in ContactsRemoved.shared.restore(identity) }
         if var existing = entries[key] {
             existing.name = trimmed
             // Provenance, kind and network tags only ever FILL IN — a later

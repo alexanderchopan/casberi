@@ -69663,3 +69663,16 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 4. **Seen.** On the simulator, `-signerSheetPreview kept[:0x…]`: Approve in the wallet, Waiting, Cancel, and Ask again appearing ten seconds on. In the demo, Holdings' long press offers Hide alone, rightly: the demo's own account holds none of the demo's tokens. **Not seen:** Send/Swap from a real holding, Ask again against Rainbow.
 
 **Mac half (§1402).** The same long press (a right click) and sheet; the wallet is not reopened off the phone.
+
+## §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept preview) (user, 2026-10-29: "there doesn't seem to be a way to remove a contact"; "it takes a few seconds to read which tokens i have … on fresh boot"; the Took line of two sends, preparing 15s each; "i don't like how the details are blocked by the keyboard … makes it look like an error")
+
+**Remove from Contacts.** Only a name saved by hand could be removed ("Remove from Addresses"), so a wallet, a card or a follow stood on the list for good. Every contact the list shows (`ContactIndexSources.isListed`) now ends its page in Remove from Contacts, asked once in a dialog. It forgets what Casberi holds of them (a wallet's name in the book, a saved name) and records each of their keys in `ContactsRemoved` (`contacts.removed.v1`, mirrored through iCloud like the saved names), so whatever else still feeds them (a card in the iPhone's Contacts, something you follow) keeps them off the list; following is untouched, Unfollow stays its own door. Naming any of their identities again by hand (`AddressBook.setName`, `ContactBook.save`) brings every one back.
+
+**What Move asks, asked before it opens.** Two sends' Took lines said preparing 15s: the first after installing a build, the second six minutes after the first, when every kept fact had lapsed (`factsLife`, 300s). Four changes, none of them touching Tor or treating one send or swap apart from another:
+
+1. **A read under way is joined, never asked again.** Every kept fact goes through one helper (`Facts.joined`): a send that taps while the read-ahead is reading waits for that read. A forget bumps the record's generation, so a read begun before it keeps nothing.
+2. **A tap waits for its own preview.** `Prepared.take` waits, up to `joinWait` (20s), for a preview of the same items that is still being made, and signs what it made, instead of assembling and simulating it all a second time beside it.
+3. **Kept fresh while Move is open.** A minute before the facts would lapse, Move reads them all again at once and replaces the record whole (`refreshFacts`), never mid-send; the app coming back reads ahead too.
+4. **Read when the Wallet opens.** `MoveWarm` starts, at most once a minute, on opening the Wallet and on every foreground: every network's holdings and every network's facts. Move's opening read joins it or takes its reading under `holdingsLife` (30s) old; every later read (back from Receive, the app returning) is its own, and a send reads its own balances at the tap.
+
+**The foot fades in.** A line passing under Move's foot was cut in half by its ground, which read as a fault; the ground now fades in over `footFade` (32pt) above the foot, and the page scrolls far enough for its last line to clear it.

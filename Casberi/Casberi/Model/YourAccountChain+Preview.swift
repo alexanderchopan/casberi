@@ -65,12 +65,30 @@ extension YourAccountChain {
 
         /// The kept operation for exactly these items on this route, fresh
         /// enough; taken, so it is signed at most once.
+        ///
+        /// **A PREVIEW STILL BEING MADE IS WAITED FOR (prd §1610).** A tap
+        /// while the preview of these same items is reading took the long
+        /// way and asked every one of its questions a second time; now it
+        /// waits for that preview, up to `joinWait`, and signs what it made.
         static func take(_ items: [Item], roundUp: RoundUpBuy?, route: Signs) async -> Prepared? {
-            await store.take { p in
-                same(p.items, items) && p.roundUp == roundUp && p.route == route
-                    && Date().timeIntervalSince(p.made) < lifetime
+            let until = Date().addingTimeInterval(joinWait)
+            while true {
+                let (p, making) = await store.take(making: { same($0, items) }) { p in
+                    same(p.items, items) && p.roundUp == roundUp && p.route == route
+                        && Date().timeIntervalSince(p.made) < lifetime
+                }
+                if let p { return p }
+                guard making, Date() < until, !Task.isCancelled else { return nil }
+                try? await Task.sleep(for: .milliseconds(150))
             }
         }
+
+        /// The longest a tap waits on a preview of its own items.
+        static let joinWait: TimeInterval = 20
+
+        /// A preview of `items` is being made; `end` when it is done, kept or not.
+        static func begin(_ items: [Item]) async -> UUID { await store.begin(items) }
+        static func end(_ id: UUID) async { await store.end(id) }
 
         /// The same transaction, whatever ids its lines carry: the sentence's
         /// line being filled is a new value every time it is read. A swap's
@@ -93,11 +111,22 @@ extension YourAccountChain {
 
         private actor Store {
             private var kept: Prepared?
+            private var making: [UUID: [Item]] = [:]
             func put(_ p: Prepared) { kept = p }
-            func take(where matches: (Prepared) -> Bool) -> Prepared? {
-                guard let p = kept, matches(p) else { return nil }
-                kept = nil
-                return p
+            func begin(_ items: [Item]) -> UUID {
+                let id = UUID()
+                making[id] = items
+                return id
+            }
+            func end(_ id: UUID) { making[id] = nil }
+            /// The kept operation if it matches, and whether a preview of
+            /// these items is still being made.
+            func take(making same: ([Item]) -> Bool, where matches: (Prepared) -> Bool) -> (Prepared?, Bool) {
+                if let p = kept, matches(p) {
+                    kept = nil
+                    return (p, false)
+                }
+                return (nil, making.values.contains(where: same))
             }
         }
     }
@@ -107,6 +136,8 @@ extension YourAccountChain {
     static func preview(_ items: [Item], account: String, roundUp: RoundUpBuy?) async -> Preview? {
         guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else { return nil }
         if YourAccountDemo.isDemo(account) { return demoPreview(items, on: net) }
+        let making = await Prepared.begin(items)
+        defer { Task { await Prepared.end(making) } }
         let sends = items.compactMap { if case .send(let p) = $0 { p } else { nil } }
         var route: Prepared.Signs = .owner
         if case .on = (try? await limitState(net, account)) ?? .off {

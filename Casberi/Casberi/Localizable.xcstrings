@@ -111167,6 +111167,34 @@
         }
       }
     },
+    "Naming them again brings them back." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si vuelves a ponerles nombre, vuelven."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "もう一度名前を付けると元に戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다시 이름을 붙이면 돌아옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再次为其命名即可恢复。"
+          }
+        }
+      }
+    },
     "Narrow it to one app with the chips up top." : {
       "localizations" : {
         "es" : {
@@ -131012,6 +131040,34 @@
         }
       }
     },
+    "Opening %@'s sign-in…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abriendo el inicio de sesión de %@…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のサインインを開いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 로그인을 여는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在打开 %@ 的登录…"
+          }
+        }
+      }
+    },
     "Opening Acorns' sign-in…" : {
       "localizations" : {
         "es" : {
@@ -148553,6 +148609,34 @@
         }
       }
     },
+    "Remove %@ from Contacts?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Quitar a %@ de Contactos?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@を連絡先から削除しますか?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 님을 연락처에서 제거할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要从联系人中移除 %@ 吗?"
+          }
+        }
+      }
+    },
     "Remove %@ from your account on %@" : {
       "localizations" : {
         "es" : {
@@ -148751,6 +148835,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从地址中移除"
+          }
+        }
+      }
+    },
+    "Remove from Contacts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quitar de Contactos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "連絡先から削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연락처에서 제거"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从联系人中移除"
           }
         }
       }

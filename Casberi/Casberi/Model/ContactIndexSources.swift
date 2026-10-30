@@ -302,6 +302,8 @@ enum ContactIndexSources {
     static func isListed(_ contact: Contact) -> Bool {
         if isYours(contact) { return false }
         if contact.lead.kind == .biller { return false }
+        // Removed from Contacts (prd §1610), whatever still feeds it.
+        if ContactsRemoved.shared.removed(contact) { return false }
         if contact.identities.contains(where: { $0.kind == .wallet && WalletStore.shared.watches($0.body) }) {
             return false
         }

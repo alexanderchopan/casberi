@@ -24,11 +24,16 @@ extension YourAccountChain {
             var threshold: Int?
             var hasSessions: Bool?
             var signers: [String]?
-            let at: Date
+            var at: Date
         }
 
         static let shared = Facts()
         private var known: [String: Known] = [:]
+        /// Bumped by every forget, so a read begun before it keeps nothing.
+        private var generations: [String: Int] = [:]
+        /// The reads under way, by key and fact: a second asker joins the
+        /// first (prd §1610: a tap during the read-ahead asked it all again).
+        private var reading: [String: Task<any Sendable, Error>] = [:]
 
         func get(_ key: String) -> Known? {
             guard let k = known[key], -k.at.timeIntervalSinceNow < YourAccountChain.factsLife else {
@@ -38,13 +43,39 @@ extension YourAccountChain {
             return k
         }
 
-        func set(_ key: String, _ update: @Sendable (inout Known) -> Void) {
+        func generation(_ key: String) -> Int { generations[key, default: 0] }
+
+        func set(_ key: String, generation: Int, _ update: @Sendable (inout Known) -> Void) {
+            guard generations[key, default: 0] == generation else { return }
             var k = get(key) ?? Known(at: Date())
             update(&k)
             known[key] = k
         }
 
-        func forget(_ key: String) { known[key] = nil }
+        /// Everything read again at once: the whole record, stamped now.
+        func replace(_ key: String, generation: Int, with k: Known) {
+            guard generations[key, default: 0] == generation else { return }
+            known[key] = k
+        }
+
+        func forget(_ key: String) {
+            known[key] = nil
+            generations[key, default: 0] += 1
+            for id in reading.keys where id.hasPrefix(key + "#") { reading[id] = nil }
+        }
+
+        func joined<T: Sendable>(_ id: String, _ read: @escaping @Sendable () async throws -> T) async throws -> T {
+            let task: Task<any Sendable, Error>
+            if let running = reading[id] {
+                task = running
+            } else {
+                task = Task { try await read() }
+                reading[id] = task
+            }
+            defer { if reading[id] == task { reading[id] = nil } }
+            guard let value = try await task.value as? T else { throw CancellationError() }
+            return value
+        }
     }
 
     private static func factsKey(_ net: Network, _ account: String) -> String { "\(net.chainId)|\(account.lowercased())" }
@@ -55,46 +86,45 @@ extension YourAccountChain {
         await Facts.shared.forget(factsKey(net, account))
     }
 
-    static func knownDeployed(_ net: Network, _ account: String) async throws -> Bool {
+    /// One fact: kept, else joined to a read under way, else read and kept.
+    private static func known<T: Sendable>(_ net: Network, _ account: String, _ fact: String, fresh: Bool = false,
+                                           kept: @Sendable (Facts.Known) -> T?,
+                                           keeps: @Sendable (T) -> Bool = { _ in true },
+                                           store: @escaping @Sendable (inout Facts.Known, T) -> Void,
+                                           read: @escaping @Sendable () async throws -> T) async throws -> T {
         let key = factsKey(net, account)
-        if let v = await Facts.shared.get(key)?.deployed { return v }
-        let v = try await isDeployed(net, account)
+        if !fresh, let k = await Facts.shared.get(key), let v = kept(k) { return v }
+        let generation = await Facts.shared.generation(key)
+        let v = try await Facts.shared.joined(key + "#" + fact, read)
+        if !fresh, keeps(v) { await Facts.shared.set(key, generation: generation) { store(&$0, v) } }
+        return v
+    }
+
+    static func knownDeployed(_ net: Network, _ account: String, fresh: Bool = false) async throws -> Bool {
         // Only "on it" is kept: a node a block behind a first send would
         // otherwise keep the account off the network for minutes.
-        if v { await Facts.shared.set(key) { $0.deployed = true } }
-        return v
+        try await known(net, account, "deployed", fresh: fresh, kept: \.deployed, keeps: { $0 },
+                        store: { $0.deployed = $1 }) { try await isDeployed(net, account) }
     }
 
-    static func knownEntry(_ net: Network, _ account: String) async throws -> YourAccountOp.Entry {
-        let key = factsKey(net, account)
-        if let v = await Facts.shared.get(key)?.entry { return v }
-        let v = try await accountEntry(net, account)
-        await Facts.shared.set(key) { $0.entry = v }
-        return v
+    static func knownEntry(_ net: Network, _ account: String, fresh: Bool = false) async throws -> YourAccountOp.Entry {
+        try await known(net, account, "entry", fresh: fresh, kept: \.entry,
+                        store: { $0.entry = $1 }) { try await accountEntry(net, account) }
     }
 
-    static func knownThreshold(_ net: Network, _ account: String) async throws -> Int {
-        let key = factsKey(net, account)
-        if let v = await Facts.shared.get(key)?.threshold { return v }
-        let v = try await threshold(net, account)
-        await Facts.shared.set(key) { $0.threshold = v }
-        return v
+    static func knownThreshold(_ net: Network, _ account: String, fresh: Bool = false) async throws -> Int {
+        try await known(net, account, "threshold", fresh: fresh, kept: \.threshold,
+                        store: { $0.threshold = $1 }) { try await threshold(net, account) }
     }
 
-    static func knownHasSessions(_ net: Network, _ account: String) async throws -> Bool {
-        let key = factsKey(net, account)
-        if let v = await Facts.shared.get(key)?.hasSessions { return v }
-        let v = try await !sessionIds(net, account).isEmpty
-        await Facts.shared.set(key) { $0.hasSessions = v }
-        return v
+    static func knownHasSessions(_ net: Network, _ account: String, fresh: Bool = false) async throws -> Bool {
+        try await known(net, account, "sessions", fresh: fresh, kept: \.hasSessions,
+                        store: { $0.hasSessions = $1 }) { try await !sessionIds(net, account).isEmpty }
     }
 
-    static func knownSigners(_ net: Network, _ account: String) async throws -> [String] {
-        let key = factsKey(net, account)
-        if let v = await Facts.shared.get(key)?.signers { return v }
-        let v = try await signers(net, account)
-        await Facts.shared.set(key) { $0.signers = v }
-        return v
+    static func knownSigners(_ net: Network, _ account: String, fresh: Bool = false) async throws -> [String] {
+        try await known(net, account, "signers", fresh: fresh, kept: \.signers,
+                        store: { $0.signers = $1 }) { try await signers(net, account) }
     }
 
     /// Everything a send on `net` will ask, asked now and at once, so the tap
@@ -109,5 +139,28 @@ extension YourAccountChain {
         let needsSigner = await threshold.map { $0 >= 2 } ?? false || plan(net) != nil
         if needsSigner { _ = try? await knownSigners(net, account) }
         _ = await (entry, sessions)
+    }
+
+    /// **KEPT FRESH WHILE MOVE IS OPEN (prd §1610: a send six minutes after
+    /// the last found every fact expired and read them all on the tap).**
+    /// Every fact read again at once and the record replaced whole, stamped
+    /// now, so what is kept never outlives `factsLife` and never lapses
+    /// while somebody is about to send. A failed read keeps the old record
+    /// until it expires on its own.
+    static func refreshFacts(_ account: String, on net: Network) async {
+        let key = factsKey(net, account)
+        let generation = await Facts.shared.generation(key)
+        guard (try? await knownDeployed(net, account, fresh: true)) == true else { return }
+        async let entry = knownEntry(net, account, fresh: true)
+        async let threshold = knownThreshold(net, account, fresh: true)
+        async let sessions: Bool? = plan(net) == nil ? nil : try await knownHasSessions(net, account, fresh: true)
+        let t: Int, e: YourAccountOp.Entry, h: Bool?
+        do { (t, e, h) = try await (threshold, entry, sessions) } catch { return }
+        var record = Facts.Known(deployed: true, entry: e, threshold: t, hasSessions: h, at: Date())
+        if t >= 2 || plan(net) != nil {
+            guard let s = try? await knownSigners(net, account, fresh: true) else { return }
+            record.signers = s
+        }
+        await Facts.shared.replace(key, generation: generation, with: record)
     }
 }

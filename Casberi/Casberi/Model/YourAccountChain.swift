@@ -2365,7 +2365,8 @@ enum YourAccountChain {
         // What the account is may change with this operation (prd §1602):
         // forgotten now, and again once it settles.
         await forgetFacts(net, account)
-        defer { Task { await forgetFacts(net, account) } }
+        await YourAccountTokens.forgetShared()
+        defer { Task { await forgetFacts(net, account); await YourAccountTokens.forgetShared() } }
         var refusal: String?
         do {
             _ = try await bundler(net, "eth_sendUserOperation", [op.json, YourAccount.entryPoint])

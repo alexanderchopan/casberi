@@ -58,6 +58,8 @@ final class ContactBook {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard identity.kind != .contact, identity.kind != .wallet else { return }
         if name.isEmpty { remove(identity.key); return }
+        // Named again: a contact you removed comes back (prd §1610).
+        ContactsRemoved.shared.restore(identity.key)
         if var standing = entries[identity.key] {
             standing.name = name
             standing.updatedAt = .now
