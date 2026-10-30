@@ -17410,6 +17410,34 @@
         }
       }
     },
+    "%@'s page shows its fee before you pay. This address is copied for you to paste there." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La página de %@ muestra su comisión antes de pagar. Esta dirección está copiada para que la pegues allí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のページでは支払い前に手数料が表示されます。このアドレスはそこに貼り付けられるようコピー済みです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 페이지에서 결제 전에 수수료가 표시됩니다. 이 주소는 그곳에 붙여넣을 수 있도록 복사되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的页面会在付款前显示手续费。此地址已复制，可粘贴到那里。"
+          }
+        }
+      }
+    },
     "%@'s page shows its fee before you pay. This address is copied to paste there." : {
       "localizations" : {
         "es" : {
@@ -164894,6 +164922,118 @@
         }
       }
     },
+    "Signed in on chatgpt.com" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada en chatgpt.com"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "chatgpt.comでサインイン済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "chatgpt.com에 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 chatgpt.com 登录"
+          }
+        }
+      }
+    },
+    "Signed in on claude.ai" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada en claude.ai"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "claude.aiでサインイン済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "claude.ai에 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 claude.ai 登录"
+          }
+        }
+      }
+    },
+    "Signed in on gemini.google.com" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada en gemini.google.com"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gemini.google.comでサインイン済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gemini.google.com에 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 gemini.google.com 登录"
+          }
+        }
+      }
+    },
+    "Signed in on grok.com" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada en grok.com"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "grok.comでサインイン済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "grok.com에 로그인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 grok.com 登录"
+          }
+        }
+      }
+    },
     "Signed in on muse.ai" : {
       "localizations" : {
         "es" : {
@@ -205585,6 +205725,34 @@
         }
       }
     },
+    "You're signed out of %@ — sign in again on its account page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cerraste sesión en %@: vuelve a iniciar sesión en su página de cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ からサインアウトしています。アカウントページでもう一度サインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 로그아웃되었습니다. 계정 페이지에서 다시 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已退出 %@ 的登录，请在其账户页面重新登录。"
+          }
+        }
+      }
+    },
     "You're signed out of Muse — sign in again on its account page." : {
       "localizations" : {
         "es" : {
@@ -208825,6 +208993,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的聊天"
+          }
+        }
+      }
+    },
+    "Your cloud sessions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus sesiones en la nube"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "クラウドのセッション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "클라우드 세션"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的云端会话"
           }
         }
       }
@@ -227104,6 +227300,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "人"
+          }
+        }
+      }
+    },
+    "pick ChatGPT when you ask." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "elige ChatGPT al preguntar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問するときに ChatGPT を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문할 때 ChatGPT를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提问时选择 ChatGPT。"
+          }
+        }
+      }
+    },
+    "pick Claude when you ask." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "elige Claude al preguntar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問するときに Claude を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문할 때 Claude를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提问时选择 Claude。"
+          }
+        }
+      }
+    },
+    "pick Gemini when you ask." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "elige Gemini al preguntar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問するときに Gemini を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문할 때 Gemini를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提问时选择 Gemini。"
           }
         }
       }
