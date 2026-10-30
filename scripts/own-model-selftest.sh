@@ -89,7 +89,9 @@ grep -q 'NetworkLedger.shared.record(own, as: OwnModel.name)' "$ANSWER" \
   || { echo "✗ a request no longer names the seat to the ledger (its host is undeclarable)"; exit 1; }
 grep -q 'if chosenModel.isEmpty, provider.keyOptional { return nil }' "$ANSWER" \
   || { echo "✗ a request with no model can go out"; exit 1; }
-grep -q '\$0 == .ownModel ? OwnModel.address != nil' "$ANSWER" \
+# A switch since §1619 (Muse, then every signed-in agent, counts a session);
+# the rule is unchanged: Your own model is configured by its ADDRESS.
+grep -q 'case .ownModel: OwnModel.address != nil' "$ANSWER" \
   || { echo "✗ configured is read off the key again, not the address"; exit 1; }
 grep -q 'if provider == .ownModel { OwnModel.forget() }' "$ANSWER" \
   || { echo "✗ clearing the seat no longer forgets its address and tool memory"; exit 1; }
