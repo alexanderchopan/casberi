@@ -89,10 +89,11 @@ ALLOWANCE = {
     # §1427): Create's line, or — when iCloud Keychain holds a recovery key —
     # Move it to this iPhone's. Exclusive states, never on screen together.
     # Three settings cards in one file (Data, Agent key, Notifications). Data
-    # holds the librarian disclosure (two exclusive branches, (c)), the ADP
-    # line (a) and the redaction line (c); notifications its no-push ceiling (a).
-    # The key card's provider disclosure left with the card (prd §871).
-    "AccountDetailSheet.swift": (4, "two settings cards; (a)(b)(c)"),
+    # holds the librarian disclosure (two exclusive branches, (c)) and the ADP
+    # line (a); notifications its no-push ceiling (a). The key card's provider
+    # disclosure left with the card (prd §871); the redaction line was deleted
+    # (prd §1611).
+    "AccountDetailSheet.swift": (3, "two settings cards; (a)(c)"),
     # The usage card's two honesty lines (a), the librarian's never-shown line
     # (a), the budget control's three conditional lines (a)(b), and the Mac
     # MCP row's one sentence — four separate components in one file.

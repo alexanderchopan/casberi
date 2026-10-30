@@ -69,6 +69,10 @@ struct AccountDetailSheet: View {
     /// `NetworkReachScreen` composes it. Nil on an empty ledger, which is
     /// a fresh install and gets the door's standing subtitle instead.
     @State private var reach: NetworkReceiptsInsight.Reach?
+    /// The trailing figures (prd §1611): names in the book, and the apps
+    /// Delete access would disconnect — the same set `deleteAccess` drops.
+    @State private var addressCount = 0
+    @State private var accessCount = 0
     /// Casberi's own license, then every library it ships and its license
     /// (`Resources/Licenses.md`), read on appear. Reown's SDK requires its
     /// notice and its license in the app (its §2(a)).
@@ -111,6 +115,10 @@ struct AccountDetailSheet: View {
             guard detail == .data else { return }
             exportURL = buildExport()
             addressExportURL = buildAddressBookExport()
+            addressCount = AddressBook.shared.exportPayload().count
+            accessCount = store.bridges.filter {
+                Self.credentialBacked.contains($0.id) && $0.status == .connected
+            }.count
             keyedAgent = AgentKey.active
             librarianOn = AgentLibrarian.isEnabled
             reach = NetworkReceiptsInsight.compose(rows: NetworkLedger.shared.receiptRows())
@@ -174,29 +182,32 @@ struct AccountDetailSheet: View {
     /// both wipes reachable (each still confirms) without the chrome.
     private var controls: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
+            // "What this app reaches" left this card for the box's proof line
+            // (prd §1611): the claim and its evidence stand together.
             SectionPanelCard(name: String(localized: "Your data"), glyph: "folder") {
-                door("What this app reaches", reachLine, subtitleTone: reachTone) {
-                    if !inPane { dismiss() }
-                    route.push(.reach)
-                }
                 exportControl
-                Button { importing = true } label: {
-                    actionLabel("Import", icon: "square.and.arrow.down")
+                DSPushRow(title: Text("Import an export"),
+                          subtitle: Text("Adds what isn't here, replaces nothing"),
+                          opens: false, action: { importing = true }) {
+                    columnGlyph("square.and.arrow.down")
                 }
-                .buttonStyle(RowPress())
-                .dsHover()
             }
             // DELETE AS ROWS (prd §1226): one red row per wipe, stacked,
-            // each its own verb — never two words side by side.
+            // each its own verb — never two words side by side. Each says
+            // how much it takes, trailing (prd §1611).
             SectionPanelCard(name: String(localized: "Delete"), glyph: "trash") {
-                Button { confirmDelete = true } label: {
-                    actionLabel("Delete things", icon: "trash", destructive: true)
+                DSPushRow(title: Text("Delete things"),
+                          fact: Text(thingCount.formatted(.number.grouping(.automatic))),
+                          tint: DS.destructiveInk, opens: false,
+                          action: { confirmDelete = true }) {
+                    columnGlyph("trash", destructive: true)
                 }
-                .buttonStyle(RowPress())
-                Button { confirmDeleteAccess = true } label: {
-                    actionLabel("Delete access", icon: "key", destructive: true)
+                DSPushRow(title: Text("Delete access"),
+                          fact: accessCount > 0 ? Text("\(accessCount) apps") : nil,
+                          tint: DS.destructiveInk, opens: false,
+                          action: { confirmDeleteAccess = true }) {
+                    columnGlyph("key", destructive: true)
                 }
-                .buttonStyle(RowPress())
                 // A THIRD verb, and only when there is a key (prd §425). It is
                 // not folded into "Delete access" on purpose: that wipe is one
                 // service-wide Keychain call, and a token deleted by mistake is
@@ -204,75 +215,77 @@ struct AccountDetailSheet: View {
                 // ELSE to send an on-chain `swapOwner` before the Safe works
                 // again. Different cost, different verb, different sentence.
                 if SafeSigner.hasAnyKey {
-                    Button { confirmDeleteSigner = true } label: {
-                        actionLabel("Delete signing key", icon: "signature", destructive: true)
+                    DSPushRow(title: Text("Delete signing key"),
+                              fact: Text("Safe co-signer"),
+                              tint: DS.destructiveInk, opens: false,
+                              action: { confirmDeleteSigner = true }) {
+                        columnGlyph("signature", destructive: true)
                     }
-                    .buttonStyle(RowPress())
                 }
             }
             // Outcome lines arrive with the settle beat — a result, not a flicker.
-            if let importResult {
-                Text(importResult)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .settleIn()
+            // In the rows' text column, as every line on this page is (prd §1611).
+            Group {
+                if let importResult {
+                    Text(importResult)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .settleIn()
+                }
+                if let deleteResult {
+                    Text(deleteResult)
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .settleIn()
+                }
             }
-            if let deleteResult {
-                Text(deleteResult)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .settleIn()
-            }
-            // The tripwire, said out loud — last, the screen's one footnote
-            // (prd §748): see `SecretScan` (§277) for what it does and does not
-            // promise.
-            DSFootnote("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
+            .padding(.leading, DSRoomChassis.rowInset + Self.textColumn)
+            // The tripwire's sentence is deleted (prd §1611, user: "this is
+            // unecessary too"); `SecretScan` (§277) still does what it said.
         }
     }
 
-    /// Export, and the one choice it offers (2026-08-29). The capsule is
-    /// UNCHANGED while there is only one honest file to hand over: a menu
-    /// whose second item reads "Just the address book" over an empty book is
-    /// the dead control §83 bans, and it would cost a tap to say nothing.
-    ///
-    /// With names in the book the same capsule opens a two-item menu, both
-    /// real `ShareLink`s. It is a menu on TAP rather than §415's long-press
-    /// pick, and that is forced rather than chosen: `Menu`'s `primaryAction`
-    /// takes a closure, no API fires a share sheet programmatically, so a
-    /// tap-unchanged shape here would leave the second file reachable only by
-    /// a gesture nothing announces. One extra tap on a tray nobody opens twice
-    /// a day is the cheaper half of that trade.
+    /// Where a row's words start: past the section name's glyph column, so
+    /// a switch, a note and a door read down one edge (prd §1611, user: "make
+    /// sure all this text is indented the same").
+    private static let textColumn = DSRoomChassis.headGlyph + DSRoomChassis.headGap
+
+    /// A row's glyph in the section name's own column; `DSPushRowLabel`'s
+    /// gap is `headGap`, so its words land where the name's do.
+    private func columnGlyph(_ name: String, destructive: Bool = false) -> some View {
+        Image(systemName: name)
+            .dsGlyph(.caption, weight: .regular)
+            .foregroundStyle(destructive ? DS.destructive : DS.brandInk)
+            .frame(width: DSRoomChassis.headGlyph)
+            .accessibilityHidden(true)
+    }
+
+    /// Export, as two rows (prd §1611): the whole file, and the address book
+    /// alone only when the book has names — a second row over an empty book
+    /// is the dead control §83 bans. It was one row opening a menu, because
+    /// no API fires a share sheet from a closure; two `ShareLink` rows say
+    /// both files without the hidden step.
     @ViewBuilder private var exportControl: some View {
         if let exportURL {
-            if let addressExportURL {
-                Menu {
-                    ShareLink(item: exportURL) {
-                        Label("Everything", systemImage: "shippingbox")
-                    }
-                    ShareLink(item: addressExportURL) {
-                        Label("Just the address book",
-                              systemImage: "person.text.rectangle")
-                    }
-                } label: {
-                    actionLabel("Export", icon: "square.and.arrow.up")
+            ShareLink(item: exportURL) {
+                DSPushRowLabel(title: Text("Export everything"),
+                               fact: Text(thingCount.formatted(.number.grouping(.automatic))),
+                               opens: false) {
+                    columnGlyph("square.and.arrow.up")
                 }
-            } else {
-                ShareLink(item: exportURL) {
-                    actionLabel("Export", icon: "square.and.arrow.up")
-                }
-                .buttonStyle(.plain)
-                .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
             }
+            .buttonStyle(RowPress())
+            .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
         }
-    }
-
-    /// One action's face — a DOOR ROW since prd §746. It was a 54pt
-    /// full-width capsule (the Statement pass, 2026-08-03: Export filled tint,
-    /// Import and Remove key gray), which made a tray of verbs a stack of
-    /// pills. The row keeps the icon and the word; `destructive` keeps the one
-    /// colour that is a meaning.
-    private func actionLabel(_ title: LocalizedStringKey, icon: String,
-                             destructive: Bool = false) -> some View {
-        DSDoorRowLabel(icon: icon, title: Text(title),
-                       role: destructive ? .destructive : nil)
+        if let addressExportURL {
+            ShareLink(item: addressExportURL) {
+                DSPushRowLabel(title: Text("Export the address book"),
+                               fact: Text("\(addressCount) names"),
+                               opens: false) {
+                    columnGlyph("person.text.rectangle")
+                }
+            }
+            .buttonStyle(RowPress())
+            .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
+        }
     }
 
     /// A destructive verb as red words — full 44pt hit target, no slab. The
@@ -437,12 +450,17 @@ struct AccountDetailSheet: View {
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.6)
-                // No "on <device>" here: the capsule immediately below says
-                // it in bold green, and saying it twice in two lines spends
-                // the hero's subline on a fact already made.
                 (Text("things · ")
                     + Text(storeSize))
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
+                // Where they are (prd §1611): the copy iCloud holds only once
+                // the mirror is engaged, so a fresh flip still reads "only".
+                // `DS.device` carries its own "this".
+                Text(icloudSync && SharedStore.cloudSyncActive
+                     ? String(localized: "On \(DS.device) and in iCloud")
+                     : String(localized: "On \(DS.device) only"))
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s1)
             }
             // The whole on-device story, worn as one quiet capsule — the
             // guarantee still reads at a glance without a badge painting it.
@@ -475,12 +493,33 @@ struct AccountDetailSheet: View {
                 if let keyedAgent, librarianOn {
                     DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
                 }
+                // THE CLAIM'S EVIDENCE (prd §1611): the week's receipts under
+                // the stamp, and the door to them — it was a row in Your data.
+                Button {
+                    DSHaptic.tap()
+                    if !inPane { dismiss() }
+                    route.push(.reach)
+                } label: {
+                    reachProof
+                        .dsText(.subhead12)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        // The finger's height below the words, never air
+                        // above them: the line sits under its stamp.
+                        .frame(maxWidth: .infinity, minHeight: DS.Hit.min, alignment: .topLeading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .accessibilityHint(Text("What this app reaches"))
             }
             }
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             // Data's box, without its well (prd §1381).
-            SectionPanelCard(name: String(localized: "Privacy"), glyph: "hand.raised") {
+            // Two threats, two sections (prd §1611): where your copy lives,
+            // and who can read your screen. They were one "Privacy" card.
+            SectionPanelCard(name: String(localized: "Where it's kept"), glyph: "icloud") {
             // iCloud sync. The container binds at launch, so a fresh flip says
             // WHEN it goes live instead of pretending it is. RULE (2026-07-27):
             // this used to read the toggle's own INTENT ("Synced to your
@@ -527,11 +566,13 @@ struct AccountDetailSheet: View {
                 Text(CloudSyncReading.guardNotice(deviceName: DS.device))
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, Self.textColumn)
             }
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, Self.textColumn)
             }
             // ADP nudge — only meaningful while sync is ON (with sync off
             // there's no iCloud copy to encrypt). Points the person at the
@@ -543,9 +584,20 @@ struct AccountDetailSheet: View {
             // that an end-to-end claim requires ADP, and the honest way to
             // keep it is to say what today is.
             if icloudSync {
-                DSFootnote("Apple holds the keys unless Advanced Data Protection is on (\(DS.settingsAppName) › your name › iCloud).")
+                // The lock stands in the glyph column, the words in the
+                // rows' (prd §1611).
+                HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
+                    Image(systemName: "lock")
+                        .dsGlyph(.caption, weight: .regular)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: DSRoomChassis.headGlyph)
+                        .accessibilityHidden(true)
+                    DSFootnote("End-to-end only with Advanced Data Protection: \(DS.settingsAppName) › your name › iCloud.")
+                }
             }
-            toggleRow("Hide previews", "…in the app switcher",
+            }
+            SectionPanelCard(name: String(localized: "On screen"), glyph: "eye.slash") {
+            toggleRow("Hide previews", "In the app switcher",
                       isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
             // Its sibling (prd §374): the same threat — somebody reading your
             // screen — one surface over. Written through `BalancePrivacy` and
@@ -555,28 +607,7 @@ struct AccountDetailSheet: View {
             toggleRow("Hide account balances", "•••• instead of amounts",
                       isOn: Binding(get: { BalancePrivacy.shared.hidden },
                                     set: { BalancePrivacy.shared.hidden = $0; DSHaptic.tap() }))
-            // The in-motion half (prd §205): what LEAVES this iPhone. The rows
-            // above are your copy AT REST (on device / iCloud); this opens the
-            // one screen holding every service the app talks to AND what it
-            // actually reached this week (prd §967 — the registry and the
-            // ledger were two sheets). The line is the ledger's own verdict
-            // where there is one, so a host nobody declared reads here first.
             }
-            // The tripwire, said out loud (2026-08-18). `SecretScan` (prd
-            // §277) has redacted spotted credentials from the Spotlight/Siri
-            // donation and from keyed-agent grounding since it shipped, and no
-            // screen in the app has ever mentioned it — the strongest privacy
-            // behaviour here was also the only invisible one, which is the
-            // §83 honesty rule applied to a SILENCE rather than to a claim.
-            //
-            // Worded around two overclaims it would be easy to make. It does
-            // NOT say the secret never leaves \(DS.device): the thing itself
-            // still syncs when sync is on, and redaction is applied at the two
-            // boundaries where text is handed to somebody else, not at rest.
-            // And it names those two boundaries rather than saying "anywhere",
-            // because the on-device model is deliberately NOT redacted — it
-            // never leaves, and "what's my wifi password?" is a fair question
-            // to ask your own corpus.
         }
     }
 
@@ -589,49 +620,27 @@ struct AccountDetailSheet: View {
     // cost nothing new: the registry is a static list, and the receipts card
     // composes from a ledger this sheet already had to read nothing extra for.
 
-    /// The door's one line. An empty ledger states the registry's honest pair
-    /// — "N reaching now · M listed", because the registry's full length
-    /// counts services you would only reach if you connected them. A week
-    /// with receipts states the ledger's verdict instead, worded verbatim as
-    /// `ReachCard`'s own stamp — a door and the card it opens saying one fact
-    /// in two phrasings reads as two facts.
-    private var reachLine: String {
+    /// The stamp's evidence (prd §1611), the door to What this app reaches.
+    /// A week with receipts states the ledger's verdict, its fact in the
+    /// primary ink; an undeclared host takes attention, never destructive —
+    /// a finding to look at, as the map behind it draws it (§300). An empty
+    /// ledger says so, never a count of what COULD reach (prd §1226: "85
+    /// reaching now" read as traffic).
+    private var reachProof: Text {
         guard let reach else {
-            // No receipts yet this week: say that, not a count of what could
-            // reach (prd §1226: "85 reaching now" read as traffic).
-            return String(localized: "Nothing reached yet this week")
+            return Text("Nothing reached yet this week").foregroundStyle(DS.textSecondary)
         }
+        let week = Text("This week: ").foregroundStyle(DS.textSecondary)
         guard reach.clean else {
-            return reach.undeclaredHosts == 1
-                ? String(localized: "1 not on the list")
-                : String(localized: "\(reach.undeclaredHosts) not on the list")
+            let found = reach.undeclaredHosts == 1
+                ? Text("1 host not on the list")
+                : Text("\(reach.undeclaredHosts) hosts not on the list")
+            return week + found.fontWeight(.semibold).foregroundStyle(DS.attentionInk)
         }
-        return reach.services == 1
-            ? String(localized: "All declared · 1 service this week")
-            : String(localized: "All declared · \(reach.services) services this week")
-    }
-
-    /// Green for a clean week, attention for a host nobody declared — the
-    /// reach map's own grammar (§300), one screen earlier. Deliberately NOT
-    /// `destructive`: an undeclared host is a finding to look at, not a
-    /// failure, and the map behind this door already draws it in attention.
-    private var reachTone: Color {
-        guard let reach else { return DS.textTertiary }
-        return reach.clean ? DS.confirmInk : DS.attentionInk
-    }
-
-    /// A row that opens the reach screen — the shape kept in one place. Badge-less since the Statement pass — the title is the
-    /// wayfinding, the chevron is the affordance (`DSPushRow`).
-    /// `subtitleTone` carries a door's own verdict where it has one — the same
-    /// parameter `toggleRow` takes for a failing sync, and for the same
-    /// reason: the state belongs on the line that states the fact, not on a
-    /// badge beside it.
-    private func door(_ title: String, _ subtitle: String,
-                      subtitleTone: Color = DS.textTertiary,
-                      action: @escaping () -> Void) -> some View {
-        // The Feed's row (prd §1269): no chevron, the row is the door.
-        DSPushRow(title: Text(title), subtitle: Text(DSProse.unorphaned(subtitle)),
-                  subtitleTone: subtitleTone, opens: false, action: action)
+        let fact = reach.services == 1
+            ? Text("1 service, declared")
+            : Text("\(reach.services) services, every one declared")
+        return week + fact.fontWeight(.semibold).foregroundStyle(DS.textPrimary)
     }
 
     // MARK: - Notifications (prd §306)
@@ -708,6 +717,8 @@ struct AccountDetailSheet: View {
                            isOn: Binding<Bool>) -> some View {
         DSToggleRow(title: Text(title), detail: Text(DSProse.unorphaned(subtitle)),
                     detailTone: subtitleTone, isOn: isOn)
+            // In the rows' text column, under the section's name (prd §1611).
+            .padding(.leading, Self.textColumn)
     }
 
 
@@ -952,14 +963,17 @@ struct AccountDetailSheet: View {
     /// Twitch tokens, mail passwords, the Anthropic key). The bridges those
     /// credentials powered unregister so nothing claims a connection it no
     /// longer has. Things stay untouched.
+    /// The seats a credential powers — what `deleteAccess` unregisters, and
+    /// what its row counts (prd §1611).
+    private static let credentialBacked = Set(
+        TokenBridge.allCases.map(\.bridgeID)
+        + ["steam", "twitch", "gmail", "icloudmail"]
+    )
+
     private func deleteAccess() {
         TokenVault.deleteAll()
         TokenBridge.allCases.forEach { $0.onRemove() }   // drop any cached non-thing state too
-        let credentialBacked = Set(
-            TokenBridge.allCases.map(\.bridgeID)
-            + ["steam", "twitch", "gmail", "icloudmail"]
-        )
-        store.bridges.removeAll { credentialBacked.contains($0.id) }
+        store.bridges.removeAll { Self.credentialBacked.contains($0.id) }
         HandOffState.refresh(connected: Set(
             store.bridges.filter { $0.status == .connected }
                 .map { $0.name.lowercased() }))

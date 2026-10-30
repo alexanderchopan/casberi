@@ -243,7 +243,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1748 of 1817 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1749 of 1818 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1613,8 +1613,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1223 — A Watchlist widget, small (amended by §1242)
 - §1224 — A Wallet box leads with its figure
 - §1225 — Every top-level section of a Wallet page stands on the Feed's card (amended by §1382)
-- §1226 — Data reads in groups (amended by §1227)
-- §1227 — Data is a box and three cards; the switches stay switches
+- §1226 — Data reads in groups (amended by §1227, §1611)
+- §1227 — Data is a box and three cards; the switches stay switches (amended by §1611)
 - §1228 — A box's jump lands at once, the same way every time
 - §1229 — Day's box is a calendar (amended by §1344)
 - §1230 — Follow and subscriptions, one standard
@@ -1656,7 +1656,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1266 — The add trays' groups are the Feed's cards; Settings' glyphs are pink
 - §1267 — No tile has a backing; Notes' folders are a Feed card
 - §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks
-- §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates
+- §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates (amended by §1611)
 - §1270 — Aztec joins Testnets: the network and its sequencers, watched keylessly (amended by §1271)
 - §1271 — Aztec, round two: the current testnet, stake and schedule, the epoch strip, the proving line, public Fee Juice
 - §1272 — No chevrons, no icon discs, the last grey labels; Degen out of the demo for good
@@ -1993,6 +1993,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1608 — Peer's Deposit is parked: money in is Buy alone, one verb, the coin and network chosen and the seller picked by the a…
 - §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again
 - §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept…
+- §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
 
 ## Dead rulings → what replaced them (generated)
 

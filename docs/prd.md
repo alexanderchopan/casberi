@@ -69676,3 +69676,14 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 4. **Read when the Wallet opens.** `MoveWarm` starts, at most once a minute, on opening the Wallet and on every foreground: every network's holdings and every network's facts. Move's opening read joins it or takes its reading under `holdingsLife` (30s) old; every later read (back from Receive, the app returning) is its own, and a send reads its own balances at the tap.
 
 **The foot fades in.** A line passing under Move's foot was cut in half by its ground, which read as a fault; the ground now fades in over `footFade` (32pt) above the foot, and the page scrolls far enough for its last line to clear it.
+
+## §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge (amends §1226, §1227, §1269) (user, 2026-10-29: "how would you improve the data pages" "in settings"; of the canvas, "make sure all this text is indented the same", "this is unecessary too" of the tripwire footnote, "all this text under balance … should share same indentation"; then "Build Data page") — BUILT, SEEN ON THE SIMULATOR
+
+1. **The box says where and proves its claim.** Under the count and size, "On this iPhone and in iCloud" (only once the mirror is engaged) or "On this iPhone only"; under "Private — nothing routes through us", the week's receipts: "This week: 23 services, every one declared", an undeclared host in attention. That line is the door to What this app reaches, which leaves Your data.
+2. **Two sections where Privacy was:** Where it's kept (iCloud sync, its live line, the Advanced Data Protection note with its lock in the glyph column) and On screen (Hide previews, Hide account balances). Where your copy lives and who can read your screen are two threats.
+3. **Export is two rows**, each a `ShareLink` with its figure trailing: Export everything (the thing count) and Export the address book (its names, only when the book has any). The tap-menu is deleted. Import reads "Import an export · Adds what isn't here, replaces nothing".
+4. **Delete's rows carry what they take**, trailing: the thing count, the connected apps Delete access would disconnect (`credentialBacked`, the set it drops), "Safe co-signer". The confirms are unchanged; a Goes/Stays tray for them was drawn and not built.
+5. **One text edge.** Every switch, note, door and outcome line starts at the section name's words (`headGlyph + headGap`); a door's glyph stands in the name's glyph column. The box's lines start at the figure's edge, with no glyphs.
+6. **The tripwire sentence is deleted** ("Passwords and recovery phrases are kept out of search…"); `SecretScan` (§277) is unchanged.
+
+Not done: the Tor share in the proof line (the receipts insight carries no Tor count), What this app reaches's own redesign (drawn on the same canvas).
