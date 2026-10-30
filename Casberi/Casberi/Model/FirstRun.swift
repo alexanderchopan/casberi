@@ -1,13 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// **HAS THIS PERSON ADDED ANYTHING YET (prd §1365 item 3, user: "so please
-/// make them match").** The one answer Library's box and the Feed's box both
-/// read (`StartWaysIn`), so "Start with any of these" gives way in both
-/// places at the same moment. Each screen used to ask its own list: a contact
-/// kept by hand cleared Library's box and left the Feed's.
+/// **HAS THIS PERSON ADDED ANYTHING YET (prd §1365 item 3).** The answer the
+/// Feed's box reads (`StartWaysIn`), so "Start with any of these" gives way
+/// the moment anything is added. Library's box read it too until that box was
+/// deleted (2026-10-30); the Calendars page reads the phone's calendars here.
 ///
-/// The eight kinds Library counts. A card arrives through its app, so the
+/// The eight kinds Library counted. A card arrives through its app, so the
 /// apps term holds it.
 @MainActor @Observable
 final class FirstRun {

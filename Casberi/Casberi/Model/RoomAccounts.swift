@@ -220,8 +220,7 @@ enum RoomAccounts {
     private static let media = catalogSeats(mediaRoom)
 
     /// Life's (prd §1049, thinner since §1347): Gmail and iCloud Mail, Files,
-    /// Dropbox, Apple Health with Strava and Garmin, Duolingo, Contacts.
-    /// Contacts lands no row (§916), so it never reaches the menu. The
+    /// Dropbox, Apple Health with Strava and Garmin, Duolingo. The
     /// journals and Obsidian are the Notes category's (§1347), the calendars
     /// and to-dos Day's.
     private static let life = catalogSeats(lifeRoom)
@@ -253,7 +252,8 @@ enum RoomAccounts {
     private static let work = catalogSeats(workRoom)
 
     /// Social's (prd §1068): X, Instagram, TikTok, Snapchat, Telegram,
-    /// Farcaster and Bluesky.
+    /// Threads and Bluesky, and Contacts since 2026-10-30. Contacts lands no
+    /// row (§916), so it never reaches the menu.
     private static let social = catalogSeats(socialRoom)
 
     /// The testnets (prd §1050): test money, never in the Wallet's menu or

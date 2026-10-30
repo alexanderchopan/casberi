@@ -93,6 +93,14 @@ final class HomeRoute {
         /// (`Pinboard.room`: All · Folders · Voice · New) beside Library, as
         /// a setting opens beside Casberi's folder (§1321).
         case notes
+        /// THE CONTACTS PAGE, PUSHED FROM LIBRARY (user, 2026-10-30): the
+        /// Contacts app in Social's folder opens everyone Casberi knows, the
+        /// list Library's deleted box held. The words are a search's landing
+        /// (a person found in the tray), empty from a tap.
+        case contacts(String)
+        /// THE CALENDARS PAGE, PUSHED FROM LIBRARY (user, 2026-10-30): the
+        /// Calendar app in Day's folder opens the calendars Casberi reads.
+        case calendars
     }
     /// The pushed stack — the Mac's only, since prd §1132: on the phone and
     /// the iPad nothing pushes, and every step `place` takes rises in `sheet`.

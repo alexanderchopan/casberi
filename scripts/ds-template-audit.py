@@ -151,6 +151,7 @@ EXEMPT_TINT = {
     "Screens/FileverseDocPage.swift": (1, "a doc's markdown links, through .tint"),
     "Screens/WalletRow.swift": (1, "the sparkline's dots"),
     "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
+    "Screens/WalletSpendingFigure.swift": (1, "Spending's running line, a chart (prd §1480 item 14)"),
     "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),
 }
 

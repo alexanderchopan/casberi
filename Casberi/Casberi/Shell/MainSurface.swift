@@ -651,8 +651,7 @@ struct MainSurface: View {
         // The master list of everything connected (prd §1136 item 3). It
         // draws through the room's frame (prd §1136f), whose title row
         // already reserves the demo's band, as every room's does.
-        // Beside a pane the box is the pane's (prd §1407, as §1403).
-        case .settings: SettingsHome().environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)
+        case .settings: SettingsHome()
         // Your account (prd §1422): a page of its own, never a room.
         case .move: MoveScreen()
         }
@@ -709,6 +708,10 @@ struct MainSurface: View {
             // Mac, risen in the sheet on the iPad, so it draws as a sheet's
             // page there.
             FeedScreen(source: Pinboard.room, isActive: true, inSheet: !HomeRoute.pushes)
+        case .contacts(let query):
+            ContactsPage(query: query)
+        case .calendars:
+            CalendarsPage()
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
@@ -1831,19 +1834,19 @@ struct MainSurface: View {
         // next thing, Needs you, the days). Notes' box is the newest note,
         // open. Nothing landed keeps the mark below.
         if HomeScope.Place(source: filter.source) == .settings {
-            // LIBRARY'S PANE (prd §876, §1405, §1407): Casberi's folder or the
-            // setting it opened; at rest, Library's own box — the counts.
+            // LIBRARY'S PANE (prd §876, §1405, §1407): Casberi's folder, the
+            // setting it opened, or an app's page (Contacts, Calendars). At
+            // rest it is empty ink: Library's counts box, which stood here,
+            // is deleted (2026-10-30), and the folders beside it are the page.
             if let node = route.accountsPane.last {
                 leafRoom(node)
                     .id(node)
                     .transition(.opacity)
             } else {
-                SettingsHome(boxOnly: true)
-                    .environment(\.dsRoomBoxPlace, .paneBox)
-                    .id("paneBox:Library")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    // The pane is ink at rest as it is with a thing open (prd
-                    // §1407): no seam at its top, no change when a row opens.
+                // The pane is ink at rest as it is with a thing open (prd
+                // §1407): no seam at its top, no change when a row opens.
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .dsInk()
             }
         } else if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {

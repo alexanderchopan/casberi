@@ -79,16 +79,18 @@ def row_findings(root):
     return out
 
 
-WALLETS = "Casberi/Casberi/Screens/SettingsHome.swift"
+# Library's followed-wallet rows went with its box (2026-10-30); the Wallet's
+# Following list is where a followed account stands now.
+WALLETS = "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
 
 
 def wallet_findings(root):
-    """Sources' followed wallets (prd §1302): each row removes from a hold."""
+    """The Wallet's followed accounts (prd §1302): each row removes from a hold."""
     text = (root / WALLETS).read_text()
-    i = text.find("ForEach(watched) { addr in")
+    i = text.find("if case .wallet(let address)? = slot.faces.first {")
     if i < 0:
         return [f"{WALLETS}: no followed-wallet rows found (the audit's anchor moved)"]
-    block = text[i:i + 1800]
+    block = text[max(0, i - 200):i + 1200]
     if ".contextMenu" not in block or "WalletUnwatch.perform" not in block:
         return [f"{WALLETS}: a followed wallet's row has no hold menu to stop following it"]
     return []
@@ -110,7 +112,7 @@ def self_test():
         (SCREENS + "/FeedScreen+Subscriptions.swift", ".contextMenu { stopTrackingMenu(item) }", "", "WalletSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+MergedRoom.swift", ".contextMenu { stopTrackingMenu(item) }", "", "MailSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+Following.swift", ".contextMenu { stopFollowingMenu(item, room) }", "", "FollowingRow has no hold menu"),
-        (WALLETS, "WalletUnwatch.perform(entry, context: context, chrome: chrome, bridges: bridges)", "", "followed wallet's row has no hold menu"),
+        (WALLETS, "WalletUnwatch.perform(entry, context: modelContext, chrome: chrome, bridges: bridges)", "", "followed wallet's row has no hold menu"),
     ]
     clean = audit(ROOT)
     if clean:

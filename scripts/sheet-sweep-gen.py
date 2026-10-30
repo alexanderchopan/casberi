@@ -64,26 +64,22 @@ MARKETS = WALLET+[{"tap": "button:^Markets, What"}]
 PIVOT = [{"wait": 2}, {"tap": SEARCH}, {"focus": "field:?Search"}, {"type": "Telegram"}, {"tap": "button:^Everything from Telegram"}]
 HISTORY = WALLET+[{"tap": "button:^Home, The line"}, {"swipeUp": 5}, {"tap": "button:^See all "}]
 ENTRIES = [
-  # ---- Sources, a page (prd §1321): its plus trays and its rows' sheets rise over it ----
-  rises("sources-track-subscription", [SH+"sheet#subscriptionAdd"], [D], SRC+[{"tap": "button:=Track a subscription"}],
-        "field:?Search, or type any name"),
-  rises("sources-track-mail-list", [SH+"sheet#mailAdd"], [D], SRC+[{"tap": "button:=Track a mail list"}], "text:=Uma Patel"),
-  rises("sources-follow-wallet", [SH+"sheet#walletFollow"], [D], SRC+[{"tap": "button:=Follow an account"}], "field:?An address or a name"),
-  rises("sources-new-contact", [SH+"sheet#newContact"], [D], SRC+[{"tap": "button:=Add a contact"}, {"tap": "button:^New contact"}],
-        "button:=Save", afterSwipe="button:=Add a contact"),
-  rises("sources-track-pick", [SH+"trackPick"], [D], SRC+[{"tap": "button:=Follow something"}, {"tap": "button:^YouTube, A channel"}],
-        GRAB, afterSwipe="button:=Follow something"),
-  rises("sources-subscribe-calendar", [SH+"calendarAdd&&route.sheet"], [D], SRC+[{"tap": "button:=Add a calendar"}, {"tap": "button:=Subscribe by link"}],
-        GRAB, afterSwipe="button:=Add a calendar"),
-  rises("sources-plan", [SH+"sheet#plan"], [D], SRC+[{"tap": "button:~, Contacts"}, {"tap": "button:^iCloud+, Monthly"}], "text:=Paid so far"),
-  rises("sources-contact", ["Screens/AddressesScreen.swift:opened"], [D], SRC+[{"tap": "button:~, Contacts"}, {"tap": "button:^Ana Kovač, "}],
+  # ---- Library, a page (prd §1321). Its counts box and the lists and trays it
+  # raised are deleted (2026-10-30); Contacts and Calendars are their apps' pages,
+  # pushed from Social's and Day's folders, and what those pages raise rises over them ----
+  rises("sources-new-contact", ["Screens/ContactsPage.swift:sheet#newContact"], [D],
+        SRC+[{"tap": "button:^Social, "}, {"tap": "button:=Contacts"}, {"tap": "button:=New contact"}],
+        "button:=Save", afterSwipe="button:=New contact"),
+  rises("sources-subscribe-calendar", ["Screens/CalendarsPage.swift:subscribing&&route.sheet"], [D],
+        SRC+[{"tap": "button:^Day, "}, {"tap": "button:=Calendar"}, {"tap": "button:=Subscribe by link"}],
+        GRAB, afterSwipe="button:=Subscribe by link"),
+  rises("sources-contact", ["Screens/AddressesScreen.swift:opened"], [D],
+        SRC+[{"tap": "button:^Social, "}, {"tap": "button:=Contacts"}, {"tap": "button:^Ana Kovač, "}],
         "button:=ana@studio.com"),
-  rises("sources-mail-list", [SH+"sheet#list"], [D], SRC+[{"tap": "button:~, Mail lists"}, {"tap": "button:^Uber Eats, "}], GRAB),
-  rises("sources-followed", [SH+"sheet#follow"], [D], SRC+[{"tap": "button:~, Media"}, {"tap": "button:^Hacker News, "}], GRAB),
-  # A step from a row's sheet pushes inside it (prd §1315): a pull closes the whole sheet and leaves Sources.
+  # A step from a row's sheet pushes inside it (prd §1315): a pull closes the whole sheet.
   pushed("plan-edit", ["Screens/SubscriptionSheets.swift:editing"], [D, "-subscriptionTrack", "Hulu:15.99"],
-         SRC+[{"tap": "button:~, Subscriptions"}, {"tap": "button:^Hulu, "}, {"tap": "button:^Edit"}], "button:=Save", "button:^Edit",
-         swipe_to="button:^Hulu, "),
+         [{"wait": 2}]+WALLET+[{"tap": "button:^Spending, "}, {"tap": "button:^Subscriptions. "}, {"tap": "button:^Hulu, "}, {"tap": "button:^Edit"}],
+         "button:=Save", "button:^Edit", swipe_to="button:^Hulu, "),
   pushed("addresses-thing", ["Screens/AddressesScreen.swift:openedThing"], [D, "-openAddresses", "YES"], [{"wait": 2}, {"tap": "button:^Sam, "}, {"tap": "button:^Sent 0.15 ETH"}],
          "button:=Share, Share", "button:^Sent 0.15 ETH", swipe_to="button:^Sam, "),
   # ---- Apps' pages: found through the band's Search, a page pushed on the pager (prd §1321) ----
@@ -171,6 +167,8 @@ ENTRIES = [
   rises("wallet-subscription", [FS+"subscription"], [D], WALLET+[{"tap": "button:^Subscriptions. "}, {"tap": "button:^Netflix, $12.99"}], "text:=Paid so far"),
   rises("wallet-track-subscription", [FS+"subscriptionAdd"], [D], WALLET+[{"tap": "button:^Subscriptions. "}, {"tap": "button:=Track a subscription"}],
         "field:?Search, or type any name"),
+  # Home's Follow an account row (prd §1480), the tray Library's Wallet plus raised until 2026-10-30.
+  rises("wallet-follow", [FS+"walletFollow"], [D], [{"wait": 2}]+WALLET+[{"tap": "button:^Follow an account"}], "field:?An address or a name"),
   # The history is a page pushed on the pager; a row's thing rises over it.
   rises("wallet-history-thing", ["Screens/WalletHistoryScreen.swift:sheetThing"], [D], HISTORY+[{"tap": "button:^Sent to Savings, "}], "button:=Share, Share"),
   rises("markets-follow-company", [FS+"watchAdd"], [D], MARKETS+[{"tap": "button:=Follow"}], GRAB),
@@ -194,10 +192,15 @@ EXEMPT = [
   dict(covers=[TS+"faceTarget#followChannel"],
        why="the Follow tile draws only for a video or podcast whose channel you do not follow, and every demo channel is followed (measured 2026-10-15 after prd §1326: Computerphile, Strange Loop and Signals and Threads each read Following in the From card, no Follow tile)"),
   dict(covers=[MS+"node.casberi", MS+"node.settingsPage", MS+"node.reach", MS+"node.bridge",
-               MS+"node.l2beatDirectory", MS+"node.walletbeatDirectory", MS+"node.notes"],
-       why=PHONE_PAGE + " (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347)"),
+               MS+"node.l2beatDirectory", MS+"node.walletbeatDirectory", MS+"node.notes", MS+"node.settingsFolder",
+               MS+"node.contacts", MS+"node.calendars"],
+       why=PHONE_PAGE + " (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347, and the Contacts and Calendars pages its Contacts and Calendar apps open)"),
   dict(covers=[FS+"mailSubscription", FS+"following"],
-       why="on the phone Life and Media are Feed sections, so these rise only through a service door (ShellChrome.open, a sheet's Writes/Following row) by an item's id; the same sheets are swept from Sources' rows (sources-mail-list, sources-followed, prd §1317)"),
+       why="NOT WALKED: on the phone Life and Media are Feed sections, so these rise only through a service door (ShellChrome.open, a sheet's Writes/Following row) by an item's id; Library's rows that swept the same sheets (sources-mail-list, sources-followed) were deleted with its box (2026-10-30)"),
+  dict(covers=["Screens/ContactsPage.swift:sheet#plan"],
+       why="NOT WALKED: a contact's biller row raises the Wallet's plan sheet; no demo contact is a biller with a plan (unmeasured). The same SubscriptionSheet is swept from the Wallet (wallet-subscription)"),
+  dict(covers=[SH+"trackPick"],
+       why="NOT WALKED since Library's box was deleted (2026-10-30): the Track tray rises when a folder's app that needs only a name is not yet yours, or a door names one (route.openOffer); the walk that reached it went through the box's Follow something. Needs a demo app that is not added"),
   dict(covers=["Screens/AccountScreen.swift:detail#data", "Screens/AccountScreen.swift:detail#notifications", "Screens/AccountScreen.swift:languageOpen"],
        why="on the phone a setting is a page pushed beside Sources (AccountScreen.open, SettingsHome.bandSearches, prd §1321), never a sheet; these rise only on the iPad outside a sheet"),
   dict(covers=[MS+"node.project"], why="its one door is a circle on Find's source map (`genProjectTap`), which the sweep does not search; the composer's `show <topic>` cannot reach it, since it parses with no tags"),
@@ -208,7 +211,6 @@ EXEMPT = [
   dict(covers=["Screens/AccountPage.swift:sheet#profile", "Screens/StarterPackImportSheet.swift:open"],
        why="the demo's Bluesky page draws no followed people and no Follow a starter pack door (measured 2026-10-15: Open, Website, Pause, Disconnect only); a profile is swept through a post instead"),
   dict(covers=[FS+"token"], why="the demo's holdings carry no token route (`position.route` is nil), so a token row's tap returns before it raises this; in the demo that row is a dead tap"),
-  dict(covers=[FS+"walletFollow"], why="the demo's Wallet draws no Accounts pill in its room or tiles (measured 2026-10-15); Sources' Wallets plus raises the same tray, swept as sources-follow-wallet"),
   dict(covers=["Screens/PersonRoomScreen.swift:sheetThing"], why="a person's room by link shows no rows for any demo person (measured @uma and @sam, 2026-10-15), so there is no row to open"),
   dict(covers=[TS+"faceTarget#person", TS+"faceTarget#address", TS+"walkingToNote"],
        why="NOT WALKED YET: no demo thing found that draws Open profile, Every transfer with, or a linked-note row (-openThing on the transfer titles lands on nothing)"),

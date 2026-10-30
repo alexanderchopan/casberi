@@ -960,11 +960,11 @@ struct RoomsTray: View {
         var hits: [Hit] = []
         for cal in phoneCalendars {
             hits.append(Hit(id: "cal:" + cal.id, group: "Day", name: cal.title, line: cal.account,
-                            mark: .dot(cal.color)) { landInSettings(.kind(.calendars)) })
+                            mark: .dot(cal.color)) { landInSettings(.calendars) })
         }
         for cal in CalendarSubscriptionStore.shared.calendars {
             hits.append(Hit(id: "calsub:" + cal.id.uuidString, group: "Day", name: cal.displayName,
-                            mark: .glyph(ScopeTileGlyph.calendars)) { landInSettings(.kind(.calendars)) })
+                            mark: .glyph(ScopeTileGlyph.calendars)) { landInSettings(.calendars) })
         }
         for room in Following.Room.allCases {
             let group = switch room {
@@ -987,7 +987,7 @@ struct RoomsTray: View {
         for contact in ContactIndexSources.contacts
             where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
             hits.append(Hit(id: "person:" + contact.id, group: TraySearch.contacts, name: contact.name,
-                            mark: .face(.person(contact))) { landInSettings(.person(contact.name)) })
+                            mark: .face(.person(contact))) { landInSettings(.contacts(contact.name)) })
         }
         for item in SubscriptionsReading.shared.items {
             let figure = item.amount.map {

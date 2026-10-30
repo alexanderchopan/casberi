@@ -277,8 +277,8 @@ def self_test():
          ".sheet(isPresented: $sweepProbe) { EmptyView() }\n        .sheet(isPresented: $languageOpen)",
          "AccountScreen.swift:sweepProbe: a sheet the sweep never opens"),
         # A new case on a router.
-        ("code", "Screens/SettingsHome.swift", "case walletFollow\n",
-         "case walletFollow\n        case sweepProbe\n", "SettingsHome.swift:sheet#sweepProbe"),
+        ("code", "Screens/ContactsPage.swift", "case newContact\n",
+         "case newContact\n    case sweepProbe\n", "ContactsPage.swift:sheet#sweepProbe"),
         # An entry that lost its cover.
         ("manifest", "drop", a_key, None, f"{a_key}: a sheet the sweep never opens"),
         # A stale cover.

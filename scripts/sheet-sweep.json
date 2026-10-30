@@ -2,72 +2,9 @@
  "_doc": "The sheet sweep's list (prd §1308): scripts/sheet-sweep-audit.py holds it to the code; CasberiUITests/SheetSweepTests.swift walks it.",
  "entries": [
   {
-   "id": "sources-track-subscription",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#subscriptionAdd"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:=Track a subscription"
-    }
-   ],
-   "anchor": "field:?Search, or type any name"
-  },
-  {
-   "id": "sources-track-mail-list",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#mailAdd"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:=Track a mail list"
-    }
-   ],
-   "anchor": "text:=Uma Patel"
-  },
-  {
-   "id": "sources-follow-wallet",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#walletFollow"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:=Follow an account"
-    }
-   ],
-   "anchor": "field:?An address or a name"
-  },
-  {
    "id": "sources-new-contact",
    "covers": [
-    "Screens/SettingsHome.swift:sheet#newContact"
+    "Screens/ContactsPage.swift:sheet#newContact"
    ],
    "launch": [
     "demo"
@@ -80,44 +17,22 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:=Add a contact"
+     "tap": "button:^Social, "
     },
     {
-     "tap": "button:^New contact"
+     "tap": "button:=Contacts"
+    },
+    {
+     "tap": "button:=New contact"
     }
    ],
    "anchor": "button:=Save",
-   "afterSwipe": "button:=Add a contact"
-  },
-  {
-   "id": "sources-track-pick",
-   "covers": [
-    "Screens/SettingsHome.swift:trackPick"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:=Follow something"
-    },
-    {
-     "tap": "button:^YouTube, A channel"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Follow something"
+   "afterSwipe": "button:=New contact"
   },
   {
    "id": "sources-subscribe-calendar",
    "covers": [
-    "Screens/SettingsHome.swift:calendarAdd&&route.sheet"
+    "Screens/CalendarsPage.swift:subscribing&&route.sheet"
    ],
    "launch": [
     "demo"
@@ -130,38 +45,17 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:=Add a calendar"
+     "tap": "button:^Day, "
+    },
+    {
+     "tap": "button:=Calendar"
     },
     {
      "tap": "button:=Subscribe by link"
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Add a calendar"
-  },
-  {
-   "id": "sources-plan",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#plan"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Subscriptions, "
-    },
-    {
-     "tap": "button:^iCloud+, "
-    }
-   ],
-   "anchor": "text:=Paid so far"
+   "afterSwipe": "button:=Subscribe by link"
   },
   {
    "id": "sources-contact",
@@ -179,61 +73,16 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:^Contacts, "
+     "tap": "button:^Social, "
+    },
+    {
+     "tap": "button:=Contacts"
     },
     {
      "tap": "button:^Ana Kovač, "
     }
    ],
    "anchor": "button:=ana@studio.com"
-  },
-  {
-   "id": "sources-mail-list",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#list"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Mail lists, "
-    },
-    {
-     "tap": "button:^Uber Eats, "
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
-   "id": "sources-followed",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#follow"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Media, "
-    },
-    {
-     "tap": "button:^Hacker News, "
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
   },
   {
    "id": "plan-edit",
@@ -250,10 +99,13 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Wallet"
     },
     {
-     "tap": "button:^Subscriptions, "
+     "tap": "button:^Spending, "
+    },
+    {
+     "tap": "button:^Subscriptions. "
     },
     {
      "tap": "button:^Hulu, "
@@ -1385,6 +1237,27 @@
    "anchor": "field:?Search, or type any name"
   },
   {
+   "id": "wallet-follow",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Follow an account"
+    }
+   ],
+   "anchor": "field:?An address or a name"
+  },
+  {
    "id": "wallet-history-thing",
    "covers": [
     "Screens/WalletHistoryScreen.swift:sheetThing"
@@ -1548,16 +1421,18 @@
     "Shell/MainSurface.swift:route.sheet#node.l2beatDirectory",
     "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory",
     "Shell/MainSurface.swift:route.sheet#node.notes",
-    "Shell/MainSurface.swift:route.sheet#node.settingsFolder"
+    "Shell/MainSurface.swift:route.sheet#node.settingsFolder",
+    "Shell/MainSurface.swift:route.sheet#node.contacts",
+    "Shell/MainSurface.swift:route.sheet#node.calendars"
    ],
-   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347)"
+   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347, and the Contacts and Calendars pages its Contacts and Calendar apps open)"
   },
   {
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription",
     "Screens/FeedScreen+Sheets.swift:feedSheet#following"
    ],
-   "why": "on the phone Life and Media are Feed sections, so these rise only through a service door (ShellChrome.open, a sheet's Writes/Following row) by an item's id; the same sheets are swept from Sources' rows (sources-mail-list, sources-followed, prd §1317)"
+   "why": "NOT WALKED: on the phone Life and Media are Feed sections, so these rise only through a service door (ShellChrome.open, a sheet's Writes/Following row) by an item's id; Library's rows that swept the same sheets (sources-mail-list, sources-followed) were deleted with its box (2026-10-30)"
   },
   {
    "covers": [
@@ -1610,12 +1485,6 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#token"
    ],
    "why": "the demo's holdings carry no token route (`position.route` is nil), so a token row's tap returns before it raises this; in the demo that row is a dead tap"
-  },
-  {
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
-   ],
-   "why": "the demo's Wallet draws no Accounts pill in its room or tiles (measured 2026-10-15); Sources' Wallets plus raises the same tray, swept as sources-follow-wallet"
   },
   {
    "covers": [
@@ -1749,6 +1618,18 @@
     "Screens/ThingSheetView.swift:paneNoteSharing"
    ],
    "why": "the Mac pane's Share pill on a note (prd §1404): the note's phone key is a ShareLink a menu item cannot press, so inside the pane Share rises as the share tray; a phone sweep never stands in a pane, and the Mac sweep has no pointer to press the pill"
+  },
+  {
+   "covers": [
+    "Screens/ContactsPage.swift:sheet#plan"
+   ],
+   "why": "NOT WALKED: a contact's biller row raises the Wallet's plan sheet; no demo contact is a biller with a plan (unmeasured). The same SubscriptionSheet is swept from the Wallet (wallet-subscription)"
+  },
+  {
+   "covers": [
+    "Screens/SettingsHome.swift:trackPick"
+   ],
+   "why": "NOT WALKED since Library's box was deleted (2026-10-30): the Track tray rises when a folder's app that needs only a name is not yet yours, or a door names one (route.openOffer); the walk that reached it went through the box's Follow something. Needs a demo app that is not added"
   }
  ]
 }

@@ -109,7 +109,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library; one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
+- Library is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
+- Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library (Contacts and Calendar open their pages, §1612); one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564).
 - Markets is deleted (§1529): its tile, seat, watchlist, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions.
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -243,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1749 of 1818 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1747 of 1819 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1404,7 +1405,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
 - §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
-- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118; part superseded by §1050e)
+- §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118, §1612; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a, §1151)
 - §1050a — The glyphs: Testnets is `flask`, Life is `face.smiling`
 - §1050b — Photos moves from Life to Media
@@ -1514,7 +1515,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a, §1217, §1589)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171, §1198) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
 - §1143 — What Settings opens rises over Settings (amended by §1217)
@@ -1699,16 +1699,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1311 — Plasma One: the fourth card that settles onchain, read as the DAY it settles
 - §1312 — The top holds the title, and only the title presses
 - §1313 — Two-way Logos chat waits for Logos' own restart fix
-- §1314 — Sources' first box: "Start with any of these" (supersedes §1166's Start here)
 - §1315 — One sheet at a time, from a raised page too (extends §1238)
 - §1316 — Sources is a library: every category a folder (supersedes §1253's cards and its By category / A–Z words)
-- §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292)
 - §1318 — Gnosis Pay is removed
 - §1319 — Sources' folders draw every app in colour, and yours wear a green dot (amends §1316 item 1)
 - §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312) (amended by §1383)
 - §1321 — Pages, not sheets, on the phone (retires §1132, §1208l's places, §1208m and §1220 on the phone; amends §1231, §1312,…
 - §1322 — On the phone the demo's mark is "Exit demo" in the band (amends §919, §946, §1005)
-- §1323 — Sources names what it holds: Media and Contacts; the Addresses screen is deleted; suggestions name themselves, never…
+- §1323 — Sources names what it holds: Media and Contacts; the Addresses screen is deleted; suggestions name themselves, never… (amended by §1612)
 - §1324 — A verb is a row, a choice is a pill, and nothing else has a backing (amends §190, §613, §640; extends §746, §782)
 - §1325 — Markets reads "Wallet · Markets" (amends §1321 item 4)
 - §1326 — A thing names where it came from, and the source's page holds its controls (retires §1209a's More card on the thing s…
@@ -1790,7 +1788,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1404 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note k…
 - §1405 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the…
 - §1406 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631)
-- §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title…
+- §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title… (amended by §1612)
 - §1408 — The Security tile's flagged sections show five rows, then one door (amends §1107's Security list; applies §1386's one…
 - §1409 — A Safe's queue is one Signatures block in the sheet's column (amends §425's queue card and the Safe arm of §887's com…
 - §1410 — The Wallet adds accounts where the Feed adds follows: Accounts leads Overview, its list stands under it, and its + is… (amended by §1480)
@@ -1801,7 +1799,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1415 — The Wallet is the place; what is in it is an ACCOUNT, and you follow an account (amends §1410's "Follow a wallet", §1…
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
 - §1417 — Connect a wallet is back in Follow an account, every time
-- §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
+- §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444, §1612)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493)
@@ -1994,12 +1992,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again
 - §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept…
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
+- §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (…
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1362→§1367 · §1366→§1367
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1138→§1612 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1314→§1612 · §1317→§1612 · §1362→§1367 · §1366→§1367
 
 ## Renumbered (generated)
 

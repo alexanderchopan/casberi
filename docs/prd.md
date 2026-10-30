@@ -440,6 +440,13 @@ marks chronological position within the pair.
 | §74 (Farcaster grows likes, mentions, channels, replies, faces) | Farcaster was a keyless Network seat on the Snapchain node, with likes, recasts, mentions, channels, replies and faces | deleted by §1110 (user: "remove farcaster") — the seat, its ingest, signers, starter pack and probes are gone; stored rows are swept |
 | §877 (the widgets are Today and Wallet; amended 2026-10-04 to Wallet and Category) | Wallet and a Category tile you configure, small to large | amended by §1210 — three small tiles: Notes, Wallet, Feed; the Category widget is deleted |
 | §1210 (three widgets, each a small tile: Notes, Wallet, Feed) | three small tiles | amended by §1223 — a fourth small tile, Watchlist |
+| §1138 (the box's counts are the filter) | Library's box of counts picked what stood under it | superseded by §1612 — the box is deleted; Library is its title and the folders |
+| §1314 (Sources' first box: "Start with any of these") | Library's box offered four ways in until anything was added | superseded by §1612 — deleted with the box; the empty Feed keeps the same four ways in (§1365) |
+| §1317 (every count in Sources picks what stands under the box) | each count listed its kind under the box | superseded by §1612 — no counts; each kind lists in its room, Contacts and Calendars on their apps' pages |
+| §1407 (the Mac pane at rest beside Library draws Library's box) | the pane drew the counts at rest | amended by §1612 — the pane is empty ink at rest; it shows Casberi's folder or an app's page when one opens |
+| §1323 (Sources names Contacts; the Addresses screen is deleted) | the directory was Library's Contacts count | amended by §1612 — the directory is the Contacts app's page, in Social's folder |
+| §1418 (an app you have goes where the tray's icon does) | a tap on any app of yours in a folder opened its feed | amended by §1612 — Contacts and Calendar open their pages (the people, the calendars), yours or not |
+| §1049 (Life holds Contacts) | Contacts was a Life app | amended by §1612 — Contacts is Social's |
 
 ## §1 — Thesis
 
@@ -69687,3 +69694,16 @@ Guards: `tor-health-selftest.sh` (a return resets, never NEWNYM), `tor-route-sel
 6. **The tripwire sentence is deleted** ("Passwords and recovery phrases are kept out of search…"); `SecretScan` (§277) is unchanged.
 
 Not done: the Tor share in the proof line (the receipts insight carries no Tor count), What this app reaches's own redesign (drawn on the same canvas).
+
+## §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (supersedes §1138, §1314, §1317; amends §1407, §1323, §1418, §1049) (user, 2026-10-30, of Library's counts box, Apps 15 · Calendars 5 · Cards 0 · Media 6 · Mail lists 0 · Contacts 9 · Subscriptions 4 · Wallet 1: "I think this whole section right here is confusing and just makes the app feel harder to use. If it wasn't there, I think it would look better and we don't really need it. The only thing that would be unclear is where the contacts live"; of where Calendars goes, "Calendar app's page"; then "but I guess that's in the contacts app"; "we should move contacts to social") — BUILT, NOT COMPILED
+
+**The ruling.** Library is its title and the folders (§1316), the search over them where the band has none. The counts box, the four ways in it showed before anything was added (§1314) and the eight lists it switched between are deleted from view and model (§723): `SettingsScope`, `SettingsSheet`, the box's pluses and trays, the kinds' lists and the `-settingsScope` hook.
+
+1. **Each kind already has its home, so nothing is lost.** Media's follows, Mail lists and Subscriptions list in their rooms (§1217); the cards and the wallets you follow are the Wallet's (Home's Follow an account, §1480); Apps is the folders.
+2. **Contacts is Social's, and its page is everyone.** The Contacts app's catalogue group (People) moves from Life to Social: the people you know stand with the networks you know them on. A tap on Contacts in Social's folder pushes `ContactsPage` beside Library ("Library · Contacts"), whether or not the app is yours: Import your address book (until it is), New contact, a search field, then the list `AddressesSection` drew under the box, unchanged. Contacts lands no row (§916), so the Social room gains no rows and no menu seat. The website's shelf moves it to Social.
+3. **Calendar's page is the calendars.** A tap on Calendar in Day's folder pushes `CalendarsPage`: Your phone's calendars (until Calendar is yours), Subscribe by link, then the phone's calendars by account and the subscribed ones, each with Unsubscribe on its hold (§1150, §1588).
+4. **These two are the exception to §1418's tap**, which otherwise opens an app of yours in its feed: neither lands rows of its own worth opening (§916, §1239), and both lists lived nowhere else.
+5. **Search lands on the pages.** A person found in the tray pushes Contacts with their name in its field; a calendar pushes Calendars (`SettingsLanding.contacts`, `.calendars`). `-openAddresses YES` lands on Contacts.
+6. **The Mac half (§1402).** Library's pane at rest drew the box (§1407); it is empty ink at rest now, and shows Casberi's folder or the page an app opens, as it did when a row opened one.
+
+**Not built, not measured.** Nothing here was compiled: the session that built it had no Xcode. The sheet sweep's walks for the two pages (`sources-new-contact`, `sources-subscribe-calendar`, `sources-contact`), the Wallet's `wallet-follow` and the re-pathed `plan-edit` are written from the code's accessibility labels, not seen. Three sheets are swept nowhere now and say so: the Track tray Library's box reached (`SettingsHome.trackPick`), a contact's plan sheet, and the mail-list and follow sheets the box's lists opened.

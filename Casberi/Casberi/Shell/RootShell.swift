@@ -1087,10 +1087,10 @@ struct RootShell: View {
                 sceneState.route.pushBridge(.safe)
                 NSLog("[Casberi] openSafe: pushed")
             }
-            // `-openAddresses YES` lands on Sources › Contacts, where the
-            // directory lives since its own screen was deleted (prd §1323).
+            // `-openAddresses YES` lands on Library › Contacts, the Contacts
+            // app's page since Library's box was deleted (2026-10-30).
             if UserDefaults.standard.bool(forKey: "openAddresses") {
-                chrome.settingsLanding = .kind(.people)
+                chrome.settingsLanding = .contacts("")
                 sceneState.route.present(.casberi)
             }
             // `-openReach YES` — the reach screen, the same shape (prd §967).

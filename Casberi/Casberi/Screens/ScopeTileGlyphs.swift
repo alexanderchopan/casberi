@@ -111,13 +111,10 @@ enum ScopeTileGlyph {
     /// You's Settings place (prd §1136, §1136k): the system's gear. It was
     /// Sources, wearing `link`, for an afternoon (§1136a).
     static let settings     = "gearshape"
-    /// Settings' People (prd §1136 item 5): the people behind your accounts.
-    static let people       = "person.crop.circle"
-    /// Settings' Calendars (prd §1136e, §1137): the calendars you subscribe to.
+    /// The calendars you subscribe to (prd §1136e, §1137): Search's calendar
+    /// hits and the Calendars page's subscribed rows.
     static let calendars    = "calendar"
-    /// Settings' Feeds (prd §1136h): sites, channels and repos you follow.
-    static let feeds        = "dot.radiowaves.up.forward"
-    /// Settings' Mailing lists (prd §1136h): the lists that write to your mail.
+    /// The lists that write to your mail (prd §1136h).
     static let newsletters  = "newspaper"
     /// Settings' Cards (prd §1166): the cards your card apps read.
     static let cards        = "creditcard"
@@ -271,20 +268,4 @@ extension AztecSection: DSTileScope {
     }
 }
 
-/// Settings' own filters (prd §1136 item 5), pressed in the box (§1138);
-/// no bar since §1171.
-extension SettingsScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .apps:          return ScopeTileGlyph.apps
-        case .calendars:     return ScopeTileGlyph.calendars
-        case .cards:         return ScopeTileGlyph.cards
-        case .feeds:         return ScopeTileGlyph.feeds
-        case .newsletters:   return ScopeTileGlyph.newsletters
-        case .people:        return ScopeTileGlyph.people
-        case .subscriptions: return ScopeTileGlyph.subscriptions
-        case .wallets:       return ScopeTileGlyph.wallets
-        }
-    }
-}
 

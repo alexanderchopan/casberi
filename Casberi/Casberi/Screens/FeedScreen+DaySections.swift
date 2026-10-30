@@ -477,13 +477,12 @@ extension FeedScreen {
                                  bare: true)
                 }
             }
-            // What a body cannot read (the phone's calendars, the people), so
-            // the box gives way when Library's does.
+            // What a body cannot read (the phone's calendars, the people).
             .task { await FirstRun.shared.refresh(modelContext) }
         }
     }
 
-    /// Nothing added yet: the answer Library's box reads too (`FirstRun`).
+    /// Nothing added yet (`FirstRun`).
     var feedStarts: Bool {
         FirstRun.shared.isEmpty(bridges: bridges)
     }

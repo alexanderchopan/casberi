@@ -770,7 +770,8 @@ enum BridgeCatalog {
         // own category; with HomeKit itself retired (App Review 2.5.1) the
         // group has no offers at all, and a named group that can never
         // resolve one is a heading waiting to render blank. "People"
-        // (Contacts) already lives here (2026-07-20). Storage joins for the
+        // (Contacts) lived here from 2026-07-20 until it moved to Social
+        // (2026-10-30). Storage joins for the
         // same reason (user ruling 2026-07-27): Files' folder contents are
         // unpredictable, so it reads as personal-life miscellany, not a
         // dedicated content type.
@@ -800,14 +801,17 @@ enum BridgeCatalog {
         // `Pinboard.room` ("Your notes", §975), never this name.
         ("Day",     "Calendar",    ["Schedule"]),
         ("Notes",   "Obsidian",    ["Notes"]),
-        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Mail"]),
+        ("Life",    "Apple Health", ["Fitness", "Storage", "Learning", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         // MEDIA HOLDS READING (prd §1204, user: "reading for example maybe
         // goes with media", then "i like 'play'"): what you read, watch and
         // listen to, one category with Play and Read tiles. The groups keep
         // their own names, so a reading app's page still says "Reading".
         ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images", "Photos", "Reading", "Saves"]),
-        ("Social",  "Bluesky",     ["Network"]),
+        // CONTACTS IS SOCIAL (user, 2026-10-30: "we should move contacts to
+        // social"): the people you know stand with the networks you know
+        // them on, and its page is the contacts list Library's box held.
+        ("Social",  "Bluesky",     ["Network", "People"]),
     ]
 
     static func category(of offer: Offer) -> String {
