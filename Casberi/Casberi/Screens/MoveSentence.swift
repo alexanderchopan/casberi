@@ -907,18 +907,29 @@ struct MoveSentence: View {
                         VStack(alignment: .leading, spacing: 0) {
                             sentence
                         }
+                        // The rest of the sentence steps back while a blank's
+                        // choices are open; the open word keeps its ink (§1616).
+                        .environment(\.moveQuiet, open != nil)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
-                        space(room: geo.size.height)
+                        // An open list runs to the tray's bottom edge, under
+                        // the home bar (prd §1616 item 5): with no card, a box
+                        // ending above it clipped a row in mid-air.
+                        space(room: geo.size.height, inset: listReach(geo))
                             .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                     }
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-                // Scrolled to the end, the last line clears the foot's fade.
-                .padding(.bottom, DS.Space.s4 + Self.footFade)
+                // Scrolled to the end, the last line clears the foot's fade;
+                // an open list has no foot and runs to the edge itself.
+                .padding(.bottom, open == nil ? DS.Space.s4 + Self.footFade : 0)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
             }
         }
+        // An open list reaches the sheet's bottom edge: past the tray's own
+        // air and under the home bar (prd §1616 item 5).
+        .ignoresSafeArea(.container, edges: reachesEdge ? .bottom : [])
+        .padding(.bottom, reachesEdge ? -DSTray<EmptyView>.bottomPadding : 0)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         // While a blank is open the foot steps aside: its verb cannot sign a
@@ -1410,7 +1421,7 @@ struct MoveSentence: View {
                 if offersDetails {
                     VStack(alignment: .leading, spacing: 0) {
                         let print = [sweepSoldPrint, swapFeePrint].compactMap { $0 }
-                        detailsToggle(Text(verbatim: print.isEmpty ? "" : print.joined(separator: " · ") + " · ")
+                        detailsToggle(Text(verbatim: print.isEmpty ? "" : Self.lineCase(print.joined(separator: " · ")) + " · ")
                             .foregroundStyle(DS.textSecondary))
                         if details { moveDetails }
                     }
@@ -1805,7 +1816,8 @@ struct MoveSentence: View {
             }
             DSHaptic.selection()
         } label: {
-            word(text, ink: open == which ? DS.pickInk.opacity(0.6) : ink)
+            word(text, ink: open == which ? DS.pickInk : ink)
+                .environment(\.moveQuiet, open != nil && open != which)
         }
         .buttonStyle(RowPress())
         .disabled(stage != nil)
@@ -2119,6 +2131,9 @@ struct MoveSentence: View {
                 }
             }
             .fixedSize()
+            // A field, not a `MoveWord`: it steps back with the sentence
+            // itself while a blank's choices are open (prd §1616).
+            .opacity(open != nil ? 0.3 : 1)
         }
             .disabled(stage != nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
@@ -2259,7 +2274,6 @@ struct MoveSentence: View {
             }
         }
         .frame(minHeight: DSFeed.headHeight)
-        .padding(.horizontal, DS.Space.s4)
     }
 
     // MARK: - The space under it
@@ -2272,10 +2286,10 @@ struct MoveSentence: View {
     /// it — so moving between blanks moves nothing (§1442a, user: "it is very
     /// jittery. needs to be stable"). Line and box overlap while they swap,
     /// rather than stacking for the length of the animation.
-    private func space(room: CGFloat) -> some View {
+    private func space(room: CGFloat, inset: CGFloat = 0) -> some View {
         ZStack(alignment: .topLeading) {
             if let open {
-                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to || open == .arrives || open == .merchant, which: open) {
+                choices(room: choicesRoom(room), inset: inset, searches: open == .with || open == .buy || open == .to || open == .arrives || open == .merchant, which: open) {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
@@ -2306,41 +2320,49 @@ struct MoveSentence: View {
         }
     }
 
-    /// Everything under the sentence, down to the foot (or the keys).
+    /// Everything under the sentence, down to the edge (or the keys).
     private func choicesRoom(_ room: CGFloat) -> CGFloat {
-        max(140, room - sentenceHeight - DS.Space.s4 * 2 - (inTray ? DS.Space.s2 : DS.Space.s6))
+        max(140, room - sentenceHeight - DS.Space.s4 - (inTray ? DS.Space.s2 : DS.Space.s6))
+    }
+
+    /// An open list in the tray, keys down (with them up they are the edge).
+    private var reachesEdge: Bool { inTray && open != nil && !chrome.keyboardUp }
+
+    /// The home bar's inset an open list's last row clears at the end.
+    private func listReach(_ geo: GeometryProxy) -> CGFloat {
+        reachesEdge ? geo.safeAreaInsets.bottom : 0
     }
 
     /// The rows' own height, so a short list draws a short box (§1442b).
     @State private var rowsHeight: CGFloat = 0
 
-    /// A blank's choices on their own glass, the rooms tray's card (§1203):
-    /// a layer that floats for a moment, so glass, while the sentence stays
-    /// bare. As tall as its rows, up to the room under the sentence, then
-    /// they scroll inside it. It grows downward only: the sentence above
-    /// never moves (§1442b). A token list leads with its search.
-    private func choices<Rows: View>(room: CGFloat, searches: Bool, which: Blank,
+    /// A blank's choices, standing on the tray in the sentence's column
+    /// with no surface of their own (prd §1616, retiring the glass card it
+    /// borrowed from the rooms tray, §1203: over the tray's solid ground the
+    /// glass had nothing to show through, so it drew as a plate). As tall as its rows, up to the room under the
+    /// sentence, then they scroll. It grows downward only: the sentence
+    /// above never moves (§1442b). A token list leads with its search.
+    private func choices<Rows: View>(room: CGFloat, inset: CGFloat = 0, searches: Bool, which: Blank,
                                      @ViewBuilder _ rows: () -> Rows) -> some View {
         let head: CGFloat = searches ? 52 : 0
         return VStack(alignment: .leading, spacing: 0) {
             if let hint {
                 hintText(hint)
-                    .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
             }
             if searches { searchRow(for: which) }
             ScrollView {
                 rows()
                     .padding(.vertical, DS.Space.s2)
-                    .padding(.horizontal, DS.Space.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
             }
             .scrollIndicators(.hidden)
-            .frame(height: max(56, min(rowsHeight, room - head)))
+            // Scrolled to the end, the last row clears the home bar.
+            .contentMargins(.bottom, inset, for: .scrollContent)
+            .frame(height: max(56, min(rowsHeight + inset, room - head)))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsGlass(cornerRadius: RoomsTray.radius)
     }
 
     /// The other unit (tap to type in it), what you have, the fee.
@@ -2422,9 +2444,12 @@ struct MoveSentence: View {
                         if !fresh {
                             addressBlock(account)
                             // The network the sentence names (prd §1486).
+                            // In the door rows' column, with "Private" and
+                            // "From another wallet" (prd §1616 item 7).
                             Text("Any coin on \(network.name).")
                                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, DSDoorRowLabel.textColumn)
                         }
                         // Never an address the account cannot follow (§1442k); once a
                         // network is picked, the list offered only the ones it can.
@@ -2513,12 +2538,12 @@ struct MoveSentence: View {
                 // word opens this exact operation under the line.
                 if offersDetails {
                     VStack(alignment: .leading, spacing: 0) {
-                        detailsToggle(Text(verbatim: print.isEmpty ? "" : print.joined(separator: " · ") + " · ")
+                        detailsToggle(Text(verbatim: print.isEmpty ? "" : Self.lineCase(print.joined(separator: " · ")) + " · ")
                             .foregroundStyle(DS.textSecondary))
                         if details { moveDetails }
                     }
                 } else if !print.isEmpty {
-                    Text(verbatim: print.joined(separator: " · "))
+                    Text(verbatim: Self.lineCase(print.joined(separator: " · ")))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
                 // A test network says so wherever it is picked (prd §1439).
@@ -2952,6 +2977,7 @@ struct MoveSentence: View {
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
                          mark: String? = nil, image: String? = nil, brand: String? = nil,
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
+                         picked: Bool = false,
                          act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: DS.Space.s3) {
@@ -2990,7 +3016,9 @@ struct MoveSentence: View {
                     AssetMark(name: mark, size: DS.Face.list)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    // The current pick wears the pick's ink, the sentence's word in the
+                    // list (prd §1616); `dim` is for a row left out.
+                    Text(verbatim: title).dsText(.body17).foregroundStyle(picked ? DS.pickInk : DS.textPrimary).lineLimit(1)
                     if let sub { Text(verbatim: sub).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1) }
                 }
                 Spacer(minLength: DS.Space.s2)
@@ -3041,28 +3069,19 @@ struct MoveSentence: View {
         }
     }
 
-    /// A token For offers unasked (prd §1532): verified, and a stablecoin or
-    /// one we have a mark for — the artwork `AssetMark` draws, or the icon
-    /// book's picture (which the demo never draws).
-    private func majorToken(_ l: Tokens.Listed) -> Bool {
-        Tokens.major(l) { symbol in
-            AssetMark.hasAsset(symbol) || (!DemoMode.isActive && TokenIconBook.url(for: symbol) != nil)
-        }
-    }
-
-    /// What For offers, on the picked network or on each, a network's head
-    /// of five when none is picked and nothing is typed.
+    /// What For offers, on the picked network or on each: what you hold
+    /// there, then its ETH and USDC, until something is typed (prd §1617).
     private var buyRows: [(key: String, net: Op.Network, listed: Tokens.Listed)] {
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
         var out: [(key: String, net: Op.Network, listed: Tokens.Listed)] = []
         var seen: Set<String> = []
         // This network, then each other it can arrive on (prd §1566): what
-        // can arrive there, a head of four until something is typed.
+        // can arrive there, its ETH and USDC until something is typed (§1617).
         if crossesInFor {
             // The network picked to arrive on leads (prd §1600).
             for n in [buyHome] + destinations.filter({ $0 != buyHome }) {
                 let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
-                var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: majorToken)
+                var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: Tokens.offeredUnasked)
                 if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
                 if n == network {
                     rows = rows.filter { $0.token != with?.token }
@@ -3070,7 +3089,6 @@ struct MoveSentence: View {
                     // Never its WETH: ETH is ETH there (prd §1559).
                     let weth = YourAccountSwap.book(n.chainId)?.weth
                     rows = rows.filter { Self.arrives($0.token, from: network, on: n) && $0.token.contract?.lowercased() != weth }
-                    if !typed, n != buyHome { rows = Array(rows.prefix(4)) }
                 }
                 for l in rows {
                     let key = "\(n.chainId)|\(l.id)"
@@ -3081,9 +3099,8 @@ struct MoveSentence: View {
         }
         for n in lookIn {
             let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
-            var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: majorToken)
+            var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: Tokens.offeredUnasked)
             if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
-            if !networkPicked, !typed { rows = Array(rows.prefix(5)) }
             for l in rows where !(n == network && networkPicked && l.token == with?.token) {
                 let key = "\(n.chainId)|\(l.id)"
                 if seen.insert(key).inserted { out.append((key, n, l)) }
@@ -3176,7 +3193,7 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : String(localized: "your own address"),
-                        image: Self.networkMark(n), dim: elsewhere == nil && networkPicked && n == network) {
+                        image: Self.networkMark(n), picked: elsewhere == nil && networkPicked && n == network) {
                     pick {
                         elsewhere = nil
                         switchNetwork(n)
@@ -3236,7 +3253,7 @@ struct MoveSentence: View {
             if let route = elsewhere {
                 ForEach(route.from.coins) { c in
                     listRow(c.symbol, sub: c.isNative ? String(localized: "\(route.from.name)'s own coin") : nil,
-                            mark: c.symbol, dim: c == route.token) {
+                            mark: c.symbol, picked: c == route.token) {
                         pick {}
                         if c != route.token { takeRoute(from: route.from, token: c) }
                     }
@@ -3245,14 +3262,15 @@ struct MoveSentence: View {
         }
     }
 
-    /// What you receive (prd §1470): the tokens For lists on your network
-    /// (Uniswap's list), what you hold first; a search as you type. Relay
+    /// What you receive (prd §1470): what you hold on your network, then its
+    /// ETH and USDC, until you type (prd §1617); then any token on Uniswap's
+    /// list. Relay
     /// brings what you pick, and says so if it cannot.
     private var arrivesList: some View {
         let to = network.isTest ? Op.base : network
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
         let pool = (typed ? (found[to.chainId] ?? []) : []) + (listedBy[to.chainId] ?? [])
-        let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [], shows: majorToken)
+        let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [], shows: Tokens.offeredUnasked)
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(rows) { l in
                 let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
@@ -3289,7 +3307,7 @@ struct MoveSentence: View {
                 let total = (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +)
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : nil,
                         trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
-                        dim: networkPicked && n == network) {
+                        picked: networkPicked && n == network) {
                     pick { switchNetwork(n) }
                 }
             }
@@ -3311,7 +3329,7 @@ struct MoveSentence: View {
                 let there = buy.flatMap { b in n == buyHome ? b : equivalent(b.token, from: buyHome, to: n) }
                 let sub: String? = n == network ? String(localized: "Same network")
                     : there.flatMap { t in buy.flatMap { t.token.symbol != $0.token.symbol ? String(localized: "As \(t.token.symbol)") : nil } }
-                listRow(n.name, sub: sub, image: Self.networkMark(n), dim: buyHome == n) {
+                listRow(n.name, sub: sub, image: Self.networkMark(n), picked: buyHome == n) {
                     pick {
                         self.buy = there
                         buyOn = n == network ? nil : n
@@ -3550,9 +3568,10 @@ struct MoveSentence: View {
                 } else if verb != .buy && verb != .sweep {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
-                        // (§1442f): Add is white when ready, grey when not.
+                        // (§1442f): Add is white when ready, grey when not,
+                        // at the verb's own size (prd §1616 item 8).
                         Text("Add")
-                            .dsText(.heading24)
+                            .dsText(.heading34)
                             .foregroundStyle(pendingItem != nil && stage == nil ? DS.textPrimary : DS.textSecondary)
                             .frame(minHeight: 48)
                     }
@@ -4658,7 +4677,7 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(CardOnramp.Coin.allCases, id: \.self) { coin in
                 listRow(coin.symbol, sub: coin == .usdc ? String(localized: "Dollars") : String(localized: "Ether"),
-                        mark: coin.symbol, dim: coin == depositCoin) {
+                        mark: coin.symbol, picked: coin == depositCoin) {
                     pick { depositCoin = coin }
                 }
             }
@@ -4670,7 +4689,7 @@ struct MoveSentence: View {
             ForEach(depositNetworks) { n in
                 if let seller = CardOnramp.seller(chainId: n.chainId) {
                     listRow(n.name, sub: String(localized: "with \(seller.name)"), image: Self.networkMark(n),
-                            dim: depositSeller != nil && n == network) {
+                            picked: depositSeller != nil && n == network) {
                         // One transaction is one network, as the network blank says.
                         if n != network, !items.isEmpty {
                             say(String(localized: "One transaction is one network. Sign this one first"))
@@ -4691,7 +4710,7 @@ struct MoveSentence: View {
                 addressBlock(account)
                 Text(seller.takesAddress
                      ? "\(seller.name)'s page shows its fee before you pay, with this address filled in."
-                     : "\(seller.name)'s page shows its fee before you pay. This address is copied for you to paste there.")
+                     : "\(seller.name)'s page shows its fee before you pay. This address is copied to paste there.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -4765,7 +4784,7 @@ struct MoveSentence: View {
     private var groupList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(BitrefillBuy.Group.allCases, id: \.self) { g in
-                listRow(g.title, sub: g.examples, symbol: g.glyph, dim: buyGroup == g) {
+                listRow(g.title, sub: g.examples, symbol: g.glyph, picked: buyGroup == g) {
                     pick {
                         buyGroup = g
                         if let p = buyProduct, BitrefillBuy.group(of: p) != g { buyProduct = nil }
@@ -4815,7 +4834,7 @@ struct MoveSentence: View {
     private func merchantRow(_ p: BitrefillBuy.Product) -> some View {
         let name = BitrefillBuy.shortName(p.name)
         return listRow(name, sub: p.packages.isEmpty ? BitrefillBuy.group(of: p).title : p.denominationsLine,
-                       mark: name, brand: Self.merchantMark(name), dim: buyProduct?.id == p.id) {
+                       mark: name, brand: Self.merchantMark(name), picked: buyProduct?.id == p.id) {
             pick {}
             Task { await chooseProduct(p) }
         }
@@ -4949,6 +4968,14 @@ struct MoveSentence: View {
         if amount.isEmpty { return String(localized: "Type an amount first") }
         if !buyReady { return String(localized: "More than you have") }
         return nil
+    }
+
+    /// The grey line in sentence case: whichever part leads ("you have …"
+    /// alone, before a card is picked) starts with a capital (prd §1616
+    /// item 10).
+    static func lineCase(_ line: String) -> String {
+        guard let first = line.first else { return line }
+        return first.uppercased() + line.dropFirst()
     }
 
     /// "Costs $52.50 · you have 312.40 USDC": what the card costs, and what
@@ -5300,6 +5327,16 @@ extension EnvironmentValues {
         get { self[MoveRungKey.self] }
         set { self[MoveRungKey.self] = newValue }
     }
+    /// The sentence while a blank's choices are open: every word steps
+    /// back but the open one (prd §1616).
+    var moveQuiet: Bool {
+        get { self[MoveQuietKey.self] }
+        set { self[MoveQuietKey.self] = newValue }
+    }
+}
+
+private struct MoveQuietKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 /// A field or a glyph that must wear the sentence's size reads it here.
@@ -5362,6 +5399,7 @@ struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
     @Environment(\.moveRung) private var rung
+    @Environment(\.moveQuiet) private var quiet
     init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
     var body: some View {
         let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
@@ -5384,6 +5422,7 @@ struct MoveWord: View {
             .contentTransition(.numericText())
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .opacity(quiet ? 0.3 : 1)
     }
 }
 

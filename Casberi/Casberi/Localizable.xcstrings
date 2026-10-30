@@ -17410,7 +17410,7 @@
         }
       }
     },
-    "%@'s page shows its fee before you pay. This address is copied for you to paste there." : {
+    "%@'s page shows its fee before you pay. This address is copied to paste there." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {

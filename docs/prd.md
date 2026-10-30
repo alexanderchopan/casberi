@@ -69762,3 +69762,26 @@ Not done: the Tor share in the proof line (the receipts insight carries no Tor c
 **Not seen.** A real Telegram sign-in registering the seat; Library › Calendar by tap; the in-Wallet account menu's pick (the Library door's `pickSeat` was seen turning to Activity; the `-walletScope` probe fires before the room reads and does not). **Mac half:** the same shared views; Catalyst not compiled in this pass.
 
 Mock: `design/mockups/telegram-chat.html`.
+
+## §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires the glass card Move borrowed from the rooms tray, §1203, for `MoveSentence.choices` and Send privately's; keeps §1442b's box that grows downward and never moves the sentence) (user, 2026-10-30: "i'd like to see some alternatives for the glass popups in Move that have the coins and networks on them. i'm not sure if the glass works"; on the canvas "Move coin pickers", "A is the best"; "why have the fade tho?"; "yes") — BUILT, seen on the simulator with the demo
+
+1. **No surface.** A blank's list (coins, networks, To, Buy's, Deposit's) stands on the tray in the sentence's own column: no glass, no plate, no fade. Over the tray's solid ground the glass had nothing to show through and drew as a grey plate with a border (§782's "no plates"); the Wallet's rows already stand on nothing (§757).
+2. **The sentence steps back.** While a blank is open every other word, the amount field included, draws at 30% (`\.moveQuiet`, set on the sentence, cleared on the open word); the open word wears full `DS.pickInk` (was the pick at 60%).
+3. **The pick is pink.** The row that is the sentence's current pick draws its title in `DS.pickInk` (`listRow(picked:)`), where it was greyed; `dim` stays for a row left out (Sweep).
+4. **No fade at the list's edges** (user: "why have the fade tho?"): a short list never scrolls; a long one scrolls under the search row as any list does.
+5. **An open list runs to the tray's bottom edge** (user, on a row clipped above an empty band: "look how this cuts off here is that really how we want it"). With no card, the box ending ~50pt above the edge cut a row in mid-air and read as the list's end. While a list is open in the tray and the keys are down (user: "it should flow from bottom of the sheet"), the page steps past the tray's own bottom air (`DSTray.bottomPadding`) and the bottom safe area, the box reaches the sheet's edge, and its rows' last margin clears the home bar (`listReach`); with the keys up they are the edge.
+6. **Deposit's line drops "for you"** so it fits two lines: "This address is copied to paste there."
+7. **Receive's words share one column** (user: "aligned any coin on ethereum w/ the other text like private from another wallet"): "Any coin on <network>." starts where a door row's words do (`DSDoorRowLabel.textColumn`, 18pt glyph column + `s2`), and the Private switch takes the same glyph column and the door's glyph size, so "Private", "From another wallet" and the line read down one edge.
+8. **Add is the foot's size** (user: "why isn't Add same size as Send?", "it's a weird font size"; amends §1501's `heading24` for Add): Add draws at `heading34` beside the signing verb, told apart by ink alone (white or grey, the verb pink).
+9. **The slider's thumb stands in the column** (user: "why isn't the slider same indentation as the rest of the stuff"): `DSShareSlider` insets the thumb's travel by its resting radius, so at 0 and 100 its edge meets the column's edges, as the system slider does; it hung half a thumb outside.
+10. **The grey line is sentence case** (user: "sentence case", on "you have 248.4 USDC"): Move's print lines capitalise whichever part leads (`MoveSentence.lineCase`), so Buy's "you have …" alone reads "You have …".
+
+**Mac half:** the same view on Catalyst. **Not seen:** a list long enough to scroll on the phone, and Send privately's choices.
+
+Canvas: "Move coin pickers" (claude.ai artifact, boards Now · A · B · C · D).
+
+## §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and ones we have icons for" and §1566's head of four; user, 2026-10-30, asked where For's list comes from: "i think if we have three networks we should show the usdc on all, the eth on all that is six right there. user can go find whatever else they want", then "sorry i think coins you hold should show first") — BUILT
+
+1. **Unasked: yours, then two per network.** Swap's For, its arrival lists on other networks and Receive's "what arrives" offer, with nothing typed, what you hold on that network first, then the network's ETH and its USDC from Uniswap's list (`Tokens.offeredUnasked`), each once, in the networks' order: three networks with nothing held, six rows.
+2. **Typed or pasted reaches everything,** as before: symbols, then names, up to forty; a pasted contract is read off the chain and marked "Not on Uniswap's list".
+3. **The list's source is unchanged:** `tokens.uniswap.org`, read at most once a day. The demo's list is its own holdings, so a demo network holding no USDC offers ETH alone.

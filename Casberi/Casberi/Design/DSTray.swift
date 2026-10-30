@@ -13,6 +13,10 @@ import UIKit
 /// Content flows below the title; the caller attaches its own `.onAppear`,
 /// `.fileImporter`, `.confirmationDialog`, etc. to the `DSTray`.
 struct DSTray<Content: View>: View {
+    /// The air under a tray's content. A body that must reach the sheet's
+    /// edge (Move's open list, prd §1616 item 5) steps past it by this much.
+    static var bottomPadding: CGFloat { DS.Space.s6 }
+
     let title: String
     let height: CGFloat
     /// Paint `dsInk()` (pure black, forced dark) instead of the theme-
@@ -215,7 +219,7 @@ struct DSTray<Content: View>: View {
         .padding(.top, DS.Space.s6)
         // A find tray's field is the bottom edge: it brings its own air, and
         // 24pt more under it stood the field off the keyboard (below).
-        .padding(.bottom, liftsField ? 0 : DS.Space.s6)
+        .padding(.bottom, liftsField ? 0 : Self.bottomPadding)
         .modifier(DSKeyboardLift(active: liftsField))
         // The overflow is paid ONLY where this component owns the number.
         // A caller that passes its own set has already put `.large` in it —

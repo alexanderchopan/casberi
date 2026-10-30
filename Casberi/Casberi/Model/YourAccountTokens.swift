@@ -126,21 +126,21 @@ enum YourAccountTokens {
         "EURC", "GHO", "FRAX", "LUSD", "CRVUSD", "RLUSD", "USD1", "USDBC", "TUSD",
     ]
 
-    /// **ONLY THE TOKENS YOU WOULD KNOW, UNASKED (prd §1532, user: "why don't
-    /// we just show stablecoins, and ones we have icons for").** The list
-    /// for a network runs to hundreds of tokens, many with no name anyone
-    /// recognises. With nothing typed, For offers what is on Uniswap's list
-    /// AND is a stablecoin or wears a mark (`marked`, the app's own artwork
-    /// or the icon book). Typed words and a pasted contract still reach
-    /// every token, and what you hold always shows.
-    static func major(_ l: Listed, marked: (String) -> Bool) -> Bool {
-        l.onList && (stablecoins.contains(l.token.symbol.uppercased()) || marked(l.token.symbol))
+    /// **ETH AND USDC ON EACH NETWORK, NOTHING ELSE UNASKED (prd §1617,
+    /// retiring §1532's stablecoins-and-marks; user: "if we have three
+    /// networks we should show the usdc on all, the eth on all … user can go
+    /// find whatever else they want").** With nothing typed, a list offers
+    /// the network's ETH and its USDC from Uniswap's list. Typed words and a
+    /// pasted contract still reach every token, and what you hold leads.
+    static func offeredUnasked(_ l: Listed) -> Bool {
+        l.onList && ((l.token.contract == nil && l.token.symbol == Op.eth.symbol)
+                     || l.token.symbol.uppercased() == "USDC")
     }
 
-    /// What a search in For shows: with nothing typed, what you hold then
-    /// the list's head (only what `shows` keeps); typed, symbols that start
-    /// with it, then names that hold it, what you hold first in each. Forty
-    /// at most.
+    /// What a search in For shows: with nothing typed, what you hold, then
+    /// what `shows` keeps (prd §1617); typed, symbols that start with
+    /// it, then names that hold it, what you hold first in each. Forty at
+    /// most.
     static func matches(_ query: String, in list: [Listed], held: [Held],
                         shows: (Listed) -> Bool = { _ in true }) -> [Listed] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()

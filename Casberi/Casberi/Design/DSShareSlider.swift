@@ -23,18 +23,23 @@ struct DSShareSlider: View {
     @State private var dragX: CGFloat?
 
     private static let notches = [0, 25, 50, 75, 100]
+    /// The resting thumb's radius: its travel is inset by it, so at 0 and
+    /// 100 the thumb's EDGE meets the column's edge, as the system slider's
+    /// does (prd §1616 item 9: centred on the edge, it hung half outside).
+    private static let inset: CGFloat = 14
 
     var body: some View {
         GeometryReader { geo in
-            let width = max(geo.size.width, 1)
-            let rest = CGFloat(percent) / 100 * width
+            let r = Self.inset
+            let width = max(geo.size.width - 2 * r, 1)
+            let rest = r + CGFloat(percent) / 100 * width
             // A quarter is a detent: within it the thumb sits on the quarter.
             let x: CGFloat = dragX.map { raw in
-                let p = Int((raw / width * 100).rounded())
+                let p = Int(((raw - r) / width * 100).rounded())
                 if let near = Self.notches.first(where: { abs($0 - p) <= 3 }) {
-                    return CGFloat(near) / 100 * width
+                    return r + CGFloat(near) / 100 * width
                 }
-                return min(max(raw, 0), width)
+                return min(max(raw, r), r + width)
             } ?? rest
             ZStack(alignment: .leading) {
                 Capsule().fill(DS.fillFaint).frame(height: 6)
@@ -44,7 +49,7 @@ struct DSShareSlider: View {
                     Circle()
                         .fill(DS.textTertiary)
                         .frame(width: 4, height: 4)
-                        .offset(x: CGFloat(n) / 100 * width - 2)
+                        .offset(x: r + CGFloat(n) / 100 * width - 2)
                 }
                 Capsule().fill(enabled ? tint : DS.textTertiary).frame(width: x, height: 6)
                 Circle()
@@ -62,7 +67,7 @@ struct DSShareSlider: View {
                         guard enabled else { return }
                         if !holding { holding = true }
                         dragX = value.location.x
-                        var p = Int((value.location.x / width * 100).rounded())
+                        var p = Int(((value.location.x - r) / width * 100).rounded())
                         p = min(max(p, 0), 100)
                         if let near = Self.notches.first(where: { abs($0 - p) <= 3 }) { p = near }
                         guard p != percent else { return }

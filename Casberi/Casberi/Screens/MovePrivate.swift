@@ -59,6 +59,7 @@ struct MovePrivateSentence<Head: View>: View {
                 head()
                     .padding(.bottom, DS.Space.s4)
                 MoveFlow { sentence }
+                    .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
@@ -185,7 +186,8 @@ struct MovePrivateSentence<Head: View>: View {
                     guard move.stage == .ready else { return }
                     toggle(.amount)
                 } label: {
-                    MoveWord(figure, ink: move.stage == .ready ? (open == .amount ? DS.pickInk.opacity(0.6) : DS.pickInk) : DS.textPrimary)
+                    MoveWord(figure, ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
+                        .environment(\.moveQuiet, open != nil && open != .amount)
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("Amount, \(figure)"))
@@ -228,11 +230,14 @@ struct MovePrivateSentence<Head: View>: View {
                 guard pickable else { return }
                 toggle(.recipient)
             } label: {
-                if let to = move.recipient {
-                    MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)
-                } else {
-                    MoveWord(String(localized: "address"), ink: DS.textTertiary)
+                Group {
+                    if let to = move.recipient {
+                        MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)
+                    } else {
+                        MoveWord(String(localized: "address"), ink: open == .recipient ? DS.pickInk : DS.textTertiary)
+                    }
                 }
+                .environment(\.moveQuiet, open != nil && open != .recipient)
             }
             .buttonStyle(RowPress())
             .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))
@@ -326,7 +331,8 @@ struct MovePrivateSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
-    /// A blank's choices, in the glass box Move opens them in.
+    /// A blank's choices, on the tray in the sentence's column as Move
+    /// opens them (prd §1616).
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             switch blank {
@@ -335,9 +341,7 @@ struct MovePrivateSentence<Head: View>: View {
             }
         }
         .padding(.vertical, DS.Space.s2)
-        .padding(.horizontal, DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .dsGlass(cornerRadius: RoomsTray.radius)
     }
 
     /// The amounts the money can cover: the test account's after the gas a
@@ -515,10 +519,13 @@ struct MovePrivateSwitch: View {
     @Binding var isOn: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: DS.Space.s3) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            // The door rows' column, so "Private" reads with "From another
+            // wallet" and the lines under the address (prd §1616 item 7).
             Image(systemName: "eye.slash")
-                .dsGlyph(.body, weight: .semibold)
+                .dsGlyph(.caption, weight: .semibold)
                 .foregroundStyle(isOn ? DS.pickInk : DS.textTertiary)
+                .frame(width: DSDoorRowLabel.glyphColumn, alignment: .center)
                 .accessibilityHidden(true)
             DSToggleRow(title: Text("Private"), isOn: $isOn)
         }

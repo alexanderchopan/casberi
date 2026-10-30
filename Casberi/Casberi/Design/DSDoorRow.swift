@@ -64,6 +64,11 @@ struct DSDoorRow: View {
 /// The door row's face, for a slot that owns its own control — a `ShareLink`,
 /// a `Menu`, a `Button` with a custom press.
 struct DSDoorRowLabel: View {
+    /// Where a door's words start: its glyph column and the gap after it. A
+    /// line under a stack of doors that should read with them starts here.
+    static let textColumn: CGFloat = glyphColumn + DS.Space.s2
+    static let glyphColumn: CGFloat = 18
+
     let icon: String
     let title: Text
     var role: ButtonRole? = nil
@@ -78,7 +83,7 @@ struct DSDoorRowLabel: View {
                 .foregroundStyle(role == .destructive ? DS.destructive : DS.brandInk)
                 // The column, not the glyph's own width: SF Symbols are
                 // not uniform, so without it a stack of doors staircases.
-                .frame(width: 18, alignment: .center)
+                .frame(width: Self.glyphColumn, alignment: .center)
                 .accessibilityHidden(true)
             title
                 .dsText(.body17)
