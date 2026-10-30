@@ -170,6 +170,8 @@ extension FeedScreen {
     /// your account picked, never on another account's or Following's.
     var walletShowsPrivate: Bool {
         if walletOnAll { return true }
+        // 0xBow Privacy Pools' pick is your private balance (prd §1614).
+        if selectedSeat?.source == PrivacyPoolsBridge.sourceName { return true }
         guard let yours = YourAccountDemo.shownAddress, let scope = chrome.walletScope else { return false }
         return WalletWatch.sameAddress(scope, yours)
     }
@@ -250,7 +252,8 @@ extension FeedScreen {
             // Home blank under the tiles. §769's empty state fills it: what
             // would stand here, empty, and the account named. The pick still
             // lands on Home; it never jumps to Activity.
-            if !onAll, !walletOnFollowing, !(yours != nil && yoursPicked), needs == 0, permissions == 0, counts.flagged == 0 {
+            if !onAll, !walletOnFollowing, !(yours != nil && yoursPicked), !walletPickHasOwnSection,
+               needs == 0, permissions == 0, counts.flagged == 0 {
                 walletHomeQuiet
             }
         }

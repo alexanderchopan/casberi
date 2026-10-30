@@ -178,7 +178,17 @@ extension FeedScreen {
                         if slot.isShowing(walletOnFollowing ? nil : chrome.walletScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
-                            if let seat = selectedSeat, seatKeepsLine(seat),
+                            // Safe and 0xBow Privacy Pools are your account's
+                            // own (prd §1614): who signs and what waits, and
+                            // what is private and how hidden.
+                            if selectedSeat?.source == SafeBridge.sourceName {
+                                WalletSafeBox(total: walletBoxTotal, onOpen: { ref in
+                                    openBySourceRef(ref, in: visible)
+                                }, onOpenSafe: walletOpenSafe,
+                                   queueKey: Self.safeQueueKey(visible))
+                            } else if selectedSeat?.source == PrivacyPoolsBridge.sourceName {
+                                walletPoolsBox
+                            } else if let seat = selectedSeat, seatKeepsLine(seat),
                                !walletScopeIsEmpty(.holdings) {
                                 // An app that keeps its own line (Privy, prd
                                 // §1194, user: "the landing needs to be balance

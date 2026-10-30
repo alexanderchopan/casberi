@@ -2656,6 +2656,9 @@ harness "Wallet spending" "spending" "scripts/spending-selftest.sh" "the spendin
 # The rating ask (prd §1477): Apple's sheet only for someone using the app on
 # their own things, on four different days, once per version — never the demo.
 harness "Rating ask" "rating ask" "scripts/rating-ask-selftest.sh" "the rating ask self-test failed — run scripts/rating-ask-selftest.sh"
+# The Safe pick's roster (prd §1614): your account leads, who signs each Safe,
+# and what moves one without a signature — never your account's own send path.
+harness "Safe roster" "safe roster" "scripts/safe-roster-selftest.sh" "the Safe roster self-test failed — run scripts/safe-roster-selftest.sh"
 # Move's Buy (prd §1599): one card seller per network — Stripe on Ethereum, Ramp
 # on Base only with its key — and the page told the coin, network and dollars.
 harness "Card onramp" "card onramp" "scripts/card-onramp-selftest.sh" "the card onramp self-test failed — run scripts/card-onramp-selftest.sh"

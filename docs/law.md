@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1748 of 1820 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1749 of 1821 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1403,7 +1403,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (part superseded by §1078)
 - §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e, §1504)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
-- §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room…
+- §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room… (amended by §1614)
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118, §1612; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a, §1151)
@@ -1429,7 +1429,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080, §1118)
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu (amended by §1122)
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
-- §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072)
+- §1060 — The rest of the folded rooms' controls are deleted: GitHub's and Pinterest's scope rails and Privacy Pools' tiles, wh… (amended by §1072, §1614)
 - §1061 — The tray's rows are a name and a run of icons: the category's own disc first, its three most-opened apps, "+N"; You i… (amended by §1094, §1122, §1123, §1133)
 - §1062 — A swipe right on Home opens the tray (a user: on Home "there is nothing to swipe right onto", wishing it raised the t… (amended by §1125)
 - §1063 — The Wallet category wears the dollar sign
@@ -1438,7 +1438,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128, §1129, §1133)
 - §1067 — The room sweep
 - §1068 — Social is one room
-- §1069 — A Safe leads with its balance (amended by §1194)
+- §1069 — A Safe leads with its balance (amended by §1194, §1614)
 - §1070 — A post's cover never prints its link
 - §1071 — One 30pt icon for rows, the tray and the account list (amended by §1094, §1157)
 - §1072 — Respond on 0xBow stands under Privacy Pools' headline
@@ -1994,6 +1994,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
 - §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (…
 - §1613 — Licenses is one row per library, each opening its page
+- §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i…
 
 ## Dead rulings → what replaced them (generated)
 

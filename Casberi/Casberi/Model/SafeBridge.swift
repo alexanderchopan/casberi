@@ -559,8 +559,16 @@ enum SafeBridge {
                                  pending: [(ref: String, have: Int, required: Int,
                                            yourTurn: Bool, daysAgo: Double, descriptionText: String,
                                            nonce: Int?, unsignedOwners: [String])],
-                                 safeNonce: Int? = nil) {
+                                 safeNonce: Int? = nil,
+                                 owners: [String] = [], threshold: Int? = nil) {
         rememberDetected(chains[0], safeAddress)
+        // Its owners, so the Safe pick's box can say who holds it (prd §1614).
+        if let threshold, !owners.isEmpty,
+           let data = try? JSONEncoder().encode(SafeConfig(threshold: threshold,
+                                                          owners: owners.map { $0.lowercased() }.sorted(),
+                                                          modules: [], guardAddr: nil)) {
+            UserDefaults.standard.set(data, forKey: configSnapshotKey(chains[0].seg, safeAddress))
+        }
         for p in pending {
             trackPending(ref: p.ref, seg: chains[0].seg, safeAddress: safeAddress, ownerAddress: safeAddress,
                         have: p.have, required: p.required, yourTurn: p.yourTurn,
@@ -576,6 +584,10 @@ enum SafeBridge {
     /// it might overwrite — exactly what `AccountScreen.demoReentryAvailable`
     /// exists to keep off a lived-in install.
     static func clearDemoSnapshot() {
+        for entry in (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? [] {
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 { UserDefaults.standard.removeObject(forKey: configSnapshotKey(parts[0], parts[1])) }
+        }
         UserDefaults.standard.removeObject(forKey: detectedKey)
         saveTracking([:])
     }
@@ -634,6 +646,39 @@ enum SafeBridge {
         let seg: String
         let safeAddress: String
         let guardAddress: String
+    }
+
+    /// One detected Safe as its config snapshot last read it: who owns it,
+    /// how many must sign, and what can move it without a signature (prd
+    /// §1614, the Safe pick's box and "Without a signature"). Costs no
+    /// network, the `knownModules` read with every field.
+    struct KnownSafe: Equatable {
+        let seg: String
+        let safeAddress: String
+        let threshold: Int
+        let owners: [String]
+        let modules: [String]
+        let guardAddress: String?
+    }
+
+    static func knownSafes() -> [KnownSafe] {
+        let detected = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        return detected.sorted().compactMap { entry in
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2,
+                  let data = UserDefaults.standard.data(forKey: configSnapshotKey(parts[0], parts[1])),
+                  let config = try? JSONDecoder().decode(SafeConfig.self, from: data)
+            else { return nil }
+            return KnownSafe(seg: parts[0], safeAddress: parts[1], threshold: config.threshold,
+                             owners: config.owners, modules: config.modules, guardAddress: config.guardAddr)
+        }
+    }
+
+    /// The Safe web app's home for one Safe (EIP-3770's `shortName:address`),
+    /// or nil for a segment this bridge does not read.
+    static func webURL(seg: String, safeAddress: String) -> URL? {
+        guard let chain = chains.first(where: { $0.seg == seg }) else { return nil }
+        return URL(string: "https://app.safe.global/home?safe=\(chain.shortName):\(EIP55.checksum(safeAddress))")
     }
 
     /// Every detected Safe running a transaction GUARD, off the same persisted

@@ -95,8 +95,11 @@ extension FeedScreen {
     /// §1069): its money is what its addresses hold, which no holder prefix
     /// names.
     static func slice(_ whole: WalletPortfolio, for seat: RoomAccounts.Seat) -> WalletPortfolio {
+        // Your account is a Safe (prd §1614): its money is the Safe pick's
+        // too, as its line leads the pick's box.
         seat.source == SafeBridge.sourceName
-            ? whole.scoped(toAddresses: SafeBridge.detectedAddresses())
+            ? whole.scoped(toAddresses: SafeBridge.detectedAddresses()
+                .union(YourAccountDemo.shownAddress.map { [$0.lowercased()] } ?? []))
             : whole.scoped(to: seat)
     }
 

@@ -437,6 +437,8 @@ extension FeedScreen {
                     // Home, each a tap to open, and Follow an account.
                     if walletOnFollowing { walletFollowingPage }
                     walletHomeDoors(upcoming: upcoming)
+                    // Safe's and 0xBow Privacy Pools' own section (prd §1614).
+                    walletPickSection
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,

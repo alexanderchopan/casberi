@@ -181,3 +181,98 @@ enum SafeRoomSource {
         return out
     }
 }
+
+// MARK: - The Safe pick's roster (prd §1614)
+
+extension SafeRoomSource {
+    /// Every Safe you hold a key to, your account first (`yours`, read by
+    /// `SafeRosterReading`), each named the way the queue names it.
+    @MainActor
+    static func roster(yours: SafeRoster.Safe?) -> SafeRoster {
+        let phone = Set(SafeBridge.phoneOwners())
+        let followed = WalletStore.shared.followedForms()
+        var safes: [SafeRoster.Safe] = yours.map { [$0] } ?? []
+        for known in SafeBridge.knownSafes() {
+            // Your account read twice (detected through this phone's key) is
+            // drawn once, as your account.
+            if let yours, WalletWatch.sameAddress(yours.address, known.safeAddress) { continue }
+            if safes.contains(where: { WalletWatch.sameAddress($0.address, known.safeAddress) }) { continue }
+            var mine: [SafeRoster.Face] = []
+            var theirs: [SafeRoster.Face] = []
+            for owner in known.owners {
+                let lower = owner.lowercased()
+                if phone.contains(lower) { mine.append(.phone) }
+                else if followed.contains(lower) { mine.append(.you) }
+                else {
+                    let name = WalletIngest.knownLabel(for: owner)
+                    theirs.append(.person(name.flatMap(\.first).map { String($0).uppercased() } ?? ""))
+                }
+            }
+            safes.append(SafeRoster.Safe(address: known.safeAddress, seg: known.seg,
+                                         name: label(for: known.safeAddress), isYourAccount: false,
+                                         faces: mine + theirs, threshold: known.threshold,
+                                         spendLimit: nil, modules: known.modules.count))
+        }
+        return SafeRoster(safes: SafeRoster.ordered(safes))
+    }
+
+    /// A Safe's name, for the box's queue rows.
+    @MainActor
+    static func name(for address: String) -> String {
+        if let yours = YourAccountDemo.shownAddress, WalletWatch.sameAddress(yours, address) {
+            return String(localized: "Your account")
+        }
+        return label(for: address)
+    }
+}
+
+/// Your account as a Safe, read once the Safe pick's box stands (prd §1614):
+/// its keys from what this phone knows, its owners and threshold off Base.
+/// Never in a body — the recovery key is a Keychain item and the rest is a
+/// chain read.
+@MainActor
+@Observable
+final class SafeRosterReading {
+    static let shared = SafeRosterReading()
+    private(set) var yours: SafeRoster.Safe?
+    private var readAt: Date?
+    private var reading = false
+    /// Owners and threshold change only when you change them on the keys
+    /// page; a box that remounts on every balance landing reads them again
+    /// after this, never per mount.
+    static let life: TimeInterval = 300
+
+    func refresh(now: Date = .now) async {
+        guard let address = YourAccountDemo.shownAddress else { yours = nil; return }
+        if let readAt, now.timeIntervalSince(readAt) < Self.life, yours?.address == address { return }
+        guard !reading else { return }
+        reading = true
+        defer { reading = false }
+        let facts = YourAccountFacts.current
+        let limit = SafeRoster.limitWords(dollars: facts?.limitDollars, period: facts?.limitPeriod)
+        if YourAccountDemo.isOn {
+            yours = SafeRoster.Safe(address: address, seg: nil, name: String(localized: "Your account"),
+                                    isYourAccount: true, faces: [.phone, .recovery, .coSigner],
+                                    threshold: 1, spendLimit: limit, modules: 0)
+            return
+        }
+        var faces: [SafeRoster.Face] = [.phone]
+        if YourAccountRecovery.exists(for: address) { faces.append(.recovery) }
+        if (facts?.signers ?? 0) > 0 { faces.append(.coSigner) }
+        var threshold: Int?
+        if let net = YourAccountOp.networks.first {
+            threshold = try? await YourAccountChain.knownThreshold(net, address)
+            // The chain's count wins where it was read: a key this phone does
+            // not know of (another device) is still an owner, and a key not
+            // yet added on this network is not one.
+            if let owners = try? await YourAccountChain.owners(net, address), !owners.isEmpty {
+                faces = Array(faces.prefix(owners.count))
+                    + Array(repeating: .person(""), count: max(owners.count - faces.count, 0))
+            }
+        }
+        readAt = now
+        yours = SafeRoster.Safe(address: address, seg: nil, name: String(localized: "Your account"),
+                                isYourAccount: true, faces: faces, threshold: threshold,
+                                spendLimit: limit, modules: 0)
+    }
+}

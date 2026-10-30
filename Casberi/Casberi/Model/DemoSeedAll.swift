@@ -5295,7 +5295,7 @@ enum DemoSeedAll {
             (ref: "wallet:safe:eth:demo3", have: 1, required: 3, yourTurn: false, daysAgo: 6,
              descriptionText: "a revoke of Uniswap's spending approval", nonce: 44,
              unsignedOwners: [mia]),
-        ], safeNonce: 42)
+        ], safeNonce: 42, owners: [demoWallet, sam, mia], threshold: 3)
 
         // 8 · The watched social accounts (2026-08-11). The social rooms grew
         // a face rail (§362, the same control the wallets wear) which gates on
