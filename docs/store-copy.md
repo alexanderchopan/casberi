@@ -26,9 +26,9 @@ Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/ca
 
 - keywords: `crypto,swap,ethereum,usdc,privacy,tor,portfolio,budget,spending,subscriptions,feed,reader,ai,agent`
 
-### Promotional text (132)
+### Promotional text (150)
 
-New: buy USDC or ETH with a card, swap anything, and send and receive privately with 0xBow, beside every app and account you follow.
+New: buy crypto with a card, swap anything, and round up your spare change into a private balance that earns, beside every app and account you follow.
 
 ### iOS description — the wallet story
 
@@ -47,7 +47,13 @@ Buy with a card. Swap anything.
 Buy USDC or ETH with a card, on Stripe's page. Swap any token in one sentence, even to another network. Every move is checked on the network before you sign, and Casberi adds no fee.
 
 Send and receive privately.
-Move money into your private balance with 0xBow Privacy Pools on Ethereum. Send privately, receive at a fresh address, and take a deposit back anytime while it waits for approval. Round up your sends and save the change privately, in dollars.
+Move money into your private balance with 0xBow Privacy Pools on Ethereum. Send privately, receive at a fresh address, and take a deposit back anytime while it waits for approval.
+
+A private balance that earns.
+Your private balance earns interest in Aave, and counts once in your total.
+
+Round up your spare change.
+Turn on Round-ups and the spare change from what you send is saved privately in dollars, in your private balance, where it earns.
 
 See what you spend, and where.
 Spending by place, every subscription and what it costs, and the fees you paid. Spend USDC on gift cards, powered by Bitrefill.
