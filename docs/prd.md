@@ -447,6 +447,7 @@ marks chronological position within the pair.
 | §1323 (Sources names Contacts; the Addresses screen is deleted) | the directory was Library's Contacts count | amended by §1612 — the directory is the Contacts app's page, in Social's folder |
 | §1418 (an app you have goes where the tray's icon does) | a tap on any app of yours in a folder opened its feed | amended by §1612 — Contacts and Calendar open their pages (the people, the calendars), yours or not |
 | §1049 (Life holds Contacts) | Contacts was a Life app | amended by §1612 — Contacts is Social's |
+| §1508 (Settings › Licenses carries every library's notice, one scroll) | Casberi's license sentence, then every library's text stacked in one page | amended by §1613 — one row per library, each opening its page; the words are unchanged |
 
 ## §1 — Thesis
 
@@ -69707,3 +69708,14 @@ Not done: the Tor share in the proof line (the receipts insight carries no Tor c
 6. **The Mac half (§1402).** Library's pane at rest drew the box (§1407); it is empty ink at rest now, and shows Casberi's folder or the page an app opens, as it did when a row opened one.
 
 **Not built, not measured.** Nothing here was compiled: the session that built it had no Xcode. The sheet sweep's walks for the two pages (`sources-new-contact`, `sources-subscribe-calendar`, `sources-contact`), the Wallet's `wallet-follow` and the re-pathed `plan-edit` are written from the code's accessibility labels, not seen. Three sheets are swept nowhere now and say so: the Track tray Library's box reached (`SettingsHome.trackPick`), a contact's plan sheet, and the mail-list and follow sheets the box's lists opened.
+
+## §1613 — Licenses is one row per library, each opening its page (amends §1508) (user, 2026-10-30: "how would you improve the licenses page"; of the canvas's two ways, "ya a") — BUILT, NOT COMPILED
+
+**Why.** Settings › Licenses was one 400-line scroll: Reown's agreement, a hundred lines mostly in bold and capitals, led it and buried the rest; the MIT text stood three times, the Apache text at the very end, away from the two libraries that point at it; Casberi's own license was a sentence with its source address in plain text, and how many libraries there were took a scroll to learn.
+
+1. **Casberi's own leads.** "Casberi is free software" (`heading28`, the lede's rung, §1496), "GNU GPL, version 3 or later, with a permission to link Reown's SDK." under it, then two door rows: The source (the repository) and The GPL (the repository's `LICENSE`, the README's section 7 permission beside it). Both open in the browser.
+2. **Built with · N**, then one row per library, A–Z, its license and holder on the line (`Licenses.lines`): "MIT · Darren Ford", "WalletConnect Community License · Reown". No chevrons (§1272). The Apache License's text is a section the libraries share, never a row.
+3. **A row pushes the library's page** (`LicensePage`, `HomeRoute.Node.license`): "Licenses · QRCode", the notice verbatim at `reading17`, the Apache text after it for Coinbase's SDK and Yttrium, and Copy the license. Reown's §2(a) asks for its notice and license in the app: they are, one tap down.
+4. **One text still.** `Resources/Licenses.md` is unchanged and still the only copy; `Licenses.sections()` splits it as §1508 did. `licenses-audit.py` (in `verify.sh`) fails a library in the file with no line, a line with no library, and an Apache pointer whose notice never names Apache.
+
+**Not compiled** (no Xcode in the session that built it); not seen on a device. The design canvas: https://claude.ai/artifact/D4ZYoPTKS4uKjBCTby2Xo7 (A).

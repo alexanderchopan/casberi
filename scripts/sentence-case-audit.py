@@ -313,7 +313,7 @@ KNOWN_PROPER: set[str] = {
     "UTXO", "UTXOs", "EIP", "ERC", "RPC", "ENS", "CDN", "PDF", "OCR", "AI", "PIN",
     "UI", "UX", "CLI", "SDK", "JWT", "OAuth", "PKCE", "SIWE", "US", "UK",
     "EU", "EEA", "UTC", "IP", "VPN", "SSH", "P2SH", "OVM", "PoS", "PRT",
-    "L2", "TXT", "IMAP", "AM", "PM", "BEGIN", "END", "AKIA", "Bearer",
+    "L2", "TXT", "IMAP", "AM", "PM", "BEGIN", "END", "AKIA", "Bearer", "GPL", "GNU",
     # Tickers. Re-casing one invents a spelling no exchange or explorer uses.
     "ETH", "BTC", "SOL", "USDC", "USDT", "DAI", "HYPE", "AERO", "AAPL",
     "NASA", "COLOR", "ALARM",

@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1747 of 1819 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1748 of 1820 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1888,7 +1888,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
-- §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice
+- §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
 - §1509 — Signing shows its details behind one word, and a warning is one line you can sign past
 - §1510 — Details in Move: the fee on every send, this exact operation simulated and previewed, Raw transaction a page deeper,…
 - §1511 — Move's sentence is placed against the width it was measured for, so a clause never draws over the next (applies §1501…
@@ -1993,6 +1993,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept…
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
 - §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (…
+- §1613 — Licenses is one row per library, each opening its page
 
 ## Dead rulings → what replaced them (generated)
 

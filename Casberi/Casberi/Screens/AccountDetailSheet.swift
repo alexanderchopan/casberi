@@ -73,10 +73,11 @@ struct AccountDetailSheet: View {
     /// Delete access would disconnect — the same set `deleteAccess` drops.
     @State private var addressCount = 0
     @State private var accessCount = 0
-    /// Casberi's own license, then every library it ships and its license
-    /// (`Resources/Licenses.md`), read on appear. Reown's SDK requires its
-    /// notice and its license in the app (its §2(a)).
-    @State private var licenses: [LicenseSection] = []
+    /// Every library Casberi ships, by name (`Licenses`), read on appear.
+    /// Reown's SDK requires its notice and its license in the app (its
+    /// §2(a)): each row opens its page, the text verbatim.
+    @State private var libraries: [String] = []
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         DSTray(title: title, height: sheetHeight,
@@ -110,7 +111,7 @@ struct AccountDetailSheet: View {
             // this case of the tray actually mounted.
             NSLog("accountDetail| \(detail.rawValue) mounted")
             #endif
-            if detail == .licenses { licenses = Self.readLicenses() }
+            if detail == .licenses { libraries = Licenses.libraries(Licenses.sections()) }
             thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
             guard detail == .data else { return }
             exportURL = buildExport()
@@ -362,44 +363,46 @@ struct AccountDetailSheet: View {
             + (notifyAuthorized ? 75 : 0)
     }
 
-    // MARK: - Licenses (prd §1508)
+    // MARK: - Licenses (prd §1508; one row per library, 2026-10-30)
 
-    struct LicenseSection {
-        let name: String?
-        let text: AttributedString
-    }
-
-    /// `Resources/Licenses.md` split at its `# ` lines: a name over each
-    /// license, the words verbatim (inline markdown only, so Reown's bold
-    /// stays bold and nothing is reflowed).
-    static func readLicenses() -> [LicenseSection] {
-        guard let url = Bundle.main.url(forResource: "Licenses", withExtension: "md"),
-              let raw = try? String(contentsOf: url, encoding: .utf8) else { return [] }
-        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return ("\n" + raw).components(separatedBy: "\n# ").compactMap { chunk in
-            let lines = chunk.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
-            let lead = chunk.hasPrefix("\n")
-            let name = lead ? nil : lines.first.map { String($0) }
-            let body = (lead ? chunk : lines.count > 1 ? String(lines[1]) : "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !body.isEmpty else { return nil }
-            let text = (try? AttributedString(markdown: body, options: options)) ?? AttributedString(body)
-            return LicenseSection(name: name, text: text)
-        }
-    }
-
+    /// Casberi's own license leads, its two doors under it, then "Built with"
+    /// and one row per library, A–Z, its license and holder on the line. A
+    /// row pushes the library's page (`LicensePage`), the words verbatim.
     private var licensesCard: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
-                ForEach(Array(licenses.enumerated()), id: \.offset) { _, section in
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        if let name = section.name {
-                            Text(verbatim: name).dsText(.heading17).foregroundStyle(DS.textPrimary)
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text("Casberi is free software")
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                    Text("GNU GPL, version 3 or later, with a permission to link Reown's SDK.")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 0) {
+                        DSDoorRow(icon: "chevron.left.forwardslash.chevron.right", label: "The source") {
+                            openURL(Licenses.source)
                         }
-                        Text(section.text)
-                            .dsText(section.name == nil ? .body17 : .subhead12)
-                            .foregroundStyle(section.name == nil ? DS.textPrimary : DS.textSecondary)
-                            .textSelection(.enabled)
+                        DSDoorRow(icon: "doc.text", label: "The GPL") {
+                            openURL(Licenses.gpl)
+                        }
+                    }
+                    .padding(.top, DS.Space.s2)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Built with").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(verbatim: "\(libraries.count)")
+                            .dsText(.body17).monospacedDigit().foregroundStyle(DS.textTertiary)
+                    }
+                    ForEach(libraries, id: \.self) { name in
+                        DSPushRow(title: Text(verbatim: name),
+                                  subtitle: Licenses.lines[name].map { Text(verbatim: $0) },
+                                  opens: false) {
+                            // As the reach door leaves (prd §967): a sheet
+                            // closes first, a page stacks the library on it.
+                            if !inPane { dismiss() }
+                            route.push(.license(name))
+                        }
                     }
                 }
             }

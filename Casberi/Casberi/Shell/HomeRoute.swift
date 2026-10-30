@@ -101,6 +101,9 @@ final class HomeRoute {
         /// THE CALENDARS PAGE, PUSHED FROM LIBRARY (user, 2026-10-30): the
         /// Calendar app in Day's folder opens the calendars Casberi reads.
         case calendars
+        /// ONE LIBRARY'S LICENSE, PUSHED FROM LICENSES (user, 2026-10-30):
+        /// its notice verbatim, by its section's name in `Licenses.md`.
+        case license(String)
     }
     /// The pushed stack — the Mac's only, since prd §1132: on the phone and
     /// the iPad nothing pushes, and every step `place` takes rises in `sheet`.

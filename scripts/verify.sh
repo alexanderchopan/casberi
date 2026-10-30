@@ -633,6 +633,14 @@ step "Status-ink audit"
 "$ROOT/scripts/status-ink-audit.py" || fail "a status word is drawn in the vivid hue, not its ink — see the output above"
 print -P "%F{green}✓ status-ink audit%f"
 
+# LICENSES, ONE ROW PER LIBRARY (2026-10-30). Each library in Licenses.md has
+# its line under its name in Settings › Licenses, and every line its library.
+step "Licenses audit"
+"$ROOT/scripts/licenses-audit.py" --self-test >/dev/null \
+  || fail "the licenses audit's own self-test failed — it cannot catch what it claims to"
+"$ROOT/scripts/licenses-audit.py" || fail "a library in Licenses.md has no line, or a line no library — see the output above"
+print -P "%F{green}✓ licenses audit%f"
+
 # AN ACCOUNT MARKED `mine` LANDS ITS OWN REPLIES (2026-09-17). §239's inbound
 # half — who replied to you, who liked your posts — reads through
 # `SocialInbound.ownRecentPosts`, which walks YOUR posts out of the corpus. So

@@ -1423,9 +1423,10 @@
     "Shell/MainSurface.swift:route.sheet#node.notes",
     "Shell/MainSurface.swift:route.sheet#node.settingsFolder",
     "Shell/MainSurface.swift:route.sheet#node.contacts",
-    "Shell/MainSurface.swift:route.sheet#node.calendars"
+    "Shell/MainSurface.swift:route.sheet#node.calendars",
+    "Shell/MainSurface.swift:route.sheet#node.license"
    ],
-   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347, and the Contacts and Calendars pages its Contacts and Calendar apps open)"
+   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347, and the Contacts and Calendars pages its Contacts and Calendar apps open, and a library's license page under Licenses)"
   },
   {
    "covers": [

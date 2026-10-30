@@ -712,6 +712,8 @@ struct MainSurface: View {
             ContactsPage(query: query)
         case .calendars:
             CalendarsPage()
+        case .license(let name):
+            LicensePage(name: name)
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
