@@ -2410,7 +2410,7 @@ enum YourAccountChain {
     }
 
     /// Whether the shared signer now holds the key made for this send; when
-    /// it does, the next send makes a new one.
+    /// it does, the next send's key is made now (`YourAccountKey.used`).
     private static func rotated(_ net: Network, _ account: String, to next: Int, x: [UInt8]) async -> Bool {
         let moved = (try? await configuredX(net, account)) == x
         if moved { YourAccountKey.used(next) }

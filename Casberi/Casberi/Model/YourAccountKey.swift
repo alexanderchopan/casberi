@@ -235,6 +235,9 @@ enum YourAccountKey {
         UserDefaults.standard.set(Keccak256.hexString(xy), forKey: key0Key)
         UserDefaults.standard.set(account, forKey: addressKey)
         writeRecord(Record(address: account, origin: Keccak256.hexString(xy)))
+        // The first send's key, made with the account, as `used` makes each
+        // later one: Move's preview never makes a key.
+        _ = try? nextKey(after: 0)
         return account
     }
 
@@ -333,10 +336,15 @@ enum YourAccountKey {
         return index
     }
 
-    /// A send landed and the chain holds `index`: the next send makes a new key.
+    /// A send landed and the chain holds `index`: the next send's key is
+    /// made now, straight after its Face ID, so Move's preview finds it
+    /// waiting and never makes one (user: picking Swap or Sweep scanned a
+    /// face "sometimes"; the first preview after each send made this key,
+    /// the likeliest cause — the simulator cannot make such a key to show it).
     static func used(_ index: Int) {
         if (UserDefaults.standard.object(forKey: pendingKey) as? Int) == index {
             UserDefaults.standard.removeObject(forKey: pendingKey)
+            _ = try? nextKey(after: index)
         }
     }
 
