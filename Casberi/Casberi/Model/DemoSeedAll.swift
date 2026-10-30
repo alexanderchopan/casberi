@@ -416,6 +416,7 @@ enum DemoSeedAll {
                               // version, review or build row must survive.
                               "asc:version:demo1:IN_REVIEW", "asc:review:demo1",
                               "asc:build:demo285", "asc:buildexpiry:demo274",
+                              "asc:build:demo286", "asc:review:demo2",
                               // The approval joins the REAL `wallet:approval:`
                               // namespace because `WalletPrepare.applies`
                               // parses it. The "demo" segment keeps it clear
@@ -4023,6 +4024,11 @@ enum DemoSeedAll {
             ("Uma: can we ship the onboarding this week?", "#design", 1),
             ("Nils: joinery quote came back under budget", "#home", 3),
             ("Mia: book club moved to Thursday", "#book-club", 5),
+            // Filled out so Slack's own page holds a week (prd §1618's rule,
+            // applied to Work's apps, §1621).
+            ("Uma: new empty states are in Figma", "#design", 0.4),
+            ("Leo: standup moves to 10 tomorrow", "#quillmark", 2),
+            ("Uma: 1.4 is in review, fingers crossed", "#quillmark", 4),
         ]
         out += slack.enumerated().map { i, s in
             row(.chat, s.0, source: "Slack", ref: "demo:slack:\(i)", days: s.2, hour: 11,
@@ -4041,6 +4047,7 @@ enum DemoSeedAll {
             // is the object, the board its qualifier (prd §915).
             ("Order the tiles — Kitchen", 2), ("Confirm the joiner — Kitchen", 5),
             ("Book the Lisbon flat — Trip", 9),
+            ("Pick the grout colour — Kitchen", 1), ("Pack for Lisbon — Trip", 12),
         ]
         out += trello.enumerated().map { i, c in
             row(.reminder, c.0, source: "Trello", ref: "demo:trello:\(i)", days: c.1, hour: 9,
@@ -4070,6 +4077,8 @@ enum DemoSeedAll {
             ("quillmark/quillmark#58 · Word count lags on long documents", .doing, 2, "issue"),
             ("quillmark/quillmark!61 · Faster paste for large tables", .done, 5, "mr"),
             ("quillmark/quillmark#54 · PDF export drops footnotes", .todo, 11, "issue"),
+            ("quillmark/quillmark!63 · Retry sync on flaky networks", .doing, 1, "mr"),
+            ("quillmark/quillmark#52 · Dark mode contrast in tables", .done, 16, "issue"),
         ]
         out += gitlab.enumerated().map { i, g in
             row(.link, g.0, source: "GitLab", ref: "gitlab:\(g.3):demo\(i)", days: g.2, hour: 13) { t in
@@ -4086,6 +4095,8 @@ enum DemoSeedAll {
             ("QM-201 · Draft the launch email", .todo, 3, 5),
             ("QM-198 · Review the App Store screenshots", .doing, 6, nil),
             ("QM-190 · Ship the sync schema update", .done, 15, nil),
+            ("QM-204 · Write the 1.4 release notes", .todo, 1, 3),
+            ("QM-195 · Fix the widget after midnight", .done, 9, nil),
         ]
         out += jira.enumerated().map { i, j in
             row(.reminder, j.0, source: "Jira", ref: "demo:jira:\(i)", days: j.2, hour: 9,
@@ -4122,6 +4133,20 @@ enum DemoSeedAll {
             ("Certificate renews in 21 days", "Cloudflare", "quillmark.app", 4, []),
             ("swift-markdown 0.4.0", "npm", "2 dependents", 5, ["Release"]),
             ("httpx 0.28.1", "PyPI", "security fix", 7, ["Release"]),
+            // A week on each ops page (prd §1621), in each bridge's own title
+            // and tag shapes.
+            ("quillmark-web · TypeError in the export worker", "Sentry", "41 events", 4, ["Issue"]),
+            ("quillmark-api · Timeout reading the sync queue", "Sentry", "7 events", 9, ["Issue"]),
+            ("quillmark-docs · Update the sync guide", "Vercel", "Ready in 31s", 4, ["Deploy"]),
+            ("quillmark-site · Missing env var on preview", "Vercel", "Exited with 1", 6, ["Build failure"]),
+            ("Resolved after 22 minutes · quillmark-sync · Queue depth above 10k", "PagerDuty",
+             "Resolved by Leo", 3, ["Resolved"]),
+            ("Resolved after 4 minutes · quillmark-web · Health check failing", "PagerDuty",
+             "Resolved by Uma", 12, ["Resolved"]),
+            ("quill-sync 1.2.0", "npm", "first release", 2, ["Release"]),
+            ("swift-markdown 0.3.9", "npm", "2 dependents", 19, ["Release"]),
+            ("rich 13.9.4", "PyPI", "bug fixes", 3, ["Release"]),
+            ("httpx 0.28.0", "PyPI", "", 16, ["Release"]),
         ]
         out += ops.enumerated().map { i, o in
             row(.link, o.0, source: o.1, ref: "demo:\(o.1.lowercased()):\(i)",
@@ -4131,6 +4156,7 @@ enum DemoSeedAll {
                     t.authorHandle = o.0.components(separatedBy: " · ")
                         .first { $0.hasPrefix("quillmark-") }
                 }
+                if o.1 == "PagerDuty" { t.summary = o.2 }
             }
         }
         // REAL `asc:` ref shapes (2026-08-12). `WorkStage.ascOutcome` reads the
@@ -4149,6 +4175,8 @@ enum DemoSeedAll {
             ("★★★★★ \"Opens before I lose the thought\"", "asc:review:demo1", 3),
             ("Build 285 ready to test", "asc:build:demo285", 2),
             ("Build 274 expires in 9 days", "asc:buildexpiry:demo274", 5),
+            ("Build 286 ready to test", "asc:build:demo286", 0.5),
+            ("★★★★☆ \"Wish it synced to my Mac faster\"", "asc:review:demo2", 6),
         ]
         out += asc.enumerated().map { i, a in
             row(.link, a.0, source: "App Store Connect", ref: a.1,
@@ -4218,6 +4246,8 @@ enum DemoSeedAll {
             ("kyutai/moshi-v2 · Model", "kyutai", 1),
             ("Scaling laws for retrieval · Paper", "", 2),
             ("fieldwork/birdsong-1k · Dataset", "fieldwork", 6),
+            ("kyutai/hibiki-1b · Model", "kyutai", 3),
+            ("fieldwork/riverbank-500 · Dataset", "fieldwork", 10),
         ]
         out += hf.enumerated().map { i, h in
             row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.2, hour: 9) { t in
@@ -4251,6 +4281,8 @@ enum DemoSeedAll {
             ("heartwood · merged · Fix seed discovery on cold start", "lorenz", ["Patch", "Merged"], 1),
             ("heartwood · patch · Cache the inventory read", "fintohaps", ["Patch", "Proposed"], 3),
             ("heartwood · issue · NO_COLOR disables all styling", "ade", ["Issue", "Opened"], 7),
+            ("heartwood · issue · Cloning over Tor stalls", "ade", ["Issue", "Opened"], 4),
+            ("heartwood · merged · Faster patch diffs", "lorenz", ["Patch", "Merged"], 10),
         ]
         out += radicle.enumerated().map { i, r in
             let kind = r.2.first == "Issue" ? "issue" : "patch"

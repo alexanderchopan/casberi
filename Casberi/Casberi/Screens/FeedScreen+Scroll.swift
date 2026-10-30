@@ -946,7 +946,9 @@ extension FeedScreen {
         // section's does.
         if let name = BridgeCatalog.categories.first(where: { $0.name == category })?.name {
             let count = BridgeCatalog.offers.filter { BridgeCatalog.category(of: $0) == name }.count
-            adds.append(SectionAdd(label: String(localized: "More \(name.lowercased()) apps"),
+            // "More agent apps", never "agents apps": the category's noun.
+            let noun = name.hasSuffix("s") ? String(name.dropLast()) : name
+            adds.append(SectionAdd(label: String(localized: "More \(noun.lowercased()) apps"),
                                    detail: String(localized: "All \(count) in the catalogue"),
                                    apart: !adds.isEmpty,
                                    glyph: "square.grid.2x2") {
