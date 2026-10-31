@@ -986,7 +986,7 @@
      "relaunch": [
       "demo",
       "-openThing",
-      "A quieter approach"
+      "How a compiler actually"
      ]
     },
     {
@@ -1014,7 +1014,7 @@
      "relaunch": [
       "demo",
       "-openThing",
-      "A quieter approach"
+      "How a compiler actually"
      ]
     },
     {
@@ -1024,13 +1024,13 @@
      "tap": "button:^Following"
     },
     {
-     "tap": "button:^The return of local-first"
+     "tap": "button:^Compilers from scratch"
     }
    ],
    "anchor": "text:=From",
    "afterSwipe": "button:=Search",
    "control": "button:=Back",
-   "afterControl": "button:^The return of local-first"
+   "afterControl": "button:^Compilers from scratch"
   },
   {
    "id": "thing-follow-site",
