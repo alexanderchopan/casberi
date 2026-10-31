@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1763 of 1835 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1764 of 1836 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1802,13 +1802,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444, §1612)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
-- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493)
+- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493, §1628)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
 - §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's doll…
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…
 - §1425 — The Move page has one Add: Send's, which batches; money coming in is Receive (amends §1422's and the 2026-10-18 canva…
 - §1426 — An empty Feed draws no preview (retires §1169's preview; its All glyph stands)
-- §1427 — Your account recovers with no phrase: a recovery key in iCloud Keychain, on Base and Ethereum at once; Security on th…
+- §1427 — Your account recovers with no phrase: a recovery key in iCloud Keychain, on Base and Ethereum at once; Security on th… (amended by §1628)
 - §1428 — The Feed's quiet day is the day alone; your account's whole address heads Move; To shows an address end to end (exten…
 - §1429 — Your account, measured on Base mainnet (proves §1424 and §1427 with real money; Move stays DEBUG-only until the whole…
 - §1430 — Your account swaps through CoW: a pre-signed order this phone builds and CoW must name back (builds the canvas's Send…
@@ -1836,7 +1836,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1453 — Receive from another network: Relay's deposit address for the route (amended by §1484, §1486)
 - §1454 — Robinhood Chain comes back to the account with every feature
 - §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458, §1570, §1601)
-- §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458, §1570)
+- §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458, §1570, §1628)
 - §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501, §1516)
 - §1458 — The spend limit fits the bundler: a change in two operations, a renewal that leaves ended periods be, Finish that kee…
 - §1459 — Two lines cut from creating your account (amended by §1500, §1501)
@@ -1950,7 +1950,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
-- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the…
+- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628)
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578)
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
@@ -2009,6 +2009,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1625 — Claude Code reads your cloud sessions live through the claude.ai sign-in: each lands saying where Claude says it stands
 - §1626 — Grok signs in on grok.com and answers in your own Grok, on the loop ChatGPT and Claude share; its page drops the key
 - §1627 — Gemini signs in with Google and answers in your own Gemini, read off its page; its page drops the key and the Takeout…
+- §1628 — The co-signer is a rule the contract keeps, not one the app keeps: the recovery key leaves the account's owners while…
 
 ## Dead rulings → what replaced them (generated)
 
