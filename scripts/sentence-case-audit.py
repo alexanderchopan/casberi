@@ -220,6 +220,12 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Apple Cash, Apple's own product (`WalletCash`, prd §1048): the Wallet
+    # total names it as Apple does, as "Apple Wallet" is named.
+    "Cash",
+    # Safes, the plural of Safe (the multisig wallet): "Your Safes" heads the
+    # Safe accounts you hold, a product's name, as "Safe" is.
+    "Safes",
     # Your account's second key (prd §1447, user: "well then it is a Signer"):
     # the Security row is named "Signer", and every line that means that key
     # names it so.
