@@ -30,34 +30,6 @@
    "afterSwipe": "button:=New contact"
   },
   {
-   "id": "sources-subscribe-calendar",
-   "covers": [
-    "Screens/CalendarsPage.swift:subscribing&&route.sheet"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Day, "
-    },
-    {
-     "tap": "button:=Calendar"
-    },
-    {
-     "tap": "button:=Subscribe by link"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Subscribe by link"
-  },
-  {
    "id": "sources-contact",
    "covers": [
     "Screens/AddressesScreen.swift:opened"
@@ -168,73 +140,6 @@
    ],
    "anchor": "button:=Sheet Grabber",
    "afterSwipe": "button:=Add to Life"
-  },
-  {
-   "id": "app-key",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#key"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Agents, "
-    },
-    {
-     "tap": "button:=Gemini"
-    },
-    {
-     "tap": "button:=Gemini settings"
-    },
-    {
-     "tap": "button:^Add your Google key"
-    }
-   ],
-   "anchor": "text:=Your Gemini key",
-   "afterSwipe": "button:=Gemini settings"
-  },
-  {
-   "id": "app-key-door",
-   "covers": [
-    "Screens/AccountDoorHost.swift:web"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Library"
-    },
-    {
-     "tap": "button:^Agents, "
-    },
-    {
-     "tap": "button:=Gemini"
-    },
-    {
-     "tap": "button:=Gemini settings"
-    },
-    {
-     "tap": "button:^Add your Google key"
-    },
-    {
-     "tap": "button:^Get your API key"
-    }
-   ],
-   "anchor": "button:=Done",
-   "control": "button:=Done",
-   "afterSwipe": "text:=Your Gemini key",
-   "afterControl": "button:=Gemini settings"
   },
   {
    "id": "app-website",
@@ -1085,13 +990,16 @@
      ]
     },
     {
-     "tap": "button:^The Verge"
+     "swipeUp": 4
+    },
+    {
+     "tap": "button:^Following"
     }
    ],
    "anchor": "text:=Through",
    "afterSwipe": "button:=Search",
    "control": "button:=Back",
-   "afterControl": "button:^The Verge"
+   "afterControl": "button:^Following"
   },
   {
    "id": "following-recent",
@@ -1110,7 +1018,10 @@
      ]
     },
     {
-     "tap": "button:^The Verge"
+     "swipeUp": 4
+    },
+    {
+     "tap": "button:^Following"
     },
     {
      "tap": "button:^The return of local-first"
@@ -1252,37 +1163,13 @@
      "tap": "button:=Wallet"
     },
     {
+     "tap": "button:=Following"
+    },
+    {
      "tap": "button:^Follow an account"
     }
    ],
    "anchor": "field:?An address or a name"
-  },
-  {
-   "id": "wallet-history-thing",
-   "covers": [
-    "Screens/WalletHistoryScreen.swift:sheetThing"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Activity, "
-    },
-    {
-     "swipeUp": 30
-    },
-    {
-     "tap": "button:^See all "
-    },
-    {
-     "tap": "button:^Sent to Savings, "
-    }
-   ],
-   "anchor": "text:=Account"
   },
   {
    "id": "notes-trash",
@@ -1631,6 +1518,30 @@
     "Screens/SettingsHome.swift:trackPick"
    ],
    "why": "NOT WALKED since Library's box was deleted (2026-10-30): the Track tray rises when a folder's app that needs only a name is not yet yours, or a door names one (route.openOffer); the walk that reached it went through the box's Follow something. Needs a demo app that is not added"
+  },
+  {
+   "covers": [
+    "Screens/CalendarsPage.swift:subscribing&&route.sheet"
+   ],
+   "why": "the Calendars page opens from Library only for a Calendar not yet added (user, 2026-10-29: one of yours goes to its events), and from Search only on a real phone or subscribed calendar; the demo's Calendar is added and its calendars are seeded rows (measured 2026-10-31)"
+  },
+  {
+   "covers": [
+    "Screens/AccountPage.swift:sheet#key"
+   ],
+   "why": "the key sheet is a connected keyed app's \"Your key\" row; no keyed app is connected in the demo, and Gemini signs in with Google since prd §1627 (measured 2026-10-31: Stripe reads \"Not connected · Paste a key\")"
+  },
+  {
+   "covers": [
+    "Screens/AccountDoorHost.swift:web"
+   ],
+   "why": "rides the key sheet above, which the demo cannot reach (measured 2026-10-31)"
+  },
+  {
+   "covers": [
+    "Screens/WalletHistoryScreen.swift:sheetThing"
+   ],
+   "why": "the history opens from Activity's \"Older transactions\", drawn only when the fetch filled (prd §1587); the demo's Activity never fills it (measured 2026-10-31)"
   }
  ]
 }
