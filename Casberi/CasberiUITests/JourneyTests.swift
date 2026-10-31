@@ -38,10 +38,13 @@ final class JourneyTests: XCTestCase {
     @MainActor func testConnect() {
         let w = Walk("connect", launch: [], test: self)
         leaveDemo(w)
-        // The first box's row (prd §1314): while every count is zero
-        // the box holds the four ways in, so this is the only "Add a calendar".
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Add a calendar"), "Add a calendar")
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
+        // Calendar's page in Day's folder (prd §1612 item 3), not the empty
+        // Feed's box: the simulator's Keychain outlives an uninstall, so a
+        // session left there fills the Feed and hides its ways in.
+        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Day"), "Day folder")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Calendar"), "Calendar")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
         w.allow("Full Access", "iOS calendar ask")
         // Connected once the first box clears: any one way in done clears it
         // all, and the box shows the counts (prd §1314).
@@ -49,18 +52,18 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// Search the whole corpus for one word and open the thing. "Gerald" is in
-    /// exactly one demo thing: an X post, "Sourdough starter is alive. Named
-    /// it Gerald." (`DemoSeedAll.swift`).
+    /// Search the whole corpus for one word and open the thing. "hydration" is
+    /// in exactly one demo thing: a saved link, "Sourdough hydration,
+    /// explained" (`DemoSeedAll.swift`; the "Gerald" post it used is gone).
     @MainActor func testFind() {
         let w = Walk("find", launch: Walk.demo, test: self)
         w.tap(w.el(.button, "label == %@", "Search"), "band Search")
         w.tap(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
-        w.type("Gerald", "type Gerald")
+        w.type("hydration", "type hydration")
         // Not the "Everything that says …" row, which opens a page of results.
-        w.tap(w.el(.button, "label CONTAINS %@ AND NOT (label CONTAINS %@)", "Gerald", "Everything"), "the post's row")
+        w.tap(w.el(.button, "label CONTAINS %@ AND NOT (label CONTAINS %@)", "hydration", "Everything"), "the post's row")
         w.gone(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), within: 5, "tray closed")
-        w.see(w.el(.staticText, "label CONTAINS %@", "Gerald"), "the post's sheet")
+        w.see(w.el(.staticText, "label CONTAINS %@", "hydration"), "the post's sheet")
         w.finish()
     }
 
@@ -103,10 +106,10 @@ final class JourneyTests: XCTestCase {
     /// reads "Tracking Hulu".
     @MainActor func testSubscription() {
         let w = Walk("subscription", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
-        // The plus on the count, not Start here's row of the same verb (the
-        // demo has tracked plans, so that row is gone) and not the count.
-        w.tap(w.visible(.button, "label == %@", "Track a subscription"), "Subscriptions plus")
+        // Day's header + (prd §1343): Library's Subscriptions count is
+        // deleted (§1612).
+        w.tap(w.visible(.button, "label == %@", "Add to Day"), "Day plus")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Track a subscription"), "Track a subscription")
         w.tap(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
         w.type("Hulu\n", "type Hulu, Return")
         w.focus(w.el(.textField, "placeholderValue == %@", "0"), "price field")
@@ -127,9 +130,11 @@ final class JourneyTests: XCTestCase {
     @MainActor func testWallet() {
         let w = Walk("wallet", launch: [], test: self)
         leaveDemo(w)
-        // "Follow an account": the Wallets count's plus, or the first box's row in
-        // the box while every count is zero (prd §1314). Both raise the tray.
-        w.tap(w.visible(.button, "label == %@", "Follow an account"), "Follow an account")
+        // "Follow an account" is the Wallet Home's (prd §1480); Library's box
+        // is deleted (§1612), and the Feed's ways in are gone once `connect`
+        // has added a calendar.
+        w.tap(w.el(.button, "label == %@", "Wallet"), "Wallet tab")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Follow an account"), "Follow an account")
         w.focus(w.el(.textField, "placeholderValue == %@", "An address or a name"), "address field")
         w.type("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "type an address")
         // The row names the address short ("...6045").
@@ -162,8 +167,11 @@ final class JourneyTests: XCTestCase {
     /// a tap tracks one. The demo's Gmail is the mail, so the plus draws.
     @MainActor func testMailList() {
         let w = Walk("maillist", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
-        w.tap(w.el(.button, "label == %@", "Track a mail list"), "Mail lists plus")
+        // Life's header + (prd §1300; Life holds Mail, §1231): Library's
+        // Mail lists count is deleted (§1612).
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Life, "), "Life tile")
+        w.tap(w.visible(.button, "label == %@", "Add to Life"), "Life plus")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Gmail"), "Gmail, a sender")
         // The demo's loudest sender with no list header.
         w.tap(w.el(.staticText, "label == %@", "Uma Patel"), "a sender who writes")
         w.see(w.el(.any, "label BEGINSWITH %@", "Tracking "), "sender tracked")
@@ -281,8 +289,11 @@ final class JourneyTests: XCTestCase {
     /// `-subscriptionTrack` as the walk's setup.
     @MainActor func testStopTracking() {
         let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
-        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
-        w.tap(w.visible(.button, "label CONTAINS %@", "Subscriptions"), "Subscriptions count")
+        // The Wallet's Spending lists Subscriptions (prd §1469, §1480);
+        // Library's count is deleted (§1612).
+        w.tap(w.el(.button, "label == %@", "Wallet"), "band Wallet")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Spending"), "Spending tile")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Subscriptions"), "Subscriptions row")
         // The row under the box is one element named for the plan (prd §1317).
         w.hold(w.visible(.any, "label == %@", "Hulu"), "hold Hulu")
         w.tap(w.visible(.button, "label == %@", "Stop tracking"), "Stop tracking")
@@ -600,7 +611,15 @@ final class JourneyTests: XCTestCase {
                 return false
             }
             for _ in 0..<Self.maxScrolls {
-                if e.frame.midY < window.minY + window.height * 0.25 {
+                // Past a row's side edge (the Feed's section tiles): swipe that
+                // row sideways, at its own height, as a finger would.
+                if e.frame.minX >= window.maxX || e.frame.maxX <= window.minX {
+                    let toLeft = e.frame.minX >= window.maxX
+                    let origin = app.coordinate(withNormalizedOffset: .zero)
+                    let from = origin.withOffset(CGVector(dx: window.width * (toLeft ? 0.85 : 0.15), dy: e.frame.midY))
+                    let to = origin.withOffset(CGVector(dx: window.width * (toLeft ? 0.15 : 0.85), dy: e.frame.midY))
+                    from.press(forDuration: 0.05, thenDragTo: to)
+                } else if e.frame.midY < window.minY + window.height * 0.25 {
                     app.swipeDown(velocity: .slow)
                 } else {
                     app.swipeUp(velocity: .slow)
