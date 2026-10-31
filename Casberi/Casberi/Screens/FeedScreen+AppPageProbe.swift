@@ -36,7 +36,9 @@ extension FeedScreen {
                 ? walletInertSections(visible: visible, upcoming: walletUpcoming(visible)) : []
             let shown = chrome.walletSection.flatMap { inert.contains($0) ? nil : $0 } ?? .home
             tile = shown.rawValue
-            if shown == .holdings {
+            // An app's page reports what it holds on every tile: an exchange
+            // lands no rows, so its holdings are its content (the sweep's rule).
+            if shown == .holdings || selectedSeat != nil {
                 held = walletScopeIsEmpty(.holdings) && walletSeatHeld(visible).isEmpty ? "empty" : "full"
             }
         }

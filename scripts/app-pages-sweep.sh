@@ -28,7 +28,10 @@ def choose(kind, target, lines):
     Feed: take the newest line naming the target, else the newest at all."""
     lines = [l for l in lines if l.strip()]
     if kind == "app":
-        mine = [l for l in lines if l.split("|")[0].strip() == target]
+        # A notes app opens Your notes narrowed to it (prd §1235 item 3):
+        # its line names the app as the pick, not the room.
+        mine = [l for l in lines if l.split("|")[0].strip() == target
+                or "pick=%s " % target in l + " "]
     else:
         app = target.split("|")[0]
         mine = [l for l in lines if l.split("|")[0].strip() == "Wallet" and "pick=%s " % app in l + " "]
@@ -42,7 +45,7 @@ def classify(kind, target, line):
     room = line.split("|")[0].strip()
     rows = int(f.get("rows", "0") or 0)
     if kind == "app":
-        if room != target:
+        if room != target and f.get("pick") != target:
             return "fail", f"landed on {room}, not {target}"
     else:
         app, tile = target.split("|")
@@ -50,6 +53,13 @@ def classify(kind, target, line):
             return "fail", "landed on %s · %s, not Wallet · %s" % (room, f.get("pick"), app)
         if f.get("held") == "empty":
             return "fail", "Holdings says nothing held"
+        # A balance-only app (an exchange) lands no feed row ever (its rows
+        # count 0 by design, `LiveRoomSources.landsNothing`): what it holds is
+        # its content, and its Activity and Spending stand dimmed, so the page
+        # shows Home instead (prd §1618 item 5).
+        if rows == 0 and f.get("held") == "full":
+            shown = f.get("tile")
+            return "ok", "holdings" + ("" if shown == tile else f" · {tile} dimmed, shows {shown}")
     if rows == 0:
         return "fail", "no rows"
     if rows < 3:
@@ -70,7 +80,14 @@ cases = [
     ("wallet", "Acorns|holdings", "Wallet | pick=Acorns | tile=holdings | rows=3 | held=empty", "fail"),
     ("wallet", "Wise|home", "Wallet | pick=- | tile=home | rows=80 | held=-", "fail"),
     ("wallet", "Peer|activity", "Wallet | pick=Peer | tile=activity | rows=0 | held=-", "fail"),
+    ("app", "Notion", "Your notes | pick=Notion | tile=- | rows=10 | held=-", "ok"),
+    ("app", "Notion", "Your notes | pick=Obsidian | tile=- | rows=10 | held=-", "fail"),
+    ("wallet", "Kraken|activity", "Wallet | pick=Kraken | tile=home | rows=0 | held=full", "ok"),
+    ("wallet", "Kraken|home", "Wallet | pick=Kraken | tile=home | rows=0 | held=-", "fail"),
 ]
+notes = ["All | pick=- | tile=- | rows=127 | held=-", "Your notes | pick=Day One | tile=- | rows=20 | held=-",
+         "All | pick=- | tile=- | rows=538 | held=-"]
+cases.append(("app", "Day One", choose("app", "Day One", notes), "ok"))
 # The newest line is another mounted page's (the Feed tab under GitHub's).
 mixed = ["All | pick=- | tile=- | rows=127 | held=-", "GitHub | pick=- | tile=- | rows=5 | held=-",
          "All | pick=- | tile=- | rows=538 | held=-"]
@@ -109,11 +126,19 @@ WAIT="${APP_PAGES_WAIT:-16}"
 # so a new app is swept the night it lands. The Wallet's apps open inside the
 # Wallet (its menu, prd §1048b) on each of four tiles; the Wallet itself and
 # Contacts (Social's page, §1612) are no app page.
-TARGETS=("${(@f)$(python3 - "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" <<'EOF'
+# Apple Intelligence and ETH Validators are in `LiveRoomSources.landsNothing`
+# and hold no money in the demo: no page to land on (Library pushes their own
+# screens), so they are not swept. The exchanges are in that set too, but
+# their balances make them a Wallet pick, so they stay.
+TARGETS=("${(@f)$(python3 - "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" "$ROOT/Casberi/Casberi/Model/LiveRoomSources.swift" <<'EOF'
 import re, sys
 s = open(sys.argv[1]).read()
+live = open(sys.argv[2]).read()
+nothing = set(re.findall(r'"([^"]+)"', re.search(r'landsNothing: Set<String> = \[(.*?)\]', live, re.S).group(1)))
 for name, group in re.findall(r'Offer\(name: "([^"]+)",\s*tagline: "[^"]*",\s*group: "([^"]+)"', s):
     if name in ("Wallet", "Contacts"):
+        continue
+    if name in nothing and name in ("Apple Intelligence", "ETH Validators"):
         continue
     if group == "Wallet":
         for tile in ("home", "holdings", "activity", "spending"):

@@ -1215,6 +1215,7 @@ struct FeedScreen: View {
                 // feed is empty at all.
                 if source == "All" { reconnectSection }
                 Group { emptyState }
+                    .background { appPageProbe(rows) }
                     .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -1229,6 +1230,7 @@ struct FeedScreen: View {
                 let logosSection = LogosSection.resolve(chrome.logosSection,
                                                         present: chrome.logosSections)
                 logosScopeChromeSection(logosSection)
+                    .background { appPageProbe(rows) }
                 if logosSection == .holdings {
                     logosHoldingsSection
                 } else {
@@ -1243,6 +1245,7 @@ struct FeedScreen: View {
                 let aztecSection = AztecSection.resolve(chrome.aztecSection,
                                                         present: chrome.aztecSections)
                 aztecScopeChromeSection(aztecSection)
+                    .background { appPageProbe(rows) }
                 if aztecSection == .node {
                     aztecRosterSection
                 } else if aztecSection == .holdings {
@@ -1294,6 +1297,7 @@ struct FeedScreen: View {
                 // screen each of those arms' notes describes. The corpus-shaped
                 // empty state is the honest floor.
                 Group { emptyState }
+                    .background { appPageProbe(rows) }
                     .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
