@@ -758,12 +758,18 @@ enum YourAccountChain {
         }
         await stage(.preparing)
         let keys = try await threshold(net, account)
-        var calls = (try? await sessionIds(net, account))?.map(YourAccount7579.removeSessionCall) ?? []
+        let sessions = try? await sessionIds(net, account)
+        var calls = sessions?.map(YourAccount7579.removeSessionCall) ?? []
         if keys < 2 {
             calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
                                             data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
         }
-        guard !calls.isEmpty else { return nil }
+        guard !calls.isEmpty else {
+            // Nothing to send, and the chain read no sessions: the plan this
+            // phone kept describes an allowance that is gone, so it goes too.
+            if sessions?.isEmpty == true { UserDefaults.standard.removeObject(forKey: planKey(net)) }
+            return nil
+        }
         let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
         let next = try YourAccountKey.nextKey(after: signerIndex)
         guard let nextKey = YourAccountKey.publicKey(next) else {

@@ -38,17 +38,12 @@ enum YourAccountSetup {
     }
 }
 
-/// **YOUR ACCOUNT'S THREE FIGURES FOR SECURITY'S BOX (prd §1462).** Read
-/// off this phone: the spend limit from the plan it saved (§1455), the
-/// round-ups from their setting (§1452), and the Signers as the LAST
+/// **YOUR ACCOUNT'S FIGURES FOR SECURITY'S BOX (prd §1462).** Read off
+/// this phone: the round-ups from their setting (§1452), and the Signers as the LAST
 /// READING `MoveSecurity` made of the networks' owners (§825's rule: a
 /// figure the chain gave once stands until it answers again), so the box
 /// never waits on a chain and never shows a zero it did not read.
 struct YourAccountFacts: Equatable {
-    /// Whole dollars a period; nil when off on every network.
-    var limitDollars: Int?
-    /// "month", "week" or "day".
-    var limitPeriod: String?
     /// Distinct Signers across the networks, as last read.
     var signers: Int
     /// Dollars each send rounds up to; nil when off.
@@ -60,17 +55,8 @@ struct YourAccountFacts: Equatable {
     static var current: YourAccountFacts? {
         if YourAccountDemo.isOn { return YourAccountDemo.facts }
         guard YourAccountKey.address != nil else { return nil }
-        var dollars: Int?
-        var period: String?
-        for net in YourAccountOp.networks {
-            guard let plan = YourAccountChain.plan(net), let n = Int(plan.dollarCap.dropLast(6)) else { continue }
-            dollars = n
-            period = MoveSecurity.LimitPeriod.of(seconds: plan.windows.first.map { $0.until - $0.from } ?? 0).word
-            break
-        }
         let setting = RoundUps.setting
-        return YourAccountFacts(limitDollars: dollars, limitPeriod: period,
-                                signers: signerCount(stored: UserDefaults.standard.integer(forKey: signersKey)),
+        return YourAccountFacts(signers: signerCount(stored: UserDefaults.standard.integer(forKey: signersKey)),
                                 roundUpStep: setting.on ? setting.step : nil,
                                 roundUpSymbol: setting.on ? setting.target.symbol : nil)
     }

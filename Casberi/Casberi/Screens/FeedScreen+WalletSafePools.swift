@@ -147,9 +147,10 @@ enum PrivacyPoolsReading {
 }
 
 /// **WITHOUT A SIGNATURE (prd §1614):** each Safe you hold a key to, and what
-/// can move it with nobody signing. Your account's spend limit is a module
-/// that spends without asking, so it is stated in money; a Safe with no
-/// module says None; a module on another Safe is red. A row opens the Safe.
+/// can move it with nobody signing. Your account says None, or names the
+/// networks where a retired spend limit's allowance still stands on chain,
+/// in red (prd §1570); unread, its row waits. A Safe with no module says
+/// None; a module on another Safe is red. A row opens the Safe.
 struct WalletUnsignedSection: View {
     var onOpenSafe: (SafeRoster.Safe) -> Void
     /// The queue's rows, so a signature landing re-reads whether the box is busy.
@@ -238,7 +239,7 @@ struct WalletUnsignedSection: View {
     @ViewBuilder
     private var rows: some View {
             ForEach(roster.safes) { safe in
-                let unsigned = SafeRoster.unsigned(safe)
+                if let unsigned = SafeRoster.unsigned(safe) {
                 Button {
                     DSHaptic.selection()
                     onOpenSafe(safe)
@@ -266,12 +267,12 @@ struct WalletUnsignedSection: View {
                 .dsHover()
                 .accessibilityLabel(Text(verbatim: "\(safe.name). \(unsigned.word)"))
                 .walletListRow()
+                }
             }
     }
 
     private func glyph(_ tone: SafeRoster.Tone) -> String {
         switch tone {
-        case .quiet: "gauge.with.dots.needle.33percent"
         case .confirm: "checkmark.shield"
         case .danger: "exclamationmark.shield"
         }
@@ -280,7 +281,6 @@ struct WalletUnsignedSection: View {
     /// A status word takes the ink, a glyph keeps the hue (§1004).
     private func ink(_ tone: SafeRoster.Tone, glyph: Bool) -> Color {
         switch tone {
-        case .quiet: DS.textSecondary
         case .confirm: glyph ? DS.confirm : DS.confirmInk
         case .danger: glyph ? DS.destructive : DS.destructiveInk
         }

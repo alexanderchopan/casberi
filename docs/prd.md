@@ -69964,3 +69964,15 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 2. **§829's clearance is the END of a page, not every resting position.** `DSDock.seatClearance` keeps a pushed page's last row clear of the back control's column; at rest, a long page's content runs under it, on What this app reaches as on every long pushed page. Clearing it everywhere would be a new rule for every page, so What this app reaches keeps the shared behaviour. Closes #294.
 
 **Mac half (§1402):** neither applies; the Mac has the rail and no floating back control.
+
+## §1631 — "Without a signature" reads your account's allowance off the chain, never the plan this phone saved (amends §1614 item 4, applies §1570, §83) (user, 2026-10-31: "safe room still shows a spend limit but we got rid of them")
+
+**Why.** §1614 item 4 stated your account's spend limit in money ("$100 a month", grey) two days after §1570 retired the allowance from the surface. The row read `YourAccountFacts.limitDollars`, which came from the plan this phone saved at Create or Security (`yourAccount.spendLimit.<chain>`), not from the chain. `requireCoSigner` removed that plan only when it sent an operation; a network where the threshold was already 2 and no session stood sent nothing and kept the plan, so the row went on naming an allowance that did not exist. The demo hard-coded the same $100.
+
+1. **Your account's row reads the chain**: `YourAccountChain.limitState` on every network at once (`SafeRosterReading.allowance`). None standing: "None" (confirm ink). One standing: "Allowance on Base" in red, the same tone as a module on another Safe, because it is money that moves without the co-signer and §1570's switch removes it. Several: "Allowance on N networks".
+2. **Unread says nothing.** A network that could not be read leaves your account's row out until it is read; it never says None over a network nobody asked.
+3. **A stale plan goes.** `requireCoSigner` with nothing to send removes the network's saved plan when the chain read no sessions.
+4. **Deleted from the model (§723):** `YourAccountFacts.limitDollars`/`limitPeriod`, `SafeRoster.limitWords`, `Tone.quiet`, the demo's $100. The demo's account says None.
+5. **Checks.** `safe-roster-selftest.sh`: one network, two networks, none, unread; a mutation reading unread as None is caught.
+
+**Not seen:** written in a session with no Xcode or simulator; nothing above was compiled. Build, then run `safe-roster-selftest.sh` and the Safe pick on the demo and on the account that showed "$100 a month". **Mac half (§1402):** the same section, nothing new drawn.

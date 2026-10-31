@@ -43,9 +43,12 @@ struct SafeRoster: Equatable {
         /// Yours first, then the others in the order the Safe lists them.
         let faces: [Face]
         let threshold: Int?
-        /// What can move it without a signature: your account's spend limit
-        /// as words ("$100 a month"), else nil.
-        let spendLimit: String?
+        /// Your account only: the networks where a spend limit's allowance
+        /// still stands ON CHAIN (`YourAccountChain.limitState`). §1570
+        /// retired the allowance, so this is a leftover to remove, never a
+        /// setting; [] where none stands, nil until read. Never the plan
+        /// this phone saved: that outlived the allowance it described.
+        let allowance: [String]?
         /// Modules enabled on it; never counted for your account, whose
         /// modules are its own send path and sign with your key.
         let modules: Int
@@ -116,26 +119,24 @@ struct SafeRoster: Equatable {
     }
 
     /// "Without a signature": what a Safe's row trails, and how loud.
-    enum Tone: Equatable { case quiet, confirm, danger }
+    enum Tone: Equatable { case confirm, danger }
 
-    static func unsigned(_ safe: Safe) -> (word: String, tone: Tone) {
+    /// Nil while your account's allowance is unread: the row says nothing
+    /// rather than None.
+    static func unsigned(_ safe: Safe) -> (word: String, tone: Tone)? {
         if safe.isYourAccount {
-            if let limit = safe.spendLimit { return (limit, .quiet) }
-            return (String(localized: "None"), .confirm)
+            guard let on = safe.allowance else { return nil }
+            switch on.count {
+            case 0: return (String(localized: "None"), .confirm)
+            case 1: return (String(localized: "Allowance on \(on[0])"), .danger)
+            default: return (String(localized: "Allowance on \(on.count) networks"), .danger)
+            }
         }
         switch safe.modules {
         case 0: return (String(localized: "None"), .confirm)
         case 1: return (String(localized: "1 module"), .danger)
         default: return (String(localized: "\(safe.modules) modules"), .danger)
         }
-    }
-
-    /// Your account's spend limit as the row's words.
-    static func limitWords(dollars: Int?, period: String?) -> String? {
-        guard let dollars, dollars > 0 else { return nil }
-        let money = "$\(dollars.formatted())"
-        guard let period else { return money }
-        return String(localized: "\(money) a \(period)")
     }
 
     // MARK: - The queue in the box

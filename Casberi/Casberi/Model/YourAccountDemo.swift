@@ -136,10 +136,9 @@ enum YourAccountDemo {
     /// The demo's round-ups: to the next $1, buying ETH on Base.
     static var roundUps: RoundUps.Setting { RoundUps.Setting(on: true, step: 1, target: .ethOnBase) }
 
-    /// Security's box (§1462): the demo's limit, Signer and round-ups.
+    /// Security's box (§1462): the demo's Signer and round-ups.
     static var facts: YourAccountFacts {
-        YourAccountFacts(limitDollars: 100, limitPeriod: MoveSecurity.LimitPeriod.month.word,
-                         signers: 1, roundUpStep: 1, roundUpSymbol: "ETH")
+        YourAccountFacts(signers: 1, roundUpStep: 1, roundUpSymbol: "ETH")
     }
 
     /// The demo's plan, for Your account's rows: $100 of each coin a month.
