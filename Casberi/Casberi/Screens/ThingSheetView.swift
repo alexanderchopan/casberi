@@ -1315,6 +1315,11 @@ struct ThingSheetView: View {
                     .padding(.top, DS.Space.s4)
             }
             .padding(.bottom, DS.Space.s6)
+            // Read what brought this row in HERE, on the stack that always
+            // draws, never on the From card: an empty card is no view, its
+            // task never ran, and since §1615's head took the app row the card
+            // was empty until the read it was waiting on (#321).
+            .task(id: thing.id) { readFrom() }
         }
         .scrollIndicators(.hidden)
         // Every head's title row reads the thing's name whole (prd §1258).
@@ -4421,12 +4426,15 @@ struct ThingSheetView: View {
         // Track is for a sender on none), so it is never dropped: a name the
         // head already says gives the row the kind's name instead.
         let list = mailListRead ? mailList : nil
-        let follow = fromFollow.flatMap { fresh($0.name) ? $0 : nil }
+        // The follow is the one way to its page from here (§736): a name the
+        // head already says (§1615's head names the source) gives the row its
+        // state for a title instead, as the mail list's does.
+        let follow = fromFollow
         Group {
             if follow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
                 SheetCard(name: String(localized: "From")) {
                     VStack(alignment: .leading, spacing: 0) {
-                        if let item = follow, let room = fromRoom { fromFollowRow(item, room) }
+                        if let item = follow, let room = fromRoom { fromFollowRow(item, room, named: fresh(item.name)) }
                         if let person { fromPersonRow(person) }
                         if let contact { fromContactRow(contact) }
                         if let wallet { fromWalletRow(wallet) }
@@ -4436,7 +4444,6 @@ struct ThingSheetView: View {
                 }
             }
         }
-        .task(id: thing.id) { readFrom() }
     }
 
     /// Every name the sheet's head already says, normalized: the title and
@@ -4516,11 +4523,11 @@ struct ThingSheetView: View {
         return AddressBook.shared.entry(for: address)
     }
 
-    private func fromFollowRow(_ item: Following.Item, _ room: Following.Room) -> some View {
+    private func fromFollowRow(_ item: Following.Item, _ room: Following.Room, named: Bool) -> some View {
         let state = room == .work ? String(localized: "Watching") : String(localized: "Following")
-        let line = [state, MailSubscriptions.cadenceWords(item.cadenceDays)].compactMap { $0 }
+        let line = [named ? state : nil, MailSubscriptions.cadenceWords(item.cadenceDays)].compactMap { $0 }
             .joined(separator: " · ")
-        return sourceDoor(title: item.name, line: line) {
+        return sourceDoor(title: named ? item.name : state, line: line) {
             faceTarget = .followed(item.id, room)
         } lead: {
             if let avatar = item.avatar, !avatar.isEmpty {
