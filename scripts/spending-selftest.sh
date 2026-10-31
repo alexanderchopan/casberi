@@ -90,6 +90,9 @@ check(spent([send("p", 12, at: 0, place: nil)]).isEmpty, "a send with no place t
 // place against the last window. ──────────────────────────────────────────
 var cal = Calendar(identifier: .gregorian)
 cal.timeZone = TimeZone(identifier: "UTC")!
+// Weeks start Monday, as the comments below count them (a bare Gregorian
+// calendar starts Sunday, which adds an empty day to the running line).
+cal.firstWeekday = 2
 // Thursday 2026-10-22 12:00 UTC.
 let now = Date(timeIntervalSince1970: 1_792_670_400)
 func day(_ n: Double) -> Date { now.addingTimeInterval(-n * 86_400) }
