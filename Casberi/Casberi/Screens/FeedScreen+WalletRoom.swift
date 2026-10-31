@@ -568,7 +568,9 @@ extension FeedScreen {
         let followed = wallet.addresses.filter { !Self.isYourAccount($0.address) }
         walletCard(String(localized: "Choose collections"), glyph: Self.nftGlyph) {
             if let own {
-                walletNFTChooseRow(address: own, name: String(localized: "You"))
+                // Named as Home names it (user, 2026-10-25: "should both say
+                // your account"; Home's door is the section's label, §1536).
+                walletNFTChooseRow(address: own, name: WalletSection.yourAccount.label)
             }
             ForEach(followed, id: \.address) { entry in
                 walletNFTChooseRow(address: entry.address, name: entry.label.isEmpty ? entry.short : entry.label)
