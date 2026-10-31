@@ -180,7 +180,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         if scrollsColumns, sections.count > 1 {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
-                    ForEach(sections) { section in
+                    // A–Z after Home here too (§995): this branch skipped the sort.
+                    ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
                         tile(section)
                             .containerRelativeFrame(.horizontal, count: Self.columns, spacing: DS.Space.s2)
                     }

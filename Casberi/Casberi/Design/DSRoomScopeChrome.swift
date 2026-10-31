@@ -128,7 +128,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
                         // 560pt column; Mail's shape is a row of 28pt chips,
                         // the pick in the pick's ink, the rest grey (§1385).
                         HStack(spacing: DS.Space.s2) {
-                            ForEach(sections) { section in
+                            ForEach(DSScopeTiles<Scope>.alphabetical(sections, verbs: [])) { section in
                                 Button {
                                     DSHaptic.selection()
                                     onPick(section)
