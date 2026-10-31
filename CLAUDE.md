@@ -63,7 +63,7 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 - `scripts/live-integrations.sh` stays **separate and warn-only** (keyless third-party
   liveness, always `exit 0`). Do not fold it in and do not add a keyed check to it.
 - Knobs: `--build-only`, `LAUNCH_CYCLES=0`, `SKIP_CATALYST=1`, `SKIP_MAC=1`, `SKIP_LIVE=1`,
-  `SKIP_LOGIC=1`, `VERIFY_NO_CACHE=1`.
+  `VERIFY_NO_CACHE=1`. (`SKIP_LOGIC=1` is verify-mac.sh's; verify.sh always runs the harnesses.)
 - **Read `$OUT/step-times.tsv` (slowest ten, printed by the EXIT trap) before aiming any
   work at this suite.** Three separate passes have found that "verifying is slow" was not
   the standard cost of good tests.
@@ -207,7 +207,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-subscriptionsCategory "<Category>"|Other` — with `-openRoom Wallet -openSection subscriptions`, press that tile on the Subscriptions tile's category map (prd §1112) once the tile has read (NSLogs `subscriptionsCategory:`); the map logs `subscriptionsMap| <Category> | <monthly> | <share>` per category (shares only under Hide balances), the measure of how much spend lands in Other (`subscription-categories-selftest.sh`)
 - `-roomScope "<room>|seat:<Name>"` — pick an app in a merged room's menu at launch (`chrome.mergedScope`; NSLogs `roomScope:`), the room sweep's door to every app pick, as `-walletScope` is the Wallet's (prd §1067)
 - `-sectionAdd "<Category>[|<App>]"` — log a Feed section's + rows (`sectionAdd|`) and take one (`Model/FollowByName.swift`) → prd §1300
-- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (Wallet's `subscriptions` is a page, no tile, §1232), Work's or Life's (`subscriptions`, prd §1111, §1231), or a Markets company pack by its category name (`Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
+- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (Wallet's `subscriptions` is a page, no tile, §1232), Work's or Life's (`subscriptions`, prd §1111, §1231) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - **Shares file by kind (`ShareHome`)** → prd §1200
@@ -260,7 +260,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The page is not clipped at rest and the bottom band paints no plate** (`dock-selftest.sh`) → docs/hooks/design.md · prd §677
 - **The dock's folder touches the dock, a face rail sits above it, and the band's scrim ramps over a fixed 24pt** → docs/hooks/design.md · prd §649
 - **The furnished demo is a MODE you enter and leave, not a dev-only seed** → docs/hooks/system.md · prd §217
-- `-findProbe` — fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
+- `-findProbe` — with `-openComposer YES` (it fires only once the composer is open), fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (its field and foot); -composerDraft "<text>" → docs/hooks/agent.md
 - `-openNote YES` — raise the note sheet at mount (prd §969, `Shell/NoteCaptureSheet.swift`; NSLogs `openNote:`); pair with `-openRoom "Your notes"` for the room (`Pinboard.room`, NOT the drawn word — "Notes" is a catalog category). Dismiss KEEPS a non-empty note under `You` → docs/hooks/system.md · prd §969
 - `-noteVoice YES` — land the note sheet RECORDING (prd §971–§973; pair with `-openNote YES`; NSLogs `noteVoice:`). The sheet's ONE wide key morphs Record (waveform) → Stop → check (keeping) or Done; Stop SETTLES the recognizer (≤1s) and keeps a `.voice` thing under `You` (audio in `Thing.audio` only); a call or a sheet closed another way keeps it; the `audio` background mode keeps a locked phone recording. The sim has no mic: a pass shows the band, never a transcript or a level → docs/hooks/system.md · prd §973 · §972 · §971
@@ -485,7 +485,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 ## Design law (read docs/build-brief.md §8 before UI work)
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
-- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The tab bar (Feed · Wallet · Library + Search, prd §1327, §1374; the Mac's rail, §1402) retired §100's "no tab bar" → docs/hooks/design.md
+- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The tab bar (Feed · Wallet · Move · Library · Search, prd §1422; the Mac's rail, §1402) retired §100's "no tab bar" → docs/hooks/design.md
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - **Every text rung is named for the size it draws, and a glyph takes a `DSGlyph` rung, never a number (prd §762).**
 - **One section rung (prd §1496): every section name and Wallet door is `heading24` with its glyph in the head column; a door has no line, its state is the figure's ink or one amber word; Your account is Keys and Spending in one-word rows; the second key is the Co-signer; `heading28` is the lede's alone** → prd §1496 → docs/hooks/design.md · prd §762
@@ -496,7 +496,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **No plates under ANY spelling (prd §782, user: "these plates").** `dsInkFill` is the floating layer's only. → docs/hooks/design.md · prd §782
 - **A room head draws NO PLATE (prd §758, supersedes §745's "one surface" and §757's "the head keeps its card").** `dsRoomHeadCard()` is `dsRoomHeadBlock()` and applies no `dsWidgetSurface`. → docs/hooks/design.md · prd §758
 - **The wallet family's rows stand on NOTHING (prd §757).** → docs/hooks/design.md · prd §757
-- **Wallet and Logos take every room's anatomy: box · tiles · account menu · list (prd §1039, amends §750).** The Overview rows (`DSScopeRows`) and the Actions block are deleted; four tiles each and the verbs are rows (§1107, §1108); the Activity and Accounts tiles are gone — Home's list IS the activity, only what happened; what's ahead is the Wallet's Coming up tile, soonest first (`walletComingUpSections`, §1041) → prd §1039 · §1041 · §750
+- **Wallet and Logos take every room's anatomy: box · tiles · account menu · list (prd §1039, amends §750); the Wallet's tiles are §1480's Home · Activity · Holdings · Spending, doors on Home.** The Overview rows and the Actions block are deleted; verbs are rows (§1107, §1108) → prd §1480 · §1039 · §750
 - **The room's faces ride the dock folder's capsule, after the venues, and draw no words (prd §753).** → docs/hooks/design.md · prd §753
 - **That capsule always LEADS with the room you are standing in (prd §754).** Shut, the folder draws one seat. → docs/hooks/design.md · prd §754
 - **Every room's lead is `DSRoomChassis.leadHeight`, the wallet head's card, and nothing in it is air it could honestly fill (prd §760).** → docs/hooks/design.md · prd §760
