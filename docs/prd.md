@@ -69957,3 +69957,10 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 6. **The heartbeat** (`live-integrations.sh`) reads the chain path red and web3.bio's stale answer amber.
 
 **Not done:** ENSIP-15 normalization (a name is lowercased and trimmed only, so a name it would rewrite misses rather than lands wrong); following CCIP gateways ourselves. **Mac half (§1402):** the same code, nothing drawn changes.
+
+## §1630 — The composer's close stays top-left; a long pushed page scrolls under the back control at rest (amends §752, reads §829) (user, 2026-10-31: "ok", of two recommendations from the nightly's open issues)
+
+1. **The composer is a full-screen modal, and its close is the system's: top-left.** §752 ("no controls at the top of the screen") governs pages and rooms, where a picker, scope or back control belongs in the content or the bottom band. A full-screen modal is left by its own close, where iOS puts it; the composer keeps its chevron top-left. Closes #319.
+2. **§829's clearance is the END of a page, not every resting position.** `DSDock.seatClearance` keeps a pushed page's last row clear of the back control's column; at rest, a long page's content runs under it, on What this app reaches as on every long pushed page. Clearing it everywhere would be a new rule for every page, so What this app reaches keeps the shared behaviour. Closes #294.
+
+**Mac half (§1402):** neither applies; the Mac has the rail and no floating back control.
