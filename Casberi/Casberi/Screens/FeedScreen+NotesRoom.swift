@@ -208,7 +208,10 @@ extension FeedScreen {
                           fact: Text(verbatim: "\(vaults[name] ?? 0)"),
                           opens: false,
                           action: { openFolder(Pinboard.vaultPrefix + name) }) {
-                    BridgeIcon(name: "Obsidian", size: DS.Face.seat)
+                    // A row's lead is 30pt (prd §744), centred in the folders'
+                    // 46pt column: at the column's size the vault's tiles
+                    // filled their rows and touched.
+                    BridgeIcon(name: "Obsidian", size: DS.Mark.row)
                         .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
