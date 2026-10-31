@@ -843,6 +843,42 @@ extension FeedScreen {
     /// consistently, and `filter.tag` — the one input that moves it between
     /// them — is part of the key.
     func chronoDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
+        let days = chronoPastDays(roomThings)
+        // **A CALENDAR'S ROOM SHOWS WHAT IS AHEAD (user, 2026-10-31: "Yes, show
+        // upcoming").** `dayGroups` drops future days because a feed reads
+        // from today back and Home's Coming up lane held the rest (2026-07-19);
+        // that lane is gone (§1154), so a room of bookings still to come drew
+        // nothing at all (Cal.com, Calendly: a black page). Calendar, Cal.com
+        // and Calendly read as a calendar does: Today, then each day ahead
+        // under its own day word, soonest first, five weeks out (the Wallet's
+        // window, §1105), then the days behind. A row draws its time only,
+        // so a day ahead needs its own header.
+        guard shape == .calendar else { return days }
+        let ahead = Self.comingUp(roomThings)
+        guard !ahead.isEmpty else { return days }
+        var order: [String] = []
+        var byDay: [String: [Thing]] = [:]
+        for t in ahead {
+            let word = dayLabel(t.capturedAt)
+            if byDay[word] == nil { order.append(word) }
+            byDay[word, default: []].append(t)
+        }
+        let aheadDays = order.map { ($0, byDay[$0] ?? []) }
+        let today = String(localized: "Today")
+        guard let first = days.first, first.0 == today else { return aheadDays + days }
+        return [first] + aheadDays + days.dropFirst()
+    }
+
+    /// What starts after today, soonest first, within five weeks.
+    static func comingUp(_ things: [Thing], now: Date = .now) -> [Thing] {
+        let cal = groupingCalendar
+        guard let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now)),
+              let horizon = cal.date(byAdding: .day, value: 35, to: tomorrow) else { return [] }
+        return things.filter { $0.isLive && $0.capturedAt >= tomorrow && $0.capturedAt < horizon }
+            .sorted { $0.capturedAt < $1.capturedAt }
+    }
+
+    private func chronoPastDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
         let key = derivationKey(roomThings)
         // A section of the Feed's scroll memoises apart, so the Feed's own
         // derivation and every other section keep theirs (prd §1208).
