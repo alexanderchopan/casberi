@@ -156,6 +156,13 @@ struct RoomsTray: View {
             // panel alone, VoiceOver skipped the field beside it.
             .accessibilityAddTraits(chrome.roomsTray ? .isModal : [])
             .accessibilityAction(.escape) { close() }
+            // **SHUT, THE LAYER IS NOT THERE (2026-10-31).** The escape action
+            // makes this full-screen frame an accessibility element even
+            // with nothing in it: from §1589 on it stood over the whole app
+            // for VoiceOver and XCUITest ("found but not hittable" on every
+            // journey and sheet sweep). `allowsHitTesting` lets touches
+            // through; this lets accessibility through.
+            .accessibilityHidden(!chrome.roomsTray)
         }
         .allowsHitTesting(chrome.roomsTray)
         .animation(liftMotion, value: chrome.roomsTray)
