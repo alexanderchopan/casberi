@@ -319,7 +319,12 @@ enum DemoMode {
         let head = (try? context.fetch(newest))?.first
         let stale = head.map { head in
             (head.sourceRef.map { ref in DemoSeedAll.refPrefixes.contains(where: ref.hasPrefix) } ?? false)
-                && Date.now.timeIntervalSince(head.capturedAt) > staleAfter
+                && (Date.now.timeIntervalSince(head.capturedAt) > staleAfter
+                    // Past midnight the newest row is yesterday's, however
+                    // recent: a demo poured at 23:30 and opened at 00:58 read
+                    // "fresh" by the clock while Home's Today stood empty
+                    // (verify's All-room gate, #292).
+                    || !Calendar.current.isDateInToday(head.capturedAt))
         } ?? false
         guard tableChanged || stale else { return }
 
