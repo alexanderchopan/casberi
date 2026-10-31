@@ -109,9 +109,9 @@ def quiet_builds():
 
 
 DRAW = {
-    "tgchan-crimpchalk": crimp_chalk,
-    "tgchan-tram28notes": tram_28_notes,
-    "tgchan-quietbuilds": quiet_builds,
+    "avatar-crimpchalk": crimp_chalk,
+    "avatar-tram28notes": tram_28_notes,
+    "avatar-quietbuilds": quiet_builds,
     "privy-tidepool": tidepool,
     "privy-lantern": lantern,
     "privy-kitebox": kitebox,

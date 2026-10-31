@@ -2212,6 +2212,13 @@ enum DemoSeedAll {
     /// Each demo chat's face: a group's is a member's (Sam), Flat
     /// admin's is Priya's (`make-demo-avatars.swift`).
     private static let telegramChatFace = ["Climbing crew": "sam", "Flat admin": "priya"]
+    /// Each demo channel's drawn mark (`fam_mark.py`), spelled whole so
+    /// `demo-picture-audit.py` can see the seed names every picture it draws.
+    private static let telegramChannelMark = [
+        "crimpchalk": "sample:avatar-crimpchalk",
+        "tram28notes": "sample:avatar-tram28notes",
+        "quietbuilds": "sample:avatar-quietbuilds",
+    ]
 
     private static func telegram() -> [Thing] {
         var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", days: 9)]
@@ -2237,7 +2244,7 @@ enum DemoSeedAll {
                 content: "https://t.me/\(p.0)/\(1200 + i)",
                 tags: p.4 ? ["Photo"] : []) { t in
                 t.authorHandle = p.2
-                t.authorAvatarURL = avatarArt(p.0)
+                t.authorAvatarURL = Self.telegramChannelMark[p.0]
                 if !p.1.isEmpty { t.postText = p.1 }
                 if p.4 { t.previewImageData = pixels("tg-\(i)") }
             }

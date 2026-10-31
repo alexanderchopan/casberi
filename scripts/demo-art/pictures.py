@@ -261,7 +261,7 @@ for slug, name in (("tidepool", "Tidepool"), ("lantern", "Lantern"), ("kitebox",
 # ── Telegram: the demo's channels (DemoSeedAll.telegram) ──────────────────
 # Made-up channels, so their avatars are drawn marks, never a real channel's.
 for slug, name in (("crimpchalk", "Crimp & Chalk"), ("tram28notes", "Tram 28 Notes"), ("quietbuilds", "Quiet Builds")):
-    pic(f"tgchan-{slug}", "mark", (180, 180), f"Channel avatar for the made-up Telegram channel {name}: a rounded square, one motif, no words", scale=1, asset=f"sample-avatar-{slug}")
+    pic(f"avatar-{slug}", "mark", (180, 180), f"Channel avatar for the made-up Telegram channel {name}: a rounded square, one motif, no words", scale=1, asset=f"sample-avatar-{slug}")
 
 PICTURES = P
 
