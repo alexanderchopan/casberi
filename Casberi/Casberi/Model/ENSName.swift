@@ -424,3 +424,127 @@ enum ENSName {
         Calendar.current.date(byAdding: .day, value: days, to: date)
     }
 }
+
+// MARK: - Forward resolution through ENS's own Universal Resolver (prd §1629)
+
+extension ENSName {
+
+    /// **A name's address, read on chain (prd §1629, amends §1573 item 2).**
+    /// §1573 made web3.bio the only resolver because it answered ENS's test
+    /// name `ur.integration-tests.eth` with the current `0x2222…`. By
+    /// 2026-10-29 it answered `0x1111…`, the outdated-resolver answer (the
+    /// nightly's red row, three nights running), so every name moved to
+    /// ENSv2 would be named at a stale address. ENS's Universal Resolver,
+    /// asked through the Ethereum nodes the `.wei` names already use, answered
+    /// `0x2222…` and vitalik's measured address the same day. A gateway name
+    /// (Basenames, Linea, `cb.id`) makes it revert with `OffchainLookup`, and
+    /// only those still go to web3.bio.
+    enum Universal {
+        /// The Universal Resolver's proxy on mainnet, ENS's own address for it.
+        static let address = "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe"
+
+        /// `resolve(bytes,bytes)`.
+        static let resolveSelector: [UInt8] = [0x90, 0x61, 0xb9, 0x23]
+        /// `addr(bytes32)`, the ETH address record.
+        static let addrSelector: [UInt8] = [0x3b, 0x3b, 0x57, 0xde]
+        /// `OffchainLookup(address,string[],bytes,bytes4,bytes)` — the name
+        /// answers through a gateway (EIP-3668), which this read does not follow.
+        static let offchainLookup = "556f1830"
+
+        enum Answer: Equatable {
+            case address(String)
+            /// The chain answered: no resolver, no record, or the zero address.
+            case noAddress
+            /// A gateway name: ask web3.bio, which follows gateways.
+            case offchain
+            /// No node gave an answer worth believing.
+            case unreadable
+        }
+
+        static func namehash(_ name: String) -> [UInt8] {
+            var node = [UInt8](repeating: 0, count: 32)
+            for label in name.split(separator: ".", omittingEmptySubsequences: false).reversed() {
+                node = Keccak256.hash(node + Keccak256.hash(Array(label.utf8)))
+            }
+            return node
+        }
+
+        /// DNS wire format (`\x07vitalik\x03eth\x00`); nil for an empty label
+        /// or one longer than a length byte can say.
+        static func dnsEncoded(_ name: String) -> [UInt8]? {
+            var out: [UInt8] = []
+            for label in name.split(separator: ".", omittingEmptySubsequences: false) {
+                let bytes = Array(label.utf8)
+                guard !bytes.isEmpty, bytes.count <= 255 else { return nil }
+                out.append(UInt8(bytes.count))
+                out += bytes
+            }
+            return out + [0]
+        }
+
+        /// `resolve(dnsName, addr(namehash))` as `eth_call` data. The name is
+        /// lowercased and trimmed, nothing more: ENSIP-15's full normalization
+        /// is not here, so a name it would rewrite misses rather than lands
+        /// somewhere wrong.
+        static func calldata(for raw: String) -> String? {
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard name.contains("."), let dns = dnsEncoded(name) else { return nil }
+            let inner = addrSelector + namehash(name)
+            var body = word(64) + word(64 + 32 + padded(dns).count)
+            body += word(dns.count) + padded(dns)
+            body += word(inner.count) + padded(inner)
+            return "0x" + Keccak256.hexString(resolveSelector + body)
+        }
+
+        /// The call's return, `(bytes result, address resolver)`, read to the
+        /// address inside `result`.
+        static func answer(result hex: String) -> Answer {
+            guard let b = bytes(hex), b.count >= 96,
+                  let offset = int(b, at: 0), offset + 32 <= b.count,
+                  let length = int(b, at: offset), length >= 32,
+                  offset + 32 + length <= b.count
+            else { return .unreadable }
+            let record = Array(b[(offset + 32)..<(offset + 64)])
+            guard record[0..<12].allSatisfy({ $0 == 0 }) else { return .unreadable }
+            let address = Array(record[12..<32])
+            if address.allSatisfy({ $0 == 0 }) { return .noAddress }
+            return .address("0x" + Keccak256.hexString(address))
+        }
+
+        /// A revert's data: a gateway name, or the chain saying there is no
+        /// address (`ResolverNotFound`, `ResolverError`, …).
+        static func answer(revertData hex: String?) -> Answer {
+            guard let hex, let b = bytes(hex), b.count >= 4 else { return .unreadable }
+            return Keccak256.hexString(Array(b[0..<4])) == offchainLookup ? .offchain : .noAddress
+        }
+
+        private static func word(_ n: Int) -> [UInt8] {
+            (0..<32).map { i in i < 24 ? 0 : UInt8(truncatingIfNeeded: n >> ((31 - i) * 8)) }
+        }
+
+        private static func padded(_ b: [UInt8]) -> [UInt8] {
+            b + [UInt8](repeating: 0, count: (32 - b.count % 32) % 32)
+        }
+
+        private static func int(_ b: [UInt8], at i: Int) -> Int? {
+            guard i >= 0, i + 32 <= b.count, b[i..<(i + 24)].allSatisfy({ $0 == 0 }) else { return nil }
+            return b[(i + 24)..<(i + 32)].reduce(0) { $0 << 8 | Int($1) }
+        }
+
+        private static func bytes(_ hex: String) -> [UInt8]? {
+            var s = Substring(hex.lowercased())
+            if s.hasPrefix("0x") { s = s.dropFirst(2) }
+            guard s.count % 2 == 0 else { return nil }
+            var out: [UInt8] = []
+            out.reserveCapacity(s.count / 2)
+            var i = s.startIndex
+            while i < s.endIndex {
+                let j = s.index(i, offsetBy: 2)
+                guard let v = UInt8(s[i..<j], radix: 16) else { return nil }
+                out.append(v)
+                i = j
+            }
+            return out
+        }
+    }
+}

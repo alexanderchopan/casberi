@@ -333,7 +333,11 @@ struct AddressesSection: View {
                             identities: identities, avatar: records.compactMap(\.avatar).first)
         }
         guard case .records(let records) = await Web3Bio.lookup(q), !records.isEmpty else { return nil }
-        let address = Web3Bio.forwardAddress(records, for: q)
+        // An ENS name's address is the chain's, never web3.bio's (prd §1629):
+        // web3.bio named ENSv2 names at their outdated address.
+        let address = NameResolve.family(of: q) == .ens
+            ? await ENS.resolve(q)
+            : Web3Bio.forwardAddress(records, for: q)
         var identities: [Identity] = []
         if let address, ENS.isHexAddress(address) {
             identities.append(Identity.make(.wallet, address))

@@ -1033,7 +1033,7 @@ check("an id Walletbeat spells its own way resolves",
 
 // A wallet Walletbeat does not rate is the COMMON answer here and must be silent.
 check("a wallet Walletbeat does not rate resolves to nothing",
-      WalletbeatMatch.walletID(forAppNamed: "Trust Wallet", in: real) == nil)
+      WalletbeatMatch.walletID(forAppNamed: "Exodus", in: real) == nil)
 check("a near-miss is not a match",
       WalletbeatMatch.walletID(forAppNamed: "Rabby Points", in: real) == nil)
 
@@ -1052,12 +1052,14 @@ let t0 = Date(timeIntervalSince1970: 1_000_000)
 let apps: [(name: String, seenAt: Date)] = [
     (name: "Rabby", seenAt: t0),
     (name: "MetaMask", seenAt: t0.addingTimeInterval(600)),
-    (name: "Trust Wallet", seenAt: t0.addingTimeInterval(900)),
+    // Exodus, not Trust Wallet: Walletbeat rates Trust since its 2026-10-31
+    // snapshot, which turned four of these checks red.
+    (name: "Exodus", seenAt: t0.addingTimeInterval(900)),
 ]
 check("the most recent handshake leads",
       WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real) == ["metamask", "rabby"])
 check("a wallet Walletbeat does not rate is not offered",
-      WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real).contains("trust") == false)
+      WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real).contains("exodus") == false)
 check("a wallet already followed is not offered",
       WalletbeatMatch.suggestions(apps: apps, watched: ["metamask"], entries: real) == ["rabby"])
 check("nothing to offer is an empty list, not a nil",

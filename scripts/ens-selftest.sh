@@ -396,6 +396,33 @@ check("a name registered after activation keeps its date",
           ["trait_type": "Registration Date", "value": 1_793_100_000_000.0]]])?.registered
         == Date(timeIntervalSince1970: 1_793_100_000))
 
+
+// --- the Universal Resolver read (prd §1629) --------------------------------
+// Vectors are mainnet's own answers, measured 2026-10-31 through
+// ethereum-rpc.publicnode.com and rpc.mevblocker.io.
+print("Universal Resolver")
+let U = ENSName.Universal.self
+check("vitalik.eth's namehash", Keccak256.hexString(U.namehash("vitalik.eth"))
+      == "ee6c4522aab0003e8d14cd40a6af439055fd2577951148c14b6cea9a53475835")
+check("DNS wire format", U.dnsEncoded("vitalik.eth") == [7] + Array("vitalik".utf8) + [3] + Array("eth".utf8) + [0])
+check("an empty label is refused", U.dnsEncoded("vitalik..eth") == nil)
+check("resolve(bytes,bytes) carrying addr(namehash), byte for byte", U.calldata(for: "Vitalik.ETH ")
+      == "0x9061b92300000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000d07766974616c696b03657468000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000243b3b57deee6c4522aab0003e8d14cd40a6af439055fd2577951148c14b6cea9a5347583500000000000000000000000000000000000000000000000000000000")
+check("a dotless string asks nothing", U.calldata(for: "vitalik") == nil)
+let urtResult = "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000" + "1c7b2739aaa9ea0fc79deb45e0bb25a1fbb058df" + "0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000" + "2222222222222222222222222222222222222222"
+check("ur.integration-tests.eth reads 0x2222…, ENSv2's answer", U.answer(result: urtResult)
+      == .address("0x2222222222222222222222222222222222222222"))
+let vitalikResult = "0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000" + "394d8eb4a4fdf599384deab25f31d111d755c398" + "0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000" + "d8da6bf26964af9d7eed9e03e53415d37aa96045"
+check("vitalik.eth reads the measured address", U.answer(result: vitalikResult)
+      == .address("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"))
+check("a zero record is no address", U.answer(result: String(urtResult.dropLast(40)) + String(repeating: "0", count: 40)) == .noAddress)
+check("a short return is unreadable", U.answer(result: "0x") == .unreadable)
+check("OffchainLookup (jesse.base.eth) goes to the gateway reader",
+      U.answer(revertData: "0x556f1830000000000000000000000000eeeeeeee14d718c2b47d9923deab1335e144eeee") == .offchain)
+check("ResolverNotFound (an unregistered name) is no address",
+      U.answer(revertData: "0x77209fe80000000000000000000000000000000000000000000000000000000000000020") == .noAddress)
+check("a revert with no data is unreadable", U.answer(revertData: nil) == .unreadable)
+
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
@@ -538,6 +565,22 @@ mutate "the migration bonus counts as a renewal" \
 mutate "a re-stamped registration date kept" \
   'registered: date("Registration Date").flatMap { isReservationStamp($0) ? nil : $0 },' \
   'registered: date("Registration Date"),'
+
+# 16. The resolver's own address read back as the name's — every name
+#     would watch ENS's resolver contract (prd §1629).
+mutate "the resolver word read as the record" \
+  'let record = Array(b[(offset + 32)..<(offset + 64)])' \
+  'let record = Array(b[32..<64])'
+
+# 17. A gateway name treated as having no address — Basenames stop resolving.
+mutate "OffchainLookup read as no address" \
+  'return Keccak256.hexString(Array(b[0..<4])) == offchainLookup ? .offchain : .noAddress' \
+  'return .noAddress'
+
+# 18. The zero address believed — an unset record followed as a wallet.
+mutate "the zero address believed" \
+  'if address.allSatisfy({ $0 == 0 }) { return .noAddress }' \
+  ''
 
 echo
 echo "✓ ens-selftest passed"

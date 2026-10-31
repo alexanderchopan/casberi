@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1764 of 1836 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1765 of 1837 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1953,7 +1953,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628)
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578)
-- §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS
+- §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS (amended by §1629)
 - §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157… (amended by §1578)
 - §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape) (amended by §1577)
 - §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week
@@ -2010,6 +2010,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1626 — Grok signs in on grok.com and answers in your own Grok, on the loop ChatGPT and Claude share; its page drops the key
 - §1627 — Gemini signs in with Google and answers in your own Gemini, read off its page; its page drops the key and the Takeout…
 - §1628 — The co-signer is a rule the contract keeps, not one the app keeps: the recovery key leaves the account's owners while…
+- §1629 — ENS names resolve on chain through ENS's own Universal Resolver; web3.bio keeps gateway names, reverse names and avatars
 
 ## Dead rulings → what replaced them (generated)
 

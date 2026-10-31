@@ -12,7 +12,7 @@ import Foundation
 
 enum WalletbeatDirectory {
 	/// The day this snapshot was taken from beta.walletbeat.eth.limo.
-	static let generated = "2026-10-23"
+	static let generated = "2026-10-31"
 
 	static let wallets: [WalletbeatEntry] = [
 		WalletbeatEntry(
@@ -21,7 +21,7 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["browser"],
 			stage: "Stage 0",
-			updated: "2026-07-22",
+			updated: "2026-10-08",
 			counts: [.security: WalletbeatCounts(pass: 1, partial: 3, fail: 3, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 2, fail: 3, unrated: 0, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 3, partial: 0, fail: 2, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 3, partial: 2, fail: 0, unrated: 0, exempt: 0), .ecosystem: WalletbeatCounts(pass: 4, partial: 2, fail: 0, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
@@ -286,6 +286,15 @@ enum WalletbeatDirectory {
 			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 4, exempt: 0), .maintenance: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 1, exempt: 0)]
 		),
 		WalletbeatEntry(
+			id: "trust-wallet",
+			name: "Trust Wallet",
+			hardware: false,
+			variants: ["mobile", "browser"],
+			stage: "QUALIFIED_FOR_NO_STAGES",
+			updated: "2026-10-18",
+			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 6, exempt: 0)]
+		),
+		WalletbeatEntry(
 			id: "uniswap-wallet",
 			name: "Uniswap Wallet",
 			hardware: false,
@@ -330,12 +339,12 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "accountRecovery", dimension: .security, name: "Account recovery", question: "How easy does the wallet make it to recover your account?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "duressResistance", dimension: .security, name: "Duress resistance", question: "Does Ledger Wallet protect users from being physically coerced into surrendering their funds?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "firmware", dimension: .security, name: "Firmware", question: "Does Ledger Wallet have secure and open firmware?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
-			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security Audits & Bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
-			WalletbeatAttribute(id: "supplyChainFactory", dimension: .security, name: "Supply Chain Factory", question: "Does Ledger Wallet have a secure and transparent factory supply chain?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
+			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security audits & bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
+			WalletbeatAttribute(id: "supplyChainFactory", dimension: .security, name: "Supply chain factory", question: "Does Ledger Wallet have a secure and transparent factory supply chain?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "transactionLegibility", dimension: .security, name: "Transaction legibility", question: "When signing a transaction, does the wallet show transaction details clearly?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
-			WalletbeatAttribute(id: "userSafety", dimension: .security, name: "User Safety", question: "Does Ledger Wallet provide comprehensive user safety features?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
+			WalletbeatAttribute(id: "userSafety", dimension: .security, name: "User safety", question: "Does Ledger Wallet provide comprehensive user safety features?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "addressCorrelation", dimension: .privacy, name: "Wallet address privacy", question: "Is your wallet address linkable to other information about yourself?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
-			WalletbeatAttribute(id: "hardwarePrivacy", dimension: .privacy, name: "Hardware Privacy", question: "Does Ledger Wallet protect user privacy at the hardware level?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
+			WalletbeatAttribute(id: "hardwarePrivacy", dimension: .privacy, name: "Hardware privacy", question: "Does Ledger Wallet protect user privacy at the hardware level?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "multiAddressCorrelation", dimension: .privacy, name: "Multi-address privacy", question: "Can your multiple wallet addresses be correlated with one another?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "privateTransfers", dimension: .privacy, name: "Private token transfers", question: "Can you send and receive tokens without revealing your transaction history to others?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "accountPortability", dimension: .selfSovereignty, name: "Account portability", question: "Are you locked into this wallet? Or can you permissionlessly import your Ethereum account into another wallet?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
@@ -359,7 +368,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "duressResistance", dimension: .security, name: "Duress resistance", question: "Does MetaMask protect users from being physically coerced into surrendering their funds?", verdict: .partial, explanation: "MetaMask has a lock screen (password and biometric (Face ID / fingerprint)) but no duress mode."),
 			WalletbeatAttribute(id: "hardwareWalletSupport", dimension: .security, name: "Hardware wallet support", question: "Does the wallet support connecting to hardware wallets?", verdict: .pass, explanation: "MetaMask supports hardware wallets."),
 			WalletbeatAttribute(id: "scamPrevention", dimension: .security, name: "Scam prevention", question: "Does the wallet warn the user about potential scams?", verdict: .partial, explanation: "MetaMask warns the user about outgoing transactions to unknown addresses, transactions with potential scam contracts, and connections to potential scam applications but not about transactions that grant unlimited token approvals"),
-			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security Audits & Bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .partial, explanation: "The most recent security audit for MetaMask is over a year old."),
+			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security audits & bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .partial, explanation: "The most recent security audit for MetaMask is over a year old."),
 			WalletbeatAttribute(id: "securityBestPractices", dimension: .security, name: "Security best practices", question: "Does MetaMask follow security best practices for key storage, random number generation, deployment hardening, and passkey verification?", verdict: .fail, explanation: "MetaMask requests high-risk OS permissions that are not necessary for a wallet."),
 			WalletbeatAttribute(id: "transactionLegibility", dimension: .security, name: "Transaction legibility", question: "When signing a transaction, does the wallet show transaction details clearly?", verdict: .partial, explanation: "MetaMask supports partial transaction legibility."),
 			WalletbeatAttribute(id: "addressCorrelation", dimension: .privacy, name: "Wallet address privacy", question: "Is your wallet address linkable to other information about yourself?", verdict: .partial, explanation: "MetaMask allows Consensys to link your wallet address with your IP."),
@@ -390,7 +399,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "duressResistance", dimension: .security, name: "Duress resistance", question: "Does Rabby protect users from being physically coerced into surrendering their funds?", verdict: .partial, explanation: "Rabby has a lock screen (password and biometric (Face ID / fingerprint)) but no duress mode."),
 			WalletbeatAttribute(id: "hardwareWalletSupport", dimension: .security, name: "Hardware wallet support", question: "Does the wallet support connecting to hardware wallets?", verdict: .pass, explanation: "Rabby supports hardware wallets."),
 			WalletbeatAttribute(id: "scamPrevention", dimension: .security, name: "Scam prevention", question: "Does the wallet warn the user about potential scams?", verdict: .fail, explanation: "Rabby warns you about potential scams, but leaks your browsed websites in the process."),
-			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security Audits & Bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .fail, explanation: "The most recent security audit for Rabby is over a year old and some security flaws remain."),
+			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security audits & bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .fail, explanation: "The most recent security audit for Rabby is over a year old and some security flaws remain."),
 			WalletbeatAttribute(id: "securityBestPractices", dimension: .security, name: "Security best practices", question: "Does Rabby follow security best practices for key storage, random number generation, deployment hardening, and passkey verification?", verdict: .fail, explanation: "Rabby requests high-risk OS permissions that are not necessary for a wallet."),
 			WalletbeatAttribute(id: "transactionLegibility", dimension: .security, name: "Transaction legibility", question: "When signing a transaction, does the wallet show transaction details clearly?", verdict: .partial, explanation: "Rabby supports partial transaction legibility."),
 			WalletbeatAttribute(id: "addressCorrelation", dimension: .privacy, name: "Wallet address privacy", question: "Is your wallet address linkable to other information about yourself?", verdict: .partial, explanation: "Rabby allows DeBank to link your wallet address with your IP."),

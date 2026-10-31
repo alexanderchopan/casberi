@@ -494,16 +494,41 @@ else
   fail "web3.bio — /ns/vitalik.eth answered in a shape the app does not parse: $(print -r -- "$w3b" | cut -c1-80)"
 fi
 # ENSv2 (prd §1573): ENS's own integration name answers 0x2222… through the v2
-# Universal Resolver and 0x1111… through an outdated one. A resolver that
-# answers the old one names a stale address for every name moved to v2.
+# Universal Resolver and 0x1111… through an outdated one. web3.bio answered the
+# old one from 2026-10-29, so ENS names resolve ON CHAIN since prd §1629 and
+# web3.bio keeps only gateway names (Basenames, Linea) and reverse names, which
+# the chain verifies. Its stale answer is amber now; the chain's is red.
 urt=$(curl -s --max-time "$TIMEOUT" "https://api.web3.bio/ns/ens/ur.integration-tests.eth" 2>/dev/null)
 if [[ -z "$urt" ]]; then
   warn "web3.bio — ur.integration-tests.eth did not answer"
 elif [[ "$urt" == *'0x2222222222222222222222222222222222222222'* ]]; then
   pass "web3.bio — resolves through ENSv2 (ur.integration-tests.eth → 0x2222…)"
 else
-  fail "web3.bio — ur.integration-tests.eth did not answer 0x2222…; its ENS resolver is outdated: $(print -r -- "$urt" | cut -c1-80)"
+  warn "web3.bio — still answers ur.integration-tests.eth with an outdated address; ENS names resolve on chain (§1629), so only its reverse names are affected"
 fi
+hr
+
+# ── ENS on chain (prd §1629) ─────────────────────────────────────────────────
+# `ENS.resolve`'s own read: the Universal Resolver's resolve(dns, addr(namehash))
+# for ur.integration-tests.eth, through the eth-mainnet hosts `WalletApprovals`
+# asks. The calldata is `ENSName.Universal.calldata(for:)`'s, pinned in
+# ens-selftest.sh.
+print -P "%BENS Universal Resolver%b  (on chain, the eth-mainnet nodes)"
+UR_DATA="0x9061b92300000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000001a02757211696e746567726174696f6e2d7465737473036574680000000000000000000000000000000000000000000000000000000000000000000000000000243b3b57de0d568aa97357167ff455f59b93f8a4fd9e4d1c25c340fed31ea35cca22a2d86600000000000000000000000000000000000000000000000000000000"
+ur_ok=0
+for ur_host in https://rpc.mevblocker.io https://gateway.tenderly.co/public/mainnet; do
+  ur=$(curl -s --max-time "$TIMEOUT" -H 'content-type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe\",\"data\":\"$UR_DATA\"},\"latest\"]}" \
+    "$ur_host" 2>/dev/null)
+  if [[ "$ur" == *'2222222222222222222222222222222222222222"'* ]]; then
+    pass "${ur_host#https://} — ur.integration-tests.eth → 0x2222…, ENSv2's answer"; ur_ok=1
+  elif [[ -z "$ur" ]]; then
+    warn "${ur_host#https://} — did not answer the Universal Resolver read"
+  else
+    fail "${ur_host#https://} — the Universal Resolver did not answer 0x2222…: $(print -r -- "$ur" | cut -c1-80)"; ur_ok=1
+  fi
+done
+(( ur_ok )) || fail "ENS — no eth-mainnet node answered; no ENS name resolves"
 hr
 
 # ── ENS expiry (metadata.ens.domains, prd §1573) ─────────────────────────────

@@ -329,6 +329,10 @@ enum Web3Bio {
                 lines.append(line)
             }
         }
+        // What the app believes, which for an ENS name is the chain's (prd §1629).
+        if !ENS.isHexAddress(asked) {
+            lines.append("ENS.resolve → \(await ENS.resolve(asked) ?? "nil")")
+        }
         return lines
     }
     #endif

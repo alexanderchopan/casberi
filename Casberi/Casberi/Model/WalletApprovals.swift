@@ -245,6 +245,30 @@ enum WalletApprovals {
         return await call(chain, method: method, params: params)
     }
 
+    /// An `eth_call` whose revert is an answer too (prd §1629: the Universal
+    /// Resolver says "a gateway name" by reverting). A revert ends the walk,
+    /// since the next host would revert the same way; a host that gave
+    /// neither is passed over.
+    enum CallAnswer {
+        case result(String)
+        case reverted(data: String?)
+        case unreachable
+    }
+
+    static func ethCallKeepingRevert(network: String, to: String, data: String) async -> CallAnswer {
+        guard let chain = allChains.first(where: { $0.network == network }) else { return .unreachable }
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": "eth_call",
+                                   "params": [["to": to, "data": data], "latest"]]
+        for rpc in chain.rpcs {
+            guard let root = await IngestSupport.postJSON(rpc, body: body) as? [String: Any] else { continue }
+            if let result = root["result"] as? String { return .result(result) }
+            if let error = root["error"] as? [String: Any], error["data"] != nil || error["code"] as? Int == 3 {
+                return .reverted(data: error["data"] as? String)
+            }
+        }
+        return .unreachable
+    }
+
     static func chainId(forNetwork network: String) -> Int? {
         allChains.first { $0.network == network }?.chainId
     }

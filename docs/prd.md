@@ -448,6 +448,7 @@ marks chronological position within the pair.
 | §1418 (an app you have goes where the tray's icon does) | a tap on any app of yours in a folder opened its feed | amended by §1612 — Contacts and Calendar open their pages (the people, the calendars), yours or not |
 | §1049 (Life holds Contacts) | Contacts was a Life app | amended by §1612 — Contacts is Social's |
 | §1508 (Settings › Licenses carries every library's notice, one scroll) | Casberi's license sentence, then every library's text stacked in one page | amended by §1613 — one row per library, each opening its page; the words are unchanged |
+| §1573 item 2 (web3.bio is the only resolver) | forward, reverse and avatar reads went to web3.bio alone | amended by §1629 — an ENS name's address is read on chain through ENS's Universal Resolver; web3.bio keeps gateway names, reverse names and avatars |
 
 ## §1 — Thesis
 
@@ -69945,3 +69946,14 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 **UNMEASURED (§780b), to settle first on Base Sepolia, then Base:** OwnableValidator's deployed address on Base, Ethereum, Robinhood Chain and Base Sepolia, and that its code matches the audited source; the audit that covers it; whether its `validateUserOp` signs the EntryPoint's `userOpHash` raw or as an Ethereum signed message; the fee of the install and of a recovery; whether Pimlico and Candide accept an operation validated by it; whether every co-signer account is already on the adapter (an account opened with "Require" at Create, 879, may still be on Safe's 4337 module); and, against the deployed MultiFactor, whether item 7's duplicate holds there. The session that wrote this had no Xcode and no route to any chain node; nothing above was compiled or sent.
 
 **Mac half (§1402):** the Mac signs nothing for the account today (it can take the account over with "Use on this Mac"); this ruling changes no Mac surface. The Mac sending on its own key is the next ruling, after this one lands.
+
+## §1629 — ENS names resolve on chain through ENS's own Universal Resolver; web3.bio keeps gateway names, reverse names and avatars (amends §1573 item 2) (user, 2026-10-31, on the nightly's web3.bio red: "can you make the fixes? especially the web3bio") — BUILT, read on mainnet, not yet seen on the simulator
+
+1. **Why.** §1573 made web3.bio the only resolver because it answered ENS's test name `ur.integration-tests.eth` with ENSv2's `0x2222…`. From 2026-10-29 it answered `0x1111…`, the outdated-resolver answer: three nightly reds in a row, and every name moved to ENSv2 named at a stale address in the follow field, the Wallet's watched names and the address card's forward check.
+2. **On chain.** `ENS.resolve` calls the Universal Resolver (`0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe`), `resolve(dnsName, addr(namehash))`, through the eth-mainnet nodes the `.wei` names already use (`WalletApprovals.ethCallKeepingRevert`: mevblocker, then Tenderly's public gateway), so no new host. Measured 2026-10-31: `ur.integration-tests.eth` → `0x2222…` and vitalik.eth → `0xd8da…6045` on both nodes. The encoding and decoding are pure (`ENSName.Universal`), pinned byte for byte in `ens-selftest.sh` with three mutations.
+3. **Gateway names still go to web3.bio.** A Basename (`jesse.base.eth`, measured), a Linea name or `cb.id` makes the resolver revert with `OffchainLookup`; the app does not follow EIP-3668 gateways itself, so only those ask web3.bio. Any other revert (`ResolverNotFound` for an unregistered name, measured) is no address; no node answering resolves nothing, as §1573 ruled.
+4. **Contacts search** takes an ENS name's address from the chain too (`AddressesScreen.resolve`); its other names and the avatar still come from web3.bio's records.
+5. **Reverse names** still come from web3.bio and are now forward-verified on chain (§599), so a name web3.bio names at the stale address is dropped rather than shown.
+6. **The heartbeat** (`live-integrations.sh`) reads the chain path red and web3.bio's stale answer amber.
+
+**Not done:** ENSIP-15 normalization (a name is lowercased and trimmed only, so a name it would rewrite misses rather than lands wrong); following CCIP gateways ourselves. **Mac half (§1402):** the same code, nothing drawn changes.
