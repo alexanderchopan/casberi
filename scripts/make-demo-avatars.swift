@@ -100,6 +100,12 @@ let cast: [Face] = [
           query: "topType=LongHairCurvy&accessoriesType=Prescription01&hairColor=Blonde&facialHairType=Blank&clotheType=CollarSweater&clotheColor=PastelBlue&eyeType=Default&eyebrowType=UpDownNatural&mouthType=Default&skinColor=Pale"),
     .init(handle: "kofi", note: "TikTok — followed you",
           query: "topType=ShortHairShortFlat&accessoriesType=Blank&hairColor=Black&facialHairType=BeardLight&facialHairColor=Black&clotheType=GraphicShirt&clotheColor=Heather&eyeType=Happy&eyebrowType=Default&mouthType=Smile&skinColor=DarkBrown"),
+    // Telegram's chats (2026-10-31, user: "the demo on telegram should show
+    // faces per row"): a chat list is a column of faces.
+    .init(handle: "mum", note: "Telegram — a chat",
+          query: "topType=ShortHairShortCurly&accessoriesType=Prescription01&hairColor=SilverGray&facialHairType=Blank&clotheType=CollarSweater&clotheColor=PastelRed&eyeType=Happy&eyebrowType=DefaultNatural&mouthType=Smile&skinColor=Light"),
+    .init(handle: "priya", note: "Telegram — Flat admin",
+          query: "topType=LongHairBun&accessoriesType=Blank&hairColor=BrownDark&facialHairType=Blank&clotheType=BlazerSweater&clotheColor=Black&eyeType=Default&eyebrowType=Default&mouthType=Default&skinColor=Brown"),
 ]
 
 /// Regenerating every face on every run rewrites thirteen imagesets to add one,

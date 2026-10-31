@@ -80,7 +80,38 @@ def sundial():
     return icon("#ffe27a", "#f2b705", motif)
 
 
+# ── Telegram: the demo's channels (2026-10-31, user: "the demo on telegram
+# should show faces per row"). Made up, as the Privy apps are, so a channel's
+# avatar is a mark drawn here, never a real channel's photo or a real person.
+
+def crimp_chalk():
+    # A climbing hold: a rounded blob with two bolt holes.
+    motif = ("<path d='M48 112 C40 80 64 54 96 56 C128 58 142 84 132 108 C122 132 60 140 48 112 Z' fill='#fff'/>"
+             "<circle cx='80' cy='96' r='7' fill='#e8590c'/><circle cx='110' cy='90' r='7' fill='#e8590c'/>")
+    return icon("#ff922b", "#c2410c", motif)
+
+
+def tram_28_notes():
+    # A tram's front: windscreen, headlight and the wire above.
+    motif = ("<rect x='54' y='58' width='72' height='78' rx='16' fill='#fff8e1'/>"
+             "<rect x='64' y='68' width='52' height='28' rx='6' fill='#c79100'/>"
+             "<circle cx='90' cy='116' r='7' fill='#c79100'/>"
+             "<path d='M90 58 L90 40 M60 36 H120' stroke='#fff8e1' stroke-width='6' stroke-linecap='round'/>")
+    return icon("#ffd43b", "#e0a800", motif)
+
+
+def quiet_builds():
+    # Two stacked blocks and a cursor.
+    motif = ("<rect x='48' y='96' width='60' height='36' rx='8' fill='#fff'/>"
+             "<rect x='72' y='56' width='60' height='36' rx='8' fill='#fff' opacity='.75'/>"
+             "<rect x='118' y='104' width='8' height='24' rx='4' fill='#a5d8ff'/>")
+    return icon("#4dabf7", "#1864ab", motif)
+
+
 DRAW = {
+    "tgchan-crimpchalk": crimp_chalk,
+    "tgchan-tram28notes": tram_28_notes,
+    "tgchan-quietbuilds": quiet_builds,
     "privy-tidepool": tidepool,
     "privy-lantern": lantern,
     "privy-kitebox": kitebox,

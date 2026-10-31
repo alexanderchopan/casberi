@@ -109,8 +109,8 @@ for i, (fam, s) in enumerate(snap):
     pic(f"snap-{i}", fam, (450, 800), f"Snapchat memory: {s}")
 
 # ── Telegram channel pictures (DemoSeedAll.telegram) ──────────────────────
-pic("tg-2", "ui", (800, 450), "Telegram Info channel graphic: a phone showing a chat with a 'Scheduled' message chip and a calendar icon, Telegram blue gradient, no Telegram logo")
-pic("tg-4", "ui", (800, 450), "Telegram News channel graphic: an Apple-Watch-shaped screen showing a chat list, blue gradient, no logos")
+pic("tg-2", "ui", (800, 450), "A builder's channel graphic: a phone showing a chat with a 'Scheduled' message chip and a calendar icon, Telegram blue gradient, no Telegram logo")
+pic("tg-4", "ui", (800, 450), "A builder's channel graphic: an Apple-Watch-shaped screen showing a chat list, blue gradient, no logos")
 
 # ── YouTube (DemoSeedAll.youtube) — thumbnails ────────────────────────────
 yt = [
@@ -257,6 +257,11 @@ for key, book, motif in covers:
 for slug, name in (("tidepool", "Tidepool"), ("lantern", "Lantern"), ("kitebox", "Kitebox"),
                    ("mossline", "Mossline"), ("pebble-arcade", "Pebble Arcade"), ("sundial", "Sundial")):
     pic(f"privy-{slug}", "mark", (180, 180), f"App icon for the made-up app {name}: a rounded square in its colours, one motif, no words", scale=1)
+
+# ── Telegram: the demo's channels (DemoSeedAll.telegram) ──────────────────
+# Made-up channels, so their avatars are drawn marks, never a real channel's.
+for slug, name in (("crimpchalk", "Crimp & Chalk"), ("tram28notes", "Tram 28 Notes"), ("quietbuilds", "Quiet Builds")):
+    pic(f"tgchan-{slug}", "mark", (180, 180), f"Channel avatar for the made-up Telegram channel {name}: a rounded square, one motif, no words", scale=1, asset=f"sample-avatar-{slug}")
 
 PICTURES = P
 

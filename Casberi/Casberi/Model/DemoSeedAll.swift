@@ -2209,18 +2209,26 @@ enum DemoSeedAll {
     /// the All feed while the imported half stays out — seed them under a
     /// demo prefix and the demo silently shows the wrong behaviour for the one
     /// thing this seat had to get right.
+    /// Each demo chat's face: a group's is a member's (Sam), Flat
+    /// admin's is Priya's (`make-demo-avatars.swift`).
+    private static let telegramChatFace = ["Climbing crew": "sam", "Flat admin": "priya"]
+
     private static func telegram() -> [Thing] {
         var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", days: 9)]
 
-        // The live half: four followed channels, captioned posts and wordless
-        // pictures, so the room draws its grid AND its post cards.
+        // The live half: followed channels, captioned posts and wordless
+        // pictures, so the room draws its grid AND its post cards. The
+        // channels are MADE UP (2026-10-31), as the Privy apps are, so each
+        // wears a drawn mark (`fam_mark.py`) and no real channel's photo or
+        // person stands in the demo (user: "the demo on telegram should show
+        // faces per row").
         let posts: [(String, String, String, Double, Bool)] = [
-            ("durov", "Telegram now supports gifting a subscription to anyone in your contacts.", "Pavel Durov", 0.3, false),
-            ("telegram", "AI Text Editor. The message bar now fixes grammar and translates inline.", "Telegram News", 1.2, false),
-            ("tginfo", "", "Telegram Info", 2.1, true),
-            ("durov", "A fully native Telegram app for Apple Watch is out.", "Pavel Durov", 3.4, false),
-            ("telegram", "", "Telegram News", 5.0, true),
-            ("tginfo", "Channels can now schedule posts up to a year ahead.", "Telegram Info", 7.5, false),
+            ("crimpchalk", "Wall reset on Thursday: three new overhang problems go up Friday at 7.", "Crimp & Chalk", 0.3, false),
+            ("tram28notes", "The 28 runs every 12 minutes again from Monday, and the Graça stop reopens.", "Tram 28 Notes", 1.2, false),
+            ("quietbuilds", "", "Quiet Builds", 2.1, true),
+            ("crimpchalk", "Off-season fingerboard plan: seven seconds on, three off, six reps.", "Crimp & Chalk", 3.4, false),
+            ("quietbuilds", "", "Quiet Builds", 5.0, true),
+            ("tram28notes", "Night trams are back on the winter timetable.", "Tram 28 Notes", 7.5, false),
         ]
         out += posts.enumerated().map { i, p in
             row(.link, p.1.isEmpty ? "Photo" : p.1, source: "Telegram",
@@ -2229,6 +2237,7 @@ enum DemoSeedAll {
                 content: "https://t.me/\(p.0)/\(1200 + i)",
                 tags: p.4 ? ["Photo"] : []) { t in
                 t.authorHandle = p.2
+                t.authorAvatarURL = avatarArt(p.0)
                 if !p.1.isEmpty { t.postText = p.1 }
                 if p.4 { t.previewImageData = pixels("tg-\(i)") }
             }
@@ -2270,9 +2279,10 @@ enum DemoSeedAll {
                 content: c.3, tags: ["Conversation"]) { t in
                 t.authorHandle = c.0
                 t.messageCount = c.1
-                // A chat leads with who it's with (prd §1615): Mia is the
-                // demo's own face; a group and Mum draw their initial.
-                if c.0 == "Mia" { t.authorAvatarURL = avatarArt("mia") }
+                // A chat leads with who it's with (prd §1615), and every one
+                // wears a face (user, 2026-10-31: "the demo on telegram should
+                // show faces per row"): a group wears a member's.
+                t.authorAvatarURL = avatarArt(Self.telegramChatFace[c.0] ?? c.0.lowercased())
             }
         }
         return out
@@ -4062,7 +4072,9 @@ enum DemoSeedAll {
                 // stamps (2026-08-17). Sparse, because a real board mixes
                 // covered cards with plain ones and a board where every card
                 // has art reads as a gallery rather than a list of work.
-                if i % 2 == 0 { t.previewImageURL = art("trello-\(i)") }
+                // Two covers are drawn (`pictures.py`: trello-0, trello-2); a
+                // card added after them has none.
+                if i % 2 == 0, i < 4 { t.previewImageURL = art("trello-\(i)") }
             }
         }
         // GitLab's own title shape: `references.full` (group/project#N or
