@@ -38,7 +38,10 @@ struct PlaceRail: View {
             tile(.feed)
             tile(.wallet)
             tile(.move)
+            // Search stands apart at the end, as the phone's circle does
+            // beside its four tabs (prd §1640).
             searchTile
+                .padding(.top, DS.Space.s3)
             Spacer(minLength: 0)
             demoFoot
         }

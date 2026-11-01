@@ -15,8 +15,8 @@ import SwiftUI
 ///
 /// **FIVE EQUAL TABS IN ONE BAR (prd §1422, user: "feed wallet actions
 /// library search"; of the label, "ok lets go w/ Move").** Feed · Wallet ·
-/// Move · Library · Search, Search in the bar as Music and the App Store draw
-/// it, not a circle of its own. Move is your account's page. Search is a tab
+/// Move · Library · Search. Search stands apart as a circle since §1640.
+/// Move is your account's page. Search is a tab
 /// with no place: it raises the tray's search on the phone, Find elsewhere,
 /// and it is never in the swipe.
 ///
@@ -110,9 +110,8 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     }
 }
 
-/// The bar itself: every tab in one glass bar across the width, Search the
-/// last (prd §1422, amending §1327's circle beside it and §1374's bar that
-/// hugged three tabs). Read down, it folds into one circle for the tab you
+/// The bar itself: four tabs in one glass capsule and Search a circle beside
+/// it at the trailing edge (prd §1640, amending §1422's one bar of five). Read down, it folds into one circle for the tab you
 /// are on (`ShellChrome.minimized`, the scroll fold the band already had);
 /// that circle, or a scroll back up, unfolds it. While the tray is up the bar
 /// is that one circle too, and it closes the tray: the tray's own field
@@ -147,18 +146,27 @@ struct PlaceTabBar: View {
         .animation(DS.Motion.standard, value: folded)
     }
 
+    /// **SEARCH STANDS APART (prd §1640, amends §1422's one bar; user,
+    /// 2026-11-01: "ok we can split it then as long as it collapses", "search
+    /// fro some reason feels more appropriate on the end").** The four tabs
+    /// keep their order in the capsule (Move beside the Wallet it acts on,
+    /// Library at the right as the App Library is) and Search is its own
+    /// circle at the trailing edge, as iOS draws a search tab. Read down,
+    /// both fold into the one circle they always did.
     private var bar: some View {
+        HStack(spacing: DS.Space.s2) {
+            tabs
+            searchCircle
+        }
+    }
+
+    private var tabs: some View {
         HStack(spacing: 0) {
-            ForEach(PlaceTab.allCases) { tab in
+            ForEach(PlaceTab.allCases.filter { $0 != .search }) { tab in
                 Button {
                     taps[tab, default: 0] &+= 1
-                    if tab == .search {
-                        DSHaptic.tap()
-                        search()
-                    } else {
-                        DSHaptic.selection()
-                        open(tab)
-                    }
+                    DSHaptic.selection()
+                    open(tab)
                 } label: {
                     VStack(spacing: 2) {
                         mark(tab, on: tab == current, glyphSize: .body, taps: taps[tab] ?? 0)
@@ -181,7 +189,6 @@ struct PlaceTabBar: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(verbatim: tab.label))
                 .accessibilityAddTraits(tab == current ? [.isButton, .isSelected] : .isButton)
-                .accessibilityHint(tab == .search ? Text("Find anything, or make a page of it") : Text(verbatim: ""))
                 .background { if tab == .feed { FeedTabFrame() } }
             }
         }
@@ -189,6 +196,23 @@ struct PlaceTabBar: View {
         .frame(maxWidth: .infinity)
         .frame(height: size)
         .dsGlass(cornerRadius: size / 2, tint: Self.lens)
+    }
+
+    /// Search's own circle, the bar's height, at the trailing edge.
+    private var searchCircle: some View {
+        Button {
+            taps[.search, default: 0] &+= 1
+            DSHaptic.tap()
+            search()
+        } label: {
+            mark(.search, on: false, glyphSize: .body, taps: taps[.search] ?? 0)
+                .frame(width: size, height: size)
+                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
+                .dsTapTarget(Circle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(verbatim: PlaceTab.search.label))
+        .accessibilityHint(Text("Find anything, or make a page of it"))
     }
 
     /// The tab you are on, alone: a tap unfolds the bar, or closes the tray.

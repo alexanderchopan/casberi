@@ -15,13 +15,56 @@ import SwiftData
 // through the five weeks the rows are read for. Needs you lives in its place
 // (`FeedScreen+WalletNeeds.swift`, Work's own section). Its + is in its
 // header (`sectionAdds`): an event, a reminder, an email, a plan.
+// **The week came back as the section's own shape (prd §1640, user: "i like
+// it having the week like you drew"):** `DayWeek` over the next thing, as
+// Media tiles its pictures; the grid §1413 deleted was a figure among rows.
 extension FeedScreen {
 
     /// `rows` is Day's room's own list on iPad and the Mac (prd §1344);
     /// in the Feed, nil: the section reads its own (`dayFeedRows`).
+    ///
+    /// **THE WEEK LEADS (prd §1640, amends §1413 items 1 and 5).** The
+    /// section draws this week and the next thing on the Feed; Day's room on
+    /// iPad and the Mac keeps its rows under the same week.
     @ViewBuilder
     func dayFeedSections(nextEventID: UUID?, rows: [Thing]? = nil) -> some View {
         let visible = (rows ?? dayFeedRows).live
+        dayWeekRow(visible)
+        if rows == nil {
+            if let next = dayNextThing(visible) {
+                daySection("", [next], nextEventID: next.id, dated: false, headed: false)
+            }
+        } else {
+            dayRowWindow(visible, nextEventID: nextEventID)
+        }
+    }
+
+    /// The week as a row of the section's list, opening the app most of it
+    /// came from: Calendar when anything on it is Calendar's.
+    func dayWeekRow(_ visible: [Thing]) -> some View {
+        let marks = visible.map { DayWeek.Mark(id: $0.id.uuidString, day: Self.dayWhen($0), face: $0.source) }
+            + dayRenewals().compactMap { item in
+                item.next.map { DayWeek.Mark(id: "plan:" + item.id, day: $0, face: FeedScreen.shownName(item.name)) }
+            }
+        let target = visible.first(where: { $0.source == "Calendar" })?.source ?? visible.first?.source
+        return DayWeek(marks: marks, now: .now, open: target.map { source in
+            { withAnimation(DS.Motion.standard) { chrome.sourceRequest = source } }
+        })
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
+    }
+
+    /// What comes next: the first of Day's things still ahead of now.
+    func dayNextThing(_ visible: [Thing]) -> Thing? {
+        let now = Date.now
+        return visible.filter { Self.dayWhen($0) >= now }.min { Self.dayWhen($0) < Self.dayWhen($1) }
+    }
+
+    /// Day's room's rows on iPad and the Mac, capped as every section's.
+    @ViewBuilder
+    private func dayRowWindow(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let window = dayFeedWindow(visible)
         // The window is the section's own (things and renewals counted
         // together); the days draw uncapped inside it, then More.
