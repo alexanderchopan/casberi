@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 import WalletConnectNetworking
 import WalletConnectSign
@@ -40,6 +41,8 @@ enum YourAccountSignerLink {
         case declined
         /// A kept session the wallet no longer has (prd §1601).
         case gone
+        /// The person chose another wallet (prd §1644).
+        case switched
     }
 
     /// How long the Signer is waited for, connecting and then signing (prd
@@ -53,38 +56,57 @@ enum YourAccountSignerLink {
     /// for one on this phone); the answer is `r ‖ s ‖ v`, `v` 27 or 28.
     /// A session kept from an earlier send is asked first, with no scan:
     /// `kept` gets the wallet's own door, if it named one (prd §1601).
+    ///
+    /// **ANOTHER WALLET (prd §1644).** `switching` fires when the person
+    /// chooses another wallet: the session asked is let go and the same
+    /// signature is asked over a fresh pairing, the ask never ending. How
+    /// each other ending treats the session is `SignerSwitch.closes`: a
+    /// wallet that never answered, cancelled or not, is not kept.
     static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = wait,
                      kept: @escaping @MainActor (URL?) -> Void = { _ in },
-                     resend: AsyncStream<Void>? = nil,
+                     resend: SignerSignal? = nil, switching: SignerSignal? = nil,
                      show: @MainActor (URL) -> Void) async throws -> [UInt8] {
-        if let (pairing, door) = keptSession(signer: signer, chainId: chainId) {
-            trace("asking the kept session")
+        var asked = keptSession(signer: signer, chainId: chainId)
+        var wasKept = asked != nil
+        if wasKept { trace("asking the kept session") }
+        while true {
+            if asked == nil {
+                let pairing = try await connect(signer: signer, chainIds: [chainId], timeout: timeout, show: show)
+                // Connected: the code has done its work, so the sheet says to
+                // approve in the wallet, as for a kept session, with its door
+                // and Ask again (prd §1609). Its door is THIS session's: a wallet
+                // just let go may still be listed for the same address.
+                asked = (pairing, door(of: pairing.topic))
+            }
+            guard let (pairing, door) = asked else { throw Failure.unavailable }
+            let sent = OSAllocatedUnfairLock(initialState: false)
             do {
                 // The request goes first, then the wallet is opened onto it
                 // (prd §1605): it is waiting there when the wallet comes up.
                 return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout,
-                                         resend: resend, sent: { kept(door) })
-            } catch Failure.gone {
-                trace("the kept session is gone: pairing afresh")
-            } catch Failure.timedOut {
-                // Never answered: stale, so the next send pairs afresh. A
-                // Cancel is the person's, never the session's fault.
-                if !Task.isCancelled { close(pairing) }
-                throw Failure.timedOut
+                                         resend: resend, switching: switching,
+                                         sent: { sent.withLock { $0 = true }; kept(door) })
+            } catch {
+                guard let end = ending(error, sent: sent.withLock { $0 }) else { throw error }
+                if SignerSwitch.closes(end) { close(pairing) }
+                guard SignerSwitch.pairsAfresh(end, kept: wasKept) else { throw error }
+                trace(end == .switched ? "another wallet: pairing afresh" : "the kept session is gone: pairing afresh")
+                asked = nil
+                wasKept = false
             }
         }
-        let pairing = try await connect(signer: signer, chainIds: [chainId], timeout: timeout, show: show)
-        // Connected: the code has done its work, so the sheet says to approve
-        // in the wallet, as for a kept session, with its door and Ask again
-        // (prd §1609).
-        let door = keptSession(signer: signer, chainId: chainId)?.1
-        do {
-            return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout,
-                                     resend: resend, sent: { kept(door) })
-        } catch let failure as Failure where failure == .timedOut || failure == .gone {
-            // Never kept unanswered: the next send would wait on it again.
-            if !Task.isCancelled { close(pairing) }
-            throw failure
+    }
+
+    /// What a failed ask means for its session (prd §1644), or nil for an
+    /// answer (a refusal, a malformed signature) that leaves it as it is.
+    /// A cancelled ask is the person's, whatever the request threw.
+    private static func ending(_ error: Error, sent: Bool) -> SignerSwitch.End? {
+        if Task.isCancelled { return .cancelled(sent: sent) }
+        switch error as? Failure {
+        case .switched?: return .switched
+        case .gone?: return .gone
+        case .timedOut?: return .timedOut
+        default: return nil
         }
     }
 
@@ -104,6 +126,11 @@ enum YourAccountSignerLink {
             return (Pairing(topic: session.topic, signer: signer, chainIds: agreed), door)
         }
         return nil
+    }
+
+    /// The wallet's own door for the session on `topic`.
+    static func door(of topic: String) -> URL? {
+        Sign.instance.getSessions().first { $0.topic == topic }?.peer.redirect?.native.flatMap(URL.init(string:))
     }
 
     /// A settled session with the Signer's wallet: its topic and the
@@ -173,7 +200,7 @@ enum YourAccountSignerLink {
 
     /// One signature over a settled pairing, on one of its networks.
     static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = wait,
-                        resend: AsyncStream<Void>? = nil,
+                        resend: SignerSignal? = nil, switching: SignerSignal? = nil,
                         sent: @MainActor () -> Void = {}) async throws -> [UInt8] {
         guard pairing.chainIds.contains(chainId), let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
         func make() throws -> Request {
@@ -181,14 +208,16 @@ enum YourAccountSignerLink {
         }
         let request = try make()
         let ids = Asked(request.id)
-        async let answer = answer(to: ids, topic: pairing.topic, timeout: timeout)
+        // Listened to before the request goes, so a tap is never missed.
+        let resends = resend?.stream(), switches = switching?.stream()
+        async let answer = answer(to: ids, topic: pairing.topic, timeout: timeout, switching: switches)
         // **ASK AGAIN (prd §1609, user: "sometimes it doesn't fire w/
         // rainbow").** A wallet in the background can miss a request; the
         // same question is asked again on the same session, and whichever
         // asking it answers is the answer.
         let again = Task {
-            guard let resend else { return }
-            for await _ in resend {
+            guard let resends else { return }
+            for await _ in resends {
                 guard let next = try? make() else { continue }
                 ids.add(next.id)
                 try? await Sign.instance.request(params: next)
@@ -209,6 +238,7 @@ enum YourAccountSignerLink {
         switch await answer {
         case .answered(let r): result = r
         case .gone: throw Failure.gone
+        case .switched: throw Failure.switched
         case .none: throw Failure.timedOut
         }
         switch result {
@@ -244,9 +274,15 @@ enum YourAccountSignerLink {
         guard verdict == .holds else { throw Failure.notProven }
     }
 
-    /// The session torn down, answered or not.
+    /// The session torn down, answered or not, once more after a second if
+    /// the relay refused: a wallet let go that stays listed is the one the
+    /// next send asks again (prd §1644).
     static func close(_ pairing: Pairing) {
-        Task.detached { try? await WalletConnectBridge.tearDown(topic: pairing.topic) }
+        Task.detached {
+            if (try? await WalletConnectBridge.tearDown(topic: pairing.topic)) != nil { return }
+            try? await Task.sleep(for: .seconds(1))
+            try? await WalletConnectBridge.tearDown(topic: pairing.topic)
+        }
     }
 
     private static func trace(_ line: String) {
@@ -302,12 +338,14 @@ enum YourAccountSignerLink {
         func contains(_ id: RPCID) -> Bool { lock.lock(); defer { lock.unlock() }; return ids.contains(id) }
     }
 
-    enum Answer { case answered(RPCResult), gone, none }
+    enum Answer { case answered(RPCResult), gone, switched, none }
 
     /// The wallet's answer to `id`; `.gone` the moment the wallet deletes
     /// the session `topic` (prd §1601), `.none` once `timeout` passes or the
-    /// task is cancelled.
-    static func answer(to ids: Asked, topic: String?, timeout: Duration) async -> Answer {
+    /// task is cancelled; `.switched` when the person chooses another wallet
+    /// (prd §1644).
+    static func answer(to ids: Asked, topic: String?, timeout: Duration,
+                       switching: AsyncStream<Void>? = nil) async -> Answer {
         await withTaskGroup(of: Answer.self) { group in
             group.addTask {
                 for await response in Sign.instance.sessionResponsePublisher.values where ids.contains(response.id) {
@@ -320,6 +358,14 @@ enum YourAccountSignerLink {
                     for await (deleted, _) in Sign.instance.sessionDeletePublisher.values where deleted == topic {
                         return .gone
                     }
+                    return .none
+                }
+            }
+            if let switching {
+                group.addTask {
+                    for await _ in switching { return .switched }
+                    // The sheet done: the other tasks end the wait.
+                    try? await Task.sleep(for: timeout)
                     return .none
                 }
             }
