@@ -220,6 +220,85 @@ enum WatchlistRules {
         }
     }
 
+    // MARK: - Side by side (the Watchlist's box)
+
+    /// **THE WATCHLIST'S BOX DRAWS ITS TOKENS SIDE BY SIDE (2026-11-01, user:
+    /// "in the header it just says 2 tokens you watch"; of the mockups, "lets
+    /// go with E").** Every token's window as a percent from where it began,
+    /// one line each on one scale. The list is never capped; the box draws
+    /// the first five, in the list's own order (Move to top decides).
+    static let chartCap = 5
+
+    static func charted(_ tokens: [WatchedToken]) -> [WatchedToken] {
+        Array(tokens.prefix(chartCap))
+    }
+
+    /// One hue per charted line, by its place in the five, never green or
+    /// red (those say up and down here); `ProjectHue`'s, readable on the page.
+    static let lineHues = ["#60a5fa", "#facc15", "#c084fc", "#2dd4bf", "#fb923c"]
+
+    /// Closes as the percent each is from the first; empty when there is no
+    /// line to draw (under two closes, or a first close that is not a price).
+    static func percentSeries(_ closes: [Double]) -> [Double] {
+        guard closes.count >= 2, let first = closes.first, first > 0 else { return [] }
+        return closes.map { ($0 / first - 1) * 100 }
+    }
+
+    /// Where each label's centre goes, in the order given: as near its line's
+    /// end as it can be, never closer than `gap` to another, inside `lo…hi`.
+    static func labelCenters(_ wanted: [Double], gap: Double, lo: Double, hi: Double) -> [Double] {
+        let order = wanted.indices.sorted { wanted[$0] < wanted[$1] }
+        var placed = order.map { wanted[$0] }
+        for i in placed.indices { placed[i] = max(placed[i], i == 0 ? lo : placed[i - 1] + gap) }
+        for i in placed.indices.reversed() {
+            placed[i] = min(placed[i], i == placed.count - 1 ? hi : placed[i + 1] - gap)
+        }
+        for i in placed.indices { placed[i] = max(placed[i], i == 0 ? lo : placed[i - 1] + gap) }
+        var out = wanted
+        for (k, i) in order.enumerated() { out[i] = placed[k] }
+        return out
+    }
+
+    /// At most `n` closes, each the mean of its stretch: a line in a 280pt
+    /// box gains nothing from CoinGecko's 289 five-minute points, and picking
+    /// every sixth kept a thin coin's tick-to-tick bounce as a comb of spikes
+    /// (MUSEGOD, seen on the simulator 2026-11-01).
+    static func thinned(_ xs: [Double], to n: Int) -> [Double] {
+        guard xs.count > n, n >= 2 else { return xs }
+        return (0..<n).map { k in
+            let bucket = xs[(k * xs.count / n)..<((k + 1) * xs.count / n)]
+            return bucket.reduce(0, +) / Double(bucket.count)
+        }
+    }
+
+    /// CoinGecko's `market_chart` for a coin DeFiLlama has no window for
+    /// (measured 2026-10-31: MUSEGOD answered one point a week and none a
+    /// day there, 289 a day here): the days it asks, and for the hour, how
+    /// much of the day's tail it keeps.
+    static func coingeckoChartQuery(_ range: String) -> (days: Int, keepsSeconds: Double?)? {
+        switch range {
+        case "1H":  return (1, 3600)
+        case "1D":  return (1, nil)
+        case "7D":  return (7, nil)
+        case "30D": return (30, nil)
+        default:    return nil
+        }
+    }
+
+    /// `api.coingecko.com/api/v3/coins/<id>/market_chart`: the closes, oldest
+    /// first, only those within `keepsSeconds` of the last when given.
+    static func parseCoinGeckoChart(_ data: Data, keepsSeconds: Double?) -> [Double] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rows = root["prices"] as? [[Any]] else { return [] }
+        let points = rows.compactMap { r -> (Double, Double)? in
+            guard r.count == 2, let t = number(r[0]), let v = number(r[1]), v > 0 else { return nil }
+            return (t, v)
+        }.sorted { $0.0 < $1.0 }
+        guard let last = points.last?.0 else { return [] }
+        let cutoff = keepsSeconds.map { last - $0 * 1000 } ?? -.infinity
+        return points.filter { $0.0 >= cutoff }.map(\.1)
+    }
+
     // MARK: - Reading the answers
 
     /// `coins.llama.fi/prices/current/…`: id → (price, symbol), only above

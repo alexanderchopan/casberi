@@ -110,9 +110,31 @@ final class WatchlistPrices {
     /// A token's chart for a `TokenRange`, keyless, or nil when the range did
     /// not answer (the chart then says so rather than drawing anything else).
     nonisolated static func chart(id: String, range: TokenRange) async -> TokenChart? {
-        guard let q = WatchlistRules.chartQuery(range.rawValue),
-              let body = await text("https://coins.llama.fi/chart/\(id)?span=\(q.span)&period=\(q.period)") else { return nil }
-        return TokenChart.from(closes: WatchlistRules.parseChart(Data(body.utf8), id: id))
+        guard let closes = await charts(ids: [id], range: range)[id] else { return nil }
+        return TokenChart.from(closes: closes)
+    }
+
+    /// Each id's closes for a range, keyless: one DeFiLlama read for all of
+    /// them, then CoinGecko for a coin DeFiLlama has no window for (MUSEGOD's
+    /// day, measured 2026-10-31), averaged to DeFiLlama's own count for the
+    /// range so every line is drawn at one grain. An id with no line is left out.
+    nonisolated static func charts(ids: [String], range: TokenRange) async -> [String: [Double]] {
+        guard !ids.isEmpty, let q = WatchlistRules.chartQuery(range.rawValue) else { return [:] }
+        var out: [String: [Double]] = [:]
+        if let body = await text("https://coins.llama.fi/chart/\(ids.joined(separator: ","))?span=\(q.span)&period=\(q.period)") {
+            for id in ids {
+                let closes = WatchlistRules.parseChart(Data(body.utf8), id: id)
+                if closes.count >= 2 { out[id] = closes }
+            }
+        }
+        for id in ids where out[id] == nil && id.hasPrefix("coingecko:") {
+            let coin = String(id.dropFirst("coingecko:".count))
+            guard let cg = WatchlistRules.coingeckoChartQuery(range.rawValue),
+                  let body = await text("https://api.coingecko.com/api/v3/coins/\(coin)/market_chart?vs_currency=usd&days=\(cg.days)") else { continue }
+            let closes = WatchlistRules.thinned(WatchlistRules.parseCoinGeckoChart(Data(body.utf8), keepsSeconds: cg.keepsSeconds), to: q.span)
+            if closes.count >= 2 { out[id] = closes }
+        }
+        return out
     }
 
     /// The search: a pasted address asks every chain at once; words ask

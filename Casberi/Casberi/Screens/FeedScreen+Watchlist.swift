@@ -170,8 +170,15 @@ extension FeedScreen {
             .id(token.id)
         } else {
             let tokens = Watchlist.shared.tokens
-            DSFigureReading(number: "\(tokens.count)",
-                            caption: watchlistCaption(tokens.count))
+            if tokens.isEmpty {
+                DSFigureReading(number: "0", caption: watchlistCaption(0))
+            } else {
+                WatchlistCompareChart(tokens: WatchlistRules.charted(tokens), count: tokens.count,
+                                      caption: watchlistCaption(tokens.count)) { token in
+                    chrome.watchedTokenID = token.id
+                    chrome.walletSection = .watchedToken
+                }
+            }
         }
     }
 

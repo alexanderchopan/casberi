@@ -163,6 +163,26 @@ check(R.parseCoinByContract(Data(#"{"id":"musegod","symbol":"musegod"}"#.utf8)) 
 check(R.parseCoinByContract(Data(#"{"error":"coin not found"}"#.utf8)) == nil, "a contract CoinGecko lists none for is nil")
 check(R.tickerKey(" $musegod ") == "MUSEGOD" && R.tickerKey("MuseGod") == R.tickerKey("MUSEGOD"), "a ticker compares by its letters")
 
+// The box: every token side by side, the first five (2026-11-01)
+let six = (1...6).map { WatchedToken(id: "coingecko:t\($0)", symbol: "T\($0)", name: "T\($0)") }
+check(R.charted(six).map(\.id) == six.prefix(5).map(\.id), "the box draws the first five, in the list's order")
+check(R.charted(Array(six.prefix(2))).count == 2, "two watched draw two")
+check(R.lineHues.count == R.chartCap && Set(R.lineHues).count == R.chartCap, "one hue for each line the box draws")
+check(zip(R.percentSeries([100, 102, 99]), [0.0, 2, -1]).allSatisfy { abs($0 - $1) < 1e-9 }, "each close as the percent from the first")
+check(R.percentSeries([5]).isEmpty && R.percentSeries([0, 1]).isEmpty, "one close, or no first price, is no line")
+let spread = R.labelCenters([10, 12, 13, 90], gap: 16, lo: 8, hi: 100)
+check(spread[0] == 10 && spread[1] == 26 && spread[2] == 42 && spread[3] == 90, "labels that would touch are pushed apart, in order")
+let floor = R.labelCenters([95, 99, 100], gap: 16, lo: 8, hi: 100)
+check(floor == [68, 84, 100], "labels at the floor stack upward, inside the box")
+check(R.labelCenters([50, 10], gap: 16, lo: 8, hi: 100) == [50, 10], "labels far apart stay at their lines, in the order given")
+check(R.thinned(Array(stride(from: 0.0, through: 288, by: 1)), to: 49).count == 49, "a long series is thinned to the cap")
+check(R.thinned([1, 2, 3, 4, 5], to: 3) == [1, 2.5, 4.5], "thinning takes each stretch's mean, so a bounce is not kept")
+check(R.thinned([1, 9, 1, 9, 1, 9], to: 3) == [5, 5, 5], "a coin bouncing tick to tick draws flat")
+check(R.coingeckoChartQuery("1D")! == (1, nil) && R.coingeckoChartQuery("1H")! == (1, 3600), "each range asks CoinGecko its days")
+let cgc = #"{"prices":[[1000000,1.0],[2000000,2.0],[4600000,3.0],[4700000,0]]}"#
+check(R.parseCoinGeckoChart(Data(cgc.utf8), keepsSeconds: nil) == [1, 2, 3], "CoinGecko's closes, oldest first, a zero dropped")
+check(R.parseCoinGeckoChart(Data(cgc.utf8), keepsSeconds: 3000) == [2, 3], "the hour keeps only the tail")
+
 print(failures == 0 ? "watchlist-selftest: all checks ✓" : "watchlist-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
