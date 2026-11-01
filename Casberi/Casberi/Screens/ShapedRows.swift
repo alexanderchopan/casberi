@@ -709,7 +709,33 @@ struct BandRow: View {
     /// original body moved to `liveBody`; everything it reads now sits behind
     /// this check.
     var body: some View {
-        if thing.isLive { liveBody }
+        if thing.isLive {
+            if ChatFace.isPersonChat(thing), let said = ChatFace.lastMessage(thing) {
+                chatRow(said)
+            } else {
+                liveBody
+            }
+        }
+    }
+
+    /// **A CHAT IS ITS LAST MESSAGE, IN A BUBBLE (prd §1642, user,
+    /// 2026-11-01: "what if the telegram messages looked like chat bubbles";
+    /// of the mock, "it would need to have same indent, so remove 'climbing
+    /// crew 9:58' and only one bubble").** Who it's with leads, as every row's
+    /// lead does (§1615), and one bubble stands on the rows' text edge in the
+    /// sheet's own fills: yours in the tint, theirs in the faint fill. No
+    /// name or time above it, and never a run.
+    private func chatRow(_ said: (text: String, mine: Bool)) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.s3) {
+            if groupedSource == nil {
+                leaderView
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
+            }
+            DSChatBubble(feedText: said.text, fromSelf: said.mine)
+        }
+        .frame(minHeight: DSFeed.headHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(titleText))
     }
 
     @ViewBuilder private var liveBody: some View {

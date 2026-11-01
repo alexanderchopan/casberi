@@ -48,6 +48,18 @@ enum ChatFace {
         return others.count > 1 ? last : said.words
     }
 
+    /// The last message as the Feed's bubble holds it (prd §1642): your own
+    /// words alone in the tint, theirs as `lastLine` gives them, so a group
+    /// keeps who said it inside the bubble. Nil when the transcript is empty.
+    static func lastMessage(_ thing: Thing) -> (text: String, mine: Bool)? {
+        guard let last = thing.content.split(separator: "\n")
+            .map({ $0.trimmingCharacters(in: .whitespaces) })
+            .last(where: { !$0.isEmpty }) else { return nil }
+        let said = ChatBubbles.speaker(of: last)
+        if let name = said.name, ChatBubbles.isMine(name) { return (said.words, true) }
+        return (lastLine(thing) ?? last, false)
+    }
+
     /// **THE FEED SAYS WHAT WAS SAID (prd §1641, user, 2026-11-01: "the
     /// most important part of social is seeing the message", "rn for
     /// telegram messages it just says the generic thing").** The Feed's one

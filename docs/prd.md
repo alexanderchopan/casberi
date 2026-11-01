@@ -70108,3 +70108,15 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 2. **`BandRow.titleText`** says it for every chat with people (`ChatFace.isPersonChat`: Telegram, X and Instagram DMs, Snapchat's imported threads), so the Feed, Newest and any room that draws the band agree with the Social room. The face still leads (§1615).
 
 **Seen** on the iPhone 17 Pro simulator over the demo: Social's Feed section reads "Mia: Perfect. I'll bring the rope." under Mia's face. `row-cost-audit.py`, `title-seam-audit.py`, `ds-template-audit.py`, `swiftdata-liveness-audit.py`, `live-messages-selftest.sh`, `social-room-selftest.sh` green. **Not seen:** a group chat's line on screen, the Mac.
+
+## §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare rows and §1413 item 7's one row shape for this one row; builds on §1641) (user, 2026-11-01: "what if the telegram messages looked like chat bubbles"; of the canvas "Feed Section Shapes", "it would need to have same indent, so remove 'climbing crew 9:58' and only one bubble"; "Yes, build it")
+
+**Why.** A chat is read as a message before it is read as a sentence about one. §1641 put the words in the row; a bubble says at a glance that they are someone's words to you, and the fill says whose.
+
+**What.**
+1. **`BandRow` draws a chat with people (`ChatFace.isPersonChat`) as its lead and one `DSChatBubble`** (`chatRow`): who it's with leads as on every row (§1615), and the bubble holds the last message (`ChatFace.lastMessage`): your words alone in the tint, theirs in the faint fill, a group's with the sender's name in the words as `lastLine` gives them. Up to three lines; the row's tap opens the chat, so the words are not selectable here.
+2. **The bubble stands on the rows' text edge whoever sent it** (`DSChatBubble(feedText:fromSelf:)`, `onTextEdge`): no right-hand bubble, no name or time above it, never a run. The sheet keeps Messages' two sides (§1580).
+3. **The one exception to bare rows.** §749 and §782 keep plates off rows; this bubble is the conversation's own shape (§1213's one shape behind words) and the only row that wears one. Notices, posts and mail stay bare.
+4. VoiceOver reads §1641's sentence ("Mia: Perfect. I'll bring the rope.").
+
+**Seen** on the iPhone 17 Pro simulator over the demo: Social's Feed section draws Mia's face beside "Perfect. I'll bring the rope." in the grey bubble on the column the rows around it start on. `ds-template-audit.py`, `row-cost-audit.py`, `swiftdata-liveness-audit.py`, `title-seam-audit.py`, `live-messages-selftest.sh`, `social-room-selftest.sh` green. **Not seen:** a group chat's or your own bubble on screen, the Mac, Dynamic Type.

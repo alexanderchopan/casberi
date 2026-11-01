@@ -19,9 +19,19 @@ struct DSChatBubble: View {
     /// sender's side, as Messages draws a run.
     var joinsAbove = false
     var joinsBelow = false
+    /// A Feed row's bubble (prd §1642): it stands on the rows' text edge
+    /// whoever sent it, the fill alone saying whose, and the row's tap opens
+    /// the chat rather than selecting words.
+    var onTextEdge = false
 
     init(text: String, fromSelf: Bool, faded: Bool = false) {
         self.init(attributed: AttributedString(text), fromSelf: fromSelf, faded: faded)
+    }
+
+    /// The Feed's one bubble for a chat (prd §1642).
+    init(feedText text: String, fromSelf: Bool) {
+        self.init(attributed: AttributedString(text), fromSelf: fromSelf)
+        self.onTextEdge = true
     }
 
     /// Words with their links already painted (`ProseLinks.rendered`), so an
@@ -58,17 +68,26 @@ struct DSChatBubble: View {
                     .foregroundStyle(fromSelf ? Color.white.opacity(0.8) : DS.textSecondary)
                     .accessibilityHidden(true)
             }
-            Text(text)
-                .dsText(.body17)
-                .foregroundStyle(fromSelf ? Color.white : DS.textPrimary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            if onTextEdge {
+                words.lineLimit(3)
+            } else {
+                words.textSelection(.enabled)
+            }
         }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
             .background(fromSelf ? DS.tint : DS.fillStrong, in: shape)
             .opacity(faded ? 0.55 : 1)
-            .frame(maxWidth: 300, alignment: fromSelf ? .trailing : .leading)
-            .frame(maxWidth: .infinity, alignment: fromSelf ? .trailing : .leading)
+            .frame(maxWidth: 300, alignment: edge)
+            .frame(maxWidth: .infinity, alignment: edge)
+    }
+
+    private var edge: Alignment { fromSelf && !onTextEdge ? .trailing : .leading }
+
+    private var words: some View {
+        Text(text)
+            .dsText(.body17)
+            .foregroundStyle(fromSelf ? Color.white : DS.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
