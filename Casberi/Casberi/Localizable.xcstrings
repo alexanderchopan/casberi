@@ -42273,6 +42273,34 @@
         }
       }
     },
+    "A name, a ticker or an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un nombre, un símbolo o una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前、ティッカー、またはアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름, 티커 또는 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名称、代码或地址"
+          }
+        }
+      }
+    },
     "A name, or one you're waiting on" : {
       "localizations" : {
         "es" : {
@@ -43900,6 +43928,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "代币转账"
+          }
+        }
+      }
+    },
+    "A token you watch" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un token que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的代币"
           }
         }
       }
@@ -65950,6 +66006,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新地址的二维码"
+          }
+        }
+      }
+    },
+    "Coin" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moneda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "币种"
           }
         }
       }
@@ -99818,6 +99902,34 @@
         }
       }
     },
+    "Its price, the day's change and its chart." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Su precio, el cambio del día y su gráfico."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格、当日の変動、チャート。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격, 오늘의 변동, 차트."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "价格、当日涨跌和走势图。"
+          }
+        }
+      }
+    },
     "Its receipt couldn't be paired — we can't say whether it ran." : {
       "localizations" : {
         "es" : {
@@ -117524,6 +117636,62 @@
         }
       }
     },
+    "No priced token by that name." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún token con precio tiene ese nombre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "その名前の価格付きトークンはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 이름으로 가격이 있는 토큰이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有该名称的有价代币。"
+          }
+        }
+      }
+    },
+    "No priced token named %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún token con precio se llama %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@という価格付きトークンはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(이)라는 가격이 있는 토큰이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有名为 %@ 的有价代币。"
+          }
+        }
+      }
+    },
     "No prices to draw" : {
       "localizations" : {
         "es" : {
@@ -126276,6 +126444,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有发送任何内容。"
+          }
+        }
+      }
+    },
+    "Nothing watched" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada en seguimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 항목 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有关注的内容"
           }
         }
       }
@@ -157920,6 +158116,34 @@
         }
       }
     },
+    "Searching works once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La búsqueda funciona al salir de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "検索はデモを終了すると使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검색은 데모를 나가면 작동합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可搜索。"
+          }
+        }
+      }
+    },
     "Secure Enclave key" : {
       "localizations" : {
         "es" : {
@@ -186167,6 +186391,34 @@
         }
       }
     },
+    "Tokens you keep an eye on, priced, with the day's change." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens que sigues, con su precio y el cambio del día."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のトークンの価格と当日の変動。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 토큰의 가격과 오늘의 변동."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的代币，附价格和当日涨跌。"
+          }
+        }
+      }
+    },
     "Tomorrow" : {
       "localizations" : {
         "es" : {
@@ -194321,6 +194573,34 @@
         }
       }
     },
+    "Watch a token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir un token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンをウォッチ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 지켜보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注代币"
+          }
+        }
+      }
+    },
     "Watch a wallet" : {
       "localizations" : {
         "es" : {
@@ -196377,6 +196657,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退出演示后即可关注"
+          }
+        }
+      }
+    },
+    "Watching works once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El seguimiento funciona al salir de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチはデモを終了すると使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보기는 데모를 나가면 작동합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可关注。"
           }
         }
       }
@@ -204417,6 +204725,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你还没有为该地址命名"
+          }
+        }
+      }
+    },
+    "You hold" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tienes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保有中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你持有"
           }
         }
       }
@@ -227976,6 +228312,34 @@
         }
       }
     },
+    "prices from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "precios de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格提供：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격 출처: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "价格来自 %@"
+          }
+        }
+      }
+    },
     "private" : {
       "localizations" : {
         "es" : {
@@ -232998,6 +233362,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "代币"
+          }
+        }
+      }
+    },
+    "token you watch" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "token que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个关注的代币"
+          }
+        }
+      }
+    },
+    "tokens you watch" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tokens que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个关注的代币"
           }
         }
       }
