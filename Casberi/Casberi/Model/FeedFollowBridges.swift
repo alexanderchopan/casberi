@@ -537,6 +537,14 @@ enum FeedFollowIngest {
         var reached = false
     }
 
+    /// `stored` with each of `fresh`'s facts in place of any stored fact of
+    /// the same action (prd §1637); the rest keep their order.
+    static func replacingFacts(_ stored: [String], with fresh: [String]) -> [String] {
+        guard !fresh.isEmpty else { return stored }
+        let actions = Set(fresh.compactMap { ThingFact(encoded: $0)?.action })
+        return stored.filter { ThingFact(encoded: $0).map { !actions.contains($0.action) } ?? true } + fresh
+    }
+
     /// A Telegram channel page as if it were a feed.
     ///
     /// **The posts are REVERSED here, and that is the whole reason this is a
@@ -579,6 +587,13 @@ enum FeedFollowIngest {
             if post.photoURL != nil { tags.append("Photo") }
             if post.hasVideo { tags.append("Video") }
             item.categories = tags
+            // The page's own words, never numbers (rule 7, prd §1637).
+            if let views = post.views {
+                item.facts.append(ThingFact(String(localized: "Views"), views, .views).encoded)
+            }
+            if let subscribers = channel.subscribers {
+                item.facts.append(ThingFact(String(localized: "Subscribers"), subscribers, .subscribers).encoded)
+            }
             return item
         }
         return parsed
@@ -862,6 +877,10 @@ enum FeedFollowIngest {
                         where !thing.tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
                             thing.tags.append(tag); extraPatched = true
                         }
+                        // A count the page words again replaces the last
+                        // (prd §1637).
+                        let facts = Self.replacingFacts(thing.facts, with: item.facts)
+                        if facts != thing.facts { thing.facts = facts; extraPatched = true }
                     }
                     continue
                 }
@@ -901,6 +920,7 @@ enum FeedFollowIngest {
                 // whether or not it stood in for `content` above: the row's
                 // bytes are its link, this is the media file itself.
                 if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
+                if !item.facts.isEmpty { thing.facts = item.facts }
                 context.insert(thing)
                 existing.insert(ref)
                 indexed.append(thing)

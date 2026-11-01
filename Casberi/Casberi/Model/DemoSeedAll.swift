@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 16
+    static let version = 17
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -2230,6 +2230,11 @@ enum DemoSeedAll {
         "quietbuilds": "sample:avatar-quietbuilds",
     ]
 
+    /// The demo channels' counts, as a channel page words them (prd §1637).
+    private static let telegramViews = ["2.4K", "18.1K", "9.7K", "3.1K", "12.6K", "880"]
+    private static let telegramSubscribers = ["crimpchalk": "4.8K", "tram28notes": "21.3K",
+                                              "quietbuilds": "7.9K"]
+
     private static func telegram() -> [Thing] {
         var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", days: 9)]
 
@@ -2248,15 +2253,26 @@ enum DemoSeedAll {
             ("tram28notes", "Night trams are back on the winter timetable.", "Tram 28 Notes", 7.5, false),
         ]
         out += posts.enumerated().map { i, p in
-            row(.link, p.1.isEmpty ? "Photo" : p.1, source: "Telegram",
+            // One forward, so the sheet's forward line has a post to stand
+            // over (prd §1637); the source is made up, as the channels are.
+            let forwarded = p.0 == "tram28notes" && p.3 > 7
+            return row(.link, p.1.isEmpty ? "Photo" : p.1, source: "Telegram",
                 ref: "telegram:post:demo-\(p.0)/\(1200 + i)",
                 days: p.3, hour: 11,
                 content: "https://t.me/\(p.0)/\(1200 + i)",
-                tags: p.4 ? ["Photo"] : []) { t in
+                tags: (p.4 ? ["Photo"] : []) + (forwarded ? ["Forwarded"] : [])) { t in
                 t.authorHandle = p.2
                 t.authorAvatarURL = Self.telegramChannelMark[p.0]
                 if !p.1.isEmpty { t.postText = p.1 }
                 if p.4 { t.previewImageData = pixels("tg-\(i)") }
+                if forwarded { t.postAuthor = "Lisbon Night Lines" }
+                // The page's own words, as a read lands them (rule 7).
+                t.facts = [
+                    ThingFact(String(localized: "Views"), Self.telegramViews[i % Self.telegramViews.count],
+                              .views).encoded,
+                    ThingFact(String(localized: "Subscribers"), Self.telegramSubscribers[p.0] ?? "1.2K",
+                              .subscribers).encoded,
+                ]
             }
         }
 

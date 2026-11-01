@@ -319,6 +319,8 @@ struct ThingSheetView: View {
     /// second half, and the thing a profile card structurally cannot know.
     /// Keyed, not raw (`ThingRowKeying.swift`): a snapshot held in `@State`.
     @State private var personPosts: [KeyedThing] = []
+    /// A Telegram channel post's siblings, newest first (prd §1637).
+    @State private var channelPosts: [KeyedThing] = []
     /// How often you've paid this merchant (prd §364). Held in `@State` and
     /// read once on open rather than computed in `body`: it is a corpus fetch,
     /// and a computed property here would run it on every graph update the
@@ -1407,6 +1409,15 @@ struct ThingSheetView: View {
         .toolbar(onBack != nil || inlineRest ? .hidden : .automatic, for: .navigationBar)
         .onAppear {
             streamRelated()
+            if let channel = TelegramPost.channelName(thing) {
+                let id = thing.id
+                channelPosts = SocialSheetSource
+                    .recentPosts(by: channel, source: thing.source, context: modelContext, limit: 4)
+                    .filter { $0.id != id }
+                    .prefix(3)
+                    .map { $0 }
+                    .keyed
+            }
             // An X Following post you opened is kept past its days (prd §1582).
             XLiveFollowing.noteOpened(thing)
             Task { replies = await SocialThread.replies(for: thing) }
@@ -4202,6 +4213,13 @@ struct ThingSheetView: View {
                 .padding(.horizontal, DSRoomChassis.leadInset)
                 .padding(.top, DS.Space.s4)
         }
+        // Whose post a channel's forward repeats, over its words (prd §1637).
+        if let forwarded = TelegramPost.forwardedFrom(thing) {
+            TelegramForwardLine(name: forwarded)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s4)
+                .settleIn(delay: 0.07)
+        }
         let words = SocialSheetSource.words(for: thing)
         if !words.isEmpty {
             Text(ProseLinks.rendered(words))
@@ -4216,6 +4234,13 @@ struct ThingSheetView: View {
         SocialPostContent(thing: thing, parts: [.pictures, .quote])
             .padding(.top, DS.Space.s4)
             .settleIn(delay: 0.1)
+        // A channel post's views, as the page worded them (prd §1637).
+        if let views = TelegramPost.views(thing) {
+            TelegramViewsLine(views: views)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s3)
+                .settleIn(delay: 0.11)
+        }
         // How it landed, under the post (prd §1636): the counts with their
         // nouns and who liked it. The foot keeps how it got here.
         if let landing = reception?.landing, !landing.isEmpty {
@@ -4231,6 +4256,17 @@ struct ThingSheetView: View {
         dialResult
         SocialPostContent(thing: thing, parts: [.thread])
             .padding(.top, DS.Space.s6)
+        // The channel's other posts, its subscribers trailing (prd §1637).
+        // "More posts": the head above already names the channel, and its
+        // name beside the count was cut to "More from Crimp &…".
+        if !channelPosts.isEmpty, TelegramPost.isChannelPost(thing) {
+            MoneyHistoryRows(title: String(localized: "More posts"), rows: channelPosts,
+                             trailing: TelegramPost.subscribers(thing)
+                                .map { String(localized: "\($0) subscribers") },
+                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
+                .padding(.top, DS.Space.s6)
+                .settleIn(delay: 0.16)
+        }
     }
 
     /// A mail in the room's frame (prd §1188): the sender is the title, the

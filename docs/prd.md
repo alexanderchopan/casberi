@@ -70044,3 +70044,18 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 **Guards.** `social-sheet-selftest.sh`: the foot is `reception.footnotes` under a post head, the landing is drawn (`SocialReceptionCard(reception: landing)`), and a notice draws its post `full: true`.
 
 **Mac half (§1402):** the same sheet in the pane; compiled for Mac Catalyst, not looked at on the Mac.
+
+## §1637 — A Telegram channel post's sheet: the channel's real @handle, "Forwarded from" over a forward's words, its views as the page words them, and the channel's other posts with its subscribers; a count is the page's WORD, never a number (amends §1636 for a Telegram channel post, `TelegramChannel` rule 7's refusal) (user, 2026-11-01: of the round-2 canvas's channel post, "Build channel posts") — BUILT, seen on the simulator over the demo; canvas https://claude.ai/artifact/PoefQ3sng41LcNW6uEqwSY (C2)
+
+**Why.** §1636 gave a channel post the post's anatomy, but the line under the channel's name had no handle (the row holds the channel's display name), a forward was headed by the forward's source instead of the channel, and nothing said how far a post went or what else the channel had said.
+
+1. **The handle is the channel's own** (`TelegramPost.handle`), read off the ref `telegram:post:<channel>/<id>` (the demo's `demo-` marker is not part of it): "@crimpchalk · Today 6:43 AM".
+2. **A forward is the channel's post** (`PostSheetBox.title` takes the channel's name), and "Forwarded from Tram 28 Notes" stands over its words (`TelegramForwardLine`): the feed landing already kept the source on `postAuthor` with a Forwarded tag.
+3. **Views and subscribers are the page's words** (`TelegramChannel` rule 7, amended). The refusal stood because the page rounds ("1.63M") and an Int would invent precision. They now land as the word, in rowless facts (`ThingFact.Action.views`, `.subscribers`, through `FeedParser.Item.facts`; a later read replaces a fact of the same action, `FeedFollowIngest.replacingFacts`), and are drawn as written: "2.4K views" under the post (`TelegramViewsLine`), "4.8K subscribers" trailing More posts. Measured 2026-11-01 on @telegram and @durov: 20 of 20 posts carry `tgme_widget_message_views`, and the subscribers counter leads the header's four.
+4. **More posts** (`MoneyHistoryRows`, the person sheet's Lately shape): the channel's three newest other posts, each opening in the sheet. Titled "More posts" because the head names the channel and "More from Crimp & Chalk" was cut beside the count.
+5. **The demo** carries views, subscribers and one forward (seed 17).
+
+**Not built.** The verb stays "Telegram ↗" (the dial's word for Open in, app-wide). Posts landed before this carry no views until the channel is read again.
+
+**Guards.** `telegram-selftest.sh`: guard (4) inverted (a view count must be the page's String, never a number field), and the fixture's views and subscribers counters read, a group's members counter refused, a non-count dropped. **Seen** on a private iPhone 17 simulator, demo, dark: Crimp & Chalk's post and Tram 28 Notes' forward. **Not seen:** a real channel's counts in the sheet, the Mac (the same shared views; Catalyst not compiled in this pass).
+

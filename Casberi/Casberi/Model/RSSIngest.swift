@@ -692,6 +692,11 @@ enum FeedParser {
         /// on `Thing.tags`, which feeds §308 facet filtering, so junk here
         /// degrades search.
         var categories: [String] = []
+        /// Rowless facts the item carries for its row (prd §1637), encoded
+        /// (`ThingFact.encoded`): a Telegram post's views and its channel's
+        /// subscribers. A later read REPLACES a fact of the same action, so a
+        /// count stays the newest the page said. Empty for every other feed.
+        var facts: [String] = []
     }
 
     struct Parsed {

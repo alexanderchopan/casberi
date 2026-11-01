@@ -100,23 +100,18 @@ grep -qE 'case telegram = "Telegram"' "$FOLLOW" \
 grep -qF 'TelegramChannel.parse(html, handle: handle)' "$FOLLOW" \
   || { echo "✗ the feed-follow arm no longer routes a channel page through the parser"; exit 1; }
 
-# (4) NEGATIVE — the view count stays REFUSED (rule 7). The page publishes it
-# already rounded ("12.6M") and the only field that could hold it is an Int, so
-# landing it turns a rounded string into a precise number nobody measured — a
-# figure that looks exactly like a fact (§83). Read from the comment-stripped
-# copy, because rule 7 explains itself by naming the field.
-#
-# Two spellings, because the refusal can be undone from either end: a FIELD to
-# hold the number, or the page's own `tgme_widget_message_views` counter being
-# read at all. `viewCount` is matched anywhere rather than only as a property —
-# which is exactly why the stripped copy is required, since rule 7's own prose
-# names `Thing.viewCount` and would satisfy a raw grep on the comment alone.
+# (4) The view count is the page's own WORD, never a number (rule 7, prd
+# §1637, amending the refusal this guard held). The page publishes it already
+# rounded ("1.63M"); an Int would turn that into a precise number nobody
+# measured (§83), so it must land as a String and be drawn as written. Read
+# from the comment-stripped copy, because rule 7's own prose names the field.
 if grep -qE 'viewCounts?\b' "$TMP/channel.nc"; then
-  echo "✗ TelegramChannel names a view count — the page publishes it PRE-ROUNDED (\"12.6M\") and the only field that could hold it is an Int, so landing it turns a rounded string into a precise number nobody measured (rule 7, §83)"; exit 1
+  echo "✗ TelegramChannel names a view count — the page publishes it PRE-ROUNDED (\"1.63M\"), so a number field turns it into precision nobody measured (rule 7, §83); keep the page's word"; exit 1
 fi
-if grep -qE '(var|let)[[:space:]]+views\b|tgme_widget_message_views' "$TMP/channel.nc"; then
-  echo "✗ TelegramChannel reads the page's view counter — see rule 7: that number is already rounded on the wire, so any precision it lands is invented"; exit 1
-fi
+grep -qE 'var views: String\?' "$TMP/channel.nc" \
+  || { echo "✗ a post's views are no longer the page's word (a String) — rule 7"; exit 1; }
+grep -qE 'var subscribers: String\?' "$TMP/channel.nc" \
+  || { echo "✗ a channel's subscribers are no longer the page's word (a String) — rule 7"; exit 1; }
 
 echo "telegram-selftest: drift guards ✓"
 
@@ -195,6 +190,7 @@ let page = """
 <meta property="og:description" content="Thoughts &amp; things">
 <meta property="og:image" content="//cdn1.telesco.pe/file/avatar.jpg">
 </head><body>
+<div class="tgme_channel_info_counters"><div class="tgme_channel_info_counter"><span class="counter_value">9.21M</span> <span class="counter_type">subscribers</span></div><div class="tgme_channel_info_counter"><span class="counter_value">16</span> <span class="counter_type">photos</span></div></div>
 <div class="tgme_widget_message" data-post="durov/101">
 <div class="tgme_widget_message_text js-message_text">A clip</div>
 <time class="message_video_duration">0:42</time>
@@ -216,6 +212,7 @@ let page = """
 <div class="tgme_widget_message" data-post="durov/104">
 <div class="tgme_widget_message_text">The newest thing</div>
 <div class="link_preview_title">Some Article</div>
+<span class="tgme_widget_message_views">1.63M</span>
 <time datetime="2026-06-13T20:15:20+00:00" class="time">Jun 13</time>
 </div>
 </body></html>
@@ -472,6 +469,18 @@ check("…a video off any other host is refused",
       TelegramChannel.videoSource(in: "<video src=\"https://evil.example/a.mp4\">") == nil)
 check("…and a post Telegram calls too big carries none",
       TelegramChannel.videoSource(in: "<div class=\"message_media_not_supported\">Media is too big</div>") == nil)
+
+// --- rule 7: views and subscribers as the page words them (prd §1637) ------
+check("a post's views are the page's own word, rounding and all",
+      channel.posts.last?.views == "1.63M")
+check("…and a post with no views span carries none, never a zero",
+      channel.posts.first?.views == nil)
+check("the channel's subscribers are the counter typed subscribers, as its word",
+      channel.subscribers == "9.21M")
+check("a group's members counter is not subscribers",
+      TelegramChannel.subscribers(in: "<div class=\"tgme_channel_info_counter\"><span class=\"counter_value\">40</span> <span class=\"counter_type\">members</span></div>") == nil)
+check("a counter that is not a count is dropped",
+      TelegramChannel.countWord("lots") == nil && TelegramChannel.countWord("12.6M") == "12.6M")
 
 print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }

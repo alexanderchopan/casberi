@@ -54,7 +54,10 @@ struct PostSheetHead: View {
     }
 
     private var handle: String {
-        SocialThread.shortHandle(thing.authorHandle ?? "")
+        // A Telegram channel's handle is in its ref; `authorHandle` holds the
+        // channel's display name (prd §1637).
+        if TelegramPost.isChannelPost(thing) { return TelegramPost.handle(thing) ?? "" }
+        return SocialThread.shortHandle(thing.authorHandle ?? "")
     }
 
     @ViewBuilder private var face: some View {

@@ -21,6 +21,9 @@ import SwiftUI
 
     /// The title row's name: the author's own name, else the handle.
     static func title(_ thing: Thing) -> String {
+        // A channel's post is the CHANNEL's (prd §1637): a forward keeps its
+        // source on `postAuthor`, which the forward line names instead.
+        if let channel = TelegramPost.channelName(thing) { return channel }
         let name = (thing.postAuthor ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !name.isEmpty { return name }
         let handle = SocialThread.shortHandle(thing.authorHandle ?? thing.source)

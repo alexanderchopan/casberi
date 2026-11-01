@@ -627,16 +627,21 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// for their day and time stamps, never drawn as a fact row.
         case sent
         /// How many saw a channel post, as its page counted at the last read
-        /// (prd §1635): `value` the page's own word ("1.2K"). Read by the
-        /// post's foot line, never drawn as a fact row.
+        /// (prd §1637): `value` the page's own word ("1.63M"), never a number
+        /// (`TelegramChannel` rule 7). Read by the post's views line, never
+        /// drawn as a fact row.
         case views
+        /// A channel's subscribers as its page counted them at the read that
+        /// landed the post (prd §1637): `value` the page's word ("9.21M").
+        /// Read by the channel's Earlier rows, never drawn as a fact row.
+        case subscribers
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
             case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp,
-                 .sent, .views: return true
+                 .sent, .views, .subscribers: return true
             default: return false
             }
         }

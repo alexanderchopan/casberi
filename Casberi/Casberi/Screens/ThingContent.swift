@@ -2577,7 +2577,7 @@ struct FactRows: View {
                   url.scheme == "https" || url.scheme == "http" else { return nil }
             return url
         case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp,
-             .sent, .views:
+             .sent, .views, .subscribers:
             return nil
         }
     }

@@ -47,12 +47,15 @@ import Foundation
 ///      Telegram writes it into the text container for a post its own preview
 ///      cannot render. Landed, rows read as that sentence instead of the
 ///      author's.
-///   7. **The view count is REFUSED.** The page publishes it already rounded
-///      ("12.6M"), and the only field that could hold it (`Thing.viewCount`)
-///      is an Int — so landing it would turn a rounded string into a precise
-///      number nobody measured. YouTube's `media:statistics` is exact and is
-///      landed; this is not, and is not. (§83, in the one place a figure looks
-///      most like a fact.)
+///   7. **The view count is the page's own WORD, never a number** (prd
+///      §1637, amending the refusal this rule was). The page publishes it
+///      already rounded ("1.63M"), and an Int would turn that into a precise
+///      number nobody measured (§83), so it lands as the word, in a rowless
+///      `.views` fact, and is drawn as written. The channel's subscribers are
+///      the same: the header's first counter ("9.21M subscribers"), kept as
+///      its word (`.subscribers`). Measured 2026-11-01 on @telegram and
+///      @durov: 20 of 20 posts carry the views span, and the subscribers
+///      counter leads the four.
 ///
 /// Foundation-only BY DESIGN so `scripts/telegram-selftest.sh` can compile it
 /// WHOLE and unmodified — the strongest form a harness here takes, and the
@@ -171,6 +174,8 @@ enum TelegramChannel {
         /// The headline of the page this post links out to, when Telegram
         /// rendered a link preview for it.
         var linkTitle: String?
+        /// How many saw it, as the page words it ("1.63M") — rule 7.
+        var views: String? = nil
 
         var ref: String { TelegramChannel.ref(handle: channel, id: id) }
         var url: String { TelegramChannel.postURL(handle: channel, id: id) }
@@ -189,6 +194,9 @@ enum TelegramChannel {
         var title: String
         var avatarURL: String?
         var about: String
+        /// The header's subscriber count as the page words it ("9.21M"),
+        /// nil when the page shows none — rule 7.
+        var subscribers: String? = nil
         /// As published: OLDEST FIRST (rule 2).
         var posts: [Post]
 
@@ -239,8 +247,37 @@ enum TelegramChannel {
             title: title.isEmpty ? handle : title,
             avatarURL: IngestSupport.imageURL(avatar),
             about: about,
+            subscribers: subscribers(in: html),
             posts: posts
         )
+    }
+
+    /// The subscriber count off the header's counters (rule 7): the one
+    /// whose type is "subscribers", as its own word. nil for a page with no
+    /// such counter — a group's say "members", and that is not this.
+    static func subscribers(in html: String) -> String? {
+        var from = html.startIndex
+        while let mark = html.range(of: "class=\"tgme_channel_info_counter\"", range: from..<html.endIndex) {
+            let end = html.range(of: "</div>", range: mark.upperBound..<html.endIndex)?.lowerBound ?? html.endIndex
+            let open = html.range(of: ">", range: mark.upperBound..<end)?.upperBound ?? end
+            let words = plainText(String(html[open..<end]).replacingOccurrences(of: "</span>", with: "</span> "))
+                .split(whereSeparator: \.isWhitespace)
+            if words.count >= 2, words[1].lowercased().hasPrefix("subscriber") {
+                return countWord(String(words[0]))
+            }
+            from = end
+        }
+        return nil
+    }
+
+    /// A count as the page words it — digits, a point, a K, M or B — and
+    /// nothing else; anything else is not a count and is dropped.
+    static func countWord(_ raw: String) -> String? {
+        let word = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = word.first, first.isNumber, word.count <= 8,
+              word.allSatisfy({ $0.isNumber || $0 == "." || $0 == "," || "KMB".contains($0) })
+        else { return nil }
+        return word
     }
 
     /// Read the LANDING page (`t.me/<name>`, where `/s/` redirected) for the
@@ -294,6 +331,9 @@ enum TelegramChannel {
                              withClassContaining: "tgme_widget_message_forwarded_from_name") {
             let name = plainText(fwd).trimmingCharacters(in: .whitespacesAndNewlines)
             if !name.isEmpty { post.forwardedFrom = name }
+        }
+        if let v = element(in: fragment, withClassContaining: "tgme_widget_message_views") {
+            post.views = countWord(plainText(v))
         }
         if let lp = element(in: fragment, withClassContaining: "link_preview_title") {
             let t = plainText(lp).trimmingCharacters(in: .whitespacesAndNewlines)
