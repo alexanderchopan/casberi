@@ -9,9 +9,13 @@ import SwiftUI
 ///
 /// Liveness: every member takes a `Thing` the caller has already guarded.
 enum ChatFace {
-    /// A conversation with people, not an AI chat or a note.
+    /// A conversation with people, not an AI chat or a note. A post or a
+    /// notice is `.chat` too on X and Bluesky, but it carries its words in
+    /// `postText` or why it's here in `socialContext`, which no conversation
+    /// sets: read as a chat, a followed post's "last message" was its link.
     static func isPersonChat(_ thing: Thing) -> Bool {
         thing.kind == .chat && SocialRoom.facts(for: thing.source) != nil
+            && (thing.postText ?? "").isEmpty && (thing.socialContext ?? "").isEmpty
     }
 
     /// "Ada", out of "Chat with Ada"; a group's own name stands.
