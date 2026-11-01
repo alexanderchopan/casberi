@@ -1332,7 +1332,12 @@ struct ThingSheetView: View {
         .environment(\.dsTitleWraps, true)
         // A note of yours stands its three keys at the foot (prd §983).
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if pagedNote, !inPane { keptNoteBand }
+            if pagedNote, !inPane {
+                keptNoteBand
+            } else if let reply = Self.chatReplyURL(thing) {
+                // A chat's way on, where it can be answered (prd §1635).
+                ChatReplyPill(network: thing.source) { openURL(reply) }
+            }
         }
         // In the pane the note's three keys are the pane's header row (prd
         // §1404), published as every dial's are.
@@ -2743,10 +2748,34 @@ struct ThingSheetView: View {
         return title.hasPrefix(prefix) ? String(title.dropFirst(prefix.count)) : title
     }
 
-    /// "Telegram · 6,310 messages".
+    /// "Telegram · 6,310 messages", or "@mia · 6,310 messages" where the
+    /// person has a handle of their own (prd §1635): the face's badge
+    /// already names the network.
     static func chatLine(_ thing: Thing) -> String {
-        guard let n = thing.messageCount, n > 0 else { return thing.source }
-        return "\(thing.source) · " + String(localized: "\(n) messages")
+        let lead = chatHandle(thing).map { "@" + $0 } ?? thing.source
+        guard let n = thing.messageCount, n > 0 else { return lead }
+        return "\(lead) · " + String(localized: "\(n) messages")
+    }
+
+    /// A person chat's other person's handle, when the read stamped one that
+    /// is a handle and not their name again.
+    static func chatHandle(_ thing: Thing) -> String? {
+        guard ChatFace.isPersonChat(thing), let handle = thing.authorHandle,
+              !handle.isEmpty, handle.count <= 32, handle != chatName(thing.title),
+              handle.allSatisfy({ ($0.isLetter || $0.isNumber) && $0.isASCII || $0 == "_" || $0 == "." })
+        else { return nil }
+        return handle
+    }
+
+    /// Where a chat is answered (prd §1635): a live Telegram one-to-one with
+    /// a public username opens it in Telegram. Anything else draws no pill —
+    /// a group's chat has no public link, and the demo's people are made up.
+    static func chatReplyURL(_ thing: Thing) -> URL? {
+        guard !DemoMode.isActive,
+              thing.sourceRef?.hasPrefix(TelegramMessages.refPrefix) == true,
+              let handle = chatHandle(thing), TelegramChannel.isValidHandle(handle)
+        else { return nil }
+        return URL(string: "https://t.me/\(handle)")
     }
 
     /// "Piranesi — Susanna Clarke" as its two parts — the app's one seam
@@ -4001,7 +4030,10 @@ struct ThingSheetView: View {
         // Who it's with leads, the network its badge, and the count rides the
         // head's line (prd §1615): the row under the tiles that said
         // "Telegram · 6,310 messages" beside a second logo is deleted.
-        SheetPartyHead(name: Self.chatName(thing.title), day: thing.capturedAt,
+        // A chat whose messages carry their times dates them there, so the
+        // head's day goes (prd §1635).
+        SheetPartyHead(name: Self.chatName(thing.title),
+                       day: LiveMessagesLanding.sentTimes(thing).isEmpty ? thing.capturedAt : nil,
                        line: Self.chatLine(thing)) {
             if ChatFace.isPersonChat(thing) {
                 ChatFaceMark(thing: thing, size: DS.Face.sheet, badge: true)

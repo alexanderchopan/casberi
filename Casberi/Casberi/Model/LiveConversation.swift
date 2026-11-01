@@ -63,6 +63,11 @@ enum LiveMessages {
         var count: Int
         /// How many lines this read added.
         var appended: Int
+        /// When each of the transcript's LAST `times.count` lines was sent
+        /// (prd §1635). Aligned from the END, because a row landed before
+        /// times were kept holds older lines with none, and the clamp cuts
+        /// from the front.
+        var times: [Date] = []
     }
 
     /// The lines newer than `newest` onto a stored transcript, clamped. nil
@@ -71,8 +76,9 @@ enum LiveMessages {
     /// `newest` is the row's `capturedAt`, which is the newest line it holds;
     /// a first landing passes nil for all three. `count` is the stored
     /// `messageCount`, the whole conversation as far as this app has seen it,
-    /// never the clamped slice.
-    static func merge(content: String?, newest: Date?, count: Int?,
+    /// never the clamped slice. `times` is the row's stored `.sent` fact,
+    /// aligned to its last lines.
+    static func merge(content: String?, newest: Date?, count: Int?, times: [Date] = [],
                       lines: [LiveConversation.Line]) -> Merge? {
         let fresh = lines
             .filter { line in newest.map { line.at > $0 } ?? true }
@@ -81,11 +87,28 @@ enum LiveMessages {
         let stored = (content ?? "")
             .split(separator: "\n", omittingEmptySubsequences: true)
             .map(String.init)
+        let transcript = clamp(stored + fresh.map(\.text))
+        let kept = transcript.split(separator: "\n", omittingEmptySubsequences: true).count
         return Merge(
-            content: clamp(stored + fresh.map(\.text)),
+            content: transcript,
             newest: last.at,
             count: (count ?? stored.count) + fresh.count,
-            appended: fresh.count)
+            appended: fresh.count,
+            times: Array((times.suffix(stored.count) + fresh.map(\.at)).suffix(kept)))
+    }
+
+    /// The `.sent` fact's value: epoch seconds, space-separated.
+    static func encodeTimes(_ times: [Date]) -> String {
+        times.map { String(Int($0.timeIntervalSince1970)) }.joined(separator: " ")
+    }
+
+    /// The `.sent` fact's value back to dates; anything unreadable is the
+    /// whole fact unreadable, never a guessed time.
+    static func decodeTimes(_ value: String) -> [Date] {
+        let parts = value.split(separator: " ")
+        let seconds = parts.compactMap { Double($0) }
+        guard seconds.count == parts.count else { return [] }
+        return seconds.map { Date(timeIntervalSince1970: $0) }
     }
 
     /// The newest `transcriptLines`, inside `transcriptBytes` — the imports'

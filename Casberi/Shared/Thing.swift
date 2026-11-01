@@ -621,12 +621,22 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// Spending's Round-ups door (`SpendingSource.roundUp(of:)`), which
         /// also keeps it out of the total; never drawn as a fact row.
         case roundUp
+        /// When each message of a conversation was sent (prd §1635): `value`
+        /// epoch seconds, space-separated, aligned to the transcript's LAST
+        /// lines (`LiveMessages.Merge.times`). Read by the chat's bubbles
+        /// for their day and time stamps, never drawn as a fact row.
+        case sent
+        /// How many saw a channel post, as its page counted at the last read
+        /// (prd §1635): `value` the page's own word ("1.2K"). Read by the
+        /// post's foot line, never drawn as a fact row.
+        case views
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
-            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp: return true
+            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp,
+                 .sent, .views: return true
             default: return false
             }
         }

@@ -11,6 +11,14 @@ struct DSChatBubble: View {
     let fromSelf: Bool
     /// A message the Observer says was not delivered draws faded.
     var faded = false
+    /// What a message that is not words carries (prd §1635): "photo",
+    /// "waveform", drawn before its name inside the bubble.
+    var glyph: String? = nil
+    /// The run this bubble stands in (prd §1635): a bubble joined to the one
+    /// above or below by the same sender tightens that corner on the
+    /// sender's side, as Messages draws a run.
+    var joinsAbove = false
+    var joinsBelow = false
 
     init(text: String, fromSelf: Bool, faded: Bool = false) {
         self.init(attributed: AttributedString(text), fromSelf: fromSelf, faded: faded)
@@ -18,22 +26,47 @@ struct DSChatBubble: View {
 
     /// Words with their links already painted (`ProseLinks.rendered`), so an
     /// address in a chat opens (prd §1580).
-    init(attributed: AttributedString, fromSelf: Bool, faded: Bool = false) {
+    init(attributed: AttributedString, fromSelf: Bool, faded: Bool = false,
+         glyph: String? = nil, joinsAbove: Bool = false, joinsBelow: Bool = false) {
         self.text = attributed
         self.fromSelf = fromSelf
         self.faded = faded
+        self.glyph = glyph
+        self.joinsAbove = joinsAbove
+        self.joinsBelow = joinsBelow
+    }
+
+    private static let round: CGFloat = 18
+    private static let joined: CGFloat = 6
+
+    private var shape: UnevenRoundedRectangle {
+        let top = joinsAbove ? Self.joined : Self.round
+        let bottom = joinsBelow ? Self.joined : Self.round
+        return UnevenRoundedRectangle(
+            topLeadingRadius: fromSelf ? Self.round : top,
+            bottomLeadingRadius: fromSelf ? Self.round : bottom,
+            bottomTrailingRadius: fromSelf ? bottom : Self.round,
+            topTrailingRadius: fromSelf ? top : Self.round,
+            style: .continuous)
     }
 
     var body: some View {
-        Text(text)
-            .dsText(.body17)
-            .foregroundStyle(fromSelf ? Color.white : DS.textPrimary)
-            .textSelection(.enabled)
-            .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            if let glyph {
+                Image(systemName: glyph)
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(fromSelf ? Color.white.opacity(0.8) : DS.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            Text(text)
+                .dsText(.body17)
+                .foregroundStyle(fromSelf ? Color.white : DS.textPrimary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
-            .background(fromSelf ? DS.tint : DS.fillStrong,
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(fromSelf ? DS.tint : DS.fillStrong, in: shape)
             .opacity(faded ? 0.55 : 1)
             .frame(maxWidth: 300, alignment: fromSelf ? .trailing : .leading)
             .frame(maxWidth: .infinity, alignment: fromSelf ? .trailing : .leading)

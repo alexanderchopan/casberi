@@ -79,3 +79,31 @@ struct ChatFaceMark: View {
         }
     }
 }
+
+/// A chat's way on (prd §1635): one glass capsule over the sheet's foot,
+/// "Reply in Telegram", which opens the conversation in the app it lives in.
+/// Casberi reads chats and never writes one, so the reply is the network's.
+struct ChatReplyPill: View {
+    let network: String
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "paperplane").dsGlyph(.subhead)
+                Text("Reply in \(network)").dsText(.heading17)
+            }
+            .foregroundStyle(DS.textPrimary)
+            .padding(.horizontal, DS.Space.s6)
+            .frame(minHeight: 48)
+            .dsGlass(cornerRadius: 24)
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, DS.Space.s3)
+    }
+}

@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 15
+    static let version = 16
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -277,7 +277,10 @@ enum DemoSeedAll {
                               // a demo marker inside the real shape, so both
                               // halves are exact.
                               "telegram:post:demo-", "telegram:saved:demo-",
-                              "telegram:chat:demo-",
+                              // The chats moved from the export's shape to the
+                              // live read's (prd §1635); the old spelling stays
+                              // so a demo poured before it still leaves whole.
+                              "telegram:chat:demo-", "telegram:dm:demo-",
                               // X's live notices (prd §707) — Telegram's case
                               // exactly, on the second seat to hold both
                               // shapes at once. The demo notice must carry the
@@ -604,8 +607,15 @@ enum DemoSeedAll {
     /// over five identical bars. Caught exactly that way on the sim.
     @MainActor
     static func seed(_ context: ModelContext) {
-        let landed = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
-            .compactMap(\.sourceRef))
+        let stored = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        // The demo's Telegram chats under the export's shape, from before
+        // they took the live read's (prd §1635): the same chats under a new
+        // ref, so a demo in progress would draw each twice.
+        for thing in stored where thing.isLive
+            && thing.sourceRef?.hasPrefix("telegram:chat:demo-") == true {
+            context.delete(thing)
+        }
+        let landed = Set(stored.compactMap(\.sourceRef))
         for thing in rooms() where !landed.contains(thing.sourceRef ?? "") {
             context.insert(thing)
         }
@@ -2272,7 +2282,7 @@ enum DemoSeedAll {
         // (prd §1005). It said "Messages with Ada." under "Chat with Ada".
         let chats: [(String, Int, Double, String)] = [
             ("Mia", 6_310, 0.8,
-             "Mia: Are we still on for Saturday?\nYou: Yes, 10am at the wall.\nMia: Perfect. I'll bring the rope."),
+             "Mia: Are we still on for Saturday?\nMia: Photo: the new overhang\nYou: Yes, 10am at the wall.\nMia: Voice message\nMia: Perfect. I'll bring the rope."),
             ("Climbing crew", 2_480, 2.6,
              "Sam: The wall's shut Thursday for a reset.\nJo: Friday at 7 then?\nYou: Friday works for me."),
             ("Mum", 1_140, 6.0,
@@ -2281,11 +2291,24 @@ enum DemoSeedAll {
              "Priya: October's rent is paid.\nYou: Thanks. The boiler service is booked for the 14th."),
         ]
         out += chats.enumerated().map { i, c in
+            // The live read's shape (prd §1575, §1635): Telegram's importer
+            // is deleted (§1577), so the demo's chats are read live, under
+            // its prefix and with when each line was sent — the first a day
+            // before, the last two minutes apart, so the sheet draws a day,
+            // a pause and a run.
             row(.chat, "Chat with \(c.0)", source: "Telegram",
-                ref: "telegram:chat:demo-\(700 + i)", days: c.2, hour: 20,
+                ref: TelegramMessages.refPrefix + "demo-\(700 + i)", days: c.2, hour: 20,
                 content: c.3, tags: ["Conversation"]) { t in
                 t.authorHandle = c.0
                 t.messageCount = c.1
+                let lines = c.3.split(separator: "\n").count
+                let times = (0..<lines).map { n -> Date in
+                    let back = lines - 1 - n
+                    return t.capturedAt.addingTimeInterval(n == 0 && lines > 2
+                        ? -26 * 3600 : -Double(back) * 4 * 60 - (back >= 2 ? 40 * 60 : 0))
+                }
+                t.facts.append(ThingFact(String(localized: "Sent"),
+                                         LiveMessages.encodeTimes(times), .sent).encoded)
                 // A chat leads with who it's with (prd §1615), and every one
                 // wears a face (user, 2026-10-31: "the demo on telegram should
                 // show faces per row"): a group wears a member's.

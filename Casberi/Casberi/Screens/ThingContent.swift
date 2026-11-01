@@ -521,7 +521,8 @@ struct ThingContentView: View {
                 // nothing is drawn twice.
                 let rest = SheetRepeat.dropping(thing.content, heads: heads)
                 if !rest.isEmpty {
-                    PersonChatBubbles(text: rest)
+                    PersonChatBubbles(text: rest, times: LiveMessagesLanding.sentTimes(thing),
+                                      chatID: thing.id)
                 }
             }
         case .voice:
@@ -1439,37 +1440,151 @@ struct ChatBubbles: View {
 /// sender over the first of their run. The newest stand at the foot, so a
 /// long chat hides its OLDEST behind "Show N earlier", never its newest.
 ///
-/// Liveness: holds a plain string sliced off a live model by the caller.
+/// **Times, runs and what is new (prd §1635).** A chat read live keeps when
+/// each message was sent (`.sent`, aligned to the last lines): a day and a
+/// time stand over a message that opens a day or follows a pause, a run of
+/// one sender's bubbles tightens its joined corners, and "N new" marks where
+/// the messages since you last opened the chat begin (`ChatSeen`). A
+/// message that is not words ("Photo", "Voice message") wears its glyph.
+///
+/// Liveness: holds a plain string and dates sliced off a live model by the
+/// caller.
 struct PersonChatBubbles: View {
     let text: String
+    /// When each of the transcript's last lines was sent, aligned from the
+    /// end; empty for a chat landed before times were kept.
+    var times: [Date] = []
+    /// The chat's id, for "N new"; nil marks nothing.
+    var chatID: UUID? = nil
     @State private var expanded = false
+    /// When the chat was opened before this time, read once on appear.
+    @State private var seenBefore: Date?
 
     private static let collapsedCount = 20
+    /// A pause this long between two messages earns a time over the second.
+    static let pause: TimeInterval = 30 * 60
 
-    private struct Message {
+    struct Message {
         var name: String?
         var words: String
         var mine: Bool
+        var glyph: String?
+        var media: String?
     }
 
-    private var messages: [Message] {
+    /// A message that is not words, as `TelegramMessages.text` names it:
+    /// its glyph, the word, and a caption when it had one.
+    static func media(_ words: String) -> (glyph: String, word: String, caption: String?)? {
+        let kinds: [(String, String)] = [
+            (String(localized: "Photo"), "photo"),
+            (String(localized: "Video message"), "video.circle"),
+            (String(localized: "Video"), "video"),
+            (String(localized: "GIF"), "play.rectangle"),
+            (String(localized: "Voice message"), "waveform"),
+            (String(localized: "Audio"), "music.note"),
+            (String(localized: "Sticker"), "face.smiling"),
+            (String(localized: "Location"), "mappin.and.ellipse"),
+            (String(localized: "Contact"), "person.crop.circle"),
+            (String(localized: "Poll"), "chart.bar"),
+        ]
+        for (word, glyph) in kinds {
+            if words == word { return (glyph, word, nil) }
+            if words.hasPrefix(word + ": ") {
+                let caption = words.dropFirst(word.count + 2).trimmingCharacters(in: .whitespaces)
+                return (glyph, word, caption.isEmpty ? nil : caption)
+            }
+        }
+        return nil
+    }
+
+    static func messages(_ text: String) -> [Message] {
         text.split(separator: "\n")
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
             .map { line in
-                let said = ChatBubbles.speaker(of: line)
+                var said = ChatBubbles.speaker(of: line)
+                // A one-to-one's other person carries no label, so their
+                // captioned photo reads "Photo: …" — a kind, never a name.
+                if let name = said.name, media(name + ": ") != nil || media(name) != nil {
+                    said = (nil, line)
+                }
                 let mine = said.name.map(ChatBubbles.isMine) ?? false
-                return Message(name: mine ? nil : said.name, words: said.words, mine: mine)
+                let kind = media(said.words)
+                return Message(name: mine ? nil : said.name, words: said.words, mine: mine,
+                               glyph: kind?.glyph, media: kind?.word)
             }
     }
 
-    var body: some View {
-        let all = messages
-        let shown = expanded ? all : Array(all.suffix(Self.collapsedCount))
-        let hiddenCount = all.count - shown.count
+    /// The bubble's words: a media message's word in the quieter ink, then
+    /// its caption.
+    private static func bubbleText(_ message: Message) -> AttributedString {
+        guard let word = message.media, let kind = media(message.words) else {
+            return ProseLinks.rendered(message.words)
+        }
+        var out = AttributedString(word)
+        out.foregroundColor = message.mine ? Color.white.opacity(0.8) : DS.textSecondary
+        if let caption = kind.caption {
+            out += AttributedString(" · ")
+            out += ProseLinks.rendered(caption)
+        }
+        return out
+    }
+
+    /// Whether a day and time stand over the message at `index`.
+    static func stamps(_ at: Date?, after previous: Date?, first: Bool) -> Bool {
+        guard let at else { return false }
+        guard let previous, !first else { return true }
+        return !Calendar.current.isDate(at, inSameDayAs: previous) || at.timeIntervalSince(previous) > pause
+    }
+
+    /// What the body draws, worked out once per pass: which messages show,
+    /// which wear a stamp, where the new ones begin, and each bubble's run.
+    private struct Layout {
+        var all: [Message]
+        var start: Int
+        var times: [Int: Date] = [:]
+        var stamped: Set<Int> = []
+        var firstNew: Int?
+        var newCount = 0
+        var opens: Set<Int> = []
+        var closes: Set<Int> = []
+        var named = false
+        var indices: [Int] { Array(start..<all.count) }
+    }
+
+    private func layout() -> Layout {
+        let all = Self.messages(text)
+        var out = Layout(all: all, start: expanded ? 0 : max(0, all.count - Self.collapsedCount))
+        // Times align to the LAST lines; a message older than them has none.
+        let offset = all.count - times.count
+        for i in all.indices where i - offset >= 0 && i - offset < times.count {
+            out.times[i] = times[i - offset]
+        }
+        out.newCount = min(ChatSeen.newCount(times: times, since: seenBefore), all.count - out.start)
+        out.firstNew = out.newCount > 0 ? all.count - out.newCount : nil
         // Names only where the side cannot say who: two or more people
         // besides you.
-        let named = Set(all.compactMap(\.name)).count > 1
+        out.named = Set(all.compactMap(\.name)).count > 1
+        for i in out.indices where i == out.firstNew
+            || Self.stamps(out.times[i], after: i > out.start ? out.times[i - 1] : nil, first: i == out.start) {
+            out.stamped.insert(i)
+        }
+        func sameRun(_ a: Int, _ b: Int) -> Bool {
+            all[a].mine == all[b].mine && all[a].name == all[b].name
+        }
+        for i in out.indices {
+            if i == out.start || out.stamped.contains(i) || !sameRun(i - 1, i) { out.opens.insert(i) }
+            if i == all.count - 1 || out.stamped.contains(i + 1) || !sameRun(i, i + 1) { out.closes.insert(i) }
+        }
+        return out
+    }
+
+    var body: some View {
+        let l = layout()
+        let all = l.all
+        let start = l.start
+        let hiddenCount = start
+        let named = l.named
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if hiddenCount > 0 {
                 Button {
@@ -1483,21 +1598,54 @@ struct PersonChatBubbles: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, DS.Space.s2)
             }
-            ForEach(Array(shown.enumerated()), id: \.offset) { index, message in
-                let previous = index > 0 ? shown[index - 1] : nil
-                let turn = previous.map { $0.mine != message.mine || $0.name != message.name } ?? false
-                if named, let name = message.name, turn || previous == nil {
+            ForEach(l.indices, id: \.self) { index in
+                let message = all[index]
+                let opens = l.opens.contains(index)
+                let closes = l.closes.contains(index)
+                let stamped = l.stamped
+                if stamped.contains(index) {
+                    stamp(l.times[index], new: index == l.firstNew ? l.newCount : nil)
+                        .padding(.top, index == start ? 0 : DS.Space.s3)
+                        .padding(.bottom, DS.Space.s1)
+                }
+                if named, let name = message.name, opens {
                     Text(verbatim: name)
                         .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .padding(.leading, DS.Space.s3)
-                        .padding(.top, previous == nil ? 0 : DS.Space.s2)
+                        .padding(.top, index == start || stamped.contains(index) ? 0 : DS.Space.s2)
                 }
-                DSChatBubble(attributed: ProseLinks.rendered(message.words), fromSelf: message.mine)
-                    .padding(.top, turn && !(named && message.name != nil) ? DS.Space.s2 : 0)
+                DSChatBubble(attributed: Self.bubbleText(message), fromSelf: message.mine,
+                             glyph: message.glyph, joinsAbove: !opens, joinsBelow: !closes)
+                    .padding(.top, opens && !stamped.contains(index) && !(named && message.name != nil)
+                             && index != start ? DS.Space.s2 : 0)
             }
         }
         .padding(.horizontal, DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s3)
+        .task(id: chatID) {
+            guard let chatID else { return }
+            seenBefore = ChatSeen.seen(chatID)
+            ChatSeen.mark(chatID)
+        }
+    }
+
+    /// The day and time over a message, as the sheet's head draws them; where
+    /// the unseen messages begin, how many lead it in the pick's ink.
+    @ViewBuilder
+    private func stamp(_ at: Date?, new: Int?) -> some View {
+        HStack(spacing: DS.Space.s1) {
+            if let new {
+                Text("\(new) new").dsText(.label12).foregroundStyle(DS.pickInk)
+                if at != nil { Text(verbatim: "·").dsText(.label12).foregroundStyle(DS.pickInk) }
+            }
+            if let at {
+                Text(FeedScreen.dayWord(at)).dsText(.label12).foregroundStyle(DS.headInk)
+                Text(verbatim: at.formatted(date: .omitted, time: .shortened))
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -2428,7 +2576,8 @@ struct FactRows: View {
             guard let url = URL(string: fact.value),
                   url.scheme == "https" || url.scheme == "http" else { return nil }
             return url
-        case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp:
+        case .none, .metric, .state, .allDay, .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp,
+             .sent, .views:
             return nil
         }
     }

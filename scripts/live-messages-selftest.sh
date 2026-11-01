@@ -105,12 +105,15 @@ let a = LiveConversation.Line(id: "1", at: at(0), text: "Ana: hi")
 let b = LiveConversation.Line(id: "2", at: at(1), text: "You: hey")
 let c = LiveConversation.Line(id: "3", at: at(2), text: "Ana: dinner?")
 let first = LiveMessages.merge(content: nil, newest: nil, count: nil, lines: [b, a])
-check(first == LiveMessages.Merge(content: "Ana: hi\nYou: hey", newest: at(1), count: 2, appended: 2),
+check(first == LiveMessages.Merge(content: "Ana: hi\nYou: hey", newest: at(1), count: 2, appended: 2,
+                                  times: [at(0), at(1)]),
       "a first landing sorts oldest first and counts what it holds")
 check(LiveMessages.merge(content: first!.content, newest: first!.newest, count: first!.count, lines: [a, b]) == nil,
       "a second read of the same lines changes nothing")
-let grown = LiveMessages.merge(content: first!.content, newest: first!.newest, count: first!.count, lines: [a, b, c])
-check(grown == LiveMessages.Merge(content: "Ana: hi\nYou: hey\nAna: dinner?", newest: at(2), count: 3, appended: 1),
+let grown = LiveMessages.merge(content: first!.content, newest: first!.newest, count: first!.count,
+                               times: first!.times, lines: [a, b, c])
+check(grown == LiveMessages.Merge(content: "Ana: hi\nYou: hey\nAna: dinner?", newest: at(2), count: 3, appended: 1,
+                                  times: [at(0), at(1), at(2)]),
       "a later read appends only what is newer")
 let imported = LiveMessages.merge(content: "old one\nold two", newest: at(-10), count: 412, lines: [c])
 check(imported?.count == 413 && imported?.content == "old one\nold two\nAna: dinner?",
@@ -121,6 +124,21 @@ check(clamped.content.split(separator: "\n").count == 60 && clamped.content.hasP
         && clamped.count == 80, "the transcript keeps the newest sixty lines and counts all eighty")
 let long = LiveMessages.clamp([String(repeating: "a", count: 5000)])
 check(long.count == LiveMessages.transcriptBytes, "and stays inside the byte ceiling")
+
+// ── When each line was sent (prd §1635) ───────────────────────────────
+check(imported?.times == [at(2)],
+      "a row landed before times were kept dates only the lines read since, from the end")
+check(clamped.times.count == 60 && clamped.times.first == at(20) && clamped.times.last == at(79),
+      "the times are clamped with the lines they date")
+let grownAgain = LiveMessages.merge(content: clamped.content, newest: clamped.newest, count: clamped.count,
+                                    times: clamped.times,
+                                    lines: [LiveConversation.Line(id: "x", at: at(90), text: "late")])!
+check(grownAgain.times.count == 60 && grownAgain.times.first == at(21) && grownAgain.times.last == at(90),
+      "a later read keeps the times aligned to the last sixty lines")
+check(LiveMessages.decodeTimes(LiveMessages.encodeTimes([at(0), at(1)])) == [at(0), at(1)],
+      "the stored times read back whole")
+check(LiveMessages.decodeTimes("1730000000 soon").isEmpty,
+      "a stored value with anything unreadable dates nothing, never a guess")
 
 // ── X ─────────────────────────────────────────────────────────────────
 check(XLiveMessages.userID(fromTwid: "u%3D1234567890") == "1234567890", "twid, encoded")

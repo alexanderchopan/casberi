@@ -33,10 +33,12 @@ enum LiveMessagesLanding {
                 if let merge = LiveMessages.merge(content: existing.content,
                                                   newest: existing.capturedAt,
                                                   count: existing.messageCount,
+                                                  times: sentTimes(existing),
                                                   lines: conversation.lines) {
                     existing.content = merge.content
                     existing.capturedAt = merge.newest
                     existing.messageCount = merge.count
+                    setSentTimes(merge.times, on: existing)
                     existing.embedding = nil
                     outcome.grew += 1
                     touched = true
@@ -67,6 +69,7 @@ enum LiveMessagesLanding {
                 tags: ["Conversation"],
                 sourceRef: ref)
             thing.messageCount = merge.count
+            setSentTimes(merge.times, on: thing)
             // WHO you are talking to (§707's rule): the row's face is the
             // other person on a one-to-one; a group keeps the source mark.
             thing.authorHandle = conversation.handle
@@ -78,6 +81,22 @@ enum LiveMessagesLanding {
         }
         if touched { context.saveHonestly() }
         return outcome
+    }
+
+    /// When each of a conversation's last lines was sent (prd §1635), off
+    /// its `.sent` fact; empty for a row landed before times were kept.
+    static func sentTimes(_ thing: Thing) -> [Date] {
+        thing.factList.first { $0.action == .sent }
+            .map { LiveMessages.decodeTimes($0.value) } ?? []
+    }
+
+    /// Replaces the `.sent` fact, the one place it is written.
+    static func setSentTimes(_ times: [Date], on thing: Thing) {
+        var facts = thing.facts.filter { ThingFact(encoded: $0)?.action != .sent }
+        if !times.isEmpty {
+            facts.append(ThingFact(String(localized: "Sent"), LiveMessages.encodeTimes(times), .sent).encoded)
+        }
+        if facts != thing.facts { thing.facts = facts }
     }
 
     /// The newest line each landed conversation holds, by ref — what a seat
