@@ -1681,26 +1681,7 @@ struct MoveSentence: View {
     /// characters are eight groups of five, two rows of four, the first and
     /// last bright — the ones a person checks. A tap copies it, as the foot does.
     private func addressBlock(_ address: String) -> some View {
-        let groups = Self.addressGroups(address)
-        return Button { copy() } label: {
-            if groups.count == 8 {
-                Grid(alignment: .leading, horizontalSpacing: DS.Space.s3, verticalSpacing: DS.Space.s1) {
-                    ForEach(0..<2, id: \.self) { row in
-                        GridRow {
-                            Text(verbatim: row == 0 ? "0x" : "").foregroundStyle(DS.textSecondary)
-                            ForEach(0..<4, id: \.self) { col in
-                                let n = row * 4 + col
-                                Text(verbatim: groups[n]).foregroundStyle(n == 0 || n == 7 ? DS.textPrimary : DS.textSecondary)
-                            }
-                        }
-                    }
-                }
-                .dsText(.mono17)
-            } else {
-                Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+        Button { copy() } label: { AddressGroupsGrid(address: address) }
         .buttonStyle(RowPress())
         .accessibilityLabel(Text(verbatim: address))
         .accessibilityHint(Text("Copies the address"))
@@ -5513,6 +5494,34 @@ struct MovePhrase: View {
                 return (word, String(piece.dropFirst(word.count + 1)))
             }
             return (nil, piece)
+        }
+    }
+}
+
+/// **THE WHOLE ADDRESS, READABLE (prd §1586):** "0x" apart, eight groups of
+/// five in two rows of four, the first and last bright. Receive's sentence
+/// and Your account's box draw it; anything not an EVM address is one line.
+struct AddressGroupsGrid: View {
+    let address: String
+
+    var body: some View {
+        let groups = MoveSentence.addressGroups(address)
+        if groups.count == 8 {
+            Grid(alignment: .leading, horizontalSpacing: DS.Space.s3, verticalSpacing: DS.Space.s1) {
+                ForEach(0..<2, id: \.self) { row in
+                    GridRow {
+                        Text(verbatim: row == 0 ? "0x" : "").foregroundStyle(DS.textSecondary)
+                        ForEach(0..<4, id: \.self) { col in
+                            let n = row * 4 + col
+                            Text(verbatim: groups[n]).foregroundStyle(n == 0 || n == 7 ? DS.textPrimary : DS.textSecondary)
+                        }
+                    }
+                }
+            }
+            .dsText(.mono17)
+        } else {
+            Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

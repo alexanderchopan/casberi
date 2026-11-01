@@ -894,39 +894,58 @@ extension FeedScreen {
 }
 
 /// **YOUR ACCOUNT'S BOX (prd §1480 item 6):** who it is — the face, the name,
-/// the address to copy — the way Apple's own account page opens.
+/// the address to copy. The one place the WHOLE address stands (user,
+/// 2026-10-31: "this is the one place seeing entire address maybe is
+/// helpful"), centred as a person's page opens (the canvas's C): the face,
+/// the name, the address in Receive's grid (§1586), then Copy address. The
+/// grid copies on a tap too.
 struct WalletYourAccountFigure: View {
     let address: String?
     @Environment(ShellChrome.self) private var chrome
+    @State private var copied = false
 
     var body: some View {
-        VStack(spacing: DS.Space.s2) {
-            if let address {
-                // A profile's face (`DS.Face.profile`), as a person's page opens.
-                WalletFace(address: address, size: DS.Face.profile, circular: true)
+        if let address {
+            VStack(spacing: DS.Space.s1) {
+                WalletFace(address: address, size: DS.Face.sheet, circular: true)
                 Text(verbatim: WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                Button {
-                    // One buzz: the success flash carries its own (prd §1587).
-                    UIPasteboard.general.string = address
-                    chrome.flash(String(localized: "Address copied"), tone: .success)
-                } label: {
+                    .lineLimit(1)
+                    .padding(.top, DS.Space.s1)
+                Button { copy(address) } label: { AddressGroupsGrid(address: address) }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text(verbatim: address))
+                    .accessibilityHint(Text("Copies the address"))
+                Button { copy(address) } label: {
                     HStack(spacing: DS.Space.s1) {
-                        Text(verbatim: WalletStore.shortAddress(address))
-                            .dsText(.body17).monospacedDigit()
-                        Image(systemName: "doc.on.doc").dsGlyph(.body).accessibilityHidden(true)
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .dsSymbolSwap(copied)
+                            .dsGlyph(.caption)
+                        Text(copied ? "Copied" : "Copy address")
+                            .dsText(.heading17)
                     }
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
+                    .foregroundStyle(copied ? DS.confirmInk : DS.pickInk)
+                    .dsTapTarget()
                 }
                 .buttonStyle(RowPress())
-                .accessibilityLabel(Text("Copy address"))
-            } else {
-                DSFigureReading(number: String(localized: "No account yet"),
-                                caption: String(localized: "Move makes one"))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            DSFigureReading(number: String(localized: "No account yet"),
+                            caption: String(localized: "Move makes one"))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// One buzz: the success flash carries its own (prd §1587); the Copy
+    /// word marks itself for 1.2s (§867).
+    private func copy(_ address: String) {
+        UIPasteboard.general.string = address
+        chrome.flash(String(localized: "Address copied"), tone: .success)
+        withAnimation(DS.Motion.standard) { copied = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(1200))
+            withAnimation(DS.Motion.standard) { copied = false }
+        }
     }
 }
