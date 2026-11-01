@@ -48,7 +48,10 @@ enum SocialSheetSource {
             // The post a notice is about (prd §704). `quote` is the field the
             // sheet already draws a card from, so a notice needs no new column
             // and no CloudKit deploy — and the test stays about the RECORD.
-            notice: thing.quote != nil)
+            notice: thing.quote != nil,
+            // A post's own words, which no conversation stamps: the record
+            // test that makes an X Following post (`.chat`) a post.
+            ownPost: !(thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     /// The prose the sheet would show, if there is any.

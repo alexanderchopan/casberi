@@ -115,6 +115,15 @@ enum SocialSheet {
         /// words test below, so a quote-post (a post that has both) is a post,
         /// which is what it is.
         var notice: Bool = false
+        /// Does the record carry a post's own words in `postText`? A post
+        /// stamps them; a conversation never does (`LiveMessagesLanding` and
+        /// Snapchat put the transcript in `content`). The second way a `.chat`
+        /// is a post: X's Following timeline lands its posts as `.chat`, the
+        /// Bluesky anatomy, on a network with no thread API, and the sheet
+        /// drew each one as a transcript — no person, no pictures, the
+        /// permalink as its body (user, 2026-11-01: "why doesn't the X sheet
+        /// show the image like it does in the box on the feed").
+        var ownPost: Bool = false
     }
 
     /// The anatomy, or nil for a social thing that needs none (a Snapchat
@@ -130,6 +139,8 @@ enum SocialSheet {
     ///    behaviour exactly for a Bluesky post landed before `postText` existed
     ///    (nil words, still a post) — the one case a pure words test would
     ///    regress, and it is every row in an install that predates prd 81.
+    ///    A `.chat` that carries `postText` is a post on any network (an X
+    ///    Following post): a conversation never stamps it.
     /// 3. **Then, and only then, words decide.** This is the widening: an X
     ///    post, an X like, an Instagram caption, a TikTok comment all reach
     ///    `.post` here on the strength of their own record.
@@ -141,7 +152,7 @@ enum SocialSheet {
     static func shape(_ f: Facts) -> Shape? {
         guard f.social else { return nil }
         if f.context == "follow" { return .person }
-        if f.kind == "chat" { return f.threadCapable ? .post : .transcript }
+        if f.kind == "chat" { return f.threadCapable || f.ownPost ? .post : .transcript }
         if f.hasWords { return .post }
         if f.notice { return .notice }
         if f.kind == "link" || f.kind == "product" { return .save }

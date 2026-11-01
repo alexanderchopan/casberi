@@ -289,9 +289,9 @@ func check(_ name: String, _ ok: Bool) {
 
 func facts(social: Bool = true, threadCapable: Bool = false, kind: String,
            hasWords: Bool = false, context: String? = nil,
-           notice: Bool = false) -> SocialSheet.Facts {
+           notice: Bool = false, ownPost: Bool = false) -> SocialSheet.Facts {
     .init(social: social, threadCapable: threadCapable, kind: kind,
-          hasWords: hasWords, context: context, notice: notice)
+          hasWords: hasWords, context: context, notice: notice, ownPost: ownPost)
 }
 
 print("Shape — the gate that was a source list")
@@ -347,6 +347,15 @@ check("a follower beats a notice",
 // saved chats, an imported DM thread.
 check("a Snapchat chat is a transcript",
       SocialSheet.shape(facts(kind: "chat", hasWords: true)) == .transcript)
+// A live DM (X, Instagram, Telegram) is a transcript: its lines sit in
+// `content`, never `postText`.
+check("an X DM is a transcript",
+      SocialSheet.shape(facts(kind: "chat", hasWords: true, ownPost: false)) == .transcript)
+// …but a `.chat` carrying a post's own words is a post on any network. The
+// shipped defect: X's Following posts land as `.chat`, X has no thread API,
+// and the sheet drew each one as a transcript with no person and no pictures.
+check("an X Following post (.chat with postText) is a post",
+      SocialSheet.shape(facts(kind: "chat", hasWords: true, ownPost: true)) == .post)
 
 // A follower is a PERSON before it is anything else — the context wins over
 // every kind, which is what makes it a noun change rather than a layout one.
@@ -585,12 +594,17 @@ mutate "the widening reverted to a thread-capable test" \
   'if f.hasWords && f.threadCapable { return .post }'
 # The regression a pure words test would cause — every pre-§81 Bluesky row.
 mutate "a legacy wordless cast falls through to a save" \
-  'if f.kind == "chat" { return f.threadCapable ? .post : .transcript }' \
+  'if f.kind == "chat" { return f.threadCapable || f.ownPost ? .post : .transcript }' \
   'if f.kind == "chat" && f.hasWords { return .post }'
 # A conversation drawn as one person's post.
 mutate "a transcript is classified as a post" \
-  'return f.threadCapable ? .post : .transcript' \
+  'return f.threadCapable || f.ownPost ? .post : .transcript' \
   'return .post'
+# THE X FOLLOWING DEFECT: a `.chat` post off a network with no thread API
+# drawn as a transcript, so the sheet lost the person and the pictures.
+mutate "a chat carrying its own post words is a transcript again" \
+  'return f.threadCapable || f.ownPost ? .post : .transcript' \
+  'return f.threadCapable ? .post : .transcript'
 # THE BUG §704 FIXED: a notice falling through to the save fallback, so the
 # sheet draws a link card over a host that serves no og: tags.
 mutate "a notice falls back to a save" \
