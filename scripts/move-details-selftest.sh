@@ -79,7 +79,6 @@ check(P.hex(P.calldataDigest(transfer)) == "0x812cee5d9cc7461c04bbcd7b70af9c28b2
       "the Calldata Digest is not ERC-8213's test vector")
 check(P.calldataDigest([]) != P.calldataDigest([0]), "the length prefix does not separate empty from one zero byte")
 check(P.HashKind.eip712.label == "EIP-712 Digest", "a SafeOp's hash is not labelled exactly as ERC-8213 names it")
-check(P.HashKind.userOp.label == "Operation hash", "the session key's hash claims an EIP-712 name it is not")
 
 // The revert, in words where the bytes carry them.
 let base = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002645524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e63650000000000000000000000000000000000000000000000000000"
@@ -121,23 +120,19 @@ xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$PREVIEW" "$ACCO
 "$TMP/t" || exit 1
 
 # The wiring. Every send is simulated before Face ID (§1509 item 3): the
-# owner path through `assemble` and `require`, the session key's in sessionSend.
+# owner path through `assemble` and `require` (the session send is deleted, prd §1632).
 grep -q 'let simulated = await check(net, account: account, approvals: approvalCalls, steps: steps, symbols: symbols)' "$CHAIN" \
   || { echo "✗ assemble no longer simulates every step — sends would go unchecked again (prd §1509)"; exit 1; }
 grep -q 'try require(a.simulated, on: net, swaps:' "$CHAIN" \
   || { echo "✗ transact signs without reading the simulation"; exit 1; }
-awk '/static func sessionSend\(/,/^    }$/' "$CHAIN" | grep -q 'try require(await check(' \
-  || { echo "✗ a send under the spend limit is no longer simulated"; exit 1; }
 # A node that will not simulate refuses a swap and lets a send go, never the reverse.
 awk '/static func require\(/,/^    }$/' "$CHAIN" | grep -A1 'case .notChecked:' | grep -q 'if swaps { throw' \
   || { echo "✗ 'not checked' no longer refuses a swap only (§1440 keeps the swap's proof)"; exit 1; }
 
-# What Details showed is what is signed: the kept preview is taken by both
-# signing paths, and its gas pinned only when the bytes are the same.
+# What Details showed is what is signed: the kept preview is taken by the
+# signing path, and its gas pinned only when the bytes are the same.
 grep -q 'await Prepared.take(items, roundUp: roundUp, route: route)' "$CHAIN" \
   || { echo "✗ transact no longer signs the kept preview — Raw transaction's hash would not be Face ID's"; exit 1; }
-grep -q 'await Prepared.take(payments.map(Item.send), roundUp: roundUp, route: .session)' "$CHAIN" \
-  || { echo "✗ the session key no longer signs the kept preview"; exit 1; }
 grep -q 'pinned.callData == op.callData' "$CHAIN" \
   || { echo "✗ a pinned preview is no longer checked byte for byte before its gas is reused"; exit 1; }
 grep -q 'static let lifetime: TimeInterval = 60' "$CHAINPREVIEW" \

@@ -2,11 +2,12 @@ import SwiftUI
 
 /// **YOUR ACCOUNT, RIGHT AFTER CREATE (prd §1457, rebuilt by §1501).**
 /// Four steps in the sentence's grammar, each one that can wait — a recovery
-/// key in iCloud Keychain, a co-signer in another wallet, with a co-signer a
-/// spend limit, and round-ups — then the account itself, Created, with Done.
-/// Nothing here touches a chain: the recovery key is made at once (free), the
-/// co-signer and the limit are kept in `YourAccountSetup` and ride the first
-/// move on each network, and round-ups are this phone's setting.
+/// key in iCloud Keychain, a co-signer in another wallet, with a co-signer
+/// whether it is required (prd §1570), and round-ups — then the account
+/// itself, Created, with Done. Nothing here touches a chain: the recovery key
+/// is made at once (free), the co-signer and its requirement are kept in
+/// `YourAccountSetup` and ride the first move on each network, and round-ups
+/// are this phone's setting.
 ///
 /// The walk was reviewed word by word (user, 2026-10-24: "i want to talk
 /// about every word"); §1501 records each line and why.
@@ -19,8 +20,7 @@ struct MoveKeysWalk: View {
     enum Ending { case close, receive }
     let done: (Ending) -> Void
 
-    enum Step: Int { case recovery = 1, signer, limit, roundUps, created }
-    typealias Period = MoveSecurity.LimitPeriod
+    enum Step: Int { case recovery = 1, signer, require, roundUps, created }
 
     @State private var step: Step
     @State private var choice = YourAccountSetup.Choice()
@@ -51,7 +51,7 @@ struct MoveKeysWalk: View {
     /// The networks this phone's account is on, as the Create screen names them.
     private var networks: [YourAccountOp.Network] { YourAccountOp.networks.filter { !$0.isTest } }
 
-    /// "1 of 4": the limit is a step only with a co-signer, so once the
+    /// "1 of 4": Require is a step only with a co-signer, so once the
     /// co-signer is skipped the walk is three steps long.
     private var stepCount: Int { step.rawValue <= Step.signer.rawValue || choice.signer != nil ? 4 : 3 }
     private var stepNumber: Int { step == .roundUps && choice.signer == nil ? 3 : step.rawValue }
@@ -118,7 +118,7 @@ struct MoveKeysWalk: View {
             // Its own job, never the recovery key's; and when it lands —
             // connecting signs nothing (prd §1499).
             small(String(localized: "Once required, it approves every send and swap. Activates on your first move."))
-        case .limit:
+        case .require:
             // One switch, never an amount (prd §1570): required or not.
             MoveFlow {
                 MoveWord(String(localized: "Require your co-signer"))
@@ -209,7 +209,7 @@ struct MoveKeysWalk: View {
         switch step {
         case .recovery: String(localized: "Add")
         case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
-        case .limit: String(localized: "Require")
+        case .require: String(localized: "Require")
         case .roundUps: String(localized: "Turn on")
         case .created: String(localized: "Done")
         }
@@ -218,7 +218,7 @@ struct MoveKeysWalk: View {
     private var verbEnabled: Bool {
         switch step {
         case .signer: !connecting
-        case .limit: true
+        case .require: true
         default: true
         }
     }
@@ -262,7 +262,7 @@ struct MoveKeysWalk: View {
                         ?? String(localized: "No wallet connected. Try again, or add one later.")
                 }
             }
-        case .limit:
+        case .require:
             choice.requiresCoSigner = true
             DSHaptic.success()
             advance()
@@ -275,7 +275,7 @@ struct MoveKeysWalk: View {
         }
     }
 
-    /// The next step, kept as it goes; the limit only stands with a
+    /// The next step, kept as it goes; Require only stands with a
     /// co-signer, and Created ends the walk.
     private func advance() {
         note = nil
@@ -283,12 +283,12 @@ struct MoveKeysWalk: View {
         let next: Step
         switch step {
         case .recovery: next = .signer
-        case .signer: next = choice.signer == nil ? .roundUps : .limit
-        case .limit: next = .roundUps
+        case .signer: next = choice.signer == nil ? .roundUps : .require
+        case .require: next = .roundUps
         case .roundUps, .created: next = .created
         }
         #if DEBUG
-        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@ roundUps=%@", next.rawValue, choice.recovery ? "yes" : "no",
+        NSLog("keysWalk: step %d recovery=%@ signer=%@ coSigner=%@ roundUps=%@", next.rawValue, choice.recovery ? "yes" : "no",
               choice.signer ?? "none", choice.required ? "required" : "none",
               RoundUps.setting.on ? "\(RoundUps.setting.step)/\(RoundUps.setting.target.symbol)" : "off")
         #endif

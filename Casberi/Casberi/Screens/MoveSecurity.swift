@@ -32,8 +32,10 @@ struct MoveSecurity: View {
         let exported: [String]
         /// How many keys a send needs (prd §1447); nil when not there yet.
         let threshold: Int?
-        /// The spend limit there (prd §1455); nil when it could not be read.
-        let limit: Chain.LimitState?
+        /// Smart Sessions an older build's spend limit left standing (prd
+        /// §1455, deleted §1632): until the switch removes them the network
+        /// is not required. Nil when they could not be read.
+        let sessions: Bool?
         var id: Int { network.chainId }
     }
 
@@ -266,8 +268,7 @@ struct MoveSecurity: View {
 
     // MARK: - Round-ups (prd §1452)
 
-    /// Under the spend limit (user: "same place we have spend limits"): one
-    /// row whose trailing word says the setting ("$1, buys ETH", or Off) and
+    /// Under Spending: one row whose trailing word says the setting ("$1, buys ETH", or Off) and
     /// opens the one glass menu — the switch, $1 or $5, and what it buys,
     /// the tokens with their marks (prd §1452, §1496). The sentence under it
     /// says the one thing the word cannot: when the change is spent.
@@ -364,11 +365,6 @@ struct MoveSecurity: View {
             .map { WalletValue.money(YourAccountOp.dollars($0, decimals: RoundUps.dollarDecimals, price: 1)) } ?? "$10"
         return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send.")
     }
-
-    /// ONE gutter for this card's limit sentence; sized to the widest glue,
-    /// "up to". Move and the keys walk share `MoveSentence.gutter`, a
-    /// narrower one, on their own screens.
-    static let sentenceGutter: CGFloat = 76
 
     static func target(_ listed: YourAccountTokens.Listed, on net: YourAccountOp.Network) -> RoundUps.Target {
         RoundUps.Target(chainId: net.chainId, address: listed.token.contract ?? YourAccountSwap.native,
@@ -532,16 +528,13 @@ struct MoveSecurity: View {
     @discardableResult
     private func read(_ nets: [Op.Network] = Op.networks) async -> [Op.Network] {
         // The demo's account (§1475): every network on, its key here, the
-        // recovery key and a Signer on, the limit standing — read off no node,
-        // and nothing of it noted for this phone's own account.
+        // recovery key and a Signer on, the co-signer required — read off no
+        // node, and nothing of it noted for this phone's own account.
         if YourAccountDemo.isDemo(account) {
             hasRecoveryKey = true
-            let now = Int(Date().timeIntervalSince1970)
             standings = Op.networks.filter { !$0.isTest }.map { net in
-                let plan = YourAccountDemo.plan(on: net)
-                return Standing(network: net, deployed: true, keyIndex: 3, recovery: .added,
-                                outside: [YourAccountDemo.signer], exported: [], threshold: 2,
-                                limit: .on(plan, current: plan.window(at: now)))
+                Standing(network: net, deployed: true, keyIndex: 3, recovery: .added,
+                         outside: [YourAccountDemo.signer], exported: [], threshold: 2, sessions: false)
             }
             return []
         }
@@ -564,18 +557,17 @@ struct MoveSecurity: View {
                     guard let deployed = try? await Chain.isDeployed(net, account) else { return (net.chainId, nil) }
                     guard deployed else {
                         return (net.chainId, Standing(network: net, deployed: false, keyIndex: nil, recovery: .notThere,
-                                                      outside: [], exported: [], threshold: nil, limit: nil))
+                                                      outside: [], exported: [], threshold: nil, sessions: nil))
                     }
                     guard !signerUnread else { return (net.chainId, nil) }
                     // **ASKED AT ONCE, EACH ONCE.** Every read here went one
-                    // after another over Tor (~1–2s each), and the recovery
-                    // state and the limit asked the code, the owners and the
-                    // threshold again: eleven round trips a network before the
-                    // page said anything. The owners answer the recovery key
-                    // too; the threshold feeds the limit.
+                    // after another over Tor (~1–2s each): eleven round trips
+                    // a network before the page said anything. The owners
+                    // answer the recovery key too.
                     async let configured = Chain.configuredX(net, account)
                     async let ownersRead = Chain.owners(net, account)
-                    async let spending = Self.spending(net, account)
+                    async let thresholdRead = try? Chain.threshold(net, account)
+                    async let sessionsRead = try? Chain.sessionIds(net, account)
                     let x: [UInt8]?
                     do { x = try await configured } catch { return (net.chainId, nil) }
                     let all: [String]
@@ -600,10 +592,16 @@ struct MoveSecurity: View {
                     }
                     guard !isContract.contains(where: { $0 == nil }) else { return (net.chainId, nil) }
                     let outside = zip(asked, isContract).filter { $0.1 == false }.map { $0.0 }
-                    let (threshold, limit) = await spending
-                    guard threshold != nil else { return (net.chainId, nil) }
+                    guard let threshold = await thresholdRead else { return (net.chainId, nil) }
+                    // At two keys a failed sessions read is unread, never
+                    // "none": one standing would spend without the co-signer.
+                    var sessions: Bool? = nil
+                    if threshold == 2 {
+                        guard let ids = await sessionsRead else { return (net.chainId, nil) }
+                        sessions = !ids.isEmpty
+                    }
                     return (net.chainId, Standing(network: net, deployed: deployed, keyIndex: index, recovery: state,
-                                                  outside: outside, exported: exported, threshold: threshold, limit: limit))
+                                                  outside: outside, exported: exported, threshold: threshold, sessions: sessions))
                 }
             }
             for await (id, s) in group {
@@ -633,7 +631,7 @@ struct MoveSecurity: View {
             await YourAccountProtection.check(force: true)
         }
         #if DEBUG
-        NSLog("spendLimit| %@", standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\(plan(of: $0) == nil ? "off" : "on")" }.joined(separator: ","))
+        NSLog("coSigner| %@", standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\($0.sessions == true ? "sessions" : "none")" }.joined(separator: ","))
         // `-coSignerTray on|off`: the switch's tray raised, because a
         // simulator does not flip a switch.
         if let tray = UserDefaults.standard.string(forKey: "coSignerTray"), coSignerTray == nil, coSignerSwitchable {
@@ -643,59 +641,23 @@ struct MoveSecurity: View {
         return nets.filter { failed.contains($0.chainId) }
     }
 
-    /// How many keys a send needs on `net`, then the limit that implies: one
-    /// chain of reads, run beside the key and the owners.
-    private static func spending(_ net: Op.Network, _ account: String) async -> (threshold: Int?, limit: Chain.LimitState?) {
-        let threshold = try? await Chain.threshold(net, account)
-        let limit = threshold == 2 ? try? await Chain.limitState(net, account, threshold: 2) : .off
-        return (threshold, limit)
-    }
-
-    // MARK: - The spend limit (prd §1455)
-
-    /// How often the limit starts again: a day, a week or a month (prd
-    /// §1447 item 15; per send dropped, user: "a period limit already caps
-    /// every single send").
-    enum LimitPeriod: CaseIterable {
-        case day, week, month
-        var minutes: Int {
-            switch self {
-            case .day: 60 * 24
-            case .week: 60 * 24 * 7
-            case .month: 60 * 24 * 30
-            }
-        }
-        var word: String {
-            switch self {
-            case .day: String(localized: "day")
-            case .week: String(localized: "week")
-            case .month: String(localized: "month")
-            }
-        }
-        static func of(seconds: Int) -> LimitPeriod {
-            allCases.min { abs($0.minutes * 60 - seconds) < abs($1.minutes * 60 - seconds) } ?? .month
-        }
-    }
-
-    /// Networks a limit can stand on: the account there, and this phone signing for it.
-    private var limitNetworks: [Standing] { live.filter { $0.keyIndex != nil } }
-
-    private func plan(of s: Standing) -> (plan: YourAccount7579.Plan, current: YourAccount7579.Window?)? {
-        if case .on(let plan, let current) = s.limit { return (plan, current) }
-        return nil
-    }
+    /// Networks the co-signer can stand on: the account there, and this
+    /// phone signing for it.
+    private var signingNetworks: [Standing] { live.filter { $0.keyIndex != nil } }
 
     /// The networks the co-signer can be required on: the account there,
     /// this phone signing for it, and a co-signer standing.
-    private var coSignerNetworks: [Standing] { limitNetworks.filter { !$0.outside.isEmpty } }
+    private var coSignerNetworks: [Standing] { signingNetworks.filter { !$0.outside.isEmpty } }
 
     /// Every network read, a co-signer on each: the switch stands.
     private var coSignerSwitchable: Bool {
         unsettled == nil && outsideOwner != nil && outsideTargets.isEmpty && !coSignerNetworks.isEmpty
     }
 
-    /// Required where both keys sign everything: two keys, no allowance left.
-    private func required(_ s: Standing) -> Bool { s.threshold == 2 && plan(of: s) == nil }
+    /// Required where both keys sign everything: two keys, and no session an
+    /// older build enabled still standing beside them (`sessions`; at two
+    /// keys a failed read leaves the network unread, §1549).
+    private func required(_ s: Standing) -> Bool { s.threshold == 2 && s.sessions != true }
 
     private var coSignerRequired: Bool { coSignerNetworks.allSatisfy(required) }
     private var notRequired: [Standing] { coSignerNetworks.filter { !required($0) } }
@@ -703,8 +665,7 @@ struct MoveSecurity: View {
     enum CoSignerStep: Equatable { case next, waiting(String), done, failed(String) }
 
     /// **ONE ROW: WHO, AND WHETHER IT IS REQUIRED (user, 2026-10-27: "we
-    /// should just turn cosigner on or off"; the spend limit's allowance is
-    /// retired).** The address, then the switch; on, one line says what it
+    /// should just turn cosigner on or off").** The address, then the switch; on, one line says what it
     /// means; partly on, the networks it is not on, in amber. Flipping it
     /// opens the tray that walks the networks.
     @ViewBuilder private var coSignerSwitchRow: some View {
@@ -739,8 +700,8 @@ struct MoveSecurity: View {
         on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }
     }
 
-    /// How many of them ask the co-signer: off, each; on, only where an
-    /// allowance stands under both keys.
+    /// How many of them ask the co-signer: off, each; on, only where a
+    /// session an older build enabled stands under both keys.
     private func coSignerApprovals(on: Bool) -> Int {
         coSignerTargets(on: on).filter { $0.threshold == 2 }.count
     }
@@ -805,14 +766,14 @@ struct MoveSecurity: View {
         case .failed(let why): return (why, DS.attentionInk)
         case nil:
             if s.threshold != 2 { return (String(localized: "Face ID alone"), DS.textSecondary) }
-            return plan(of: s) != nil ? (String(localized: "Allowance on"), DS.textSecondary)
+            return s.sessions == true ? (String(localized: "Not required"), DS.textSecondary)
                 : (String(localized: "Required"), DS.textSecondary)
         }
     }
 
     /// One network at a time, each its own transaction, each step said in
     /// the tray. On: this phone alone where one key signs, both where an
-    /// allowance is removed; off: both, every network.
+    /// older build's sessions are removed; off: both, every network.
     private func walkCoSigner(on: Bool) {
         if demoSays() { return }
         guard !coSignerWalking else { return }
@@ -837,8 +798,8 @@ struct MoveSecurity: View {
                         sent = try await Chain.requireCoSigner(on: net, coSigner: co,
                                                                reason: String(localized: "Require your co-signer on \(net.name)")) { _ in }
                     } else if let co {
-                        sent = try await Chain.turnOffLimit(on: net, coSigner: co,
-                                                            reason: String(localized: "Stop requiring your co-signer on \(net.name)")) { _ in }
+                        sent = try await Chain.releaseCoSigner(on: net, coSigner: co,
+                                                               reason: String(localized: "Stop requiring your co-signer on \(net.name)")) { _ in }
                     } else {
                         coSignerSteps[s.id] = .failed(String(localized: "No co-signer here"))
                         continue

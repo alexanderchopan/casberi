@@ -120856,6 +120856,34 @@
         }
       }
     },
+    "Not required" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No obligatorio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "必須ではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "필수 아님"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非必需"
+          }
+        }
+      }
+    },
     "Not revoked" : {
       "localizations" : {
         "es" : {
@@ -129904,6 +129932,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目前仅评级 %lld / %lld 项"
+          }
+        }
+      }
+    },
+    "Only a test account can do this yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por ahora solo una cuenta de prueba puede hacer esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今はテスト用アカウントだけがこれを行えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직은 테스트 계정만 이 작업을 할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前只有测试账户能这样做"
           }
         }
       }
@@ -176429,6 +176485,34 @@
         }
       }
     },
+    "The account Casberi makes you, its keys, its co-signer and its round-ups." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cuenta que Casberi te crea, sus claves, su cofirmante y sus redondeos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi が作るあなたのアカウント、その鍵、共同署名者、切り上げ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 만들어 주는 계정과 그 키, 공동 서명자, 올림."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 为你创建的账户，及其密钥、共同签名人和凑整。"
+          }
+        }
+      }
+    },
     "The account Casberi makes you, its keys, its spend limit and its round-ups." : {
       "localizations" : {
         "es" : {
@@ -208067,6 +208151,34 @@
         }
       }
     },
+    "Your account is not on Safe's adapter on %@ yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta aún no está en el adaptador de Safe en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ではアカウントはまだ Safe のアダプターにありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 계정이 아직 Safe 어댑터에 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户在 %@ 上还未接入 Safe 的适配器"
+          }
+        }
+      }
+    },
     "Your account now delegates to %@" : {
       "localizations" : {
         "es" : {
@@ -208259,6 +208371,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户委托已移除"
+          }
+        }
+      }
+    },
+    "Your account's keys, co-signer and round-ups" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las claves, el cofirmante y los redondeos de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの鍵、共同署名者、切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정의 키, 공동 서명자, 올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你账户的密钥、共同签名人和凑整"
           }
         }
       }

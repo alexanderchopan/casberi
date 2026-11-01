@@ -46,7 +46,7 @@ struct MoveClock: Equatable, Sendable {
     }
 
     /// Each stage and how long it held, in order, until `end`. A stage
-    /// entered twice (the spend limit's fallback prepares again) adds up.
+    /// entered twice adds up.
     func spans(until end: Date) -> [(mark: Mark, seconds: TimeInterval)] {
         var out: [(mark: Mark, seconds: TimeInterval)] = []
         for (i, e) in entries.enumerated() {

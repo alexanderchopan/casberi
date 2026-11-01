@@ -193,9 +193,6 @@ struct MoveSentence: View {
     /// (§1442c). Cleared after a few seconds, or by the next one.
     struct Hint: Equatable {
         let text: String; let failure: Bool; var from: String? = nil
-        /// A refusal with a way forward carries its door (prd §1586):
-        /// over the limit with no co-signer opens Your account's keys.
-        var opensKeys = false
         let id = UUID()
     }
     @State private var hint: Hint?
@@ -259,13 +256,12 @@ struct MoveSentence: View {
     @State private var sweepLeftOut: Set<String> = []
 
     private func say(_ text: String, failure: Bool = false, seconds: Double = 3, from: String? = nil) {
-        let h = Hint(text: text, failure: failure, from: from, opensKeys: text == Self.needsCoSigner)
+        let h = Hint(text: text, failure: failure, from: from)
         withAnimation(DS.Motion.standard) { hint = h }
         // A refusal is felt as well as read (prd §1586).
         if failure { DSHaptic.failure() }
         Task {
-            // A door stays long enough to be taken.
-            try? await Task.sleep(for: .seconds(h.opensKeys ? max(seconds, 12) : seconds))
+            try? await Task.sleep(for: .seconds(seconds))
             if hint?.id == h.id { withAnimation(DS.Motion.standard) { hint = nil } }
         }
     }
@@ -299,30 +295,15 @@ struct MoveSentence: View {
     }
 
     private func hintText(_ h: Hint) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                if let from = h.from { Self.mark(of: from) }
-                Text(verbatim: h.text)
-                    .dsText(.body17)
-                    .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if h.opensKeys {
-                Button {
-                    DSHaptic.selection()
-                    chrome.moveTray = false
-                    chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
-                } label: {
-                    Text("Add a co-signer").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
-                }
-                .buttonStyle(RowPress())
-            }
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            if let from = h.from { Self.mark(of: from) }
+            Text(verbatim: h.text)
+                .dsText(.body17)
+                .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .transition(.opacity)
     }
-
-    /// Over the limit with no co-signer (`spend`): said with a door to it.
-    static let needsCoSigner = String(localized: "Add a signer first: over the limit, a send waits on it")
 
     /// Bumped to shake the To word once: an address that imitates a book entry.
     @State private var shake = 0
@@ -747,7 +728,7 @@ struct MoveSentence: View {
     private var privateRide: String? {
         // On Ethereum, the deposit itself; on Base or Robinhood, bridged into
         // the pool on the way in (prd §1574).
-        let here = RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit
+        let here = RoundUps.privateRoute(on: network.chainId) == .deposit
         let bridged = PrivateBridge.carries(from: network.chainId) && RoundUps.privatePools.contains(RoundUps.ethereumPool)
         guard privateRoundUps, here || bridged,
               PrivateMove.available, PrivateOnEthereum.owner != nil, RoundUps.carriesBuy(roundUpAct) else { return nil }
@@ -839,7 +820,7 @@ struct MoveSentence: View {
                 let usd = Op.dollars(due, decimals: RoundUps.dollarDecimals, price: 1)
                 if privateRide != nil { return [String(localized: "\(Self.money(usd)) of round-ups moves to your private balance")] }
                 // Private money not available now (finding 7): it counts, nothing moves.
-                guard RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit else {
+                guard RoundUps.privateRoute(on: network.chainId) == .deposit else {
                     return [String(localized: "\(Self.money(usd)) of round-ups so far, for your private balance")]
                 }
                 return [String(localized: "\(Self.money(usd)) of round-ups so far, moved with your next send of \(Op.dollar(on: network).symbol)")]
@@ -854,11 +835,6 @@ struct MoveSentence: View {
         }
         if let buy = plan.buy {
             let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
-            // The spend limit's key signs this send alone and never buys on
-            // the exchanges (prd §1545): the change waits for Face ID.
-            if shownPreview?.route == .session, !RoundUps.sessionCarries(target, from: network.chainId) {
-                return [String(localized: "\(Self.money(usd)) of round-ups so far, bought with your next Face ID send")]
-            }
             return [String(localized: "\(Self.money(usd)) of round-ups buys \(target.symbol) on \(target.network)")]
         }
         let usd = Op.dollars(plan.savedAfter, decimals: RoundUps.dollarDecimals, price: 1)
@@ -3928,14 +3904,12 @@ struct MoveSentence: View {
                 let done = try await IngestSupport.$tripLog.withValue(tripLog) {
                     try await Chain.$following.withValue(followed) {
                         try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
-                                             said: { line in await MainActor.run { say(line) } }) { s in
-                            await MainActor.run { advance(to: s) }
-                        }
+                                             stage: { s in await MainActor.run { advance(to: s) } })
                     }
                 }
                 // The change is counted once the send has landed; a buy
-                // empties the count with it, and a send that did not buy (the
-                // spend limit's key, or no pool, prd §1545) keeps it all.
+                // empties the count with it, and a send that did not buy (no
+                // pool, prd §1545) keeps it all.
                 // **ONE STILL ON ITS WAY RESERVES ITS BATCH (finding 3):** the
                 // count empties as if it landed, so the next send neither
                 // rides nor buys it again; `PrivatePending` puts it back only
@@ -4126,47 +4100,14 @@ struct MoveSentence: View {
         return nil
     }
 
-    /// **UNDER THE LIMIT, FACE ID ALONE; OVER IT, THE SIGNER TOO (prd §1455).**
-    /// With the spend limit on, sends of the dollar and ETH go on the session
-    /// key; one the limit refuses (over the window's total, or a token it does
-    /// not cover) and every swap are signed by this phone and the Signer, whose
-    /// wallet is asked through the Signer sheet. A refusal before Face ID sends
-    /// nothing, so asking both keys next pays nothing twice.
+    /// **ONE ROUTE (prd §1632, deleting §1455's session send).** Every send
+    /// and swap is the account's own operation: Face ID, and the co-signer
+    /// too where it is required (`operate` asks it).
     static func spend(_ batch: [Chain.Item], on net: Op.Network, account: String, roundUp: Chain.RoundUpBuy?,
                       ride: [(to: String, data: String, value: String)] = [],
-                      reason: String, said: @escaping @Sendable (String) async -> Void,
+                      reason: String,
                       stage: @escaping @Sendable (Chain.Stage) async -> Void) async throws -> Chain.Transacted {
-        // The Signer is read beside the limit (prd §1601), not after it, and
-        // only where a limit can be on: this phone set its plan.
-        func signersIfLimited() async throws -> [String] { Chain.plan(net) == nil ? [] : try await Chain.knownSigners(net, account) }
-        async let signers = signersIfLimited()
-        guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
-            return try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
-        }
-        let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
-        if sends.count == batch.count {
-            let signed = SignedFlag()
-            do {
-                let sent = try await Chain.sessionSend(sends, roundUp: roundUp, reason: reason) { s in
-                    if s == .signing { await signed.mark() }
-                    await stage(s)
-                }
-                // The session buys only to another network (prd §1545).
-                return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)
-            } catch let failure as Chain.Failure {
-                // A send the simulation refuses fails on both keys too.
-                guard await !signed.value, !failure.settled else { throw failure }
-                #if DEBUG
-                NSLog("moveSpend: over the limit, both keys: %@", failure.message)
-                #endif
-                await said(String(localized: "Over your limit: your Signer signs too"))
-            }
-        }
-        guard let signer = try await signers.first else {
-            throw Chain.Failure(message: needsCoSigner)
-        }
-        return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
-                                        roundUp: roundUp, renew: true, ride: ride, stage: stage)
+        try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
     }
 
     /// What this operation's own sends and swaps take of `token`, so a
@@ -4196,12 +4137,6 @@ struct MoveSentence: View {
             PrivateActivity.land(hash: tx, title: PrivateMoney.roundUpsTitle(figure: ride.figure), chainId: n.chainId, context: context)
         }
         NSLog("roundUpsPrivate| moved | %@ | %@", tx ?? "not yet seen", ride.figure)
-    }
-
-    /// Whether Face ID was reached, read across the send's tasks.
-    actor SignedFlag {
-        private(set) var value = false
-        func mark() { value = true }
     }
 
     /// The sentence in the past tense: what was sent or swapped, what a filled

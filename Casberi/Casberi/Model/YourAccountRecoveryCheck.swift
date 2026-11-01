@@ -8,7 +8,7 @@ import Foundation
 /// key, it signs a random challenge verified on this phone against its own
 /// public half, and each network says whether the account still lists the
 /// key's signer among its owners. It is NOT `isValidSignature` on chain:
-/// with the spend limit the threshold is two keys (§1456), so one key alone
+/// with the co-signer required the threshold is two keys (§1456), so one key alone
 /// would read as a failure.
 ///
 /// Pure (Foundation): the due rule, each network's standing and the

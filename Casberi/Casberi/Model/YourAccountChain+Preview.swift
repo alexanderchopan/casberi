@@ -1,11 +1,9 @@
 import Foundation
 
 /// **DETAILS: THIS EXACT OPERATION, BEFORE THE TAP (prd §1509 item 1).**
-/// Move asks for a preview whenever its sentence settles: the same route
-/// `MoveSentence.spend` will take (the session key under the spend limit,
-/// both keys over it, else this phone), the same calls `transact` signs
-/// (`assemble`), the same unsigned operation (`build`, `sessionBuild`),
-/// simulated. What comes back is the fee ceiling, the nonce, what the
+/// Move asks for a preview whenever its sentence settles: the same calls
+/// `transact` signs (`assemble`), the same unsigned operation (`build`), with
+/// the co-signer where the account needs it, simulated. What comes back is the fee ceiling, the nonce, what the
 /// simulation found, the calls in words, the hash and the calldata.
 ///
 /// The operation is kept for a minute (`Prepared`): signing these same
@@ -32,16 +30,17 @@ extension YourAccountChain {
         let hashKind: YourAccountPreview.HashKind
         let callData: [UInt8]
         /// Why signing would be refused, in words: a fee the account cannot
-        /// pay, a node that would not price it, no Signer over the limit.
+        /// pay, a node that would not price it, no co-signer where both keys
+        /// are needed.
         var refusal: String? = nil
-        /// Your Signer signs this too: both keys over the limit, or an
-        /// account that already needs both on this network (prd §1456).
+        /// Your Signer signs this too: the account needs both keys on this
+        /// network (prd §1456, §1570).
         var signerSigns = false
     }
 
     /// An operation built for a preview, kept for signing (prd §1509).
     struct Prepared: @unchecked Sendable {
-        enum Signs: Equatable, Sendable { case owner, bothKeys, session }
+        enum Signs: Equatable, Sendable { case owner, bothKeys }
         let items: [Item]
         let roundUp: RoundUpBuy?
         let route: Signs
@@ -138,32 +137,22 @@ extension YourAccountChain {
         if YourAccountDemo.isDemo(account) { return demoPreview(items, on: net) }
         let making = await Prepared.begin(items)
         defer { Task { await Prepared.end(making) } }
-        let sends = items.compactMap { if case .send(let p) = $0 { p } else { nil } }
-        var route: Prepared.Signs = .owner
-        if case .on = (try? await limitState(net, account)) ?? .off {
-            route = .bothKeys
-            if sends.count == items.count, let p = await sessionPreview(sends, net: net, account: account, roundUp: roundUp) {
-                return p
-            }
-        }
+        // Move's send passes no co-signer; `operate` asks one where the
+        // account needs both keys, so the kept operation is the owner's.
+        let route: Prepared.Signs = .owner
         // What assembling wrote, kept for a refusal after it: the bundler
         // refusing to price the operation still leaves Details the calls in
         // words, the pools and the simulation's verdict (prd §1545).
         var written: Assembled?
         do {
-            let parts = try await assemble(items, account: account, roundUp: roundUp, renew: route == .bothKeys)
+            let parts = try await assemble(items, account: account, roundUp: roundUp)
             written = parts.assembled
             let a = parts.assembled
             let entry: YourAccountOp.Entry = a.deployed ? try await knownEntry(net, account) : .module4337
-            // Who signs beside this phone: the Signer over the limit, or the
-            // one `operate` asks itself when the account already needs both.
+            // Who signs beside this phone: the one `operate` asks itself
+            // when the account needs both keys.
             var coSigner: String?
-            if route == .bothKeys {
-                guard let first = try await knownSigners(net, account).first else {
-                    return empty(a, route: route, refusal: String(localized: "Add a signer first: over the limit, a send waits on it"))
-                }
-                coSigner = first
-            } else if a.deployed, entry == .adapter, try await knownThreshold(net, account) >= 2 {
+            if a.deployed, entry == .adapter, try await knownThreshold(net, account) >= 2 {
                 // `operate` refuses this at signing; say so now.
                 guard let first = try await knownSigners(net, account).first else {
                     return empty(a, route: route, refusal: String(localized: "Your Signer signs this too, and none is on \(net.name)"))
@@ -194,44 +183,6 @@ extension YourAccountChain {
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],
                            approvals: [], hash: nil, hashKind: .eip712, callData: [], refusal: String(localized: "\(net.name) did not answer"))
         }
-    }
-
-    /// Sends under the limit, on the session key; nil when the session key
-    /// cannot carry them — the policy refusing them in the estimate (over the
-    /// limit), or any other refusal before Face ID — so both keys sign,
-    /// exactly as `MoveSentence.spend` falls back.
-    private static func sessionPreview(_ sends: [YourAccountOp.Payment], net: Network, account: String,
-                                       roundUp asked: RoundUpBuy?) async -> Preview? {
-        // A buy on this network waits for Face ID (prd §1545).
-        let roundUp = sessionRoundUp(asked, on: net)
-        guard let (callData, salt) = try? await sessionCall(sends, roundUp: roundUp, account: account),
-              let op = try? await sessionBuild(net, account: account, callData: callData, salt: salt) else { return nil }
-        let steps: [Step] = sends.compactMap { YourAccountOp.call(for: $0).map { ([$0], nil) } }
-        let symbols = Dictionary(sends.compactMap { p in p.token.contract.map { ($0.lowercased(), p.token.symbol) } },
-                                 uniquingKeysWith: { a, _ in a })
-        let simulated = await check(net, account: account, approvals: [], steps: steps, symbols: symbols)
-        if !Task.isCancelled {
-            await Prepared.keep(Prepared(items: sends.map(Item.send), roundUp: roundUp, route: .session, op: op,
-                                         assembled: nil, made: Date()))
-        }
-        var words = sends.map { p in
-            YourAccountPreview.send(YourAccountOp.spoken(p.amount, decimals: p.token.decimals), p.token.symbol,
-                                    to: p.toName ?? YourAccountPreview.short(p.to))
-        }
-        if let roundUp {
-            let dollar = YourAccountOp.dollar(on: net)
-            words.append(YourAccountPreview.roundUp(YourAccountOp.spoken(roundUp.units, decimals: dollar.decimals), dollar.symbol,
-                                                    buys: roundUp.target.symbol, on: roundUp.target.network))
-        } else if let asked {
-            let dollar = YourAccountOp.dollar(on: net)
-            words.append(YourAccountPreview.roundUpKept(YourAccountOp.spoken(asked.units, decimals: dollar.decimals), dollar.symbol))
-        }
-        words.append(YourAccountPreview.underLimit)
-        let fee = op.maxCost.map(String.init)
-        return Preview(network: net, route: .session, feeWei: fee, nonce: op.nonce, checked: simulated.checked,
-                       words: words, approvals: [], hash: YourAccountOp.userOpHash(op, chainId: net.chainId),
-                       hashKind: .userOp, callData: op.callData,
-                       refusal: await short(sends, fee: fee, net: net, account: account))
     }
 
     private static func empty(_ a: Assembled, route: Prepared.Signs, refusal: String) -> Preview {

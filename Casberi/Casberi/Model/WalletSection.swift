@@ -149,7 +149,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .activity:        return String(localized: "Every transaction, by day")
         case .holdings:        return String(localized: "What your money is")
         case .spending:        return String(localized: "What left your accounts, by place")
-        case .yourAccount:     return String(localized: "Your account's keys, limit and round-ups")
+        case .yourAccount:     return String(localized: "Your account's keys, co-signer and round-ups")
         case .following:       return String(localized: "The accounts and apps you follow")
         case .needsYou:        return String(localized: "What is waiting on you")
         case .permissions:     return String(localized: "Who can spend from you")
@@ -215,7 +215,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             // What counts, and what is left out (§1201).
             return String(localized: "What your cards and wallets paid to places this week or month, against the last one; a move of your own or a swap never counts.")
         case .yourAccount:
-            return String(localized: "The account Casberi makes you, its keys, its spend limit and its round-ups.")
+            return String(localized: "The account Casberi makes you, its keys, its co-signer and its round-ups.")
         case .following:
             return String(localized: "Wallets you watch and apps you connected.")
         case .needsYou:

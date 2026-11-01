@@ -206,7 +206,7 @@ struct MoveDetails: View {
 /// **RAW TRANSACTION, A PAGE DEEPER (prd §1509 item 1, canvas figure 3).**
 /// The calls in words first, numbered, the key change included; then the
 /// hash Face ID signs, labelled in ERC-8213's own terms (an "EIP-712 Digest"
-/// for a SafeOp, the "Operation hash" for the session key's), and the
+/// for a SafeOp), and the
 /// operation's calldata with its byte count and its Calldata Digest, each
 /// with Copy. It takes the sentence's place in Move, its title the way back.
 /// What Raw transaction shows, whoever signs it: Move's own operation, or

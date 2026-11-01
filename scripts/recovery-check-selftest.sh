@@ -5,8 +5,8 @@
 # when neither is known), each network's standing, and the sentence (green
 # only when the key is here, it signed, and no network the account is on
 # refuses it; red naming the first failure). Then the wiring: the check
-# never asks a chain's isValidSignature (with the spend limit one key alone
-# reads as a failure, §1456), stores only a good check's date, and the row
+# never asks a chain's isValidSignature (with the co-signer required one key
+# alone reads as a failure, §1456), stores only a good check's date, and the row
 # raises no badge or notification.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -62,7 +62,7 @@ xcrun swiftc -O -o "$TMP/t" "$CHECK" "$TMP/main.swift" 2>"$TMP/err" || { cat "$T
 # The wiring.
 awk '/static func check\(_ account: String, reason: String\)/,/^    }$/' "$RECOVERY" > "$TMP/check.swift"
 grep -q 'isValidSignature' "$TMP/check.swift" && grep -q 'ethCall' "$TMP/check.swift" \
-  && { echo "✗ the check asks a chain to validate the signature — one key alone fails at the spend limit's threshold (§1456)"; exit 1; }
+  && { echo "✗ the check asks a chain to validate the signature — one key alone fails at the co-signer's threshold (§1456)"; exit 1; }
 grep -q 'key.isValidSignature(ecdsa, for: RecoveryDigest' "$TMP/check.swift" \
   || { echo "✗ the test signature is no longer verified on the phone against the key's public half"; exit 1; }
 grep -q 'if result.works {' "$TMP/check.swift" || { echo "✗ a failed check stores its date — the row would go quiet on a broken key"; exit 1; }
