@@ -635,6 +635,10 @@ extension FeedScreen {
             walletSpendingGroup(.fees)
         case .roundUps:
             walletSpendingGroup(.roundUps)
+        case .watchlist:
+            walletWatchlistPage
+        case .watchedToken:
+            walletWatchedTokenPage
         default:
             EmptyView()
         }

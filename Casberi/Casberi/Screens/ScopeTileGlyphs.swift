@@ -30,6 +30,11 @@ enum ScopeTileGlyph {
     static let permissions = "key"
     /// The three kinds of transfer made to fool you (prd §1480).
     static let threats     = "exclamationmark.shield"
+    /// The tokens you watch (prd §1632): the star a watched address wears in
+    /// the book, for the same act.
+    static let watchlist   = "star"
+    /// One watched token's page: its price line.
+    static let watchedToken = "chart.xyaxis.line"
     /// Money lent, pooled, staked or held as a perp — the columns the user
     /// reserved for Positions (2026-09-18), a door on Holdings (prd §1480).
     static let positions   = "building.columns"
@@ -228,6 +233,8 @@ extension WalletSection: DSTileScope {
         case .needsYou:        return ScopeTileGlyph.alerts
         case .permissions:     return ScopeTileGlyph.permissions
         case .threats:         return ScopeTileGlyph.threats
+        case .watchlist:       return ScopeTileGlyph.watchlist
+        case .watchedToken:    return ScopeTileGlyph.watchedToken
         case .holdingAccounts: return ScopeTileGlyph.holdingAccounts
         case .positions:       return ScopeTileGlyph.positions
         case .apps:            return ScopeTileGlyph.apps

@@ -112,7 +112,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Library is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library (Contacts and Calendar open their pages, §1612); one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564).
-- Markets is deleted (§1529): its tile, seat, watchlist, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions.
+- Markets is deleted (§1529): its tile, seat, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions. A watchlist came back as a Wallet Home door (§1632), not as Markets.
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
 
 ### 9. Bridges and seats
@@ -149,6 +149,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats (§1480; Markets deleted, §1529).
+- The watchlist is yours, apart from Following (§1632): one Home door like Permissions, on All and Yours only, trailing the day's biggest mover in its ink ("WLD −2.3%"), never an average, else the count; empty, it is the verb Watch a token. It pushes `Wallet · Watchlist` (the verb row, then each token: price trailing, the day's change on the line); Watch a token is a token-only search tray; a token's page is its chart, You hold, Coin or Network, Stop watching (no Swap yet). Watch is the verb for tokens, Follow for wallets and feeds, Track for subscriptions (§1632 amends §1120). Prices are keyless (DeFiLlama, CoinGecko's search), read on screen at most once per ten minutes, never through Zerion.
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
@@ -244,7 +245,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1767 of 1839 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1768 of 1840 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2013,6 +2014,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1629 — ENS names resolve on chain through ENS's own Universal Resolver; web3.bio keeps gateway names, reverse names and avatars
 - §1630 — The composer's close stays top-left; a long pushed page scrolls under the back control at rest (amends §752, reads §829)
 - §1631 — Your account's "Without a signature" row says None; the spend limit is gone from it, the model under it and the demo…
+- §1632 — The Wallet keeps a watchlist: tokens you watch, one door on Home trailing the day's biggest mover, apart from Followi…
 
 ## Dead rulings → what replaced them (generated)
 

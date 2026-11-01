@@ -64,6 +64,8 @@ extension FeedScreen {
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
         case walletFollow
         case walletTokens
+        /// Watch a token (prd §1632 item 4).
+        case watchToken
         /// One subscription, by its key (prd §1105).
         case subscription(String)
         /// Track a subscription by hand (prd §1105, the verb since §1117).
@@ -97,6 +99,7 @@ extension FeedScreen {
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
+            case .watchToken: "watchToken"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
             case .subscriptionTrack(let app): "subscriptionTrack:\(app)"
@@ -284,6 +287,8 @@ extension FeedScreen {
             SocialFollowSheet()
         case .walletFollow:
             WalletFollowSheet(landsOnClose: true)
+        case .watchToken:
+            WatchTokenSheet(held: walletHeldSymbols)
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

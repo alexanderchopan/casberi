@@ -5053,6 +5053,36 @@ enum ProbeHooks {
                       item.byYou ? "byYou" : "header")
             }
         },
+        // `-watchlistAdd "<id>|<SYMBOL>|<Name>[,…]"|clear` — watch tokens as
+        // Watch a token does (prd §1632), by DeFiLlama coin id
+        // (`coingecko:bitcoin`, `base:0x…`); logs `watchlistAdd:` per token.
+        Hook(key: "watchlistAdd") { spec, _ in
+            if spec == "clear" {
+                Watchlist.shared.clear()
+                NSLog("[Casberi] watchlistAdd: cleared")
+                return
+            }
+            for item in spec.split(separator: ",") {
+                let p = item.split(separator: "|").map { String($0).trimmingCharacters(in: .whitespaces) }
+                guard p.count >= 2 else { continue }
+                Watchlist.shared.watch(WatchedToken(id: p[0], symbol: p[1].uppercased(), name: p.count > 2 ? p[2] : p[1]))
+                NSLog("[Casberi] watchlistAdd: %@ %@", p[1], p[0])
+            }
+        },
+        // `-watchlistProbe YES` — read every watched token's price and day's
+        // change once, keyless, and log `watchlist| <SYMBOL> | <price> | <change>`.
+        Hook(key: "watchlistProbe") { _, _ in
+            Task { @MainActor in
+                let tokens = Watchlist.shared.tokens
+                let quotes = await WatchlistPrices.read(tokens.map(\.id))
+                for t in tokens {
+                    let q = quotes[t.id]
+                    NSLog("[Casberi] watchlist| %@ | %@ | %@", t.symbol,
+                          q.map { PriceCommentary.money($0.price) } ?? "none",
+                          q?.change.map { WatchlistRules.change($0).words } ?? "none")
+                }
+            }
+        },
         // `-subscriptionTrack "<Name>:<monthly price>"` — track a subscription
         // by hand, as the Track tray's form does, so its sheet's Edit can be
         // driven headlessly; logs `subscriptionTrack:` with the stored entry.

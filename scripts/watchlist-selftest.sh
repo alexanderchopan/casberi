@@ -1,0 +1,135 @@
+#!/bin/zsh
+# Casberi watchlist self-test (prd §1632) — the rules behind the Wallet's
+# watchlist, compiled WHOLE and unmodified:
+#
+#   Casberi/Casberi/Model/WatchlistRules.swift
+#
+# The list's order, the ten-minute price window, the day's change in words
+# (a change that rounds to zero has no sign, §83), a pasted contract asked of
+# every chain, and the three keyless answers it reads. Plus the drift guards:
+# the store's key is outside what the Markets sweep clears, the prices never
+# ask Zerion, they are read only where the watchlist is on screen, and Home
+# draws it on All and Yours only, as one door.
+#
+# Pure, local, deterministic — no network, no simulator. Exit non-zero on failure.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+RULES="Casberi/Casberi/Model/WatchlistRules.swift"
+STORE="Casberi/Casberi/Model/Watchlist.swift"
+SCREEN="Casberi/Casberi/Screens/FeedScreen+Watchlist.swift"
+SWEEP="Casberi/Casberi/Model/SourceRename.swift"
+for f in "$RULES" "$STORE" "$SCREEN" "$SWEEP"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+
+# The key outlives the Markets sweep (§1529 clears `markets.` and `tokens.watch.`).
+key="$(grep -oE 'storeKey = "[^"]+"' "$STORE" | head -1 | sed -E 's/.*"([^"]+)"/\1/')"
+[[ -n "$key" ]] || { echo "✗ Watchlist.storeKey not found"; exit 1; }
+for prefix in $(grep -oE '"(markets|tokens\.watch)\.[^"]*"' "$SWEEP" | tr -d '"'); do
+  [[ "$key" != ${prefix}* ]] || { echo "✗ the watchlist's key $key is cleared by the sweep's $prefix"; exit 1; }
+done
+# Keyless: never the one Zerion budget every install shares (§1632 item 8).
+if grep -vE '^[[:space:]]*(//|///)' "$STORE" "$RULES" | grep -qE 'zerion|ZerionAPI|ZerionLane'; then
+  echo "✗ the watchlist reads through Zerion"; exit 1
+fi
+# Read only where it is on screen, never by a sweep.
+callers="$(grep -rlE 'WatchlistPrices\.shared\.refreshIfStale' Casberi/Casberi | sort)"
+[[ "$callers" == "$SCREEN" ]] || { echo "✗ refreshIfStale is called outside the watchlist's screens:"; print -r -- "$callers"; exit 1; }
+# Home draws it on All and Yours only: never on Following, never on an app pick.
+shows="$(awk '/var walletWatchlistShows: Bool/,/^    }/' "$SCREEN")"
+print -r -- "$shows" | grep -qF 'guard !walletOnFollowing, selectedSeat == nil else { return false }' \
+  || { echo "✗ Home's watchlist no longer stands down on Following and an app pick"; exit 1; }
+grep -qF 'if walletWatchlistShows { walletWatchlistHomeSection }' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
+  || { echo "✗ Home no longer draws the watchlist behind walletWatchlistShows"; exit 1; }
+echo "watchlist-selftest: drift guards ✓"
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+cat > "$TMP/main.swift" <<'SWIFT'
+import Foundation
+
+var failures = 0
+func check(_ ok: Bool, _ what: String) {
+    if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); failures += 1 }
+}
+typealias R = WatchlistRules
+let btc = WatchedToken(id: "coingecko:bitcoin", symbol: "BTC", name: "Bitcoin")
+let eth = WatchedToken(id: "coingecko:ethereum", symbol: "ETH", name: "Ethereum")
+let aero = WatchedToken(id: "base:0x940181a94a35a4569e4529a3cdfb74e38fd98631", symbol: "AERO", name: "AERO")
+
+// The list
+check(R.adding(eth, to: [btc]) == [btc, eth], "watching adds to the end")
+check(R.adding(btc, to: [btc, eth]) == [btc, eth], "watching twice keeps one")
+check(R.removing(btc.id, from: [btc, eth]) == [eth], "stop watching removes it")
+check(R.movingToTop(eth.id, in: [btc, eth, aero]) == [eth, btc, aero], "move to top leads with it, the rest in order")
+check(R.movingToTop(btc.id, in: [btc, eth]) == [btc, eth], "the first stays first")
+
+// The window
+let now = Date(timeIntervalSince1970: 1_800_000_000)
+check(R.isStale(readAt: nil, now: now), "never read is stale")
+check(!R.isStale(readAt: now.addingTimeInterval(-599), now: now), "under ten minutes stands")
+check(R.isStale(readAt: now.addingTimeInterval(-600), now: now), "ten minutes is stale")
+
+// The day's change
+check(R.change(2.14) == ("+2.1%", .up), "a rise has its sign")
+check(R.change(-4.56) == ("\u{2212}4.6%", .down), "a fall has a true minus")
+check(R.change(0.04) == ("0.0%", .flat), "rounds to zero: no sign, no colour")
+check(R.change(-0.04) == ("0.0%", .flat), "a fall that rounds to zero too")
+check(R.change(.nan) == ("0.0%", .flat), "no number is flat, never a sign")
+
+// Home's door: the biggest mover
+let q: [String: R.Quote] = [btc.id: .init(price: 1, change: 0.9), eth.id: .init(price: 1, change: -4.6),
+                            aero.id: .init(price: 1, change: 2.1)]
+let m = R.biggestMover([btc, eth, aero], quotes: q)
+check(m?.symbol == "ETH" && m?.change.words == "\u{2212}4.6%" && m?.change.tone == .down, "the biggest move either way, a fall included")
+check(R.biggestMover([btc, eth], quotes: [btc.id: .init(price: 1, change: 0.04), eth.id: .init(price: 1, change: nil)]) == nil,
+      "nothing moved, or no change answered: no mover, the count instead")
+check(R.biggestMover([btc, eth], quotes: [btc.id: .init(price: 1, change: 2), eth.id: .init(price: 1, change: -2)])?.symbol == "BTC",
+      "a tie goes to the earlier on the list")
+check(R.biggestMover([], quotes: q) == nil, "an empty list has no mover")
+
+// Where it lives
+check(R.network(of: aero.id) == "Base", "a contract names its network")
+check(R.network(of: btc.id) == nil, "a coin names none")
+check(R.line(for: btc) == "Bitcoin" && R.line(for: aero) == "Base", "the line: the coin's name, or the network")
+
+// A pasted contract
+let evm = R.contractCandidates("  0x940181A94A35A4569E4529A3CDFB74E38FD98631 ")
+check(evm.contains("base:0x940181a94a35a4569e4529a3cdfb74e38fd98631") && evm.contains("ethereum:0x940181a94a35a4569e4529a3cdfb74e38fd98631"),
+      "an EVM address asks every EVM chain, lowercased")
+check(!evm.contains { $0.hasPrefix("solana:") }, "an EVM address never asks Solana")
+check(R.contractCandidates("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN") == ["solana:JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"],
+      "a Solana mint asks Solana, its case kept")
+check(R.contractCandidates("hype").isEmpty, "words are not an address")
+check(R.contractCandidates("0x123").isEmpty, "a short hex is not an address")
+
+// The chart
+check(R.chartQuery("1H")! == (13, "5m") && R.chartQuery("30D")! == (31, "1d"), "each range asks its span and period")
+check(R.chartQuery("1Y") == nil, "a range DeFiLlama is not asked for is nil")
+
+// The answers
+let prices = #"{"coins":{"coingecko:bitcoin":{"price":77458.4,"symbol":"BTC","confidence":0.99},"coingecko:thin":{"price":1.0,"symbol":"THIN","confidence":0.5},"coingecko:zero":{"price":0,"symbol":"Z","confidence":0.99}}}"#
+let p = R.parsePrices(Data(prices.utf8))
+check(p["coingecko:bitcoin"]?.price == 77458.4 && p["coingecko:bitcoin"]?.symbol == "BTC", "a price and its symbol")
+check(p["coingecko:thin"] == nil, "under the confidence floor is no price (§83)")
+check(p["coingecko:zero"] == nil, "a zero is no price")
+let pct = R.parsePercent(Data(#"{"coins":{"coingecko:bitcoin":0.31,"base:0xa":"-2.5"}}"#.utf8))
+check(pct["coingecko:bitcoin"] == 0.31 && pct["base:0xa"] == -2.5, "the day's change, in percent")
+let chart = #"{"coins":{"coingecko:x":{"prices":[{"timestamp":3,"price":3.0},{"timestamp":1,"price":1.0},{"timestamp":2,"price":2.0},{"timestamp":4,"price":0}]}}}"#
+check(R.parseChart(Data(chart.utf8), id: "coingecko:x") == [1, 2, 3], "the closes, oldest first, a zero dropped")
+check(R.parseChart(Data(chart.utf8), id: "coingecko:y").isEmpty, "another id's chart is nothing")
+let search = #"{"coins":[{"id":"basedhype","symbol":"basedhype","name":"BasedHype","market_cap_rank":612},{"id":"fakehype","symbol":"hype","name":"Hype","market_cap_rank":null},{"id":"hyperliquid","symbol":"hype","name":"Hyperliquid","market_cap_rank":11}]}"#
+let found = R.parseSearch(Data(search.utf8))
+check(found.map(\.id) == ["coingecko:hyperliquid", "coingecko:basedhype"], "ranked by market cap, the unranked left out")
+check(found.first?.symbol == "HYPE" && found.first?.name == "Hyperliquid", "the ticker in capitals, the name kept")
+check(R.parseSearch(Data("not json".utf8)).isEmpty, "a broken answer is nothing")
+
+print(failures == 0 ? "watchlist-selftest: all checks ✓" : "watchlist-selftest: \(failures) FAILED")
+exit(failures == 0 ? 0 : 1)
+SWIFT
+
+swiftc -O -o "$TMP/run" "$RULES" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+[[ -x "$TMP/run" ]] || { echo "✗ watchlist-selftest: compile failed"; exit 1; }
+"$TMP/run"

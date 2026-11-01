@@ -452,12 +452,15 @@ extension FeedScreen {
                     // Home, each a tap to open, and Follow an account.
                     if walletOnFollowing { walletFollowingPage }
                     walletHomeDoors(upcoming: upcoming)
+                    // The tokens you watch, open (prd §1632 item 2).
+                    if walletWatchlistShows { walletWatchlistHomeSection }
                     // Safe's and 0xBow Privacy Pools' own section (prd §1614).
                     walletPickSection
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,
-                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes:
+                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes,
+                     .watchlist, .watchedToken:
                     walletPageSections(section, all: all, upcoming: upcoming,
                                        nextEventID: nextEventID)
                 case .subscriptions:

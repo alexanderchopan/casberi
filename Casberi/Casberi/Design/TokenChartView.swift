@@ -1045,6 +1045,10 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         return TokenChartPlot(chart: chart, accent: accent,
                               height: boxed ? Self.boxedPlotHeight : 140,
                               pulses: fresh, endpointDot: !fresh,
+                              // The fill falls to the series' low, never to
+                              // zero (prd §1471): to zero it pinned every
+                              // price line to the top of its box (§1632).
+                              fillsToLow: true,
                               watchedX: watchedX(chart), levels: levels)
             // Draw-on reveal, replayed per range — a range switch is a
             // data arrival (the GenTokenRow entrance, shared).

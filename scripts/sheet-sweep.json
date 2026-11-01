@@ -1172,6 +1172,28 @@
    "anchor": "field:?An address or a name"
   },
   {
+   "id": "watch-token",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#watchToken"
+   ],
+   "launch": [
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "watchlist"
+   ],
+   "steps": [
+    {
+     "wait": 6
+    },
+    {
+     "tap": "button:^Watch a token"
+    }
+   ],
+   "anchor": "field:?A name, a ticker or an address"
+  },
+  {
    "id": "notes-trash",
    "covers": [
     "Screens/FeedScreen.swift:open"

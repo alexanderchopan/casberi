@@ -428,6 +428,8 @@ final class ShellChrome {
     /// §1133) from whatever room was showing; the Wallet raises its tray
     /// once it stands, and clears this.
     var walletFollowPending = false
+    /// The watched token the Wallet's token page shows (prd §1632).
+    var watchedTokenID: String?
 
     /// Words the tray's search hands to the sheet it opens (Watch a wallet),
     /// typed into its field on appear and cleared there.

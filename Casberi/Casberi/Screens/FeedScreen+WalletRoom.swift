@@ -60,6 +60,9 @@ extension FeedScreen {
         // Home's doors state their own count (prd §1480).
         case .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
             walletPageFigure(section, upcoming: upcoming)
+        // The watchlist's count, and a token's price and chart (prd §1632).
+        case .watchlist, .watchedToken:
+            walletWatchlistFigure(section)
         // Spending's pages keep Spending's box: the window and its total.
         case .places, .fees, .roundUps:
             walletSpendingFigure
@@ -276,6 +279,7 @@ extension FeedScreen {
             .id((roomBoxPlace == .paneBox ? "paneBalance:" : "walletChrome:") + "\(portfolioShown?.totalUSD ?? 0)")
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
+            .task { watchTokenProbe() }
             // Where a launch opens the Wallet: Yours, unless you last chose
             // Everything (prd §1526).
             .task { WalletWhoseSwitch.applyLaunchChoice(chrome) }
@@ -303,6 +307,19 @@ extension FeedScreen {
         Self.walletFollowProbed = true
         NSLog("[Casberi] walletFollow: raised")
         feedSheet = .walletFollow
+        #endif
+    }
+
+    /// `-watchToken YES` — raise Watch a token at mount (prd §1632; NSLogs
+    /// `watchToken:`), with `-watchlistSearch "<words>"` typed into it, since
+    /// a simulator booted by `simctl` draws no keyboard. Once per launch.
+    private func watchTokenProbe() {
+        #if DEBUG
+        guard !Self.watchTokenProbed,
+              UserDefaults.standard.bool(forKey: "watchToken") else { return }
+        Self.watchTokenProbed = true
+        NSLog("[Casberi] watchToken: raised")
+        feedSheet = .watchToken
         #endif
     }
 
@@ -478,7 +495,8 @@ extension FeedScreen {
         // their figure; Activity and Home's doors state their own count
         // (prd §1480), an empty one included.
         case .home, .subscriptions, .spending, .places, .fees, .roundUps,
-             .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
+             .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes,
+             .watchlist, .watchedToken:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             return blockStream.els.isEmpty

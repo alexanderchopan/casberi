@@ -249,6 +249,10 @@ extension FeedScreen {
         // The Wallet's tile, now a page (prd §1321): "Wallet · Holdings".
         if source == CategoryFold.walletRoom, pinnedWalletSection == nil,
            let section = chrome.walletSection, section != .home {
+            // A token's page is named by the token (prd §1632 item 5).
+            if section == .watchedToken, let token = Watchlist.shared.token(chrome.watchedTokenID) {
+                return token.symbol
+            }
             return section.label
         }
         return nil

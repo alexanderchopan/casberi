@@ -369,8 +369,13 @@ enum NetworkReach {
         // line.
         Endpoint(service: "Token prices",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Fetches the public price history of a token you hold to draw its chart on \(DS.device), and its public price and mark. Carries only the token or ticker — nothing about you, and never a portfolio.",
+                 purpose: "Fetches the public price history of a token you hold or watch to draw its chart on \(DS.device), its public price and day's change, and finds a token you search for by name or ticker. Carries only the token, ticker or words you typed — nothing about you, and never a portfolio.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com",
+                         // The watchlist (prd §1632), keyless: CoinGecko's
+                         // search for a name or a ticker, DeFiLlama's prices,
+                         // day's change and chart. DeFiLlama is the Wallet's
+                         // price backstop too; here it carries no address.
+                         "api.coingecko.com", "coins.llama.fi",
                          "api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com",
                          "api.nasdaq.com", "api.coinpaprika.com",

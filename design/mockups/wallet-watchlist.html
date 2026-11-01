@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wallet watchlist</title><style>
+:root{--page:#000;--ink:#fff;--ink2:#8e8e93;--ink3:#636366;--pink:#ff2d55;--green:#30d158;--red:#ff453a;--amber:#ffd60a;--fill:#1c1c1e;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e4e3ea;color:#15141a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header{max-width:1640px;margin:0 auto 22px} h1{font:700 28px/34px var(--rounded)}
+.desc{font-size:15px;line-height:22px;color:#56535f;max-width:900px;margin-top:6px}
+.stage{max-width:1640px;margin:14px auto 0;display:flex;flex-wrap:wrap;gap:30px 34px;align-items:flex-start}
+figure{width:362px} figcaption{font-size:13px;line-height:19px;color:#56535f;margin:14px 4px 0} figcaption b{color:#15141a}
+.ph{width:402px;height:874px;zoom:.9;border-radius:56px;overflow:hidden;position:relative;background:var(--page);box-shadow:0 24px 70px #00000033;color:var(--ink);font-family:var(--rounded)}
+.status{display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.title{padding:30px 20px 0} .title h3{font:700 34px/40px var(--rounded)}
+.panel{padding:0 20px}
+.box{height:150px;padding-top:14px}
+.box .fig{font:700 40px/46px var(--rounded);font-variant-numeric:tabular-nums}
+.box .sub{font:400 15px/20px var(--rounded);color:var(--ink2);margin-top:4px}
+.whose{display:flex;gap:18px;font:600 17px/22px var(--rounded);color:var(--ink3);margin-top:18px}
+.whose .on{color:var(--pink)}
+.tiles{display:flex;gap:10px;margin:6px 0 10px}
+.tile{width:84px;height:52px;border-radius:14px;background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 11px var(--rounded);color:#aeaeb2}
+.tile i{font-style:normal;font-size:15px;line-height:15px}
+.tile.on{background:#fff;color:#000}
+/* Home's doors: heading24, glyph in the head column, no line, the figure trailing */
+.dr{display:flex;align-items:center;gap:14px;min-height:60px;font:700 24px/30px var(--rounded)}
+.dr .g{width:30px;text-align:center;font-size:19px;color:var(--ink2);font-weight:400}
+.dr .v{margin-left:auto;font:600 20px var(--rounded);font-variant-numeric:tabular-nums}
+.dr .v.amber{color:var(--amber);font-size:17px;font-weight:500}
+.dr .v.pink{color:var(--pink)}
+.row{display:flex;align-items:center;gap:14px;min-height:56px;font:400 17px/22px var(--rounded)}
+.mk{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:700 13px var(--rounded)}
+.mk.face{background:#3a3a3c;color:#fff;font-weight:600}
+.mk.eth{background:#fff;color:#627eea} .mk.hype{background:#97fce4;color:#072723} .mk.pepe{background:#4c9e3b;color:#fff}
+.mk.btc{background:#f7931a;color:#fff} .mk.sol{background:linear-gradient(135deg,#9945ff,#14f195);color:#fff} .mk.wld{background:#fff;color:#000}
+.mk.verb{background:#2c2c2e;color:var(--pink);font-size:18px;font-weight:600}
+.two{display:flex;flex-direction:column;min-width:0} .two small{font-size:13px;line-height:18px;color:var(--ink2)}
+.f{margin-left:auto;text-align:right;font-variant-numeric:tabular-nums;display:flex;flex-direction:column}
+.f small{font-size:13px;line-height:18px}
+.up{color:var(--green)} .dn{color:var(--red)} .flat{color:var(--ink2)}
+.verbrow{color:var(--pink)}
+.tab{position:absolute;left:20px;right:20px;bottom:26px;display:flex;align-items:center;gap:14px}
+.tab .bar{flex:1;height:64px;border-radius:40px;background:#2a2a2d;display:flex;justify-content:space-around;align-items:center;font:500 13px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pink);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 18px}
+.tab .s{width:64px;height:64px;border-radius:50%;background:#2a2a2d;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff}
+.back{padding:30px 20px 0;display:flex;align-items:center;gap:8px}
+.back .c{width:44px;height:44px;border-radius:50%;background:#2a2a2d;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.back h3{font:700 34px/40px var(--rounded);white-space:nowrap}
+.under{position:absolute;inset:0;opacity:.35}
+.tray{position:absolute;left:0;right:0;top:70px;bottom:0;background:#1c1c1e;border-radius:38px 38px 0 0;padding:14px 20px 0}
+.grab{width:40px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 18px}
+.tray h4{font:700 28px/34px var(--rounded);margin-bottom:14px}
+.field{height:44px;border-radius:12px;background:#2c2c2e;display:flex;align-items:center;gap:8px;padding:0 12px;font:400 17px var(--rounded)}
+.field .caret{width:2px;height:22px;background:var(--pink)}
+.grp{font:400 15px/20px var(--rounded);color:var(--ink2);margin:18px 0 0}
+.add{margin-left:auto;width:30px;height:30px;border-radius:50%;background:#2c2c2e;color:var(--pink);display:flex;align-items:center;justify-content:center;font:600 18px var(--rounded);flex:none}
+.add.done{background:var(--pink);color:#fff;font-size:15px}
+.chart{height:110px;margin-top:6px;display:block}
+.chips{display:flex;gap:8px;margin-top:6px}
+.chip{font:500 13px/18px var(--rounded);padding:6px 12px;border-radius:16px;color:var(--ink2);background:var(--fill)}
+.chip.on{background:#fff;color:#000}
+.facts .row{min-height:48px}
+.facts .row span:first-child{color:var(--ink2)}
+.new{outline:2px dashed #ff2d5588;outline-offset:4px;border-radius:8px}
+.notes{max-width:1240px;margin:34px auto 0;font-size:15px;line-height:22px;color:#36343c}
+.notes h2{font:700 20px/26px var(--rounded);margin:18px 0 8px;color:#15141a}
+.notes li{margin:0 0 6px 20px}
+code{font:13px ui-monospace,Menlo,monospace;background:#0000000d;padding:1px 4px;border-radius:4px}
+</style></head><body>
+<header>
+<h1>Wallet watchlist</h1>
+<p class="desc">The watchlist is yours: tokens you want to keep an eye on, apart from the wallets you follow. It stands open on Wallet Home, so you see it the moment you open the Wallet: five tokens, then a door to the rest. Markets doesn't come back: there's no tile, seat, sector board, alert or widget. A dashed outline marks what's new.</p>
+</header>
+
+<div class="stage">
+
+<!-- 1. Home on All -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$2,184</div>
+  <div class="sub">Across 4 accounts</div>
+  <div class="whose"><span>Yours</span><span>Following</span><span class="on">All</span></div>
+</div>
+<div class="tiles"><div class="tile on"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">⛨</span>Your account<span class="v amber">Add a recovery key</span></div>
+<div class="dr"><span class="g">◉</span>Needs you<span class="v pink">2</span></div>
+<div class="new">
+<div class="dr"><span class="g">☆</span>Watchlist</div>
+<div class="row"><span class="mk btc">₿</span><span class="two">BTC<small>Bitcoin</small></span><span class="f">$104,220<small class="up">+0.9%</small></span></div>
+<div class="row"><span class="mk eth">Ξ</span><span class="two">ETH<small>You hold $412</small></span><span class="f">$3,412<small class="up">+2.1%</small></span></div>
+<div class="row"><span class="mk hype">H</span><span class="two">HYPE<small>Hyperliquid</small></span><span class="f">$38.20<small class="dn">−4.6%</small></span></div>
+<div class="row"><span class="mk sol">S</span><span class="two">SOL<small>Solana</small></span><span class="f">$182.55<small class="up">+1.3%</small></span></div>
+<div class="row"><span class="mk wld">W</span><span class="two">WLD<small>World Chain</small></span><span class="f">$1.94<small class="dn">−1.2%</small></span></div>
+<div class="row" style="color:var(--ink2);padding-left:44px">All 6 tokens</div>
+</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>The watchlist is on Home, open.</b> It's a section under Home's doors: the name in the doors' rung, then five rows, then a door, as Accounts does (§1410). The empty doors (Permissions, Threats, Needs you) drop out, so on a quiet day it sits right under Your account. It shows on All and on Yours, but not on Following or with an app picked, because the watchlist belongs to you, not to any account. With nothing watched, the section is one row, <b>Watch a token</b>, which opens the search. Prices come from the last read in the ten-minute holdings window, so opening the Wallet again doesn't fetch them again.</figcaption></figure>
+
+<!-- 2. Watchlist page -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="back"><span class="c">‹</span><h3>Wallet · Watchlist</h3></div>
+<div class="panel" style="padding-top:18px">
+<div class="new">
+<div class="row verbrow"><span class="mk verb">+</span>Watch a token</div>
+<div class="row"><span class="mk btc">₿</span><span class="two">BTC<small>Bitcoin</small></span><span class="f">$104,220<small class="up">+0.9%</small></span></div>
+<div class="row"><span class="mk eth">Ξ</span><span class="two">ETH<small>You hold $412</small></span><span class="f">$3,412<small class="up">+2.1%</small></span></div>
+<div class="row"><span class="mk hype">H</span><span class="two">HYPE<small>Hyperliquid</small></span><span class="f">$38.20<small class="dn">−4.6%</small></span></div>
+<div class="row"><span class="mk sol">S</span><span class="two">SOL<small>Solana</small></span><span class="f">$182.55<small class="up">+1.3%</small></span></div>
+<div class="row"><span class="mk wld">W</span><span class="two">WLD<small>World Chain</small></span><span class="f">$1.94<small class="dn">−1.2%</small></span></div>
+<div class="row"><span class="mk pepe">P</span><span class="two">PEPE<small>Ethereum</small></span><span class="f">$0.0000094<small class="flat">0.0%</small></span></div>
+</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>The page</b> is pushed from "All 6 tokens" (§1321), and only matters once you watch more than five. <b>Watch a token</b> leads as a verb row, the way Following's page leads with its adds. Each row shows the price, with the day's change under it. Under the name, a token you hold says how much, and one you don't names its network. A change that rounds to zero is grey and has no sign (§83). Rows stay in the order you added them; press and hold a row for <b>Move to top</b> or <b>Stop watching</b>.</figcaption></figure>
+
+<!-- 3. Search tray -->
+<figure><div class="ph">
+<div class="under">
+  <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="back"><span class="c">‹</span><h3>Wallet · Watchlist</h3></div>
+</div>
+<div class="tray new" style="outline-offset:-6px">
+<div class="grab"></div>
+<h4>Watch a token</h4>
+<div class="field"><span>hype</span><span class="caret"></span></div>
+<div class="grp">Tokens</div>
+<div class="row"><span class="mk hype">H</span><span class="two">HYPE<small>Hyperliquid · $38.20</small></span><span class="add done">✓</span></div>
+<div class="row"><span class="mk hype">W</span><span class="two">wHYPE<small>HyperEVM · $38.18</small></span><span class="add">+</span></div>
+<div class="row"><span class="mk face">K</span><span class="two">kHYPE<small>HyperEVM · $38.91</small></span><span class="add">+</span></div>
+<div class="grp" style="margin-top:28px">With nothing typed: you've held these</div>
+<div class="row"><span class="mk wld">W</span><span class="two">WLD<small>Swapped Oct 22</small></span><span class="add done">✓</span></div>
+<div class="row"><span class="mk face">A</span><span class="two">AERO<small>You hold $24.37</small></span><span class="add">+</span></div>
+</div>
+</div><figcaption><b>A search tray</b> (<code>DSTray</code>) is the one sheet in this flow. A name, a ticker or a pasted contract address finds tokens, and tokens only. A tap ticks the row and the tray stays open, so you can add several (§1164's rule). With nothing typed, it offers tokens you've held or swapped. Only priced tokens are listed, and fake tokens never are (§1107a).</figcaption></figure>
+
+<!-- 4. Token page -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="back"><span class="c">‹</span><h3>Wallet · HYPE</h3></div>
+<div class="panel">
+<div class="box" style="height:auto">
+  <div class="fig">$38.20</div>
+  <div class="sub"><span class="dn">−$1.84</span> today</div>
+</div>
+<svg class="chart" viewBox="0 0 362 110" width="362" height="110" preserveAspectRatio="none">
+  <polyline fill="none" stroke="#ff453a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+    points="0,40 18,34 36,38 54,28 72,30 90,22 108,26 126,20 144,30 162,36 180,33 198,44 216,52 234,48 252,60 270,58 288,70 306,66 324,78 342,74 362,82"/>
+</svg>
+<div class="chips"><span class="chip on">Day</span><span class="chip">Week</span><span class="chip">Month</span><span class="chip">Year</span></div>
+<div class="facts" style="margin-top:18px">
+<div class="row"><span>You hold</span><span class="f">None</span></div>
+<div class="row"><span>Network</span><span class="f">Hyperliquid</span></div>
+</div>
+<div class="row verbrow" style="margin-top:8px"><span class="mk verb">⇄</span>Swap for HYPE</div>
+<div class="row verbrow"><span class="mk verb">−</span>Stop watching</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>A token's page</b>, <code>Wallet · HYPE</code>. Its box is the price and today's change, then <code>TokenChartView</code>'s line (it's still in the tree) with the range chips. Two facts: what you hold, and where the token lives. The verbs are rows: <b>Swap for HYPE</b> opens Move with the draft filled in, and <b>Stop watching</b> removes it. It shows nothing about the wallets you follow; that's Following's job.</figcaption></figure>
+
+</div>
+
+<div class="notes">
+<h2>Rulings it touches</h2>
+<ul>
+<li><b>§1529, amended.</b> The watchlist comes back as a door on Home. The Markets tile, the <code>tokens</code> seat, sectors, the company index, price alerts and the Watchlist widget stay deleted.</li>
+<li><b>§1480 item 2.</b> Home lists the watchlist instead of putting it behind a door. "Every list behind a door" gets one exception, because a watchlist only works if you can see it at a glance.</li>
+<li><b>§1120, the verbs.</b> That ruling says Follow is the verb for everything you keep up with. "Watchlist" and "Watch a token" need an exception written into §1120. The alternative is "Follow a token", which would put us back on the word you just separated from Following.</li>
+</ul>
+<h2>Cost (unmeasured)</h2>
+<ul>
+<li>Tokens you hold are already priced by Holdings' read.</li>
+<li>Tokens you don't hold need one batched Zerion <code>fungibles</code> call. It runs when Home or the Watchlist page comes on screen, at most once per ten-minute holdings window (§216), and never in the background sweep. Between reads, Home shows the last prices; a reading older than the window says when it's from. Ceiling: a person who keeps the Wallet open makes six calls an hour.</li>
+<li>The chart is one <code>charts</code> call per range, made only when the token's page is open.</li>
+</ul>
+</div>
+</body></html>

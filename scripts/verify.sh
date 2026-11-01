@@ -2679,6 +2679,9 @@ harness "Wallet spending" "spending" "scripts/spending-selftest.sh" "the spendin
 # The rating ask (prd §1477): Apple's sheet only for someone using the app on
 # their own things, on four different days, once per version — never the demo.
 harness "Rating ask" "rating ask" "scripts/rating-ask-selftest.sh" "the rating ask self-test failed — run scripts/rating-ask-selftest.sh"
+# The Wallet's watchlist (prd §1632): its order, the price window, the day's
+# change, the keyless answers, and that it never reads Zerion or a sweep.
+harness "Watchlist" "watchlist" "scripts/watchlist-selftest.sh" "the watchlist self-test failed — run scripts/watchlist-selftest.sh"
 # The Safe pick's roster (prd §1614): your account leads, who signs each Safe,
 # and what moves one without a signature — never your account's own send path.
 harness "Safe roster" "safe roster" "scripts/safe-roster-selftest.sh" "the Safe roster self-test failed — run scripts/safe-roster-selftest.sh"

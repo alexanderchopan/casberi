@@ -50,6 +50,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case permissions
     /// Address poisoning, fake tokens, fake transfers.
     case threats
+    /// The tokens you watch, open on Home and all of them here (prd §1632).
+    case watchlist
+    /// One watched token: its price, its chart, what you hold of it.
+    case watchedToken
 
     // ── Your account's doors ─────────────────────────────────────────────────
     /// The monthly recovery check (prd §1509 item 4, §1515).
@@ -100,6 +104,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         if Self.holdingsDoors.contains(self) { return .holdings }
         if Self.spendingDoors.contains(self) { return .spending }
         if Self.yourAccountDoors.contains(self) { return .yourAccount }
+        if self == .watchedToken { return .watchlist }
         return .home
     }
 
@@ -127,6 +132,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "Needs you")
         case .permissions:     return String(localized: "Permissions")
         case .threats:         return String(localized: "Threats")
+        case .watchlist:       return String(localized: "Watchlist")
+        // The title names the token itself (`FeedScreen+RoomTitle`).
+        case .watchedToken:    return String(localized: "Token")
         // The wallets you follow, by balance; Home's Following is where you
         // add and remove them (§1503).
         case .holdingAccounts: return String(localized: "Following")
@@ -154,6 +162,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "What is waiting on you")
         case .permissions:     return String(localized: "Who can spend from you")
         case .threats:         return String(localized: "What's trying to fool you")
+        case .watchlist:       return String(localized: "The tokens you watch")
+        case .watchedToken:    return String(localized: "A token you watch")
         case .holdingAccounts: return String(localized: "What each wallet you follow holds")
         case .positions:       return String(localized: "Money lent, pooled, staked or held as a perp")
         case .apps:            return String(localized: "What each app holds for you")
@@ -187,6 +197,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .needsYou:        return String(localized: "Nothing waiting")
         case .permissions:     return String(localized: "No permissions")
         case .threats:         return String(localized: "Nothing to fool you")
+        case .watchlist:       return String(localized: "Nothing watched")
+        case .watchedToken:    return String(localized: "No price yet")
         case .holdingAccounts: return String(localized: "No wallets you follow")
         case .positions:       return String(localized: "No positions")
         case .apps:            return String(localized: "No apps")
@@ -224,6 +236,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "A delegate or a token approval that can spend from you.")
         case .threats:
             return String(localized: "An address made to look like yours, a fake token or a fake transfer.")
+        case .watchlist:
+            return String(localized: "Tokens you keep an eye on, priced, with the day's change.")
+        case .watchedToken:
+            return String(localized: "Its price, the day's change and its chart.")
         case .holdingAccounts:
             return String(localized: "Each wallet you follow, and what it holds.")
         case .positions:
