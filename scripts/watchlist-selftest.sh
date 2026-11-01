@@ -152,6 +152,17 @@ check(R.holdingIDs(symbol: "JUP", contracts: ["solana-mainnet:\(mint.lowercased(
 check(R.holdingIDs(symbol: "ZZZ", contracts: [], route: nil, coingecko: cg, llamaChains: llama).isEmpty,
       "nothing known: empty, and the tray asks the search")
 
+// A contract DeFiLlama cannot price is asked which coin it is (2026-11-01,
+// MUSEGOD on Robinhood read "No price").
+check(R.coinByContractPath("robinhood:0x0379e228f6887c6f18bf394042ecaf81b308cb2e")
+      == "coins/robinhood/contract/0x0379e228f6887c6f18bf394042ecaf81b308cb2e", "a Robinhood contract asks CoinGecko's robinhood")
+check(R.coinByContractPath("arbitrum:0xa") == "coins/arbitrum-one/contract/0xa", "DeFiLlama's chain is CoinGecko's platform")
+check(R.coinByContractPath("coingecko:bitcoin") == nil, "a coin is not a contract")
+check(R.coinByContractPath("bsc:0xa") == nil, "a chain CoinGecko is not asked on is nil")
+check(R.parseCoinByContract(Data(#"{"id":"musegod","symbol":"musegod"}"#.utf8)) == "coingecko:musegod", "the coin a contract is")
+check(R.parseCoinByContract(Data(#"{"error":"coin not found"}"#.utf8)) == nil, "a contract CoinGecko lists none for is nil")
+check(R.tickerKey(" $musegod ") == "MUSEGOD" && R.tickerKey("MuseGod") == R.tickerKey("MUSEGOD"), "a ticker compares by its letters")
+
 print(failures == 0 ? "watchlist-selftest: all checks ✓" : "watchlist-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT

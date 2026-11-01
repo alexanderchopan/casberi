@@ -46,6 +46,17 @@ extension FeedScreen {
                 .map { (key: $0.key, usd: $0.usd) }
             if route[symbol] == nil, let r = position.route { route[symbol] = r }
         }
+        #if DEBUG
+        // `-watchHeldSample "SYMBOL|<network>:<contract>|<usd>"`: a holding of
+        // your own for the simulator, which has no account to hold one.
+        if let raw = UserDefaults.standard.string(forKey: "watchHeldSample") {
+            let p = raw.split(separator: "|").map(String.init)
+            if p.count == 3, let dollars = Double(p[2]) {
+                usd[p[0].uppercased(), default: 0] += dollars
+                contracts[p[0].uppercased(), default: []].append((key: p[1].lowercased(), usd: dollars))
+            }
+        }
+        #endif
         return usd.sorted { $0.value > $1.value }.map { symbol, dollars in
             let keys = Dictionary((contracts[symbol] ?? []).map { ($0.key, $0.usd) }, uniquingKeysWith: +)
                 .sorted { $0.value > $1.value }

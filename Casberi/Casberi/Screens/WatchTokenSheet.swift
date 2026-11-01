@@ -169,15 +169,29 @@ struct WatchTokenSheet: View {
         unpriced.remove(h.symbol)
         defer { looking.remove(h.symbol) }
         var picked: WatchedToken?
+        var via = "contract"
         if !h.ids.isEmpty {
             let quotes = await WatchlistPrices.read(h.ids)
             if let id = h.ids.first(where: { quotes[$0] != nil }) {
                 picked = WatchedToken(id: id, symbol: h.symbol, name: h.symbol)
             }
         }
+        // A contract DeFiLlama cannot price (all of Robinhood's) is asked
+        // which coin it is, and that coin is watched if it is priced.
         if picked == nil {
+            for id in h.ids where !id.hasPrefix("coingecko:") {
+                guard let coin = await WatchlistPrices.coin(forContract: id),
+                      await WatchlistPrices.read([coin])[coin] != nil else { continue }
+                picked = WatchedToken(id: coin, symbol: h.symbol, name: h.symbol)
+                via = "coin by contract"
+                break
+            }
+        }
+        if picked == nil {
+            via = "ticker"
             let hits = await WatchlistPrices.search(h.symbol)
-            picked = hits.first(where: { $0.token.symbol.uppercased() == h.symbol })?.token
+            let key = WatchlistRules.tickerKey(h.symbol)
+            picked = hits.first(where: { WatchlistRules.tickerKey($0.token.symbol) == key })?.token
         }
         guard let token = picked else {
             withAnimation(DS.Motion.standard) { _ = unpriced.insert(h.symbol) }
@@ -192,7 +206,7 @@ struct WatchTokenSheet: View {
         // The row's bounce is keyed by symbol; `watch` keys it by id.
         justWatched = h.symbol
         #if DEBUG
-        NSLog("watchHeld| %@ | %@", h.symbol, token.id)
+        NSLog("watchHeld| %@ | %@ | %@", h.symbol, token.id, via)
         #endif
     }
 

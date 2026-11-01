@@ -136,6 +136,14 @@ final class WatchlistPrices {
         return found.compactMap { t in quotes[t.id].map { (t, $0) } }
     }
 
+    /// The coin a contract id IS on CoinGecko (`coingecko:<id>`), keyless;
+    /// nil when it lists none or the chain is not asked.
+    nonisolated static func coin(forContract id: String) async -> String? {
+        guard let path = WatchlistRules.coinByContractPath(id),
+              let body = await text("https://api.coingecko.com/api/v3/\(path)") else { return nil }
+        return WatchlistRules.parseCoinByContract(Data(body.utf8))
+    }
+
     /// Named "Token prices", the watchlist's own declaration, so a host the
     /// Wallet shares (`coins.llama.fi`) is read direct, never on a wallet's
     /// Tor circuit (`TorRoute.way`): it carries a token, never an account.

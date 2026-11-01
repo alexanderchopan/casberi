@@ -168,6 +168,43 @@ enum WatchlistRules {
         return out
     }
 
+    /// DeFiLlama chain key → CoinGecko's asset platform, for asking which
+    /// coin a contract is (measured 2026-10-31 against `/asset_platforms` by
+    /// chain id; Robinhood's MUSEGOD answered `musegod`).
+    static let coingeckoPlatform: [String: String] = [
+        "ethereum": "ethereum", "base": "base", "arbitrum": "arbitrum-one",
+        "optimism": "optimistic-ethereum", "polygon": "polygon-pos",
+        "hyperliquid": "hyperevm", "wc": "world-chain", "robinhood": "robinhood",
+        "monad": "monad", "solana": "solana",
+    ]
+
+    /// `api.coingecko.com/api/v3/coins/<platform>/contract/<address>` for a
+    /// contract id, nil for a coin or a chain CoinGecko is not asked on.
+    ///
+    /// **A holding DeFiLlama cannot price by its contract is found BY its
+    /// contract (2026-11-01, user: "trying to click on musegod and it says no
+    /// price").** DeFiLlama prices nothing on Robinhood by contract, so the
+    /// plus fell to the ticker search, and only an exact symbol match was
+    /// taken; this asks which coin the contract you hold IS.
+    static func coinByContractPath(_ id: String) -> String? {
+        let parts = id.split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let platform = coingeckoPlatform[parts[0]] else { return nil }
+        return "coins/\(platform)/contract/\(parts[1])"
+    }
+
+    /// CoinGecko's coin for a contract: its id, as a watchlist id.
+    static func parseCoinByContract(_ data: Data) -> String? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let id = root["id"] as? String, !id.isEmpty else { return nil }
+        return "coingecko:\(id)"
+    }
+
+    /// A ticker as the search and a holding compare it: letters and digits
+    /// only, upper case, so a stray space or `$` is not another token.
+    static func tickerKey(_ s: String) -> String {
+        String(s.uppercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+    }
+
     // MARK: - The chart
 
     /// DeFiLlama's `span` and `period` for a chart range, by `TokenRange`'s
