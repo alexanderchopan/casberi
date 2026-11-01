@@ -542,6 +542,8 @@ struct BandRow: View {
 
     private var titleText: String {
         if let money = titleMoney { return money.title }
+        // A chat with people says its last message (prd §1641).
+        if ChatFace.isPersonChat(thing), let said = ChatFace.sentence(thing) { return said }
         return thing.title
     }
 

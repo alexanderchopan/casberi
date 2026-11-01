@@ -70098,3 +70098,13 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 Mock: Design canvas "Feed, Notes & Tab Bar".
 
 **Seen** on the iPhone 17 Pro simulator over the demo: the week with its faces, today on the pink disc, "Evening run · in 6h" under it; a tap on the week raised Calendar's sheet; the capsule of four with Search's circle at the end, folding to the one circle on scroll. `needs-you-selftest.sh`, `your-account-selftest.sh`, `category-fold-selftest.sh`, `mac-parity-audit.py`, `tile-glyph-audit.py`, `ds-template-audit.py` green. **Not seen:** the Mac rail, iPad's pane box, a full `verify.sh`.
+
+## §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed's one-line row) (user, 2026-11-01: "the most important part of social is seeing the message"; "'chat w/ mia' is probably from a telegram chat. but ya if you can capture what was said that's better"; "b/c rn for telegram messages it just says the generic thing")
+
+**Why.** The Social room's row already led with who a chat is with over its last message (`ExcerptRow`, §1615). The Feed draws every row as the plain one-line `BandRow`, which printed the stored title, so a Telegram chat read "Chat with Mia" and said nothing she wrote.
+
+**What.**
+1. **`ChatFace.sentence`**: who sent the conversation's last message and what, read off the transcript the live read already stores (oldest first): "Mia: Perfect. I'll bring the rope." from the person, "You: Yes, 10am at the wall." from you, "Jo in Climbing crew: Friday at 7 then?" in a group. An empty transcript keeps the title.
+2. **`BandRow.titleText`** says it for every chat with people (`ChatFace.isPersonChat`: Telegram, X and Instagram DMs, Snapchat's imported threads), so the Feed, Newest and any room that draws the band agree with the Social room. The face still leads (§1615).
+
+**Seen** on the iPhone 17 Pro simulator over the demo: Social's Feed section reads "Mia: Perfect. I'll bring the rope." under Mia's face. `row-cost-audit.py`, `title-seam-audit.py`, `ds-template-audit.py`, `swiftdata-liveness-audit.py`, `live-messages-selftest.sh`, `social-room-selftest.sh` green. **Not seen:** a group chat's line on screen, the Mac.

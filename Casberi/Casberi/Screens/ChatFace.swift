@@ -47,6 +47,31 @@ enum ChatFace {
         })
         return others.count > 1 ? last : said.words
     }
+
+    /// **THE FEED SAYS WHAT WAS SAID (prd §1641, user, 2026-11-01: "the
+    /// most important part of social is seeing the message", "rn for
+    /// telegram messages it just says the generic thing").** The Feed's one
+    /// line for a chat with people: who sent the last message and what —
+    /// "Mia: Perfect. I'll bring the rope.", "You: Yes, 10am at the wall.",
+    /// "Jo in Climbing crew: Friday at 7 then?" — never "Chat with Mia".
+    /// Nil when the transcript is empty, and the title stands.
+    static func sentence(_ thing: Thing) -> String? {
+        let messages = thing.content.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard let last = messages.last else { return nil }
+        let chat = name(thing)
+        let said = ChatBubbles.speaker(of: last)
+        guard let speaker = said.name else { return String(localized: "\(chat): \(last)") }
+        let who = ChatBubbles.isMine(speaker) ? String(localized: "You") : speaker
+        let others = Set(messages.compactMap { line -> String? in
+            guard let n = ChatBubbles.speaker(of: line).name, !ChatBubbles.isMine(n) else { return nil }
+            return n
+        })
+        return others.count > 1
+            ? String(localized: "\(who) in \(chat): \(said.words)")
+            : String(localized: "\(who): \(said.words)")
+    }
 }
 
 /// The chat's face: the person's picture, else the name's initial, with the
