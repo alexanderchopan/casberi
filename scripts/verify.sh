@@ -2132,6 +2132,9 @@ harness "Object fold self-test" "object fold self-test" "scripts/object-fold-sel
 # What leads Work's Coming up as "Needs you" (prd §1080): asks and breakages by
 # stable signal per service, never the to-do mark, and a week at most.
 harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh" "the work ask self-test failed — run scripts/work-ask-selftest.sh"
+# Permissions' and Threats' boxes (prd §1633): what leads Permissions, and the
+# twelve weeks of threats against last month.
+harness "Permissions box self-test" "permissions box self-test" "scripts/permissions-box-selftest.sh" "the permissions box self-test failed — run scripts/permissions-box-selftest.sh"
 
 # Day gathers every place's Needs you (prd §1327 item 9): newest first, a thing
 # once, Work folded before it asks, and the Wallet's one rule shared with Home.

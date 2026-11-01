@@ -154,6 +154,7 @@ EXEMPT_TINT = {
                                      "of the conversation, not a pick, a state or a verb"),
     "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
     "Screens/WalletSpendingFigure.swift": (1, "Spending's running line, a chart (prd §1480 item 14)"),
+    "Screens/WalletThreatsFigure.swift": (1, "Threats' weekly bars, a chart (prd §1633)"),
     "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),
 }
 

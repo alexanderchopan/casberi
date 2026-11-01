@@ -602,7 +602,12 @@ extension FeedScreen {
         case .needsYou:
             walletNeedsYouPage(upcoming: upcoming, nextEventID: nextEventID)
         case .permissions:
-            if counts(\.delegations) + counts(\.approvals) == 0 { walletSkeletonRowsSection }
+            if counts(\.delegations) + counts(\.approvals) == 0 {
+                // What you just took back, else the empty rows (§769).
+                if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }
+                else { walletRevokedTodaySection }
+            }
+            walletPermissionsLeadVerb
             walletActingSection
             walletApprovalsSection
         case .threats:
@@ -818,14 +823,18 @@ extension FeedScreen {
         case .needsYou:
             let n = walletNeedsCount(upcoming: upcoming)
             DSFigureReading(number: "\(n)", caption: String(localized: "waiting on you"))
+        // **THE WORST ONE, AND WHAT EACH APP REACHES (prd §1633).**
         case .permissions:
-            let c = walletSecurityCounts
-            DSFigureReading(number: "\(c.delegations + c.approvals)",
-                            caption: String(localized: "can spend from you"),
-                            alarm: c.unlimited > 0 ? String(localized: "\(c.unlimited) with no limit") : nil)
+            WalletPermissionsFigure(lead: walletPermissionsLead, grants: walletLive.exposure.all)
+        // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
-            DSFigureReading(number: "\(walletSecurityCounts.flagged)",
-                            caption: String(localized: "trying to fool you"))
+            let things = walletThreatThings
+            let trend = ThreatTrend.read(things.map(\.capturedAt), now: .now)
+            let weekStart = trend.starts.last ?? .now
+            WalletThreatsFigure(trend: trend,
+                                unseenThisWeek: things.contains {
+                                    $0.capturedAt >= weekStart && !ThreatsSeen.shared.contains($0.id)
+                                })
         default:
             EmptyView()
         }
