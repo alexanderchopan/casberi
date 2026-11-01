@@ -213,7 +213,7 @@ if [[ $MODE == --self-test ]]; then
   zsh -c 'sleep 60; :' "$P/casberi-building-dd" & HOLD=$!                         # a build in flight
   sleep 0.3
   DISK_SWEEP_LIBDEV=$L DISK_SWEEP_TMP=$P DISK_SWEEP_USERTMP=$U DISK_SWEEP_ONLY=files \
-    DISK_SWEEP_LEDGER=/dev/null "$0" >/dev/null 2>&1
+    DISK_SWEEP_LEDGER=/dev/null zsh "$0" >/dev/null 2>&1
   fails=0
   gone() { [[ ! -e $1 ]] || { print -r -- "✗ should be swept: ${1#$T/}"; (( fails++ )); } }
   kept() { [[ -e $1 ]] || { print -r -- "✗ should be kept: ${1#$T/}"; (( fails++ )); } }
