@@ -41293,6 +41293,34 @@
         }
       }
     },
+    "A contract nobody can name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un contrato sin nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前のないコントラクト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름 없는 컨트랙트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无名合约"
+          }
+        }
+      }
+    },
     "A copy of %@" : {
       "localizations" : {
         "es" : {
@@ -47904,6 +47932,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "地址投毒"
+          }
+        }
+      }
+    },
+    "Address poisoning, fake tokens and fake transfers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envenenamiento de direcciones, tokens falsos y transferencias falsas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスポイズニング、偽トークン、偽の送金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 포이즈닝, 가짜 토큰, 가짜 전송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "地址投毒、假代币和假转账"
           }
         }
       }
@@ -54618,6 +54674,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "作为私钥导入。显示为空，这是正常的。"
+          }
+        }
+      }
+    },
+    "As many as %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tantas como en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@と同じ数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@와 같은 수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与%@一样多"
           }
         }
       }
@@ -61418,6 +61502,34 @@
         }
       }
     },
+    "Capped approval" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprobación con límite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上限付きの承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한도 있는 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有上限的授权"
+          }
+        }
+      }
+    },
     "Capped at %@ %@" : {
       "localizations" : {
         "en" : {
@@ -66230,6 +66342,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你持有的收藏品"
+          }
+        }
+      }
+    },
+    "Collection approval" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprobación de colección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コレクションの承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "컬렉션 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收藏集授权"
           }
         }
       }
@@ -78355,6 +78495,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "较上月的 %@ 下降 %lld%%"
+          }
+        }
+      }
+    },
+    "Down from %lld in %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Down from %1$lld in %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bajan desde %1$lld en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@の%1$lldから減少"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$lld에서 감소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于%2$@的%1$lld"
           }
         }
       }
@@ -115418,6 +115592,34 @@
         }
       }
     },
+    "No approvals" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin aprobaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "承認なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "승인 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无授权"
+          }
+        }
+      }
+    },
     "No apps" : {
       "localizations" : {
         "es" : {
@@ -118308,6 +118510,34 @@
         }
       }
     },
+    "No threats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin amenazas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "脅威なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위협 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无威胁"
+          }
+        }
+      }
+    },
     "No tokens" : {
       "localizations" : {
         "es" : {
@@ -119116,6 +119346,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无"
+          }
+        }
+      }
+    },
+    "None in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에는 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@没有"
+          }
+        }
+      }
+    },
+    "None in %@ either" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tampoco en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@もなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에도 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@也没有"
           }
         }
       }
@@ -124982,6 +125268,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "最近还没有播放内容"
+          }
+        }
+      }
+    },
+    "Nothing priced" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada con precio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无报价"
           }
         }
       }
@@ -131813,6 +132127,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开测试网浏览器"
+          }
+        }
+      }
+    },
+    "Open the unknown contract" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir el contrato desconocido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不明なコントラクトを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알 수 없는 컨트랙트 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开未知合约"
           }
         }
       }
@@ -152924,6 +153266,34 @@
         }
       }
     },
+    "Review %@'s grant" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revisar la aprobación de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の承認を確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 승인 검토"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查看%@的授权"
+          }
+        }
+      }
+    },
     "Review and sign" : {
       "localizations" : {
         "es" : {
@@ -153116,6 +153486,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "撤销"
+          }
+        }
+      }
+    },
+    "Revoke %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revocar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤销%@"
           }
         }
       }
@@ -154814,6 +155212,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Safe 在 %@ 之前拒绝免费读取，因此 Casberi 无法在签名前检查这笔交易。"
+          }
+        }
+      }
+    },
+    "Safe module" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Módulo de Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeモジュール"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 모듈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 模块"
           }
         }
       }
@@ -185270,6 +185696,34 @@
         }
       }
     },
+    "Threats each week, the last twelve weeks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Amenazas por semana, últimas doce semanas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "週ごとの脅威(過去12週間)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주별 위협, 최근 12주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每周威胁,最近十二周"
+          }
+        }
+      }
+    },
     "Three things arrive: a new issue, a regression, an escalation. Never an event, a stack trace, or the person who hit it." : {
       "localizations" : {
         "es" : {
@@ -189213,6 +189667,34 @@
         }
       }
     },
+    "Unknown delegate" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Delegado desconocido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不明なデリゲート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알 수 없는 위임"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未知委托"
+          }
+        }
+      }
+    },
     "Unknown status" : {
       "localizations" : {
         "es" : {
@@ -189293,6 +189775,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无限%@"
+          }
+        }
+      }
+    },
+    "Unlimited approval" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprobación ilimitada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "無制限の承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "무제한 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无限授权"
           }
         }
       }
@@ -190145,6 +190655,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "原价 %@"
+          }
+        }
+      }
+    },
+    "Up from %lld in %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Up from %1$lld in %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Suben desde %1$lld en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@の%1$lldから増加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$lld에서 증가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高于%2$@的%1$lld"
           }
         }
       }
@@ -219233,6 +219777,34 @@
         }
       }
     },
+    "end" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "fin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "終了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "끝"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "结束"
+          }
+        }
+      }
+    },
     "evening" : {
       "localizations" : {
         "es" : {
@@ -227556,6 +228128,34 @@
         }
       }
     },
+    "percent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "porcentaje"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パーセント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "퍼센트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "百分比"
+          }
+        }
+      }
+    },
     "permission" : {
       "localizations" : {
         "es" : {
@@ -232040,6 +232640,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "赞助方"
+          }
+        }
+      }
+    },
+    "start" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "inicio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "開始"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "开始"
           }
         }
       }
