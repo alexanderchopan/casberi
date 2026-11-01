@@ -453,10 +453,10 @@ struct SettingsRows: View {
     /// itself to glyphs and marks.
     private var colophon: some View {
         VStack(spacing: DS.Space.s2) {
-            CasberiMark(size: 36)
-            Text(verbatim: "casberi")
-                .dsText(.heading17)
-                .foregroundStyle(CasberiMark.pink)
+            // The wordmark, the arm as its c (docs/brand.md): the one place in
+            // the app the name is spelled out beside the mark, so the two are
+            // one thing here.
+            CasberiWordmark(style: .heading24)
             Text(buildLine)
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)

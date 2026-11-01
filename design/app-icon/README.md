@@ -1,9 +1,12 @@
 # Handoff: Casberi App Icon
 
 ## Overview
-The Casberi app icon: **an octopus** — a rounded mantle with two eyes and five suckered arms, in Apple Music's pink (`#FA2D48`, prd §1252; `#FF2D87` until 2026-10-11) on a plain ground. Many arms, one animal: the product thesis (many things, one container) said as a creature rather than as a diagram.
+**Since 2026-11-01 (prd §1638) the icon is one octopus arm curled into a lowercase c**, leaning −9°, in Apple Music's pink (`#FA2D48`, prd §1252) on a plain ground, its suckers punched through in the ground colour. The geometry, and every file it writes, is `tentacle.py`; `docs/brand.md` section 2 has the construction rules. `Design/CasberiMark.swift` is a line-for-line port of it.
 
-**This file described a BERRY until 2026-09-08, and it was wrong** (user: "the apps' mark is not a berri it is an octopus"). The berry — seven blue drupelets, hex-packed, named for *cache + berry* — was the earlier mark, and its generator (`icon-svg.js`) and three `casberi-icon-*.svg` outputs were deleted with this rewrite, because they emitted art the app has not shipped for some time and nothing else referenced them. Two things had been quietly reading the stale claim: `Design/BerryRain.swift`'s drop palette, commented "the icon's berry blues", and several `design/*/…mocks.html` boards drawing `.berry` confetti. Both are gone (the shower is `TileRain` now — see prd §655).
+**Everything below this section describes the OCTOPUS** — the five-armed leaning creature that was the mark until 2026-11-01 and is now the website's illustration. Its sources are kept as `casberi-octopus.svg` and `casberi-octopus-small.svg`; `casberi-mark.svg` and `casberi-mark-small.svg` are the arm now.
+
+### The octopus (until 2026-11-01)
+The Casberi app icon was **an octopus** — a rounded mantle with two eyes and five suckered arms, in Apple Music's pink (`#FA2D48`, prd §1252; `#FF2D87` until 2026-10-11) on a plain ground. Many arms, one animal: the product thesis (many things, one container) said as a creature rather than as a diagram.
 
 ## About the Design Files
 `casberi-mark.svg` is the mark's geometry source. The three 1024 PNGs in the app's asset catalog are the final icon art — they are what ships, and they are not generated from anything in this folder any more.
@@ -59,8 +62,9 @@ python3 design/app-icon/make-light-icon.py
 Because the eyes and suckers are GROUND, they turn white for free — there is no second drawing to keep in step.
 
 ## Files
-- `casberi-mark.svg` — the full mark, 1024 (geometry source).
-- `casberi-mark-small.svg` — the 29pt mark: three arms, no suckers, heavier stroke.
+- `tentacle.py` — the arm: writes `casberi-mark.svg` (full cut), `casberi-mark-small.svg` (clean cut), `casberi-wordmark-c.svg` (the clean cut cropped, for the wordmark) and the dark and tinted icon PNGs. Then run `make-light-icon.py`.
+- `casberi-octopus.svg`, `casberi-octopus-small.svg` — the octopus, now the illustration.
+- `casberi-mark.svg`, `casberi-mark-small.svg` — the arm's full and clean cuts (written by `tentacle.py`).
 - `make-light-icon.py` — derives the light PNG from the dark one; pure stdlib, `--self-test`.
 - Shipped art lives in `Casberi/Casberi/Assets.xcassets/AppIcon.appiconset/` — `casberi-octopus-1024-{light,dark,tinted}.png`, wired in `Contents.json` as the universal iOS icon plus its dark and tinted luminosity variants.
 

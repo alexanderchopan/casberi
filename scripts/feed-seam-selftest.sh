@@ -269,8 +269,8 @@ echo "$arrive" | grep -q 'withAnimation(.easeIn(duration: Self.settle)) { settle
 # draws at a rung where `CasberiMark` paints FIVE, so the settle grew two limbs.
 # Derived from the two numbers rather than asserted as a string, so a change to
 # either rung re-answers the question instead of going stale.
-grep -q 'fileprivate static var silhouetteArms: \[Path\] { armsFull }' "$MARK" \
-  || { echo "✗ the drawn-on outline is not the full-arm silhouette — it changes shape at the settle"; exit 1; }
+grep -q 'fileprivate static var silhouette: Path { fullCut.body }' "$MARK" \
+  || { echo "✗ the drawn-on outline is not the full cut's silhouette — it changes shape at the settle"; exit 1; }
 cut_at=$(grep -o 'static let smallCutBelow: CGFloat = [0-9.]*' "$MARK" | grep -o '[0-9.]*$')
 floor_rung=$(grep -o 'private static let size = DS.Mark.[a-z]*' "$FLOOR" | sed 's/.*DS.Mark.//')
 # A rung may name another rung (`tile` is `Face.seat` since prd §1017):

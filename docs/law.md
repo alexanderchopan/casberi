@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1773 of 1845 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1774 of 1846 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2021,6 +2021,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1635 — A chat's sheet keeps when each message was sent: a day and time over a new day or a pause, one sender's run joined, "…
 - §1636 — A post's sheet reads like the post: the person on one line, the words, the pictures at their own shape, the quote, ho…
 - §1637 — A Telegram channel post's sheet: the channel's real @handle, "Forwarded from" over a forward's words, its views as th…
+- §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t…
 
 ## Dead rulings → what replaced them (generated)
 

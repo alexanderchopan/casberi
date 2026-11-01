@@ -70059,3 +70059,16 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 
 **Guards.** `telegram-selftest.sh`: guard (4) inverted (a view count must be the page's String, never a number field), and the fixture's views and subscribers counters read, a group's members counter refused, a non-count dropped. **Seen** on a private iPhone 17 simulator, demo, dark: Crimp & Chalk's post and Tram 28 Notes' forward. **Not seen:** a real channel's counts in the sheet, the Mac (the same shared views; Catalyst not compiled in this pass).
 
+## §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; the wordmark's c is the arm (amends brand.md sections 2, 4 and 5)
+
+**Why.** User, 2026-11-01, after a canvas of fixes and eight styles for the octopus: "tentacle is cool", then of eight tentacle variants "as drawn or leaning … if today's mark is tilted then leaning", and for the wordmark "i love the arm is the c", without sucker holes. The arm says the octopus's thesis (many arms, one animal) as a letter the name starts with, and a mostly empty round shape holds at 20pt better than a face.
+
+**What.**
+1. **The mark** (`CasberiMark`, every call site at once): the arm, `design/app-icon/tentacle.py`'s geometry ported line for line. Full cut (six punched suckers) at 16pt and up, clean cut (none, blunter tip) under it; `smallCutBelow` stays 16 on the octopus's evidence. `CasberiMarkShape` traces the full cut, so the feed floor's draw-on still ends as the mark it draws (§866; `feed-seam-selftest.sh` guard re-pointed at `silhouette`).
+2. **The icon:** pink arm on black, its box 60% of the tile, light / dark / tinted (dark and tinted from `tentacle.py`, light from `make-light-icon.py`). Filenames unchanged. iOS and Mac share it.
+3. **The wordmark** (`CasberiWordmark`): the clean cut as the c, "asberi" in Figtree SemiBold, the brand hue. The Settings colophon is the wordmark and the build line (`heading24`), replacing mark-over-name.
+4. **The octopus** is kept as the website hero's illustration (`casberi-octopus.svg`); nowhere in the app.
+
+**Not built.** The website's nav (to the wordmark alone), favicon and share image (to the arm); the hero keeps the octopus.
+
+**Seen** on the iPhone 17 Pro simulator, demo, dark: the Library's Casberi tile, the Library tab's face (the full cut at tab size), and the Settings colophon's wordmark over "Version 3.0.19 (906)"; the three icon PNGs rendered and looked at; the website nav rendered. **Not seen:** the Home Screen icon on a device, light mode in the app, the Mac (Catalyst not compiled in this pass), the website deployed.

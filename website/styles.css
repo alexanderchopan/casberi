@@ -289,6 +289,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* ---------- Hero + icon rain (ALL the apps, bouncy) ---------- */
 header.hero { text-align: center; padding: 8px 0 40px; }
 .brandmark { width: 30px; height: 30px; border-radius: 8px; display: block; }
+/* The wordmark: the arm as the c (prd §1638), sized and dropped as an overshooting c. */
+.brand.wordmark { gap: 0; align-items: baseline; }
+.brandc { width: .56em; height: .56em; display: block; position: relative; top: .035em; margin-right: .015em; }
 .rain {
   display: flex; flex-wrap: wrap; gap: 10px; row-gap: 10px;
   justify-content: center;
