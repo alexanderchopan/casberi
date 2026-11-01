@@ -12,13 +12,9 @@ import Foundation
 /// ANOTHER network goes through Relay: a plain `transfer` of the dollar to
 /// Relay's deposit address for the route (`YourAccountChain.depositAddress`).
 ///
-/// **Who may buy.** A send you approve with Face ID buys. A send the spend
-/// limit's session key signs alone never buys on the exchanges: the session
-/// may only `transfer` the dollar and send ETH through Multicall3 (§1447
-/// item 15), and it is never widened to approve or call a router. Its change
-/// keeps counting (`savedAfter(_:bought:)`) and the buy rides your next Face
-/// ID send. A Relay buy is itself a `transfer`, so the session carries one to
-/// another network as it always did.
+/// **Who may buy.** Every send is approved with Face ID, and every send may
+/// buy; one that no pool would buy for keeps its change counting
+/// (`savedAfter(_:bought:)`) toward the next.
 ///
 /// **Why the change waits for $5.** Relay charged a flat few cents a buy
 /// (measured 2026-10-21: ~$0.03 on Base), which is why the count began. The
@@ -217,17 +213,14 @@ enum RoundUps {
         case notHere
     }
 
-    /// **A DEPOSIT IS A CONTRACT CALL**, so the spend limit's session key,
-    /// which may only `transfer` the dollar and send ETH through Multicall3
-    /// (§1545 item 2), never carries one: a send it signs alone leaves the
-    /// change counting, and the deposit rides the next send you approve with
-    /// Face ID — §1545's pattern for a buy on the exchanges. A private
-    /// network whose money is not available now (`pools`) waits too.
-    static func privateRoute(on chainId: Int, bySession: Bool, pools: Set<Int> = privatePools,
+    /// Where a send's change goes privately: the send carries the deposit,
+    /// or — on a private network whose money is not available now (`pools`)
+    /// — it waits, counting.
+    static func privateRoute(on chainId: Int, pools: Set<Int> = privatePools,
                              chains: Set<Int> = privateChains) -> PrivateRoute {
         guard chains.contains(chainId) else { return .notHere }
         guard pools.contains(chainId) else { return .waits }
-        return bySession ? .waits : .deposit
+        return .deposit
     }
 
     // MARK: - The ride, and a batch not yet seen (the review of 2026-10-26)
@@ -446,17 +439,10 @@ enum RoundUps {
     }
 
     /// What is counted once a send lands: the plan's own when it bought,
-    /// else everything it reached — the session key's send never buys on the
-    /// exchanges, so its change keeps counting toward the next Face ID send.
+    /// else everything it reached — a send no pool would buy for keeps its
+    /// change counting toward the next.
     static func savedAfter(_ plan: Plan, bought: Bool) -> String {
         bought ? plan.savedAfter : (plan.buy ?? plan.savedAfter)
-    }
-
-    /// Whether a send signed by the spend limit's session key may carry the
-    /// buy: only Relay's `transfer`, to a token on another network. A buy on
-    /// the send's own network is a router call the session may not make.
-    static func sessionCarries(_ target: Target, from chainId: Int) -> Bool {
-        !target.onExchanges(from: chainId)
     }
 
     // MARK: - An exchange buy, known by its transaction (prd §1545)

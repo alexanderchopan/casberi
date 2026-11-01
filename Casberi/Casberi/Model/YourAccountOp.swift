@@ -41,7 +41,7 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
         dollar: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
     /// Robinhood Chain, back with every feature (prd §1454, amending
-    /// §1449): every contract the account and its spend limit use is there,
+    /// §1449): every contract the account uses is there,
     /// Safe's adapter published at its own address (§1447 item 18); Pimlico's
     /// public bundler serves it, Candide's does not.
     static let robinhood = Network(
@@ -68,7 +68,7 @@ enum YourAccountOp {
 
     /// The account's networks, the same in every build: Base, Ethereum and
     /// Robinhood Chain (prd §1454), each with send, receive, swap, round-ups
-    /// and the spend limit. Base Sepolia is in none, DEBUG included (prd
+    /// and the co-signer. Base Sepolia is in none, DEBUG included (prd
     /// §1441a, user: "we got rid of sepolia"); its constant stays for the
     /// dry-run probe alone.
     static let networks: [Network] = [base, ethereum, robinhood]
@@ -428,7 +428,7 @@ enum YourAccountOp {
     /// Deploy the recovery key's Safe passkey signer (idempotent: the
     /// factory returns the existing one) and make it an owner at threshold 1.
     /// `threshold` is the one the network already keeps (prd §1456): adding
-    /// a key never lowers it — at 2 the spend limit stands.
+    /// a key never lowers it — at 2 the co-signer stays required.
     static func addRecoveryCalls(account: String, x: [UInt8], y: [UInt8], signer: String, threshold: Int = 1) -> [Call] {
         let create = YourAccount.sel("createSigner(uint256,uint256,uint176)") + x + y + SafeWebAuthn.verifiersWord!
         let add = YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(signer) + w(max(threshold, 1))

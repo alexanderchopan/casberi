@@ -28,9 +28,9 @@
 #   • A POOL FEE SAID TO FOUR PLACES (prd §1545): rounded to two, trailing
 #     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
 #   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1545): a buy on the send's own
-#     network is the exchanges', never Relay's; the spend limit's session key
-#     never buys on them, and its change keeps counting; an exchange buy is
-#     known by its own transaction — this account's dollar leaving in exactly
+#     network is the exchanges', never Relay's; a send that did not buy
+#     keeps its change counting; an exchange buy is known by its own
+#     transaction — this account's dollar leaving in exactly
 #     the buy's amount, in its window — and nothing else.
 #
 # Pure, local, deterministic — no network, no simulator, no key. Then every
@@ -282,8 +282,6 @@ let ruBTC = RoundUps.Target(chainId: 8453, address: "0xcbB7C0000aB88B473b1f5aFd9
 let ruMAG7 = RoundUps.Target(chainId: 4663, address: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840", symbol: "MAG7", decimals: 18, network: "Robinhood Chain")
 check(ruETH.onExchanges(from: 8453) && ruBTC.onExchanges(from: 8453) && !ruMAG7.onExchanges(from: 8453) && !ruETH.onExchanges(from: 1),
       "a round-up on the send's own network is not the exchanges', or one elsewhere is")
-check(!RoundUps.sessionCarries(ruETH, from: 8453) && !RoundUps.sessionCarries(ruBTC, from: 8453) && RoundUps.sessionCarries(ruMAG7, from: 8453),
-      "the session key may buy on the exchanges, or may no longer carry Relay's transfer to another network")
 check(ruETH.contract == nil && ruBTC.contract == "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
       "a round-up's token is not the account's own spelling (nil for ETH, the contract lowercased)")
 let ruBuys = RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1)
@@ -328,8 +326,7 @@ check(RoundUps.swapBuy(ruLegs(), wallet: ruMe, network: "base-mainnet", buys: [r
 
 // ── Round-ups into your private balance (prd §1561) ───────────────────────
 // Only where a pool is: a send elsewhere sets nothing aside for it; the
-// change moves together at the threshold, never per send; a deposit is a
-// contract call, so the spend limit's session key never carries one.
+// change moves together at the threshold, never per send.
 var ruPriv = RoundUps.Setting(on: true)
 ruPriv.toPrivate = true
 let ruPools: Set<Int> = [11155111]
@@ -362,21 +359,20 @@ check(RoundUps.privateCount(for: 8453, chains: [1]) == 1 && RoundUps.privateCoun
       "a send off Ethereum counts somewhere other than Ethereum's count (prd §1572)")
 check(RoundUps.applies(RoundUps.Setting(on: true), on: 8453, chains: ruPools) && !RoundUps.applies(RoundUps.Setting(), on: 8453, chains: ruPools),
       "buying a token, round-ups run as they did")
-check(RoundUps.privateRoute(on: 11155111, bySession: false, pools: ruPools, chains: ruPools) == .deposit, "a Face ID send does not carry the deposit")
-check(RoundUps.privateRoute(on: 11155111, bySession: true, pools: ruPools, chains: ruPools) == .waits, "the session key carries a deposit (a contract call)")
-check(RoundUps.privateRoute(on: 8453, bySession: false, pools: ruPools, chains: ruPools) == .notHere, "a deposit is routed to a network with no pool")
+check(RoundUps.privateRoute(on: 11155111, pools: ruPools, chains: ruPools) == .deposit, "a Face ID send does not carry the deposit")
+check(RoundUps.privateRoute(on: 8453, pools: ruPools, chains: ruPools) == .notHere, "a deposit is routed to a network with no pool")
 // Finding 7: a private target kept while private money is not available (the
 // kill switch off, no account) counts on Ethereum and WAITS — never a public
 // buy — and off Ethereum sets nothing aside.
-check(RoundUps.applies(ruPriv, on: 1, chains: [1]) && RoundUps.privateRoute(on: 1, bySession: false, pools: [], chains: [1]) == .waits,
+check(RoundUps.applies(ruPriv, on: 1, chains: [1]) && RoundUps.privateRoute(on: 1, pools: [], chains: [1]) == .waits,
       "a private target with private money unavailable stops counting, or moves")
-check(RoundUps.privateRoute(on: 8453, bySession: false, pools: [], chains: [1]) == .notHere,
+check(RoundUps.privateRoute(on: 8453, pools: [], chains: [1]) == .notHere,
       "a Base send carries a private deposit, though only Ethereum has the pool (prd §1572)")
 // With no account on the phone (or the kill switch off) private money is not
 // available: the kept target still reads as private, never as its token.
 YourAccountKey.stubbed = nil
 check(RoundUps.privatePools.isEmpty && ruPriv.movesPrivately && RoundUps.applies(ruPriv, on: 1)
-      && RoundUps.privateRoute(on: 1, bySession: false) == .waits, "a kept private target reads as buying its token once private money is unavailable")
+      && RoundUps.privateRoute(on: 1) == .waits, "a kept private target reads as buying its token once private money is unavailable")
 YourAccountKey.stubbed = "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"
 // Finding 5: a ride that does not check out is dropped, never the send.
 check(RoundUps.rideVerdict(written: true, checked: .lands).rides, "a ride whose operation lands does not ride")
@@ -598,8 +594,6 @@ mutate "a pool fee said to four places again" "$SWAP" \
   'NSDecimalRound(&r, &d, 2, .plain)' 'NSDecimalRound(&r, &d, 4, .plain)'
 mutate "a fee under 0.01% said as a rounded number" "$SWAP" \
   'guard pips >= 100 else { return String(localized: "under 0.01%") }' 'guard pips >= 0 else { return String(localized: "under 0.01%") }'
-mutate "the session key buys on the exchanges" "$ROUNDUPS" \
-  '        !target.onExchanges(from: chainId)' '        true'
 mutate "a send that did not buy empties the count" "$ROUNDUPS" \
   'bought ? plan.savedAfter : (plan.buy ?? plan.savedAfter)' 'plan.savedAfter'
 mutate "any send of the dollar reads as the buy" "$ROUNDUPS" \
@@ -610,8 +604,8 @@ mutate "a buy's window never closes" "$ROUNDUPS" \
   'at <= buy.at.addingTimeInterval(swapBuyLate)' 'at <= .distantFuture'
 mutate "any token that arrived is the buy's fill" "$ROUNDUPS" \
   'legs.filter { $0.received && $0.contract == buy.target.contract }' 'legs.filter { $0.received }'
-mutate "a send the session key signs carries the private deposit" "$ROUNDUPS" \
-  'return bySession ? .waits : .deposit' 'return .deposit'
+mutate "a network whose pool is not available carries the private deposit" "$ROUNDUPS" \
+  'guard pools.contains(chainId) else { return .waits }' 'guard pools.contains(chainId) || true else { return .waits }'
 mutate "the change moves into private per send" "$ROUNDUPS" \
   'have > 0, let need = Decimal(string: threshold), have >= need else' 'have > 0, let need = Decimal(string: threshold), need >= 0 else'
 mutate "a Base send counts on its own count, never Ethereum's (prd §1572)" "$ROUNDUPS" \

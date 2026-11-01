@@ -104,45 +104,30 @@ check(Keccak256.hexString(YourAccountOp.safeOpHash(aop, chainId: 8453)) == "1d95
 var amod = aop; amod.entry = .module4337
 check(YourAccountOp.safeOpHash(amod, chainId: 8453) != YourAccountOp.safeOpHash(aop, chainId: 8453), "the adapter's hash does not take its own domain")
 check(YourAccountOp.firstBytes(YourAccount.w(32) + YourAccount.w(3) + [1, 2, 3] + [UInt8](repeating: 0, count: 29)) == [1, 2, 3], "an answer's first bytes are not read")
-// The spend limit's session (prd §1447 item 14), each pinned to bytes
-// re-derived apart from this code and proven on Base: the passkey config
-// packed into Smart Sessions' 320 bytes, the session's id, the session, the
-// dollar transfer, and a session op's hash as the EntryPoint answered it.
-let sx = [UInt8](repeating: 0x11, count: 32), sy = [UInt8](repeating: 0x22, count: 32)
-let svi = YourAccount7579.validatorInitData(x: sx, y: sy)
-check(svi.count == 320, "the session key's config no longer fits Smart Sessions' 320 bytes")
-check(Keccak256.hexString(k(svi)) == "ce8b39a70ac8d8be4c45ed41d887c2cc38c659d2ecb29018deb7013bab3a93af", "the session key's packed config changed")
+// What stays of Smart Sessions (prd §1632, deleting §1455's spend limit):
+// the read of the sessions an older build enabled and their removal, which
+// the co-signer switch sends so no key spends without the co-signer.
 let susdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-// A period limit (prd §1447 item 15): one session per window, the dollar
-// by `transfer` and ETH through Multicall3, each a total within the window.
-let swin = YourAccount7579.Window(from: 1792560060, until: 1792560660)
-let splan = YourAccount7579.Plan(chainId: 8453, dollar: susdc, dollarCap: "600000", ethCap: "2000000000000", windows: [swin])
-check(SafeABI.hex(YourAccount7579.timeFrameInit(swin)) == "0x00006ad84e1400006ad84bbc", "a window's time frame is not validUntil then validAfter, six bytes each")
-check(Keccak256.hexString(YourAccount7579.permissionId(validatorInit: svi, salt: YourAccount7579.salt(splan, swin)))
-      == "22de65785c1c0634061ef98a5e609853cb7ca904ea19b329ebe33add6b88fad7", "a window's permission id changed")
-check(Keccak256.hexString(k(YourAccount7579.session(validatorInit: svi, plan: splan, window: swin)!))
-      == "6c5a443b08d2faee2e9ae231c2ed4a737f745aece0de9a712e563c97e2b90d75", "a window's session bytes changed")
-check(YourAccount7579.windows(start: 100, seconds: 10, count: 3) == [.init(from: 100, until: 110), .init(from: 110, until: 120), .init(from: 120, until: 130)],
-      "windows are not back to back")
-check(splan.window(at: 1792560660) == nil && splan.window(at: 1792560060) == swin, "a window does not hold its start and drop its end")
 let sacct = "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6"
-check(Keccak256.hexString(k(YourAccount7579.ethSendCall(to: sacct, wei: "1500000000000")!))
-      == "0f786ad4dae2db1d610f549ea6a7f1e87a37be14b2ce0700d61e59e517886d93", "ETH under the limit no longer goes through Multicall3 as built")
+let sid = [UInt8](repeating: 0x5a, count: 32)
+let removal = YourAccount7579.removeSessionCall(sid)
+check(removal.to == YourAccount7579.smartSession && removal.operation == 0 && removal.data == YourAccount.sel("removeSession(bytes32)") + sid,
+      "a session's removal is not removeSession(id) on Smart Sessions")
+check(YourAccount7579.permissionIdsCall(account: sacct) == YourAccount.sel("getPermissionIDs(address)") + YourAccount.w(sacct),
+      "the sessions are not read with getPermissionIDs(account)")
 let mApprove = YourAccountOp.Call(operation: 0, to: susdc, value: YourAccount.w(0),
                                   data: YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccount7579.multicall3) + YourAccount.w(1))
 let otherApprove = YourAccountOp.Call(operation: 0, to: susdc, value: YourAccount.w(0),
                                       data: YourAccount.sel("approve(address,uint256)") + YourAccount.w(sacct) + YourAccount.w(1))
 check(YourAccount7579.approvesMulticall3(mApprove) && !YourAccount7579.approvesMulticall3(otherApprove),
       "an approval to Multicall3 is not caught, or another is")
-let stc = YourAccount7579.transferCall(token: susdc, to: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", units: "500000")!
-check(Keccak256.hexString(k(stc)) == "e7ac0d56f0e885a1c04b91ad63d5ba08cfb27a6281c837ac0675b8e6d27dd0be", "the session's transfer call changed")
-var sop = YourAccountOp.Op(sender: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", nonce: 7, factory: nil, factoryData: [], callData: stc)
-sop.nonceKey = YourAccount7579.sessionNonceKey
+// A keyed nonce (a validator's address, then 4 zero bytes), as the
+// co-signer's wallet sees one in typed data.
+var sop = YourAccountOp.Op(sender: sacct, nonce: 7, factory: nil, factoryData: [], callData: acd)
+sop.nonceKey = YourAccount.addressBytes(YourAccount7579.smartSession) + [0, 0, 0, 0]
 sop.verificationGasLimit = 500000; sop.callGasLimit = 100000; sop.preVerificationGas = 60000
 sop.maxFeePerGas = 2000000; sop.maxPriorityFeePerGas = 1000000
-check(Keccak256.hexString(YourAccountOp.userOpHash(sop, chainId: 8453)) == "d59bff9f0a72eb2cdb01e14642cc07c376eaf838ea00ae8478e9697f0abec4b9",
-      "a session op's hash is not what the EntryPoint on Base answered")
-check(sop.json["nonce"] as? String == "0x8bdaba73cd9815d79069c247eb4bda000000000000000000000007", "a session op's nonce is not its key then its sequence")
+check(sop.json["nonce"] as? String == "0x8bdaba73cd9815d79069c247eb4bda000000000000000000000007", "a keyed op's nonce is not its key then its sequence")
 // Both keys (prd §1447 item 16): Safe takes signatures by owner, ascending,
 // 65-byte static parts, the passkey's assertion after them at offset 130.
 let ecdsa = [UInt8](repeating: 0xAB, count: 64) + [27]
@@ -155,7 +140,7 @@ check(low.count == high.count && Array(low.suffix(from: 142)) == Array(high.suff
 // What the Signer's wallet is asked to sign (prd §1447 item 17): the SafeOp
 // as typed data, whose EIP-712 digest — read by the app's own general parser
 // — is the very hash this phone signs, on the adapter's domain and with a
-// session's keyed nonce alike.
+// keyed nonce alike.
 for (label, tdOp) in [("the adapter's op", aop), ("a keyed-nonce op", { var o = sop; o.entry = .adapter; return o }())] {
     let json = YourAccountOp.safeOpTypedData(tdOp, chainId: 8453)!
     let parsed = EIP712.parse(try! JSONSerialization.jsonObject(with: Data(json.utf8)))!
@@ -175,11 +160,11 @@ check(RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1) == .init(c
       "a round-up reaching $5 does not buy everything counted")
 check(RoundUps.plan(dollarSent: "4300000", saved: "4300000", step: 1) == .init(change: "700000", buy: "5000000", savedAfter: "0"),
       "exactly $5 does not buy")
-// Adding a key keeps the network's threshold (prd §1456): at 2 — the spend
-// limit on — a recovery key or a Signer added never drops it to one key.
+// Adding a key keeps the network's threshold (prd §1456): at 2 — the
+// co-signer required — a recovery key or a Signer added never drops it to one key.
 check(Array(YourAccountOp.addOwnerCall(account: want, owner: want, threshold: 2).data.suffix(32)) == YourAccount.w(2)
       && Array(YourAccountOp.addRecoveryCalls(account: want, x: x, y: y, signer: want, threshold: 2)[1].data.suffix(32)) == YourAccount.w(2),
-      "adding a key resets the threshold: the spend limit would switch itself off")
+      "adding a key resets the threshold: the co-signer would stop being required")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -240,7 +225,7 @@ check(YourAccountSwap.supported(YourAccountOp.base) && YourAccountSwap.supported
 check(YourAccountOp.networks.filter { !$0.isTest }.allSatisfy(YourAccountSwap.supported),
       "a live network without swaps — send, receive and swap arrive together (prd §1441)")
 check(YourAccountOp.networks.contains { $0.chainId == 4663 } && YourAccountOp.network(appName: "robinhood-mainnet")?.chainId == 4663,
-      "Robinhood Chain is back with every feature (prd §1454): the spend limit's contracts are all there")
+      "Robinhood Chain is back with every feature (prd §1454): the adapter's contracts are all there")
 
 // The outside key (prd §1432): an owner at threshold 1; a wallet upgraded by
 // EIP-7702 is still a wallet (the user's own, measured on Base), a contract is not.
@@ -365,26 +350,32 @@ grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountProtection.swift | gr
 # The nudge moved with Home's lists to the pages file (prd §1480); the guard followed it 2026-10-24.
 grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift || { echo "✗ the Wallet's Home no longer draws the recovery-key row (prd §1442m)"; exit 1; }
 
-# The spend limit (prd §1455): Smart Sessions on Safe's adapter, never a
-# contract of ours; turning it on refuses an account with no Signer (every send
-# over it would wait on nobody); the row is drawn in every build (no hidden
-# feature, §1435); the adapter's publish stays a throwaway's alone.
-grep -q 'Add a signer first: over the limit, a send waits on it' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ turning the limit on no longer refuses an account with no Signer (prd §1455)"; exit 1; }
+# The spend limit is deleted (prd §1632, applying §1570 and §723): no word of
+# it on any screen, no session send, no session key; what stays is the
+# switch's removal of the sessions an older build enabled, on and off. The
+# switch is drawn in every build (no hidden feature, §1435); the adapter's
+# publish stays a throwaway's alone.
+grep -rqE '(String\(localized: |Text\()"[^"]*([Ss]pend limit|[Aa]llowance|over the limit|[Uu]nder (your|the) limit)' Casberi/Casberi \
+  && { echo "✗ a screen names the spend limit again (prd §1570, §1632)"; exit 1; }
+grep -rqE 'func (sessionSend|sessionBuild|limitSend|turnOnLimit|changeLimit|installLimit)\(|signSession\(|sessionKey\(\)' Casberi/Casberi \
+  && { echo "✗ a session send route is back: a key that spends without the co-signer (prd §1632)"; exit 1; }
+awk '/static func requireCoSigner\(/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'var calls = try await sessionIds(net, account).map(YourAccount7579.removeSessionCall)' \
+  && awk '/static func releaseCoSigner\(/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'sessionIds(net, account).map(YourAccount7579.removeSessionCall)' \
+  || { echo "✗ the co-signer switch no longer removes the sessions an older build enabled — they would spend without the co-signer (prd §1570 item 3, §1632)"; exit 1; }
+grep -q 'private func required(_ s: Standing) -> Bool { s.threshold == 2 && s.sessions != true }' "$SEC" \
+  && grep -q 'guard let ids = await sessionsRead else { return (net.chainId, nil) }' "$SEC" \
+  || { echo "✗ a network with an older build's sessions standing reads as required, so the switch would never remove them (prd §1632)"; exit 1; }
 grep -q '^                coSignerSwitchRow$' "$SEC" || { echo "✗ the co-signer switch is not drawn in every build (prd §1570, §1435)"; exit 1; }
 grep -A9 'static func publishAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ publishing Safe's adapter runs outside the throwaway (prd §1447 item 18)"; exit 1; }
 grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casberi/Casberi/Screens/*.swift && { echo "✗ the dropped Allowance-module design is back (prd §1447 item 9, §1455)"; exit 1; }
-grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
+grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride a standing session's ETH route (prd §1447 item 15)"; exit 1; }
 grep -q '(c\["vmType"\] as? String) == "evm", (c\["depositAddressEnabled"\] as? Bool) == true' Casberi/Casberi/Model/YourAccountElsewhere.swift || { echo "✗ receiving from another network offers a network Relay takes no keyless deposit address on (prd §1453: EVM only, no Relay key)"; exit 1; }
 grep -q 'WalletWatch.sameAddress(recipient, account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a Relay deposit address is taken without Relay naming the account as the one that gets it (prd §1452, §1453)"; exit 1; }
 # Round-ups on the exchanges (prd §1545, user 2026-10-26): a Face ID send buys
-# a token on its own network through the direct swap; the spend limit's
-# session key never buys on the exchanges and is never widened to (its change
-# keeps counting); Relay is only for a token on another network; an exchange
-# buy is noted before Face ID so its own transaction reads as the buy.
+# a token on its own network through the direct swap; Relay is only for a
+# token on another network; an exchange buy is noted before Face ID so its own
+# transaction reads as the buy.
 CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
-grep -q 'if let roundUp = sessionRoundUp(roundUp, on: net) {' "$CHAIN" || { echo "✗ the session key's calls carry a round-up buy on the exchanges (prd §1545: the session is send-only)"; exit 1; }
-grep -q 'let roundUp = sessionRoundUp(roundUp, on: net)' "$CHAIN" || { echo "✗ a session send keeps a round-up it cannot buy (prd §1545)"; exit 1; }
-grep -q 'let roundUp = sessionRoundUp(asked, on: net)' Casberi/Casberi/Model/YourAccountChain+Preview.swift || { echo "✗ the session preview shows a round-up buy the session never makes (prd §1545)"; exit 1; }
 grep -q 'if roundUp.target.onExchanges(from: net.chainId) {' "$CHAIN" || { echo "✗ a round-up on the send's own network is not bought on the exchanges (prd §1545)"; exit 1; }
 grep -q 'let quote = try await swapQuote(net, sell: dollar, buy: buy, amount: roundUp.units, account: account)' "$CHAIN" || { echo "✗ a round-up's exchange buy is not quoted off the pools like a swap (prd §1545)"; exit 1; }
 grep -q 'guard let checked = YourAccountSwap.checked(quote, sell: dollar, amount: roundUp.units, chainId: net.chainId)' "$CHAIN" || { echo "✗ a round-up's exchange buy is signed without the swap's check (prd §1542, §1545)"; exit 1; }
@@ -400,7 +391,6 @@ MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
 grep -qF 'let bought = !toPrivate && buy != nil && !done.roundUpWaits' "$MOVE" \
   && grep -qF 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: bought), on: net.chainId)' "$MOVE" \
   || { echo "✗ a send that did not buy empties the round-up count (prd §1545)"; exit 1; }
-grep -q 'return Chain.Transacted(sent: sent, roundUpWaits: roundUp != nil && Chain.sessionRoundUp(roundUp, on: net) == nil)' "$MOVE" || { echo "✗ a session send's round-up is counted as bought (prd §1545)"; exit 1; }
 grep -q 'case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)' "$MOVE" || { echo "✗ an exchange round-up still says Relay carries it (prd §1545)"; exit 1; }
 
 # Receive from another network, widened (prd §1470): what they send is every
@@ -476,28 +466,30 @@ grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(
 # network; off asks the co-signer on each, since at 2-of-2 it cannot be one key's.
 grep -q 'unsettled == nil && outsideOwner != nil && outsideTargets.isEmpty && !coSignerNetworks.isEmpty' "$SEC" || { echo "✗ the co-signer switch can be turned on with no co-signer on a network (prd §1570)"; exit 1; }
 grep -q 'on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }' "$SEC" || { echo "✗ the one co-signer switch no longer walks every network (prd §1570)"; exit 1; }
-grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.threshold == 2 ? coSigner(s, batch) : nil' "$SEC" && grep -q 'Self.sharedSigner(cosigned)' "$SEC" || { echo "✗ turning the co-signer off no longer asks the co-signer — at 2-of-2 it cannot be one key's (prd §1570, §83)"; exit 1; }
+grep -q 'releaseCoSigner(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.threshold == 2 ? coSigner(s, batch) : nil' "$SEC" && grep -q 'Self.sharedSigner(cosigned)' "$SEC" || { echo "✗ turning the co-signer off no longer asks the co-signer — at 2-of-2 it cannot be one key's (prd §1570, §83)"; exit 1; }
 
 # The keys chosen at Create (prd §1457): they ride only the operation that
-# opens a network, the limit only with a Signer, both keys switched on LAST
+# opens a network, Require only with a Signer, both keys switched on LAST
 # (while this phone alone still signs), and Create walks through them.
 CH=Casberi/Casberi/Model/YourAccountChain.swift
 grep -q 'if !deployed, let setup = try await setupCalls(net, account)' "$CH" || { echo "✗ the keys chosen at Create ride an operation on a network the account is already on (prd §1457)"; exit 1; }
 awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/changeThreshold/{e=NR}/installCalls|limitCalls/{x=1}END{exit !(a<b && b<e && !x)}' \
   || { echo "✗ setupCalls no longer adds recovery, the co-signer, then both keys last, with no allowance (prd §1457, §1570)"; exit 1; }
-grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ a spend limit chosen at Create can stand with no Signer to sign over it (prd §1457)"; exit 1; }
-awk '/static func setupCalls/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'limitPlan' && { echo "✗ the opening operation sets up an allowance again — the co-signer is required or not (prd §1570)"; exit 1; }
+grep -q 'var required: Bool { signer != nil && (requiresCoSigner == true || (olderLimitDollars ?? 0) > 0) }' Casberi/Casberi/Model/YourAccountSetup.swift \
+  && grep -q 'case olderLimitDollars = "limitDollars"' Casberi/Casberi/Model/YourAccountSetup.swift \
+  || { echo "✗ a limit an older build chose at Create no longer reads as the co-signer required, or one stands with no Signer (prd §1457, §1570 item 5)"; exit 1; }
+grep -q 'static func setupCalls(_ net: Network, _ account: String) async throws -> \[YourAccountOp.Call\]?' Casberi/Casberi/Model/YourAccountChain.swift \
+  || { echo "✗ the opening operation carries a plan again — the co-signer is required or not (prd §1570, §1632)"; exit 1; }
 # A bundler's refusal reaches the person in the app's words (prd §1461 item 4).
 grep -q 'last = worded(error, on: net)' Casberi/Casberi/Model/YourAccountChain.swift && grep -q 'lower.contains("max gas")' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a bundler's raw refusal (\"UserOperation max gas … is larger than\") reaches the person (prd §1461 item 4)"; exit 1; }
 # Security's box is nine, three across, the figure centered over its word (prd §1462):
-# the six counts and your account's limit, Signers and round-ups; the Signers
+# the six counts, Signers and round-ups; the Signers
 # figure is a last reading MoveSecurity stamps, never a zero it did not read.
 # Security's box went with Security (prd §1480); the facts now trail Your
 # account's door on Home as the one missing control, in amber (prd §1496).
 FIG=Casberi/Casberi/Screens/FeedScreen+WalletPages.swift
 grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1496)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
-# The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1496).
 grep -q 'Every send and swap needs approval in' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the co-signer row no longer says what required means (prd §1570)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
 # The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink.
@@ -536,9 +528,9 @@ grep -q '\.minimumScaleFactor(0.5)' "$SENTENCE" || { echo "✗ a word wider than
 grep -q '@Environment(\\.moveRung) private var rung' "$SENTENCE" || { echo "✗ MoveWord no longer reads the flow's size (prd §1501)"; exit 1; }
 grep -rq 'dsText(.heading28)\|dsText(.heading52)\|dsText(.heading44)' "$SENTENCE" Casberi/Casberi/Screens/MoveScreen.swift "$WALK" \
   && { echo "✗ a Move view names a sentence size itself instead of reading the flow's (prd §1501)"; exit 1; }
-# The walk (prd §1501): the limit only with a co-signer, round-ups always,
+# The walk (prd §1501): Require only with a co-signer, round-ups always,
 # Created last; Done closes Move, Receive opens it on Receive.
-grep -q 'case .signer: next = choice.signer == nil ? .roundUps : .limit' "$WALK" || { echo "✗ the walk's order drifted: the limit needs a co-signer, round-ups always follow (prd §1501)"; exit 1; }
+grep -q 'case .signer: next = choice.signer == nil ? .roundUps : .require' "$WALK" || { echo "✗ the walk's order drifted: Require needs a co-signer, round-ups always follow (prd §1501)"; exit 1; }
 grep -q 'case .created: String(localized: "Done")' "$WALK" && grep -q 'done(.close)' "$WALK" && grep -q 'done(.receive)' "$WALK" \
   || { echo "✗ Created no longer ends the walk with Done and Receive (prd §1501)"; exit 1; }
 grep -q 'if ending == .close, inTray { chrome.moveTray = false }' Casberi/Casberi/Screens/MoveScreen.swift \

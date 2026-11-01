@@ -584,7 +584,7 @@ final class PrivateMove {
         let chain = PrivacyNetwork.sepolia.chainId
         let setting = RoundUps.setting
         guard setting.movesPrivately, RoundUps.applies(setting, on: chain),
-              RoundUps.privateRoute(on: chain, bySession: false) == .deposit,
+              RoundUps.privateRoute(on: chain) == .deposit,
               let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: chain), at: RoundUps.privateMoveAt),
               let hex = PrivateMoney.hex(batch) else { return nil }
         do {

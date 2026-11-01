@@ -356,22 +356,26 @@ enum YourAccountKey {
         try await sign(digest, item: item(index), reason: reason)
     }
 
-    // MARK: - The spend limit's key
+    // MARK: - The spend limit's key, deleted (prd §1632)
 
-    /// The spend limit's own key (prd §1447 item 14): one Enclave key under
-    /// the account's policy, that Smart Sessions alone answers to and only
-    /// within the limit. Never an owner of the Safe, never rotated: a
-    /// session names it, and a new key is a new session.
+    /// The Enclave key an older build made for the spend limit's sessions
+    /// (prd §1447 item 14). Nothing signs with it now; it is dropped once,
+    /// with the plans that build kept per network, so no key on this phone
+    /// can spend without the co-signer. A session still standing on chain is
+    /// the co-signer switch's to remove (`YourAccountChain.requireCoSigner`).
     private static let sessionName = "session-key"
+    private static let sessionDroppedKey = "yourAccount.spendLimit.dropped.v1"
 
-    /// Its public half, made on first ask.
-    static func sessionKey() throws -> (x: [UInt8], y: [UInt8]) {
-        let xy = try make(item(named: sessionName), domain: "yourAccount.domainState.session", biometric: biometric)
-        return (Array(xy[0..<32]), Array(xy[32..<64]))
-    }
-
-    static func signSession(_ digest: [UInt8], reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
-        try await sign(digest, item: item(named: sessionName), reason: reason)
+    static func dropRetiredSessionKey() {
+        guard !UserDefaults.standard.bool(forKey: sessionDroppedKey) else { return }
+        // A locked keychain (a background launch) refuses: try next launch.
+        let status = SecItemDelete(item(named: sessionName) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { return }
+        for key in UserDefaults.standard.dictionaryRepresentation().keys
+        where key.hasPrefix("yourAccount.spendLimit.") || key == "yourAccount.domainState.session" {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+        UserDefaults.standard.set(true, forKey: sessionDroppedKey)
     }
 
     private static func sign(_ digest: [UInt8], item: [String: Any], reason: String) async throws -> (r: [UInt8], s: [UInt8]) {

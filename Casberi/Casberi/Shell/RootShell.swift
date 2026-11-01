@@ -592,6 +592,8 @@ struct RootShell: View {
                 // What the ask left behind (2026-10-01): its defaults, the MCP
                 // pairing token, and any MCP save request still in the store.
                 SourceRename.sweepRetiredAsk(context: modelContext)
+                // The spend limit's key and plans (prd §1632), once.
+                YourAccountKey.dropRetiredSessionKey()
                 // What an unfollowed wallet or Safe left behind (prd §1330):
                 // the unwatched queue, and every detected Safe no follow
                 // reaches any more, with its rows and its tracked queue.

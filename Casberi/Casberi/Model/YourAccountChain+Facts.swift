@@ -1,8 +1,8 @@
 import Foundation
 
 /// **WHAT THE ACCOUNT IS, READ ONCE (prd §1602).** Whether it is on a network,
-/// which contract it answers through, its threshold, whether it has a spend
-/// limit's sessions, and who its Signer is change only when an operation of
+/// which contract it answers through, its threshold, and who its Signer is
+/// change only when an operation of
 /// its own changes them (Security's), or from another device. Every send and
 /// every preview asked all of them again, three to five round trips over Tor
 /// each time; now they are read once, ahead (`readAhead`, when Move opens a
@@ -22,7 +22,6 @@ extension YourAccountChain {
             var deployed: Bool?
             var entry: YourAccountOp.Entry?
             var threshold: Int?
-            var hasSessions: Bool?
             var signers: [String]?
             var at: Date
         }
@@ -117,11 +116,6 @@ extension YourAccountChain {
                         store: { $0.threshold = $1 }) { try await threshold(net, account) }
     }
 
-    static func knownHasSessions(_ net: Network, _ account: String, fresh: Bool = false) async throws -> Bool {
-        try await known(net, account, "sessions", fresh: fresh, kept: \.hasSessions,
-                        store: { $0.hasSessions = $1 }) { try await !sessionIds(net, account).isEmpty }
-    }
-
     static func knownSigners(_ net: Network, _ account: String, fresh: Bool = false) async throws -> [String] {
         try await known(net, account, "signers", fresh: fresh, kept: \.signers,
                         store: { $0.signers = $1 }) { try await signers(net, account) }
@@ -135,10 +129,9 @@ extension YourAccountChain {
         guard (try? await knownDeployed(net, account)) == true else { return }
         async let entry = try? knownEntry(net, account)
         async let threshold = try? knownThreshold(net, account)
-        async let sessions: Bool? = plan(net) == nil ? nil : try? knownHasSessions(net, account)
-        let needsSigner = await threshold.map { $0 >= 2 } ?? false || plan(net) != nil
+        let needsSigner = await threshold.map { $0 >= 2 } ?? false
         if needsSigner { _ = try? await knownSigners(net, account) }
-        _ = await (entry, sessions)
+        _ = await entry
     }
 
     /// **KEPT FRESH WHILE MOVE IS OPEN (prd §1610: a send six minutes after
@@ -153,11 +146,10 @@ extension YourAccountChain {
         guard (try? await knownDeployed(net, account, fresh: true)) == true else { return }
         async let entry = knownEntry(net, account, fresh: true)
         async let threshold = knownThreshold(net, account, fresh: true)
-        async let sessions: Bool? = plan(net) == nil ? nil : try await knownHasSessions(net, account, fresh: true)
-        let t: Int, e: YourAccountOp.Entry, h: Bool?
-        do { (t, e, h) = try await (threshold, entry, sessions) } catch { return }
-        var record = Facts.Known(deployed: true, entry: e, threshold: t, hasSessions: h, at: Date())
-        if t >= 2 || plan(net) != nil {
+        let t: Int, e: YourAccountOp.Entry
+        do { (t, e) = try await (threshold, entry) } catch { return }
+        var record = Facts.Known(deployed: true, entry: e, threshold: t, at: Date())
+        if t >= 2 {
             guard let s = try? await knownSigners(net, account, fresh: true) else { return }
             record.signers = s
         }

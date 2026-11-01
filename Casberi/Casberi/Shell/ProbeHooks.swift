@@ -3763,8 +3763,8 @@ enum ProbeHooks {
         // `-keysSetupProbe <network>` — the keys chosen at Create riding a
         // first send (prd §1457), SIMULATED on a network the account is not
         // on yet: the recovery key (when this phone holds it), the Signer
-        // (`-keysSetupSigner`, else the user's test wallet) and a $1 monthly
-        // limit are kept as the walk keeps them, then a 1-wei send to itself
+        // (`-keysSetupSigner`, else the user's test wallet) and the co-signer
+        // required are kept as the walk keeps them, then a 1-wei send to itself
         // is priced by the bundler and signed, never sent. Logs `keysSetup|`.
         Hook(key: "keysSetupProbe") { raw, _ in
             Task { @MainActor in
@@ -3775,7 +3775,7 @@ enum ProbeHooks {
                 }
                 let signer = UserDefaults.standard.string(forKey: "keysSetupSigner") ?? "0x2F60D2BB84Eb8df6951F7215ef035eF052BA2725"
                 YourAccountSetup.save(.init(recovery: YourAccountRecovery.exists(for: account), signer: signer,
-                                            limitDollars: 1, limitMinutes: MoveSecurity.LimitPeriod.month.minutes), for: account)
+                                            requiresCoSigner: true), for: account)
                 do {
                     if try await YourAccountChain.isDeployed(net, account) { log("refused: already on \(net.name)"); return }
                     let pay = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: "1", to: account, toName: nil)
@@ -3883,61 +3883,6 @@ enum ProbeHooks {
                     log("entry=\(try await YourAccountChain.accountEntry(net, account))")
                     let sent = try await YourAccountChain.send([payment], reason: "Probe: a send on the adapter",
                                                              report: { line in NSLog("throwawaySend| %@", line) }) { stage in log("stage=\(stage)") }
-                    log("result=\(sent.outcome)")
-                } catch let failure as YourAccountChain.Failure {
-                    log("refused: \(failure.message)")
-                } catch {
-                    log("error: \(String(describing: error))")
-                }
-            }
-        },
-        // `-limitInstallProbe "<network>|<dollar units>|<ETH wei>|<seconds>|<count>"`
-        // — a spend limit (prd §1447 items 14–15): `count` windows of `seconds`
-        // from this minute, each allowing the session key that much of the
-        // network's dollar and of ETH (through Multicall3); every older session
-        // is removed. Simulated unless `-adapterThrowaway` names this account.
-        Hook(key: "limitInstallProbe") { raw, _ in
-            Task { @MainActor in
-                func log(_ line: String) { NSLog("limitInstall| %@", line) }
-                let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 5, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
-                      let seconds = Int(p[3]), let count = Int(p[4]), let account = YourAccountKey.address else {
-                    log("usage: <network>|<dollar units>|<ETH wei>|<seconds>|<count>"); return
-                }
-                let start = Int(Date().timeIntervalSince1970) / 60 * 60
-                // `-coSignWith <signer address>`: a limit set once both keys are required.
-                let coSigner = UserDefaults.standard.string(forKey: "coSignWith").map(ProbeCoSigner.make)
-                let plan = YourAccount7579.Plan(chainId: net.chainId, dollar: net.dollar, dollarCap: p[1], ethCap: p[2],
-                                                windows: YourAccount7579.windows(start: start, seconds: seconds, count: count))
-                do {
-                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
-                    let sent = try await YourAccountChain.installLimit(on: net, plan: plan, reason: "Probe: a spend limit", dryRun: !real, coSigner: coSigner,
-                                                                      report: { line in NSLog("limitInstall| %@", line) }) { stage in log("stage=\(stage)") }
-                    log("result=\(sent.outcome)")
-                } catch let failure as YourAccountChain.Failure {
-                    log("refused: \(failure.message)")
-                } catch {
-                    log("error: \(String(describing: error))")
-                }
-            }
-        },
-        // `-limitSendProbe "<network>|usdc|eth|<units>"` — `units` of the dollar
-        // or ETH from the account to itself, signed by the session key alone, on
-        // the window of the installed limit that holds now (prd §1447 items
-        // 14–15). Over the window's total it must be refused. Simulated unless
-        // `-adapterThrowaway` names this account.
-        Hook(key: "limitSendProbe") { raw, _ in
-            Task { @MainActor in
-                func log(_ line: String) { NSLog("limitSend| %@", line) }
-                let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 3, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
-                      let account = YourAccountKey.address else { log("usage: <network>|usdc|eth|<units>"); return }
-                let token = p[1].lowercased() == "eth" ? YourAccountOp.eth : YourAccountOp.dollar(on: net)
-                do {
-                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
-                    let sent = try await YourAccountChain.limitSend(on: net, token: token, to: account, units: p[2],
-                                                                   reason: "Probe: a send within the limit", dryRun: !real,
-                                                                   report: { line in NSLog("limitSend| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")
@@ -4119,8 +4064,8 @@ enum ProbeHooks {
             }
         },
         // `-spendProbe "<network>|eth|usdc|<units>"` — Move's own send path
-        // (`MoveSentence.spend`, prd §1455) to the account itself: under the
-        // spend limit on Face ID alone, over it the Signer sheet. Throwaway only.
+        // (`MoveSentence.spend`) to the account itself: Face ID, and the
+        // Signer sheet where the co-signer is required. Throwaway only.
         Hook(key: "spendProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("spendProbe| %@", line) }
@@ -4134,7 +4079,7 @@ enum ProbeHooks {
                 let payment = YourAccountOp.Payment(network: net, token: token, amount: p[2], to: account, toName: nil)
                 do {
                     let done = try await MoveSentence.spend([.send(payment)], on: net, account: account, roundUp: nil,
-                                                            reason: "Probe: a send", said: { line in NSLog("spendProbe| said: %@", line) }) { stage in
+                                                            reason: "Probe: a send") { stage in
                         NSLog("spendProbe| stage=%@", String(describing: stage))
                     }
                     log("result=\(done.sent.outcome)")

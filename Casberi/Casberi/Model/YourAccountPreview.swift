@@ -11,13 +11,11 @@ import Foundation
 /// only, so `move-details-selftest.sh` holds them; the reads that fill a
 /// `YourAccountChain.Preview` are the chain's.
 ///
-/// **Two readings of "the hash" (ERC-8213, read 2026-10-24, Draft):** an
-/// operation your own keys sign is a SafeOp, EIP-712 typed data, so its hash
-/// IS an "EIP-712 Digest" and is labelled exactly so. A send under the spend
-/// limit is signed by the session key over EntryPoint v0.7's own
-/// `getUserOpHash`, which is not EIP-712, so it is the "Operation hash". The
-/// ERC's "Calldata Digest" (`keccak256(uint256(len) ‖ calldata)`) stands
-/// under the operation's calldata either way.
+/// **The hash (ERC-8213, read 2026-10-24, Draft):** an operation your own
+/// keys sign is a SafeOp, EIP-712 typed data, so its hash IS an "EIP-712
+/// Digest" and is labelled exactly so. The ERC's "Calldata Digest"
+/// (`keccak256(uint256(len) ‖ calldata)`) stands under the operation's
+/// calldata.
 enum YourAccountPreview {
     typealias Op = YourAccountOp
 
@@ -70,13 +68,10 @@ enum YourAccountPreview {
     enum HashKind: Equatable, Sendable {
         /// A SafeOp: EIP-712 typed data, its digest what Face ID signs.
         case eip712
-        /// EntryPoint v0.7's `getUserOpHash`, which the session key signs.
-        case userOp
 
         var label: String {
             switch self {
             case .eip712: String(localized: "EIP-712 Digest")
-            case .userOp: String(localized: "Operation hash")
             }
         }
     }
@@ -211,13 +206,6 @@ enum YourAccountPreview {
 
     /// A round-up bought on the send's own network, on the exchanges (prd
     /// §1545): the swap's own words, said as the round-up it is.
-    /// A send the spend limit's session key signs never buys on the
-    /// exchanges (prd §1545): the change is kept, counted, for the next send
-    /// Face ID approves.
-    static func roundUpKept(_ figure: String, _ symbol: String) -> Step {
-        Step(words: String(localized: "Keeps \(figure) \(symbol) of round-ups for a send you approve with Face ID"))
-    }
-
     static func roundUpSwap(_ figure: String, _ symbol: String, atLeast: String, _ bought: String, on exchange: String) -> Step {
         Step(words: String(localized: "Swaps \(figure) \(symbol) of round-ups for at least \(atLeast) \(bought) on \(exchange)"))
     }
@@ -236,22 +224,6 @@ enum YourAccountPreview {
 
     static var addsRecovery: Step { Step(words: String(localized: "Adds your recovery key")) }
     static var addsSigner: Step { Step(words: String(localized: "Adds your Signer as a second key")) }
-
-    static func setsLimit(periods: Int) -> Step {
-        Step(words: String(localized: "Sets your spend limit"),
-             detail: String(localized: "\(periods) periods ahead. Over it, and for a swap or a private move, your Signer signs too."))
-    }
-
-    static func renewsLimit(periods: Int) -> Step {
-        Step(words: String(localized: "Renews your spend limit"),
-             detail: String(localized: "\(periods) periods ahead"))
-    }
-
-    /// The session key signs under the limit: no key change rides it.
-    static var underLimit: Step {
-        Step(words: String(localized: "Signed by your spend limit's key"),
-             detail: String(localized: "Under your limit, so your Signer is not asked."))
-    }
 
     // MARK: - Hex
 
