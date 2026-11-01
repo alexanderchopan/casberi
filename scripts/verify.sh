@@ -2757,6 +2757,11 @@ harness "Following pure-logic self-test" "following" "scripts/following-selftest
 # with no charges because its key and its charges' keys disagree.
 harness "Billers pure-logic self-test" "billers" "scripts/billers-selftest.sh" "the billers self-test failed — run scripts/billers-selftest.sh"
 
+# A source's row looks like its app (prd §1645): the one table that decides
+# each look, compiled as shipped; a GitHub "Merged" it never stored, a like
+# drawn as a post, a payment's figure pushed into its title all fail here.
+harness "Feed look table self-test" "feed-look" "scripts/feed-look-selftest.sh" "the feed look self-test failed — run scripts/feed-look-selftest.sh"
+
 # Day's Subscriptions tile (prd §1111): which mail is a list's (a header, never
 # a guess), one row per list across renames, the way out (https before mailto,
 # never http), a cadence only from three mails, and the loudest list first.

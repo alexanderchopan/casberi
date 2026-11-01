@@ -497,7 +497,7 @@ struct BandRow: View {
     /// New rows carry the sender in authorHandle; older rows stored it only
     /// as "From …" content, parsed here so they get their circle without a
     /// migration.
-    private var mailSender: String? {
+    var mailSender: String? {
         if Self.initialCircleSources.contains(thing.source),
            let who = thing.authorHandle, !who.isEmpty { return who }
         guard thing.kind == .mail else { return nil }
@@ -589,7 +589,7 @@ struct BandRow: View {
     }
 
     /// The app header this row stands under in Home (prd §1103b).
-    @Environment(\.dsGroupedSource) private var groupedSource
+    @Environment(\.dsGroupedSource) var groupedSource
     /// Under the Wallet's "Needs you" heading, which says what a stuck word
     /// or "your signature is needed" would (prd §1378).
     @Environment(\.dsUnderNeedsYou) private var underNeedsYou
@@ -713,7 +713,9 @@ struct BandRow: View {
             if ChatFace.isPersonChat(thing), let said = ChatFace.lastMessage(thing) {
                 chatRow(said)
             } else {
-                liveBody
+                // A source's own look (prd §1645, `FeedLook`), else the band.
+                let look = feedLook
+                if look != .plain { lookRow(look) } else { liveBody }
             }
         }
     }
@@ -901,7 +903,7 @@ struct BandRow: View {
 
     /// The lead, in the ladder `leader` resolves. Always inside the anatomy's
     /// 26pt frame; a circle draws at `Face.rowCircle`, as it always did.
-    @ViewBuilder private var leaderView: some View {
+    @ViewBuilder var leaderView: some View {
         switch leader {
         case .avatar(let avatar):
             RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
