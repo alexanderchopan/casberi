@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1779 of 1851 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1780 of 1852 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1983,15 +1983,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
-- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609)
+- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
 - §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc… (amended by §1606)
-- §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line cou…
+- §1605 — Preparing asks nothing the preview already asked, the Signer's wallet opens onto its request, and the "Took" line cou… (amended by §1644)
 - §1606 — Cash App leads Deposit, because it is the payment app the user has; Revolut waits
 - §1607 — Deposit's capture: Cash App's own sign-in in our web view, its activity request caught as the page makes it, the sess…
 - §1608 — Peer's Deposit is parked: money in is Buy alone, one verb, the coin and network chosen and the seller picked by the a…
-- §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again
+- §1609 — A holding of yours sends and swaps from its long press, and the Signer sheet asks again (amended by §1644)
 - §1610 — A contact can be removed, and Move is read before it opens (amends §1392's Contacts, §1602's kept facts, §1509's kept…
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
 - §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (… (amended by §1615)
@@ -2027,6 +2027,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed…
 - §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare r…
 - §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's…
+- §1644 — The co-signer's sheet lets you pick another wallet: Use another wallet on a kept session, Cancel drops a session that…
 
 ## Dead rulings → what replaced them (generated)
 
