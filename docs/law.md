@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1766 of 1840 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1767 of 1841 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1837,7 +1837,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1454 — Robinhood Chain comes back to the account with every feature
 - §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458, §1570, §1601; part superseded by §1632)
 - §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458, §1570, §1628)
-- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501, §1516, §1632)
+- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501, §1516, §1632, §1633)
 - §1459 — Two lines cut from creating your account (amended by §1500, §1501)
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480, §1570)
@@ -1948,7 +1948,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
-- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1632)
+- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1632, §1633)
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578)
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS (amended by §1629)
@@ -2012,6 +2012,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1630 — The composer's close stays top-left; a long pushed page scrolls under the back control at rest (amends §752, reads §829)
 - §1631 — Your account's "Without a signature" row says None; the spend limit is gone from it, the model under it and the demo…
 - §1632 — The spend limit is deleted from the model: no session send, no session key, no plan; the co-signer switch still remov…
+- §1633 — Two keys only on the adapter: Require at Create and the co-signer switch put the account onto Safe's adapter in the s…
 
 ## Dead rulings → what replaced them (generated)
 

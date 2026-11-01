@@ -359,7 +359,7 @@ grep -rqE '(String\(localized: |Text\()"[^"]*([Ss]pend limit|[Aa]llowance|over t
   && { echo "✗ a screen names the spend limit again (prd §1570, §1632)"; exit 1; }
 grep -rqE 'func (sessionSend|sessionBuild|limitSend|turnOnLimit|changeLimit|installLimit)\(|signSession\(|sessionKey\(\)' Casberi/Casberi \
   && { echo "✗ a session send route is back: a key that spends without the co-signer (prd §1632)"; exit 1; }
-awk '/static func requireCoSigner\(/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'var calls = try await sessionIds(net, account).map(YourAccount7579.removeSessionCall)' \
+awk '/static func requireCoSigner\(/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'var calls = try await sessionsRead.map(YourAccount7579.removeSessionCall)' \
   && awk '/static func releaseCoSigner\(/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'sessionIds(net, account).map(YourAccount7579.removeSessionCall)' \
   || { echo "✗ the co-signer switch no longer removes the sessions an older build enabled — they would spend without the co-signer (prd §1570 item 3, §1632)"; exit 1; }
 grep -q 'private func required(_ s: Standing) -> Bool { s.threshold == 2 && s.sessions != true }' "$SEC" \
@@ -473,8 +473,12 @@ grep -q 'releaseCoSigner(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.t
 # (while this phone alone still signs), and Create walks through them.
 CH=Casberi/Casberi/Model/YourAccountChain.swift
 grep -q 'if !deployed, let setup = try await setupCalls(net, account)' "$CH" || { echo "✗ the keys chosen at Create ride an operation on a network the account is already on (prd §1457)"; exit 1; }
-awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/changeThreshold/{e=NR}/installCalls|limitCalls/{x=1}END{exit !(a<b && b<e && !x)}' \
-  || { echo "✗ setupCalls no longer adds recovery, the co-signer, then both keys last, with no allowance (prd §1457, §1570)"; exit 1; }
+awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/installCalls/{i=NR}/changeThreshold/{e=NR}/limitCalls/{x=1}END{exit !(a<b && b<i && i<e && !x)}' \
+  || { echo "✗ setupCalls no longer adds recovery, the co-signer, the adapter, then both keys last, with no allowance (prd §1457, §1570, §1633)"; exit 1; }
+# Two keys only on the adapter (prd §1633): a send asks the co-signer only
+# there, so the switch's On puts a 4337-module account onto it first.
+awk '/static func requireCoSigner\(/,/^    }$/' "$CH" | grep -q 'if entry == .module4337 { calls += YourAccount7579.installCalls(account: account) }' \
+  || { echo "✗ requiring the co-signer raises the threshold on Safe's 4337 module, where no send asks the co-signer (prd §1633)"; exit 1; }
 grep -q 'var required: Bool { signer != nil && (requiresCoSigner == true || (olderLimitDollars ?? 0) > 0) }' Casberi/Casberi/Model/YourAccountSetup.swift \
   && grep -q 'case olderLimitDollars = "limitDollars"' Casberi/Casberi/Model/YourAccountSetup.swift \
   || { echo "✗ a limit an older build chose at Create no longer reads as the co-signer required, or one stands with no Signer (prd §1457, §1570 item 5)"; exit 1; }

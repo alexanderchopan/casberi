@@ -152206,6 +152206,34 @@
         }
       }
     },
+    "Requires your Signer for every send and swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requiere tu Signer para cada envío e intercambio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての送金とスワップに Signer が必要になります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 송금과 스왑에 Signer가 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送和兑换都需要你的 Signer"
+          }
+        }
+      }
+    },
     "Reset order" : {
       "localizations" : {
         "es" : {

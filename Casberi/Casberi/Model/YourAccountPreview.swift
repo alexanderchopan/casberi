@@ -224,6 +224,9 @@ enum YourAccountPreview {
 
     static var addsRecovery: Step { Step(words: String(localized: "Adds your recovery key")) }
     static var addsSigner: Step { Step(words: String(localized: "Adds your Signer as a second key")) }
+    /// Required at Create (prd §1570, §1633): the account onto Safe's adapter,
+    /// then both keys for every send and swap.
+    static var requiresSigner: Step { Step(words: String(localized: "Requires your Signer for every send and swap")) }
 
     // MARK: - Hex
 

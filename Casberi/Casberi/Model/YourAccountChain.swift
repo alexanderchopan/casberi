@@ -407,8 +407,13 @@ enum YourAccountChain {
 
     /// What the keys chosen at Create add to the operation that opens the
     /// account on `net` (prd §1457): the recovery key, the co-signer, and —
-    /// when the co-signer was required (prd §1570) — both keys above them,
-    /// last, while this phone alone still signs. Nil when nothing was chosen.
+    /// when the co-signer was required (prd §1570) — the account onto Safe's
+    /// adapter and both keys above them, last, while this phone alone still
+    /// signs. Nil when nothing was chosen.
+    ///
+    /// **THE ADAPTER BEFORE TWO KEYS (prd §1633).** A send asks the co-signer
+    /// only on the adapter (§1447 item 16); at two keys on Safe's 4337 module
+    /// every send would sign with this phone alone and be refused.
     static func setupCalls(_ net: Network, _ account: String) async throws -> [YourAccountOp.Call]? {
         let choice = YourAccountSetup.choice(for: account) ?? YourAccountSetup.Choice()
         var calls: [YourAccountOp.Call] = []
@@ -423,6 +428,7 @@ enum YourAccountChain {
         if let owner = choice.signer {
             calls.append(YourAccountOp.addOwnerCall(account: account, owner: owner, threshold: 1))
             if choice.required {
+                calls += YourAccount7579.installCalls(account: account)
                 calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
                                                 data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
             }
@@ -485,10 +491,16 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
         await stage(.preparing)
-        let keys = try await threshold(net, account)
+        async let keysRead = threshold(net, account)
+        async let entryRead = accountEntry(net, account)
         // A failed read throws: "nothing to send" must mean no session stands.
-        var calls = try await sessionIds(net, account).map(YourAccount7579.removeSessionCall)
+        async let sessionsRead = sessionIds(net, account)
+        let keys = try await keysRead, entry = try await entryRead
+        var calls = try await sessionsRead.map(YourAccount7579.removeSessionCall)
         if keys < 2 {
+            // The adapter first, in the same operation (prd §1633): at two
+            // keys a send asks the co-signer only on the adapter.
+            if entry == .module4337 { calls += YourAccount7579.installCalls(account: account) }
             calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
                                             data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
         }
@@ -1474,7 +1486,10 @@ enum YourAccountChain {
             calls += setup
             tail = " · " + String(localized: "and your keys")
             if YourAccountRecovery.publicKey(for: account) != nil { words.append(Words.addsRecovery) }
-            if YourAccountSetup.choice(for: account)?.signer != nil { words.append(Words.addsSigner) }
+            if let choice = YourAccountSetup.choice(for: account), choice.signer != nil {
+                words.append(Words.addsSigner)
+                if choice.required { words.append(Words.requiresSigner) }
+            }
             report("setup: \(setup.count) calls")
         }
         let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
