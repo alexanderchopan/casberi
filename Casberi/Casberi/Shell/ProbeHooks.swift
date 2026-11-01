@@ -3760,6 +3760,72 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-coSignerOffProbe <create|recovery|outside|adapter|on|off|send|state|all>` —
+        // Off without the co-signer (prd §1647), for real, on Base Sepolia
+        // only: `create` makes the account and its recovery key; `recovery`
+        // puts the account there with the recovery key an owner; `outside`
+        // adds the co-signer `-coSignerOffOwner` (never asked to sign) at one
+        // key; `adapter` moves the account onto Safe's 7579 adapter (where
+        // every account opened since §1447 is); `on` requires it (threshold
+        // 2, this phone alone); `off` turns
+        // it off with this phone's key and the recovery key; `send` sends 1
+        // wei to itself on Face ID alone. `all` runs recovery to send,
+        // reading the state between. Logs `coSignerOff|`.
+        Hook(key: "coSignerOffProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("coSignerOff| %@", line) }
+                let net = YourAccountOp.baseSepolia
+                let co = UserDefaults.standard.string(forKey: "coSignerOffOwner") ?? "0x000000000000000000000000000000000000dEaD"
+                func state(_ step: String) async {
+                    guard let account = YourAccountKey.address else { return }
+                    let owners = (try? await YourAccountChain.owners(net, account))?.joined(separator: ",") ?? "unread"
+                    let keys = (try? await YourAccountChain.threshold(net, account)).map(String.init) ?? "unread"
+                    let entry = (try? await YourAccountChain.accountEntry(net, account)).map { "\($0)" } ?? "unread"
+                    log("\(step): account=\(account) entry=\(entry) threshold=\(keys) owners=\(owners)")
+                }
+                func step(_ name: String) async throws {
+                    var made = YourAccountKey.address
+                    if made == nil, name == "create" { made = try YourAccountKey.create() }
+                    guard let account = made else { log("refused: no account; run create first"); return }
+                    let stage: @Sendable (YourAccountChain.Stage) async -> Void = { s in NSLog("coSignerOff| %@ stage=%@", name, String(describing: s)) }
+                    switch name {
+                    case "create":
+                        let rec = try YourAccountRecovery.make(for: account)
+                        log("create: account=\(account) recovery=\(rec)")
+                    case "recovery":
+                        let sent = try await YourAccountChain.addRecovery(on: net, reason: "Probe: recovery key", stage: stage)
+                        log("recovery: \(sent.outcome)")
+                    case "outside":
+                        let sent = try await YourAccountChain.addOutsideKey(co, on: net, reason: "Probe: co-signer", stage: stage)
+                        log("outside: \(sent.outcome)")
+                    case "adapter":
+                        let sent = try await YourAccountChain.installAdapter(on: net, reason: "Probe: adapter", dryRun: false, report: log, stage: stage)
+                        log("adapter: \(sent.outcome)")
+                    case "on":
+                        let sent = try await YourAccountChain.requireCoSigner(on: net, coSigner: nil, reason: "Probe: co-signer on", stage: stage)
+                        log("on: \(String(describing: sent?.outcome))")
+                    case "off":
+                        let sent = try await YourAccountChain.turnOffAlone(on: net, reason: "Probe: co-signer off", report: log, stage: stage)
+                        log("off: \(sent.outcome)")
+                    case "send":
+                        let pay = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: "1", to: account, toName: nil)
+                        let sent = try await YourAccountChain.send([pay], reason: "Probe: Face ID alone", report: log, stage: stage)
+                        log("send: \(sent.outcome)")
+                    default:
+                        break
+                    }
+                    await state(name)
+                }
+                do {
+                    for name in raw == "all" ? ["recovery", "outside", "on", "off", "send"] : [raw] { try await step(name) }
+                    log("done")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(error)")
+                }
+            }
+        },
         // `-keysSetupProbe <network>` — the keys chosen at Create riding a
         // first send (prd §1457), SIMULATED on a network the account is not
         // on yet: the recovery key (when this phone holds it), the Signer

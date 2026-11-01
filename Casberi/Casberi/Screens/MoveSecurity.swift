@@ -1,3 +1,4 @@
+import LocalAuthentication
 import SwiftUI
 
 /// **YOUR ACCOUNT'S KEYS (prd §1427, in the Wallet's Security tile since
@@ -543,6 +544,9 @@ struct MoveSecurity: View {
                                 outside: [YourAccountDemo.signer], exported: [], threshold: 2,
                                 limit: .on(plan, current: plan.window(at: now)))
             }
+            #if DEBUG
+            raiseTrayIfAsked()
+            #endif
             return []
         }
         let recovery = YourAccountRecovery.publicKey(for: account)
@@ -634,14 +638,20 @@ struct MoveSecurity: View {
         }
         #if DEBUG
         NSLog("spendLimit| %@", standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\(plan(of: $0) == nil ? "off" : "on")" }.joined(separator: ","))
-        // `-coSignerTray on|off`: the switch's tray raised, because a
-        // simulator does not flip a switch.
-        if let tray = UserDefaults.standard.string(forKey: "coSignerTray"), coSignerTray == nil, coSignerSwitchable {
-            coSignerTray = tray == "on"
-        }
+        raiseTrayIfAsked()
         #endif
         return nets.filter { failed.contains($0.chainId) }
     }
+
+    #if DEBUG
+    /// `-coSignerTray on|off`: the switch's tray raised, because a
+    /// simulator does not flip a switch — over the demo's account too.
+    private func raiseTrayIfAsked() {
+        if let tray = UserDefaults.standard.string(forKey: "coSignerTray"), coSignerTray == nil, coSignerSwitchable {
+            coSignerTray = tray == "on"
+        }
+    }
+    #endif
 
     /// How many keys a send needs on `net`, then the limit that implies: one
     /// chain of reads, run beside the key and the owners.
@@ -739,11 +749,26 @@ struct MoveSecurity: View {
         on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }
     }
 
-    /// How many of them ask the co-signer: off, each; on, only where an
-    /// allowance stands under both keys.
-    private func coSignerApprovals(on: Bool) -> Int {
-        coSignerTargets(on: on).filter { $0.threshold == 2 }.count
+    /// **OFF NEVER NEEDS THE CO-SIGNER (prd §1647, user: "user should be
+    /// able to just turn off cosigner and do it").** Where this phone's key
+    /// signs and the recovery key is an owner, the two keys this iPhone holds
+    /// pass threshold 2 alone.
+    static func offAlone(threshold: Int?, keyIndex: Int?, recovery: Chain.RecoveryState, hasRecoveryKey: Bool) -> Bool {
+        threshold == 2 && keyIndex != nil && recovery == .added && hasRecoveryKey
     }
+
+    private func offAlone(_ s: Standing) -> Bool {
+        Self.offAlone(threshold: s.threshold, keyIndex: s.keyIndex, recovery: s.recovery, hasRecoveryKey: hasRecoveryKey)
+    }
+
+    /// The networks that ask the co-signer: off, only where this iPhone
+    /// cannot turn it off alone; on, only where an allowance stands under
+    /// both keys.
+    private func coSignerAsked(on: Bool) -> [Standing] {
+        coSignerTargets(on: on).filter { $0.threshold == 2 && (on || !offAlone($0)) }
+    }
+
+    private func coSignerApprovals(on: Bool) -> Int { coSignerAsked(on: on).count }
 
     /// The switch's tray (user: "it isn't clear to user that they need to
     /// wait for each network"): what it does, each network and its step, how
@@ -820,7 +845,9 @@ struct MoveSecurity: View {
         guard !targets.isEmpty else { coSignerTray = nil; return }
         coSignerWalking = true
         coSignerSteps = Dictionary(uniqueKeysWithValues: targets.map { ($0.id, CoSignerStep.next) })
-        let cosigned = targets.filter { $0.threshold == 2 }
+        let cosigned = coSignerAsked(on: on)
+        // One Face ID for the recovery key across the walk (prd §1647).
+        let context = LAContext()
         let batch = Self.sharedSigner(cosigned).map {
             SignerRequestSheet.Batch(owner: $0, chainIds: cosigned.map(\.network.chainId))
         }
@@ -828,7 +855,8 @@ struct MoveSecurity: View {
             defer { Task { await batch?.finish() } }
             for s in targets {
                 let net = s.network
-                let co = s.threshold == 2 ? coSigner(s, batch) : nil
+                let alone = !on && offAlone(s)
+                let co = s.threshold == 2 && !alone ? coSigner(s, batch) : nil
                 coSignerSteps[s.id] = .waiting(co.map { String(localized: "Approve in \(YourAccount.short($0.owner))") }
                                                ?? String(localized: "Confirm with Face ID"))
                 do {
@@ -836,6 +864,10 @@ struct MoveSecurity: View {
                     if on {
                         sent = try await Chain.requireCoSigner(on: net, coSigner: co,
                                                                reason: String(localized: "Require your co-signer on \(net.name)")) { _ in }
+                    } else if alone {
+                        sent = try await Chain.turnOffAlone(on: net,
+                                                            reason: String(localized: "Stop requiring your co-signer on \(net.name)"),
+                                                            context: context) { _ in }
                     } else if let co {
                         sent = try await Chain.turnOffLimit(on: net, coSigner: co,
                                                             reason: String(localized: "Stop requiring your co-signer on \(net.name)")) { _ in }

@@ -416,6 +416,24 @@ enum YourAccountOp {
         return [UInt8](repeating: 0, count: 12) + statics + YourAccount.w(assertion.count) + assertion
     }
 
+    /// Two passkeys this iPhone holds (prd §1647): this phone's key through
+    /// the shared signer and the recovery key through its own signer, over
+    /// the same SafeOp hash. Safe's order: both static parts by owner,
+    /// ascending, each pointing past the two (130 bytes) to its assertion,
+    /// the assertions in the same order — behind no time bounds.
+    static func twoPasskeySignatures(_ a: (owner: String, r: [UInt8], s: [UInt8]),
+                                     _ b: (owner: String, r: [UInt8], s: [UInt8])) -> [UInt8]? {
+        guard YourAccount.w(a.owner) != YourAccount.w(b.owner),
+              let first = SafeWebAuthn.signatureBytes(r: a.r, s: a.s),
+              let second = SafeWebAuthn.signatureBytes(r: b.r, s: b.s) else { return nil }
+        var pair = [(a.owner, first), (b.owner, second)]
+        if !YourAccount.w(pair[0].0).lexicographicallyPrecedes(YourAccount.w(pair[1].0)) { pair.swapAt(0, 1) }
+        let firstTail = YourAccount.w(pair[0].1.count) + pair[0].1
+        let statics = YourAccount.w(pair[0].0) + YourAccount.w(130) + [0]
+            + YourAccount.w(pair[1].0) + YourAccount.w(130 + firstTail.count) + [0]
+        return [UInt8](repeating: 0, count: 12) + statics + firstTail + YourAccount.w(pair[1].1.count) + pair[1].1
+    }
+
     /// The right shape and length, verifying nothing: for gas estimation,
     /// where a real signature cannot exist yet (it signs the gas).
     static var dummySignature: [UInt8] { dummySignature(owner: YourAccount.sharedSigner) }

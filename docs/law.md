@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1782 of 1854 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1783 of 1855 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1952,7 +1952,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
-- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628)
+- §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1647)
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578)
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS (amended by §1629)
@@ -2011,7 +2011,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1625 — Claude Code reads your cloud sessions live through the claude.ai sign-in: each lands saying where Claude says it stands
 - §1626 — Grok signs in on grok.com and answers in your own Grok, on the loop ChatGPT and Claude share; its page drops the key
 - §1627 — Gemini signs in with Google and answers in your own Gemini, read off its page; its page drops the key and the Takeout…
-- §1628 — The co-signer is a rule the contract keeps, not one the app keeps: the recovery key leaves the account's owners while…
+- §1628 — The co-signer is a rule the contract keeps, not one the app keeps: the recovery key leaves the account's owners while… (part superseded by §1647)
 - §1629 — ENS names resolve on chain through ENS's own Universal Resolver; web3.bio keeps gateway names, reverse names and avatars
 - §1630 — The composer's close stays top-left; a long pushed page scrolls under the back control at rest (amends §752, reads §829)
 - §1631 — Your account's "Without a signature" row says None; the spend limit is gone from it, the model under it and the demo…
@@ -2030,6 +2030,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1644 — The co-signer's sheet lets you pick another wallet: Use another wallet on a kept session, Cancel drops a session that…
 - §1645 — A source's row looks like its app: one table of looks, each drawn only from a fact the bridge stored (amends §1497's…
 - §1646 — A note of yours is set in New York; everything the app brought in stays Figtree
+- §1647 — Turning the co-signer off never needs the co-signer: this iPhone signs Off with its own key and the recovery key, at…
 
 ## Dead rulings → what replaced them (generated)
 

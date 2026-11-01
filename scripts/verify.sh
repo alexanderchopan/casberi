@@ -2836,6 +2836,10 @@ harness "Signer-proof self-test" "signer-proof self-test" "scripts/signer-proof-
 # wallet re-pairs on the same ask, Cancel drops a wallet that never answered,
 # one door per installed wallet onto its own `wc?uri=` link, `wc:` otherwise.
 harness "Signer-switch self-test" "signer-switch self-test" "scripts/signer-switch-selftest.sh" "the co-signer's sheet can be stuck on one wallet again — run scripts/signer-switch-selftest.sh"
+# Off never needs the co-signer (prd §1647): the phone's key and the recovery
+# key as Safe reads two contract signatures, offered only where both are
+# owners, and the walk asking no co-signer there.
+harness "Co-signer Off self-test" "cosigner-off self-test" "scripts/cosigner-off-selftest.sh" "turning the co-signer off would need the co-signer again — run scripts/cosigner-off-selftest.sh"
 
 # Move's Details (prd §1509): the fee ceiling and its words, ERC-8213's
 # Calldata Digest pinned to the ERC's own vector, the revert words pinned to

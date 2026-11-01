@@ -96,9 +96,11 @@ enum YourAccountRecovery {
     }
 
     /// Sign 32 pre-hashed bytes with the recovery key, after the device owner
-    /// says yes: `r ‖ s`, `s` low.
-    static func sign(_ digest: [UInt8], for account: String, reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
-        let context = LAContext()
+    /// says yes: `r ‖ s`, `s` low. A context already answered (one Face ID
+    /// for a walk of networks, prd §1647) answers again without asking.
+    static func sign(_ digest: [UInt8], for account: String, reason: String,
+                     context given: LAContext? = nil) async throws -> (r: [UInt8], s: [UInt8]) {
+        let context = given ?? LAContext()
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil),
               (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) == true,
               let stored = load(account) else { throw Failure.refused }
