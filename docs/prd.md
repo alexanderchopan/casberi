@@ -69965,14 +69965,13 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 
 **Mac half (§1402):** neither applies; the Mac has the rail and no floating back control.
 
-## §1631 — "Without a signature" reads your account's allowance off the chain, never the plan this phone saved (amends §1614 item 4, applies §1570, §83) (user, 2026-10-31: "safe room still shows a spend limit but we got rid of them")
+## §1631 — Your account's "Without a signature" row says None; the spend limit is gone from it, the model under it and the demo (amends §1614 item 4, applies §1570, §723) (user, 2026-10-31: "safe room still shows a spend limit but we got rid of them"; 2026-11-01: "spend limit is a previous feature we got rid of")
 
-**Why.** §1614 item 4 stated your account's spend limit in money ("$100 a month", grey) two days after §1570 retired the allowance from the surface. The row read `YourAccountFacts.limitDollars`, which came from the plan this phone saved at Create or Security (`yourAccount.spendLimit.<chain>`), not from the chain. `requireCoSigner` removed that plan only when it sent an operation; a network where the threshold was already 2 and no session stood sent nothing and kept the plan, so the row went on naming an allowance that did not exist. The demo hard-coded the same $100.
+**Why.** §1614 item 4 stated your account's spend limit in money ("$100 a month", grey) two days after §1570 retired it. The row read `YourAccountFacts.limitDollars`, off the plan this phone saved at Create or Security (`yourAccount.spendLimit.<chain>`); `requireCoSigner` removed that plan only when it sent an operation, so a network where the threshold was already 2 and no session stood kept it, and the row kept naming it. The demo hard-coded the same $100. A first fix read the chain and drew "Allowance on Base" in red; refused, because it still names a feature that no longer exists.
 
-1. **Your account's row reads the chain**: `YourAccountChain.limitState` on every network at once (`SafeRosterReading.allowance`). None standing: "None" (confirm ink). One standing: "Allowance on Base" in red, the same tone as a module on another Safe, because it is money that moves without the co-signer and §1570's switch removes it. Several: "Allowance on N networks".
-2. **Unread says nothing.** A network that could not be read leaves your account's row out until it is read; it never says None over a network nobody asked.
-3. **A stale plan goes.** `requireCoSigner` with nothing to send removes the network's saved plan when the chain read no sessions.
-4. **Deleted from the model (§723):** `YourAccountFacts.limitDollars`/`limitPeriod`, `SafeRoster.limitWords`, `Tone.quiet`, the demo's $100. The demo's account says None.
-5. **Checks.** `safe-roster-selftest.sh`: one network, two networks, none, unread; a mutation reading unread as None is caught.
+1. **Your account's row is "None"** (confirm ink), always: its modules are its own send path and sign with your key, as §1614 already held for the rest of them. Nothing is read for it.
+2. **A stale plan goes.** `requireCoSigner` with nothing to send removes the network's saved plan when the chain read no sessions.
+3. **Deleted from the model (§723):** `YourAccountFacts.limitDollars`/`limitPeriod`, `SafeRoster.Safe.spendLimit`, `SafeRoster.limitWords`, `Tone.quiet`, the demo's $100.
+4. **Checks.** `safe-roster-selftest.sh`: your account says None with any keys; a mutation counting its modules is caught.
 
-**Not seen:** written in a session with no Xcode or simulator; nothing above was compiled. Build, then run `safe-roster-selftest.sh` and the Safe pick on the demo and on the account that showed "$100 a month". **Mac half (§1402):** the same section, nothing new drawn.
+**Not seen:** written in a session with no Xcode or simulator; nothing above was compiled. **Mac half (§1402):** the same section, nothing new drawn.

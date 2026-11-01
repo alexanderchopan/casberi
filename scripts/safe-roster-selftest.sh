@@ -17,13 +17,13 @@ func check(_ ok: Bool, _ what: String) { if !ok { print("  ✗ \(what)"); failur
 typealias R = SafeRoster
 
 let yours = R.Safe(address: "0xaa", seg: nil, name: "Your account", isYourAccount: true,
-                   faces: [.phone, .recovery, .coSigner], threshold: 1, allowance: ["Base"], modules: 3)
+                   faces: [.phone, .recovery, .coSigner], threshold: 1, modules: 3)
 let team = R.Safe(address: "0xbb", seg: "eth", name: "Studio", isYourAccount: false,
-                  faces: [.you, .person("S"), .person("L")], threshold: 2, allowance: nil, modules: 0)
+                  faces: [.you, .person("S"), .person("L")], threshold: 2, modules: 0)
 let vault = R.Safe(address: "0xcc", seg: "eth", name: "Ada's vault", isYourAccount: false,
-                   faces: [.person("A"), .person("B")], threshold: 2, allowance: nil, modules: 1)
+                   faces: [.person("A"), .person("B")], threshold: 2, modules: 1)
 let unread = R.Safe(address: "0xdd", seg: "base", name: "Another", isYourAccount: false,
-                    faces: [.phone], threshold: nil, allowance: nil, modules: 0)
+                    faces: [.phone], threshold: nil, modules: 0)
 
 // Order: your account first, then A–Z.
 check(R.ordered([vault, team, yours]).map(\.name) == ["Your account", "Ada's vault", "Studio"], "your account leads, then A–Z")
@@ -31,7 +31,7 @@ check(R.ordered([vault, team, yours]).map(\.name) == ["Your account", "Ada's vau
 // Who signs.
 check(R.line(yours) == "Any one signs", "your account with any one key says so")
 let yoursTwo = R.Safe(address: "0xaa", seg: nil, name: "Your account", isYourAccount: true,
-                      faces: [.phone, .coSigner], threshold: 2, allowance: [], modules: 0)
+                      faces: [.phone, .coSigner], threshold: 2, modules: 0)
 check(R.line(yoursTwo) == "This iPhone and co-signer", "your account needing two names its keys")
 check(R.line(team) == "You and 2 others", "a Safe you share counts the others")
 check(R.line(vault) == "2 owners", "a Safe you hold no key to never says you")
@@ -40,16 +40,10 @@ check(R.need(team) == "2 of 3", "threshold of owners")
 check(R.need(unread) == nil, "an unread threshold is never guessed")
 
 // Without a signature.
-func word(_ s: R.Safe) -> String? { R.unsigned(s)?.word }
-func tone(_ s: R.Safe) -> R.Tone? { R.unsigned(s)?.tone }
-check(word(yours) == "Allowance on Base" && tone(yours) == .danger, "an allowance left on chain is red, never its modules")
-let yoursTwoNets = R.Safe(address: "0xaa", seg: nil, name: "Your account", isYourAccount: true,
-                          faces: [.phone], threshold: 2, allowance: ["Base", "Ethereum"], modules: 0)
-check(word(yoursTwoNets) == "Allowance on 2 networks", "two networks counted")
-check(word(yoursTwo) == "None" && tone(yoursTwo) == .confirm, "your account with no allowance says None")
-let yoursUnread = R.Safe(address: "0xaa", seg: nil, name: "Your account", isYourAccount: true,
-                         faces: [.phone], threshold: 2, allowance: nil, modules: 0)
-check(R.unsigned(yoursUnread) == nil, "an unread allowance says nothing, never None")
+func word(_ s: R.Safe) -> String { R.unsigned(s).word }
+func tone(_ s: R.Safe) -> R.Tone { R.unsigned(s).tone }
+check(word(yours) == "None" && tone(yours) == .confirm, "your account says None, never its modules")
+check(word(yoursTwo) == "None", "your account needing two keys says None")
 check(word(team) == "None" && tone(team) == .confirm, "a Safe with no module says None")
 check(word(vault) == "1 module" && tone(vault) == .danger, "a module on another Safe is red")
 
@@ -77,8 +71,7 @@ mutate() {
   if "$work/m" >/dev/null 2>&1; then fail "mutation SURVIVED — $why"; fi
   print "  ok   catches  $why"
 }
-mutate "your account's modules counted as a danger" 's/if safe\.isYourAccount \{\n            guard let on/if false {\n            guard let on/'
-mutate "an unread allowance reads None"              's/guard let on = safe\.allowance else \{ return nil \}/let on = safe.allowance ?? []/'
+mutate "your account's modules counted as a danger" 's/if safe\.isYourAccount \{ return/if false { return/'
 mutate "a module reads None"                         's/case 0: return \(String\(localized: "None"\), \.confirm\)\n        case 1: return \(String\(localized: "1 module"\), \.danger\)/case 0, 1: return (String(localized: "None"), .confirm)/'
 mutate "a stranger's Safe says you"                  's/guard safe\.faces\.contains\(where: \\\.isYours\) else/guard true else/'
 mutate "your account no longer leads"                's/if a\.isYourAccount != b\.isYourAccount \{ return a\.isYourAccount \}/if a.isYourAccount != b.isYourAccount { return b.isYourAccount }/'

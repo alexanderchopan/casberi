@@ -211,7 +211,7 @@ extension SafeRoomSource {
             safes.append(SafeRoster.Safe(address: known.safeAddress, seg: known.seg,
                                          name: label(for: known.safeAddress), isYourAccount: false,
                                          faces: mine + theirs, threshold: known.threshold,
-                                         allowance: nil, modules: known.modules.count))
+                                         modules: known.modules.count))
         }
         return SafeRoster(safes: SafeRoster.ordered(safes))
     }
@@ -252,7 +252,7 @@ final class SafeRosterReading {
         if YourAccountDemo.isOn {
             yours = SafeRoster.Safe(address: address, seg: nil, name: String(localized: "Your account"),
                                     isYourAccount: true, faces: [.phone, .recovery, .coSigner],
-                                    threshold: 1, allowance: [], modules: 0)
+                                    threshold: 1, modules: 0)
             return
         }
         var faces: [SafeRoster.Face] = [.phone]
@@ -272,27 +272,6 @@ final class SafeRosterReading {
         readAt = now
         yours = SafeRoster.Safe(address: address, seg: nil, name: String(localized: "Your account"),
                                 isYourAccount: true, faces: faces, threshold: threshold,
-                                allowance: await Self.allowance(address), modules: 0)
-    }
-
-    /// The networks where an allowance still stands on chain, every network
-    /// at once; nil when any could not be read, so the row never says None
-    /// over a network it did not ask. A network with no plan on this phone
-    /// asks nothing (`limitState`).
-    private static func allowance(_ address: String) async -> [String]? {
-        await withTaskGroup(of: (String, Bool?).self) { group in
-            for net in YourAccountOp.networks {
-                group.addTask {
-                    guard let state = try? await YourAccountChain.limitState(net, address) else { return (net.name, nil) }
-                    return (net.name, state != .off)
-                }
-            }
-            var on: [String] = []
-            for await (name, standing) in group {
-                guard let standing else { return nil }
-                if standing { on.append(name) }
-            }
-            return YourAccountOp.networks.map(\.name).filter(on.contains)
-        }
+                                modules: 0)
     }
 }

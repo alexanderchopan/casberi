@@ -43,12 +43,6 @@ struct SafeRoster: Equatable {
         /// Yours first, then the others in the order the Safe lists them.
         let faces: [Face]
         let threshold: Int?
-        /// Your account only: the networks where a spend limit's allowance
-        /// still stands ON CHAIN (`YourAccountChain.limitState`). §1570
-        /// retired the allowance, so this is a leftover to remove, never a
-        /// setting; [] where none stands, nil until read. Never the plan
-        /// this phone saved: that outlived the allowance it described.
-        let allowance: [String]?
         /// Modules enabled on it; never counted for your account, whose
         /// modules are its own send path and sign with your key.
         let modules: Int
@@ -121,17 +115,10 @@ struct SafeRoster: Equatable {
     /// "Without a signature": what a Safe's row trails, and how loud.
     enum Tone: Equatable { case confirm, danger }
 
-    /// Nil while your account's allowance is unread: the row says nothing
-    /// rather than None.
-    static func unsigned(_ safe: Safe) -> (word: String, tone: Tone)? {
-        if safe.isYourAccount {
-            guard let on = safe.allowance else { return nil }
-            switch on.count {
-            case 0: return (String(localized: "None"), .confirm)
-            case 1: return (String(localized: "Allowance on \(on[0])"), .danger)
-            default: return (String(localized: "Allowance on \(on.count) networks"), .danger)
-            }
-        }
+    /// Your account says None: its modules are its own send path and sign
+    /// with your key (prd §1631).
+    static func unsigned(_ safe: Safe) -> (word: String, tone: Tone) {
+        if safe.isYourAccount { return (String(localized: "None"), .confirm) }
         switch safe.modules {
         case 0: return (String(localized: "None"), .confirm)
         case 1: return (String(localized: "1 module"), .danger)
