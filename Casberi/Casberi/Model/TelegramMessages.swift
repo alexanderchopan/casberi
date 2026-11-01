@@ -35,6 +35,14 @@ enum TelegramMessages {
         "https://t.me/i/userpic/320/\(handle).jpg"
     }
 
+    /// A public supergroup's username, off TDLib's `supergroup` object
+    /// (`getSupergroup`): the same keyless photo a person's is (prd §1643).
+    /// A basic group, or a supergroup with none, has no public face.
+    static func publicUsername(_ supergroup: [String: Any]) -> String? {
+        let usernames = supergroup["usernames"] as? [String: Any]
+        return (usernames?["active_usernames"] as? [String])?.first.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
     /// Telegram's service notifications — login codes among them.
     static let serviceUserID: Int64 = 777000
 
@@ -135,6 +143,7 @@ enum TelegramMessages {
     /// (an anonymous admin, a channel posting in its discussion group).
     static func conversation(chat: [String: Any], messages: [[String: Any]],
                              users: [Int64: User], chatTitles: [Int64: String] = [:],
+                             groupUsername: String? = nil,
                              me: Int64?) -> LiveConversation? {
         guard let chatID = int64(chat["id"]),
               let kind = kind(chat, me: me, users: users) else { return nil }
@@ -183,8 +192,10 @@ enum TelegramMessages {
             id: String(chatID),
             title: title,
             handle: handle,
-            // A one-to-one's face; a group keeps the source mark (§707).
-            avatar: handle.map(face(handle:)),
+            // A one-to-one's face, and a public group's by its username
+            // (prd §1643); a private group's photo is a file on this device
+            // only, so it keeps its initial (§707).
+            avatar: (kind == .group ? groupUsername : handle).map(face(handle:)),
             isGroup: kind == .group,
             lines: lines.sorted { $0.at < $1.at })
     }

@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1778 of 1850 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1779 of 1851 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2026,6 +2026,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1640 — Day is the week: the Feed's Day section draws this week with its faces over the next thing; Search stands apart from…
 - §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed…
 - §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare r…
+- §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's…
 
 ## Dead rulings → what replaced them (generated)
 

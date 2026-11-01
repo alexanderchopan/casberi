@@ -35,6 +35,8 @@ done
 
 # Drift guards: wiring the compiled functions cannot prove about themselves.
 code() { grep -vE '^[[:space:]]*//' "$1"; }
+code "$READ" | grep -F 'groupUsername: await groupUsername(chat)' >/dev/null \
+  || { echo "✗ the Telegram read no longer passes a public group's username — every group draws its initial (prd §1643)"; exit 1; }
 code "$READ" | grep -F 'guard TelegramClient.signedIn, LiveMessages.reads(.telegram)' >/dev/null \
   || { echo "✗ the Telegram read no longer asks its switch — chats would land for everyone signed in"; exit 1; }
 code "$REFRESH" | grep -F 'if TelegramClient.signedIn, LiveMessages.reads(.telegram)' >/dev/null \
@@ -164,6 +166,24 @@ check(climbing?.title == "Messages in Climbing" && climbing?.isGroup == true && 
 let nameless = TelegramMessages.conversation(chat: chat(30, #"{"@type":"chatTypePrivate","user_id":30}"#, title: "Bo"),
     messages: [message(1, 1_757_890_000, from: 30, text("hey"))], users: users, me: me)
 check(nameless?.avatar == nil, "no username, no face — never a guessed URL")
+// A public group's face (prd §1643): its own username, never a member's.
+let builders = TelegramMessages.conversation(chat: supergroup,
+    messages: [message(1, 1_757_890_000, from: 30, text("ship it"))], users: users,
+    groupUsername: "builders", me: me)
+check(builders?.avatar == "https://t.me/i/userpic/320/builders.jpg" && builders?.handle == nil,
+      "a public group's face is its public photo, by its username")
+check(TelegramMessages.conversation(chat: supergroup,
+    messages: [message(1, 1_757_890_000, from: 30, text("ship it"))], users: users, me: me)?.avatar == nil,
+      "a group with no public username keeps no face")
+check(TelegramMessages.conversation(chat: ana,
+    messages: [message(1, 1_757_890_000, from: 20, text("hi"))], users: users,
+    groupUsername: "builders", me: me)?.avatar == "https://t.me/i/userpic/320/ana.jpg",
+      "a one-to-one never takes a group's username")
+check(TelegramMessages.publicUsername(obj(#"{"@type":"supergroup","usernames":{"active_usernames":["builders"]}}"#)) == "builders",
+      "a supergroup's active username")
+check(TelegramMessages.publicUsername(obj(#"{"@type":"supergroup","usernames":{"active_usernames":[]}}"#)) == nil
+      && TelegramMessages.publicUsername(obj(#"{"@type":"supergroup"}"#)) == nil,
+      "a private supergroup has none")
 check(climbing?.lines.map(\.text) == ["Bo: Saturday?", "You: in", "News: pinned the plan"],
       "members by name, yours You, a chat sender by its title")
 check(TelegramMessages.conversation(chat: group, messages: [

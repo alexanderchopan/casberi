@@ -89,6 +89,16 @@ enum TelegramMessagesRead {
             return found
         }
         var chatTitles: [Int64: String] = [:]
+        // A public supergroup's username, for its face (prd §1643); asked
+        // once per group per read.
+        func groupUsername(_ chat: [String: Any]) async -> String? {
+            guard let type = chat["type"] as? [String: Any],
+                  type["@type"] as? String == "chatTypeSupergroup",
+                  let id = TelegramMessages.int64(type["supergroup_id"]) else { return nil }
+            let json = await client.send(["@type": "getSupergroup", "supergroup_id": id])
+            guard TelegramClient.failed(json) == nil else { return nil }
+            return TelegramMessages.publicUsername(json)
+        }
 
         for chatID in ids {
             guard reading.chatsRead < chatCap else { break }
@@ -115,7 +125,8 @@ enum TelegramMessagesRead {
                    let id = TelegramMessages.int64(sender?["user_id"]) { _ = await user(id) }
             }
             if let conversation = TelegramMessages.conversation(
-                chat: chat, messages: messages, users: users, chatTitles: chatTitles, me: me) {
+                chat: chat, messages: messages, users: users, chatTitles: chatTitles,
+                groupUsername: await groupUsername(chat), me: me) {
                 reading.conversations.append(conversation)
             }
         }
