@@ -10,7 +10,7 @@
 # default"). It also asserts the USE — the funnel asks the rule before it sends, a Tor answer never falls back to a direct read, an exit's 403 is an
 # outage and never the provider's refusal (§827b), no proxy may fail over, and
 # the receipts count what went through Tor — or the rule is a type nothing
-# calls. Four mutations prove the assertions bite, each checked to have
+# calls. Five mutations prove the assertions bite, each checked to have
 # CHANGED the source.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -25,7 +25,8 @@ done
 echo "tor-route self-test"
 
 use() { grep -q -- "$2" "$1" || { echo "✗ $3"; exit 1; } }
-use "$FUNNEL" 'let way = TorRoute.way(for: request)' "IngestSupport.send no longer asks TorRoute before sending"
+use "$FUNNEL" 'let way = TorRoute.way(for: request, service: service)' "IngestSupport.send no longer asks TorRoute, with its caller's service, before sending"
+use "Casberi/Casberi/Model/Watchlist.swift" 'return await IngestSupport.getText(url, service: service)' "the watchlist no longer names its service, so its prices wait on a wallet's Tor circuit"
 use "$FUNNEL" 'answer = await torData(for: request, isolation: tor)' "a Tor request no longer goes through torData"
 use "$FUNNEL" 'NetworkLedger.shared.record(request, as: service, throughTor: tor != nil)' "the receipts no longer count what went through Tor"
 use "$FUNNEL" '(again.1 as? HTTPURLResponse)?.statusCode != 403 else {' "an exit's second 403 no longer reads as an outage"
@@ -113,6 +114,19 @@ for url in ["https://x.com/i/api/2/notifications/all.json", "https://www.instagr
     check(way(url, body: rpcBody(a)) == .direct, "a Feed app never goes through Tor: \(url)")
 }
 check(way("https://evil.example/\(a)") == .direct, "an undeclared host is not a wallet host")
+// A host two services share goes its caller's way (2026-11-01): the
+// watchlist's prices on the Wallet's backstop host.
+func named(_ url: String, _ service: String, body: String? = nil) -> TorRoute.Way {
+    TorRoute.way(host: URL(string: url)?.host(), url: url, body: body.map { Data($0.utf8) }, service: service)
+}
+let llama = "https://coins.llama.fi/prices/current/coingecko:ethereum,base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+check(way(llama) == .tor(isolation: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"), "the Wallet's backstop read still goes through Tor")
+check(named(llama, "Token prices") == .direct, "the watchlist's price read goes direct")
+check(named("https://rpc.mevblocker.io", "Token prices", body: rpcBody(a)) == .tor(isolation: a.lowercased()),
+      "a read whose body names a wallet stays on Tor, whatever service it names")
+check(named("https://api.zerion.io/v1/wallets/\(a)/positions/", "Token prices") == .tor(isolation: a.lowercased()),
+      "a service that does not declare the host routes nothing")
+check(named(llama, "Wallet") == way(llama), "naming a routed service changes nothing")
 
 for e in NetworkReach.endpoints where !e.refusesTor.isEmpty {
     check(e.throughTor, "\(e.service) lists hosts refusing Tor but is not routed")
@@ -164,4 +178,5 @@ mutate "a host refusing Tor is routed anyway" 's/return \.refusesTor\n/return .t
 mutate "every wallet shares one circuit" 's/return \.tor\(isolation: isolationKey\(url: url, body: body, host: host\)\)/return .tor(isolation: host)/'
 mutate "a refusing host's subdomain is routed" 's/endpoint\.refusesTor\.contains\(where: \{ NetworkReach\.matches\(host: host, declared: \$0\) \}\)/endpoint.refusesTor.contains(host)/'
 mutate "every host goes through Tor" 's/guard let endpoint = endpoint\(forHost: host\), endpoint\.throughTor else \{ return \.direct \}/guard let endpoint = endpoint(forHost: host) else { return .tor(isolation: host) }/'
-echo "  ok   4 mutations"
+mutate "a named service carries a wallet's RPC around Tor" 's/\),\n\s+isolationKey\(url: "", body: body, host: host\) == host \{/) {/'
+echo "  ok   5 mutations"

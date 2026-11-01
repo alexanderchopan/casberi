@@ -136,9 +136,14 @@ final class WatchlistPrices {
         return found.compactMap { t in quotes[t.id].map { (t, $0) } }
     }
 
+    /// Named "Token prices", the watchlist's own declaration, so a host the
+    /// Wallet shares (`coins.llama.fi`) is read direct, never on a wallet's
+    /// Tor circuit (`TorRoute.way`): it carries a token, never an account.
+    nonisolated static let service = "Token prices"
+
     nonisolated private static func text(_ url: String) async -> String? {
         guard let url = URL(string: url) else { return nil }
-        return await IngestSupport.getText(url)
+        return await IngestSupport.getText(url, service: service)
     }
 
     /// The demo's chart: an invented curve ending on its quote, the day's

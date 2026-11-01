@@ -607,7 +607,7 @@ enum IngestSupport {
         let began = Date()
         defer { tripLog?.add(MoveClock.Trip(start: began, seconds: Date().timeIntervalSince(began))) }
         // A request naming a wallet goes through Tor (prd §1495, `TorRoute`).
-        let way = TorRoute.way(for: request)
+        let way = TorRoute.way(for: request, service: service)
         let tor: String? = if case .tor(let key) = way { key } else { nil }
         NetworkLedger.shared.record(request, as: service, throughTor: tor != nil)
         // Alchemy's key is one pool for every install: a 429 there brakes

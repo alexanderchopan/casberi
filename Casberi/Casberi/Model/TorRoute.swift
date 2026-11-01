@@ -42,14 +42,28 @@ enum TorRoute {
         #endif
     }
 
-    static func way(for request: URLRequest) -> Way {
+    static func way(for request: URLRequest, service: String? = nil) -> Way {
         way(host: request.url?.host(), url: request.url?.absoluteString ?? "",
-            body: request.httpBody)
+            body: request.httpBody, service: service)
     }
 
     /// The pure rule, for `tor-route-selftest.sh`.
-    static func way(host: String?, url: String, body: Data?) -> Way {
+    ///
+    /// **A host two services share goes the way its CALLER's service goes
+    /// (2026-11-01, user: "can't click to add").** `coins.llama.fi` is the
+    /// Wallet's price backstop and the watchlist's prices alike, and the host
+    /// lookup gives it to the Wallet, so a watchlist read waited on a Tor
+    /// circuit, up to 60s twice, and its plus looked dead. A read whose
+    /// caller names a service that is not routed and declares the host goes
+    /// direct, unless its body names a wallet (an RPC's params): "Token
+    /// prices" carries a token, a ticker or typed words, never an account.
+    static func way(host: String?, url: String, body: Data?, service: String? = nil) -> Way {
         guard let host = host?.lowercased(), !host.isEmpty else { return .direct }
+        if let service, let named = NetworkReach.endpoint(forService: service), !named.throughTor,
+           named.hosts.contains(where: { NetworkReach.matches(host: host, declared: $0) }),
+           isolationKey(url: "", body: body, host: host) == host {
+            return .direct
+        }
         guard let endpoint = endpoint(forHost: host), endpoint.throughTor else { return .direct }
         if endpoint.refusesTor.contains(where: { NetworkReach.matches(host: host, declared: $0) }) {
             return .refusesTor
