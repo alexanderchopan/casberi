@@ -67,9 +67,12 @@ check(WalletSection.activity.label == "Activity", "the stream's tile reads Activ
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
 // Holdings' four and Spending's four; together with the tiles they are
-// every case, each once, so a new scope cannot be silently unlisted.
+// every case, each once, so a new scope cannot be silently unlisted. The
+// watchlist is Home's door trailing the day's mover, drawn apart from the
+// row, and a watched token is its page (prd §1632).
+let watchlistPages: [WalletSection] = [.watchlist, .watchedToken]
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
-    + WalletSection.yourAccountDoors
+    + WalletSection.yourAccountDoors + watchlistPages
 check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
       && WalletSection.order.count + doors.count == WalletSection.allCases.count,
       "the tiles and the doors list every case once (prd §1480)")
@@ -87,6 +90,8 @@ for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes 
 for s in WalletSection.holdingsDoors { check(s.parent == .holdings, "\(s.rawValue) goes back to Holdings") }
 for s in WalletSection.spendingDoors { check(s.parent == .spending, "\(s.rawValue) goes back to Spending") }
 for s in WalletSection.yourAccountDoors { check(s.parent == .yourAccount, "\(s.rawValue) goes back to Your account") }
+check(WalletSection.watchlist.parent == .home, "the watchlist goes back to Home (prd §1632)")
+check(WalletSection.watchedToken.parent == .watchlist, "a watched token goes back to the watchlist (prd §1632)")
 check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you follow read Following, the word Home uses (prd §1503)")
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
