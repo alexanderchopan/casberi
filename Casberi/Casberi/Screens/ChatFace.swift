@@ -13,9 +13,18 @@ enum ChatFace {
     /// notice is `.chat` too on X and Bluesky, but it carries its words in
     /// `postText` or why it's here in `socialContext`, which no conversation
     /// sets: read as a chat, a followed post's "last message" was its link.
+    /// A post with no words (a picture alone) sets neither, so a content
+    /// that is one bare link is a post too: a transcript never is.
     static func isPersonChat(_ thing: Thing) -> Bool {
         thing.kind == .chat && SocialRoom.facts(for: thing.source) != nil
             && (thing.postText ?? "").isEmpty && (thing.socialContext ?? "").isEmpty
+            && !isBareLink(thing.content)
+    }
+
+    /// One URL and nothing else: a post's permalink, never a transcript.
+    static func isBareLink(_ content: String) -> Bool {
+        let s = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        return s.hasPrefix("http") && !s.contains(where: \.isWhitespace)
     }
 
     /// "Ada", out of "Chat with Ada"; a group's own name stands.
