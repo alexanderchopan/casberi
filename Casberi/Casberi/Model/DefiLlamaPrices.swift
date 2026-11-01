@@ -23,8 +23,9 @@ enum DefiLlamaPrices {
     /// Alchemy network id → DeFiLlama chain key. Mirrors `WalletIngest`'s own
     /// `chainSlug` (DeFiLlama, Dexscreener, and GeckoTerminal happen to spell
     /// every chain we read the same way). A network absent here simply isn't
-    /// backstopped rather than asked with a bad key.
-    private static let chainKey: [String: String] = [
+    /// backstopped rather than asked with a bad key. The watchlist's tray
+    /// reads it too, to watch a holding by its contract (prd §1632).
+    static let chainKey: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
         "opt-mainnet": "optimism", "matic-mainnet": "polygon", "solana-mainnet": "solana",
         // Measured 2026-08-28 against real tokens on each (WHYPE 0.99

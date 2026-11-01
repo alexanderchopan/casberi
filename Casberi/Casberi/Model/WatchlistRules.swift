@@ -133,6 +133,41 @@ enum WatchlistRules {
         return []
     }
 
+    // MARK: - A holding of yours
+
+    /// The ids a holding of yours is watched under, best first (prd §1632
+    /// item 4): the coin's CoinGecko id when the symbol names a known coin
+    /// (ETH on any chain is one coin), then each contract the account holds
+    /// it at, on a chain DeFiLlama reads, in the order given. Empty when
+    /// neither applies, and the tray asks the search by symbol.
+    ///
+    /// A ticker alone is not enough: CoinGecko's search offers only ranked
+    /// coins, so a holding with no market-cap rank was never found and its
+    /// plus did nothing (2026-11-01).
+    ///
+    /// `contracts` are `HiddenTokens.contractKey`s (`<network>:<contract|native>`,
+    /// lowercased), so a Solana mint, whose case is its address, is taken
+    /// from `route` (`solana:<mint>`, case kept) or not at all.
+    static func holdingIDs(symbol: String, contracts: [String], route: String?,
+                           coingecko: [String: String], llamaChains: [String: String]) -> [String] {
+        var out: [String] = []
+        if let coin = coingecko[symbol.lowercased()] { out.append("coingecko:\(coin)") }
+        for key in contracts {
+            let parts = key.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, parts[1] != "native", let chain = llamaChains[parts[0]] else { continue }
+            let id: String
+            if chain == "solana" {
+                guard let route, route.lowercased() == "solana:\(parts[1].lowercased())" else { continue }
+                id = route
+            } else {
+                guard isEVMAddress(parts[1]) else { continue }
+                id = "\(chain):\(parts[1].lowercased())"
+            }
+            if !out.contains(id) { out.append(id) }
+        }
+        return out
+    }
+
     // MARK: - The chart
 
     /// DeFiLlama's `span` and `period` for a chart range, by `TokenRange`'s

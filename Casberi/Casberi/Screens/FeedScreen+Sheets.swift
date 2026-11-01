@@ -288,7 +288,7 @@ extension FeedScreen {
         case .walletFollow:
             WalletFollowSheet(landsOnClose: true)
         case .watchToken:
-            WatchTokenSheet(held: walletHeldSymbols)
+            WatchTokenSheet(held: walletHeldTokens)
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

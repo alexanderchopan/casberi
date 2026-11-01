@@ -28,6 +28,36 @@ extension FeedScreen {
         return out
     }
 
+    /// What the Watch a token tray offers before you type: each holding of
+    /// your own account, largest first, with the ids it can be watched under
+    /// (`WatchlistRules.holdingIDs`), so a tap watches what you hold rather
+    /// than whatever a search finds wearing its ticker.
+    var walletHeldTokens: [WatchTokenSheet.Held] {
+        var usd: [String: Double] = [:]
+        var contracts: [String: [(key: String, usd: Double)]] = [:]
+        var route: [String: String] = [:]
+        for position in portfolio?.positions ?? [] {
+            let mine = position.holders.filter { YourAccountDemo.isYours($0.address) }.reduce(0) { $0 + $1.usd }
+            guard mine > 0 else { continue }
+            let symbol = position.symbol.uppercased()
+            usd[symbol, default: 0] += mine
+            contracts[symbol, default: []] += position.parts
+                .filter { YourAccountDemo.isYours($0.holder) }
+                .map { (key: $0.key, usd: $0.usd) }
+            if route[symbol] == nil, let r = position.route { route[symbol] = r }
+        }
+        return usd.sorted { $0.value > $1.value }.map { symbol, dollars in
+            let keys = Dictionary((contracts[symbol] ?? []).map { ($0.key, $0.usd) }, uniquingKeysWith: +)
+                .sorted { $0.value > $1.value }
+                .map(\.key)
+            return WatchTokenSheet.Held(
+                symbol: symbol, usd: dollars,
+                ids: WatchlistRules.holdingIDs(symbol: symbol, contracts: keys, route: route[symbol],
+                                               coingecko: MainnetPrices.ids,
+                                               llamaChains: DefiLlamaPrices.chainKey))
+        }
+    }
+
     // MARK: - Home
 
     /// **ONE DOOR, LIKE PERMISSIONS (prd §1632 item 2, user: "the watchlist

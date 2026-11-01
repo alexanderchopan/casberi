@@ -126,6 +126,32 @@ check(found.map(\.id) == ["coingecko:hyperliquid", "coingecko:basedhype"], "rank
 check(found.first?.symbol == "HYPE" && found.first?.name == "Hyperliquid", "the ticker in capitals, the name kept")
 check(R.parseSearch(Data("not json".utf8)).isEmpty, "a broken answer is nothing")
 
+// A holding of yours is watched as what you hold (2026-11-01): a ticker
+// CoinGecko does not rank was never found, and its plus did nothing.
+let cg = ["eth": "ethereum", "usdc": "usd-coin"]
+let llama = ["eth-mainnet": "ethereum", "base-mainnet": "base", "solana-mainnet": "solana"]
+check(R.holdingIDs(symbol: "ETH", contracts: ["base-mainnet:native", "eth-mainnet:native"], route: nil,
+                   coingecko: cg, llamaChains: llama) == ["coingecko:ethereum"],
+      "a known coin is its CoinGecko id, and a native coin has no contract")
+check(R.holdingIDs(symbol: "USDC", contracts: ["base-mainnet:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"], route: nil,
+                   coingecko: cg, llamaChains: llama)
+      == ["coingecko:usd-coin", "base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"],
+      "the coin first, then the contract you hold it at")
+check(R.holdingIDs(symbol: "MUSEGO", contracts: ["base-mainnet:0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+                                                "unknown-mainnet:0x940181a94a35a4569e4529a3cdfb74e38fd98631"],
+                   route: nil, coingecko: cg, llamaChains: llama)
+      == ["base:0x940181a94a35a4569e4529a3cdfb74e38fd98631"],
+      "an unranked token is its contract, on a chain DeFiLlama reads only")
+let mint = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"
+check(R.holdingIDs(symbol: "JUP", contracts: ["solana-mainnet:\(mint.lowercased())"], route: "solana:\(mint)",
+                   coingecko: cg, llamaChains: llama) == ["solana:\(mint)"],
+      "a Solana mint keeps its case, from the route")
+check(R.holdingIDs(symbol: "JUP", contracts: ["solana-mainnet:\(mint.lowercased())"], route: nil,
+                   coingecko: cg, llamaChains: llama).isEmpty,
+      "a lowercased mint is never asked")
+check(R.holdingIDs(symbol: "ZZZ", contracts: [], route: nil, coingecko: cg, llamaChains: llama).isEmpty,
+      "nothing known: empty, and the tray asks the search")
+
 print(failures == 0 ? "watchlist-selftest: all checks ✓" : "watchlist-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
