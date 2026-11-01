@@ -18,11 +18,16 @@ extension BandRow {
             source: source, sourceRef: thing.sourceRef, title: thing.title, tags: thing.tags,
             mark: thing.mark.rawValue, projectField: thing.authorHandle, hasPrice: thing.priceValue != nil))
         let isAgent = thing.kind == .chat && AgentSheet.assistant(for: source) != nil
-        let facts = FeedLook.Facts(
+        let calendar = source == "Calendar"
+        let handled = FeedLook.handleSources.contains(source)
+        // The facts list is a decode: read it only for the two sources whose
+        // look needs one.
+        let factList = calendar || source == "Apple Music" ? thing.factList : []
+        var facts = FeedLook.Facts(
             source: source,
             kind: thing.kind.rawValue,
             title: source == "GitHub" ? TitleSeam.split(thing.title).name : thing.title,
-            content: isAgent || source == "GitHub" || source == "Files" ? thing.content : "",
+            content: isAgent || FeedLook.contentSources.contains(source) ? thing.content : "",
             tags: thing.tags,
             mark: thing.mark.rawValue,
             sourceRef: thing.sourceRef,
@@ -36,6 +41,20 @@ extension BandRow {
                 ? thing.factList.first { $0.label == "Duration" }?.value : nil,
             workOutcome: outcome.map { FeedLook.Status(word: $0.0, tone: FeedLook.Tone(rawValue: $0.1.rawValue) ?? .neutral) },
             hasPrice: thing.priceValue != nil)
+        if calendar {
+            facts.start = thing.capturedAt
+            facts.end = thing.endAt
+            facts.allDay = factList.contains { $0.action == .allDay }
+            facts.cancelled = factList.contains { $0.action == .state && $0.value == String(localized: "Cancelled") }
+        }
+        if handled {
+            facts.authorHandle = thing.authorHandle
+            facts.summary = thing.summary
+            facts.dueAt = thing.dueAt
+        }
+        if source == "Apple Music" {
+            facts.length = factList.first { $0.label == "Length" }?.value
+        }
         return FeedLook.of(facts)
     }
 
@@ -76,12 +95,13 @@ extension BandRow {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-        case let .mail(sender, subject):
+        case let .mail(who, what), let .byline(who, what):
+            // A publication over its headline is mail's look (prd §1648).
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: sender)
+                Text(verbatim: who)
                     .dsText(.body17).fontWeight(.semibold)
                     .lineLimit(1)
-                Text(verbatim: subject)
+                Text(verbatim: what)
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
@@ -128,6 +148,112 @@ extension BandRow {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             statusWord(status)
+        case let .event(title, start, end, allDay, place, cancelled):
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
+                    .dsText(.body17)
+                    .foregroundStyle(cancelled ? DS.textTertiary : DS.textPrimary)
+                    .strikethrough(cancelled, color: DS.textTertiary)
+                    .lineLimit(1)
+                eventLine(start: start, end: end, allDay: allDay, place: place, cancelled: cancelled)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        case let .quote(passage, from):
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+                    Text(verbatim: "“")
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.brandInk)
+                        .accessibilityHidden(true)
+                    Text(verbatim: passage)
+                        .dsText(.body17)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(verbatim: from)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        case let .review(title, by, stars):
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
+                    .dsText(.body17)
+                    .lineLimit(1)
+                if let by {
+                    Text(verbatim: by)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 1) {
+                ForEach(0..<5, id: \.self) { i in
+                    Image(systemName: "star.fill")
+                        .dsGlyph(.caption, weight: .regular)
+                        .foregroundStyle(i < stars ? DS.textPrimary : DS.fillStrong)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("\(stars) of 5 stars"))
+        case let .figure(title, line, figure, style):
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
+                    .dsText(.body17)
+                    .lineLimit(1)
+                if let line {
+                    Text(verbatim: line)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            figureText(figure, style: style)
+        }
+    }
+
+    /// "14:00–15:00 · Studio 3", "All day", or "Cancelled · 12:30" with the
+    /// word in its ink. The hours are the time the row is about, so they
+    /// stand in the primary ink, the place after them in the line's.
+    private func eventLine(start: Date, end: Date?, allDay: Bool, place: String?, cancelled: Bool) -> Text {
+        let clock = Date.FormatStyle(date: .omitted, time: .shortened)
+        let hours: String = allDay ? String(localized: "All day")
+            : end.map { "\(start.formatted(clock))–\($0.formatted(clock))" } ?? start.formatted(clock)
+        var out = cancelled
+            ? Text(String(localized: "Cancelled")).fontWeight(.semibold).foregroundStyle(DS.destructiveInk)
+                + Text(verbatim: " · " + hours)
+            : Text(verbatim: hours).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+        if let place { out = out + Text(verbatim: " · " + place) }
+        return out
+    }
+
+    @ViewBuilder
+    private func figureText(_ figure: String, style: FeedLook.FigureStyle) -> some View {
+        switch style {
+        case .bold:
+            Text(verbatim: figure)
+                .dsText(.body17).fontWeight(.semibold).monospacedDigit()
+                .lineLimit(1)
+        case .code:
+            Text(verbatim: figure)
+                .dsText(.body17).monospaced()
+                .lineLimit(1)
+        case .quiet:
+            Text(verbatim: figure)
+                .dsText(.subhead12).monospacedDigit()
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        case .attention:
+            Text(verbatim: figure)
+                .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
+                .foregroundStyle(DS.attentionInk)
+                .lineLimit(1)
         }
     }
 
@@ -154,7 +280,7 @@ extension FeedLook {
     /// A look whose words run past one line stands its lead at the top.
     var isTall: Bool {
         switch self {
-        case .post, .mail, .code: true
+        case .post, .mail, .code, .byline, .quote: true
         default: false
         }
     }
