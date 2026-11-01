@@ -340,7 +340,7 @@ strip "$FEED" > "$FEED_BARE"
 # Since prd §1480 the gate is the Permissions page's: its skeleton draws on
 # the checkup's own counts, and the delegations count is the acting list's
 # own split.
-grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0 { walletSkeletonRowsSection }' "$FEED_BARE" \
+grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0 {' "$FEED_BARE" && grep -q 'if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }' "$FEED_BARE" \
   || fail "the Permissions page's empty gate has drifted from the checkup's counts"
 grep -q 'delegations: WalletPermissions.actingHolders(holders).count' "$FEED_BARE" \
   || fail "the checkup's delegations no longer count the acting list's own holders"
@@ -386,10 +386,11 @@ grep -q 'walletActingSection' "$FEED" \
 # indent — Frames' reading headline — sits EARLIER in the file, so the first
 # match is no longer the room's rows. Take the block that draws the acting list.
 # The empty scope's skeleton gate (prd §769/§771) sits between the case and the
-# lists, so the window is wide enough to reach past it.
+# lists, so the window is wide enough to reach past it (eight lines since
+# §1633's revoked-today branch and the lead verb stand before them).
 # Since prd §1480 the lists stand on the Permissions page: the acting list,
 # then the approvals. Signatures waiting on you lead Needs you instead.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'case .permissions:$' \
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 'case .permissions:$' \
         | grep -A 1 'walletActingSection' | head -2)
 print -r -- "$order" | sed -n '1p' | grep -q 'walletActingSection' \
   || fail "the acting list no longer leads the Permissions page (prd §1480)"

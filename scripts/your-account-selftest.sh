@@ -476,7 +476,7 @@ grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(
 # network; off asks the co-signer on each, since at 2-of-2 it cannot be one key's.
 grep -q 'unsettled == nil && outsideOwner != nil && outsideTargets.isEmpty && !coSignerNetworks.isEmpty' "$SEC" || { echo "✗ the co-signer switch can be turned on with no co-signer on a network (prd §1570)"; exit 1; }
 grep -q 'on ? notRequired : coSignerNetworks.filter { $0.threshold == 2 }' "$SEC" || { echo "✗ the one co-signer switch no longer walks every network (prd §1570)"; exit 1; }
-grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.threshold == 2 ? coSigner(s, batch) : nil' "$SEC" && grep -q 'Self.sharedSigner(cosigned)' "$SEC" || { echo "✗ turning the co-signer off no longer asks the co-signer — at 2-of-2 it cannot be one key's (prd §1570, §83)"; exit 1; }
+grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'let co = s.threshold == 2 && !alone ? coSigner(s, batch) : nil' "$SEC" && grep -q 'Self.sharedSigner(cosigned)' "$SEC" || { echo "✗ turning the co-signer off no longer asks the co-signer where this phone cannot do it alone (prd §1570, §1647, §83)"; exit 1; }
 
 # The keys chosen at Create (prd §1457): they ride only the operation that
 # opens a network, the limit only with a Signer, both keys switched on LAST
