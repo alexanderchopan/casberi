@@ -597,6 +597,18 @@ enum DemoSeedAll {
         UserDefaults.standard.set(version, forKey: versionKey)
     }
 
+    /// The demo's Telegram chats under the export's shape, from before they
+    /// took the live read's (prd §1635): the same chats under a new ref, so a
+    /// demo in progress would draw each twice. Deleted by their own prefix,
+    /// never by absence from a read.
+    @MainActor
+    private static func dropExportShapedChats(_ stored: [Thing], _ context: ModelContext) {
+        for thing in stored where thing.isLive
+            && thing.sourceRef?.hasPrefix("telegram:chat:demo-") == true {
+            context.delete(thing)
+        }
+    }
+
     /// Insert the rooms and the bridge state the room heads read.
     ///
     /// Deduped on `sourceRef` the way every real ingest is, and for the same
@@ -608,13 +620,7 @@ enum DemoSeedAll {
     @MainActor
     static func seed(_ context: ModelContext) {
         let stored = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
-        // The demo's Telegram chats under the export's shape, from before
-        // they took the live read's (prd §1635): the same chats under a new
-        // ref, so a demo in progress would draw each twice.
-        for thing in stored where thing.isLive
-            && thing.sourceRef?.hasPrefix("telegram:chat:demo-") == true {
-            context.delete(thing)
-        }
+        dropExportShapedChats(stored, context)
         let landed = Set(stored.compactMap(\.sourceRef))
         for thing in rooms() where !landed.contains(thing.sourceRef ?? "") {
             context.insert(thing)

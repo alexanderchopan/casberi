@@ -97,6 +97,11 @@ KNOWN_EXEMPT = {
     # borrow. A mark's badge size doesn't communicate anything by growing —
     # it's a fixed dot, always the same fraction of the disc it sits on.
     "AssetMark.swift:AssetMark": "badge size is a fixed proportion of `size`, not data",
+    # FileTypeMark (prd §1645) is a row lead's glyph: a page whose width is a
+    # FIXED 0.8 of `DS.Mark.row` and whose words are the file's extension. No
+    # proportion carries a quantity, and it arrives with its row, whose
+    # section carries `RowEntrance`; AssetMark's ruling, for the same reason.
+    "BandRow+Looks.swift:FileTypeMark": "a row lead's glyph at a fixed proportion of DS.Mark.row, not data",
     # The check's premise is that a drawing whose PROPORTIONS ARE THE
     # INFORMATION must grow, or the magnitude is asserted rather than
     # perceived. DemoNFTArt's proportions are the information about nothing:
