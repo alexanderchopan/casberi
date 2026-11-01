@@ -26986,6 +26986,34 @@
         }
       }
     },
+    "%lld of 5 stars" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld de 5 estrellas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5つ星中%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "별 5개 중 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 星（满分 5 星）"
+          }
+        }
+      }
+    },
     "%lld of about %lld seconds" : {
       "localizations" : {
         "en" : {
@@ -149621,6 +149649,34 @@
         }
       }
     },
+    "Regression" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Regresión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リグレッション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회귀"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回归"
+          }
+        }
+      }
+    },
     "Regressions" : {
       "localizations" : {
         "es" : {
@@ -212781,6 +212837,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此设备的 iCloud 钥匙串中没有你的恢复密钥。"
+          }
+        }
+      }
+    },
+    "Your recovery key was not confirmed, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu clave de recuperación no se confirmó, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キーが確認されなかったため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 확인되지 않아 아무것도 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥未经确认，因此未发送任何内容"
           }
         }
       }
