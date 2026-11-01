@@ -70072,3 +70072,14 @@ The sweep found Linear, PostHog, Cloudflare, Stripe, Polar and Dodo Payments lea
 **Not built.** The website's nav (to the wordmark alone), favicon and share image (to the arm); the hero keeps the octopus.
 
 **Seen** on the iPhone 17 Pro simulator, demo, dark: the Library's Casberi tile, the Library tab's face (the full cut at tab size), and the Settings colophon's wordmark over "Version 3.0.19 (906)"; the three icon PNGs rendered and looked at; the website nav rendered. **Not seen:** the Home Screen icon on a device, light mode in the app, the Mac (Catalyst not compiled in this pass), the website deployed.
+
+## §1639 — The app icon is the black tile in every appearance: the default (light) icon is the dark art, byte for byte (amends §869, §1638)
+
+**Why.** User, 2026-11-01, on §1638's light icon: "i do NOT think the logo looks good with white background and the pink arm." The arm is a mostly empty round shape: on white it floats, its tapered tip fades and its white suckers read as gaps rather than holes. The black tile is also what makes the icon findable on a home screen (`docs/brand.md` section 4). iOS asks for a default, dark and tinted image; nothing requires the default to be light.
+
+**What.**
+1. `casberi-octopus-1024-light.png` is a byte copy of the dark PNG; `design/app-icon/tentacle.py` writes it so. Tinted stays white on black.
+2. `scripts/app-icon-audit.py` is turned round: light must equal dark, every ground must be dark, tinted must be its own file; its self-test flags the white tile §869 introduced. `make-light-icon.py` is deleted (a script that writes the retired drawing is a door back to it).
+3. In the app, light theme still draws the arm pink on white (`CasberiMark`'s ground is adaptive): that is content on a page, not a tile on a home screen.
+
+**Seen.** The three PNGs' md5s (light = dark, tinted apart); the audit and its self-test green. **Not seen:** the Home Screen on a device.

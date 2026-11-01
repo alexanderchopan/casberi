@@ -42,30 +42,20 @@ The eyes and suckers being the GROUND rather than a colour is what keeps the mar
 `casberi-mark-small.svg` (29pt) is a **deliberately different drawing**, not the same file scaled. Five arms and thirteen suckers turn to mud below about 40pt, so the small mark drops to **three arms, no suckers**, with the eyes enlarged to r **5** and the arm stroke thickened to **9**. Reach for it whenever the mark is rendered under ~40pt; scaling the full mark down instead is the failure this file exists to prevent.
 
 ## The three variants
-iOS picks one of these by the appearance the person chose in the Home Screen editor. All three carry the SAME coverage mask; only the ground changes.
+iOS picks one of these by the appearance the person chose in the Home Screen editor. All three carry the SAME coverage mask, written by `tentacle.py` from one drawing.
 
 | Variant | Mark | Ground | Note |
 |---------|------|--------|------|
-| light | `#FA2D48` | `#FFFFFF` | derived from the dark art — see below |
-| dark | `#FA2D48` | `#000000` | the drawing everything else comes from |
+| light (default) | `#FA2D48` | `#000000` | **the dark art, byte for byte** (prd §1639) |
+| dark | `#FA2D48` | `#000000` | |
 | tinted | `#FFFFFF` | `#000000` | greyscale; the system maps luminance to the person's tint |
 
-**The light PNG was a byte-for-byte copy of the dark one until 2026-09-22** (prd §869), so every person on the light or default appearance saw the dark drawing — pink on black — on a light home screen. The two files had the same md5.
-
-`make-light-icon.py` derives the light variant by recovering the mark's per-pixel coverage out of the dark art and compositing it over white instead of black. It reads the SHIPPED dark PNG, which is the point: the berry-era generator was deleted for emitting art the app had stopped shipping, and a script whose input is the shipped art cannot drift that way. It has a `--self-test` (the ground inverts, the mark holds, coverage round-trips, a knocked-out eye lands on white, and the transform is not the identity).
-
-```sh
-python3 design/app-icon/make-light-icon.py --self-test
-python3 design/app-icon/make-light-icon.py
-```
-
-Because the eyes and suckers are GROUND, they turn white for free — there is no second drawing to keep in step.
+**The default appearance shows the black tile on purpose (prd §1639, 2026-11-01).** The arm on a white tile was mostly empty space and its white suckers read as gaps (user: "i do NOT think the logo looks good with white background"); the black tile is what makes the icon findable. This reverses §869, which had derived a white-ground light variant (`make-light-icon.py`, now deleted) after the light file was found to be an accidental copy of the dark one. It is a copy again, deliberately, and `scripts/app-icon-audit.py` now requires it.
 
 ## Files
-- `tentacle.py` — the arm: writes `casberi-mark.svg` (full cut), `casberi-mark-small.svg` (clean cut), `casberi-wordmark-c.svg` (the clean cut cropped, for the wordmark) and the dark and tinted icon PNGs. Then run `make-light-icon.py`.
+- `tentacle.py` — the arm: writes `casberi-mark.svg` (full cut), `casberi-mark-small.svg` (clean cut), `casberi-wordmark-c.svg` (the clean cut cropped, for the wordmark) and the three icon PNGs (light is a copy of dark). 
 - `casberi-octopus.svg`, `casberi-octopus-small.svg` — the octopus, now the illustration.
 - `casberi-mark.svg`, `casberi-mark-small.svg` — the arm's full and clean cuts (written by `tentacle.py`).
-- `make-light-icon.py` — derives the light PNG from the dark one; pure stdlib, `--self-test`.
 - Shipped art lives in `Casberi/Casberi/Assets.xcassets/AppIcon.appiconset/` — `casberi-octopus-1024-{light,dark,tinted}.png`, wired in `Contents.json` as the universal iOS icon plus its dark and tinted luminosity variants.
 
 ## Unverified

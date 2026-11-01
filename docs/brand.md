@@ -155,13 +155,14 @@ is a bright mark on near-black.
 
 Three 1024 PNGs, all opaque, in `AppIcon.appiconset`:
 
-- `casberi-octopus-1024-light.png` — the default
-- `casberi-octopus-1024-dark.png` — identical; the default is already dark
+- `casberi-octopus-1024-light.png` — the default: the dark art, byte for byte
+  (prd §1639; the arm on a white tile was mostly empty space)
+- `casberi-octopus-1024-dark.png` — the same file
 - `casberi-octopus-1024-tinted.png` — white arm, black ground
 
 The filenames keep "octopus" so the asset catalog and pbxproj did not change
-with the art. `tentacle.py` writes the dark and tinted PNGs (the arm's box is
-60% of the tile, centred); `make-light-icon.py` derives the light one.
+with the art. `tentacle.py` writes all three (the arm's box is 60% of the
+tile, centred); `scripts/app-icon-audit.py` holds light to a copy of dark.
 
 The set is `"platform": "ios"` and **Catalyst inherits it**, so Mac and iOS share
 one artwork. Consequence worth knowing: changing it changes both, so a Mac build

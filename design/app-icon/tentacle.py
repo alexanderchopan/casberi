@@ -11,8 +11,9 @@ Writes, beside this file:
                               wordmark, where it stands in for the c
 and into the app's icon set:
     casberi-octopus-1024-dark.png    pink on black
+    casberi-octopus-1024-light.png   the same bytes: the black tile in the
+                                     default appearance too (prd §1639)
     casberi-octopus-1024-tinted.png  white on black
-(the light PNG is then derived from the dark one by make-light-icon.py).
 
     python3 design/app-icon/tentacle.py
 
@@ -154,11 +155,13 @@ def main():
     from PIL import Image
     a = icon_masks()
     black = Image.new("RGB", a.size, (0, 0, 0))
-    Image.composite(Image.new("RGB", a.size, PINK), black, a).save(
-        os.path.join(ICONSET, "casberi-octopus-1024-dark.png"))
+    dark = os.path.join(ICONSET, "casberi-octopus-1024-dark.png")
+    Image.composite(Image.new("RGB", a.size, PINK), black, a).save(dark)
+    with open(dark, "rb") as src, open(os.path.join(ICONSET, "casberi-octopus-1024-light.png"), "wb") as dst:
+        dst.write(src.read())
     Image.composite(Image.new("RGB", a.size, (255, 255, 255)), black, a).save(
         os.path.join(ICONSET, "casberi-octopus-1024-tinted.png"))
-    print("wrote the three SVGs and the dark and tinted icons; now run make-light-icon.py")
+    print("wrote the three SVGs and the three icons")
 
 
 if __name__ == "__main__":

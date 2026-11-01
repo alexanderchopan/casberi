@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""App-icon variant audit (prd §869).
+"""App-icon variant audit (prd §869, amended by §1639).
+
+**Since §1639 (2026-11-01) the light variant IS the dark art, on purpose.** The
+arm on a white tile was mostly empty space (user: "i do NOT think the logo looks
+good with white background"), and the black tile is what makes the icon
+findable (docs/brand.md section 4). So the light file must now be a byte copy of
+the dark one, every ground is dark, and the white tile §869 introduced is the
+defect. What follows is §869's history, kept because its lesson stands: the
+home screen is outside every other check, so a wrong variant is caught here or
+nowhere.
 
 iOS 18 lets the person choose Light, Dark, Tinted or Clear for every icon on
 the Home Screen, and `AppIcon.appiconset` declares one PNG per luminosity.
@@ -18,13 +27,13 @@ invisible to a human reading a diff of a binary, and forever.
 The rules, from design/app-icon/README.md:
   1. Contents.json declares a default, a `dark` and a `tinted` luminosity.
   2. Every declared file exists and is a 1024x1024 8-bit truecolour PNG.
-  3. No two variants are byte-identical — that is the shipped defect.
-  4. The light variant's ground is LIGHT; the dark and tinted grounds are dark.
+  3. The light variant is byte-identical to the dark one (§1639), and the
+     tinted one is its own file.
+  4. Every ground is dark — the black tile in every appearance (§1639).
   5. The tinted variant is greyscale (the system maps luminance to the tint).
-  6. All three carry the SAME coverage mask. The eyes and suckers are knocked
-     OUT of the mark, so they are the ground; a variant redrawn by hand loses
-     that and the arms stop reading. Deriving light from dark keeps it for
-     free (design/app-icon/make-light-icon.py).
+  6. All three carry the SAME coverage mask. The suckers are knocked OUT of
+     the mark, so they are the ground; a variant redrawn by hand loses that.
+     design/app-icon/tentacle.py writes all three from one mask.
 
 Usage:  scripts/app-icon-audit.py [--self-test]
 Exit 0 = clean.
@@ -161,26 +170,27 @@ def audit(iconset, side=SIDE):
     if findings:
         return findings
 
-    # 3. THE SHIPPED DEFECT: two variants that are the same file
-    for a, b in itertools.combinations(sorted(blobs), 2):
-        if blobs[a] == blobs[b]:
+    # 3. light IS dark (§1639); tinted is its own file
+    if blobs["light"] != blobs["dark"]:
+        findings.append(
+            f"light ({declared['light']}) is not a copy of dark ({declared['dark']}) — "
+            f"§1639 keeps the black tile in the default appearance too")
+    for other in ("light", "dark"):
+        if blobs["tinted"] == blobs[other]:
             findings.append(
-                f"{a} and {b} are byte-identical ({declared[a]} == {declared[b]}) — "
-                f"one of the two appearances is showing the other's drawing")
+                f"tinted is byte-identical to {other} — the tinted appearance is "
+                f"showing the colour drawing")
 
     grounds, masks = {}, {}
     for lum, (w, h, rgb) in pixels.items():
         grounds[lum], masks[lum] = mask_of(rgb, w * h)
 
-    # 4. grounds point the right way
+    # 4. every ground is dark: the black tile in every appearance (§1639)
     for lum, ground in grounds.items():
-        lightness = sum(ground) / 3.0
-        if lum == "light" and lightness < 128:
+        if sum(ground) / 3.0 > 128:
             findings.append(
-                f"light: ground is {ground}, which is dark — a light-appearance "
-                f"home screen gets a dark tile")
-        if lum in ("dark", "tinted") and lightness > 128:
-            findings.append(f"{lum}: ground is {ground}, which is light")
+                f"{lum}: ground is {ground}, which is light — §1639 retired the "
+                f"white tile; the arm on white is mostly empty space")
 
     # 5. tinted is greyscale
     if "tinted" in pixels:
@@ -240,7 +250,7 @@ def self_test():
                          + chunk(b"IEND", b""))
 
     BLACK, WHITE, PINK = (0, 0, 0), (255, 255, 255), (255, 45, 135)
-    good = {"light": art(WHITE, PINK), "dark": art(BLACK, PINK), "tinted": art(BLACK, WHITE)}
+    good = {"light": art(BLACK, PINK), "dark": art(BLACK, PINK), "tinted": art(BLACK, WHITE)}
 
     def build(tmp, arts, contents=None, side=TINY):
         d = pathlib.Path(tmp); d.mkdir(parents=True, exist_ok=True)
@@ -259,15 +269,17 @@ def self_test():
 
     cases = []
     cases.append(("passes a correct iconset", False, lambda t: build(t, good)))
-    # The defect this audit exists for.
-    cases.append(("flags  light shipped as a copy of dark (THE shipped defect)", True,
-                  lambda t: build(t, {**good, "light": good["dark"]})))
-    cases.append(("flags  a light variant whose ground is dark", True,
+    # §1639: the white tile §869 introduced is now the defect.
+    cases.append(("flags  a light variant on a white tile (retired by §1639)", True,
+                  lambda t: build(t, {**good, "light": art(WHITE, PINK)})))
+    cases.append(("flags  a light variant drawn apart from dark", True,
                   lambda t: build(t, {**good, "light": art(BLACK, (250, 250, 250))})))
+    cases.append(("flags  tinted shipped as a copy of dark", True,
+                  lambda t: build(t, {**good, "tinted": good["dark"]})))
     cases.append(("flags  a tinted variant that is not greyscale", True,
                   lambda t: build(t, {**good, "tinted": art(BLACK, (255, 46, 135))})))
-    cases.append(("flags  a light variant redrawn without the knockouts", True,
-                  lambda t: build(t, {**good, "light": art(WHITE, PINK, holes=False)})))
+    cases.append(("flags  a tinted variant redrawn without the knockouts", True,
+                  lambda t: build(t, {**good, "tinted": art(BLACK, WHITE, holes=False)})))
     cases.append(("flags  an undeclared tinted variant", True,
                   lambda t: build(t, good, contents={"images": [
                       {"filename": "icon-light.png", "idiom": "universal"},
@@ -277,14 +289,15 @@ def self_test():
                   lambda t: build(t, {k: v for k, v in good.items() if k != "tinted"})))
     cases.append(("flags  art that is not the shipped square size", True,
                   lambda t: build(t, {k: art(c[0], c[1], side=TINY // 2)
-                                      for k, c in {"light": (WHITE, PINK), "dark": (BLACK, PINK),
+                                      for k, c in {"light": (BLACK, PINK), "dark": (BLACK, PINK),
                                                    "tinted": (BLACK, WHITE)}.items()},
                                   side=TINY // 2)))
-    # A near-identical pair must still PASS, or the mask check is just noise.
-    nudged = bytearray(good["light"])
-    nudged[3 * (TINY // 2 * TINY + TINY // 2)] = 254
-    cases.append(("passes two variants differing by one pixel of antialiasing", False,
-                  lambda t: build(t, {**good, "light": bytes(nudged)})))
+    # A near-identical mask must still PASS, or the mask check is just noise.
+    nudged = bytearray(good["tinted"])
+    at = 3 * (TINY // 2 * TINY + TINY // 2)
+    nudged[at:at + 3] = bytes((254, 254, 254))
+    cases.append(("passes a tinted mask differing by one pixel of antialiasing", False,
+                  lambda t: build(t, {**good, "tinted": bytes(nudged)})))
 
     ok = True
     for why, should_flag, make in cases:
@@ -306,8 +319,8 @@ if problems:
     print("✗ app icon findings:")
     for p in problems:
         print(f"  {p}")
-    print("\nThe light variant is DERIVED, never redrawn: "
-          "python3 design/app-icon/make-light-icon.py")
+    print("\nAll three come from one mask, never redrawn: "
+          "python3 design/app-icon/tentacle.py")
     sys.exit(1)
-print("✓ app icon: three distinct variants, grounds point the right way, "
+print("✓ app icon: light is the dark art, every ground is black, "
       "tinted is greyscale, one coverage mask across all three")

@@ -766,7 +766,9 @@ python3 "$ROOT/scripts/screenshot-vision-audit.py" \
   || fail "the screenshot vision pass lost a gate, its text branch or its honesty rail — see the output above"
 print -P "%F{green}✓ screenshot-vision audit%f"
 
-# The app icon's three luminosity variants (prd §869). The light PNG had been a
+# The app icon's three luminosity variants (prd §869, amended by §1639: the
+# light PNG is now the dark art ON PURPOSE, the black tile in every appearance,
+# and the audit requires the copy it once forbade). The light PNG had been a
 # BYTE-FOR-BYTE COPY of the dark one — same md5 — so everyone on the light or
 # default appearance saw the dark drawing, hot pink on a black tile, on a light
 # home screen. Nothing here could see it: the asset compiler ships the same
@@ -779,8 +781,8 @@ print -P "%F{green}✓ screenshot-vision audit%f"
 # It also pins the rule that makes the fix cheap: all three variants carry ONE
 # coverage mask. The eyes and suckers are knocked OUT of the mark rather than
 # painted on it, so a variant redrawn by hand loses them and the arms stop
-# reading at small sizes; a variant DERIVED from the dark art keeps them for
-# free (design/app-icon/make-light-icon.py).
+# reading at small sizes; all three written from one mask keep them for free
+# (design/app-icon/tentacle.py).
 step "App-icon audit"
 python3 "$ROOT/scripts/app-icon-audit.py" --self-test >/dev/null \
   || fail "the app-icon audit's own self-test failed — the check is broken, not the code"

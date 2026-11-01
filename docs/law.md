@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1774 of 1846 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1775 of 1847 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1224,7 +1224,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §866a — The floor was drawing over a door to the rest of the corpus
 - §867 — The dial answers the hand
 - §868 — ether.fi Cash gets the head its two siblings have had, and the room it shares is why it needed more than a copy (amended by §1311)
-- §869 — The icon colour setting is declined, and the light icon was the dark one
+- §869 — The icon colour setting is declined, and the light icon was the dark one (amended by §1639)
 - §870 — Quiet hours are deleted
 - §871 — "Your key" leaves Settings, because every other account is connected on its own page (amended by §1623, §1624, §1627)
 - §872 — every sheet the Settings rows raise carries the shell's environment with it, because on Catalyst it does not inherit one
@@ -2021,7 +2021,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1635 — A chat's sheet keeps when each message was sent: a day and time over a new day or a pause, one sender's run joined, "…
 - §1636 — A post's sheet reads like the post: the person on one line, the words, the pictures at their own shape, the quote, ho…
 - §1637 — A Telegram channel post's sheet: the channel's real @handle, "Forwarded from" over a forward's words, its views as th…
-- §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t…
+- §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t… (amended by §1639)
+- §1639 — The app icon is the black tile in every appearance: the default (light) icon is the dark art, byte for byte
 
 ## Dead rulings → what replaced them (generated)
 
