@@ -64,6 +64,7 @@ typeset -a KEEP
 KEEP=("$LIBDEV/CasberiDD" "$LIBDEV/CasberiCatalystDD" "$LIBDEV/CasberiMacDD"
       "$LIBDEV/CasberiReleaseDD" "$LIBDEV/CasberiReleaseDDMac"
       "$(ls -dt "$LIBDEV/Xcode/DerivedData"/Casberi-*(N/) 2>/dev/null | head -1)")
+[[ -n ${DISK_SWEEP_KEEP:-} ]] && KEEP+=("${DISK_SWEEP_KEEP%/}")   # a caller's own fixed dir (verify.sh's $DD)
 
 FREED=0
 typeset -a SWEPT
@@ -206,13 +207,14 @@ if [[ $MODE == --self-test ]]; then
   mkdir -p "$P/repo-with-build/Build"; : > "$P/repo-with-build/README"; age "$P/repo-with-build"
   mkdd "$P/casberi-perf-dd";                     age "$P/casberi-perf-dd"
   mkdd "$P/casberi-building-dd";                 age "$P/casberi-building-dd"
+  mkdd "$P/casberi-callers-dd";                  age "$P/casberi-callers-dd"   # DISK_SWEEP_KEEP
   mkdd "$P/claude-501/proj/sess/scratchpad/dd";  : > "$P/claude-501/proj/sess/scratchpad/notes.md"
   age "$P/claude-501/proj/sess"
   mkdd "$P/claude-501/loose-dd";                 age "$P/claude-501/loose-dd"
   mkdir -p "$U/XcodeDistPipeline.~~~old" "$U/XcodeDistPipeline.~~~new"; age "$U/XcodeDistPipeline.~~~old"
   zsh -c 'sleep 60; :' "$P/casberi-building-dd" & HOLD=$!                         # a build in flight
   sleep 0.3
-  DISK_SWEEP_LIBDEV=$L DISK_SWEEP_TMP=$P DISK_SWEEP_USERTMP=$U DISK_SWEEP_ONLY=files \
+  DISK_SWEEP_LIBDEV=$L DISK_SWEEP_TMP=$P DISK_SWEEP_USERTMP=$U DISK_SWEEP_ONLY=files DISK_SWEEP_KEEP=$P/casberi-callers-dd/ \
     DISK_SWEEP_LEDGER=/dev/null zsh "$0" >/dev/null 2>&1
   fails=0
   gone() { [[ ! -e $1 ]] || { print -r -- "✗ should be swept: ${1#$T/}"; (( fails++ )); } }
@@ -229,9 +231,10 @@ if [[ $MODE == --self-test ]]; then
   kept "$P/casberi-ship-wt"
   kept "$P/repo-with-build/Build"
   kept "$P/casberi-building-dd"
+  kept "$P/casberi-callers-dd"
   kept "$P/claude-501/proj/sess/scratchpad/notes.md"
   kept "$U/XcodeDistPipeline.~~~new"
-  (( fails == 0 )) && { print -r -- "✓ disk-sweep self-test: 6 swept, 8 kept"; exit 0; }
+  (( fails == 0 )) && { print -r -- "✓ disk-sweep self-test: 6 swept, 9 kept"; exit 0; }
   exit 1
 fi
 
@@ -248,8 +251,9 @@ fi
 AFTER=$(free_gb)
 
 GB=$(( FREED / 1048576 ))
-print -r -- "disk-sweep| freed ~${GB} GB in ${#SWEPT} item(s); free ${BEFORE} → ${AFTER} GB (df lags after a sim delete)"
-(( ${#SWEPT} )) && print -rl -- "  ${^SWEPT}"
+if (( FREED >= 1048576 )); then SIZE="~${GB} GB"; else SIZE="$(( FREED / 1024 )) MB"; fi
+print -r -- "disk-sweep| freed ${SIZE} in ${#SWEPT} item(s); free ${BEFORE} → ${AFTER} GB (df lags after a sim delete)"
+(( ${#SWEPT} )) && print -r -- "  ${SWEPT[*]}"
 if [[ $MODE != --dry-run ]]; then
   mkdir -p "${LEDGER:h}" 2>/dev/null
   print -r -- "$(date +%Y-%m-%dT%H:%M:%S)  freed=${GB}GB  items=${#SWEPT}  free=${BEFORE}->${AFTER}GB" >> "$LEDGER" 2>/dev/null
