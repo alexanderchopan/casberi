@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1770 of 1842 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1771 of 1843 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1027,7 +1027,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined (amended by §1577, §1582)
 - §702 — "What it reaches" leaves the account pages; the app's hosts are stated once, in settings
 - §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows (amended by §1158)
-- §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it
+- §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it (amended by §1636)
 - §705 — The avatar is a TOGGLE: press it again and Settings closes (amended by §796)
 - §706 — The daily whisper is CUT: two notification classes, no third
 - §707 — A notification shows the face of the person who ACTED, and the demo shows notifications at all
@@ -1562,7 +1562,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things (amended by §1467, §1589)
 - §1186 — A song, a video and a picture stand in the room's frame
 - §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted (amended by §1217)
-- §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
+- §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192, §1636)
 - §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token (amended by §1217)
 - §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
 - §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192, §1580)
@@ -1780,7 +1780,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
 - §1395 — Deleting a price alert clears its Went off rows, and a Went off row deletes from its long press (amends §1081's Alert…
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
-- §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n…
+- §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n… (amended by §1636)
 - §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic…
 - §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (amended by §1581)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
@@ -2018,6 +2018,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1632 — The Wallet keeps a watchlist: tokens you watch, one door on Home trailing the day's biggest mover, apart from Followi… (amended by §1634)
 - §1633 — Permissions' box leads with the worst permission and a strip of what each app reaches; Threats' box is this month aga…
 - §1634 — The Watchlist's box draws every watched token side by side: each window as the percent from where it began, one line…
+- §1636 — A post's sheet reads like the post: the person on one line, the words, the pictures at their own shape, the quote, ho…
 
 ## Dead rulings → what replaced them (generated)
 

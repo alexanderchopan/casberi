@@ -230,11 +230,18 @@ struct SocialReception: Equatable {
     /// shape where an empty card would otherwise read as a broken fetch.
     var ceiling: String?
 
-    /// The same reception without the network's counts, for a post whose
-    /// box already stamps them (prd §1188).
-    var withoutReadings: SocialReception {
+    /// How it landed, under a post's words and above its tiles (prd §1636):
+    /// the counts and who liked it, nothing else.
+    var landing: SocialReception {
+        SocialReception(readings: readings, likers: likers)
+    }
+
+    /// What is left for the foot once `landing` stood under the post: how it
+    /// got here, and whether the numbers are a snapshot.
+    var footnotes: SocialReception {
         var copy = self
         copy.readings = []
+        copy.likers = nil
         return copy
     }
 

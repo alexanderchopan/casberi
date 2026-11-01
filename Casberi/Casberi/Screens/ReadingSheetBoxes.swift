@@ -49,7 +49,6 @@ import SwiftUI
         leadPicture(thing) != nil || (thing.imageURLs.isEmpty && thing.previewImageData != nil)
     }
 
-    /// What the network counted, only where it counted something.
     /// The author's face at the centred head's size (prd §1397): the ramp's
     /// own tier, named here, so the face-ramp audit can read it (a `size`
     /// parameter resolves to no tier in this file).
@@ -60,31 +59,6 @@ import SwiftUI
             BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
         }
     }
-
-    /// The post's picture, filling whatever frame it is given (prd §1397):
-    /// under the tiles, since the head is the person.
-    @ViewBuilder static func picture(_ thing: Thing) -> some View {
-        if let url = leadPicture(thing) {
-            GeometryReader { geo in
-                RemoteArt(urlString: url, width: geo.size.width,
-                          height: geo.size.height, cornerRadius: 0)
-            }
-        } else {
-            PhotoWell(thing: thing)
-        }
-    }
-
-    static func counts(_ thing: Thing) -> [String] {
-        var out: [String] = []
-        if let likes = thing.likeCount, likes > 0 {
-            out.append(likes == 1 ? String(localized: "1 like") : String(localized: "\(likes) likes"))
-        }
-        if let replies = thing.replyCount, replies > 0 {
-            out.append(replies == 1 ? String(localized: "1 reply") : String(localized: "\(replies) replies"))
-        }
-        return out
-    }
-
 }
 
 // MARK: - A mail

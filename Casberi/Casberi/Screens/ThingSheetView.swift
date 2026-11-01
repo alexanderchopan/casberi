@@ -532,6 +532,9 @@ struct ThingSheetView: View {
                 let boxedByHead: Bool = chartHead || mailHead || transcriptHead || momentHead
                     || postHead || mediaHead || articleHead
                 let plainHead: Bool = !boxedByShape && !boxedByHead
+                // A notice in its own frame draws the post it is about there,
+                // between the head and the tiles (prd §1636).
+                let noticeFramed: Bool = plainHead && socialShape == .notice
                 let ownHead: Bool = articleHead || postHead || framedShot || moneyReceipt != nil
                     || mediaHead || chartHead
                     || workReading != nil
@@ -1082,7 +1085,9 @@ struct ThingSheetView: View {
                 let hasWords: Bool = drawsSocialBody || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event && wordsDiffer)
                 let contentShown: Bool = shapeHasBody && !dueInHead && hasWords
-                if contentShown && !mediaHead {
+                // A post's frame and a notice's draw their own body, in
+                // their own order (prd §1636).
+                if contentShown && !mediaHead && !postHead && !noticeFramed {
                     sheetContent(articleHead: articleHead, mailHead: mailHead, chartHead: chartHead)
                         .environment(\.linkInBox, plainHead)
                         .padding(.top, DS.Space.s3)
@@ -1111,8 +1116,9 @@ struct ThingSheetView: View {
                 // with it, so the two can never say the same thing twice.
                 // A person's box already says how they came (prd §1187).
                 if let reception, !isPerson {
-                    // A post's counts stand in its box (prd §1188).
-                    SocialReceptionCard(reception: postHead ? reception.withoutReadings : reception)
+                    // A post's counts and likers stand under its words
+                    // (prd §1636); the foot keeps how it got here.
+                    SocialReceptionCard(reception: postHead ? reception.footnotes : reception)
                         .padding(.horizontal, postHead ? DSRoomChassis.leadInset : DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.16)
@@ -4053,7 +4059,7 @@ struct ThingSheetView: View {
     /// the sheet was titled "X", drew X three times and a lone "Today"). Its
     /// sentence is its name (§915), the box is the person it is from — face,
     /// handle, the app and when, the post box's own person shape — then the
-    /// tiles, and the post it is about stands under them as the content.
+    /// post it is about, drawn as a post, and the tiles under it (§1636).
     @ViewBuilder
     private var noticeFrame: some View {
         // THE CENTRED HEAD (prd §1397): the person it is from, the
@@ -4065,10 +4071,22 @@ struct ThingSheetView: View {
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
+        // THE POST IT IS ABOUT, AS A POST (prd §1636): its face and handle,
+        // the words whole in reading type, its pictures — then the tiles.
+        // Under the tiles as grey context it was the least of the sheet.
+        if let quote = thing.quote {
+            SocialQuoteCard(card: quote, source: thing.source, full: true)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+                .settleIn(delay: 0.08)
+        }
+        SocialPostContent(thing: thing, parts: [.pictures])
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.1)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
                  centered: true)
             .padding(.top, DSRoomChassis.leadGap)
-            .settleIn(delay: 0.08)
+            .settleIn(delay: 0.12)
         dialResult
     }
 
@@ -4135,55 +4153,52 @@ struct ThingSheetView: View {
     /// A picture under the tiles (prd §1397): a post's, an article's.
     static let sheetArtHeight: CGFloat = 200
 
-    /// A post in the room's frame (prd §1188, §1192): the person is the
-    /// title, the box its picture or the person, then the tiles, what it
-    /// answered, and the words whole, once.
+    /// A post's sheet READS LIKE THE POST (prd §1636, amends §1397 for a
+    /// post): the person on one line, what it answers, the words in reading
+    /// type with their links, the pictures at their own shape, the post it
+    /// quotes, how it landed — and only then the tiles, and the rest of the
+    /// thread under them. The centred head stood the tiles between who said
+    /// it and what they said.
     @ViewBuilder
     private var postFrame: some View {
-        let pictured = PostSheetBox.picturesTheBox(thing)
-        // THE CENTRED HEAD (prd §1397): the person, then the tiles, then
-        // the picture and the words.
-        SheetPartyHead(name: PostSheetBox.title(thing), day: thing.capturedAt,
-                       line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
-                       onFace: facesAreDoors ? openAuthorProfile : nil) {
-            PostSheetBox.face(thing)
-        }
+        PostSheetHead(thing: thing, name: PostSheetBox.title(thing),
+                      onFace: facesAreDoors ? openAuthorProfile : nil)
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
-            .padding(.top, DSRoomChassis.leadGap)
-            .settleIn(delay: 0.08)
-        dialResult
-        if pictured {
-            PostSheetBox.picture(thing)
-                .frame(height: Self.sheetArtHeight)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-                .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s6)
-        }
         if let parent = thing.parent {
             replyingToRow(parent)
                 .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s6)
+                .padding(.top, DS.Space.s4)
         }
-        Text(verbatim: SocialSheetSource.words(for: thing))
-            .dsText(.heading20)
-            .foregroundStyle(DS.textPrimary)
-            .textSelection(.enabled)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, DSRoomChassis.leadInset)
-            .padding(.top, DS.Space.s6)
-        // The counts under the words (prd §1397): the head holds no stamps.
-        let counts = PostSheetBox.counts(thing)
-        if !counts.isEmpty {
-            Text(verbatim: counts.joined(separator: " · "))
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textSecondary)
+        let words = SocialSheetSource.words(for: thing)
+        if !words.isEmpty {
+            Text(ProseLinks.rendered(words))
+                .dsText(.reading17)
+                .foregroundStyle(DS.textPrimary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s4)
+                .settleIn(delay: 0.08)
         }
+        SocialPostContent(thing: thing, parts: [.pictures, .quote])
+            .padding(.top, DS.Space.s4)
+            .settleIn(delay: 0.1)
+        // How it landed, under the post (prd §1636): the counts with their
+        // nouns and who liked it. The foot keeps how it got here.
+        if let landing = reception?.landing, !landing.isEmpty {
+            SocialReceptionCard(reception: landing)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s3)
+                .settleIn(delay: 0.12)
+        }
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.14)
+        dialResult
+        SocialPostContent(thing: thing, parts: [.thread])
+            .padding(.top, DS.Space.s6)
     }
 
     /// A mail in the room's frame (prd §1188): the sender is the title, the

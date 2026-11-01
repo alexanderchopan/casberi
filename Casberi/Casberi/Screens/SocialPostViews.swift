@@ -24,6 +24,12 @@ extension EnvironmentValues {
 
 struct SocialPostContent: View {
     let thing: Thing
+    /// Which of the body's three parts to draw. A post's sheet takes them
+    /// apart (prd §1636): the pictures and the quote under the words, the
+    /// thread's rest under the tiles; a notice draws the pictures under the
+    /// post it is about.
+    enum Part: CaseIterable { case pictures, quote, thread }
+    var parts: Set<Part> = Set(Part.allCases)
     @Environment(\.postLeadPictureDrawn) private var leadDrawn
 
     /// The counts, the likers and the provenance sentence LEFT this view on
@@ -64,13 +70,16 @@ struct SocialPostContent: View {
         // Pictures stand at the well's edge and the words beside them in the
         // rows' column (prd §884), where the post head sets the post.
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            photos
-                .padding(.horizontal, DS.Space.s4)
-            if let quote = thing.quote {
+            if parts.contains(.pictures) {
+                photos
+                    .padding(.horizontal, DS.Space.s4)
+            }
+            if parts.contains(.quote), let quote = thing.quote {
                 SocialQuoteCard(card: quote, source: thing.source)
                     .padding(.horizontal, DSRoomChassis.leadInset)
             }
-            if let rest = SocialSheet.threadRest(enriched: thing.enrichedText,
+            if parts.contains(.thread),
+               let rest = SocialSheet.threadRest(enriched: thing.enrichedText,
                                                  words: SocialSheetSource.words(for: thing),
                                                  count: thing.messageCount) {
                 SocialThreadRest(parts: rest, total: thing.messageCount ?? 0)
@@ -111,10 +120,9 @@ struct SocialPostContent: View {
                     }
                 }
         } else if images.count == 1 {
-            // One picture fills the lead's well, as an article's does (§884).
-            SocialPhoto(urlString: images[0], height: DSRoomChassis.sheetArtHeight,
-                        cornerRadius: DS.Radius.widget)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // One picture at its own shape (prd §1636): a crop to the box's
+            // height cut the half of a screenshot that was the point.
+            SocialPhotoFit(urlString: images[0])
         } else if images.count > 1 {
             ScrollView(.horizontal) {
                 HStack(spacing: DS.Space.s2) {
@@ -199,6 +207,52 @@ struct SocialPhoto: View {
     }
 }
 
+/// One post picture across the column at ITS OWN SHAPE (prd §1636), so a
+/// screenshot is read whole. A very tall one stops at 3:4 and crops from the
+/// middle, so a single picture never runs the post's tiles off the screen.
+/// Until it loads it holds a 4:3 well; a dead URL draws nothing, as
+/// `SocialPhoto` does.
+struct SocialPhotoFit: View {
+    let urlString: String
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    /// Width over height. Never narrower than 3:4.
+    private var ratio: CGFloat {
+        guard let image, image.size.height > 0 else { return 4.0 / 3.0 }
+        return max(image.size.width / image.size.height, 0.75)
+    }
+
+    var body: some View {
+        Group {
+            if !failed {
+                Color.clear
+                    .aspectRatio(ratio, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .overlay {
+                        if let image {
+                            Image(uiImage: image).resizable().scaledToFill()
+                        } else {
+                            DS.fillFaint
+                        }
+                    }
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            }
+        }
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        // Across a phone's column at 3×.
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: 1200) {
+        case .image(let ui, _): image = ui
+        case .dead:             failed = true
+        case .transientFailure: break   // retry on the next appearance
+        }
+    }
+}
+
 /// The post this post QUOTES — both networks' signature form, dropped at ingest
 /// until 2026-07-16, so a quote-post read as a bare, contextless line. Set
 /// apart by a leading inset and secondary ink, never a plate or a line (prd
@@ -221,18 +275,50 @@ struct SocialQuoteCard: View {
     /// 2026-07-27 pass grew both). In a row the quote stays a read: the row's
     /// one tap opens the thing, and the walk is a tap away inside it.
     var walkable = true
+    /// The post a NOTICE is about, drawn as a post rather than as context
+    /// (prd §1636): the face at row size, the handle as its name, the words
+    /// whole in reading type and primary ink, at the column's edge.
+    var full = false
     @State private var walking = false
 
+    @ViewBuilder private var cardFace: some View {
+        if full {
+            if let avatar = card.avatarURL {
+                RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: source, circular: true)
+            } else {
+                BridgeIcon(name: source, size: DS.Face.row, circular: true)
+            }
+        } else if let avatar = card.avatarURL {
+            RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: source, circular: true)
+        } else {
+            BridgeIcon(name: source, size: DS.Face.badge, circular: true)
+        }
+    }
+
+    @ViewBuilder private var cardWords: some View {
+        if full {
+            Text(ProseLinks.rendered(card.text))
+                .dsText(.reading17).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(card.text)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                // A quote is context, not the point — it shows enough to
+                // know what's being answered and stops. The tap has the rest.
+                .lineLimit(6)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var cardBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: full ? DS.Space.s3 : DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
-                if let avatar = card.avatarURL {
-                    RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: source, circular: true)
-                } else {
-                    BridgeIcon(name: source, size: DS.Face.badge, circular: true)
-                }
+                cardFace
                 Text("@\(SocialThread.shortHandle(card.handle))")
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .dsText(full ? .heading17 : .subhead12)
+                    .foregroundStyle(full ? DS.textPrimary : DS.textTertiary)
                 Spacer(minLength: 0)
             }
             // A WORDLESS post is a real card, not a broken one (prd §704): a
@@ -241,17 +327,11 @@ struct SocialQuoteCard: View {
             // reads as a failed fetch. The picture is drawn above this card by
             // `SocialPostContent`, so the card is complete without it.
             if !card.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(card.text)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    // A quote is context, not the point — it shows enough to
-                    // know what's being answered and stops. The tap has the rest.
-                    .lineLimit(6)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                cardWords
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, DS.Space.s4)
+        .padding(.leading, full ? 0 : DS.Space.s4)
         .contentShape(Rectangle())
     }
 

@@ -130,7 +130,14 @@ guard "Corpus.liveRefPrefixes is derived from the per-source map" \
 guard "ImportRemoval.hasLiveHalf asks the per-source map" \
   'Corpus\.liveRefPrefixesBySource\[source\]' "$REMOVAL"
 guard "the reception block is drawn by the sheet" \
-  'SocialReceptionCard\(reception: postHead \? reception\.withoutReadings : reception\)' "$VIEW"
+  'SocialReceptionCard\(reception: postHead \? reception\.footnotes : reception\)' "$VIEW"
+# THE POST LEADS (prd §1636): its counts and likers stand under the words, the
+# foot above keeps only how it got here — the two halves or neither.
+guard "a post's counts and likers stand under its words" \
+  'SocialReceptionCard\(reception: landing\)' "$VIEW"
+# A notice draws the post it is about AS a post, never as grey context.
+guard "a notice draws its post whole" \
+  'SocialQuoteCard\(card: quote, source: thing\.source, full: true\)' "$VIEW"
 guard "the reception is recomposed when the live read answers" \
   'live: live, context: modelContext' "$VIEW"
 # THE FROM ROW IS DELETED (prd §736), and these two guards became one.
