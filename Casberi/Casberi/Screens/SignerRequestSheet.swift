@@ -1,4 +1,5 @@
 import CoreImage.CIFilterBuiltins
+import os
 import SwiftUI
 import UIKit
 
@@ -18,6 +19,8 @@ struct SignerRequestSheet: View {
     let ask: SignerAsk
     private var signer: String? { ask.signer }
     @State private var copiedInstead = false
+    /// The wallets on this phone with their own link (prd §1644), asked once.
+    @State private var installed: [SignerSwitch.Wallet] = []
     /// A phone cannot scan its own screen (user: "it's only relevant if you
     /// had another phone"): there the wallet on this phone leads and the code
     /// is small, for a second device; an iPad or a Mac leads with the code.
@@ -38,10 +41,32 @@ struct SignerRequestSheet: View {
                 if ask.canAskAgain {
                     DSDoorRow(icon: "arrow.clockwise", label: "Ask again") { ask.again() }
                 }
+                // Out of a wallet that will not answer, the ask kept (prd
+                // §1644): the same signature over a fresh pairing.
+                if ask.kept, ask.canSwitch, let signer {
+                    DSDoorRow(icon: "arrow.triangle.swap", label: "Use another wallet") { ask.useAnother() }
+                    DSFootnote("It must hold \(AddressTail.short(signer, wholeUpTo: 4))'s key.")
+                }
                 DSDoorRow(icon: "xmark", label: "Cancel") { ask.cancel() }
             }
         }
+        .onAppear { installed = Self.installedWallets() }
         .onDisappear { ask.dismissed() }
+    }
+
+    /// Which of `SignerSwitch.wallets` this phone has. The Mac answers none,
+    /// and takes the `wc:` door. DEBUG's `-signerWalletsInstalled
+    /// "metamask,rainbow"` pretends, for the simulator, which has none.
+    static func installedWallets() -> [SignerSwitch.Wallet] {
+        #if DEBUG
+        if let fake = UserDefaults.standard.string(forKey: "signerWalletsInstalled") {
+            let schemes = Set(fake.split(separator: ",").map(String.init))
+            return SignerSwitch.wallets.filter { schemes.contains($0.scheme) }
+        }
+        #endif
+        return SignerSwitch.wallets.filter { w in
+            URL(string: "\(w.scheme)://").map(UIApplication.shared.canOpenURL) ?? false
+        }
     }
 
     /// A Signer paired before: no code, its wallet asked again (prd §1601).
@@ -112,15 +137,26 @@ struct SignerRequestSheet: View {
         }
     }
 
+    /// One door per wallet on this phone, onto its own link (prd §1644: the
+    /// bare `wc:` link went to whichever app claims it, Rainbow on the
+    /// user's phone, and no other could be picked); none, the `wc:` door.
     @ViewBuilder private func doors(_ url: URL) -> some View {
-        DSDoorRow(icon: "arrow.up.forward.app", label: "Open wallet") {
-            // The wallet that claims WalletConnect's own link (Rainbow,
-            // Trust, Zerion…); none here, the link is copied instead.
-            if UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url)
+        ForEach(SignerSwitch.doors(pairing: url, installed: { installed.contains($0) }), id: \.url) { door in
+            if let wallet = door.wallet {
+                DSDoorRow(icon: "arrow.up.forward.app", title: Text("Open \(wallet.name)")) {
+                    UIApplication.shared.open(door.url)
+                }
             } else {
-                DSPasteboard.copySensitive(url.absoluteString)
-                withAnimation(DS.Motion.standard) { copiedInstead = true }
+                DSDoorRow(icon: "arrow.up.forward.app", label: "Open wallet") {
+                    // The wallet that claims WalletConnect's own link (Rainbow,
+                    // Trust, Zerion…); none here, the link is copied instead.
+                    if UIApplication.shared.canOpenURL(door.url) {
+                        UIApplication.shared.open(door.url)
+                    } else {
+                        DSPasteboard.copySensitive(door.url.absoluteString)
+                        withAnimation(DS.Motion.standard) { copiedInstead = true }
+                    }
+                }
             }
         }
         if copiedInstead {
@@ -150,8 +186,10 @@ struct SignerRequestSheet: View {
         YourAccountChain.CoSigner(owner: owner) { _, typedData in
             do {
                 return try await asking(signer: owner) { ask in
-                    try await YourAccountSignerLink.sign(typedData: typedData, signer: owner, chainId: chainId,
-                                                         kept: { ask.ask(kept: $0) }, resend: ask.resends, show: { ask.pair($0) })
+                    await ask.offerSwitch()
+                    return try await YourAccountSignerLink.sign(typedData: typedData, signer: owner, chainId: chainId,
+                                                                kept: { ask.ask(kept: $0) }, resend: ask.resends,
+                                                                switching: ask.switches, show: { ask.pair($0) })
                 }
             } catch {
                 throw YourAccountChain.Failure(message: words(error))
@@ -209,21 +247,42 @@ struct SignerRequestSheet: View {
             }
         }
 
+        /// One sheet for the pairing and the ask; Use another wallet (prd
+        /// §1644) lets the batch's pairing go and pairs again in it, so later
+        /// networks ride the new one.
         private func sign(_ typedData: String, chainId: Int) async throws -> [UInt8] {
-            if pairing == nil || pairing?.chainIds.contains(chainId) == false {
-                let owner = self.owner, chainIds = self.chainIds
-                pairing = try await SignerRequestSheet.asking(signer: owner) { ask in
-                    try await YourAccountSignerLink.connect(signer: owner, chainIds: chainIds) { ask.pair($0) }
-                }
+            let owner = self.owner, chainIds = self.chainIds
+            let start = pairing?.chainIds.contains(chainId) == true ? pairing : nil
+            // The pairing asked, as it stands when the ask ends: nil once Use
+            // another wallet let it go and no other paired.
+            let held = OSAllocatedUnfairLock(initialState: start)
+            defer {
+                let now = held.withLock { $0 }
+                // A pairing for other networks, never touched, stays.
+                if now != nil || start != nil { pairing = now }
             }
-            guard let pairing else { throw YourAccountSignerLink.Failure.unavailable }
-            // Asked with the sheet up and its Cancel (prd §1601), as a kept
-            // session is: no second scan, a way out.
-            let owner = self.owner
             return try await SignerRequestSheet.asking(signer: owner) { ask in
-                await ask.ask(kept: nil)
-                return try await YourAccountSignerLink.request(pairing, typedData: typedData, chainId: chainId,
-                                                               resend: ask.resends)
+                await ask.offerSwitch()
+                while true {
+                    let current: YourAccountSignerLink.Pairing
+                    if let p = held.withLock({ $0 }) {
+                        current = p
+                    } else {
+                        current = try await YourAccountSignerLink.connect(signer: owner, chainIds: chainIds) { ask.pair($0) }
+                        held.withLock { $0 = current }
+                    }
+                    do {
+                        // Asked with the sheet up and its Cancel (prd §1601), as
+                        // a kept session is: no second scan, a way out, shown
+                        // once the request is out and its switch is heard.
+                        return try await YourAccountSignerLink.request(current, typedData: typedData, chainId: chainId,
+                                                                       resend: ask.resends, switching: ask.switches,
+                                                                       sent: { ask.ask(kept: nil) })
+                    } catch YourAccountSignerLink.Failure.switched {
+                        YourAccountSignerLink.close(current)
+                        held.withLock { $0 = nil }
+                    }
+                }
             }
         }
 
@@ -305,8 +364,12 @@ final class SignerAsk {
     private(set) var canAskAgain = false
     static let askAgainAfter: Duration = .seconds(10)
     /// Each Ask again, for the request waiting on the wallet (prd §1609).
-    let resends: AsyncStream<Void>
-    @ObservationIgnored private let resend: AsyncStream<Void>.Continuation
+    let resends = SignerSignal()
+    /// Use another wallet, for the request waiting on the wallet (prd §1644).
+    let switches = SignerSignal()
+    /// Offered only where an ask listens for it (`offerSwitch`), never a row
+    /// that does nothing (§83).
+    private(set) var canSwitch = false
     @ObservationIgnored private var offer: Task<Void, Never>?
     @ObservationIgnored var stop: @Sendable () -> Void = {}
     @ObservationIgnored private var close: (@MainActor () -> Void)?
@@ -314,7 +377,22 @@ final class SignerAsk {
 
     init(signer: String?) {
         self.signer = signer
-        (resends, resend) = AsyncStream<Void>.makeStream()
+    }
+
+    /// The ask listens for Use another wallet (prd §1644).
+    func offerSwitch() { canSwitch = true }
+
+    /// Lets the wallet asked go and pairs another on the same ask (prd
+    /// §1644): the sheet waits for the fresh link, then shows it.
+    func useAnother() {
+        guard !closing, canSwitch else { return }
+        withAnimation(DS.Motion.standard) {
+            kept = false
+            door = nil
+            canAskAgain = false
+        }
+        offer?.cancel()
+        switches.fire()
     }
 
     func pair(_ url: URL) {
@@ -342,7 +420,7 @@ final class SignerAsk {
     /// Ask the wallet the same question again and open it onto it.
     func again() {
         guard !closing else { return }
-        resend.yield()
+        resends.fire()
         if let door, UIDevice.current.userInterfaceIdiom == .phone { UIApplication.shared.open(door) }
         offerAgain()
     }
@@ -377,7 +455,8 @@ final class SignerAsk {
     func done() {
         closing = true
         offer?.cancel()
-        resend.finish()
+        resends.finish()
+        switches.finish()
         close?()
         close = nil
     }

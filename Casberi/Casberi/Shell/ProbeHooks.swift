@@ -4004,9 +4004,12 @@ enum ProbeHooks {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
                 // `kept[:0x…]` (prd §1609): a Signer paired before, "Approve in
-                // your wallet", and Ask again ten seconds on.
+                // your wallet", and Ask again ten seconds on; with an address,
+                // Use another wallet too (prd §1644). `-signerWalletsInstalled
+                // "metamask,rainbow,rabby"` draws the pairing's wallet doors.
                 if raw.hasPrefix("kept") {
                     let ask = SignerAsk(signer: raw.split(separator: ":").dropFirst().first.map(String.init))
+                    ask.offerSwitch()
                     ask.ask(kept: nil)
                     NSLog("signerSheetPreview: shown kept")
                     return
