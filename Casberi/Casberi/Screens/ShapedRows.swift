@@ -777,7 +777,8 @@ struct BandRow: View {
                       : notePreview ? previewLine
                       : line(project: project, leader: leader, qualifier: qualifier),
                   leadIsPicture: isPicture(leader),
-                  face: personFace) {
+                  face: personFace,
+                  yourWords: !imageOnly && Pinboard.isNote(thing)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
                     if thing.isFlagged {

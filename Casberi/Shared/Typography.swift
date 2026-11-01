@@ -207,10 +207,13 @@ enum DSFont {
         }
     }
 
-    static func font(size: CGFloat, weight: Font.Weight, monospaced: Bool) -> Font {
-        monospaced
-            ? .system(size: size, weight: weight, design: .monospaced)
-            : .custom(name(for: weight), fixedSize: size)
+    static func font(size: CGFloat, weight: Font.Weight, monospaced: Bool,
+                     yourWords: Bool = false) -> Font {
+        if monospaced { return .system(size: size, weight: weight, design: .monospaced) }
+        // Words you wrote take Apple's serif, New York, at the rung's size
+        // and weight; everything the app brought in stays Figtree.
+        if yourWords { return .system(size: size, weight: weight, design: .serif) }
+        return .custom(name(for: weight), fixedSize: size)
     }
 }
 
@@ -389,16 +392,24 @@ private struct DSTextModifier: ViewModifier {
     @Environment(\.sizeCategory) private var sizeCategory
     // …and the Bold Text setting, which a custom family has to answer itself.
     @Environment(\.legibilityWeight) private var legibilityWeight
+    @Environment(\.dsYourWords) private var yourWords
 
     func body(content: Content) -> some View {
         let scaled = UIFontMetrics(forTextStyle: style.relative)
             .scaledValue(for: style.platformSize)
         let weight = legibilityWeight == .bold ? DSFont.bolder(style.weight) : style.weight
         content
-            .font(DSFont.font(size: scaled, weight: weight, monospaced: style.monospaced))
+            .font(DSFont.font(size: scaled, weight: weight, monospaced: style.monospaced,
+                              yourWords: yourWords))
             .tracking(style.tracking)
             .lineSpacing(style.lineSpacing)
     }
+}
+
+extension EnvironmentValues {
+    /// Text in this subtree is words the person wrote (a note of yours), so
+    /// `dsText` draws it in New York instead of Figtree.
+    @Entry var dsYourWords = false
 }
 
 extension View {

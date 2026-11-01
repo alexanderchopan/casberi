@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1781 of 1853 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1782 of 1854 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -839,7 +839,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §529 — Bankr becomes a first-class agent — a conversation, an in-app sign-up, and a permission that can act (part superseded by §582, §800)
 - §530 — "The network refused it: the node refused the transaction" — the write path could not say why, and one refusal it sho… (part superseded by §1038)
 - §531 — The Hegotá account that could never be made again, and the faucet sentence that could never be said (part superseded by §1038)
-- §532 — Five sizes, one family: the type ramp becomes the brand
+- §532 — Five sizes, one family: the type ramp becomes the brand (amended by §1646)
 - §533 — Category chips get a user-set order, past the 2026-08-11 constant (amended by §1208f)
 - §534 — ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (part superseded by §540)
 - §535 — Polar becomes a room — Stripe's doctrine applied to a second Merchant of Record
@@ -2029,6 +2029,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's…
 - §1644 — The co-signer's sheet lets you pick another wallet: Use another wallet on a kept session, Cancel drops a session that…
 - §1645 — A source's row looks like its app: one table of looks, each drawn only from a fact the bridge stored (amends §1497's…
+- §1646 — A note of yours is set in New York; everything the app brought in stays Figtree
 
 ## Dead rulings → what replaced them (generated)
 

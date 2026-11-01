@@ -64,6 +64,9 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// watched row's price over its move): on the name's line it pushed the
     /// line a whole figure below its name.
     var trailingBesideLine = false
+    /// The title and line are words the person wrote (a note of yours), drawn
+    /// in New York; the trailing slot keeps the app's face.
+    var yourWords = false
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
@@ -166,6 +169,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
             }
             Text(name)
                 .dsText(.body17)
+                .environment(\.dsYourWords, yourWords)
                 .fontWeight(emphasized ? .medium : .regular)
                 .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)
@@ -179,6 +183,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     private func styledLine(_ line: Text) -> some View {
         line
             .dsText(.subhead12)
+            .environment(\.dsYourWords, yourWords)
             .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
             .lineLimit(lineLines)
     }
@@ -248,11 +253,13 @@ extension DSFeedRow where Below == EmptyView {
          leadIsPicture: Bool = false,
          face: String? = nil,
          trailingBesideLine: Bool = false,
+         yourWords: Bool = false,
          @ViewBuilder lead: () -> Lead,
          @ViewBuilder trailing: () -> Trailing) {
         self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
                   leadIsPicture: leadIsPicture, face: face, trailingBesideLine: trailingBesideLine,
+                  yourWords: yourWords,
                   lead: lead, trailing: trailing, below: { EmptyView() })
     }
 }

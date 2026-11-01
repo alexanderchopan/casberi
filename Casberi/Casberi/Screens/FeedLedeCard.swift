@@ -787,6 +787,9 @@ struct FeedLedeCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        // A note of yours is your words, in New York as its row draws them;
+        // a journal brought in from another app keeps Figtree.
+        .environment(\.dsYourWords, Pinboard.isNote(thing))
     }
 
     /// A LIST IN THE BOX TICKS (prd §1099): a note of yours whose words hold
