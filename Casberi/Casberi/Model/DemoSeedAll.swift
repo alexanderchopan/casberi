@@ -251,6 +251,9 @@ enum DemoSeedAll {
                               // Lightning (prd §1098) — the real seat's
                               // `lightning:` ref family, same reasoning.
                               "lightning:demo",
+                              // SimpleFIN (prd §1663) — the real seat's
+                              // escaped ref shape with "demo" as the bank.
+                              "simplefin:txn:demo",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -3817,6 +3820,30 @@ enum DemoSeedAll {
             }
         }
 
+        // SimpleFIN (prd §1663). A bank's rows as the seat lands them: shops
+        // carry Purchase or Refund (Spending reads those), a paycheck is a
+        // Deposit, a card payment off checking carries neither, so Spending
+        // never counts the card twice. "demo" is the bank, which has no
+        // icon, so the rows wear SimpleFIN's mark.
+        let bank: [(String, String, Double, [String], String, String, Double)] = [
+            ("Blue Bottle · $6.50", "Blue Bottle", 6.50, ["Purchase"], "sent", "Chase · Sapphire", 0.3),
+            ("Whole Foods · $84.20", "Whole Foods", 84.20, ["Purchase"], "sent", "Chase · Sapphire", 1.4),
+            ("Received · Northwind Payroll · $3,200.00", "Northwind Payroll", 3_200, ["Deposit"], "received",
+             "Chase · Total Checking", 4),
+            ("Chase Card Payment · $612.00", "Chase Card Payment", 612, [], "sent", "Chase · Total Checking", 5),
+        ]
+        out += bank.enumerated().map { i, x in
+            row(.transaction, x.0, source: "SimpleFIN", ref: "simplefin:txn:demo:\(i)",
+                days: x.6, hour: 12, tags: x.3) { t in
+                t.transferCounterparty = x.1
+                t.transferDirection = x.4
+                t.transferAmount = AppleWalletRoom.money(x.2, "USD")
+                t.priceValue = x.2
+                t.priceCurrency = "USD"
+                t.authorHandle = x.5
+            }
+        }
+
         // Lightning (prd §1098). Three settled payments as the seat lands them:
         // titled by memo, or by direction when there is none, with the amount
         // in sats in the trailing slot. No content, as a real one has none
@@ -5598,6 +5625,8 @@ enum DemoSeedAll {
         ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
         // Lightning (prd §1098): what `LightningWatch` composes.
         ("Lightning", "Connected", "Reads your Lightning balance and payments."),
+        // SimpleFIN (prd §1663): the banks `SimpleFINWatch` names.
+        ("SimpleFIN", "Chase", "Reads your banks' balances and transactions."),
         // Privy (prd §803g) — how many apps made a wallet and how many are
         // funded, what `PrivyScreen.signedInLine` composes.
         ("Privy", "6 apps · 2 funded", "Reads which apps made you an account."),
