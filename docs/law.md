@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1804 of 1876 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1805 of 1877 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2052,6 +2052,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
 - §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us…
 - §1668 — Spend asks Face ID only when you press Show gift cards: Bitrefill's pass is asked for by a row in the merchant list,…
+- §1669 — Needs you's box states what the asks hold up, not how many: "Held up", the money, since when, one bar split by ask an…
 
 ## Dead rulings → what replaced them (generated)
 

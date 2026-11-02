@@ -2673,6 +2673,7 @@ harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscripti
 # §1378): Wise's stuck word and Safe's "your signature is needed" are dropped
 # there, the Safe count stays, and the Feed keeps them all.
 harness "Needs-you words self-test" "needs-you words" "scripts/needs-you-words-selftest.sh" "the needs-you words self-test failed — run scripts/needs-you-words-selftest.sh"
+harness "Needs-you held self-test" "needs-you held" "scripts/needs-you-held-selftest.sh" "the needs-you held self-test failed — run scripts/needs-you-held-selftest.sh"
 
 # A money row's name fits its one line (prd §1414): a swap reads pair · venue,
 # in on the right, out on the line; a Safe row names the act and counts on the

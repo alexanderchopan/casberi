@@ -194,6 +194,28 @@ extension FeedScreen {
         return rows + walletSignatureWarnings.count + nudges + cards + deposits
     }
 
+    /// The asks Needs you can value (prd §1669): a private deposit waiting
+    /// on 0xBow or refused, in dollars on a network with prices, else its
+    /// quantity. Safe signatures, the rows and the nudges are counted, not
+    /// valued: none carries an amount we read.
+    var walletNeedsHeldParts: [NeedsYouHeld.Part] {
+        guard walletShowsPrivate else { return [] }
+        let store = PrivateMoneyStore.shared
+        let prices = store.shownPrices
+        return store.asks().map { ask in
+            let note = ask.note
+            let worth = PrivateMoney.worth(note, rates: store.rates)
+            let units = Double(worth.amount).map { $0 / pow(10, Double(worth.decimals)) }
+            let usd = PrivateMoney.testnets.contains(note.chainId) ? nil
+                : prices[note.symbol.lowercased()].flatMap { price in units.map { $0 * price } }
+            return NeedsYouHeld.Part(
+                id: ask.id,
+                label: ask.kind == .refused ? String(localized: "Not approved") : String(localized: "Waiting for approval"),
+                figure: BalancePrivacy.shared.amount(ask.figure, unit: note.symbol),
+                usd: usd, since: note.at, refused: ask.kind == .refused)
+        }
+    }
+
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
     /// tiles, five doors: Your account, Following, Needs you, Permissions,
     /// Threats (Markets is a tile, §1498). Needs you, Permissions and Threats draw no row while
@@ -835,9 +857,11 @@ extension FeedScreen {
             let slots = walletFollowingSlots
             DSFigureReading(number: "\(slots.count)",
                             caption: slots.isEmpty ? String(localized: "Nothing followed") : followingLine(slots))
+        // **WHAT IT HOLDS UP (prd §1669)**, the count when nothing does.
         case .needsYou:
             let n = walletNeedsCount(upcoming: upcoming)
-            DSFigureReading(number: "\(n)", caption: String(localized: "waiting on you"))
+            let parts = walletNeedsHeldParts
+            WalletNeedsHeldFigure(reading: NeedsYouHeld.read(parts, others: n - parts.count), count: n)
         // **ONE CIRCLE PER APP, SIZED BY WHAT IT REACHES (prd §1654).**
         case .permissions:
             WalletPermissionsFigure(grants: walletLive.exposure.all) { walletOpenPermission($0) }

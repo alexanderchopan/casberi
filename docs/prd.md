@@ -70439,3 +70439,13 @@ Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, 
 4. **Open question, unmeasured.** Bitrefill's recorded challenge lists `supportedChains: [{type: "eip191"}]`; the account signs through ERC-1271. Whether Bitrefill's sign-in accepts a contract signature is what the row's first press on a phone answers. Bitrefill's own signed message still reads "Sign in to Bitrefill … (no account or password needed)"; it is its text, signed as given, and not drawn.
 
 **Mac half (§1402).** Move is the same view on the Mac; the row rides it.
+
+## §1669 — Needs you's box states what the asks hold up, not how many: "Held up", the money, since when, one bar split by ask and a line per ask; quantity where there is no price, the asks with no money counted (retires the box's "N waiting on you", §1480) (user, 2026-11-02, of three mockups: "I like C the most b/c A just repeats what's in the list"; picked "Quantity, then count") — BUILT, SEEN ON THE SIMULATOR
+
+1. **The box (`WalletNeedsHeldFigure`).** "Held up" over the figure at `price40`, then "in 3 · since Sat · and 2 more waiting" at `body17`; under it one bar, a capsule per ask with 3pt between, then up to three lines: what it waits on, its dollars or its quantity. Amber waits, red was refused (§1004). The box keeps its fixed size (§760).
+2. **The figure (`NeedsYouHeld`, pure).** Dollars of the priced asks when any is priced; else one quantity ("0.001 ETH"), or two joined with " + "; else nil and the box keeps the count. Test money never takes a price (§83): Sepolia's 0.001 ETH reads "0.001 ETH", never "$4".
+3. **What is valued.** A private deposit waiting on 0xBow or refused (§1561), priced from `PrivateMoneyStore.shownPrices`, its quantity masked by Hide balances. Safe signatures, the dated rows, the cards and the key nudges carry no amount we read: they are COUNTED in the line, never in the bar. Reading a Safe transaction's value is the next step, not done.
+4. **The bar.** By dollars when all are priced; equal parts when none is; in a mix the unpriced take the smallest priced share, so they show and never claim a value.
+5. **Checks.** `needs-you-held-selftest.sh` (13 checks: test money's quantity, the order, the shares, the count fallback; listed in `verify.sh`).
+
+**Mac half (§1402).** The Wallet's pages are the same views on the Mac; the box rides them.
