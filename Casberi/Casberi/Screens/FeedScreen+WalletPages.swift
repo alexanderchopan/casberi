@@ -443,6 +443,14 @@ extension FeedScreen {
             // An app the menu picked holds no collections (prd §1048b).
             if selectedSeat == nil {
                 walletDoor(.nfts)
+                // Its collections under it, as Tokens' top three stand
+                // under Tokens; one opens its pieces (prd §1672).
+                if let entry = nftShelfEntry {
+                    WalletNFTCollectionRows(wallet: entry.address, onEdit: { chrome.walletSection = .nfts }) { collection, name in
+                        route.pushBridge(.nftCollection(wallet: entry.address, collection: collection, name: name))
+                    }
+                    .walletStackRow()
+                }
             }
         }
         // **AN APP PICKED LISTS WHAT IT HOLDS FOR YOU (prd §1618 item 2):**

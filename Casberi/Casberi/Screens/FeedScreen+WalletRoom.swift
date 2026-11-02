@@ -38,17 +38,6 @@ extension FeedScreen {
         feedSheet = .walletToken(position.symbol)
     }
 
-    /// Its price and chart: the watched thing, else the token's quick sheet.
-    func walletOpenTokenChart(_ position: WalletPortfolio.Position) {
-        guard let route = position.route,
-              let r = TokenQuickRoute.from(sentinel: "@token:\(route):\(position.symbol)") else { return }
-        if let thing = r.watchedThing(in: modelContext) {
-            openThing(thing)
-        } else {
-            feedSheet = .token(r.withHolders(position.holders))
-        }
-    }
-
     /// The one drawing this scope leads with, in the box (prd §483, §1107).
     ///
     /// **The rule, in the user's own words: "above the toggles is always a
@@ -748,6 +737,9 @@ extension FeedScreen {
     var nftShelfWallet: WalletStore.WatchedAddress? {
         let watched = wallet.addresses
         if let selectedWallet {
+            // The demo's own account is no watched wallet (prd §1671), and its
+            // shelf is the demo's drawn pieces whoever holds them (§483).
+            if DemoMode.isActive, YourAccountDemo.isDemo(selectedWallet) { return watched.first }
             return watched.first { WalletWatch.sameAddress($0.address, selectedWallet) }
         }
         // **UNSCOPED FALLS BACK TO THE FIRST WALLET WITH PICKS, not to nil**
@@ -1634,7 +1626,16 @@ extension FeedScreen {
                         // controls). The Feed sets its own handler —
                         // HomeScreen's doesn't reach this surface.
                         .environment(\.genProjectTap) { name in
-                            if let route = TokenQuickRoute.from(sentinel: name) {
+                            // **A TILE OPENS ITS TOKEN (prd §1672, user: "if you
+                            // tap the eth treemap eth opens but if you tap the
+                            // others they don't")**: every held token's tile
+                            // opens its sheet, as its row does.
+                            let symbol = TokenQuickRoute.from(sentinel: name)?.symbol
+                                ?? (name.hasPrefix("@wallet:") ? String(name.dropFirst("@wallet:".count)) : nil)
+                            if let symbol,
+                               let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
+                                walletOpenToken(position)
+                            } else if let route = TokenQuickRoute.from(sentinel: name) {
                                 if let thing = route.watchedThing(in: modelContext) {
                                     openThing(thing)
                                 } else {
@@ -1646,7 +1647,7 @@ extension FeedScreen {
                                     feedSheet = .token(route.withHolders(
                                         portfolio?.holders(forSymbol: route.symbol ?? "") ?? []))
                                 }
-                            } else if name == "@wallet" {
+                            } else if name.hasPrefix("@wallet") {
                                 route.pushBridge(.wallet)
                             }
                         }

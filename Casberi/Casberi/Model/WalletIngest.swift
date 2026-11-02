@@ -2162,7 +2162,8 @@ enum WalletIngest {
                     .map { (symbol: $0.symbol, usd: $0.usd,
                             holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
             }
-            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy)
+            let account = await MainActor.run { WalletPortfolio.demoAccountHeld(scopeTo: address, only: only) }
+            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account)
             guard !portfolio.isEmpty else { return (read: nil, failed: false) }
             let cells = portfolio.treemapCells.joined(separator: ", ")
             // The line carries the total the room's crown reads (prd §953);
@@ -2641,7 +2642,7 @@ enum WalletIngest {
         // by its true share of the whole — the top five alone would call a
         // 60% holding 97%.
         let rest = sorted.dropFirst(5).reduce(0) { $0 + $1.value }
-        let other = rest > 0 ? ["\(HoldingsTreemapLayout.otherID) \(treemapWeight(rest))"] : []
+        let other = rest > 0 ? ["\(HoldingsTreemapLayout.otherID) \(treemapWeight(rest))\(exactMarker(rest))"] : []
         return sorted.prefix(5)
             .map { sym, usd in
                 // A last reading (prd §825) keeps no routes, so a native coin
@@ -2673,8 +2674,17 @@ enum WalletIngest {
                 // that is carried by area and rank, not by the labels. The
                 // symbol stays because a cell nobody can name is not a
                 // proportion of anything.
-                return "\(label) \(treemapWeight(usd))\(route)"
+                return "\(label) \(treemapWeight(usd))\(exactMarker(usd))\(route)"
             } + other
+    }
+
+    /// **THE TILE'S DOLLARS ARE THE ROW'S (user, 2026-11-02: ETH read $416 on
+    /// its tile and $417 in the list).** The weight is a whole number in
+    /// square-root space, so a tile that read its money back off it was off
+    /// by a dollar; " @u:<dollars>" carries the exact figure, never shown in
+    /// the cell (§491), read by the box's pressed reading alone.
+    static func exactMarker(_ usd: Double) -> String {
+        usd.isFinite && usd > 0 ? " @u:" + String(format: "%.2f", usd) : ""
     }
 
     /// One priced token a wallet holds — the shared read behind both the
@@ -3907,6 +3917,16 @@ enum WalletIngest {
     /// holding one such token, and — since the value is persisted in the
     /// last-known sample — it replayed on every later cold launch. Clamp so a
     /// bad value degrades to a small cell instead of killing the process.
+    /// A held token's chart route ("base:0x…") off one of its contract
+    /// keys (`HiddenTokens.contractKey`): a contract charts itself, a native
+    /// coin its wrapped token; nil on a network no chart routes.
+    static func route(forPartKey key: String) -> String? {
+        let bits = key.split(separator: ":", maxSplits: 1).map(String.init)
+        guard bits.count == 2, let slug = chainSlug[bits[0]] else { return nil }
+        if bits[1] != "native" { return "\(slug):\(bits[1])" }
+        return wrappedNativeContract[bits[0]].map { "\(slug):\($0)" }
+    }
+
     static func treemapWeight(_ usd: Double) -> Int {
         let scaled = usd.squareRoot() * 10
         guard scaled.isFinite else { return 1 }

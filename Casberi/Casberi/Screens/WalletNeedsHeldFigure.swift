@@ -80,6 +80,8 @@ struct WalletNeedsHeldFigure: View {
             }
         }
         .frame(height: 14)
+        // The bar wipes in, as every chart in the room does (`ChartEntrance`).
+        .chartWipe(reduceMotion: reduceMotion)
         .accessibilityHidden(true)
     }
 

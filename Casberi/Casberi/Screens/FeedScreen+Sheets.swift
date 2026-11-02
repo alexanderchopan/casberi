@@ -289,14 +289,7 @@ extension FeedScreen {
             TokenQuickSheet(route: route)
         case .walletToken(let symbol):
             if let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
-                WalletTokenSheet(position: position, onChart: position.route == nil ? nil : {
-                    // One sheet at a time (§872): this one closes, then the chart.
-                    feedSheet = nil
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(450))
-                        walletOpenTokenChart(position)
-                    }
-                })
+                WalletTokenSheet(position: position)
             }
         case .socialFaces:
             socialFacesTray

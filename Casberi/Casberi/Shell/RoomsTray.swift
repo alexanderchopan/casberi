@@ -1389,7 +1389,7 @@ struct RoomsTray: View {
         // The last reading of every wallet, never a fetch: the demo's own
         // fixture, else each wallet's stored sample (`WalletPortfolio`).
         let portfolio = DemoMode.isActive
-            ? WalletPortfolio.demoFixture()
+            ? WalletPortfolio.demoFixture(account: WalletPortfolio.demoAccountHeld(scopeTo: nil, only: nil))
             : WalletPortfolio.from(groups: WalletIngest.lastKnownHoldingsByWallet())
         holdings = portfolio.positions.filter { $0.usd >= 1 }
         // People are found from the index's snapshot, which only Settings

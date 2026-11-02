@@ -2526,7 +2526,7 @@ private struct GenTagMap: View {
             let sym = item.tag.contains(":") ? "" : item.tag
             projectTap?(item.route.map { r in
                 sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
-            } ?? "@wallet")
+            } ?? (sym.isEmpty ? "@wallet" : "@wallet:\(sym)"))
         } else if iconMode == "source" {
             // A source map's circle is an APP, never a tag (prd §1310): a
             // tag view filtered by "Bluesky" was empty. The sentinel lands
@@ -2551,7 +2551,7 @@ private struct GenTagMap: View {
                     total: reading.number,
                     holdings: items.map {
                         HoldingsTreemap.Holding(id: $0.tag,
-                                                usd: pow(Double($0.n) / 10, 2),
+                                                usd: $0.usd ?? pow(Double($0.n) / 10, 2),
                                                 route: $0.route)
                     },
                     onOpen: { holding in
@@ -3984,7 +3984,9 @@ private struct GenSourceMix: View {
 /// not want to see the x chips those are supposed to be internal only").
 /// The parsing is untouched — it is the live half, and always was.
 private enum KindCountRow {
-    struct Item { let tag: String; let n: Int; var route: String? = nil; var value: String? = nil }
+    struct Item { let tag: String; let n: Int; var route: String? = nil; var value: String? = nil
+        /// The exact dollars " @u:" carried, for a holdings tile's reading.
+        var usd: Double? = nil }
 
     /// "[Tag N, ...]" refs → items, count-ordered upstream. The one parser
     /// for the idiom — every map and strip reads it. `requireCount` drops
@@ -4006,6 +4008,13 @@ private enum KindCountRow {
                case let tail = body[at.upperBound...],
                !tail.isEmpty, !tail.contains(" ") {
                 route = String(tail)
+                body = String(body[..<at.lowerBound])
+            }
+            var usd: Double? = nil
+            if let at = body.range(of: " @u:", options: .backwards),
+               case let tail = body[at.upperBound...],
+               !tail.isEmpty, !tail.contains(" ") {
+                usd = Double(tail)
                 body = String(body[..<at.lowerBound])
             }
             if let at = body.range(of: " @v:", options: .backwards),
@@ -4030,7 +4039,7 @@ private enum KindCountRow {
             let parts = body.split(separator: " ")
             if let last = parts.last, let n = Int(last) {
                 return Item(tag: parts.dropLast().joined(separator: " "), n: n,
-                            route: route, value: value)
+                            route: route, value: value, usd: usd)
             }
             return requireCount ? nil : Item(tag: body, n: 1, route: route, value: value)
         }

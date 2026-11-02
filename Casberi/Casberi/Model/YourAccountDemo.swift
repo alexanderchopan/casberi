@@ -4,7 +4,7 @@ import Foundation
 /// are empty. need to have seeded data so user can see what things are
 /// like").** The demo is one person's life (§1026); now that person has an
 /// account too, so Move, Security's box and Your account's rows draw what
-/// they would hold: dollars and ETH on Base, MAG7 on Robinhood Chain, a
+/// they would hold: dollars and ETH on Base, USDG on Robinhood Chain, a
 /// Signer, a $100 monthly limit, round-ups to ETH.
 ///
 /// It is never a key. Nothing here can sign, and every act that would send,
@@ -41,7 +41,6 @@ enum YourAccountDemo {
 
     static let cbBTC = Op.Token(symbol: "cbBTC", decimals: 8, contract: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf")
     static let aero = Op.Token(symbol: "AERO", decimals: 18, contract: "0x940181a94A35A4569E4529A3CDfB74e38FD98631")
-    static let mag7 = Op.Token(symbol: "MAG7", decimals: 18, contract: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840")
     /// A token two days old that Uniswap's list does not carry (prd §1513's demo).
     static let pepe2 = Op.Token(symbol: "PEPE2", decimals: 18, contract: "0x9e7ac1d2b3f4e5a6b7c8d9e0f1a2b3c4d5e6f702")
 
@@ -52,7 +51,6 @@ enum YourAccountDemo {
         case "USDC", "USDG": 1
         case "CBBTC": 108_000
         case "AERO": 0.92
-        case "MAG7": 41.5
         case "PEPE2": 0.0000012
         default: nil
         }
@@ -72,7 +70,9 @@ enum YourAccountDemo {
             return [h(Op.dollar(on: net), "248.40"), h(Op.eth, "0.0842"), h(cbBTC, "0.0011"),
                     h(aero, "0.6"), h(pepe2, "200000")]
         case Op.robinhood.chainId:
-            return [h(Op.dollar(on: net), "62.00"), h(mag7, "3.2"), h(Op.eth, "0.0031")]
+            // USDG, Robinhood's dollar, where MAG7 stood (user, 2026-11-02:
+            // "for mag 7 just replace it with a different token like … USDG").
+            return [h(Op.dollar(on: net), "195.00"), h(Op.eth, "0.0031")]
         case Op.ethereum.chainId:
             return [h(Op.eth, "0.021")]
         default:
@@ -108,7 +108,6 @@ enum YourAccountDemo {
         case "USDC": "USD Coin"
         case "USDG": "Global Dollar"
         case "CBBTC": "Coinbase Wrapped BTC"
-        case "MAG7": "MAG7 Index"
         default: token.symbol
         }
     }

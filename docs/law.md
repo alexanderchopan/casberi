@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1807 of 1879 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1808 of 1880 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2055,6 +2055,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1669 — Needs you's box states what the asks hold up, not how many: "Held up", the money, since when, one bar split by ask an…
 - §1670 — A token's row opens that token: its sheet takes Holdings' sum apart into Networks and Accounts; the Tokens door and a…
 - §1671 — Yours is always on the switch: with no account it opens Move to make one; the demo's own account is in the demo's hol…
+- §1672 — A Holdings tile opens its token's sheet in one tap, every token, and the sheet draws the token's price chart; every t…
 
 ## Dead rulings → what replaced them (generated)
 

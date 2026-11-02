@@ -70468,3 +70468,15 @@ Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, 
 3. **Long press** on a token you hold in your own account: Send, Swap, Hide (§1609, §1591, unchanged); a watched wallet's or an account's token offers Hide alone, since Move cannot spend it (§83).
 
 **Mac half (§1402).** The switch is the same view on the Mac.
+
+## §1672 — A Holdings tile opens its token's sheet in one tap, every token, and the sheet draws the token's price chart; every tile's figure is one rung, dropped where it does not fit; a tile's dollars are the row's; the chart prices the token's own side of its pool; the demo's NFTs stand under Holdings (amends §1595's "a coin with no chart route lights", §1670 item 2's "Price and chart" door) (user, 2026-11-02: "if you tap the eth treemap eth opens but if you tap the others they don't … presumably the token sheet should w/ price"; "should these token prices all be same size font?"; "yes fix the eth thing" [$416 on the tile, $417 in the list]; "for mag 7 just replace it with … USDG"; "for NFTs the demo should show some already there") — BUILT, SEEN ON THE SIMULATOR (the demo)
+
+1. **The tap.** `HoldingsTreemap`: every tile but "Other" opens; GenUI sends `@token:<route>:<SYM>` or, with no route, `@wallet:<SYM>`, and the Wallet opens `WalletTokenSheet` for any held symbol.
+2. **The chart.** `WalletTokenSheet` draws `TokenChartView` under the total off the read's route, else its biggest contract's (`WalletIngest.route(forPartKey:)`, a native coin through its wrapped token). The demo draws none: it reaches nothing (§483).
+3. **The token's own price.** `TokenChart.geckoTerminal` asks the pool's candles with `token=<address>`: GeckoTerminal prices a pool's BASE token by default, so a token that is the quote (USDC in WETH/USDC) charted the other coin (measured: $2,247.34 default, $1.0023 with the token named). Every chart behind a holdings tile had the same fault.
+4. **One rung.** A tile's figure is `price17` on every tile; a tile too narrow for it draws none (`ViewThatFits`), never a shrunk or cut figure.
+5. **Exact dollars.** `WalletIngest.treemapCells` carries ` @u:<dollars>` beside the square-root weight, read by the box's reading only (never drawn, §491): a tile read its money back off the weight and was a dollar off the row.
+6. **The demo.** USDG holds Robinhood's $195 where MAG7 stood (MAG7 had no mark). Its NFT rows start with their pieces (`WalletNFTCollectionRows`), so a `List` row born empty no longer waits for a scroll; Holdings lists the collections under NFTs; Yours' NFTs page is the demo's shelf.
+7. **Kept apart.** The demo account's fold left `WalletPortfolio.swift` for `WalletPortfolio+DemoAccount.swift`, so `wallet-viz-selftest.sh` compiles the portfolio alone again (it failed from §1671's commit until this one). Needs you's bar wipes in (`chartWipe`, `design-motion-audit.py`).
+
+**Mac half (§1402).** Holdings, its box and the sheet are the same views on the Mac.

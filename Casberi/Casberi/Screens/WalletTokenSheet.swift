@@ -6,12 +6,15 @@ import SwiftUI
 /// "you are mixing chains and places"): Networks (its contracts summed across
 /// your wallets), then Accounts, each biggest first. Every token
 /// opens here, so a tap never lands on the whole list ("a user may want to see
-/// just that token"); the Tokens door and See all open the list. A token with
-/// a contract keeps its chart behind one door.
+/// just that token"); the Tokens door and See all open the list. Its price
+/// chart stands under the total (prd §1672).
 struct WalletTokenSheet: View {
     let position: WalletPortfolio.Position
-    /// Price and chart, for a token with a route (`TokenQuickSheet`).
-    var onChart: (() -> Void)? = nil
+
+    /// The read's route, else one off its biggest contract.
+    private var chartRoute: String? {
+        position.route ?? position.contracts.lazy.compactMap { WalletIngest.route(forPartKey: $0.key) }.first
+    }
 
     /// What kind of place holds it, in the order the sheet lists them: on a
     /// network, or in an ACCOUNT someone else holds for you — a bank, an
@@ -98,6 +101,16 @@ struct WalletTokenSheet: View {
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .padding(.horizontal, DS.Space.s4)
+                // **ITS PRICE, IN THE SHEET (prd §1672, user: "presumably the
+                // token sheet should w/ price")**: the chart of its biggest
+                // contract, a native coin's through its wrapped token.
+                // The demo reaches nothing (§483), so it draws no chart.
+                if !DemoMode.isActive, let route = chartRoute,
+                   let r = TokenQuickRoute.from(sentinel: "@token:\(route)") {
+                    TokenChartView(chain: r.chain, address: r.address) { EmptyView() }
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
                 ForEach(groups, id: \.0) { kind, rows in
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         WalletSectionLabel(title: kind.title)
@@ -110,11 +123,6 @@ struct WalletTokenSheet: View {
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
-                }
-                if let onChart {
-                    DSDoorRow(icon: "chart.xyaxis.line", title: Text("Price and chart"), act: onChart)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s4)
                 }
             }
             .padding(.bottom, DS.Space.s6)

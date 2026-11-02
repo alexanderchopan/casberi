@@ -197,8 +197,12 @@ struct TokenChart {
               let poolAddress = pool["address"] as? String else { return nil }
 
         let (timeframe, limit) = range.ohlcv
+        // **THE TOKEN'S OWN SIDE OF THE POOL (user, 2026-11-02: USDC read
+        // $2,247).** Candles default to the pool's BASE token, and a token
+        // that is the quote (USDC in WETH/USDC) charted the other coin;
+        // `token=<address>` asks for this one's price.
         guard let ohlcvRoot = await IngestSupport.getJSON(
-            "\(base)/pools/\(poolAddress)/ohlcv/\(timeframe)?aggregate=1&limit=\(limit)") as? [String: Any],
+            "\(base)/pools/\(poolAddress)/ohlcv/\(timeframe)?aggregate=1&limit=\(limit)&token=\(address)") as? [String: Any],
               let data = ohlcvRoot["data"] as? [String: Any],
               let attrs = data["attributes"] as? [String: Any],
               let list = attrs["ohlcv_list"] as? [[Any]], list.count >= 2 else { return nil }

@@ -289,10 +289,11 @@ struct HoldingsTreemap: View {
         let showsShare = inner >= (showsMark ? mark : 0) + worthLine + shareLine
         // **ONE TAP OPENS THE TOKEN (prd §1595, user: "first tap should open
         // the token chart. second tap should not even be an action").** Only
-        // a tile with nothing to open — "Other", a coin with no chart route —
-        // lights to read its value. A routeless tile used to open the Wallet's
-        // account page on its second press.
-        let door = isOther ? nil : holdings.first { $0.id == tile.id && $0.route != nil }
+        // a tile with nothing to open — "Other" — lights to read its value.
+        // Every token opens since prd §1672: its sheet is the door, chart or
+        // none ("if you tap the eth treemap eth opens but if you tap the
+        // others they don't").
+        let door = isOther ? nil : holdings.first { $0.id == tile.id }
         Button {
             DSHaptic.selection()
             if let door, let onOpen {
@@ -339,12 +340,20 @@ struct HoldingsTreemap: View {
                 }
                 if showsShares {
                     if let worth = worth(tile) {
-                        Text(verbatim: worth)
-                            .dsText(large ? .stat24 : (small ? .label12 : .price17))
-                            .monospacedDigit()
-                            .foregroundStyle(isLit ? Color.white : DS.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                        // One rung on every tile (user, 2026-11-02: "should
+                        // these token prices all be same size font?"): the
+                        // area says how much, the type never does. A tile
+                        // too narrow for it keeps none, never a shrunk or
+                        // cut figure; pressed, the box's reading names it.
+                        ViewThatFits(in: .horizontal) {
+                            Text(verbatim: worth)
+                                .dsText(.price17)
+                                .monospacedDigit()
+                                .foregroundStyle(isLit ? Color.white : DS.textPrimary)
+                                .lineLimit(1)
+                                .fixedSize()
+                            Color.clear.frame(width: 0, height: 0)
+                        }
                     }
                     if (!small || worth(tile) == nil) && showsShare {
                         Text(HoldingsTreemapLayout.percent(tile.share))

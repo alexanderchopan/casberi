@@ -28,7 +28,10 @@ struct WalletNFTCollectionRows: View {
 
     @ObservedObject private var picks = WalletNFTStore.shared
 
-    @State private var pieces: [WalletNFTShelf.NFTPiece] = []
+    /// The demo's pieces from the first frame (user, 2026-11-02: "for NFTs
+    /// the demo should show some already there"): a row born empty in a
+    /// `List` kept no height until a scroll laid it out again.
+    @State private var pieces: [WalletNFTShelf.NFTPiece] = DemoMode.isActive ? WalletNFTShelf.demoPieces() : []
 
     private var demo: Bool { DemoMode.isActive }
 

@@ -273,8 +273,16 @@ struct WalletPortfolio: Equatable, Codable {
                                walletCount: 0, asOf: asOf)
     }
 
+    /// The demo's own account and its tokens, each by its contract key.
+    struct DemoAccountHeld {
+        let address: String
+        let label: String
+        let held: [(symbol: String, usd: Double, key: String)]
+    }
+
     static func demoFixture(scopeTo address: String? = nil, only: [String]? = nil,
-                            privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [])
+                            privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [],
+                            account: DemoAccountHeld? = nil)
     -> WalletPortfolio {
         let watched = WalletStore.shared.addresses.filter { entry in
             if let only { return only.contains { WalletWatch.sameAddress(entry.address, $0) } }
@@ -297,31 +305,23 @@ struct WalletPortfolio: Equatable, Codable {
             }
         }
         // **THE DEMO'S OWN ACCOUNT IS IN ITS HOLDINGS (prd §1671)**, as a real
-        // account is in a real read: its tokens by network off its own table
-        // (`YourAccountDemo.held`), so Yours narrows to it and a long press
-        // offers Send and Swap on what it holds. Never under a Safe's pick,
-        // whose box adds this account itself (§1442l).
-        let demoAccount = YourAccountDemo.address
-        if YourAccountDemo.isOn, only == nil,
-           address.map({ WalletWatch.sameAddress($0, demoAccount) }) ?? true {
-            for net in YourAccountOp.networks {
-                guard let network = YourAccountOp.appName(net) else { continue }
-                for held in YourAccountDemo.held(on: net) {
-                    guard let usd = held.usd, usd > 0 else { continue }
-                    let symbol = held.token.symbol
-                    total += usd
-                    bySymbol[symbol, default: 0] += usd
-                    if let i = holders[symbol]?.firstIndex(where: { $0.address == demoAccount }) {
-                        let had = holders[symbol]![i]
-                        holders[symbol]![i] = Holder(address: demoAccount, label: had.label, usd: had.usd + usd)
-                    } else {
-                        holders[symbol, default: []].append(
-                            Holder(address: demoAccount, label: String(localized: "Your account"), usd: usd))
-                    }
-                    parts[symbol, default: []].append(Part(
-                        key: HiddenTokens.contractKey(network: network, contract: held.token.contract),
-                        holder: demoAccount, usd: usd))
+        // account is in a real read: the caller hands its tokens by network
+        // (`demoAccountHeld`, in `WalletPortfolio+DemoAccount.swift`, so this
+        // file stays Foundation-only for `wallet-viz-selftest.sh`), so Yours
+        // narrows to it and a long press offers Send and Swap on what it holds.
+        if let account {
+            for held in account.held where held.usd > 0 {
+                let symbol = held.symbol
+                total += held.usd
+                bySymbol[symbol, default: 0] += held.usd
+                if let i = holders[symbol]?.firstIndex(where: { $0.address == account.address }) {
+                    let had = holders[symbol]![i]
+                    holders[symbol]![i] = Holder(address: account.address, label: had.label, usd: had.usd + held.usd)
+                } else {
+                    holders[symbol, default: []].append(
+                        Holder(address: account.address, label: account.label, usd: held.usd))
                 }
+                parts[symbol, default: []].append(Part(key: held.key, holder: account.address, usd: held.usd))
             }
         }
         // THE CONNECTED EXCHANGES MERGE, exactly as they do live (2026-08-26,
