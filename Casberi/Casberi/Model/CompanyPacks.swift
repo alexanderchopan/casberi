@@ -97,6 +97,7 @@ enum CompanyPacks {
             "Railgun": coin("Railgun", "RAIL", "rail-railgun"),
             "Rocket Money": ("Rocket Companies", .stock("RKT")),
             "Safe": coin("Safe", "SAFE", "safe-safe"),
+            "SimpleFIN": own("SimpleFIN"),
             "Splits": own("Splits"),
             "Wise": own("Wise"),
             "ether.fi": coin("ether.fi", "ETHFI", "ethfi-etherfi"),

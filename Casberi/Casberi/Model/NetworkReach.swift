@@ -718,6 +718,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wise"),
                  purpose: "Reads which profile your token belongs to, your balances, and the transfers you have sent — with a personal API token you mint yourself and can scope read-only. Nothing here can send money, convert a balance, or add a recipient. Your card spending is not read at all: it lives in Wise's balance statement, behind a signed-approval step this app does not implement. wise.com is where the token is created — opened in your browser, never called by the app.",
                  hosts: ["api.transferwise.com"]),
+        // SimpleFIN (2026-11-02, prd §1663) — the claim host is whatever the
+        // pasted Setup Token names and the read host whatever the claim hands
+        // back, so the FAMILY is declared, AWS's way; `SimpleFINShape.
+        // isAllowed` refuses any token or URL off it before a request is made.
+        Endpoint(service: "SimpleFIN",
+                 reach: .whenConnected(bridge: "SimpleFIN"),
+                 purpose: "Claims the one-time Setup Token you make at SimpleFIN Bridge, then reads your connected banks' accounts, balances and posted transactions with the address it hands back — your own subscription, paid to SimpleFIN, about once an hour at most. Each bank's icon is asked once of that bank's own website (the address SimpleFIN names for it), so no logo service learns which bank you use. Nothing here can move money: SimpleFIN has no way to. bridge.simplefin.org is where the token is made — opened in your browser.",
+                 hosts: ["simplefin.org", "beta-bridge.simplefin.org", "bridge.simplefin.org"]),
         // Splits (2026-09-18, prd §820) — one host, fixed. `app.splits.org`
         // is the settings page the setup door OPENS, never fetched.
         Endpoint(service: "Splits",

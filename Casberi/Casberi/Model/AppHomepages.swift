@@ -28,6 +28,7 @@ enum AppHomepages {
         "Privy": "privy.io",
         "Wise": "wise.com",
         "Splits": "splits.org",
+        "SimpleFIN": "simplefin.org",
         "Coinbase": "coinbase.com",
         "Kraken": "kraken.com",
         "Binance": "binance.com",

@@ -1435,8 +1435,12 @@ extension FeedScreen {
         // Under "Needs you" a stuck Wise transfer leads with its amounts, not
         // the heading's own words (prd §1378).
         let who = underNeedsYou ? NeedsYouWords.name(named) : named
-        let account = selectedWallet == nil && wallet.addresses.count > 1
-            ? WalletStore.shared.label(forAddress: thing.walletAddress) : nil
+        // A bank account's row names its bank and account (prd §1663):
+        // the mark is the bank's, the line says which account.
+        let account = thing.source == SimpleFINShape.source
+            ? thing.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
+            : selectedWallet == nil && wallet.addresses.count > 1
+                ? WalletStore.shared.label(forAddress: thing.walletAddress) : nil
         let parsed = WalletFlow.parseAmount(thing.transferAmount ?? "")
         // A dollar coin's quantity IS dollars; anything else needs the read's price.
         let usd = thing.transferUSD.flatMap { $0.isFinite ? $0 : nil }
@@ -1469,14 +1473,14 @@ extension FeedScreen {
         // A folded app's row (a Wise transfer, prd §1067): no address, no
         // card, no token, so its title is the fact and names no counterparty.
         let folded = (thing.counterpartyAddress ?? "").isEmpty && !WalletCards.isSpend(thing)
-            && WalletFlow.parseAmount(thing.transferAmount ?? "").symbol.isEmpty && thing.source != "Wallet"
+            && WalletFlow.tokenSymbol(thing.transferAmount ?? "").isEmpty && thing.source != "Wallet"
         Button {
             // Every row ticks as it opens, as every door does (prd §1587).
             DSHaptic.selection()
             openThing(thing)
         } label: {
             HStack(spacing: DS.Space.s3) {
-                let symbol = WalletFlow.parseAmount(thing.transferAmount ?? "").symbol
+                let symbol = WalletFlow.tokenSymbol(thing.transferAmount ?? "")
                 if let address = thing.counterpartyAddress, !address.isEmpty {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                 } else if WalletCards.isSpend(thing) {
@@ -1487,6 +1491,10 @@ extension FeedScreen {
                     // row. The token stays on the subline.
                     BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),
                                size: DS.Face.list, circular: true)
+                } else if thing.source == SimpleFINShape.source {
+                    // A bank account's row wears its bank (prd §1663).
+                    BankMark(connID: SimpleFINShape.connID(fromRef: thing.sourceRef),
+                             size: DS.Face.list, circular: true)
                 } else if symbol.isEmpty, thing.source != "Wallet" {
                     // A folded app's row with no token (a Wise transfer, prd
                     // §1067) wears its app's mark, not a "?" monogram.

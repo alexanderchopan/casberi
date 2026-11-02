@@ -287,6 +287,8 @@ enum RoomAccounts {
              mark: "Gemini Exchange"),
         Seat(name: "Wise", source: WiseShape.source,
              holder: WalletCash.holderPrefix + "wise", group: exchanges, mark: "Wise"),
+        Seat(name: "SimpleFIN", source: SimpleFINShape.source,
+             holder: SimpleFINShape.holderPrefix, group: exchanges, mark: "SimpleFIN"),
         Seat(name: "Acorns", source: AcornsLive.source,
              holder: nil, group: exchanges, mark: "Acorns"),
         Seat(name: "ETH Validators", source: nil,

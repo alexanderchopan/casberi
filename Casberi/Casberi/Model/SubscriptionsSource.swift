@@ -30,7 +30,8 @@ final class SubscriptionsReading {
     private init() {}
 
     /// The seats a subscription can be read from.
-    static let sources: [String] = [AppleWalletBridge.sourceName, WalletCards.privacySource, RocketMoneyLive.source]
+    static let sources: [String] = [AppleWalletBridge.sourceName, WalletCards.privacySource, RocketMoneyLive.source,
+                                    SimpleFINShape.source]
 
     func refresh(_ context: ModelContext, now: Date = .now) async {
         let members = Self.sources
@@ -140,6 +141,11 @@ enum SubscriptionsSource {
         case WalletCards.privacySource:
             guard thing.sourceRef?.hasPrefix("privacy:txn:") ?? false else { return nil }
             return "Privacy.com"
+        // A bank account's shop charges only (prd §1663), named as the bank
+        // names the account.
+        case SimpleFINShape.source:
+            guard SimpleFINShape.isShopCharge(tags: thing.tags) else { return nil }
+            return thing.authorHandle.flatMap { $0.isEmpty ? nil : $0 } ?? SimpleFINShape.source
         default:
             return nil
         }

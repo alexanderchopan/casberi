@@ -408,6 +408,29 @@ enum IngestSupport {
         return String(data: data, encoding: .utf8)
     }
 
+    /// A 200's raw bytes, or nil — a bank's icon (prd §1663), through the
+    /// one `send` funnel so the receipts screen accounts for it.
+    static func getData(_ url: URL, service: String? = nil) async -> Data? {
+        var request = URLRequest(url: url)
+        request.setValue("image/*", forHTTPHeaderField: "Accept")
+        // An icon is a nicety: a stalled site gives up in 10s, not 60.
+        request.timeoutInterval = 10
+        guard let (data, http) = await send(request, service: service), http.statusCode == 200 else { return nil }
+        return data
+    }
+
+    /// An empty POST whose answer is TEXT, with the status beside it (0 when
+    /// nothing answered). SimpleFIN's claim is its one caller (prd §1663): it
+    /// answers with a bare URL, not JSON, and its 403 means something the
+    /// screen has to say on its own.
+    static func postText(_ url: URL, service: String? = nil) async -> (text: String?, status: Int) {
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("0", forHTTPHeaderField: "Content-Length")
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
+        return (String(data: data, encoding: .utf8), http.statusCode)
+    }
+
     static func postJSON(_ url: String, auth: String? = nil, body: [String: Any],
                          headers: [String: String] = [:],
                          service: String? = nil) async -> Any? {

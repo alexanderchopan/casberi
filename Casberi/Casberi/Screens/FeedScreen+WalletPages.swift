@@ -386,7 +386,11 @@ extension FeedScreen {
                 ForEach(Array(groups.apps.sorted { $0.usd > $1.usd }.prefix(Self.holdingsPreviewCount))) { app in
                     walletPreviewRow(app.label, figure: mask ?? WalletValue.money(app.usd),
                                      act: { chrome.walletSection = .apps }) {
-                        BridgeIcon(name: app.label, size: DS.Mark.badge)
+                        if let bank = SimpleFINShape.connID(fromHolder: app.address) {
+                            BankMark(connID: bank, size: DS.Mark.badge)
+                        } else {
+                            BridgeIcon(name: Self.venueMark(app), size: DS.Mark.badge)
+                        }
                     }
                 }
             }
@@ -743,6 +747,16 @@ extension FeedScreen {
         walletAccountsSection(appAccounts, nextEventID: nextEventID)
     }
 
+    /// A venue row's mark: its own name's when one is bundled ("Apple
+    /// Cash"), else the app that holds it — an account named as its bank
+    /// names it ("Savings") wears its app's, never a blank square (prd §1663).
+    static func venueMark(_ holder: WalletPortfolio.Holder) -> String {
+        guard BrandMark.image(for: holder.label) == nil,
+              let seat = RoomAccounts.seats(for: CategoryFold.walletRoom).first(where: { $0.holds(holder.address) })
+        else { return holder.label }
+        return seat.mark
+    }
+
     /// One group of Holdings' money, each holder its balance; a wallet's row
     /// narrows the Wallet to it.
     @ViewBuilder
@@ -775,8 +789,10 @@ extension FeedScreen {
                                     // A Privy app wears its own logo, as Privy's
                                     // room draws it; the catalogue has none.
                                     PrivyAppMark(logoURL: app.logoURL)
+                                } else if let bank = SimpleFINShape.connID(fromHolder: holder.address) {
+                                    BankMark(connID: bank, size: DS.Face.row)
                                 } else if isVenue {
-                                    BridgeIcon(name: holder.label, size: DS.Face.row)
+                                    BridgeIcon(name: Self.venueMark(holder), size: DS.Face.row)
                                 } else {
                                     WalletFace(address: holder.address, size: DS.Face.row, circular: true)
                                 }

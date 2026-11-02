@@ -240,6 +240,11 @@ enum BridgeCatalog {
         // moved, proposals included while they wait on signatures.
         Offer(name: "Splits",      tagline: "Your team's accounts and payments", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 18)),
+        // SimpleFIN (prd §1663, 2026-11-02) — your banks and cards through a
+        // SimpleFIN Bridge subscription the person pays for themselves:
+        // balances into the Wallet's total, shop charges into Spending.
+        Offer(name: "SimpleFIN",   tagline: "Your banks and cards", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 11, 2)),
         // Lightning (prd §1098, 2026-10-03) — any Lightning wallet over Nostr
         // Wallet Connect: the balance into the total, settled payments as
         // rows, and a connection that can pay refused on save.

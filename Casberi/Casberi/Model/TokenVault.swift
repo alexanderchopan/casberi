@@ -106,7 +106,10 @@ enum TokenVault {
 
     /// Bridges whose key needs a setting this vault does not hold — their
     /// host or region lives in `UserDefaults`, which does not travel.
-    static let localTokenBridges: Set<TokenBridge> = [.posthog, .sentry, .aws]
+    /// SimpleFIN's Access URL stays too (prd §1663): the bridge allows about
+    /// 24 reads a day per token, and two devices sharing one would spend it
+    /// twice and get it turned off. Each device claims its own token.
+    static let localTokenBridges: Set<TokenBridge> = [.posthog, .sentry, .aws, .simplefin]
 
     /// The pasted keys, by construction from the types that name them, plus
     /// the settings a synced key cannot work without (they live in the vault

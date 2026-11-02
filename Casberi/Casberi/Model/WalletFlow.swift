@@ -248,6 +248,16 @@ enum WalletFlow {
     /// field `BalancePrivacy` already reads a symbol from. A head that isn't a
     /// number in that formatter's shapes leaves the whole string as the symbol
     /// and no amount, which draws a row with no quantity rather than a wrong one.
+    /// The token a stamp names, or "" when it names none. A bank's figure
+    /// ("$136.00", "£100.00 → €113.79") carries digits but no quantity-space-
+    /// symbol, and drawing it as a token mark painted its first two
+    /// characters ("$1") beside every Wise, Apple Wallet and SimpleFIN row
+    /// (prd §1663). A bare unit ("ETH") is still a token.
+    static func tokenSymbol(_ text: String) -> String {
+        let parsed = parseAmount(text)
+        return parsed.amount == nil && text.contains(where: \.isNumber) ? "" : parsed.symbol
+    }
+
     static func parseAmount(_ text: String) -> (amount: Double?, symbol: String) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard let space = trimmed.firstIndex(of: " "),

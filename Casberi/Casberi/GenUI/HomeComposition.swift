@@ -77,6 +77,7 @@ enum HomeComposition {
             "Delivered", "Module added",                  // Safe, 7579
             "Control changed",                            // Safe (prd §1249)
             "Across",                                     // a crossing's row (prd §1555)
+            "Purchase", "Deposit",                        // SimpleFIN (prd §1663)
             "Deprecated", "Issue",
             "Mining", "Rewards", "Ticket",                // Logos (prd §1016)
             "Regression", "Resolved",                     // GitHub, Sentry

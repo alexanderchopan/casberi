@@ -325,7 +325,7 @@ struct MoneyReceipt: Equatable {
         // of a Lightning payment and an Acorns account in Home's
         // Transactions: "this is terrible", "they all look like that").
         "Lightning", "Privy", "Splits", "MetaMask Card", "Plasma One",
-        "Acorns", "Rocket Money",
+        "Acorns", "Rocket Money", "SimpleFIN",
     ]
 
     /// The Wallet's apps whose rows are NOT money moves, each with where its
@@ -409,6 +409,7 @@ struct MoneyReceipt: Equatable {
         case "Lightning":                    return lightning(f)
         case "Privy":                        return privy(f)
         case "Splits":                       return splits(f)
+        case "SimpleFIN":                    return bank(f)
         default:                             return wallet(f)
         }
     }
@@ -553,6 +554,31 @@ struct MoneyReceipt: Equatable {
             stamp: refund ? .refund : (pending ? .pending : .settled),
             finality: pending ? .open : .torn,
             hue: hue)
+    }
+
+    /// A bank account's row (prd §1663). A shop's charge or credit is a card
+    /// spend and reads as one; anything else is money that left or reached
+    /// the account with no shop named — a bill, a transfer, a deposit — and
+    /// never reads "Spent at".
+    private static func bank(_ f: Facts) -> MoneyReceipt {
+        if f.tags.contains("Purchase") || f.tags.contains("Refund") { return card(f, hue: .neutral) }
+        let received = f.direction == "received"
+        let priced = currency(f.priceValue, code: f.priceCurrency)
+        return MoneyReceipt(
+            subject: .named(f.counterparty ?? f.source),
+            mine: nil,
+            lead: received ? String(localized: "Received from") : String(localized: "Paid to"),
+            party: f.counterparty ?? f.source,
+            titleFallback: priced == nil ? f.title : nil,
+            amount: priced.map {
+                Amount(number: (received ? "+" : "−") + $0, unit: nil,
+                       tone: received ? .gain : .plain, numeric: f.priceValue.map(abs))
+            },
+            secondary: cardLine(f),
+            sentence: String(localized: "Posted \(dayPhrase(f.capturedAt))."),
+            stamp: .settled,
+            finality: .torn,
+            hue: .neutral)
     }
 
     /// "on Apple Card, ending 4821" — built from the account label the bridge

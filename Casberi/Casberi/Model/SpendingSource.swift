@@ -59,6 +59,7 @@ final class SpendingReading {
     static let cardSources: [String] = [
         AppleWalletBridge.sourceName, WalletCards.privacySource,
         MetaMaskCardBridge.source, EtherFiCash.source, PlasmaOneCard.source,
+        SimpleFINShape.source,
     ]
     static let walletSource = "Wallet"
     static var sources: [String] { cardSources + [WiseShape.source, walletSource] }
@@ -262,6 +263,19 @@ enum SpendingSource {
                 return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt,
                            card: cardName(forSource: thing.source), app: thing.source,
                            wallet: thing.walletAddress?.lowercased())
+            // A bank's row counts only when it names a shop (prd §1663): a
+            // transfer or a card payment off checking would count a card's
+            // spend twice.
+            case SimpleFINShape.source:
+                guard SimpleFINShape.isShopCharge(tags: thing.tags),
+                      let amount = thing.priceValue, let currency = thing.priceCurrency,
+                      let merchant = thing.transferCounterparty, !merchant.isEmpty else { return nil }
+                let refund = thing.tags.contains("Refund")
+                // No `card`: SimpleFIN cannot say whether an account is a card
+                // or a checking account, and Home's Cards must not list
+                // checking as a card.
+                return Raw(place: merchant, amount: refund ? -abs(amount) : abs(amount),
+                           currency: currency, at: thing.capturedAt, app: thing.source)
             case WiseShape.source:
                 guard thing.transferDirection == "sent",
                       !thing.tags.contains(String(localized: "Pending")),

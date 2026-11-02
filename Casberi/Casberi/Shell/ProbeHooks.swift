@@ -25,6 +25,8 @@ enum ProbeHooks {
         "-byokKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
         // A Nostr Wallet Connect string carries its client secret (prd §1098).
         "-lightningConnect",
+        // A Setup Token claims a bank connection; an Access URL IS one (prd §1663).
+        "-simplefinConnect",
         // Safe's API key — a JWT over our own developer account's quota
         // (prd §789). Not a person's credential, and redacted anyway for
         // `-wcProjectID`'s reason: anything credential-shaped stays out of
@@ -4807,6 +4809,49 @@ enum ProbeHooks {
                       LightningState.balanceSats.map(String.init) ?? "UNREAD",
                       added.map(String.init) ?? "FAILED",
                       LightningIngest.lastPassFailure ?? "no failure")
+            }
+        },
+        // `-simplefinConnect "<setup token | access URL>"|forget` (prd §1663)
+        // — the page's own connect (`SimpleFINConnect.connect`), then the one
+        // forced first read. The bridge's developer page hands out a demo
+        // token, so the whole path runs on the sim with no subscription.
+        Hook(key: "simplefinConnect") { spec, context in
+            Task { @MainActor in
+                if spec == "forget" {
+                    SimpleFINAuth.clear()
+                    NSLog("[Casberi] simplefin| forgotten")
+                    return
+                }
+                let outcome = await SimpleFINConnect.connect(spec)
+                NSLog("[Casberi] simplefin| connect: %@", outcome == .connected ? "connected"
+                      : (SimpleFINConnect.sentence(outcome) ?? "?"))
+                guard outcome == .connected else { return }
+                let added = await SimpleFINIngest.refresh(context: context, force: true)
+                let standing = SimpleFINState.standing
+                NSLog("[Casberi] simplefin| %d accounts · %d institutions · %@ landed · %@",
+                      standing.accounts.count, standing.institutions.count,
+                      added.map(String.init) ?? "FAILED",
+                      SimpleFINIngest.lastPassFailure ?? "no failure")
+            }
+        },
+        // `-simplefinProbe YES` — one read with the STORED Access URL, by
+        // shape only (`SimpleFINFetch.probe`); spends one of the day's reads.
+        Hook(key: "simplefinProbe") { _, _ in
+            Task { await SimpleFINFetch.probe() }
+        },
+        // `-simplefinIconProbe "<conn id>=<the bank's https address>"` — fetch a
+        // bank's icon through the shipped path (`SimpleFINLogos`) for that
+        // connection, so a demo connection can wear a real bank's mark on
+        // screen; logs the outcome, never the image.
+        Hook(key: "simplefinIconProbe") { spec, _ in
+            let parts = spec.split(separator: "=", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { return }
+            Task {
+                UserDefaults.standard.removeObject(forKey: "simplefin.logoTried")
+                await SimpleFINLogos.fetchMissing([.init(id: parts[0], name: parts[0], url: parts[1])])
+                let image = SimpleFINLogos.image(connID: parts[0])
+                NSLog("[Casberi] simplefinIcon| %@ · %@", parts[1],
+                      image.map { "\(Int($0.size.width))x\(Int($0.size.height))" } ?? "none")
             }
         },
         Hook(key: "bitcoinProbe") { address, context in

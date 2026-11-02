@@ -3347,7 +3347,10 @@ struct ThingSheetView: View {
         let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy.com", "Plasma One"]
         // A price rise is news about a plan, not a charge on a card (prd
         // §1357.4): no card, no month of visits.
-        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,
+        // A bank account's row takes the card's layout only when it names a
+        // shop (prd §1663); a deposit is no card spend.
+        let bankCharge = thing.source == SimpleFINShape.source && SimpleFINShape.isShopCharge(tags: thing.tags)
+        guard cardSources.contains(thing.source) || bankCharge, moneyReceipt?.mine == nil,
               !thing.tags.contains("Price rise") else { return nil }
         let account = (thing.authorHandle?.isEmpty == false ? thing.authorHandle : nil)
             ?? BridgeCatalog.seatName(forSource: thing.source)

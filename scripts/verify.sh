@@ -1765,6 +1765,11 @@ harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Pri
 # read parses to nothing, address-poisoning dust landed as news, and a
 # proposal waiting on signatures drawn as done.
 harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the Splits self-test failed — run scripts/splits-selftest.sh"
+# SimpleFIN (prd §1663) — a pasted token followed off simplefin.org with the
+# person's bank credentials, a read past the bridge's ~24 a day (it turns the
+# token off), one transaction id in two accounts landed once, and a transfer
+# off checking counted as spending.
+harness "SimpleFIN self-test" "SimpleFIN self-test" "scripts/simplefin-selftest.sh" "the SimpleFIN self-test failed — run scripts/simplefin-selftest.sh"
 # Bankr's key, made in the app (prd §800) — the request asks for Agent API
 # and read-only and nothing else, a key that comes back wider is never
 # stored (an ABSENT flag included), and the sign-in's jar never outlives the

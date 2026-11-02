@@ -220,6 +220,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # SimpleFIN's own name for the one-time code a person makes at the bridge
+    # (prd §1663): "Setup Token" is what its page calls it and what they copy.
+    "Setup", "Token",
     # Apple Cash, Apple's own product (`WalletCash`, prd §1048): the Wallet
     # total names it as Apple does, as "Apple Wallet" is named.
     "Cash",

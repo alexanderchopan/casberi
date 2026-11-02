@@ -40,12 +40,24 @@ enum WalletCash {
     /// Every card balance owed, in words ("$812 owed on Apple Card"), for the
     /// crown's note. Never counted (prd §1078).
     static func owed() -> [String] {
-        guard AppleWalletBridge.connected else { return [] }
-        return AppleWalletBridge.owed.sorted(by: { $0.key < $1.key }).compactMap { name, balance in
-            guard balance.value > 0, balance.currency.count == 3 else { return nil }
-            let money = balance.value.formatted(.currency(code: balance.currency))
-            return String(localized: "\(money) owed on \(name)")
+        var out: [String] = []
+        if AppleWalletBridge.connected {
+            out = AppleWalletBridge.owed.sorted(by: { $0.key < $1.key }).compactMap { name, balance in
+                guard balance.value > 0, balance.currency.count == 3 else { return nil }
+                let money = balance.value.formatted(.currency(code: balance.currency))
+                return String(localized: "\(money) owed on \(name)")
+            }
         }
+        // A SimpleFIN account below zero is a card's balance (prd §1663):
+        // owed, said, never subtracted.
+        if !DemoMode.isActive, SimpleFINAuth.configured {
+            for account in SimpleFINState.standing.accounts {
+                guard let value = account.balance, value < 0, let code = account.currency else { continue }
+                let money = (-value).formatted(.currency(code: code))
+                out.append(String(localized: "\(money) owed on \(account.label)"))
+            }
+        }
+        return out
     }
 
     /// Every cash balance the seats hold right now. Off main: it reads the
@@ -62,6 +74,17 @@ enum WalletCash {
                 out.append(Held(currency: balance.currency, amount: value,
                                 holderID: holderPrefix + "wise", label: "Wise",
                                 readAt: WiseState.standing.lastRead))
+            }
+        }
+        // Each SimpleFIN account above zero (prd §1663), named as the bank
+        // names it. A custom currency (a URL) is no money this can price.
+        if SimpleFINAuth.configured {
+            let standing = SimpleFINState.standing
+            for account in standing.accounts {
+                guard let value = account.balance, value > 0, let code = account.currency else { continue }
+                out.append(Held(currency: code, amount: value,
+                                holderID: SimpleFINShape.holderID(conn: account.connID, account: account.id),
+                                label: account.label, readAt: standing.lastRead))
             }
         }
         // Bitrefill's balance (prd §1051a): money held to spend on gift cards,

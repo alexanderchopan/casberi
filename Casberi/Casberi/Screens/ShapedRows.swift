@@ -162,6 +162,9 @@ struct BandRow: View {
         // fact it does not carry.
         case "Splits":
             return thing.authorHandle
+        // Which bank account the money moved in (prd §1663).
+        case "SimpleFIN":
+            return thing.authorHandle
         // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
         // liked cast, a channel cast, and your own post used to read
         // identically, and the row already leads with the author's FACE — so
