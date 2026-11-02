@@ -424,7 +424,7 @@ extension FeedScreen {
                 walletCard(WalletSection.apps.label, glyph: WalletSection.apps.glyph) {
                     ForEach(Array(apps.enumerated()), id: \.element.id) { i, row in
                         if case .single(let item) = row.kind, let thing = item.live {
-                            shapedListRow(thing, index: i, nextEventID: nil)
+                            shapedListRow(thing, index: i, nextEventID: nil, air: Self.rowAir)
                         }
                     }
                 }

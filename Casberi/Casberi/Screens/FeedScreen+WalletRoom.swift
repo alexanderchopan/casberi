@@ -961,7 +961,7 @@ extension FeedScreen {
             walletCard(String(localized: "Accounts"), glyph: "banknote") {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if case .single(let item) = row.kind, let thing = item.live {
-                        shapedListRow(thing, index: i, nextEventID: nextEventID)
+                        shapedListRow(thing, index: i, nextEventID: nextEventID, air: Self.rowAir)
                     }
                 }
             }
@@ -1342,7 +1342,7 @@ extension FeedScreen {
                                               underNeedsYou: label == Self.needsYouGroup)
                             } else {
                                 shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                              position: positions[i])
+                                              position: positions[i], air: Self.rowAir)
                                     // The heading says it waits on you (prd §1378).
                                     .environment(\.dsUnderNeedsYou, label == Self.needsYouGroup)
                             }

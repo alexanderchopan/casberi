@@ -297,7 +297,10 @@ extension FeedScreen {
                                // The place a gathered row came from (Day's
                                // Needs you, prd §1327 item 9), named first on
                                // the app's line.
-                               place: String? = nil) -> some View {
+                               place: String? = nil,
+                               // The air either side (prd §1661): the Feed's
+                               // 16pt gap, the Wallet's `rowAir`.
+                               air: CGFloat = FeedScreen.thingAir) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         // A Button since 2026-08-04 (the microanimation pass), not an
         // `onTapGesture`: the tap gesture gave no touch-down feedback, so a
@@ -366,15 +369,14 @@ extension FeedScreen {
                                              selected: DS.isMac
                                                 && chrome.walkSelected == thing.id.uuidString,
                                              skin: skin)))
-            // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
+            // Feed rhythm: `air` (prd §1661, see `thingAir`). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
-            // **ONE PITCH, HOME INCLUDED (prd §1496, retiring §1157's
-            // `groupAir`):** a row is 52 on the Feed's front page as on every
-            // Wallet and Feed page; the 24pt section names separate the
-            // groups the 12pt of air once did.
-            .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+            // ONE GAP, HOME INCLUDED (§1496, retiring §1157's `groupAir`):
+            // every Feed page spaces its rows alike, the 24pt section names
+            // separating the groups; the Wallet passes `rowAir`, its 52pt.
+            .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : air,
                                  leading: DSRoomChassis.rowInset,
-                                 bottom: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+                                 bottom: standsAlone(thing) ? DS.Space.s2 : air,
                                  trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its

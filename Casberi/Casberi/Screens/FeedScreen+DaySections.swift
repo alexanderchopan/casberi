@@ -593,6 +593,14 @@ extension FeedScreen {
     /// still not the case).
     static let rowAir: CGFloat = DS.Space.s1
 
+    /// A thing's row on the Feed and its pages takes s2 either side, a 16pt
+    /// gap (prd §1661, user, of the canvas "Feed row spacing": "Build B").
+    /// §1496's 52pt pitch was set while a Feed row was its app's icon and a
+    /// title; since §1642–§1660 a row carries a bubble, a photo, a cover or
+    /// its app's look, and 8pt between rows that tall read as one block. The
+    /// Wallet's rows stay one line and keep `rowAir` (`shapedListRow(air:)`).
+    static let thingAir: CGFloat = DS.Space.s2
+
 
     /// Whether a row steps back on a skim — ambient, or already read.
     ///
