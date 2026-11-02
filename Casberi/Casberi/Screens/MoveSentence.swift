@@ -4814,7 +4814,14 @@ struct MoveSentence: View {
                 listHeader(buyGroup.map { String(localized: "\($0.title) · popular") } ?? String(localized: "Popular"))
             }
             ForEach(rows.prefix(60)) { merchantRow($0) }
-            if rows.isEmpty, spend.isEmpty {
+            if rows.isEmpty, spend.isEmpty, needsBitrefillSignIn {
+                // Face ID only on this press, never on picking Spend (user,
+                // 2026-11-02: "Face id happening before I press anything").
+                listRow(String(localized: "Sign in to Bitrefill with your account"),
+                        sub: String(localized: "No Bitrefill account needed"), symbol: "faceid") {
+                    Task { await readCatalogue(retry: true) }
+                }
+            } else if rows.isEmpty, spend.isEmpty {
                 HStack(spacing: DS.Space.s2) {
                     if buyReading { DSSpinner() }
                     Text(verbatim: buyReading ? String(localized: "Asking Bitrefill")
@@ -4881,7 +4888,20 @@ struct MoveSentence: View {
         }
         networkPicked = true
         spendNames = Self.spendNames()
-        Task { await readCatalogue() }
+        if bitrefillOpen { Task { await readCatalogue() } }
+    }
+
+    /// Bitrefill answers without a Face ID: the demo's catalogue, the DEBUG
+    /// sample, or a sign-in still inside its two hours. Otherwise nothing
+    /// asks it until the merchant list's Sign in row is pressed.
+    private var bitrefillOpen: Bool {
+        YourAccountDemo.isOn || BitrefillX402.sample || BitrefillX402.signedIn
+    }
+
+    /// The merchant list leads with Sign in: nothing read, nothing reading,
+    /// nothing refused.
+    private var needsBitrefillSignIn: Bool {
+        !bitrefillOpen && popular.isEmpty && !buyReading && buyFailure == nil
     }
 
     /// Bitrefill's popular cards, read once per visit; the first read signs
@@ -4939,7 +4959,7 @@ struct MoveSentence: View {
         // ask for a second Face ID, and one after its refusal would fail the
         // same way, silently.
         if let running = catalogueRead { await running.value }
-        guard buyFailure == nil, let account = buyAccount else { return }
+        guard buyFailure == nil, bitrefillOpen, let account = buyAccount else { return }
         for word in g.searches {
             guard let hits = try? await BitrefillX402.search(word, account: account) else { continue }
             foundProducts = Self.dedupe(foundProducts + hits)
@@ -4949,7 +4969,7 @@ struct MoveSentence: View {
     /// Typing in the merchant list asks Bitrefill after a pause.
     private func searchMerchants() async {
         let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard text.count >= 2, let account = buyAccount else { return }
+        guard text.count >= 2, bitrefillOpen, let account = buyAccount else { return }
         try? await Task.sleep(for: .milliseconds(450))
         guard !Task.isCancelled else { return }
         buyReading = true

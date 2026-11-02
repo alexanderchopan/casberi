@@ -70430,3 +70430,12 @@ Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, 
 8. **Checks.** `savings-goal-selftest.sh`: the percent, what is left, the pace, a passed day, a goal of nothing; 6 mutations.
 
 **Mac half (§1402).** Holdings is the same view on the Mac; the row and the tray ride it.
+
+## §1668 — Spend asks Face ID only when you press Sign in: Bitrefill's pass is asked for by a row in the merchant list, never by picking Spend; a refusal stays in the list with Try again (amends §1473 item 4's sign-in on entering Buy) (user, 2026-11-02: "bitrefill doesn't work. when i click merchant it says 'nothing here' no matter which category i choose"; "Face id happening before I press anything"; picked "A Sign in row") — BUILT, NOT COMPILED HERE, UNSEEN ON A DEVICE
+
+1. **Cause of "Nothing here".** Every Bitrefill read (search, prices, invoice) rides the two-hour pass the account's signature buys (§1473 item 4). Picking Spend asked for it at once; a refusal flashed six seconds, then each category's seed searches failed silently and the list read "Nothing here yet" in every category.
+2. **The press.** Until a pass is live, the merchant list's one row is "Sign in to Bitrefill with your account" / "No Bitrefill account needed", wearing `faceid`. Its tap reads the popular list and seeds the picked category. Picking Spend, picking a category and typing ask nothing until then (`MoveSentence.bitrefillOpen`: the demo, the DEBUG sample, or `BitrefillX402.signedIn`).
+3. **A refusal stays.** The reason (`buyFailure`: "Your account is not on Base yet. Send something once first", "Bitrefill did not take the sign-in", a cancelled Face ID) stands in the list in the attention ink, with Try again under it. Seed searches wait on the read in flight, so one press is one Face ID.
+4. **Open question, unmeasured.** Bitrefill's recorded challenge lists `supportedChains: [{type: "eip191"}]`; the account signs through ERC-1271. Whether Bitrefill's sign-in accepts a contract signature is what the row's first press on a phone answers.
+
+**Mac half (§1402).** Move is the same view on the Mac; the row rides it.

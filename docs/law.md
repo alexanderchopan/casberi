@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1803 of 1875 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1804 of 1876 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1855,7 +1855,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
-- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666)
+- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666, §1668)
 - §1474 — A Logos node row names no address, and an unreachable node is "Not on the same network as your node"
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
@@ -2051,6 +2051,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks
 - §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
 - §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us…
+- §1668 — Spend asks Face ID only when you press Sign in: Bitrefill's pass is asked for by a row in the merchant list, never by…
 
 ## Dead rulings → what replaced them (generated)
 
