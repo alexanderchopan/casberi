@@ -148,6 +148,11 @@ enum MailIngest {
         // inside the server's recent window get it here at no extra request;
         // nothing else in the bridge ever re-reads an envelope it has seen.
         var idless = IngestSupport.mailIDlessThings(context, source: provider.source)
+        // Mail the old HTML reader landed as its page title over a layout's
+        // blank lines, or with no sender (2026-11-02): this pass holds its
+        // bytes again, so the rows in its window are read again, no request.
+        let recent = recentMail(context, source: provider.source)
+        var repaired: [Thing] = []
         var added = 0
         var backfilled = 0
         for m in messages {
@@ -164,6 +169,19 @@ enum MailIngest {
                     landed.mailMessageID = id
                     idless[ref] = nil
                     backfilled += 1
+                }
+                if let landed = recent[ref], landed.isLive {
+                    var changed = false
+                    if MailMIME.carriesLayoutRun(landed.content), let body = m.body {
+                        landed.content = body
+                        changed = true
+                    }
+                    if (landed.authorHandle ?? "").isEmpty, !m.from.isEmpty {
+                        landed.authorHandle = m.from
+                        if landed.authorEmail == nil { landed.authorEmail = m.fromAddress }
+                        changed = true
+                    }
+                    if changed { repaired.append(landed) }
                 }
                 continue
             }
@@ -239,8 +257,24 @@ enum MailIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 || backfilled > 0 { context.saveHonestly() }
+        if !repaired.isEmpty { SpotlightIndex.index(repaired) }
+        if added > 0 || backfilled > 0 || !repaired.isEmpty { context.saveHonestly() }
         return added
+    }
+
+    /// The newest landed mail, by ref: every row the server's recent window
+    /// can still hand back (`fetchRecent`'s twenty), with room for mail that
+    /// arrived since.
+    private static func recentMail(_ context: ModelContext, source: String) -> [String: Thing] {
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 60
+        var out: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { out[ref] = thing }
+        }
+        return out
     }
 
     /// The recipient lines a mail carries into retrieval, or nil when it names

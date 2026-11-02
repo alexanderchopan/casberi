@@ -125,7 +125,10 @@ enum IMAPClient {
         let withBodies = parsed.map { m in
             let raw = rawBodies[m.uid]
             let list = raw.map(MailMIME.listHeaders)
-            return Message(uid: m.uid, subject: m.subject, from: m.from,
+            // An envelope that named nobody: the header itself, off the same
+            // bytes (2026-11-02, a TestFlight mail headed by the app's name).
+            let from = m.from.isEmpty ? (raw.flatMap(MailMIME.sender) ?? "") : m.from
+            return Message(uid: m.uid, subject: m.subject, from: from,
                            fromAddress: m.fromAddress, date: m.date,
                            body: raw.flatMap(MailMIME.plainText),
                            to: m.to, cc: m.cc, messageID: m.messageID, inReplyTo: m.inReplyTo,

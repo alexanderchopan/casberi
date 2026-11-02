@@ -317,15 +317,49 @@ enum MailMIME {
     /// paragraphs don't run together; everything else is dropped, then
     /// entities decode through the same table the rest of ingest already
     /// uses (RSS descriptions hit the identical shape).
+    ///
+    /// **The title and the layout are not the message (2026-11-02).** A
+    /// TestFlight mail landed as "iTunes Connect" — its page `<title>` — over
+    /// some four thousand characters of the table layout's indentation, and
+    /// `clean`'s cap cut the words off below them: the sheet drew the title
+    /// and a screen of black. The title and comments go with the scripts, and
+    /// every line is trimmed, so what is left is the words.
     private static func htmlToPlainText(_ html: String) -> String {
         var s = html
-        s = s.replacingOccurrences(of: "(?is)<(script|style)[^>]*>.*?</\\1>", with: "",
+        s = s.replacingOccurrences(of: "(?s)<!--.*?-->", with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?is)<(script|style|title)[^>]*>.*?</\\1>", with: "",
                                    options: .regularExpression)
         s = s.replacingOccurrences(of: "(?i)<br\\s*/?>", with: "\n", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)</p>|</div>|</li>|</tr>", with: "\n",
+        s = s.replacingOccurrences(of: "(?i)</p>|</div>|</li>|</tr>|</h[1-6]>|</table>", with: "\n",
                                    options: .regularExpression)
+        // Two cells side by side are two words, never one.
+        s = s.replacingOccurrences(of: "(?i)</t[dh]>", with: " ", options: .regularExpression)
         s = s.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        return IngestSupport.decodeHTMLEntities(s)
+        s = IngestSupport.decodeHTMLEntities(s).replacingOccurrences(of: "\r\n", with: "\n")
+        s = s.replacingOccurrences(of: "[ \\t\\u00A0]+", with: " ", options: .regularExpression)
+        return s.replacingOccurrences(of: "(?m)^ +| +$", with: "", options: .regularExpression)
+    }
+
+    /// Words the old HTML reader stored with blank lines of spaces in them —
+    /// a layout's indentation. `clean` never leaves one now, so a body
+    /// carrying one was read before 2026-11-02 and is read again
+    /// (`MailIngest.refresh`).
+    static func carriesLayoutRun(_ text: String) -> Bool {
+        text.range(of: "\\n[ \\t\\u00A0]+\\n", options: .regularExpression) != nil
+    }
+
+    /// The `From` header's name, else its address — for a mail whose ENVELOPE
+    /// named nobody, so the sheet's head is the sender, never the app.
+    static func sender(from raw: Data) -> String? {
+        guard let (headers, _) = splitHeaderBody(raw),
+              let value = headerValue("From", in: headers) else { return nil }
+        let from = IMAPClient.decodeHeaderWord(value).trimmingCharacters(in: .whitespaces)
+        guard let open = from.firstIndex(of: "<") else { return from.isEmpty ? nil : from }
+        let name = from[..<open].trimmingCharacters(in: CharacterSet(charactersIn: " \""))
+        if !name.isEmpty { return name }
+        let address = from[from.index(after: open)...].prefix { $0 != ">" }
+            .trimmingCharacters(in: .whitespaces)
+        return address.isEmpty ? nil : address
     }
 
     // MARK: - Readability trim
@@ -355,6 +389,9 @@ enum MailMIME {
             s = lines[..<firstQuote].joined(separator: "\n")
         }
 
+        // A line of spaces is an empty line, or the collapse below never
+        // sees the run (2026-11-02).
+        s = s.replacingOccurrences(of: "(?m)[ \\t\\u00A0]+$", with: "", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\n{3,}", with: "\n\n", options: .regularExpression)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         return String(s.prefix(4000))

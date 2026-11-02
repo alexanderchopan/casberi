@@ -348,6 +348,59 @@ let huge = mail([
 check("a hostile 400-character name is capped",
       (MailMIME.attachmentNames(from: huge).first?.count ?? 0) <= 120)
 
+print("an HTML-only mail — its words, never its page title or its layout (2026-11-02)")
+// A TestFlight mail read as "iTunes Connect" over ~4,000 characters of the
+// table's indentation, and `clean`'s cap cut the words off below them.
+var layout = ""
+for _ in 1...60 {
+    layout += "\r\n          <tr>\r\n            <td style=\"padding:0\">\r\n"
+        + "              <table><tr><td>  </td></tr></table>\r\n            </td>\r\n          </tr>"
+}
+let htmlOnly = mail([
+    "From: TestFlight <no_reply@email.apple.com>",
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    "<html>",
+    "  <head>",
+    "    <title>iTunes Connect</title>",
+    "    <style>td { color: #000 }</style>",
+    "  </head>",
+    "  <body>",
+    "    <!--[if mso]><table><tr><td>Outlook only</td></tr></table><![endif]-->",
+    "    <table>\(layout)",
+    "      <tr><td><h1>Casberi 3.0.21 (916) for iOS is now available to test.</h1></td></tr>",
+    "      <tr>",
+    "        <td>",
+    "          You can now test it.",
+    "        </td>",
+    "      </tr>",
+    "    </table>",
+    "  </body>",
+    "</html>",
+])
+let read = MailMIME.plainText(from: htmlOnly) ?? ""
+check("the message is read past the layout",
+      read.contains("Casberi 3.0.21 (916) for iOS is now available to test."))
+check("the page's title is not the body", !read.contains("iTunes Connect"))
+check("a comment is not the body", !read.contains("Outlook only"))
+check("no line of spaces is left", !MailMIME.carriesLayoutRun(read))
+check("the words lead", read.hasPrefix("Casberi"))
+check("a line keeps no indentation", read.contains("\nYou can now test it."))
+let cells = MailMIME.plainText(from: mail([
+    "Content-Type: text/html", "", "<table><tr><td>Version</td><td>3.0.21</td></tr></table>",
+])) ?? ""
+check("two cells are two words", cells == "Version 3.0.21")
+let spaced = MailMIME.plainText(from: Data("Subject: x\r\n\r\nHi\r\n   \r\n   \r\n   \r\n   \r\nThere".utf8)) ?? ""
+check("a plain body's lines of spaces collapse", spaced == "Hi\n\nThere")
+check("an old read is known", MailMIME.carriesLayoutRun("iTunes Connect\n    \n  \n"))
+check("a clean read is not", !MailMIME.carriesLayoutRun("Hi\n\nThere"))
+
+print("the sender, off the header, when the envelope named nobody")
+check("the header's name", MailMIME.sender(from: htmlOnly) == "TestFlight")
+check("a quoted name", MailMIME.sender(from: mail(["From: \"Ana Ruiz\" <ana@x.co>", "", "x"])) == "Ana Ruiz")
+check("a bare address", MailMIME.sender(from: mail(["From: <a@b.co>", "", "x"])) == "a@b.co")
+check("no header, no sender", MailMIME.sender(from: mail(["Subject: x", "", "x"])) == nil)
+
 if failures > 0 { print("\n\(failures) failed"); exit(1) }
 print("\nall checks passed")
 SWIFT
@@ -396,5 +449,18 @@ mutate "the count cap removed" \
   's@private static let attachmentCap = 8@private static let attachmentCap = 400@'
 mutate "the dedupe removed (one file referenced twice reads as two)" \
   's@return names.filter { seen.insert($0.lowercased()).inserted }@return names.filter { _ in true }@'
+
+mutate "the title kept (a mail reads as its page's title)" \
+  's@<(script|style|title)@<(script|style)@'
+mutate "comments kept (Outlook-only words read as the body)" \
+  's@"(?s)<!--\.\*?-->"@"(?s)<never>"@'
+mutate "a line's indentation kept" \
+  's@"(?m)^ +| +\$"@"(?m)^never"@'
+mutate "lines of spaces left in a plain body" \
+  's@"(?m)\[ \\\\t\\\\u00A0\]+\$"@"(?m)never\$"@'
+mutate "cells glued together" \
+  's@"(?i)</t\[dh\]>", with: " "@"(?i)</t[dh]>", with: ""@'
+mutate "the From header's name dropped" \
+  's@if !name.isEmpty { return name }@_ = name@'
 
 echo "\n✓ MIME self-test passed"
