@@ -90,7 +90,7 @@ struct LogosRoomFigure: View {
     private var caption: String {
         let who = head.accounts.count == 1
             ? LogosRoom.name(for: head.accounts[0].id)
-            : String(localized: "\(head.accounts.count) accounts · test coins")
+            : String(localized: "\(head.accounts.count) accounts · test tokens")
         guard let reset = head.resetDay else { return who }
         let day = reset.formatted(.dateTime.month(.abbreviated).day())
         return String(localized: "\(who) · testnet reset \(day)")
@@ -271,7 +271,7 @@ enum LogosHoldings {
         guard !head.tokens.isEmpty else { return [] }
         var out: [RoomHoldings.Cell] = []
         if let total = head.total {
-            out.append(RoomHoldings.Cell(name: String(localized: "test coins"),
+            out.append(RoomHoldings.Cell(name: String(localized: "test tokens"),
                                          amount: LogosWire.amount(total)))
         }
         // Two definitions can share a name (three "ANTV"s on the 10-01

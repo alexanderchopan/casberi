@@ -129,7 +129,7 @@ extension FeedScreen {
                 }
                 .walletListRow()
                 DSFeedRow(name: WatchlistRules.network(of: token.id) == nil
-                                ? String(localized: "Coin") : String(localized: "Network"),
+                                ? String(localized: "Token") : String(localized: "Network"),
                           trailingBesideLine: true) {
                     EmptyView()
                 } trailing: {

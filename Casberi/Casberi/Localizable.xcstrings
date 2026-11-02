@@ -12588,30 +12588,30 @@
         }
       }
     },
-    "%@ test coins" : {
+    "%@ test tokens" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ monedas de prueba"
+            "value" : "%@ tokens de prueba"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "テストコイン %@"
+            "value" : "テストトークン %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "테스트 코인 %@"
+            "value" : "테스트 토큰 %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ 测试币"
+            "value" : "%@ 测试代币"
           }
         }
       }
@@ -17444,30 +17444,30 @@
         }
       }
     },
-    "%@'s own coin" : {
+    "%@'s own token" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La moneda propia de %@"
+            "value" : "El token propio de %@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@のネイティブコイン"
+            "value" : "%@のネイティブトークン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@의 자체 코인"
+            "value" : "%@의 자체 토큰"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 的原生币"
+            "value" : "%@ 的原生代币"
           }
         }
       }
@@ -19786,30 +19786,30 @@
         }
       }
     },
-    "%lld accounts · test coins" : {
+    "%lld accounts · test tokens" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld cuentas · monedas de prueba"
+            "value" : "%lld cuentas · tokens de prueba"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld件のアカウント · テストコイン"
+            "value" : "%lld件のアカウント · テストトークン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "계정 %lld개 · 테스트 코인"
+            "value" : "계정 %lld개 · 테스트 토큰"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld 个账户 · 测试币"
+            "value" : "%lld 个账户 · 测试代币"
           }
         }
       }
@@ -45108,30 +45108,30 @@
         }
       }
     },
-    "Account made. Its id is copied — send test coins to it to fund it." : {
+    "Account made. Its id is copied — send test tokens to it to fund it." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cuenta creada. Su id está copiado: envíale monedas de prueba para financiarla."
+            "value" : "Cuenta creada. Su id está copiado: envíale tokens de prueba para financiarla."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "アカウントを作成しました。IDをコピーしました — テストコインを送って入金してください。"
+            "value" : "アカウントを作成しました。IDをコピーしました — テストトークンを送って入金してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "계정을 만들었습니다. ID가 복사되었습니다 — 테스트 코인을 보내 충전하세요."
+            "value" : "계정을 만들었습니다. ID가 복사되었습니다 — 테스트 토큰을 보내 충전하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "账户已创建，ID 已复制 — 向它发送测试币即可充值。"
+            "value" : "账户已创建，ID 已复制 — 向它发送测试代币即可充值。"
           }
         }
       }
@@ -52669,30 +52669,30 @@
         }
       }
     },
-    "Any coin on %@." : {
+    "Any token on %@." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cualquier moneda en %@."
+            "value" : "Cualquier token en %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 上のどのコインでも。"
+            "value" : "%@ 上のどのトークンでも。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@의 모든 코인."
+            "value" : "%@의 모든 토큰."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 上的任何币。"
+            "value" : "%@ 上的任何代币。"
           }
         }
       }
@@ -66264,34 +66264,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新地址的二维码"
-          }
-        }
-      }
-    },
-    "Coin" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moneda"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "コイン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "코인"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "币种"
           }
         }
       }
@@ -159590,30 +159562,30 @@
         }
       }
     },
-    "Send %@ test coins on Logos" : {
+    "Send %@ test tokens on Logos" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Enviar %@ monedas de prueba en Logos"
+            "value" : "Enviar %@ tokens de prueba en Logos"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Logos でテストコインを %@ 送る"
+            "value" : "Logos でテストトークンを %@ 送る"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Logos에서 테스트 코인 %@ 보내기"
+            "value" : "Logos에서 테스트 토큰 %@ 보내기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "在 Logos 上发送 %@ 测试币"
+            "value" : "在 Logos 上发送 %@ 测试代币"
           }
         }
       }
@@ -168863,30 +168835,30 @@
         }
       }
     },
-    "Spending it with your other coins links them together. It's safest left where it is." : {
+    "Spending it with the rest of your bitcoin links them together. It's safest left where it is." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Gastarlo junto con tus otras monedas las vincula entre sí. Lo más seguro es dejarlo donde está."
+            "value" : "Gastarlo junto con el resto de tus bitcoins los vincula entre sí. Lo más seguro es dejarlo donde está."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "他のコインと一緒に使うと、それらが結びつけられます。そのままにしておくのが最も安全です。"
+            "value" : "残りのビットコインと一緒に使うと、それらが結びつけられます。そのままにしておくのが最も安全です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "다른 코인과 함께 쓰면 서로 연결됩니다. 그대로 두는 것이 가장 안전합니다."
+            "value" : "나머지 비트코인과 함께 쓰면 서로 연결됩니다. 그대로 두는 것이 가장 안전합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "和你的其他币一起花掉会把它们关联起来。最安全的做法是放着不动。"
+            "value" : "和你其余的比特币一起花掉会把它们关联起来。最安全的做法是放着不动。"
           }
         }
       }
@@ -174400,58 +174372,58 @@
         }
       }
     },
-    "Test coins have no value, and the testnet may be reset without notice." : {
+    "Test tokens have no value, and the testnet may be reset without notice." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Las monedas de prueba no tienen valor, y la testnet puede reiniciarse sin aviso."
+            "value" : "Los tokens de prueba no tienen valor, y la testnet puede reiniciarse sin aviso."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "テストコインに価値はなく、テストネットは予告なくリセットされることがあります。"
+            "value" : "テストトークンに価値はなく、テストネットは予告なくリセットされることがあります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "테스트 코인은 가치가 없으며, 테스트넷은 예고 없이 초기화될 수 있습니다."
+            "value" : "테스트 토큰은 가치가 없으며, 테스트넷은 예고 없이 초기화될 수 있습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "测试币没有价值，测试网可能在不通知的情况下重置。"
+            "value" : "测试代币没有价值，测试网可能在不通知的情况下重置。"
           }
         }
       }
     },
-    "Test coins on Logos are whole numbers." : {
+    "Test tokens on Logos are whole numbers." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Las monedas de prueba en Logos son números enteros."
+            "value" : "Los tokens de prueba en Logos son números enteros."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Logos のテストコインは整数です。"
+            "value" : "Logos のテストトークンは整数です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Logos 테스트 코인은 정수입니다."
+            "value" : "Logos 테스트 토큰은 정수입니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Logos 上的测试币为整数。"
+            "value" : "Logos 上的测试代币为整数。"
           }
         }
       }
@@ -174484,24 +174456,24 @@
         }
       }
     },
-    "Test network · its coins have no value" : {
+    "Test network · its tokens have no value" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Red de prueba · sus monedas no tienen valor"
+            "value" : "Red de prueba · sus tokens no tienen valor"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テストネットワーク · コインに価値はありません"
+            "value" : "テストネットワーク · トークンに価値はありません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "테스트 네트워크 · 코인에 가치가 없음"
+            "value" : "테스트 네트워크 · 토큰에 가치가 없음"
           }
         },
         "zh-Hans" : {
@@ -204789,24 +204761,24 @@
         }
       }
     },
-    "You approve each send in your wallet. Each network keeps a little of its own coin to pay for them." : {
+    "You approve each send in your wallet. Each network keeps a little of its own token to pay for them." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Apruebas cada envío en tu cartera. Cada red guarda un poco de su propia moneda para pagarlos."
+            "value" : "Apruebas cada envío en tu cartera. Cada red guarda un poco de su propio token para pagarlos."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "各送金はウォレットで承認します。各ネットワークには手数料分の通貨が少し残ります。"
+            "value" : "各送金はウォレットで承認します。各ネットワークには手数料分のトークンが少し残ります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "각 전송은 지갑에서 승인합니다. 각 네트워크에는 수수료용 코인이 조금 남습니다."
+            "value" : "각 전송은 지갑에서 승인합니다. 각 네트워크에는 수수료용 토큰이 조금 남습니다."
           }
         },
         "zh-Hans" : {
@@ -233434,30 +233406,30 @@
         }
       }
     },
-    "test coins" : {
+    "test tokens" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "monedas de prueba"
+            "value" : "tokens de prueba"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テストコイン"
+            "value" : "テストトークン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "테스트 코인"
+            "value" : "테스트 토큰"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测试币"
+            "value" : "测试代币"
           }
         }
       }

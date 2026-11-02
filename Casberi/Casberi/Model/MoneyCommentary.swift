@@ -142,7 +142,7 @@ enum MoneyCommentary: Equatable {
     /// the one thing it is for: spent beside your other coins, it links them.
     static let dust = MoneyCommentary.note(
         headline: String(localized: "Dust."),
-        subline: String(localized: "Spending it with your other coins links them together. It's safest left where it is."))
+        subline: String(localized: "Spending it with the rest of your bitcoin links them together. It's safest left where it is."))
 
     static func settling(need: Int) -> MoneyCommentary {
         .note(headline: String(localized: "Still settling."), subline: nil)
