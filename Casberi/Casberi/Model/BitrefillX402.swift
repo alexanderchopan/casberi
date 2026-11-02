@@ -71,14 +71,14 @@ enum BitrefillX402 {
         let address = EIP55.checksum(account)
         let message = challenge.message(address: address, chainId: network.chainId)
         let signature = try await YourAccountMessage.signText(message, on: network, account: account,
-                                                              reason: String(localized: "Sign in to Bitrefill with your account"))
+                                                              reason: String(localized: "Use your account with Bitrefill"))
         guard let header = challenge.header(address: address, chainId: network.chainId, signature: signature) else {
             throw Failure(message: "The sign-in could not be written")
         }
         let (answer, status2) = await IngestSupport.requestJSON(url, method: "POST", body: [:],
                                                                 headers: ["SIGN-IN-WITH-X": header], service: service)
         guard status2 == 200, let session = BitrefillBuy.Session.parse(answer) else {
-            throw Failure(message: BitrefillBuy.refusal(answer, status: status2) ?? String(localized: "Bitrefill did not take the sign-in"), from: "Bitrefill")
+            throw Failure(message: BitrefillBuy.refusal(answer, status: status2) ?? String(localized: "Bitrefill did not accept your account's signature"), from: "Bitrefill")
         }
         return session
     }

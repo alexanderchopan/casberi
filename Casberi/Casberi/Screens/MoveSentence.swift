@@ -4817,8 +4817,11 @@ struct MoveSentence: View {
             if rows.isEmpty, spend.isEmpty, needsBitrefillSignIn {
                 // Face ID only on this press, never on picking Spend (user,
                 // 2026-11-02: "Face id happening before I press anything").
-                listRow(String(localized: "Sign in to Bitrefill with your account"),
-                        sub: String(localized: "No Bitrefill account needed"), symbol: "faceid") {
+                // No Bitrefill account exists or is made: the account signs
+                // once and Bitrefill answers for two hours (user, 2026-11-02:
+                // "people don't create a bitrefill account").
+                listRow(String(localized: "Show gift cards"),
+                        sub: String(localized: "Face ID once, good for two hours"), symbol: "faceid") {
                     Task { await readCatalogue(retry: true) }
                 }
             } else if rows.isEmpty, spend.isEmpty {
@@ -4893,12 +4896,12 @@ struct MoveSentence: View {
 
     /// Bitrefill answers without a Face ID: the demo's catalogue, the DEBUG
     /// sample, or a sign-in still inside its two hours. Otherwise nothing
-    /// asks it until the merchant list's Sign in row is pressed.
+    /// asks it until the merchant list's Show gift cards row is pressed.
     private var bitrefillOpen: Bool {
         YourAccountDemo.isOn || BitrefillX402.sample || BitrefillX402.signedIn
     }
 
-    /// The merchant list leads with Sign in: nothing read, nothing reading,
+    /// The merchant list leads with Show gift cards: nothing read, nothing reading,
     /// nothing refused.
     private var needsBitrefillSignIn: Bool {
         !bitrefillOpen && popular.isEmpty && !buyReading && buyFailure == nil
