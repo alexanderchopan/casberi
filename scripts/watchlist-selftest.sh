@@ -42,6 +42,14 @@ print -r -- "$shows" | grep -qF 'guard !walletOnFollowing, selectedSeat == nil e
   || { echo "✗ Home's watchlist no longer stands down on Following and an app pick"; exit 1; }
 grep -qF 'if walletWatchlistShows { walletWatchlistHomeSection }' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
   || { echo "✗ Home no longer draws the watchlist behind walletWatchlistShows"; exit 1; }
+# A token watched by its contract charts too: when DeFiLlama has no window,
+# the coin CoinGecko lists it as (AZTEC on Ethereum drew an empty box).
+charts="$(awk '/static func charts\(ids:/,/^    }/' "$STORE")"
+print -r -- "$charts" | grep -qF 'ContractCoins.shared.coin(forContract: id)' \
+  || { echo "✗ a contract with no DeFiLlama window no longer falls back to its CoinGecko coin"; exit 1; }
+# A token page with no chart says so, never an empty box (§769).
+awk '/func walletWatchlistFigure/,/^    }/' "$SCREEN" | grep -qF 'WalletScopeEmptyFigure(section: .watchedToken)' \
+  || { echo "✗ a token page with no chart draws an empty box"; exit 1; }
 echo "watchlist-selftest: drift guards ✓"
 
 TMP="$(mktemp -d)"

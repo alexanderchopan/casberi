@@ -127,14 +127,42 @@ final class WatchlistPrices {
                 if closes.count >= 2 { out[id] = closes }
             }
         }
-        for id in ids where out[id] == nil && id.hasPrefix("coingecko:") {
-            let coin = String(id.dropFirst("coingecko:".count))
-            guard let cg = WatchlistRules.coingeckoChartQuery(range.rawValue),
+        for id in ids where out[id] == nil {
+            // A contract DeFiLlama has no window for (a token watched from
+            // what you hold, AZTEC on Ethereum): the coin CoinGecko lists it
+            // as, asked once per launch, then that coin's chart.
+            let coin: String?
+            if id.hasPrefix("coingecko:") {
+                coin = String(id.dropFirst("coingecko:".count))
+            } else if let found = await ContractCoins.shared.coin(forContract: id) {
+                coin = String(found.dropFirst("coingecko:".count))
+            } else {
+                coin = nil
+            }
+            guard let coin, let cg = WatchlistRules.coingeckoChartQuery(range.rawValue),
                   let body = await text("https://api.coingecko.com/api/v3/coins/\(coin)/market_chart?vs_currency=usd&days=\(cg.days)") else { continue }
             let closes = WatchlistRules.thinned(WatchlistRules.parseCoinGeckoChart(Data(body.utf8), keepsSeconds: cg.keepsSeconds), to: q.span)
             if closes.count >= 2 { out[id] = closes }
         }
         return out
+    }
+
+    /// Which CoinGecko coin each contract is, kept for the launch: every
+    /// range switch would otherwise ask CoinGecko twice, and its keyless
+    /// limit is a few requests a minute. A contract it lists as nothing is
+    /// kept as nothing; a failed read is not kept, so the next asks again.
+    private actor ContractCoins {
+        static let shared = ContractCoins()
+        private var known: [String: String?] = [:]
+
+        func coin(forContract id: String) async -> String? {
+            if let hit = known[id] { return hit }
+            guard let path = WatchlistRules.coinByContractPath(id) else { return nil }
+            guard let body = await WatchlistPrices.text("https://api.coingecko.com/api/v3/\(path)") else { return nil }
+            let coin = WatchlistRules.parseCoinByContract(Data(body.utf8))
+            known[id] = .some(coin)
+            return coin
+        }
     }
 
     /// The search: a pasted address asks every chain at once; words ask
@@ -171,7 +199,7 @@ final class WatchlistPrices {
     /// Tor circuit (`TorRoute.way`): it carries a token, never an account.
     nonisolated static let service = "Token prices"
 
-    nonisolated private static func text(_ url: String) async -> String? {
+    nonisolated fileprivate static func text(_ url: String) async -> String? {
         guard let url = URL(string: url) else { return nil }
         return await IngestSupport.getText(url, service: service)
     }

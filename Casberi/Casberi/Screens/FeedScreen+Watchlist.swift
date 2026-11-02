@@ -164,7 +164,8 @@ extension FeedScreen {
                            },
                            hero: true,
                            object: (name: token.name, symbol: token.symbol)) {
-                EmptyView()
+                // No range answered: say so, never an empty box (§769).
+                WalletScopeEmptyFigure(section: .watchedToken)
             }
             .environment(\.priceBoxed, true)
             .id(token.id)

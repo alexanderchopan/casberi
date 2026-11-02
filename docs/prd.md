@@ -70255,3 +70255,12 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 3. **Nothing added around it.** Built and deleted in the same pass: a card spend's week strip, a wallet move's "That hour" list, and a Safe proposal's signers as the head (the Signatures block already draws each face). Not built, because the rows do not carry them: an NFT's picture, a swap's value since, who a person is across apps, what a permission has done, a subscription's year of charges. No line of subtext.
 
 **Seen** on an iPhone 18 Pro simulator over the demo, dark: a swap (USDC and ETH at 120), a send, a MetaMask Card spend, a Safe proposal, Netflix's subscription page, all on ink. **Not seen:** light theme, the Mac.
+
+## §1652 — A watched token's page draws its price chart whatever it was watched by: a contract DeFiLlama has no window for is charted as the coin CoinGecko lists it as, and a page with no chart says "No price yet" (amends §1632 item 8, §1634 item 4) (user, 2026-11-02: "tapping a token in watchlist should show its price chart", over a screenshot of AZTEC on Ethereum with an empty box) — BUILT, NOT SEEN
+
+1. **The cause.** AZTEC was watched from what the account holds, so its id is its Ethereum contract (`WatchlistRules.holdingIDs`). The chart asked DeFiLlama for that contract and, when it answered no window, fell back to CoinGecko only for an id that was already a CoinGecko coin (§1634 item 4, MUSEGOD's). The token page's box passed `EmptyView()` as the chart's fallback, so a range with no answer drew nothing at all.
+2. **The fallback.** `WatchlistPrices.charts` asks CoinGecko which coin a contract is (`coins/<platform>/contract/<address>`, the path `coin(forContract:)` already reads), kept per launch in `ContractCoins` so a range switch asks CoinGecko once, not twice, then reads that coin's `market_chart`, thinned to DeFiLlama's count as §1634 rules. A contract CoinGecko lists as nothing is kept as nothing; a failed read is asked again. The Watchlist's box gains the same lines.
+3. **No chart is a fact.** With no range answering, the box draws the scope's empty state (`WalletScopeEmptyFigure(section: .watchedToken)`: "No price yet"), never an empty box (§769).
+4. **Checks.** `watchlist-selftest.sh` fails when `charts` stops asking `ContractCoins` or the token page's fallback stops being the empty state.
+
+**Not measured:** neither host was reachable from the session that wrote this, so whether DeFiLlama has no AZTEC window and whether CoinGecko lists the contract are unconfirmed. **Not seen:** the simulator, the Mac.
