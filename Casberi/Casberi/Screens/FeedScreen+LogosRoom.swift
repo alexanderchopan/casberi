@@ -140,7 +140,7 @@ extension FeedScreen {
                           name: LogosKey.holds(id) ? String(localized: "This phone · \(LogosRoom.name(for: id))")
                                                    : LogosRoom.name(for: id),
                           sub: store.balance(for: id)
-                              .map { String(localized: "\(LogosWire.amount($0)) test coins") }
+                              .map { String(localized: "\(LogosWire.amount($0)) test tokens") }
                               .map { LogosScreen.withID(id, $0) },
                           faces: [.wallet(address: id)])
         }
@@ -161,7 +161,7 @@ extension FeedScreen {
             let id = try LogosSend.create()
             UIPasteboard.general.string = id
             withAnimation(DS.Motion.standard) { chrome.logosScope = id }
-            chrome.flash(String(localized: "Account made. Its id is copied — send test coins to it to fund it."))
+            chrome.flash(String(localized: "Account made. Its id is copied — send test tokens to it to fund it."))
             chrome.rain(sources: [LogosRoom.source])
             Task { _ = await LogosIngest.refresh(context: modelContext) }
         } catch {
@@ -188,7 +188,7 @@ extension FeedScreen {
             return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
         }
         guard let value = LogosWire.typedAmount(amount) else {
-            return String(localized: "Test coins on Logos are whole numbers.")
+            return String(localized: "Test tokens on Logos are whole numbers.")
         }
         switch await LogosSend.send(to: to, amount: value, context: modelContext) {
         case .success:

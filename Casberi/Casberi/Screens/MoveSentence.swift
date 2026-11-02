@@ -2427,7 +2427,7 @@ struct MoveSentence: View {
                             // The network the sentence names (prd §1486).
                             // In the door rows' column, with "Private" and
                             // "From another wallet" (prd §1616 item 7).
-                            Text("Any coin on \(network.name).")
+                            Text("Any token on \(network.name).")
                                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.leading, DSDoorRowLabel.textColumn)
@@ -2529,7 +2529,7 @@ struct MoveSentence: View {
                 }
                 // A test network says so wherever it is picked (prd §1439).
                 if network.isTest {
-                    Text("test coins").dsText(.body17).foregroundStyle(DS.attentionInk)
+                    Text("test tokens").dsText(.body17).foregroundStyle(DS.attentionInk)
                 }
                 // The slider and the $ · token switch work on the line being
                 // filled, so they share a row under the sentence (§1442g).
@@ -3173,7 +3173,7 @@ struct MoveSentence: View {
     private var elsewhereList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
-                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : String(localized: "your own address"),
+                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its tokens have no value") : String(localized: "your own address"),
                         image: Self.networkMark(n), picked: elsewhere == nil && networkPicked && n == network) {
                     pick {
                         elsewhere = nil
@@ -3233,7 +3233,7 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             if let route = elsewhere {
                 ForEach(route.from.coins) { c in
-                    listRow(c.symbol, sub: c.isNative ? String(localized: "\(route.from.name)'s own coin") : nil,
+                    listRow(c.symbol, sub: c.isNative ? String(localized: "\(route.from.name)'s own token") : nil,
                             mark: c.symbol, picked: c == route.token) {
                         pick {}
                         if c != route.token { takeRoute(from: route.from, token: c) }
@@ -3286,7 +3286,7 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
                 let total = (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +)
-                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : nil,
+                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its tokens have no value") : nil,
                         trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
                         picked: networkPicked && n == network) {
                     pick { switchNetwork(n) }

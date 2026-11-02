@@ -412,7 +412,7 @@ extension FeedScreen {
                 venue: String(localized: "Logos"),
                 seat: LogosRoom.source,
                 tint: DS.pickInk,
-                unit: String(localized: "test coins"),
+                unit: String(localized: "test tokens"),
                 candidates: logosSendCandidates,
                 heldLine: logosHeldLine,
                 maxAmount: nil,

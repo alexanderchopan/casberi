@@ -108,7 +108,7 @@ struct ReceiveFromWalletSheet: View {
                 .padding(.top, DS.Space.s3)
             // Approving is the wallet's, one send at a time; a network's
             // own coin goes last, less what the sends cost.
-            DSFootnote(prose: String(localized: "You approve each send in your wallet. Each network keeps a little of its own coin to pay for them."),
+            DSFootnote(prose: String(localized: "You approve each send in your wallet. Each network keeps a little of its own token to pay for them."),
                        scale: .page)
         }
     }

@@ -131,7 +131,7 @@ struct LogosScreen: View {
             let day = start.formatted(.dateTime.month(.abbreviated).day())
             return String(localized: "The testnet was reset on \(day), so accounts from before then are empty.")
         }
-        return String(localized: "Test coins have no value, and the testnet may be reset without notice.")
+        return String(localized: "Test tokens have no value, and the testnet may be reset without notice.")
     }
 
     // MARK: - The roster
@@ -405,7 +405,7 @@ struct LogosScreen: View {
                     id: "logos", name: "Logos", proof: proof,
                     can: ["Reads the balance and activity of the public LEZ accounts you follow, on the Logos testnet.",
                           "Reads your own node's sync state, peers, mining and reward vouchers, at the address you give it.",
-                          "Sends test coins from an account made on this phone, signed with a key that never leaves it."])
+                          "Sends test tokens from an account made on this phone, signed with a key that never leaves it."])
             } else {
                 lastResult = .failed(String(localized: "Couldn't reach the Logos testnet — check your connection."))
             }

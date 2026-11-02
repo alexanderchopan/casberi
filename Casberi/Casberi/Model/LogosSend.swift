@@ -81,7 +81,7 @@ enum LogosSend {
         do {
             witness = try LogosKey.sign(
                 hash: LogosWire.messageHash(message),
-                reason: String(localized: "Send \(LogosWire.amount(amount)) test coins on Logos"))
+                reason: String(localized: "Send \(LogosWire.amount(amount)) test tokens on Logos"))
         } catch LogosKey.Failure.locked {
             return .failure(.cancelled)
         } catch {
