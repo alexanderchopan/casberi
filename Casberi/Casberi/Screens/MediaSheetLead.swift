@@ -557,6 +557,7 @@ private struct EpisodePlayerView: View {
     let chapters: [MediaChapters.Chapter]
     @Binding var seek: Int?
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var player = EpisodePlayer()
 
     var body: some View {
@@ -608,7 +609,11 @@ private struct EpisodePlayerView: View {
             let fraction = player.duration > 0 ? min(1, player.elapsed / player.duration) : 0
             ZStack(alignment: .leading) {
                 Capsule().fill(DS.fillStrong).frame(height: 4)
+                // The fill runs through each half-second tick of the player
+                // (`addPeriodicTimeObserver`), so it moves with the sound
+                // rather than stepping.
                 Capsule().fill(DS.textPrimary).frame(width: w * fraction, height: 4)
+                    .animation(reduceMotion ? nil : .linear(duration: 0.5), value: fraction)
                 if player.duration > 0 {
                     ForEach(chapters.filter { $0.seconds > 0 }) { chapter in
                         Capsule()
@@ -616,9 +621,12 @@ private struct EpisodePlayerView: View {
                             .frame(width: 3, height: 10)
                             .offset(x: w * min(1, Double(chapter.seconds) / player.duration) - 1.5)
                     }
+                    .transition(.opacity)
                 }
             }
             .frame(maxHeight: .infinity)
+            // The chapter marks arrive when the length is known.
+            .animation(reduceMotion ? nil : DS.Motion.standard, value: player.duration > 0)
         }
         .frame(height: 12)
         .accessibilityElement()
