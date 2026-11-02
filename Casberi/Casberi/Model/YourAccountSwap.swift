@@ -895,8 +895,14 @@ enum YourAccountSwap {
     static func credit(_ routes: [Route]) -> String? {
         guard let first = routes.first else { return nil }
         if routes.allSatisfy({ $0 == first }) { return words(first) }
+        return on(exchanges(routes).formatted(.list(type: .and)))
+    }
+
+    /// Each exchange the routes pass through, once, in order: the names
+    /// `credit` says and whose marks lead its line (prd §1675).
+    static func exchanges(_ routes: [Route]) -> [String] {
         var names: [String] = []
         for r in routes where !names.contains(r.venue.exchange) { names.append(r.venue.exchange) }
-        return on(names.formatted(.list(type: .and)))
+        return names
     }
 }

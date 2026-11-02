@@ -70537,3 +70537,15 @@ Now and When ETH is … are drawn by the same row as the token and network lists
 7. **Not measured:** no order has been placed, filled or cancelled on chain this way; a typed price is in dollars only for the token that is not a dollar (neither a dollar: the bought token's price, turned into a rate at today's price of the sold one); the expiry is fixed at a week (item 5 of §1673's "until <day>" word that changes it is not built).
 
 **Mac half (§1402).** The same Move sentence and Needs you rows; built for iOS only this pass, the Mac not walked.
+
+## §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswap, Aerodrome and Across, as Relay's and CoW Swap's credits carry theirs (amends §1539's foot, §1555, §1566; keeps "no powered by") (user, 2026-11-02: "on swaps in the footer it says Across and Uniswap. should we have their logos there"; "you get their logo") — BUILT, not compiled
+
+**Why.** The Move foot credits four services. Relay, CoW Swap and Bitrefill wore their marks beside the name (§1442n, §1673b); the swap's own exchanges were words alone, the one credit drawn differently.
+
+1. **One line per leg, its marks first.** `exchangeCredit` is a list of `CreditLine`s (words and the services they name) in place of one string joined by new lines: the pools here, Across, the pools there (§1566), each its own line; a route through two exchanges ("On Uniswap and Aerodrome") wears both marks, side by side (`YourAccountSwap.exchanges`, the names `credit` already said). The words are unchanged, and there is still no "powered by" (§1539).
+2. **The marks.** `MoveSentence.exchangeMarks`: `brand-uniswap` and `brand-aerodrome` (already in the catalogue), `brand-across` new, 16pt in a circle as CoW Swap's. Across's is its X mark, from Trust Wallet's asset repository (`blockchains/ethereum/assets/0x44108f0223A3C3028F5Fe7AEC7f9bb2E66beF82F`, the ACX token's logo, which is Across's), cropped 6px a side and drawn at 192px. Sushi has no mark here, so a Sushi line (Robinhood) stands on its words; WETH's wrap names no exchange and wears none.
+3. **VoiceOver** reads the words once: the marks on these lines are hidden, since the line names the service.
+
+**Not measured:** built in a cloud session with no Xcode; not compiled or seen on the simulator.
+
+**Mac half (§1402).** The same Move foot; not walked.

@@ -307,6 +307,14 @@ struct MoveSentence: View {
         }
     }
 
+    /// The marks a swap's lines wear, by the name the line says (prd §1675).
+    /// Sushi has none here, so its line stands on its words.
+    static let exchangeMarks: [String: String] = [
+        "Uniswap": "brand-uniswap",
+        "Aerodrome": "brand-aerodrome",
+        "Across": "brand-across",
+    ]
+
     /// A service's mark, in place of its name before its own words (§1442n):
     /// Relay's star on its white circle, as its credit draws it.
     @ViewBuilder static func mark(of service: String) -> some View {
@@ -326,6 +334,14 @@ struct MoveSentence: View {
                 .accessibilityLabel(Text(verbatim: service))
         } else if service == "CoW Swap" {
             Image("brand-cowswap")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 16, height: 16)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: service))
+        } else if let asset = exchangeMarks[service] {
+            // The exchanges and Across, on the swap's own lines (prd §1675).
+            Image(asset)
                 .resizable()
                 .scaledToFill()
                 .frame(width: 16, height: 16)
@@ -847,35 +863,57 @@ struct MoveSentence: View {
     ///
     /// A send whose round-up buys on the exchanges (prd §1545) says it the
     /// same way, from the preview's own quote: "On Aerodrome · 0.01% pool fee".
-    private var exchangeCredit: String? {
+    ///
+    /// **EACH LINE WEARS ITS EXCHANGE'S MARK (prd §1675, user: "should we
+    /// have their logos there").** One line per leg, the marks of the
+    /// services it names before its words, as Relay's and CoW Swap's credits
+    /// carry theirs.
+    private var exchangeCredit: [CreditLine] {
         // A price's order credits CoW Swap with its mark, in `foot` (prd §1673).
-        if limiting { return nil }
+        if limiting { return [] }
         if verb == .send {
-            guard roundUpCarried != nil, let sold = shownPreview?.sold else { return nil }
-            return YourAccountSwap.credit(sold.compactMap(\.route))
+            guard roundUpCarried != nil, let sold = shownPreview?.sold else { return [] }
+            return CreditLine.of(sold.compactMap(\.route))
         }
-        guard verb == .swap || verb == .sweep else { return nil }
+        guard verb == .swap || verb == .sweep else { return [] }
         // **"THROUGH ACROSS · 0.06% FEE · ABOUT 10 SECONDS" (prd §1555).**
         // A swap to another network: Across's fee, rounded as a pool's is,
         // and its time; under the pool's words when a token is swapped first.
         // "Unwraps WETH · no fee" (prd §1559): one for one through the
         // network's WETH, no pool and no fee but the network's.
         if signing.count == 1, case .swap(let s) = signing[0], let w = s.quote.wrap {
-            return YourAccountSwap.words(w)
+            return [CreditLine(marks: [], text: YourAccountSwap.words(w))]
         }
         for item in signing {
             guard case .swap(let s) = item, let leg = s.quote.across else { continue }
             let across = [YourAccountAcross.words(leg), YourAccountAcross.about(leg.seconds)].compactMap { $0 }.joined(separator: " · ")
             // In the order it happens: the pools here, Across, the pools
             // there (prd §1566: "On Uniswap · 0.05% pool fee on Ethereum").
-            return [s.quote.route.map(YourAccountSwap.words), across, YourAccountAcross.arrivalWords(leg)]
-                .compactMap { $0 }.joined(separator: "\n")
+            var lines = s.quote.route.map { CreditLine.of([$0]) } ?? []
+            lines.append(CreditLine(marks: ["Across"], text: across))
+            if let words = YourAccountAcross.arrivalWords(leg), let there = leg.swap?.route {
+                lines.append(CreditLine(marks: [there.venue.exchange], text: words))
+            }
+            return lines
         }
         let routes = signing.compactMap { item -> YourAccountSwap.Route? in
             if case .swap(let s) = item { return s.quote.route }
             return nil
         }
-        return YourAccountSwap.credit(routes)
+        return CreditLine.of(routes)
+    }
+
+    /// One line of the swap's credit: its words and the services they name,
+    /// whose marks lead it (prd §1675).
+    struct CreditLine: Hashable {
+        let marks: [String]
+        let text: String
+
+        /// The pools' credit as one line, every exchange it names marked.
+        static func of(_ routes: [YourAccountSwap.Route]) -> [CreditLine] {
+            guard let text = YourAccountSwap.credit(routes) else { return [] }
+            return [CreditLine(marks: YourAccountSwap.exchanges(routes), text: text)]
+        }
     }
 
     /// The small print's word on round-ups: what is counted, or that this
@@ -4071,13 +4109,22 @@ struct MoveSentence: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
             }
-            if let exchangeCredit, receipt == nil, !nothingToMove {
-                Text(verbatim: exchangeCredit)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, DS.Space.s1)
+            let credit = exchangeCredit
+            if !credit.isEmpty, receipt == nil, !nothingToMove {
+                VStack(spacing: DS.Space.s1) {
+                    ForEach(credit, id: \.self) { line in
+                        HStack(spacing: DS.Space.s1) {
+                            // The words name the service; the mark is not read twice.
+                            ForEach(line.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
+                            Text(verbatim: line.text)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s1)
             }
             // Both keys sign this one (prd §1456): said before the tap, not
             // when the Signer's sheet rises.
