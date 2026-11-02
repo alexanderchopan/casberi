@@ -2362,6 +2362,11 @@ enum DemoSeedAll {
                 t.topicsAt = .now
                 t.previewImageURL = art("yt-\(i)")
                 t.enrichedText = "\(v.0) — \(v.2.joined(separator: ", "))"
+                // The channel's own description, chapters and all, as the
+                // feed lands it on `summary` (prd §1650).
+                if i == 0 {
+                    t.summary = "We take a twenty-line program and follow it through a real compiler: the tokens, the tree, the checks and the code that comes out the other end.\n\n0:00 The program\n2:41 Tokens\n7:15 The tree\n13:02 Type checking\n19:40 What comes out"
+                }
             }
         }
     }
@@ -2627,6 +2632,10 @@ enum DemoSeedAll {
             row(.link, s.0, source: "Podcasts", ref: "demo:podcast:\(i)", days: s.2, hour: 7) { t in
                 t.authorHandle = s.1
                 t.previewImageURL = art("podcast-\(i)")
+                // The episode's notes, as the feed lands them (prd §1650).
+                if i == 0 {
+                    t.summary = "Ron and the team on what a compiler is for when the program is a trading system: why the slow path matters, and the bug that only showed up on Fridays.\n\n4:15 Why build your own\n21:40 The slow path\n38:05 The Friday bug"
+                }
             }
         }
         let steam: [(String, Double, Double)] = [
@@ -2858,6 +2867,8 @@ enum DemoSeedAll {
                 t.authorHandle = f.handle
                 t.authorAvatarURL = avatarArt(f.handle)
                 t.socialContext = "follow"
+                // Their own bio, as `landFollower` keeps it (prd §912, §1651).
+                t.summary = "Product designer in Lisbon. Critique on Fridays, ceramics on Sundays."
             }
         }
         let posts: [(String, String, Int, Double)] = [

@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1784 of 1856 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1786 of 1858 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2032,6 +2032,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1646 — A note of yours is set in New York; everything the app brought in stays Figtree
 - §1647 — Turning the co-signer off never needs the co-signer: this iPhone signs Off with its own key and the recovery key, at…
 - §1648 — The apps §1645 did not reach look like their apps too: an event's hours, an issue's key, a release's version, a revie…
+- §1650 — A track, a video, an episode, a saved TikTok and a screenshot lead with themselves: the medium's shape is the head, t…
+- §1651 — A short post is set large, a reply stands under what it answers, a follow is the person, a chat's tiles come after it…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -823,7 +823,7 @@ enum NetworkReach {
         // it as an undisclosed reach.
         Endpoint(service: "Podcasts",
                  reach: .whenConnected(bridge: "Podcasts"),
-                 purpose: "Finds a show in Apple's public podcast directory and reads its feed for new episodes. The feed request goes to that show's own site.",
+                 purpose: "Finds a show in Apple's public podcast directory, reads its feed for new episodes, and plays an episode when you press Play. The feed and the audio come from that show's own site.",
                  hosts: ["itunes.apple.com", "the shows you follow"]),
         // Apple Music's own reads go through Apple's Music framework on this
         // iPhone rather than a URL we build, so nothing about them is a host

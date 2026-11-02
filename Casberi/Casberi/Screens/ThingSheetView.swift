@@ -219,6 +219,8 @@ struct ThingSheetView: View {
     @State private var dayBlocks: [EventDaySlice.Block] = []
     /// More from this artist or channel (prd §1186), read on the task (§628).
     @State private var mediaMore: [Thing] = []
+    /// A song's or an episode's cover colour, the sheet's ground (prd §1650).
+    @State private var mediaGround: Color?
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
     @State private var tracking = false
@@ -496,8 +498,11 @@ struct ThingSheetView: View {
                 // leave the picture to the head.
                 // MEDIA (prd §897) — a track, a video, an episode; it wins over
                 // the article head, which a video with a stored description met.
-                let mediaHead: Bool = MediaSheetBox.isMedia(thing) && ThingChart.kind(for: thing) == nil
+                // A saved TikTok or a reel stands at its own 9:16 (prd §1650).
+                let verticalHead: Bool = MediaSheetLead.isVertical(thing)
                     && moneyReceipt == nil && !framedShot
+                let mediaHead: Bool = (MediaSheetBox.isMedia(thing) && ThingChart.kind(for: thing) == nil
+                    && moneyReceipt == nil && !framedShot) || verticalHead
                 let chartHead: Bool = ThingChart.kind(for: thing) != nil
                 let readsAsArticle: Bool = !mediaHead && ThingContentView.readsAsArticle(thing)
                     && moneyReceipt == nil && !framedShot && !isSocialPost
@@ -510,7 +515,7 @@ struct ThingSheetView: View {
                 // gets the article head's shape: who, the pink day, the words.
                 let postHead: Bool = isSocialPost
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
-                    && moneyReceipt == nil && !framedShot
+                    && moneyReceipt == nil && !framedShot && !verticalHead
                 // A MOMENT (prd §892): an event, a workout, a reminder — its
                 // head, its title, and WHEN, which the sheet never drew.
                 // A chain's DEADLINE (an unlock, a name's expiry, a vote
@@ -771,50 +776,7 @@ struct ThingSheetView: View {
                     // THE CENTRED HEAD (prd §1398): the app's mark, the name,
                     // the title's line half (§915) with the day; the tiles;
                     // then the picture at the box's size under them.
-                    SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
-                                   line: TitleSeam.split(thing.title).line.flatMap { $0.isEmpty ? nil : $0 }
-                                       ?? BridgeCatalog.seatName(forSource: thing.source)) {
-                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
-                    }
-                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
-                        .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, centered: true)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
-                    Button {
-                        if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
-                    } label: {
-                        PhotoWell(thing: thing, anchor: thing.kind == .screenshot ? .top : .center,
-                                  readsFolder: true)
-                            .overlay(alignment: .topTrailing) {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .dsGlyph(.caption, weight: .bold)
-                                    .foregroundStyle(Color.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Circle().fill(Color.black.opacity(0.55)))
-                                    .padding(DS.Space.s3)
-                                    .accessibilityHidden(true)
-                            }
-                    }
-                    .buttonStyle(PressSpring())
-                    .dsTapTarget()
-                    .dsRoomBox(bleed: true)
-                    .padding(.top, DS.Space.s6)
-                    .accessibilityLabel(Text(verbatim: TitleSeam.split(thing.title).name))
-                    .accessibilityHint(Text("Opens the photo full screen"))
-                    .dsTooltip(String(localized: "Opens the photo full screen"))
-                    .settleIn(delay: 0.1)
-                    // What the picture names, under the tiles (§885's facts).
-                    if !facts.isEmpty {
-                        SheetCard(name: String(localized: "Found in it")) {
-                            factRows
-                        }
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.12)
-                    }
+                    shotFrame
                 } else if socialShape == .person {
                     // A PERSON, not a link to one (prd §363). The title slot
                     // held "@alice started following you" at display size and
@@ -1199,7 +1161,7 @@ struct ThingSheetView: View {
                 // The "Name this address?" block is deleted (prd §1350): the
                 // verb row's Save names the address, and the block said so twice.
                 let headDrawsTiles: Bool = moneyReceipt != nil || framedShot || articleHead
-                    || noteShape != nil || talkHead || momentHead || mediaHead
+                    || noteShape != nil || (talkHead && !transcriptHead) || momentHead || mediaHead
                     || workReading != nil || framesOwnTiles || postHead || chartHead || plainHead
                 let purchaseAllowsDial: Bool = purchaseReading == nil || purchaseReading?.archetype == .watch
                 if !headDrawsTiles && purchaseAllowsDial {
@@ -1218,7 +1180,7 @@ struct ThingSheetView: View {
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, keep: sheetKeep)
+                             onVerb: runVerb, onName: nil, keep: sheetKeep, centered: transcriptHead)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
                     dialResult
@@ -1377,6 +1339,9 @@ struct ThingSheetView: View {
         // push, per the fix above), it only seems to get read once at initial
         // setup and never again once something pushes on top. `dsInk()`'s
         // real `.background()` can't lose that race — it always covers.
+        // A song or an episode stands on its cover's colour (prd §1650 item
+        // 4), over the ink, and reads dark on it in either theme.
+        .artGround($mediaGround, resetOn: thing.id)
         .dsInk()
         // The haptics this sheet has always fired, made audible (2026-08-16).
         //
@@ -3979,24 +3944,19 @@ struct ThingSheetView: View {
         // title, the face leads the box, then the tiles and what
         // of theirs you already have.
         let handle = thing.authorHandle ?? ""
-        // THE CENTRED HEAD (prd §1397): the face, the handle, the network
-        // and the day they followed you; the Follow tile says the rest.
-        SheetPartyHead(name: "@\(SocialThread.shortHandle(handle))", day: thing.capturedAt,
-                       line: String(localized: "\(thing.source) · Followed you"), clock: false,
-                       onFace: {
-                           faceTarget = .person(SocialProfile(
-                               source: thing.source, handle: handle,
-                               displayName: nil, bio: nil,
-                               avatarURL: thing.authorAvatarURL))
-                       }) {
-            PostSheetBox.face(thing)
-        }
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // WHO THEY ARE (prd §1651, amends §1397 for a follow): the face, the
+        // name, the handle and when, their own bio; the tiles under it.
+        PersonSheetHead(thing: thing, onFace: {
+            faceTarget = .person(SocialProfile(
+                source: thing.source, handle: handle,
+                displayName: nil, bio: thing.summary,
+                avatarURL: thing.authorAvatarURL))
+        })
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
-                 keep: sheetKeep)
-            .padding(.top, DSRoomChassis.leadGap)
+                 keep: sheetKeep, centered: true)
+            .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.08)
         dialResult
         if !personPosts.isEmpty {
@@ -4054,11 +4014,8 @@ struct ThingSheetView: View {
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
-            .padding(.top, DSRoomChassis.leadGap)
-            .settleIn(delay: 0.08)
-        dialResult
+        // The conversation comes next, the tiles after it (prd §1651): the
+        // body's own dial draws them under the chat.
     }
 
     /// Anything else in the room's frame (prd §1191): its title, the box of
@@ -4204,15 +4161,17 @@ struct ThingSheetView: View {
     /// it and what they said.
     @ViewBuilder
     private var postFrame: some View {
-        PostSheetHead(thing: thing, name: PostSheetBox.title(thing),
-                      onFace: facesAreDoors ? openAuthorProfile : nil)
-            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
-            .settleIn(delay: 0.06)
+        // What a reply answers stands over the person who answered it (prd
+        // §1651): the conversation reads top to bottom.
         if let parent = thing.parent {
             replyingToRow(parent)
                 .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s4)
+                .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
         }
+        PostSheetHead(thing: thing, name: PostSheetBox.title(thing),
+                      onFace: facesAreDoors ? openAuthorProfile : nil)
+            .padding(.top, thing.parent != nil ? DS.Space.s4 : (onBack == nil ? DS.Space.s6 : DS.Space.s4))
+            .settleIn(delay: 0.06)
         // Whose post a channel's forward repeats, over its words (prd §1637).
         if let forwarded = TelegramPost.forwardedFrom(thing) {
             TelegramForwardLine(name: forwarded)
@@ -4222,8 +4181,10 @@ struct ThingSheetView: View {
         }
         let words = SocialSheetSource.words(for: thing)
         if !words.isEmpty {
+            // A short post at the size it reads at on its own (prd §1651).
             Text(ProseLinks.rendered(words))
-                .dsText(.reading17)
+                .dsText(PostWords.isDisplay(words) ? .heading28 : .reading17)
+                .fontWeight(PostWords.isDisplay(words) ? .semibold : .regular)
                 .foregroundStyle(DS.textPrimary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
@@ -4342,45 +4303,62 @@ struct ThingSheetView: View {
             .padding(.top, DS.Space.s6)
     }
 
-    /// A track, a video or an episode in the room's frame (prd §1186).
+    /// A screenshot or a stored photo (prd §1650 item 5).
+    @ViewBuilder
+    private var shotFrame: some View {
+        // A PICTURE LEADS WITH ITS NAME (prd §1650, amends §1398
+        // for a picture): the name and when on the rows' column,
+        // what was found in it as rows you can act on, the
+        // picture whole at the column's width, then the tiles.
+        ShotSheetHead(thing: thing)
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+            .settleIn(delay: 0.06)
+        if !facts.isEmpty {
+            factRows
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s3)
+                .settleIn(delay: 0.08)
+        }
+        Button {
+            if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
+        } label: {
+            ShotWhole(thing: thing)
+        }
+        .buttonStyle(PressSpring())
+        .dsTapTarget()
+        .padding(.horizontal, DSRoomChassis.leadInset)
+        .padding(.top, DS.Space.s4)
+        .accessibilityLabel(Text(verbatim: TitleSeam.split(thing.title).name))
+        .accessibilityHint(Text("Opens the photo full screen"))
+        .dsTooltip(String(localized: "Opens the photo full screen"))
+        .settleIn(delay: 0.1)
+        VerbDial(thing: thing, verbs: sheetVerbs,
+                 onVerb: runVerb, onName: nil, centered: true)
+            .padding(.top, DS.Space.s6)
+            .settleIn(delay: 0.12)
+        dialResult
+    }
+
+    /// A track, a video or an episode leads with itself (prd §1650, amends
+    /// §1398's centred head for media): the frame, the cover or the show art,
+    /// the words and chapters the row holds, your plays; then the tiles, then
+    /// more from the artist or the channel.
     @ViewBuilder
     private var mediaFrame: some View {
-        // THE ROOM'S FRAME (prd §1186): the title, the box (a video's
-        // frame, or the cover beside who and when), the tiles, then
-        // more from the artist or the channel.
-        // THE CENTRED HEAD (prd §1398): the app's mark, the track's or the
-        // video's name, the app with the day; the tiles; the cover or the
-        // frame at the box's size under them.
-        SheetPartyHead(name: MediaSheetBox.title(thing), day: thing.capturedAt,
-                       line: BridgeCatalog.seatName(forSource: thing.source)) {
-            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
-        }
-            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+        MediaSheetLead(thing: thing, onOpen: mediaOpen, onGround: { mediaGround = $0 })
+            .padding(.top, [.video, .vertical].contains(MediaSheetLead.kind(of: thing)) ? 0 : (onBack == nil ? DS.Space.s2 : 0))
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
                  keep: mediaKeep, centered: true)
-            .padding(.top, DSRoomChassis.leadGap)
-            .settleIn(delay: 0.08)
-        dialResult
-        MediaSheetBox(thing: thing, onOpen: mediaOpen)
-            .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
             .padding(.top, DS.Space.s6)
-            .settleIn(delay: 0.1)
+            .settleIn(delay: 0.08)
             .task(id: thing.id) { readMediaMore() }
+        dialResult
         if !mediaMore.isEmpty {
             MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                 .padding(.top, DS.Space.s6)
                 .settleIn(delay: 0.12)
-        } else if MediaSheetBox.isVideo(thing),
-                  let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !about.isEmpty {
-            SheetCard(name: String(localized: "About")) {
-                Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .lineLimit(6)
-            }
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, DS.Space.s6)
         }
     }
 

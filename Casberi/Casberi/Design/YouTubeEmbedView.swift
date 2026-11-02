@@ -17,13 +17,16 @@ import WebKit
 /// Safari), and the frame stays on the video.
 struct YouTubeEmbedView: UIViewRepresentable {
     let videoID: String
+    /// Where the video starts, in seconds: a chapter's press (prd §1650).
+    var start: Int = 0
 
     /// The embed's own address. `playsinline` keeps the video in the sheet
     /// rather than jumping to the full-screen player; `autoplay` because the
     /// press that built this view WAS the play; `rel=0` keeps the end screen to
     /// the same channel.
-    static func embedURL(_ id: String) -> String {
+    static func embedURL(_ id: String, start: Int = 0) -> String {
         "https://www.youtube-nocookie.com/embed/\(id)?playsinline=1&autoplay=1&rel=0&origin=https://casberi.app"
+            + (start > 0 ? "&start=\(start)" : "")
     }
 
     static let origin = URL(string: "https://casberi.app")!
@@ -46,7 +49,7 @@ struct YouTubeEmbedView: UIViewRepresentable {
         web.scrollView.isScrollEnabled = false
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
-        web.loadHTMLString(Self.page(videoID), baseURL: Self.origin)
+        web.loadHTMLString(Self.page(videoID, start: start), baseURL: Self.origin)
         NetworkLedger.shared.record(host: "www.youtube-nocookie.com", as: "YouTube player")
         return web
     }
@@ -59,11 +62,11 @@ struct YouTubeEmbedView: UIViewRepresentable {
         web.loadHTMLString("", baseURL: nil)
     }
 
-    static func page(_ id: String) -> String {
+    static func page(_ id: String, start: Int = 0) -> String {
         """
         <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">\
         <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>\
-        </head><body><iframe src="\(embedURL(id))" \
+        </head><body><iframe src="\(embedURL(id, start: start))" \
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen \
         referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>
         """
