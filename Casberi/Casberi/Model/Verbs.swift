@@ -438,10 +438,21 @@ enum VerbDerivation {
             // permalink (thing.content), so it lands on the cast, not the
             // network's front door. Prepended, so it survives the cap and the
             // generic "Open in <source>" hand-off below stands down.
-            if thing.kind == .chat, SocialThread.isSocial(thing.source),
+            //
+            // A network with no thread reader (X's Following timeline lands
+            // its posts as `.chat`) opens the post in its app: the `postText`
+            // test is `SocialSheet.Facts.ownPost`'s, which no conversation
+            // stamps. Without it the post's sheet had no door to the post
+            // (user, 2026-11-02: "they don't open with a 'open on X'").
+            if thing.kind == .chat,
                let url = URL(string: thing.content), url.scheme?.hasPrefix("http") == true {
-                out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
-                                action: .openURL(url)))
+                if SocialThread.isSocial(thing.source) {
+                    out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
+                                    action: .openURL(url)))
+                } else if !(thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    out.append(Verb(label: "Open in \(thing.source)", icon: "arrow.up.right",
+                                    action: .openURL(url)))
+                }
             }
             // Copy and Translate are for a body of words a person reads — a
             // post, a message, a mail, a voice note's words (sheet sweep,
