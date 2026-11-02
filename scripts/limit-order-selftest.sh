@@ -46,6 +46,9 @@ grep -q 'if whenOffered, when == nil { return String(localized: "Pick when") }' 
 grep -q 'if whenOffered, when == nil {' "$MOVE" && grep -q 'if limiting { placeOrder(); return }' "$MOVE" \
   || { echo "✗ sign() no longer waits for when, or no longer places a priced order"; exit 1; }
 
+grep -q 'priceWords: Self.priceWords(v, places: p.places), seconds: orderSeconds)' "$MOVE" \
+  || { echo "✗ the order no longer waits as long as Until says"; exit 1; }
+
 TMP=$(mktemp -d /tmp/limit-order-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -136,6 +139,9 @@ check(!O.offersWhen(sell: eth, buy: Op.dollar(on: Op.robinhood), from: Op.robinh
 check(!O.offersWhen(sell: usdc, buy: usdt, from: base, to: base), "a dollar for a dollar was offered a price")
 check(O.priced(sell: eth, buy: usdc, on: base) == eth && O.priced(sell: usdc, buy: aero, on: base) == aero
       && O.priced(sell: eth, buy: aero, on: base) == aero, "the price is not of the token that is not a dollar (else the one bought)")
+
+// How long it waits: a day, a week, a month, a week by default.
+check(O.expiries == [86_400, 604_800, 2_592_000] && O.expiries.contains(O.defaultSeconds), "the expiries are not a day, a week and a month, with the week the default")
 
 if bad > 0 { print("✗ \(bad) limit-order check(s) failed"); exit(1) }
 print("✓ limit orders: the id CoW answered, exact calls, prices rounded down, when only where CoW fills")

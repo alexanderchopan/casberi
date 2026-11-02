@@ -100,7 +100,7 @@ struct MoveSentence: View {
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
-    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when }
+    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until }
     enum Field: Hashable { case amount, search, to, price }
 
     struct Recipient: Equatable {
@@ -224,6 +224,9 @@ struct MoveSentence: View {
     @State private var sellDollars: Double?
     /// The order a receipt is following, until it fills, expires or is cancelled.
     @State private var orderShown: YourAccountOrders.Placed?
+    /// How long the order waits to fill: a week unless "Until" is changed
+    /// (prd §1673 item 5).
+    @State private var orderSeconds: UInt32 = YourAccountOrder.defaultSeconds
     #if DEBUG
     @State private var whenDraftPending: String?
     #endif
@@ -2386,6 +2389,7 @@ struct MoveSentence: View {
                             case .depositCoin: depositCoinList
                             case .depositNetwork: depositNetworkList
                             case .when: whenList
+                            case .until: untilList
                             }
                         }
                         .id(open)
@@ -3642,7 +3646,7 @@ struct MoveSentence: View {
         guard limiting, let with, let buy, let units, units != "0", let b = limitBuyUnits,
               let p = limitPrice, let v = YourAccountOrder.value(p), let priced = pricedToken else { return nil }
         return .init(network: network, sell: with.token, buy: buy.token, sellUnits: units, buyUnits: b,
-                     pricedSymbol: priced.symbol, priceWords: Self.priceWords(v, places: p.places))
+                     pricedSymbol: priced.symbol, priceWords: Self.priceWords(v, places: p.places), seconds: orderSeconds)
     }
 
     private var limitKey: String { "\(limitPair)|\(whenOffered)" }
@@ -3660,9 +3664,11 @@ struct MoveSentence: View {
     }
 
     /// The day a week from now, the order's expiry.
-    private var untilWords: String {
-        Date.now.addingTimeInterval(TimeInterval(YourAccountOrder.defaultSeconds))
-            .formatted(.dateTime.month(.abbreviated).day())
+    private var untilWords: String { Self.untilDay(orderSeconds) }
+
+    /// The day an order placed now stops waiting: "Nov 9".
+    static func untilDay(_ seconds: UInt32) -> String {
+        Date.now.addingTimeInterval(TimeInterval(seconds)).formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// "when", "now." or "when ETH is $2,400." — Swap's last word.
@@ -3733,7 +3739,8 @@ struct MoveSentence: View {
     }
 
     /// "+6.8% · Now $2,248 · At least 2,400 USDC · Until Nov 9": the pink
-    /// figure trades dollars and percent (prd §1673 item 3).
+    /// figure trades dollars and percent (prd §1673 item 3), and Until is
+    /// a word that opens how long it waits (item 5); the rest is grey.
     private var limitPrint: (pink: String, rest: String) {
         var rest: [String] = []
         var pink = ""
@@ -3744,9 +3751,7 @@ struct MoveSentence: View {
         if let buy, let b = limitBuyUnits {
             rest.append(String(localized: "At least \(Self.figure(b, decimals: buy.token.decimals)) \(buy.token.symbol)"))
         }
-        rest.append(String(localized: "Until \(untilWords)"))
-        let tail = rest.joined(separator: " · ")
-        return pink.isEmpty ? ("", Self.lineCase(tail)) : (pink, " · " + tail)
+        return (pink, rest.joined(separator: " · "))
     }
 
     @ViewBuilder private func limitLine(_ with: Tokens.Held) -> some View {
@@ -3754,17 +3759,22 @@ struct MoveSentence: View {
             if over {
                 Text("More than you have").dsText(.body17).foregroundStyle(DS.attentionInk)
             }
-            let print = limitPrint
-            Button { tradePriceUnit() } label: {
-                (Text(verbatim: print.pink).foregroundColor(DS.pickInk)
-                 + Text(verbatim: print.rest).foregroundColor(DS.textSecondary))
-                    .dsText(.body17)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .buttonStyle(RowPress())
-            .disabled(print.pink.isEmpty)
-            .accessibilityHint(Text(priceInPercent ? "Types the price in dollars" : "Types the price as a percent"))
+            // One line, two words in it that act: the pink figure and Until.
+            Text(limitLineText)
+                .dsText(.body17)
+                .tint(DS.pickInk)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .environment(\.openURL, OpenURLAction { url in
+                    switch url.host() {
+                    case "unit": tradePriceUnit()
+                    case "until":
+                        withAnimation(DS.Motion.standard) { open = .until }
+                        DSHaptic.selection()
+                    default: break
+                    }
+                    return .handled
+                })
             if receipt == nil {
                 HStack(spacing: DS.Space.s4) {
                     DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
@@ -3773,6 +3783,40 @@ struct MoveSentence: View {
             }
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var limitLineText: AttributedString {
+        let print = limitPrint
+        // The acting words carry their pink themselves: a colour set on the
+        // whole line would grey them over the link tint.
+        func grey(_ s: String) -> AttributedString {
+            var a = AttributedString(s)
+            a.foregroundColor = DS.textSecondary
+            return a
+        }
+        func act(_ s: String, _ host: String) -> AttributedString {
+            var a = AttributedString(s)
+            a.link = URL(string: "casberi-move://" + host)
+            a.foregroundColor = DS.pickInk
+            return a
+        }
+        var line = AttributedString()
+        if !print.pink.isEmpty { line += act(print.pink, "unit") + grey(" · ") }
+        if !print.rest.isEmpty { line += grey(print.rest + " · ") }
+        line += act(String(localized: "Until \(untilWords)"), "until")
+        return line
+    }
+
+    /// A day, a week, a month: how long CoW may fill it (prd §1673 item 5).
+    private var untilList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(YourAccountOrder.expiries, id: \.self) { seconds in
+                listRow(YourAccountOrder.expiryWords(seconds), sub: String(localized: "Until \(Self.untilDay(seconds))"),
+                        symbol: "calendar", picked: orderSeconds == seconds) {
+                    pick { orderSeconds = seconds }
+                }
+            }
+        }
     }
 
     /// The pink figure tapped: the price is typed in the other unit, the
@@ -3802,9 +3846,13 @@ struct MoveSentence: View {
         sellDollars = nil
         guard whenOffered, let with, let buy, let priced = pricedToken else { return }
         #if DEBUG
-        if let w = whenDraftPending {
+        if let draft = whenDraftPending {
             whenDraftPending = nil
             whenFor = limitPair
+            // "<price>|until" lands on the Until rows (prd §1673 item 5).
+            let parts = draft.split(separator: "|").map(String.init)
+            let w = parts.first ?? ""
+            if parts.count > 1, parts[1] == "until" { open = .until }
             switch w {
             case "open": open = .when
             case "now": whenPick = .now
@@ -3813,7 +3861,7 @@ struct MoveSentence: View {
                 priceInPercent = w.hasSuffix("%")
                 priceText = String(w.drop { $0 == "+" }).replacingOccurrences(of: "%", with: "")
             }
-            NSLog("moveWhenDraft: %@ for %@", w, limitPair)
+            NSLog("moveWhenDraft: %@ for %@", draft, limitPair)
         }
         #endif
         let net = network
@@ -3854,6 +3902,7 @@ struct MoveSentence: View {
                     whenPick = nil
                     priceText = ""
                     priceInPercent = false
+                    orderSeconds = YourAccountOrder.defaultSeconds
                     receipt = made
                     if case .landed = sent.outcome { orderShown = placed }
                 }

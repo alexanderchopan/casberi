@@ -33,6 +33,19 @@ enum YourAccountOrder {
     /// A week to fill unless the person picks another (prd §1673 item 5).
     static let defaultSeconds: UInt32 = 7 * 24 * 3600
 
+    /// How long an order may wait, as the "Until" word offers it: a day, a
+    /// week, a month (prd §1673 item 5).
+    static let expiries: [UInt32] = [24 * 3600, 7 * 24 * 3600, 30 * 24 * 3600]
+
+    static func expiryWords(_ seconds: UInt32) -> String {
+        switch seconds {
+        case 24 * 3600: String(localized: "A day")
+        case 7 * 24 * 3600: String(localized: "A week")
+        case 30 * 24 * 3600: String(localized: "A month")
+        default: String(localized: "\(seconds / 86_400) days")
+        }
+    }
+
     /// CoW's limit-order fee, read off its form 2026-11-02 (prd §1673 item 4).
     static let feeWords = "0.02%"
 

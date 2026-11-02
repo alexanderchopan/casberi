@@ -70549,3 +70549,7 @@ Now and When ETH is … are drawn by the same row as the token and network lists
 **Not measured:** built in a cloud session with no Xcode; not compiled or seen on the simulator.
 
 **Mac half (§1402).** The same Move foot; not walked.
+
+## §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry) (user, 2026-11-02: "why not finish the changing expiry?", then "yes")
+
+"Until Nov 9" in the order's grey line is pink and opens three rows under the sentence, Move's list rows with the `calendar` mark: **A day**, **A week** (the default, CoW Swap's own), **A month**, each with its day ("Until Nov 3"); the pick is pink and the order waits that long (`Draft.seconds`, `YourAccountOrder.expiries`). The line's two acting words, the pink percent and Until, are links in one text, so it wraps as one line. After an order is placed it goes back to a week. `-moveWhenDraft "<price>|until"` lands on the rows. `limit-order-selftest.sh` holds the three choices, the week as default, and the draft carrying the choice.
