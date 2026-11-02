@@ -59,7 +59,7 @@ enum PermissionsPack {
             return Piece(id: name, name: name, symbols: symbols,
                          usd: gs.compactMap(\.usd).filter { $0 > 0 }.reduce(0, +),
                          unlimited: gs.contains { $0.unlimited && !$0.forAll },
-                         forAll: gs.contains(\.forAll),
+                         forAll: gs.contains { $0.forAll },
                          grantIDs: gs.map(\.thingID), apps: 1)
         }.sorted(by: before)
         guard apps.count > cap + 1 else { return apps }
