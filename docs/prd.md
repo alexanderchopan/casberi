@@ -70378,3 +70378,15 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 **Seen** on the iPhone 17 Pro simulator, clean install, a fresh demo token: 3 accounts, 166 rows; Activity rows wearing the bank's mark (Capital One's, fetched for the demo bank by `-simplefinIconProbe`); Holdings $141K with Savings and Checking; Spending $324 in November from shop charges only; the page listing each account under its bank's mark and the bridge's own warning. **Not seen:** a real bank (no subscription here), the Mac.
 
 **Mac half (§1402).** The same seat and page; the Mac claims its own token, since the URL never syncs.
+
+## §1664 — A Library folder rises as a sheet (supersedes §1316 item 2's "never a sheet"; amends §1321's Casberi folder) (a tester, 2026-11-02, of an open Library folder: "can't seem to close this. Might be worth to open them as sheets"; user, of the two ways, "Sheet")
+
+**Why.** An open folder was a card sprung over the page, and the only way to close it was a tap on the dimmed page around it (Escape on a keyboard). The Wallet's folder fills the phone and scrolls inside the card, so the dimmed edge left was the 24pt margin, and the tab bar covered the bottom one. No close control, no swipe down.
+
+1. **Every folder rises as a `DSTray`**: the category as its title, the grabber, swipe down closes it, the Mac's Done. Inside, the same four-across grid (yours with the green dot, the rest with the pink plus, §1319; the Notes folder leads with Your notes, §1347). It rests at its grid's height, at most 640pt, and drags to `.large`; a long folder scrolls. The category glyph the card's title wore (§1316 item 6) goes with the card: a tray's title is its words.
+2. **An app opens once the sheet is down** (`SettingsHome.takeFromFolder`): the tap closes the sheet and the app opens as its row would (§1418, §1612), since a push or a sheet raised under a presented sheet never shows. Coming back is Library, not the folder (§1316 item 2's "stays open behind" is retired with the card).
+3. **Casberi's folder rises the same way** on the phone and iPad: "Casberi" over its settings as tiles. A setting pushed beside Library takes the sheet down (`SettingsHome` watches the path). The Mac keeps it in Library's pane (§1405).
+4. **One sheet for the screen.** The Track tray, a folder and Casberi's folder are one route (`SettingsHome.LibrarySheet`) through `DSOneSheet`, which gained `onDismiss`. Inside a sheet's stack (§1238) a folder pushes as a page instead.
+5. **The sweep.** `sheet-sweep.json` gains `library-folder` (Social's folder, swiped down) and `library-casberi`; the Track tray's exempt row moves to `librarySheet#track`.
+
+**Not compiled, not seen.** The session that built it had no Xcode. The sweep's two walks are written from the accessibility labels, not run.

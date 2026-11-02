@@ -5,9 +5,9 @@ import SwiftUI
 /// catalogue and sources section is not").** Under the box, every category is
 /// a folder, three across, as the App Library draws them: inside, the apps you
 /// have wearing a green dot (§1319), every icon in colour; under
-/// it the name and "3 of 21". A tap springs the folder open in place, over the
-/// page (`SourcesOpenFolder`), the way the dock's folders spring (§621):
-/// yours first with the dot, the rest with a plus. Casberi's own settings take the
+/// it the name and "3 of 21". A tap raises the folder as a sheet
+/// (`SourcesOpenFolder`, §1664): yours first with the dot, the rest with a
+/// plus. Casberi's own settings take the
 /// first slot, where the App Library keeps Suggestions.
 ///
 /// The search field stays above the folders: on the phone Sources rises as a
@@ -181,10 +181,13 @@ private struct SourcesFolderWords: View {
     }
 }
 
-/// **A FOLDER SPRINGS OPEN IN PLACE (prd §1316).** Over the page, never a
-/// sheet: the page dims under it, a tap outside closes it, and an app opens
-/// from here as its row would (yours goes, the rest their way in, §1418). It
-/// stays open behind what that raises, so coming back is the folder again.
+/// **A FOLDER RISES AS A SHEET (prd §1664, supersedes §1316's "over the page,
+/// never a sheet").** The card sprung over the page closed only on a tap of
+/// the dimmed edge; the Wallet's folder filled the screen and left none
+/// (tester: "can't seem to close this. Might be worth to open them as
+/// sheets"). A `DSTray` has the grabber, swipe down closes it, and the Mac's
+/// Done. An app opens from here as its row would (yours goes, the rest their
+/// way in, §1418), once the sheet is down (`SettingsHome.takeFromFolder`).
 /// Yours wear the green dot, the rest the pink plus (§1319).
 struct SourcesOpenFolder: View {
     let folder: SourcesLibrary.Folder
@@ -193,7 +196,6 @@ struct SourcesOpenFolder: View {
     /// An app of yours's page, offered on its long press (prd §1418); nil for
     /// one you could add.
     let settings: (String) -> (() -> Void)?
-    let close: () -> Void
     /// **THE NOTES FOLDER LEADS WITH YOUR NOTES (prd §1347).** Notes is a
     /// category again, and its folder is where you manage it: the first
     /// cell opens the Notes page itself (All · Folders · Voice · New) as a
@@ -202,61 +204,39 @@ struct SourcesOpenFolder: View {
     /// every other folder.
     var notesPage: (() -> Void)? = nil
 
+    private static let perRow = 4
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
-                                count: 4)
+                                count: perRow)
 
-    private var apps: some View {
-        LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
-            if let notesPage {
-                SourcesFolderNotesPage(action: notesPage)
-            }
-            ForEach(folder.apps, id: \.self) { name in
-                SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
-            }
-        }
-        .padding(.top, DS.Space.s2)
+    /// The sheet's resting height, by the tray's model (pad, title, gap,
+    /// content, pad): every row of the grid when it fits, never past 640; a
+    /// longer folder (the Wallet's) drags to `.large` and scrolls.
+    private var height: CGFloat {
+        let cells = folder.apps.count + (notesPage == nil ? 0 : 1)
+        let rows = CGFloat(max(1, (cells + Self.perRow - 1) / Self.perRow))
+        // An icon, its gap, and two lines of its name.
+        let cell = DS.Face.seat + 12 + DS.Space.s1 + 32
+        let grid = DS.Space.s2 + rows * cell + (rows - 1) * DS.Space.s4
+        return min(640, DS.Space.s6 + 48 + DS.Space.s4 + grid + DS.Space.s6)
     }
 
     var body: some View {
-        ZStack {
-            // The page dims under the folder; no blur, so Reduce
-            // Transparency has nothing to undo.
-            Rectangle()
-                .fill(DS.scrim)
-                .ignoresSafeArea()
-                .onTapGesture { close() }
-                .accessibilityLabel(Text("Close \(folder.category)"))
-                .accessibilityAddTraits(.isButton)
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                    Image(systemName: CategoryFold.glyph(for: folder.category))
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.brandInk)
-                        .frame(width: DSRoomChassis.headGlyph)
-                    Text(verbatim: folder.category)
-                        .dsText(.heading24).foregroundStyle(DS.headInk)
-                    Spacer(minLength: DS.Space.s2)
-                    Text("\(folder.have) of \(folder.apps.count)")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+        DSTray(title: folder.category, height: height,
+               detents: [.height(height), .large], scrollsItself: true) {
+            ScrollView {
+                LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
+                    if let notesPage {
+                        SourcesFolderNotesPage(action: notesPage)
+                    }
+                    ForEach(folder.apps, id: \.self) { name in
+                        SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
+                    }
                 }
-                // The whole folder when it fits; a long one (the Wallet's)
-                // scrolls inside the panel.
-                ViewThatFits(in: .vertical) {
-                    apps
-                    ScrollView { apps }
-                }
+                .padding(.top, DS.Space.s2)
+                .padding(.bottom, DS.Space.s4)
             }
-            .padding(DS.Space.s6)
-            .frame(maxWidth: 440)
-            .background(DS.surfaceRaised, in: RoundedRectangle(cornerRadius: DS.Radius.widget + DS.Space.s2,
-                                                               style: .continuous))
-            .padding(DS.Space.s6)
-        }
-        // Escape closes it, on a keyboard.
-        .background {
-            Button(action: close) { EmptyView() }
-                .keyboardShortcut(.cancelAction)
-                .hidden()
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 }
@@ -356,42 +336,20 @@ struct AppMenu: View {
 }
 
 /// **CASBERI'S FOLDER IS ITS SETTINGS (prd §1321, user: "perhaps each setting
-/// could be a tile like an app").** It springs open over Sources as any folder
-/// does: the mark and "Casberi" over every setting as a tile, the version
-/// under them. A setting opens as a page pushed beside Sources; the folder
-/// stays open behind it, so coming back is the folder again.
+/// could be a tile like an app").** It rises as a sheet as any folder does
+/// (§1664): "Casberi" over every setting as a tile, the version under them.
+/// A setting opens as a page pushed beside Library, and the sheet goes down
+/// (`SettingsHome`'s watch on the path).
 struct SourcesSettingsFolder: View {
-    let close: () -> Void
-
     var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(DS.scrim)
-                .ignoresSafeArea()
-                .onTapGesture { close() }
-                .accessibilityLabel(Text("Close Casberi"))
-                .accessibilityAddTraits(.isButton)
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                // The mark stands once, in the colophon under the tiles.
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(verbatim: "Casberi")
-                        .dsText(.heading24).foregroundStyle(DS.headInk)
-                    Spacer(minLength: DS.Space.s2)
-                    Text("Settings")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                }
+        DSTray(title: "Casberi", height: 520, detents: [.height(520), .large], scrollsItself: true) {
+            ScrollView {
                 SettingsRows(style: .tiles)
+                    .padding(.top, DS.Space.s2)
+                    .padding(.bottom, DS.Space.s4)
             }
-            .padding(DS.Space.s6)
-            .frame(maxWidth: 440)
-            .background(DS.surfaceRaised, in: RoundedRectangle(cornerRadius: DS.Radius.widget + DS.Space.s2,
-                                                               style: .continuous))
-            .padding(DS.Space.s6)
-        }
-        .background {
-            Button(action: close) { EmptyView() }
-                .keyboardShortcut(.cancelAction)
-                .hidden()
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 }
