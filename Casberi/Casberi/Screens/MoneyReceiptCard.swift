@@ -577,35 +577,27 @@ struct MoneySheetHead: View {
         "\(transfer?.theirAddress ?? "")|\(swap?.inAmount ?? "")|\(card?.source ?? "")|\(receipt.subject)"
     }
 
-    /// THE SHEET STANDS ON ITS FACE'S COLOUR (prd §1655): the face's main
-    /// hue, deepened, as a song's sheet stands on its cover (§1650). A face
-    /// drawn rather than pictured, or a mark mostly black or white, keeps
-    /// the ink.
+    /// THE SHEET STANDS ON ITS FACE'S COLOUR WHEN THE FACE IS A PICTURE
+    /// (prd §1658, narrowing §1655): a person's avatar, its main hue deepened
+    /// as a song's sheet stands on its cover (§1650). A token's, an app's or
+    /// a card's mark is not a picture and keeps the ink (user, of the
+    /// canvas's middle option: "color for the face or nfts etc").
     private func readGround() async {
-        guard let onGround, let image = await artImage(),
+        guard let onGround, let image = await pictureImage(),
               let colour = ArtGround.markColor(from: image) else { return }
         withAnimation(DS.Motion.standard) { onGround(colour) }
     }
 
-    /// The picture `art` draws, rung for rung.
-    private func artImage() async -> UIImage? {
+    /// The face's picture when it IS one: the avatar a counterparty's address
+    /// set. Nil for every mark.
+    private func pictureImage() async -> UIImage? {
         if let t = transfer {
-            if WalletStore.shared.watches(t.theirAddress) { return FaceArt.app("Wallet") }
+            if WalletStore.shared.watches(t.theirAddress) { return nil }
             return await FaceArt.address(t.theirAddress)
         }
-        if let s = swap {
-            // What came in is the front mark, and the colour.
-            if s.inApp { return FaceArt.app(s.inAmount) }
-            return await FaceArt.asset(MoneyReceipt.split(s.inAmount).unit ?? "")
-        }
-        if let c = card { return FaceArt.app(c.source) }
-        switch receipt.subject {
-        case .address(let address): return await FaceArt.address(address)
-        case .asset(let symbol): return await FaceArt.asset(symbol)
-        case .named(let name):
-            return BridgeIcon.hasMark(name) ? FaceArt.app(name) : await FaceArt.asset(name)
-        default: return nil
-        }
+        if swap != nil || card != nil { return nil }
+        if case .address(let address) = receipt.subject { return await FaceArt.address(address) }
+        return nil
     }
 
     @ViewBuilder private var art: some View {

@@ -70306,3 +70306,19 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 4. **The key** is two dots, "No limit" and "Capped", each only when the pack holds one, the total trailing.
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the simulator, the Mac (§1402's Mac half: the same box in the Wallet pane); in particular whether dark words hold on `attention` in light mode and Increase Contrast.
+
+## §1657 — A presented reading sheet is black again, and opens at full height so it reaches the screen's edge (retires §1653's #161618 ground and §886's fitted height and half detent) (user, 2026-11-01, of the gray: "the gray DOES NOT WORK", "that should have just exteneded the sheet tos there is no gap", "i don't want gray backing. it should be black") — BUILT, SEEN on the simulator
+
+1. **The ground.** `DS.sheetGround` is `inkGround`: black in dark, white in light. A sheet whose face has a colour still stands on it (§1650, §1658).
+2. **The height.** `dsReadSheet` presents `.large` only. On iOS 26 a sheet below full height floats above the bottom edge and the page shows in the gap; only the full detent attaches. A short thing sits at the top over black.
+
+## §1658 — A money sheet stands on its face's colour only when the face is a picture (narrows §1655) (user, 2026-11-01, of a canvas of three: all black, a picture's colour only, every face's colour: "do the middle option like you say. color for the face or nfts etc")
+
+1. **A picture**: a counterparty's avatar (`FaceArt.address`). A token's, an app's or a card's mark, a watched wallet's mark and a swap keep the ink (`MoneyReceiptCard.pictureImage`).
+2. **NFTs** have no sheet (a piece opens OpenSea), so nothing changes for them yet.
+3. **Subscriptions are not touched** (`SubscriptionPage` still reads its App Store art): open.
+
+## §1659 — A seller app's sale opens the money receipt (user, 2026-11-01, of a swap and a Dodo payment side by side: "why isnb't teh stuff in the same place on them? its the same data"; then "yes")
+
+1. **Which rows** (`MoneyReceipt.isSale`): Polar's and Dodo Payments' rows tagged Sale, Payment or Refund. A dispute or a failed renewal is an alarm and keeps Work's status block (`WorkStageView`).
+2. **The receipt** (`MoneyReceipt.sale`): the app's mark, the payer (else the title before " · ", else the app for a refund), the signed figure, the app on the line, Refund as the state word for a refund. No "Paid" word: the + says it.

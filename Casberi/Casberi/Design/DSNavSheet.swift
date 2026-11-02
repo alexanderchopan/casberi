@@ -124,23 +124,14 @@ private struct DSReadSheet: ViewModifier {
     @Environment(\.dsInPane) private var inPane
 
     func body(content: Content) -> some View {
-        // A FITTED sheet (prd §886) opens at its content's own height, with
-        // the full height a drag away; the half/full pair is the fallback until
-        // the content has been measured, and for every sheet that is not fitted.
+        // A reading sheet opens FULL height (prd §1657, retiring §886's fit
+        // and the half detent): on iOS 26 a sheet below full height floats
+        // above the screen's bottom edge and the page shows in the gap; only
+        // the full detent reaches the edge.
         if inPane {
             content
-        } else if let detent, let fit {
-            content.presentationDetents([.height(fit), .large], selection: detent)
-                .dsPageSheet()
-                .presentationDragIndicator(.visible)
-                .dsSheetCorner()
-        } else if let detent {
-            content.presentationDetents([.medium, .large], selection: detent)
-                .dsPageSheet()
-                .presentationDragIndicator(.visible)
-                .dsSheetCorner()
         } else {
-            content.presentationDetents([.medium, .large])
+            content.presentationDetents([.large])
                 .dsPageSheet()
                 .presentationDragIndicator(.visible)
                 .dsSheetCorner()

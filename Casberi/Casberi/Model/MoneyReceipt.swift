@@ -351,6 +351,17 @@ struct MoneyReceipt: Equatable {
     /// it. It lands as a note, so the source half lets it through by name.
     static func isBill(source: String) -> Bool { source == "Rocket Money" }
 
+    /// A sale paid to you, or its refund, from the seller apps (prd §1659,
+    /// user: "its the same data"): it opens the money receipt every other
+    /// money row opens, not Work's status block. A dispute or a failed
+    /// renewal is an alarm, not money that moved, and keeps Work's.
+    static let sellers: Set<String> = ["Polar", "Dodo Payments"]
+    static func isSale(source: String, tags: [String]) -> Bool {
+        guard sellers.contains(source),
+              !tags.contains("Dispute"), !tags.contains("Failed") else { return false }
+        return tags.contains("Sale") || tags.contains("Payment") || tags.contains("Refund")
+    }
+
     /// Rows that say what WILL happen — a staked-HYPE unlock, a name's expiry,
     /// a vote closing (prd §83: a deadline is never "Settled"). They are
     /// moments, not receipts, and fall to the moment head.
@@ -381,6 +392,7 @@ struct MoneyReceipt: Equatable {
 
     /// The receipt, or nil when this thing isn't one we draw.
     static func compose(_ f: Facts) -> MoneyReceipt? {
+        if isSale(source: f.source, tags: f.tags) { return sale(f) }
         guard sources.contains(f.source), !isAhead(ref: f.sourceRef) else { return nil }
         if isReading(source: f.source, ref: f.sourceRef) { return reading(f) }
         if isBill(source: f.source) { return bill(f) }
@@ -548,6 +560,38 @@ struct MoneyReceipt: Equatable {
     private static func cardLine(_ f: Facts) -> String? {
         guard let account = f.authorHandle, !account.isEmpty else { return nil }
         return String(localized: "on \(account)")
+    }
+
+    // MARK: Sales (Polar, Dodo Payments)
+
+    /// "Ada Lovelace · $49.00": who paid, or what sold, before the seam; the
+    /// figure is the stamped price, signed by its direction.
+    private static func sale(_ f: Facts) -> MoneyReceipt {
+        let refund = f.tags.contains("Refund")
+        let named = f.title.components(separatedBy: " · ").first?
+            .trimmingCharacters(in: .whitespaces)
+        // A refund names nobody in its title ("Refund · $12.00"), so the
+        // app that refunded stands in, never a dangling "Refunded to".
+        let party = f.counterparty
+            ?? (refund || named?.isEmpty != false ? f.source : named)
+        let money = currency(f.priceValue, code: f.priceCurrency)
+        return MoneyReceipt(
+            subject: .named(f.source),
+            mine: nil,
+            lead: refund ? String(localized: "Refunded to") : String(localized: "Paid by"),
+            party: party,
+            titleFallback: money == nil ? f.title : nil,
+            amount: money.map {
+                Amount(number: (refund ? "−" : "+") + $0, unit: nil,
+                       tone: refund ? .plain : .gain, numeric: f.priceValue.map(abs))
+            },
+            // The app on the line, as a card spend names its card.
+            secondary: f.source,
+            sentence: refund ? String(localized: "Refunded \(dayPhrase(f.capturedAt)).")
+                             : String(localized: "Paid \(dayPhrase(f.capturedAt))."),
+            stamp: refund ? .refund : .settled,
+            finality: .torn,
+            hue: .neutral)
     }
 
     // MARK: Peer

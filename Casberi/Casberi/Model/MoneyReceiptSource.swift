@@ -35,6 +35,8 @@ enum MoneyReceiptSource {
                 || MoneyReceipt.isBill(source: thing.source)
                 // A price rise lands as a note (prd §1357).
                 || (thing.source == "Apple Wallet" && thing.tags.contains("Price rise"))
+                // A seller app's sale lands as a link (Polar) (prd §1659).
+                || MoneyReceipt.isSale(source: thing.source, tags: thing.tags)
         else { return nil }
         return MoneyReceipt.compose(facts(for: thing, safe: safe))
     }

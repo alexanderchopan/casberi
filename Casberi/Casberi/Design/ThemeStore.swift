@@ -174,19 +174,10 @@ extension DS {
             ? .white : .black
     }
 
-    /// A PRESENTED reading sheet's ground (2026-11-02, user: "clipping at
-    /// bottom of sheet", then option 2). On iOS 26 a sheet below full height
-    /// floats above the screen's bottom edge, and the feed shows in the gap.
-    /// Black on black, the sheet had no edge, so the feed's line in the gap
-    /// read as the sheet's own words cut off. One step off the page gives it
-    /// an edge. Light already has one (white on the light page), so light is
-    /// unchanged; a background photo takes the dark value.
-    ///
-    /// Sheets only: the iPad/Mac pane stays `inkGround` (prd §1407).
-    static var sheetGround: Color {
-        ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
-            ? .white : Color(hex: "#161618")
-    }
+    /// A PRESENTED reading sheet's ground: black, the page's own ink (prd
+    /// §1657, retiring §1653's #161618 — user: "i don't want gray backing. it
+    /// should be black"). A sheet whose face has a colour still stands on it.
+    static var sheetGround: Color { inkGround }
 
 
     /// The pour's colour where it PREVIEWS the setting rather than paints it —

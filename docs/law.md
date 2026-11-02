@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1792 of 1864 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1795 of 1867 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2040,6 +2040,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1654 — Permissions' box is a pack: one circle per app, its area the dollars it reaches, ringed in amber when it has no limit…
 - §1655 — A money sheet stands on its face's colour, read as the mark's main hue, not its average; a sheet that asks for a sign…
 - §1656 — Permissions' circles are filled by their limit: amber for no limit, the charts' tint for capped; the figure leads ins…
+- §1657 — A presented reading sheet is black again, and opens at full height so it reaches the screen's edge (retires §1653's #…
+- §1658 — A money sheet stands on its face's colour only when the face is a picture (narrows §1655)
+- §1659 — A seller app's sale opens the money receipt
 
 ## Dead rulings → what replaced them (generated)
 
