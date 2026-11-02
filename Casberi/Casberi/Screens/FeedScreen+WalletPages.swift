@@ -418,10 +418,14 @@ extension FeedScreen {
             }
             if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"), act: { feedSheet = .walletTokens })
-                // A token's row opens that token (prd §1587); one with no
-                // page of its own opens the list, as the door does.
+                // A token's row opens that token, every one (prd §1670); the
+                // door and See all open the list.
                 walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)), mask: mask) { token in
-                    if token.route != nil { walletOpenToken(token) } else { feedSheet = .walletTokens }
+                    walletOpenToken(token)
+                }
+                if tokens.count > Self.holdingsPreviewCount || anyHidden {
+                    DSMoreRow(title: Text("See all \(tokens.count) tokens")) { feedSheet = .walletTokens }
+                        .walletListRow()
                 }
             }
             // What is private, under the tokens (prd §1554).
@@ -447,7 +451,8 @@ extension FeedScreen {
         if selectedSeat != nil {
             let apps = walletAppRows(all)
             if !apps.isEmpty {
-                walletCard(WalletSection.apps.label, glyph: WalletSection.apps.glyph) {
+                // An app's own apps (Privy's), apart from its Accounts below.
+                walletCard(String(localized: "Apps"), glyph: WalletSection.apps.glyph) {
                     ForEach(Array(apps.enumerated()), id: \.element.id) { i, row in
                         if case .single(let item) = row.kind, let thing = item.live {
                             shapedListRow(thing, index: i, nextEventID: nil, air: Self.rowAir)

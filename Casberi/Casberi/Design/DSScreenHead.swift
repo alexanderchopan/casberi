@@ -163,11 +163,14 @@ struct DSRoomTitleRow: View {
             Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
             if let onSettings {
                 Button(action: onSettings) {
-                    HStack(alignment: .center, spacing: DS.Space.s2) {
-                        Text(verbatim: pick).foregroundStyle(DS.textPrimary)
-                        settingsDisc
-                    }
-                    .contentShape(Rectangle())
+                    // The pick's own text is the label, so its baseline is the
+                    // row's: an HStack centring the disc beside it dropped the
+                    // pick below "Wallet ·" (user, 2026-11-02: "axis is messed
+                    // up here"). The disc rides an overlay in the space kept.
+                    Text(verbatim: pick).foregroundStyle(DS.textPrimary)
+                        .padding(.trailing, DS.Face.row + DS.Space.s2)
+                        .overlay(alignment: .trailing) { settingsDisc }
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("\(pick) settings"))

@@ -33,7 +33,13 @@ extension FeedScreen {
         DemoMode.isActive ? HoldingMoves.demo : HoldingMoves.current()
     }
 
+    /// A held token's own sheet, where it is by network and place (prd §1670).
     func walletOpenToken(_ position: WalletPortfolio.Position) {
+        feedSheet = .walletToken(position.symbol)
+    }
+
+    /// Its price and chart: the watched thing, else the token's quick sheet.
+    func walletOpenTokenChart(_ position: WalletPortfolio.Position) {
         guard let route = position.route,
               let r = TokenQuickRoute.from(sentinel: "@token:\(route):\(position.symbol)") else { return }
         if let thing = r.watchedThing(in: modelContext) {

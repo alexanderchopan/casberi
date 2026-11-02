@@ -14,11 +14,18 @@ struct WalletWhoseSwitch: View {
     /// it watches it (`MoveScreen`), and Yours narrows to a watched account,
     /// so an unwatched one would be an empty box with nothing to say why.
     static var yours: String? {
-        guard let own = YourAccountDemo.shownAddress,
-              WalletStore.shared.addresses.contains(where: { WalletWatch.sameAddress($0.address, own) })
+        guard let own = YourAccountDemo.shownAddress else { return nil }
+        // The demo's account is in the demo's holdings without a watch (§1671).
+        if YourAccountDemo.isOn { return own }
+        guard WalletStore.shared.addresses.contains(where: { WalletWatch.sameAddress($0.address, own) })
         else { return nil }
         return own
     }
+
+    /// **YOURS IS ALWAYS A WORD (prd §1671, user: "this still needs to show
+    /// Yours, Following, All").** With no account yet it is a door: the pick
+    /// opens Move, where one is made, and the Wallet stays where it stood.
+    static var noAccountYet: Bool { YourAccountDemo.shownAddress == nil }
 
     /// The wallets Following stands for: every watched address but yours.
     static var followed: [String] {
@@ -28,7 +35,7 @@ struct WalletWhoseSwitch: View {
     }
 
     static var offered: [WalletWhose] {
-        WalletWhose.offered(hasYours: yours != nil, hasFollowing: !followed.isEmpty)
+        WalletWhose.offered(hasYours: yours != nil || noAccountYet, hasFollowing: !followed.isEmpty)
     }
 
     var body: some View {
@@ -36,6 +43,10 @@ struct WalletWhoseSwitch: View {
         if offered.count > 1 {
             let lit = WalletWhose.lit(scope: chrome.walletScope, yours: Self.yours, same: WalletWatch.sameAddress)
             DSRangeChips(ranges: offered, range: lit, label: \.label, slim: true, repicks: true) { picked in
+                if picked == .yours, Self.noAccountYet {
+                    chrome.moveTray = true
+                    return
+                }
                 DefaultsWrite.set(Data(picked.rawValue.utf8), forKey: WalletWhose.defaultsKey)
                 withAnimation(DS.Motion.standard) { chrome.walletScope = picked.scope(yours: Self.yours) }
             }

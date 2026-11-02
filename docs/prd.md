@@ -70449,3 +70449,22 @@ Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, 
 5. **Checks.** `needs-you-held-selftest.sh` (13 checks: test money's quantity, the order, the shares, the count fallback; listed in `verify.sh`).
 
 **Mac half (§1402).** The Wallet's pages are the same views on the Mac; the box rides them.
+
+## §1670 — A token's row opens that token: its sheet takes Holdings' sum apart into Networks and Accounts; the Tokens door and a See all row open the list; money someone else holds for you is an Account, one word (Holdings' Apps door is Accounts); cash wears its currency's sign on green; a picked app's title keeps one baseline (amends §1587's "one with no page of its own opens the list") (user, 2026-11-02: "if you tap one token the token list comes up … a user may want to see just that token"; "holdings aggregated, sheet itemized"; "you are mixing chains and places"; "is Wise a bank? Maybe we just create one generic word for all"; picked "Accounts"; "USD is missing icon … a green dollar sign like usdc but green"; "axis is messed up here") — BUILT, SEEN ON THE SIMULATOR (the demo)
+
+1. **The tap.** Every token row in Holdings and in the Tokens list opens `WalletTokenSheet` (`FeedSheetRoute.walletToken`, by symbol). Under three tokens or more, or any hidden, a "See all N tokens" row (`DSMoreRow`) under the top three opens the list, as the Tokens door does.
+2. **The sheet.** Mark, "Token", the symbol, the exact total at `price40`, then Networks (the position's contract parts summed by network across your wallets, each wearing the network's bundled mark: its coin's, or L2BEAT's for a rollup whose coin is ETH), then Accounts (every holder that is not a wallet: exchange, bank, Wise, a Privy app), each biggest first. Validators count as Ethereum. A wallet read with no contracts stands under Wallets by its name and face. A token with a route keeps "Price and chart" (the watched thing or `TokenQuickSheet`), after this sheet closes (§872).
+3. **Accounts.** Holdings' Apps door (`WalletSection.apps`) reads Accounts: "Banks, exchanges and apps: what each holds for you". A picked app's own Privy apps keep "Apps" above its Accounts. Wallets hold money on a network with your keys; Accounts hold it for you. Home's "Account" (§1536) stays your own Casberi account.
+4. **Cash** (`AssetMark.cashSign`): USD, EUR, GBP, JPY, CAD, AUD, SGD draw their sign in white on `DS.confirm`, never a two-letter monogram.
+5. **The title.** `DSScreenHead.pickedTitle` keeps the pick's own text as the button's label and lays the sliders disc in an overlay, so "Wallet · Kraken" shares one baseline.
+6. **The demo** spreads its wallets' ETH (Ethereum, Base, Arbitrum) and USDC (Base, Ethereum, Optimism, at USDC's real contracts) across networks (`WalletPortfolio.demoParts`), the shares summing to one.
+
+**Mac half (§1402).** Holdings and the sheet are the same views on the Mac.
+
+## §1671 — Yours is always on the switch: with no account it opens Move to make one; the demo's own account is in the demo's holdings, so Yours narrows to it and a long press offers Send and Swap (user, 2026-11-02: "this should have a Yours, Following All, but Yours is missing"; "if you long press, i think user should have option to hide, send, swap") — BUILT, SEEN ON THE SIMULATOR (the demo)
+
+1. **Yours** (`WalletWhoseSwitch`). Offered whenever Following is (§1590's rule stands: no followed wallet, no switch). With no Casberi account, picking it raises Move (`chrome.moveTray`), where one is made, and the Wallet stays on its pick.
+2. **The demo's account** (`YourAccountDemo.address`) joins `WalletPortfolio.demoFixture` on All and on its own pick, never under a Safe's (whose box adds it, §1442l): its tokens from `YourAccountDemo.held`, as contract parts keyed by Move's network names, so `MoveSentence.holdingDraft` finds them. Yours counts it without a watch while the demo is on.
+3. **Long press** on a token you hold in your own account: Send, Swap, Hide (§1609, §1591, unchanged); a watched wallet's or an account's token offers Hide alone, since Move cannot spend it (§83).
+
+**Mac half (§1402).** The switch is the same view on the Mac.

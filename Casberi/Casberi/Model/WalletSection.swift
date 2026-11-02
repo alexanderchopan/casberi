@@ -139,7 +139,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // add and remove them (§1503).
         case .holdingAccounts: return String(localized: "Following")
         case .positions:       return String(localized: "Positions")
-        case .apps:            return String(localized: "Apps")
+        case .apps:            return String(localized: "Accounts")
         case .nfts:            return String(localized: "NFTs")
         case .subscriptions:   return String(localized: "Subscriptions")
         case .places:          return String(localized: "Places")
@@ -166,7 +166,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .watchedToken:    return String(localized: "A token you watch")
         case .holdingAccounts: return String(localized: "What each wallet you follow holds")
         case .positions:       return String(localized: "Money lent, pooled, staked or held as a perp")
-        case .apps:            return String(localized: "What each app holds for you")
+        case .apps:            return String(localized: "What each account holds for you")
         case .nfts:            return String(localized: "Your collections")
         case .subscriptions:   return String(localized: "What renews, and what it costs you")
         case .places:          return String(localized: "Where your money went")
@@ -201,7 +201,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .watchedToken:    return String(localized: "No price yet")
         case .holdingAccounts: return String(localized: "No wallets you follow")
         case .positions:       return String(localized: "No positions")
-        case .apps:            return String(localized: "No apps")
+        case .apps:            return String(localized: "No accounts")
         case .nfts:            return String(localized: "No collections")
         case .subscriptions:   return String(localized: "No subscriptions yet")
         case .places:          return String(localized: "No places")
@@ -245,7 +245,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .positions:
             return String(localized: "Money lent, pooled, staked or held as a perp.")
         case .apps:
-            return String(localized: "What each app holds for you, largest first.")
+            return String(localized: "Banks, exchanges and apps: what each holds for you, largest first.")
         case .nfts:
             return String(localized: "The collections you chose to show.")
         case .subscriptions:

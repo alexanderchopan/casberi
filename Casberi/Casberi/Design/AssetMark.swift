@@ -42,6 +42,10 @@ struct AssetMark: View {
     /// caller can pick the NEUTRAL branch deliberately rather than get
     /// `BridgeIcon`'s app-shaped glyph fallback, which reads as "this is an
     /// app we know" for a name we don't.
+    /// Cash a bank or Wise holds, by its currency code.
+    static let cashSign: [String: String] = ["USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥",
+                                             "CAD": "$", "AUD": "$", "SGD": "$"]
+
     static func hasAsset(_ name: String) -> Bool {
         BrandMark.image(for: name) != nil
     }
@@ -77,6 +81,18 @@ struct AssetMark: View {
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
+            } else if let sign = Self.cashSign[name.uppercased()] {
+                // Cash is its currency's sign on green, USDC's mark in money's
+                // hue (user, 2026-11-02: "a green dollar sign like usdc but
+                // green"), never "US" as a monogram.
+                Circle()
+                    .fill(DS.confirm)
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Text(verbatim: sign)
+                            .font(.custom(DSFont.semibold, fixedSize: size * 0.56))
+                            .foregroundStyle(.white)
+                    )
             } else if let remoteURL {
                 RemoteAssetMark(urlString: remoteURL, size: size, monogram: monogram,
                                 tint: tint)

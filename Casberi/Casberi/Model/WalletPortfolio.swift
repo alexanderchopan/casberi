@@ -283,6 +283,7 @@ struct WalletPortfolio: Equatable, Codable {
         }
         var bySymbol: [String: Double] = [:]
         var holders: [String: [Holder]] = [:]
+        var parts: [String: [Part]] = [:]
         var total = 0.0
         for entry in watched {
             guard let newest = WalletStore.shared.valueSamples(forAddress: entry.address).last
@@ -292,6 +293,35 @@ struct WalletPortfolio: Equatable, Codable {
                 bySymbol[symbol, default: 0] += usd
                 holders[symbol, default: []].append(
                     Holder(address: entry.address, label: entry.label ?? entry.address, usd: usd))
+                parts[symbol, default: []] += demoParts(symbol, usd: usd, holder: entry.address)
+            }
+        }
+        // **THE DEMO'S OWN ACCOUNT IS IN ITS HOLDINGS (prd §1671)**, as a real
+        // account is in a real read: its tokens by network off its own table
+        // (`YourAccountDemo.held`), so Yours narrows to it and a long press
+        // offers Send and Swap on what it holds. Never under a Safe's pick,
+        // whose box adds this account itself (§1442l).
+        let demoAccount = YourAccountDemo.address
+        if YourAccountDemo.isOn, only == nil,
+           address.map({ WalletWatch.sameAddress($0, demoAccount) }) ?? true {
+            for net in YourAccountOp.networks {
+                guard let network = YourAccountOp.appName(net) else { continue }
+                for held in YourAccountDemo.held(on: net) {
+                    guard let usd = held.usd, usd > 0 else { continue }
+                    let symbol = held.token.symbol
+                    total += usd
+                    bySymbol[symbol, default: 0] += usd
+                    if let i = holders[symbol]?.firstIndex(where: { $0.address == demoAccount }) {
+                        let had = holders[symbol]![i]
+                        holders[symbol]![i] = Holder(address: demoAccount, label: had.label, usd: had.usd + usd)
+                    } else {
+                        holders[symbol, default: []].append(
+                            Holder(address: demoAccount, label: String(localized: "Your account"), usd: usd))
+                    }
+                    parts[symbol, default: []].append(Part(
+                        key: HiddenTokens.contractKey(network: network, contract: held.token.contract),
+                        holder: demoAccount, usd: usd))
+                }
             }
         }
         // THE CONNECTED EXCHANGES MERGE, exactly as they do live (2026-08-26,
@@ -337,11 +367,31 @@ struct WalletPortfolio: Equatable, Codable {
         let positions = bySymbol
             .map { symbol, usd in
                 Position(symbol: symbol, usd: usd, route: nil,
-                         holders: (holders[symbol] ?? []).sorted { $0.usd > $1.usd })
+                         holders: (holders[symbol] ?? []).sorted { $0.usd > $1.usd },
+                         parts: (parts[symbol] ?? []).sorted { $0.usd > $1.usd })
             }
             .sorted { $0.usd > $1.usd }
         return WalletPortfolio(totalUSD: total, positions: positions,
                                walletCount: watched.count)
+    }
+
+    /// The demo's networks for a wallet's stake (prd §1670): ETH and USDC
+    /// spread as a person's would be, at USDC's real contracts; anything else
+    /// has no parts and the sheet names its wallet. The shares sum to one, so
+    /// the sheet's rows sum to the row.
+    static func demoParts(_ symbol: String, usd: Double, holder: String) -> [Part] {
+        let split: [(key: String, share: Double)]
+        switch symbol {
+        case "ETH":
+            split = [("eth-mainnet:native", 0.6), ("base-mainnet:native", 0.25), ("arb-mainnet:native", 0.15)]
+        case "USDC":
+            split = [("base-mainnet:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 0.55),
+                     ("eth-mainnet:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", 0.3),
+                     ("opt-mainnet:0x0b2c639c533813f4aa9d7837caf62653d097ff85", 0.15)]
+        default:
+            split = []
+        }
+        return split.map { Part(key: $0.key, holder: holder, usd: usd * $0.share) }
     }
 
     var treemapCells: [String] {

@@ -23,6 +23,8 @@ extension FeedScreen {
         /// is every hero and shelf door below.
         case thing(Thing, walk: WalkScope)
         case token(TokenQuickRoute)
+        /// One held token, itemized by where it is (prd §1670), by symbol.
+        case walletToken(String)
         case worthALook
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
@@ -92,6 +94,7 @@ extension FeedScreen {
             // reuses the first's doors.
             case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
+            case .walletToken(let symbol): "walletToken:\(symbol)"
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
@@ -284,6 +287,17 @@ extension FeedScreen {
             ThingSheetView(thing: thing)
         case .token(let route):
             TokenQuickSheet(route: route)
+        case .walletToken(let symbol):
+            if let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
+                WalletTokenSheet(position: position, onChart: position.route == nil ? nil : {
+                    // One sheet at a time (§872): this one closes, then the chart.
+                    feedSheet = nil
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(450))
+                        walletOpenTokenChart(position)
+                    }
+                })
+            }
         case .socialFaces:
             socialFacesTray
         case .socialFollow:
