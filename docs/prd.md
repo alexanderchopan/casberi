@@ -70378,3 +70378,43 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 **Seen** on the iPhone 17 Pro simulator, clean install, a fresh demo token: 3 accounts, 166 rows; Activity rows wearing the bank's mark (Capital One's, fetched for the demo bank by `-simplefinIconProbe`); Holdings $141K with Savings and Checking; Spending $324 in November from shop charges only; the page listing each account under its bank's mark and the bridge's own warning. **Not seen:** a real bank (no subscription here), the Mac.
 
 **Mac half (§1402).** The same seat and page; the Mac claims its own token, since the URL never syncs.
+
+## §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks (amends §1542 item 6's "Uniswap's is the one", §1617 for typed words only) (user, 2026-11-02: "swap on aerodrome so more comes up in search") — BUILT, SEEN ON THE SIMULATOR (the build), the search UNSEEN against the live list
+
+Aerodrome was already a swap venue on Base (§1539: three Slipstream deployments and v2). What kept its tokens out of reach was the search: Uniswap's list carries 195 Base tokens and leaves out what Aerodrome mostly trades.
+
+1. **Measured 2026-11-02.** Of BRETT, MIGGLES, SKI, HIGHER, MOCHI and USDS, none is on Uniswap's Base list; all are on CoinGecko's (`tokens.coingecko.com/base/all.json`, 2,943 tokens, 673 KB, Token Lists format, every logo on `assets.coingecko.com`). It answered through Tor 3 of 3 (4.0–7.0 s); Uniswap's took 4.9 s the same hour. CoinGecko lists one USDC on Base, the real one.
+2. **Aerodrome's own list was measured and passed over.** Its TokenSugar contract (`0x910CD562…`, from velodrome-finance/sugar `deployments/base.env`) answers `tokens(limit, offset, account, [])` over pools, not tokens: 3,293 distinct tokens from 6,000 pools, most of them spam, and its `listed` flag (the Voter's `isWhitelistedToken`) read false for AERO, USDC and BRETT alike, so it could not tell a real token from a look-alike.
+3. **Found, never marked (`OpenTokenList.wideURL`, `YourAccountTokens.wideList`).** A typed word on Base searches CoinGecko's list after Uniswap's; what only it holds is `onList: false`, so it says "Not on Uniswap's list" as a pasted contract does, is never offered unasked (§1617 stands), and draws no picture of the list's (the icon book stays Uniswap's). A pasted address still reads the chain. Read once a day, like Uniswap's; unread, the search finds what Uniswap's does.
+4. **Order.** Within each rank (symbol equal, symbol prefix, name prefix, contains), what you hold first, then what is on Uniswap's list, then the wider list's finds (`Tokens.matches`).
+5. **Hosts.** `tokens.coingecko.com` joins "Your account" in `NetworkReach`, through Tor (`tor-route-selftest.sh`); `direct-swap-selftest.sh` holds the wider list to Base.
+
+**Mac half (§1402).** The same code; Move's lists are the same view on the Mac.
+
+## §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first (amends §1473 items 1 and 7's "only USDC on Base pays") (user, 2026-11-02: "pay with anything, yes converting the eth to usdc would be useful") — BUILT, THE SENTENCE BUILT; NO CARD BOUGHT, NO TOP-UP SIGNED
+
+Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, or USDC on Ethereum, could not spend it.
+
+1. **"with" is a choice.** Spend's sentence reads "$50 gift card for Travel at Delta with ETH on Ethereum."; "with" opens the holdings list across every network (`networksByWorth`), showing what pays: ETH or the network's dollar on Base or Ethereum (`SpendTopUp.pays`). Robinhood and test networks are not offered. Spend opens on USDC on Base when it is held, else on whatever pays and is worth most.
+2. **What is sold.** The card's price in the token at its last price, 3% over (`SpendTopUp.headroomBps`: the pool's price, the slippage limit, Across's fee), rounded up; a quote whose MINIMUM still falls short is asked once more for sold × cost ÷ minimum, 1% over (`rescale`), and refused if still short ("The price moved. Try again"). What is left over stays in the account as USDC on Base.
+3. **How.** On Base, a swap through its own pools (§1542); from Ethereum, `crossQuote` to USDC on Base through Across (§1555). The swap is the account's own operation (`MoveSentence.spend`, the co-signer's rules included), simulated before Face ID as every swap is. Then the account's USDC on Base is read every five seconds, fifteen minutes at most (`SpendTopUp.arrived`), and only then is Bitrefill asked, exactly as before. Two signatures, never one: Bitrefill's payment authorization can only settle once the dollars are there.
+4. **Words.** Under the sentence, "Costs $52.50 · swaps about 0.0216 ETH to USDC on Base first · you have …"; the foot says "Waiting for USDC on Base…" while the dollars move; the receipt's detail leads "Swapped 0.0216 ETH on Ethereum first". Face ID's reason names the swap and the card.
+5. **Round-ups.** A card paid this way rounds nothing up (its dollars land on another network than the sentence's); paid in USDC on Base, as before.
+6. **Not built, said plainly:** paying from your private balance; Robinhood; one Face ID for both steps.
+7. **Checks.** `spend-topup-selftest.sh`: who pays, what is sold, the re-ask, covered by the minimum only; 7 mutations.
+8. **Unmeasured:** §1473 item 13's $0.002 proof is still the gate: no Bitrefill invoice has been paid by this account, so neither path is proven.
+
+**Mac half (§1402).** Spend is not drawn on the Mac (§1473 item 10); nothing Mac-specific.
+
+## §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (user, 2026-11-02: "savings goal is interesting, not sure how we would do that", then "so lets do the … savings goal") — BUILT, SEEN ON THE SIMULATOR (the demo)
+
+1. **The row.** Under Private's head in Holdings: the target glyph, "$1K of $5K" over "$454 a week to reach it by Dec 28", the percent trailing. With no day, "$3,600 to go"; past the day, "$3,600 to go · was due Dec 28"; at or over the goal, "Reached" in the confirm ink and the glyph green. With no goal, one quiet row: "Set a savings goal". Either opens the tray.
+2. **What counts.** The private money Holdings shows as held (approved), in dollars, as Private's head counts it; waiting deposits do not count until approved. Nothing moves on its own: round-ups (§1578) and Send to your private balance fill it.
+3. **The tray (`SavingsGoalTray`).** The amount at `price40`, a "By a date" switch and its date (today onward), Save; Remove goal when one is set. Kept in `UserDefaults` (`savings.goal.v1`) through `DefaultsWrite`, never synced.
+4. **Arithmetic (`SavingsGoal`, pure).** The percent is whole and rounded DOWN, so 99.6% never reads 100%; the pace divides what is LEFT over whole weeks to the day, rounded up (ten days is two weeks); a day that is today or past gives no pace.
+5. **Hide balances** keeps the percent and hides the dollars: "Savings goal" over "By Dec 28".
+6. **The demo** draws a $500 goal eight weeks out when none is set (§1618: no empty screens in the demo).
+7. **Hook:** `-savingsGoal "<dollars>[|<days>]"|clear` sets or clears it at launch (NSLogs `savingsGoal:`).
+8. **Checks.** `savings-goal-selftest.sh`: the percent, what is left, the pace, a passed day, a goal of nothing; 6 mutations.
+
+**Mac half (§1402).** Holdings is the same view on the Mac; the row and the tray ride it.

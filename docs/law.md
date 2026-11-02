@@ -246,14 +246,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1799 of 1871 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1802 of 1874 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
 - §4 — Persona variables (amended by §1126, §1344, §1567)
 - §5 — How it works today — Bob (amended by §1208c)
 - §6 — How it works today — Alice (amended by §1113, §1568)
-- §7 — Outcomes — Bob (amended by §1100, §1498)
+- §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
 - §9 — Problems (amended by §1556, §1567, §1568)
 - §10 — Solutions (amended by §1208)
@@ -1855,7 +1855,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
-- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599)
+- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666)
 - §1474 — A Logos node row names no address, and an unreachable node is "Not on the same network as your node"
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
@@ -1924,7 +1924,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv…
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
-- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596)
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
@@ -2000,7 +2000,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes…
 - §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with,…
 - §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th…
-- §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and…
+- §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and… (amended by §1665)
 - §1618 — A Wallet app's pages are its own again: an account row and Needs you on Home, what it holds in Holdings and the box,…
 - §1619 — Muse signs in on muse.ai, as Beeper connects it, and answers in your own Muse chat; an agent seat may send what you t…
 - §1620 — Every Feed section's + ends with "More <category> apps"
@@ -2047,6 +2047,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1661 — A Feed row stands in 16pt of air, the Wallet's keeps 8
 - §1662 — Spending's pace: last month whole is the bar to beat, drawn behind this month's line and said in one line, with no bu…
 - §1663 — SimpleFIN is back: your banks and cards through a SimpleFIN Bridge subscription the person pays for, each bank wearin…
+- §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks
+- §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
+- §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us…
 
 ## Dead rulings → what replaced them (generated)
 

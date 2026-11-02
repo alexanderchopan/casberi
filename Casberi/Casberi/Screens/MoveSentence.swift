@@ -244,6 +244,8 @@ struct MoveSentence: View {
     @State private var spendNames: [String] = []
     /// After the payment: Bitrefill delivering, said at the foot.
     @State private var delivering = false
+    /// Before it: the swap into USDC on Base landing there (prd §1666).
+    @State private var toppingUp = false
 
     // MARK: - Sweep (prd §1537)
 
@@ -2513,7 +2515,8 @@ struct MoveSentence: View {
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
                 case .receive, .sweep, .deposit: []
-                case .buy: buyPrint + roundUpPrint
+                // A card paid by a swap rounds nothing up (prd §1666 item 5).
+                case .buy: buyPrint + (buySells == nil ? roundUpPrint : [])
                 }
                 // "$25.00 · Fee up to $0.01 · Details" (prd §1509): the last
                 // word opens this exact operation under the line.
@@ -3016,14 +3019,16 @@ struct MoveSentence: View {
 
     private var withList: some View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
-        let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = lookIn.flatMap { n in
+        // Spend looks on every network (prd §1666): what pays is turned into
+        // USDC on Base first, wherever it is.
+        let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = (verb == .buy ? networksByWorth : lookIn).flatMap { n in
             (heldBy[n.chainId] ?? []).map { ("\(n.chainId)|\($0.id)", n, $0) }
         }
         .filter { q.isEmpty || $0.held.token.symbol.lowercased().hasPrefix(q) }
         // What the whole swap buys is never also what it sells.
         .filter { row in lockedBuy.map { row.held.token != $0 || verb != .swap } ?? true }
-        // Buy pays in USDC on Base, the one way Bitrefill's door takes (§1473).
-        .filter { row in verb != .buy || Self.paysBuy(row.held, on: row.net) }
+        // Spend pays with ETH or USDC on Base or Ethereum (prd §1666).
+        .filter { row in verb != .buy || SpendTopUp.pays(row.held.token, on: row.net) }
         // Biggest first, whichever network it is on.
         .sorted { ($0.held.usd ?? -1) > ($1.held.usd ?? -1) }
         return VStack(alignment: .leading, spacing: 0) {
@@ -3031,11 +3036,12 @@ struct MoveSentence: View {
                 let h = row.held
                 let worth = h.usd.map { Self.money($0) }
                 listRow(h.token.symbol,
-                        sub: networkPicked ? worth : [worth, row.net.name].compactMap { $0 }.joined(separator: " · "),
+                        sub: networkPicked && verb != .buy ? worth : [worth, row.net.name].compactMap { $0 }.joined(separator: " · "),
                         trailing: Op.spoken(left(h), decimals: h.token.decimals), mark: h.token.symbol) {
                     pick {
                         if !networkPicked || row.net != network { switchNetwork(row.net) }
-                        choose(h)
+                        // Spend's amount is the card's value in dollars, whatever pays.
+                        if verb == .buy { with = h } else { choose(h) }
                     }
                 }
             }
@@ -3700,7 +3706,9 @@ struct MoveSentence: View {
         case .signing: return String(localized: "Confirm with Face ID")
         case .cosigning: return String(localized: "Waiting for your Signer…")
         case .sending: return String(localized: "Sending…")
-        case .landing: return delivering ? String(localized: "Waiting for Bitrefill…") : String(localized: "Waiting for \(network.name)…")
+        case .landing:
+            if delivering { return String(localized: "Waiting for Bitrefill…") }
+            return toppingUp ? String(localized: "Waiting for USDC on Base…") : String(localized: "Waiting for \(network.name)…")
         case nil: break
         }
         if verb == .receive { return String(localized: "Copy address") }
@@ -4601,9 +4609,10 @@ struct MoveSentence: View {
 
     // MARK: - Buy (prd §1473)
 
-    /// The one holding Buy pays with: USDC on Base.
+    /// The holding Spend pays with as it is: USDC on Base. Anything else
+    /// that pays is turned into it first (prd §1666, `SpendTopUp`).
     static func paysBuy(_ h: Tokens.Held, on net: Op.Network) -> Bool {
-        net.chainId == BitrefillX402.network.chainId && h.token.contract?.lowercased() == net.dollar.lowercased()
+        SpendTopUp.direct(h.token, on: net)
     }
 
     private var buyAccount: String? {
@@ -4756,8 +4765,13 @@ struct MoveSentence: View {
             blank(buyProduct.map { BitrefillBuy.shortName($0.name) } ?? String(localized: "merchant"),
                   ink: buyProduct == nil ? DS.textTertiary : DS.pickInk, .merchant, label: Text("Pick a merchant"))
         }
-        MoveClause(glue: String(localized: "with")) { word("USDC", ink: DS.textPrimary) }
-        MoveClause(glue: String(localized: "on")) { word(String(localized: "Base."), ink: DS.textPrimary) }
+        // What pays is a choice (prd §1666): USDC on Base as it is, ETH or
+        // USDC on Base or Ethereum swapped into it first.
+        MoveClause(glue: String(localized: "with")) {
+            blank(with?.token.symbol ?? String(localized: "coin"), ink: with == nil ? DS.textTertiary : DS.pickInk,
+                  .with, label: Text("Pick what pays"))
+        }
+        MoveClause(glue: String(localized: "on")) { word(network.name + ".", ink: DS.textPrimary) }
     }
 
     /// Bitrefill's categories folded to seven, each with the cards people
@@ -4836,15 +4850,24 @@ struct MoveSentence: View {
         return products.filter { seen.insert($0.id).inserted }
     }
 
-    /// Buy picked: USDC on Base is the payment, the popular list is read,
-    /// and the names Casberi knows you pay are matched against it.
+    /// Spend picked: USDC on Base pays when there is any, else what pays and
+    /// is worth most (prd §1666); the popular list is read, and the names
+    /// Casberi knows you pay are matched against it.
     private func enterBuy() {
         inDollars = true
-        if network != BitrefillX402.network { switchNetwork(BitrefillX402.network) }
-        networkPicked = true
-        if with.map({ Self.paysBuy($0, on: network) }) != true {
-            with = held.first { Self.paysBuy($0, on: network) }
+        if with.map({ SpendTopUp.pays($0.token, on: network) }) != true {
+            let payers = networksByWorth.flatMap { n in
+                (heldBy[n.chainId] ?? []).filter { SpendTopUp.pays($0.token, on: n) }.map { (net: n, held: $0) }
+            }
+            if let pick = payers.first(where: { SpendTopUp.direct($0.held.token, on: $0.net) })
+                ?? payers.max(by: { ($0.held.usd ?? 0) < ($1.held.usd ?? 0) }) {
+                switchNetwork(pick.net)
+                with = pick.held
+            } else {
+                switchNetwork(BitrefillX402.network)
+            }
         }
+        networkPicked = true
         spendNames = Self.spendNames()
         guard popular.isEmpty, let account = buyAccount else { return }
         Task { @MainActor in
@@ -4928,10 +4951,23 @@ struct MoveSentence: View {
         return p.package(for: v)
     }
 
+    /// What the card costs in USDC base units, once the detail priced it.
+    private var buyCost: String? {
+        buyPackage.flatMap { Op.baseUnits(BitrefillBuy.Product.valueText($0.price), decimals: 6) }
+    }
+
+    /// What Spend sells first when it does not pay in USDC on Base (prd
+    /// §1666), at the token's last price with the room the swap keeps.
+    private var buySells: String? {
+        guard let with, let cost = buyCost, !Self.paysBuy(with, on: network) else { return nil }
+        return SpendTopUp.estimate(cost: cost, held: with, on: network)
+    }
+
     private var buyReady: Bool {
-        guard verb == .buy, buyProduct?.needsPhoneNumber != true, let with, Self.paysBuy(with, on: network), let package = buyPackage,
-              let cost = Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: with.token.decimals) else { return false }
-        return Op.atMost(cost, left(with))
+        guard verb == .buy, buyProduct?.needsPhoneNumber != true, let with, SpendTopUp.pays(with.token, on: network),
+              let cost = buyCost else { return false }
+        if Self.paysBuy(with, on: network) { return Op.atMost(cost, left(with)) }
+        return buySells.map { Op.atMost($0, left(with)) } ?? false
     }
 
     /// Why Buy is grey, in a sentence.
@@ -4940,13 +4976,17 @@ struct MoveSentence: View {
         if !buyAvailable { return String(localized: "Make your account first") }
         if with == nil {
             if heldBy[network.chainId] == nil { return String(localized: "Reading…") }
-            return unread.contains(Op.base.chainId) ? String(localized: "Couldn't read Base") : String(localized: "You have no USDC on Base")
+            return unread.contains(Op.base.chainId) ? String(localized: "Couldn't read Base")
+                : String(localized: "You have no ETH or USDC on Base or Ethereum")
         }
         if buyProduct == nil { return String(localized: "Pick a merchant") }
         // Said before the tap, not refused at it (prd §1586).
         if buyProduct?.needsPhoneNumber == true { return String(localized: "Top-ups need a phone number, which Buy can't send yet") }
         if let p = buyProduct, let v = buyValue, let why = p.refusal(v) { return why }
         if amount.isEmpty { return String(localized: "Type an amount first") }
+        if let with, !Self.paysBuy(with, on: network), buyCost != nil, buySells == nil {
+            return String(localized: "No price for \(with.token.symbol) yet")
+        }
         if !buyReady { return String(localized: "More than you have") }
         return nil
     }
@@ -4966,6 +5006,10 @@ struct MoveSentence: View {
         if let package = buyPackage, let p = buyProduct {
             parts.append(String(localized: "Costs \(BitrefillBuy.money(package.price, currency: package.currency))"))
             if p.needsPhoneNumber { parts.append(String(localized: "needs a phone number")) }
+        }
+        // Anything but USDC on Base is swapped into it first (prd §1666).
+        if let with, let sells = buySells {
+            parts.append(String(localized: "swaps about \(Op.spoken(sells, decimals: with.token.decimals)) \(with.token.symbol) to USDC on Base first"))
         }
         if let with { parts.append(String(localized: "you have \(Op.spoken(left(with), decimals: with.token.decimals)) \(with.token.symbol)")) }
         return parts
@@ -4987,11 +5031,37 @@ struct MoveSentence: View {
         let spoken = Op.spoken(Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: 6) ?? "0", decimals: 6)
         let reason = BitrefillBuy.faceWords(spoken: spoken, value: product.money(value), product: product)
         let net = network
-        let roundUp = roundUpPlan
+        // Anything but USDC on Base is swapped into it first (prd §1666); a
+        // card paid that way rounds nothing up: its dollars land on Base.
+        let topUp = with.flatMap { Self.paysBuy($0, on: net) ? nil : $0 }
+        // The demo's address holds no key (§1475): nothing is swapped from it.
+        if topUp != nil, YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
+        let cost = buyCost
+        let roundUp = topUp == nil ? roundUpPlan : nil
         stage = .preparing
         delivering = false
         Task { @MainActor in
             do {
+                var swapped: String?
+                if let topUp, let cost {
+                    toppingUp = true
+                    let swap = try await SpendTopUp.swap(cost: cost, held: topUp, on: net, account: account)
+                    let sold = Op.spoken(swap.amount, decimals: topUp.token.decimals) + " " + topUp.token.symbol
+                    let why = String(localized: "Swap \(sold) for USDC on Base, to pay for a \(product.money(value)) \(BitrefillBuy.shortName(product.name)) \(product.noun)")
+                    _ = try await Self.spend([.swap(swap)], on: net, account: account, roundUp: nil, reason: why,
+                                             said: { line in await MainActor.run { say(line) } }) { s in
+                        await MainActor.run { advance(to: s) }
+                    }
+                    stage = .landing
+                    // The dollars read on Base before Bitrefill is asked: from
+                    // Ethereum, Across fills in seconds to minutes.
+                    guard await SpendTopUp.arrived(cost: cost, account: account) else {
+                        throw Chain.Failure(message: String(localized: "Your USDC has not reached Base yet. Spend again once it has"))
+                    }
+                    toppingUp = false
+                    Tokens.remember(Op.dollar(on: Op.base), on: Op.base)
+                    swapped = String(localized: "Swapped \(sold) on \(net.name) first")
+                }
                 let invoice = try await BitrefillX402.buy(product: product, value: value, account: account, reason: reason) { s in
                     await MainActor.run { advance(to: s) }
                 }
@@ -5004,8 +5074,9 @@ struct MoveSentence: View {
                 let landed = BitrefillX402.land(invoice: invoice, product: product, value: value, delivered: standing?.delivered == true)
                 stage = nil
                 delivering = false
-                let made = Self.buyReceipt(product: product, value: value, invoice: invoice, net: net,
+                var made = Self.buyReceipt(product: product, value: value, invoice: invoice, net: Op.base,
                                            delivered: standing?.delivered == true, failed: standing?.failed == true, landed: landed)
+                if let swapped { made.detail = swapped + " · " + made.detail }
                 withAnimation(DS.Motion.standard) {
                     amount = ""
                     buyProduct = nil
@@ -5026,6 +5097,7 @@ struct MoveSentence: View {
             } catch let failure as Chain.Failure {
                 stage = nil
                 delivering = false
+                toppingUp = false
                 #if DEBUG
                 NSLog("moveBuy: failed %@", failure.message)
                 #endif
@@ -5033,6 +5105,7 @@ struct MoveSentence: View {
             } catch {
                 stage = nil
                 delivering = false
+                toppingUp = false
                 #if DEBUG
                 NSLog("moveBuy: not paid %@", String(describing: error))
                 #endif

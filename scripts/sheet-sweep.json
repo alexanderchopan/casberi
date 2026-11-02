@@ -1148,6 +1148,36 @@
    "anchor": "field:?Search, or type any name"
   },
   {
+   "id": "wallet-savings-goal",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#savingsGoal"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Holdings"
+    },
+    {
+     "maybe": "button:=All"
+    },
+    {
+     "swipeUp": 2
+    },
+    {
+     "tap": "button:~of $500"
+    }
+   ],
+   "anchor": "text:=Savings goal"
+  },
+  {
    "id": "wallet-follow",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"

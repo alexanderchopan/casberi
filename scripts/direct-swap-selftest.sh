@@ -275,6 +275,9 @@ check(parsed[8453]?.first?.address == "0x833589fcd6edb6e08f4c7c32d4f71b54bda0291
 check(parsed[10] == nil && parsed[4663]?.first?.logo == nil, "another network's token, or a non-https logo, was kept")
 check(OpenTokenList.search(parsed[8453]!, "usd").count == 1 && OpenTokenList.search(parsed[8453]!, "0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913").count == 1
       && OpenTokenList.search(parsed[8453]!, "aero").isEmpty, "the list's search does not find by symbol, name or address")
+// A typed word looks further on Base only (prd §1665).
+check(OpenTokenList.wideURL(8453) == "https://tokens.coingecko.com/base/all.json" && OpenTokenList.wideURL(1) == nil
+      && OpenTokenList.wideURL(4663) == nil, "the wider list is asked somewhere other than Base, or not on Base")
 
 // ── Round-ups on the exchanges (prd §1545) ───────────────────────────────
 let ruETH = RoundUps.Target.ethOnBase

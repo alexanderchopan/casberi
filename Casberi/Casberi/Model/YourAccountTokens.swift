@@ -95,7 +95,40 @@ enum YourAccountTokens {
         // token on it would count as marked (`major`).
         let pictured = q.isEmpty ? found.filter { stablecoins.contains($0.symbol.uppercased()) } : Array(found.prefix(40))
         TokenIconBook.fill(pictured.compactMap { e in e.logo.map { (e.symbol, $0) } })
+        // A typed word looks further where there is a wider list (prd §1665):
+        // what it adds finds, never marks, and draws no picture of the list's.
+        if !q.isEmpty, !OpenTokenList.isAddress(q.lowercased()) {
+            let known = Set(found.map(\.address))
+            for e in OpenTokenList.search(await wideList(net.chainId), q) where !known.contains(e.address) && e.address != weth {
+                out.append(Listed(token: Op.Token(symbol: e.symbol, decimals: e.decimals, contract: EIP55.checksum(e.address)),
+                                  name: e.name, onList: false))
+            }
+        }
         return out
+    }
+
+    /// The wider list per network, read once a day, as Uniswap's is.
+    @MainActor private static var wide: [Int: (tokens: [OpenTokenList.Entry], at: Date)] = [:]
+    @MainActor private static var wideReading: [Int: Task<[OpenTokenList.Entry], Never>] = [:]
+
+    /// CoinGecko's list on `chainId` (prd §1665); empty where there is none
+    /// or it could not be read: the search then finds what Uniswap's does.
+    @MainActor
+    private static func wideList(_ chainId: Int) async -> [OpenTokenList.Entry] {
+        guard let address = OpenTokenList.wideURL(chainId), let url = URL(string: address) else { return [] }
+        if let kept = wide[chainId], kept.at.timeIntervalSinceNow > -86_400 { return kept.tokens }
+        if let reading = wideReading[chainId] { return await reading.value }
+        let task = Task { @MainActor () -> [OpenTokenList.Entry] in
+            guard let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: "Your account"),
+                  http.statusCode == 200 else { return [] }
+            return OpenTokenList.parse(data, chains: [chainId])[chainId] ?? []
+        }
+        wideReading[chainId] = task
+        let tokens = await task.value
+        wideReading[chainId] = nil
+        guard !tokens.isEmpty else { return wide[chainId]?.tokens ?? [] }
+        wide[chainId] = (tokens, .now)
+        return tokens
     }
 
     /// A pasted contract: the list's entry when it carries it, else what the
@@ -139,7 +172,8 @@ enum YourAccountTokens {
 
     /// What a search in For shows: with nothing typed, what you hold, then
     /// what `shows` keeps (prd §1617); typed, symbols that start with
-    /// it, then names that hold it, what you hold first in each. Forty at
+    /// it, then names that hold it, what you hold first in each, then what
+    /// is on Uniswap's list (a wider list's finds after, prd §1665). Forty at
     /// most.
     static func matches(_ query: String, in list: [Listed], held: [Held],
                         shows: (Listed) -> Bool = { _ in true }) -> [Listed] {
@@ -158,8 +192,8 @@ enum YourAccountTokens {
             return nil
         }
         let pool = mine + list.filter { !heldIDs.contains($0.id) }
-        return pool.compactMap { l in rank(l).map { (l, $0, heldIDs.contains(l.id) ? 0 : 1) } }
-            .sorted { ($0.1, $0.2) < ($1.1, $1.2) }
+        return pool.compactMap { l in rank(l).map { (l, $0, heldIDs.contains(l.id) ? 0 : 1, l.onList ? 0 : 1) } }
+            .sorted { ($0.1, $0.2, $0.3) < ($1.1, $1.2, $1.3) }
             .prefix(40)
             .map(\.0)
     }

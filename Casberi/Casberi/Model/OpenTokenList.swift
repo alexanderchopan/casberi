@@ -16,11 +16,26 @@ import Foundation
 /// contract is read off the chain, `symbol()` and `decimals()`), and is said
 /// to be "Not on Uniswap's list", so a look-alike never passes as the real one.
 ///
+/// **TYPED WORDS LOOK FURTHER ON BASE (prd §1665).** Uniswap's 195 Base
+/// tokens left out what Aerodrome mostly trades (BRETT, MIGGLES, SKI, HIGHER,
+/// MOCHI, USDS: measured 2026-11-02), so a word typed on Base also searches
+/// CoinGecko's Base list (`tokens.coingecko.com/base/all.json`, 2,943 tokens,
+/// 673 KB, answered through Tor 3 of 3). It only FINDS: what it adds is never
+/// offered unasked and never marked, so each says "Not on Uniswap's list",
+/// as a pasted contract does. Aerodrome's own token list (its TokenSugar
+/// contract) was measured and passed over: 3,293 tokens from every pool,
+/// and its `listed` flag read false for AERO itself.
+///
 /// Pure: `direct-swap-selftest.sh` reads it with no network.
 enum OpenTokenList {
     static let url = "https://tokens.uniswap.org"
     /// Said wherever the list's mark is: "Not on Uniswap's list".
     static let name = "Uniswap"
+
+    /// The list a typed word also searches on a network, unmarked (§1665).
+    static func wideURL(_ chainId: Int) -> String? {
+        chainId == 8453 ? "https://tokens.coingecko.com/base/all.json" : nil
+    }
 
     struct Entry: Equatable, Sendable {
         let chainId: Int

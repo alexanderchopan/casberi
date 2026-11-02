@@ -104,6 +104,8 @@ check(way("https://ethereum-beacon-api.publicnode.com/eth/v1/node/version") == .
 check(way("https://api.relay.link/quote", body: rpcBody(a)) == .refusesTor, "Relay refuses Tor and is told apart")
 check(way("https://tokens.uniswap.org") == .tor(isolation: "tokens.uniswap.org"),
       "Uniswap's token list (prd §1542) does not go through Tor, though it answered through it 3 of 3")
+check(way("https://tokens.coingecko.com/base/all.json") == .tor(isolation: "tokens.coingecko.com"),
+      "CoinGecko's Base list (prd §1665) does not go through Tor, though it answered through it 3 of 3")
 check(way("https://linea.gateway.tenderly.co/", body: rpcBody(a)) == .refusesTor, "a Tenderly gateway refuses Tor")
 check(way("https://rpc.gnosischain.com", body: rpcBody(a)) == .refusesTor, "Gnosis's RPC refuses Tor")
 check(way("https://rpc.plasma.to", body: rpcBody(a)) == .tor(isolation: a.lowercased()),
