@@ -239,6 +239,13 @@ struct MoveSentence: View {
     /// What searches found: a group's seed words, a typed word, a place's name.
     @State private var foundProducts: [BitrefillBuy.Product] = []
     @State private var buyReading = false
+    /// Why the catalogue could not be read (the sign-in refused, the account
+    /// not on Base, Bitrefill silent), drawn in the merchant list in place of
+    /// "Nothing here yet", with Try again; nil once a read answers.
+    @State private var buyFailure: String?
+    /// The popular read in flight, so a category's seed searches wait on its
+    /// sign-in instead of starting a second one.
+    @State private var catalogueRead: Task<Void, Never>?
     /// The names Casberi already knows you pay: Spending's places,
     /// Subscriptions, what you bought here before.
     @State private var spendNames: [String] = []
@@ -4811,10 +4818,15 @@ struct MoveSentence: View {
                 HStack(spacing: DS.Space.s2) {
                     if buyReading { DSSpinner() }
                     Text(verbatim: buyReading ? String(localized: "Asking Bitrefill")
-                         : q.isEmpty ? String(localized: "Nothing here yet") : String(localized: "Nothing named \(q)"))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                         : buyFailure ?? (q.isEmpty ? String(localized: "Nothing here yet") : String(localized: "Nothing named \(q)")))
+                        .dsText(.body17).foregroundStyle(buyFailure != nil && !buyReading ? DS.attentionInk : DS.textSecondary)
                 }
                 .frame(minHeight: DSFeed.headHeight)
+                if buyFailure != nil, !buyReading {
+                    listRow(String(localized: "Try again"), symbol: "arrow.clockwise") {
+                        Task { await readCatalogue(retry: true) }
+                    }
+                }
             }
         }
     }
@@ -4869,12 +4881,23 @@ struct MoveSentence: View {
         }
         networkPicked = true
         spendNames = Self.spendNames()
+        Task { await readCatalogue() }
+    }
+
+    /// Bitrefill's popular cards, read once per visit; the first read signs
+    /// in. A refusal stays in the merchant list (`buyFailure`) with Try
+    /// again: flashed and then dropped, it left every category reading
+    /// "Nothing here yet" (user, 2026-11-02: "no matter which category i
+    /// choose").
+    private func readCatalogue(retry: Bool = false) async {
+        if let running = catalogueRead { await running.value; return }
         guard popular.isEmpty, let account = buyAccount else { return }
-        Task { @MainActor in
+        let read = Task { @MainActor in
             buyReading = true
             defer { buyReading = false }
             do {
                 popular = try await BitrefillX402.search("", account: account)
+                buyFailure = nil
                 // A place not among the popular is searched by name, a few.
                 let unmatched = spendNames.filter { BitrefillBuy.whereYouSpend([$0], in: popular).isEmpty }.prefix(4)
                 for name in unmatched {
@@ -4882,10 +4905,17 @@ struct MoveSentence: View {
                     guard key.count >= 3, let hits = try? await BitrefillX402.search(key, account: account) else { continue }
                     foundProducts = Self.dedupe(foundProducts + hits)
                 }
-            } catch let failure as Chain.Failure {
-                say(failure.message, failure: true, seconds: 6, from: failure.from)
-            } catch {}
+            } catch {
+                let failure = error as? Chain.Failure
+                buyFailure = failure?.message ?? error.localizedDescription
+                if !retry { say(buyFailure ?? "", failure: true, seconds: 6, from: failure?.from) }
+            }
         }
+        catalogueRead = read
+        await read.value
+        catalogueRead = nil
+        // A category tap seeds after the read; Try again seeds the one picked.
+        if retry, buyFailure == nil, let group = buyGroup { await seedGroup(group) }
     }
 
     /// Spending's places, the subscriptions, and what was bought here before.
@@ -4905,7 +4935,11 @@ struct MoveSentence: View {
     /// A group's seed searches, once, so the list is more than the popular
     /// cards that happen to fall in it.
     private func seedGroup(_ g: BitrefillBuy.Group) async {
-        guard let account = buyAccount else { return }
+        // The popular read signs in; a seed search started beside it would
+        // ask for a second Face ID, and one after its refusal would fail the
+        // same way, silently.
+        if let running = catalogueRead { await running.value }
+        guard buyFailure == nil, let account = buyAccount else { return }
         for word in g.searches {
             guard let hits = try? await BitrefillX402.search(word, account: account) else { continue }
             foundProducts = Self.dedupe(foundProducts + hits)
@@ -4920,8 +4954,17 @@ struct MoveSentence: View {
         guard !Task.isCancelled else { return }
         buyReading = true
         defer { buyReading = false }
-        guard let hits = try? await BitrefillX402.search(text, account: account), !Task.isCancelled else { return }
-        foundProducts = Self.dedupe(foundProducts + hits)
+        do {
+            let hits = try await BitrefillX402.search(text, account: account)
+            guard !Task.isCancelled else { return }
+            buyFailure = nil
+            foundProducts = Self.dedupe(foundProducts + hits)
+        } catch {
+            // With no catalogue the refusal is the sign-in's, and it is the
+            // list's to say; past it, a word that failed is "Nothing named".
+            guard !Task.isCancelled, popular.isEmpty else { return }
+            buyFailure = (error as? Chain.Failure)?.message ?? error.localizedDescription
+        }
     }
 
     /// A merchant picked: its group follows, its packages are read, and the
