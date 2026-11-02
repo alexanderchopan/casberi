@@ -22,7 +22,8 @@ import Foundation
 /// Foundation-only, so `permissions-box-selftest.sh` compiles it as shipped.
 enum PermissionsLead: Equatable {
     case grant(WalletApprovalExposure.Grant)
-    /// `name` nil is a contract nobody can name.
+    /// `name` nil is a contract with no known name: the line draws its
+    /// address tail.
     case delegate(key: String, name: String?, accounts: [String])
     /// A Safe module: it moves money with no signature (§1594 keeps its row
     /// still, so it has no verb).
@@ -98,8 +99,11 @@ enum PermissionsLead: Equatable {
         switch self {
         case .grant(let g):
             return "\(g.spender) · \(g.symbol)"
-        case .delegate(_, let name, let accounts):
-            return ([name ?? String(localized: "A contract nobody can name")]
+        case .delegate(let key, let name, let accounts):
+            // The title already says "Unknown delegate"; the line says which
+            // contract (user, 2026-11-02, of "A contract nobody can name":
+            // "this is weird language").
+            return ([name ?? AddressTail.short(key)]
                     + (accounts.isEmpty ? [] : [accounts.formatted(.list(type: .and))])).joined(separator: " · ")
         case .module(_, let name, let accounts):
             return ([name] + (accounts.isEmpty ? [] : [accounts.formatted(.list(type: .and))])).joined(separator: " · ")

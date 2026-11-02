@@ -5,6 +5,7 @@
 #   Casberi/Casberi/Model/PermissionsLead.swift        (compiled whole)
 #   Casberi/Casberi/Model/ThreatTrend.swift            (compiled whole)
 #   Casberi/Casberi/Model/WalletApprovalExposure.swift (compiled whole: the grant)
+#   Casberi/Shared/AddressTail.swift                   (compiled whole: the unknown delegate's line)
 #
 # WHY A HARNESS. Both failures render as a calm box. Pick the wrong lead and
 # the sentence names an ordinary grant while an unknown delegate sits in the
@@ -18,7 +19,8 @@ cd "$(dirname "$0")/.."
 LEAD="Casberi/Casberi/Model/PermissionsLead.swift"
 TREND="Casberi/Casberi/Model/ThreatTrend.swift"
 EXPO="Casberi/Casberi/Model/WalletApprovalExposure.swift"
-for f in "$LEAD" "$TREND" "$EXPO"; do
+TAIL="Casberi/Shared/AddressTail.swift"
+for f in "$LEAD" "$TREND" "$EXPO" "$TAIL"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 grep -q 'WalletPermissionsFigure(lead: walletPermissionsLead' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift \
@@ -30,7 +32,7 @@ grep -q 'exposure(walletLive.exposure, leaving: lead)' Casberi/Casberi/Screens/F
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cp "$LEAD" "$TREND" "$EXPO" "$TMP/"
+cp "$LEAD" "$TREND" "$EXPO" "$TAIL" "$TMP/"
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -78,6 +80,8 @@ check(PermissionsLead.grant(sea).title == "Collection approval", "a whole-collec
 check(PermissionsLead.grant(uni).line == "Uniswap · USDC", "the line is whose and on what")
 check(PermissionsLead.delegate(key: "0x", name: nil, accounts: ["Main"]).title == "Unknown delegate",
       "an unknown delegate says so, no more")
+check(PermissionsLead.delegate(key: "0x4b19aa00000000000000000000000000c0dee07a", name: nil, accounts: ["Main"]).line == "...e07a · Main",
+      "an unknown delegate's line is its address tail and the account")
 check(PermissionsLead.delegate(key: "0x", name: "MetaMask", accounts: ["Main"]).line == "MetaMask · Main",
       "a delegate's line names it and the account")
 
