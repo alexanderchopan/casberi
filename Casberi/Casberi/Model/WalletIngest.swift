@@ -508,7 +508,9 @@ enum WalletIngest {
         // re-examined, and without this the flag would ship doing nothing for
         // the very wallet that revealed the attack.
         var healLegs: [Leg] = []
-        for (address, chain, received, transfers) in results {
+        // Tacit's withdrawals where the transfer read is blind to them (prd §1676).
+        let tacit = await tacitWithdrawals(addresses: evmAddresses, zerion: zerionByAddress)
+        for (address, chain, received, transfers) in results + tacit {
             guard let transfers else { continue }
             reachedAny = true
             for t in transfers {
@@ -1790,6 +1792,106 @@ enum WalletIngest {
         }
         return TransferTimes.filled(transfers, times: times)
     }
+
+    /// Tacit's withdrawals on a chain whose transfer read cannot see an
+    /// internal call (prd §1676): read off the pool's own `Transact` event
+    /// through the chain's own node (`Tacit.poolChains`; the request names
+    /// the pool, never a wallet), then handed to the pass in the
+    /// transfer read's shape. A hash Zerion already lists for the wallet is
+    /// Zerion's row. Each wallet keeps a cursor, so a wallet newly watched
+    /// walks the pool from its first event once, and later passes read only
+    /// the blocks since.
+    private static let tacitCursorKey = "wallet.tacit.cursor.v1"
+
+    private static func tacitWithdrawals(addresses: [String], zerion: [String: [ZerionAPI.Transfer]?]) async
+        -> [(String, Chain, Bool, [[String: Any]]?)] {
+        var cursors = UserDefaults.standard.dictionary(forKey: tacitCursorKey) as? [String: Int] ?? [:]
+        var out: [(String, Chain, Bool, [[String: Any]]?)] = []
+        for chain in transferChains where !chain.internalTransfers {
+            guard let pool = Tacit.poolChains[chain.network] else { continue }
+            let first = pool.firstBlock, url = pool.node
+            let mine = addresses.filter { networks(for: $0).contains(chain.network) }
+            let key = { (address: String) in "\(chain.network)|\(address.lowercased())" }
+            guard let from = mine.map({ cursors[key($0)] ?? first }).min() else { continue }
+            guard let read = await tacitLogs(url: url, from: from) else { continue }
+            let withdrawals = read.logs.compactMap(Tacit.withdrawal(fromLog:))
+            for address in mine {
+                let a = address.lowercased()
+                let listed = Set(((zerion[a] ?? nil) ?? [])
+                    .filter { $0.network == chain.network && $0.received }.map { $0.hash.lowercased() })
+                let rows = withdrawals
+                    .filter { $0.recipient == a && !listed.contains($0.hash) && hexToInt($0.block) >= (cursors[key(address)] ?? first) }
+                    .map(Tacit.transfer)
+                let timed = rows.isEmpty ? [] : await withBlockTimes(rows, url: url, network: chain.network)
+                if !timed.isEmpty { out.append((address, chain, true, timed)) }
+                // A row whose block could not be dated is asked again next pass.
+                if timed.count == rows.count { cursors[key(address)] = read.through + 1 }
+            }
+        }
+        UserDefaults.standard.set(cursors, forKey: tacitCursorKey)
+        return out
+    }
+
+    /// The pool's events from `from` to the chain's head, in windows of the
+    /// node's own 10M-block cap (measured), halved when a window is refused.
+    /// nil when the head or a window could not be read.
+    private static func tacitLogs(url: String, from: Int) async -> (logs: [[String: Any]], through: Int)? {
+        let head = await IngestSupport.postJSON(url, body: [
+            "id": 1, "jsonrpc": "2.0", "method": "eth_blockNumber", "params": [],
+        ]) as? [String: Any]
+        guard let hex = head?["result"] as? String else { return nil }
+        let latest = hexToInt(hex)
+        guard latest >= from else { return ([], from - 1) }
+        var logs: [[String: Any]] = []
+        var start = from
+        var window = 10_000_000
+        while start <= latest {
+            let end = min(start + window - 1, latest)
+            let reply = await IngestSupport.postJSONBody(url, body: [
+                "id": 1, "jsonrpc": "2.0", "method": "eth_getLogs",
+                "params": [["address": Tacit.evmPool, "topics": [Tacit.transactTopic],
+                            "fromBlock": "0x" + String(start, radix: 16), "toBlock": "0x" + String(end, radix: 16)]],
+            ])
+            let root = reply.json as? [String: Any]
+            if let page = root?["result"] as? [[String: Any]] {
+                logs += page
+                start = end + 1
+            } else if window > 100_000 {
+                #if DEBUG
+                NSLog("tacitLogs| window %d refused, HTTP %d: %@", window, reply.status, String(describing: root?["error"] ?? "no body"))
+                #endif
+                window /= 2
+            } else {
+                return nil
+            }
+        }
+        return (logs, latest)
+    }
+
+    #if DEBUG
+    /// `-tacitProbe <address>`: the pool walked whole on every chain
+    /// `tacitWithdrawals` reads, the address's withdrawals, and whether
+    /// Zerion's transactions list each one. Reads only; no cursor moves.
+    static func tacitDiagnostic(address: String) async -> [String] {
+        let a = address.lowercased()
+        var out: [String] = []
+        for chain in allChains where !chain.internalTransfers {
+            guard let pool = Tacit.poolChains[chain.network] else { continue }
+            guard let read = await tacitLogs(url: pool.node, from: pool.firstBlock) else {
+                out.append("\(chain.network) | pool log unreadable"); continue
+            }
+            let all = read.logs.compactMap(Tacit.withdrawal(fromLog:))
+            let mine = all.filter { $0.recipient == a }
+            let zerion = await ZerionAPI.transactions(address: address, networks: [chain.network])
+            let listed = Set((zerion ?? []).filter { $0.received }.map { $0.hash.lowercased() })
+            out.append("\(chain.network) | events \(read.logs.count) | withdrawals \(all.count) | to this wallet \(mine.count) | zerion \(zerion == nil ? "unreached" : "\(zerion!.count) legs")")
+            for w in mine.suffix(10) {
+                out.append("\(chain.network) | \(w.hash) | \(format(w.amount)) ETH | block \(hexToInt(w.block)) | zerion \(listed.contains(w.hash) ? "lists it" : "does not")")
+            }
+        }
+        return out
+    }
+    #endif
 
     private static func thing(from t: [String: Any], chain: Chain,
                               received: Bool, ref: String, address: String,

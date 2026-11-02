@@ -74,4 +74,92 @@ enum Tacit {
     static var note: String {
         String(localized: "Money entering and leaving Tacit is public; inside its pools, amounts and owners are private.")
     }
+
+    // MARK: - Withdrawals off the pool's own event (prd §1676)
+
+    /// The ETH pool pays a withdrawal in an internal call, and a chain whose
+    /// transfer read refuses `internal` (Robinhood: `WalletIngest.Chain
+    /// .internalTransfers`) never saw one unless Zerion listed it. Every `transact` emits
+    /// `Transact(bytes32 indexed nf0, bytes32 indexed nf1, bytes32 outLeaf0,
+    /// bytes32 outLeaf1, uint256 firstIndex, bytes32 newRoot, address
+    /// recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0,
+    /// bytes memo1)`, and `extAmount < 0` pays `-extAmount` to `recipient`
+    /// (`TacitEvmPool.sol`). The recipient is not indexed, so the pool's
+    /// whole log is read and filtered here. MEASURED on Robinhood 2026-11-02:
+    /// 2,038 events since block 74,039,158, 1,013 of them withdrawals to 25
+    /// recipients, one event per transaction.
+    static let transactTopic = "0xdf0ed29e998ac2f2ff0f0516cb9c1b95af189e00d55af3764b95bdd2a835e53a"
+
+    /// The chains whose withdrawals are read off the pool, each with the node
+    /// that serves its log and the block of the pool's first event (a walk
+    /// starts there, not at genesis). The chain's own node, because it is the
+    /// one that answers: MEASURED 2026-11-02, Alchemy's free tier takes 10
+    /// blocks per `eth_getLogs` and publicnode wants a token for history,
+    /// while `rpc.mainnet.chain.robinhood.com` takes 10M blocks a call.
+    struct PoolChain { let node: String; let firstBlock: Int }
+    static let poolChains: [String: PoolChain] = [
+        "robinhood-mainnet": PoolChain(node: "https://rpc.mainnet.chain.robinhood.com", firstBlock: 74_039_158),
+    ]
+
+    struct Withdrawal: Equatable {
+        let hash: String
+        let block: String       // hex, as the log spells it
+        let logIndex: String
+        let recipient: String   // lowercased
+        let amount: Double      // ETH
+    }
+
+    /// A withdrawal, or nil for a deposit, an in-pool transfer, another
+    /// contract's log or a log the chain took back.
+    static func withdrawal(fromLog log: [String: Any]) -> Withdrawal? {
+        guard (log["address"] as? String)?.lowercased() == evmPool,
+              (log["topics"] as? [String])?.first?.lowercased() == transactTopic,
+              (log["removed"] as? Bool) != true,
+              let hash = log["transactionHash"] as? String,
+              let block = log["blockNumber"] as? String,
+              let data = log["data"] as? String
+        else { return nil }
+        let hex = Array((data.hasPrefix("0x") ? data.dropFirst(2) : Substring(data)).lowercased())
+        guard hex.count >= 64 * 8 else { return nil }
+        let recipientWord = hex[(64 * 4)..<(64 * 5)]
+        guard recipientWord.prefix(24).allSatisfy({ $0 == "0" }) else { return nil }
+        let recipient = "0x" + String(recipientWord.suffix(40))
+        guard recipient != "0x" + String(repeating: "0", count: 40),
+              let wei = paidOut(Array(hex[(64 * 5)..<(64 * 6)])), wei > 0
+        else { return nil }
+        return Withdrawal(hash: hash.lowercased(), block: block,
+                          logIndex: (log["logIndex"] as? String) ?? "0x0",
+                          recipient: recipient, amount: wei / 1e18)
+    }
+
+    /// `-extAmount` in wei when `extAmount` (an int256 word, 64 hex digits)
+    /// is negative, else nil: the two's complement is inverted and one added,
+    /// digit by digit, so an amount past 2^64 wei (18.4 ETH) reads whole.
+    static func paidOut(_ word: [Character]) -> Double? {
+        guard word.count == 64, let top = word.first?.hexDigitValue, top >= 8 else { return nil }
+        var digits = word.compactMap { $0.hexDigitValue.map { 15 - $0 } }
+        guard digits.count == 64 else { return nil }
+        var i = 63
+        while i >= 0 {
+            if digits[i] < 15 { digits[i] += 1; break }
+            digits[i] = 0
+            i -= 1
+        }
+        return digits.reduce(0.0) { $0 * 16 + Double($1) }
+    }
+
+    /// The withdrawal as the transfer read's own shape (`alchemy_getAssetTransfers`),
+    /// so it lands through the same pipeline: "Withdrew … ETH from Tacit".
+    static func transfer(_ w: Withdrawal) -> [String: Any] {
+        [
+            "hash": w.hash,
+            "asset": "ETH",
+            "value": w.amount,
+            "category": "internal",
+            "from": evmPool,
+            "to": w.recipient,
+            "blockNum": w.block,
+            "uniqueId": "tacit:\(w.hash):\(w.logIndex)",
+        ]
+    }
 }

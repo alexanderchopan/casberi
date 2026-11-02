@@ -5469,6 +5469,16 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-tacitProbe <address>` walks Tacit's ETH pool on Robinhood whole
+        // (prd §1676): its withdrawals to the address, and whether Zerion
+        // lists each. Pair with `-liveChains YES`; reads only.
+        Hook(key: "tacitProbe") { address, _ in
+            Task { @MainActor in
+                for line in await WalletIngest.tacitDiagnostic(address: address) {
+                    NSLog("tacitProbe| %@", line)
+                }
+            }
+        },
         // `-wcConnectProbe YES` proposes a read-only WalletConnect session and
         // NSLogs the EXACT namespaces payload plus the `wc:` URI. The payload
         // line is the point: it's the proof that "we ask for nothing" is real

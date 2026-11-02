@@ -7,6 +7,7 @@
 #     — title / state / needsYou                     (the Positions row's words)
 #   Casberi/Casberi/Model/Tacit.swift
 #     — verb                                         (a pool move named Deposited / Withdrew)
+#     — withdrawal / paidOut / transfer              (a withdrawal read off the pool's event, §1676)
 #
 # Pure, local, deterministic, against replies saved off mainnet
 # (scripts/fixtures/zfi/*.json). Every failure below is a clean row that
@@ -27,7 +28,7 @@ WIRE="Casberi/Casberi/Model/ZFiWire.swift"
 TACIT="Casberi/Casberi/Model/Tacit.swift"
 APP="Casberi/Casberi/Model/ZFiOrders.swift"
 FIX="scripts/fixtures/zfi"
-for f in "$WIRE" "$TACIT" "$APP" "$FIX"/swapboard-orders.json "$FIX"/swapboard-v1-orders.json "$FIX"/dutchboard-listings.json \
+for f in "$WIRE" "$TACIT" "$APP" "$FIX"/tacit-robinhood-logs.json "$FIX"/swapboard-orders.json "$FIX"/swapboard-v1-orders.json "$FIX"/dutchboard-listings.json \
          "$FIX"/floorboard-bids.json "$FIX"/symbol-z.json "$FIX"/symbol-mkr.json "$FIX"/symbol-weth.json "$FIX"/symbol-zzz.json; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -54,6 +55,11 @@ grep -q 'WalletZFiOrdersCard(book: walletLive.zfiOrders)' Casberi/Casberi/Screen
   || { echo "✗ Positions no longer draws zFi orders"; exit 1; }
 grep -q 'let verb = Tacit.verb(counterparty: cp, received: received)' Casberi/Casberi/Model/WalletIngest.swift \
   || { echo "✗ the Wallet no longer titles Tacit's pool moves"; exit 1; }
+grep -q 'let tacit = await tacitWithdrawals(addresses: evmAddresses, zerion: zerionByAddress)' Casberi/Casberi/Model/WalletIngest.swift \
+  && grep -q 'for (address, chain, received, transfers) in results + tacit {' Casberi/Casberi/Model/WalletIngest.swift \
+  || { echo "✗ the Wallet sweep no longer lands Tacit's withdrawals off the pool's event (§1676)"; exit 1; }
+grep -q 'for chain in transferChains where !chain.internalTransfers {' Casberi/Casberi/Model/WalletIngest.swift \
+  || { echo "✗ the pool walk no longer reads only the chains whose transfer read is blind to it"; exit 1; }
 grep -q '"0x000000000000fb114709235f1ccbffb925f600e4": "zFi"' Casberi/Casberi/Model/WalletIngest.swift \
   || { echo "✗ zRouter is no longer named"; exit 1; }
 
@@ -171,6 +177,29 @@ check(Tacit.verb(counterparty: "0x0000006c96afa6f1cd4df8fe19bc0d8b6a6cd7b5", rec
 check(Tacit.title(.withdrew, amount: "0.88", asset: "ETH") == "Withdrew 0.88 ETH from Tacit", "the venue grammar")
 check(Tacit.knownName(for: stranger) == nil, "anything else is not Tacit")
 
+print("Tacit withdrawals off the pool's event (prd §1676, Robinhood logs read 2026-11-02)")
+let logs = (try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: fix + "/tacit-robinhood-logs.json"))) as! [String: Any])["result"] as! [[String: Any]]
+let decoded = logs.map(Tacit.withdrawal(fromLog:))
+check(decoded[0] == Tacit.Withdrawal(hash: "0x30a057eea4ee7d02487d33e505bdd102449e313230b4cb730f00c1d62cfb7e2d",
+                                     block: logs[0]["blockNumber"] as! String, logIndex: logs[0]["logIndex"] as! String,
+                                     recipient: "0x3d5c49e8b0c5c4bf76618fcab79febd20dab582f", amount: 0.05),
+      "a withdrawal: its recipient and the 0.05 ETH paid, not the relayer's fee")
+check(decoded[1] == nil, "a deposit is no withdrawal")
+check(decoded[2] == nil, "an in-pool transfer is no withdrawal")
+check(decoded[3]?.recipient == "0xa974890156a3649a23a6c0f2ebd77d6f7a7333d4" && decoded[3]?.amount == 4.25, "the largest one read: 4.25 ETH")
+var elsewhere = logs[0]; elsewhere["address"] = stranger
+check(Tacit.withdrawal(fromLog: elsewhere) == nil, "another contract's log is not Tacit's")
+var undone = logs[0]; undone["removed"] = true
+check(Tacit.withdrawal(fromLog: undone) == nil, "a log the chain took back is not landed")
+let huge = Array("fffffffffffffffffffffffffffffffffffffffffffff6788b8c7437dde00000")   // -45,000 ETH, past 2^64 wei
+check(abs((Tacit.paidOut(huge) ?? 0) / 1e18 - 45_000) < 1e-6, "an amount past 18.4 ETH reads whole")
+check(Tacit.paidOut(Array(String(repeating: "0", count: 63) + "5")) == nil, "a positive amount pays nothing out")
+let row = Tacit.transfer(decoded[0]!)
+check(row["from"] as? String == Tacit.evmPool && row["to"] as? String == "0x3d5c49e8b0c5c4bf76618fcab79febd20dab582f"
+      && row["category"] as? String == "internal" && row["blockNum"] as? String == logs[0]["blockNumber"] as? String
+      && Tacit.verb(counterparty: row["from"] as! String, received: true) == .withdrew,
+      "the row is the pool paying the wallet, so it reads Withdrew … from Tacit")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
@@ -244,5 +273,20 @@ mutate "a zap refund titled a withdrawal" "$TACIT" \
 mutate "the router given a verb" "$TACIT" \
   'if pools.contains(a) { return received ? .withdrew : .deposited }' \
   'if pools.contains(a) || named.contains(a) { return received ? .withdrew : .deposited }'
+mutate "a deposit landed as a withdrawal" "$TACIT" \
+  'guard word.count == 64, let top = word.first?.hexDigitValue, top >= 8 else { return nil }' \
+  'guard word.count == 64, word.first?.hexDigitValue != nil else { return nil }'
+mutate "the relayer paid named as the wallet" "$TACIT" \
+  'let recipientWord = hex[(64 * 4)..<(64 * 5)]' \
+  'let recipientWord = hex[(64 * 6)..<(64 * 7)]'
+mutate "the fee read as the amount" "$TACIT" \
+  'let wei = paidOut(Array(hex[(64 * 5)..<(64 * 6)]))' \
+  'let wei = paidOut(Array(hex[(64 * 7)..<(64 * 8)]))'
+mutate "a log the chain took back landed" "$TACIT" \
+  '(log["removed"] as? Bool) != true,' \
+  ''
+mutate "the two's complement off by one" "$TACIT" \
+  'if digits[i] < 15 { digits[i] += 1; break }' \
+  'if digits[i] < 15 { break }'
 
 echo "✓ zFi + Tacit self-test passed"
