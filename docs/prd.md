@@ -70500,3 +70500,7 @@ Bitrefill's accountless door takes USDC on Base alone, so a person holding ETH, 
 **Mac half (§1402).** The same Move sentence; nothing Mac-specific.
 
 **Mock:** the design canvas "Limit orders in Move" (https://claude.ai/artifact/5XvrpBGzJ756FrYSNtSHAM). Two things it settles that the items above leave open: once answered, only the price is pink, and a tap on it brings the two rows back with Now first; the waiting receipt is present tense, "Waiting to swap 1 ETH on Base for USDC on Base when ETH is $2,400.", since nothing has swapped.
+
+## §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 item 3) (user, 2026-11-02, on the canvas "Limit orders in Move": "should it look like how our token list looks like when you pick token or network? that is where the selectable fields come from so shouldn't it mirror it?")
+
+Now and When ETH is … are drawn by the same row as the token and network lists (`MoveSentence.listRow`), with the `symbol:` mark for what has no logo, as Buy's categories and Your private balance are: **Now** `bolt.fill`, "On Uniswap · 0.05% pool fee" (the best pool's words, §1542 item 5), the figure "≈ 2,248 USDC"; **When ETH is …** `clock`, "A price you set · On CoW · 0.02% fee". The current pick's title is pink (§1616 item 3).
