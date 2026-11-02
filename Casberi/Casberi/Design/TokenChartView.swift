@@ -275,6 +275,15 @@ struct TokenChartPlot: View {
     /// drawn only where they fall inside it: a level off the plot is not
     /// squeezed in by rescaling the line.
     var levels: [Double] = []
+    /// **THE LINE BEHIND (prd §1662):** a second series drawn faint under
+    /// the line — grey, no fill, no dot — stretched across the whole span,
+    /// so its end is the span's end. Spending's last window, whole; empty
+    /// everywhere else.
+    var behind: [Double] = []
+    /// **THE SPAN (prd §1662):** the x domain's last index. nil ends the
+    /// line at the right edge (every chart but Spending's); given, the line
+    /// stops where its last sample is, today inside the window.
+    var xSpan: Double? = nil
     /// Scrubbing — the line interrogated. Given a handler, a press-then-drag
     /// (or, on Catalyst, a resting cursor) reports the sample index under it,
     /// nil on release, and `cursorIndex` draws the scrub cursor at the
@@ -305,7 +314,10 @@ struct TokenChartPlot: View {
     /// at 993,308.0018 ETH differs between reads by float noise, and an exact
     /// test drew the empty box again (seen on the Privacy room's first build).
     private var flatDomain: ClosedRange<Double>? {
-        guard let hi = chart.closes.max(), let lo = chart.closes.min() else { return nil }
+        // The line behind shares the domain (prd §1662): a window's first
+        // day is one point, and padding round it alone clipped last month.
+        let all = chart.closes + behind
+        guard let hi = all.max(), let lo = all.min() else { return nil }
         let mid = (hi + lo) / 2
         guard hi - lo <= abs(mid) * 0.0005 else { return nil }
         let pad = max(abs(mid) * 0.01, 1e-9)
@@ -324,38 +336,51 @@ struct TokenChartPlot: View {
         // x is Double, not the enumeration's Int: an event mark lands between
         // samples (see TokenChartMark), and a proxy can only place a value in
         // its scale's own type.
-        Chart(Array(chart.closes.enumerated()), id: \.offset) { i, close in
-            LineMark(x: .value("t", Double(i)), y: .value("price", close))
-                .interpolationMethod(chart.coarse ? .linear : .catmullRom)
-                .foregroundStyle(accent)
-                .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round,
-                                       lineJoin: .round,
-                                       // A down line breaks under Differentiate
-                                       // Without Colour — `TokenChartStyle.lineDash`.
-                                       dash: TokenChartStyle.lineDash(
-                                           change: chart.change, differentiate: noColor)))
-            // No area at all when there is no fill (prd §1005): an AreaMark
-            // runs down to zero, so even a CLEAR one widened the automatic
-            // domain and pinned a $31K line to the top tenth of its box.
-            if fill > 0, fillsToLow {
-                AreaMark(x: .value("t", Double(i)),
-                         yStart: .value("low", chart.closes.min() ?? close),
-                         yEnd: .value("price", close))
-                    .interpolationMethod(chart.coarse ? .linear : .catmullRom)
-                    .foregroundStyle(LinearGradient(
-                        colors: [accent.opacity(fill), accent.opacity(0)],
-                        startPoint: .top, endPoint: .bottom))
-            } else if fill > 0 {
-                AreaMark(x: .value("t", Double(i)), y: .value("price", close))
-                    .interpolationMethod(chart.coarse ? .linear : .catmullRom)
-                    .foregroundStyle(LinearGradient(
-                        colors: [accent.opacity(fill), accent.opacity(0)],
-                        startPoint: .top, endPoint: .bottom))
+        Chart {
+            // The line behind first, so the line draws over it (prd §1662).
+            ForEach(Array(behind.enumerated()), id: \.offset) { j, value in
+                LineMark(x: .value("t", behindX(j)), y: .value("price", value),
+                         series: .value("series", "behind"))
+                    // Monotone: a running total never falls, and Catmull-Rom
+                    // overshot every jump into a dip (seen on the simulator).
+                    .interpolationMethod(.monotone)
+                    .foregroundStyle(DS.textTertiary.opacity(0.55))
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             }
-            if chart.coarse {
-                PointMark(x: .value("t", Double(i)), y: .value("price", close))
-                    .symbolSize(28)
+            ForEach(Array(chart.closes.enumerated()), id: \.offset) { i, close in
+                LineMark(x: .value("t", Double(i)), y: .value("price", close),
+                         series: .value("series", "line"))
+                    .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                     .foregroundStyle(accent)
+                    .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round,
+                                           lineJoin: .round,
+                                           // A down line breaks under Differentiate
+                                           // Without Colour — `TokenChartStyle.lineDash`.
+                                           dash: TokenChartStyle.lineDash(
+                                               change: chart.change, differentiate: noColor)))
+                // No area at all when there is no fill (prd §1005): an AreaMark
+                // runs down to zero, so even a CLEAR one widened the automatic
+                // domain and pinned a $31K line to the top tenth of its box.
+                if fill > 0, fillsToLow {
+                    AreaMark(x: .value("t", Double(i)),
+                             yStart: .value("low", chart.closes.min() ?? close),
+                             yEnd: .value("price", close))
+                        .interpolationMethod(chart.coarse ? .linear : .catmullRom)
+                        .foregroundStyle(LinearGradient(
+                            colors: [accent.opacity(fill), accent.opacity(0)],
+                            startPoint: .top, endPoint: .bottom))
+                } else if fill > 0 {
+                    AreaMark(x: .value("t", Double(i)), y: .value("price", close))
+                        .interpolationMethod(chart.coarse ? .linear : .catmullRom)
+                        .foregroundStyle(LinearGradient(
+                            colors: [accent.opacity(fill), accent.opacity(0)],
+                            startPoint: .top, endPoint: .bottom))
+                }
+                if chart.coarse {
+                    PointMark(x: .value("t", Double(i)), y: .value("price", close))
+                        .symbolSize(28)
+                        .foregroundStyle(accent)
+                }
             }
         }
         .chartXAxis(.hidden)
@@ -367,7 +392,7 @@ struct TokenChartPlot: View {
         // gap is half a percent and nobody ever saw it; on a devnet's Home,
         // where the line is one point per transaction, it is a sixth of the
         // chart and reads as a line that stopped.
-        .chartXScale(domain: 0...Double(max(chart.closes.count - 1, 1)))
+        .chartXScale(domain: 0...span)
         .frame(height: height)
         .chartOverlay { proxy in
             GeometryReader { geo in
@@ -470,6 +495,16 @@ struct TokenChartPlot: View {
                 }
             }
         }
+    }
+
+    /// The x domain's end: the caller's span, else the last sample (the
+    /// line ends at the right edge).
+    private var span: Double { max(xSpan ?? Double(chart.closes.count - 1), 1) }
+
+    /// Where the line behind's sample `j` stands: stretched across the whole
+    /// span, so last month's 31 days and this month's 30 end together.
+    private func behindX(_ j: Int) -> Double {
+        behind.count > 1 ? Double(j) / Double(behind.count - 1) * span : 0
     }
 
     /// The line's value at a fractional x, between its two neighbours.

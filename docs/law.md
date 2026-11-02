@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1797 of 1869 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1798 of 1870 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2045,6 +2045,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1659 — A seller app's sale opens the money receipt
 - §1660 — A Telegram chat wears its group's photo, its last photo is drawn in the bubble, and a live chat's initial is its own…
 - §1661 — A Feed row stands in 16pt of air, the Wallet's keeps 8
+- §1662 — Spending's pace: last month whole is the bar to beat, drawn behind this month's line and said in one line, with no bu…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spending pace</title><style>
+:root{--page:#000;--ink:#fff;--ink2:#8e8e93;--ink3:#636366;--pink:#fb3a53;--tint:#1673e6;--amber:#ffd60a;--fill:#1c1c1e;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e4e3ea;color:#15141a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header{max-width:1640px;margin:0 auto 22px} h1{font:700 28px/34px var(--rounded)}
+.desc{font-size:15px;line-height:22px;color:#56535f;max-width:900px;margin-top:6px}
+.stage{max-width:1640px;margin:14px auto 0;display:flex;flex-wrap:wrap;gap:30px 34px;align-items:flex-start}
+figure{width:362px} figcaption{font-size:13px;line-height:19px;color:#56535f;margin:14px 4px 0} figcaption b{color:#15141a}
+.ph{width:402px;height:874px;zoom:.9;border-radius:56px;overflow:hidden;position:relative;background:var(--page);box-shadow:0 24px 70px #00000033;color:var(--ink);font-family:var(--rounded)}
+.status{display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.title{padding:30px 20px 0} .title h3{font:700 34px/40px var(--rounded)}
+.panel{padding:0 20px}
+/* The box: DSRoomChassis.leadHeight (220 + 2×s2), a statement, no plate */
+.box{height:236px;padding-top:12px;display:flex;flex-direction:column}
+.box .fig{font:700 24px/30px var(--rounded);font-variant-numeric:tabular-nums}
+.box .sub{font:400 12px/16px var(--rounded);color:var(--ink3);margin-top:4px}
+.box svg{flex:1;min-height:0;width:100%;margin-top:12px;display:block}
+.foot{display:flex;gap:16px;font:600 15px/20px var(--rounded);color:var(--ink3);margin-top:12px}
+.foot .on{color:var(--pink)} .foot .gap{width:10px}
+.tiles{display:flex;gap:10px;margin:10px 0 10px}
+.tile{width:84px;height:52px;border-radius:14px;background:var(--fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 11px var(--rounded);color:#aeaeb2}
+.tile i{font-style:normal;font-size:15px;line-height:15px}
+.tile.on{background:#fff;color:#000}
+.dr{display:flex;align-items:center;gap:14px;min-height:60px;font:700 24px/30px var(--rounded)}
+.dr .g{width:30px;text-align:center;font-size:19px;color:var(--ink2);font-weight:400}
+.dr .v{margin-left:auto;font:600 20px var(--rounded);font-variant-numeric:tabular-nums}
+.dr .g.fee::before{content:"◇"}
+.dr .v.grey{color:var(--ink2);font-size:17px;font-weight:500}
+.tab{position:absolute;left:20px;right:20px;bottom:26px;display:flex;align-items:center;gap:14px}
+.tab .bar{flex:1;height:64px;border-radius:40px;background:#2a2a2d;display:flex;justify-content:space-around;align-items:center;font:500 13px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pink);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 18px}
+.tab .s{width:64px;height:64px;border-radius:50%;background:#2a2a2d;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff}
+.new{outline:2px dashed #ff2d5588;outline-offset:3px;border-radius:6px}
+.notes{max-width:1240px;margin:34px auto 0;font-size:15px;line-height:22px;color:#36343c}
+.notes h2{font:700 20px/26px var(--rounded);margin:18px 0 8px;color:#15141a}
+.notes li{margin:0 0 6px 20px}
+code{font:13px ui-monospace,Menlo,monospace;background:#0000000d;padding:1px 4px;border-radius:4px}
+</style></head><body>
+<header>
+<h1>Spending pace</h1>
+<p class="desc">You never set a budget: last month's total is the bar to beat. Behind this month's running line, Spending draws last month's, day by day across the whole month, and one line of words says how far you are from its total. The chart spans the whole window, so today's dot stands at today. A dashed outline marks what's new; every other part is the box as it ships (§1468, §1480 item 14, §1526).</p>
+</header>
+
+<div class="stage">
+
+<!-- A. As it ships -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$2,940 in November</div>
+  <div class="sub">$280 less than this point in October</div>
+  <svg data-now="nov18" data-span="fit"></svg>
+  <div class="foot"><span>Yours</span><span>Following</span><span class="on">All</span><span class="gap"></span><span>Week</span><span class="on">Month</span></div>
+</div>
+<div class="tiles"><div class="tile"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile on"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">↻</span>Subscriptions<span class="v">$57.98</span></div>
+<div class="dr"><span class="g">⌂</span>Places<span class="v">$2,882</span></div>
+<div class="dr"><span class="g fee"></span>Fees<span class="v">$4.12</span></div>
+<div class="dr"><span class="g">◒</span>Round-ups<span class="v grey">$2.60 waiting</span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>A · As it ships, for reference.</b> November 18. The running line is stretched to fill the width, so it always ends at the right edge, whatever the day. The words say where you stand against October on the same day, but nothing shows how October ended.</figcaption></figure>
+
+<!-- B. Under last month -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$2,940 in November</div>
+  <div class="sub">$280 less than this point in October</div>
+  <div class="sub new" style="margin-top:2px;align-self:flex-start">$436 left to match October</div>
+  <svg class="new" data-now="nov18" data-ghost="oct" data-span="30"></svg>
+  <div class="foot"><span>Yours</span><span>Following</span><span class="on">All</span><span class="gap"></span><span>Week</span><span class="on">Month</span></div>
+</div>
+<div class="tiles"><div class="tile"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile on"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">↻</span>Subscriptions<span class="v">$57.98</span></div>
+<div class="dr"><span class="g">⌂</span>Places<span class="v">$2,882</span></div>
+<div class="dr"><span class="g fee"></span>Fees<span class="v">$4.12</span></div>
+<div class="dr"><span class="g">◒</span>Round-ups<span class="v grey">$2.60 waiting</span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>B · Under October: the pace.</b> November's line stops at the 18th, out of 30 days. October's whole month runs behind it in grey: no fill, no dot. Today's dot sitting under the grey line <i>is</i> the pace, and the grey line's end is the budget nobody had to set. The new words state a fact, how much is left before November reaches October's $3,376 total, never a projection. The chart gives up the height of one 12pt line to make room for them.</figcaption></figure>
+
+<!-- C. Past last month -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$3,520 in November</div>
+  <div class="sub">$200 more than this point in October</div>
+  <div class="sub new" style="margin-top:2px;align-self:flex-start">$144 past all of October</div>
+  <svg class="new" data-now="nov25" data-ghost="oct" data-span="30"></svg>
+  <div class="foot"><span>Yours</span><span>Following</span><span class="on">All</span><span class="gap"></span><span>Week</span><span class="on">Month</span></div>
+</div>
+<div class="tiles"><div class="tile"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile on"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">↻</span>Subscriptions<span class="v">$57.98</span></div>
+<div class="dr"><span class="g">⌂</span>Places<span class="v">$3,462</span></div>
+<div class="dr"><span class="g fee"></span>Fees<span class="v">$5.08</span></div>
+<div class="dr"><span class="g">◒</span>Round-ups<span class="v grey">$10</span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>C · Past October.</b> November 25: the line has crossed October's whole month. The words switch to how far past it you are. The figure stays white, with no red and no warning (§83: money is never coloured). A change within a tenth reads "about the same as all of October", using Home's own rule.</figcaption></figure>
+
+<!-- D. Week -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$612 this week</div>
+  <div class="sub">$80 less than this point last week</div>
+  <div class="sub new" style="margin-top:2px;align-self:flex-start">$140 left to match last week</div>
+  <svg class="new" data-now="wk4" data-ghost="lastwk" data-span="7"></svg>
+  <div class="foot"><span>Yours</span><span>Following</span><span class="on">All</span><span class="gap"></span><span class="on">Week</span><span>Month</span></div>
+</div>
+<div class="tiles"><div class="tile"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile on"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">↻</span>Subscriptions<span class="v">$12.99</span></div>
+<div class="dr"><span class="g">⌂</span>Places<span class="v">$599</span></div>
+<div class="dr"><span class="g fee"></span>Fees<span class="v">$1.20</span></div>
+<div class="dr"><span class="g">◒</span>Round-ups<span class="v grey">$2.60 waiting</span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>D · Week.</b> The same idea against last week, whole: seven days, with Thursday's dot four days in. Week starts on your calendar's first day, as the tile already does (§1468 item 3).</figcaption></figure>
+
+<!-- E. First month -->
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3></div>
+<div class="panel">
+<div class="box">
+  <div class="fig">$2,940 in November</div>
+  <div class="sub">So far in November</div>
+  <svg class="new" data-now="nov18" data-span="29"></svg>
+  <div class="foot"><span>Yours</span><span>Following</span><span class="on">All</span><span class="gap"></span><span>Week</span><span class="on">Month</span></div>
+</div>
+<div class="tiles"><div class="tile"><i>▥</i>Home</div><div class="tile"><i>↺</i>Activity</div><div class="tile"><i>◔</i>Holdings</div><div class="tile on"><i>▤</i>Spending</div></div>
+<div class="dr"><span class="g">↻</span>Subscriptions<span class="v">$57.98</span></div>
+<div class="dr"><span class="g">⌂</span>Places<span class="v">$2,882</span></div>
+<div class="dr"><span class="g fee"></span>Fees<span class="v">$4.12</span></div>
+<div class="dr"><span class="g">◒</span>Round-ups<span class="v grey">$2.60 waiting</span></div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Move</span><span>Library</span></div><div class="s">⌕</div></div>
+</div><figcaption><b>E · No October.</b> This is someone's first month, or an account they followed this month. With nothing to match, there's no grey line and no new words; the box is what ships, except the line still stops at today. Under Hide balances (not drawn), the words are masked as the line above them already is, and both lines keep their shapes, which show no amounts.</figcaption></figure>
+
+</div>
+
+<div class="notes">
+<h2>Rulings it touches</h2>
+<ul>
+<li><b>§1468 item 1, amended.</b> The box gets a third line: the last window's whole total, as what's left to match it or how far past it you are. It's absent when the last window had nothing.</li>
+<li><b>§1480 item 14, amended.</b> The running line spans the whole window and stops at today. Behind it is the last window's running line, grey, with no fill and no dot.</li>
+<li><b>§1524 holds.</b> An account picked in the search tray compares against its own last window, as the line above already does.</li>
+<li><b>Not drawn, on purpose:</b> "on pace for $X" (a projection, §83), a budget you type in (setup is a cost), limits per place, and a notification when you pass last month.</li>
+</ul>
+<h2>Cost</h2>
+<ul>
+<li>No new fetch: the cached charges already reach two months back (<code>SpendingSource.refresh</code>), which covers last month whole and last week whole.</li>
+<li><code>Spending.Reading</code> gains <code>lastWhole</code> and <code>lastRunning</code>.</li>
+<li><code>TokenChartPlot</code> gains an optional second series and a fixed x span. Every other chart passes neither and draws exactly as it does today.</li>
+</ul>
+</div>
+
+<script>
+// Running totals, by day. October's 18th is $3,220, so November's $2,940 is $280 under;
+// October ends at $3,376, so $436 is left. November's 25th is $3,520: $144 past October.
+const D = {
+  oct:[180,240,310,900,960,1010,1100,1180,1260,1600,1680,1760,1820,2300,2380,2900,3080,3220,3240,3260,3270,3290,3300,3310,3320,3330,3340,3350,3360,3368,3376],
+  nov18:[120,200,260,330,880,930,1010,1090,1180,1460,1530,1620,1700,2150,2230,2600,2820,2940],
+  nov25:[120,200,260,330,880,930,1010,1090,1180,1460,1530,1620,1700,2150,2230,2600,2820,2940,3010,3090,3200,3300,3380,3450,3520],
+  lastwk:[90,260,410,692,712,740,752],
+  wk4:[140,300,470,612]
+};
+const TINT='#1673e6';
+document.querySelectorAll('svg[data-now]').forEach(svg=>{
+  const W=362, H=svg.getBoundingClientRect().height||120;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('preserveAspectRatio','none');
+  const now=D[svg.dataset.now], ghost=svg.dataset.ghost?D[svg.dataset.ghost]:null;
+  // A fitted span stretches today's points across the width (as it ships);
+  // a fixed span is the window's days, so today stops where today is.
+  const span=svg.dataset.span==='fit'? now.length-1 : (ghost? ghost.length-1 : +svg.dataset.span);
+  const max=Math.max(...now, ...(ghost||[]))*1.06, pad=6;
+  const x=i=>i/span*(W-pad*2)+pad, y=v=>H-pad-(v/max)*(H-pad*2);
+  const pts=a=>a.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let s='';
+  if(ghost) s+=`<polyline fill="none" stroke="#8e8e93" stroke-opacity=".55" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts(ghost)}"/>`;
+  const last=now.length-1, low=H-pad;
+  s+=`<polygon fill="${TINT}" fill-opacity=".22" points="${x(0)},${low} ${pts(now)} ${x(last)},${low}"/>`;
+  s+=`<polyline fill="none" stroke="${TINT}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="${pts(now)}"/>`;
+  s+=`<circle cx="${x(last)}" cy="${y(now[last])}" r="4.5" fill="${TINT}" stroke="#000" stroke-width="2"/>`;
+  svg.innerHTML=s;
+});
+</script>
+</body></html>

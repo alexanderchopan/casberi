@@ -109,6 +109,16 @@ enum Spending {
         /// so the last point is `total`. A place whose refunds cancelled it
         /// is left out here as it is from `total`.
         var running: [Double] = []
+        /// **THE PACE (prd §1662, user: "Spending pace first"):** the last
+        /// window WHOLE — never to the same point, that is `earlier` — as
+        /// the bar to beat, so nobody sets a budget. Its total, nil when
+        /// nothing was read in it (a first month draws no pace); its running
+        /// line, one point a day, every charge as `earlier` counts them; and
+        /// this window's length in days, so the chart spans the whole window
+        /// and today's point stands at today.
+        var lastWhole: Double? = nil
+        var lastRunning: [Double] = []
+        var windowDays: Int = 1
 
         var rest: Double { max(0, total - recurring) }
         var earlierRest: Double? { earlier.map { max(0, $0 - (earlierRecurring ?? 0)) } }
@@ -409,6 +419,28 @@ enum Spending {
         }
         var sum: Double = 0
         reading.running = perDay.map { sum += $0; return sum }
+        // The pace (prd §1662): the last window whole, by day, and how long
+        // this one runs. A month is the calendar's (30 or 31, February's
+        // 28); a week is seven days.
+        let end = calendar.date(byAdding: window == .month ? .month : .day,
+                                value: window == .month ? 1 : 7, to: start) ?? now
+        reading.windowDays = max(1, calendar.dateComponents([.day], from: firstDay,
+                                                            to: calendar.startOfDay(for: end)).day ?? 1)
+        let lastFirstDay = calendar.startOfDay(for: lastStart)
+        let lastDays = max(1, calendar.dateComponents([.day], from: lastFirstDay, to: firstDay).day ?? 1)
+        var lastPerDay = [Double](repeating: 0, count: lastDays)
+        var sawLast = false
+        for charge in charges where charge.at >= lastStart && charge.at < start {
+            let i = calendar.dateComponents([.day], from: lastFirstDay,
+                                            to: calendar.startOfDay(for: charge.at)).day ?? 0
+            lastPerDay[min(max(0, i), lastDays - 1)] += charge.usd
+            sawLast = true
+        }
+        if sawLast {
+            var lastSum: Double = 0
+            reading.lastRunning = lastPerDay.map { lastSum += $0; return max(0, lastSum) }
+            reading.lastWhole = max(0, lastSum)
+        }
         // Fees (prd §1476): by network, this window and the last.
         var byNetwork: [String: Place] = [:]
         var earlierByNetwork: [String: Double] = [:]

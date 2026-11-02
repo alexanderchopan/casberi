@@ -145,6 +145,24 @@ check(week.places.first { $0.name == "Amazon" } == nil, "a place with nothing th
 check(week.running == [12, 42, 90, 90], "the running line adds each day's charges (\(week.running))")
 check(month.running.count == 22 && month.running.last == month.total, "the month's line ends on its total")
 
+// ── The pace (prd §1662): the last window WHOLE is the bar to beat, and the
+// chart spans the whole window. ──────────────────────────────────────────
+// September whole: Amazon 10 (Sep 12), Spotify 12 (Sep 19), Uber 20 (Sep 20),
+// Whole Foods 70 (Sep 27, after this day of it, so not in `earlier`).
+check(month.lastWhole == 112, "last month whole, not to this point (\(String(describing: month.lastWhole)))")
+check(month.lastRunning.count == 30 && month.lastRunning.last == 112,
+      "last month's line is one point a day of September, ending on its total (\(month.lastRunning.count))")
+check(month.lastRunning[11] == 10 && month.lastRunning[19] == 42 && month.lastRunning[25] == 42,
+      "last month's line adds each day's charges")
+check(month.windowDays == 31 && week.windowDays == 7, "the chart spans October's 31 days, a week's 7 (\(month.windowDays), \(week.windowDays))")
+// Last week whole (Mon Oct 12 → Sun Oct 18): Uber 10 (Oct 14), Amazon 5
+// (Oct 16) and 100 (Sat Oct 17), both after this point of it.
+check(week.lastWhole == 115 && week.lastRunning == [0, 0, 10, 10, 15, 115, 115],
+      "last week whole, by day (\(week.lastRunning))")
+let firstMonth = Spending.read([C(place: "Uber", usd: 48, at: day(1))], now: now, calendar: cal)
+check(firstMonth.lastWhole == nil && firstMonth.lastRunning.isEmpty,
+      "a first month has nothing to match, and draws no pace")
+
 // A subscription says its newest charge and what paid it.
 let paid = Spending.read([C(place: "Netflix", usd: 13, at: day(8), via: "Apple Card"),
                           C(place: "Netflix", usd: 13, at: day(1), via: "Apple Card"),
@@ -247,7 +265,7 @@ check(!appleOnly.holds(app: nil, wallet: nil) && !mineOnly.holds(app: nil, walle
       "a plan tracked by hand is no account's: All's only")
 
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window, the recurring half, fees and round-ups")
+print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window, the recurring half, the pace, fees and round-ups")
 SWIFT
 
 xcrun swiftc -O "$SRC" "$work/main.swift" -o "$work/t" 2>&1 | grep -v "^$" || true
@@ -292,3 +310,7 @@ mutate "the day the count starts from never said"    's/reading\.roundUpsFrom = 
 mutate "a plan tracked by hand on an app's page"     's/return app\.map \{ sources\.contains\(\$0\) \} \?\? false/return app.map { sources.contains(\$0) } ?? true/'
 mutate "a wallet's page reads every wallet"          's/return wallet\.map \{ forms\.contains\(\$0\.lowercased\(\)\) \} \?\? false/return wallet.map { _ in true } ?? false/'
 mutate "a wallet spelt in capitals is not its own"   's/forms\.contains\(\$0\.lowercased\(\)\)/forms.contains(\$0)/'
+mutate "the pace reads last month to this point"     's/where charge\.at >= lastStart && charge\.at < start \{/where charge.at >= lastStart && charge.at <= lastEnd {/'
+mutate "the line behind forgets earlier days"        's/lastSum \+= \$0; return max\(0, lastSum\)/return max(0, \$0)/'
+mutate "a first month draws a pace"                  's/if sawLast \{/if true {/'
+mutate "the chart spans only to today"               's/to: calendar\.startOfDay\(for: end\)\)\.day \?\? 1\)/to: calendar.startOfDay(for: now)).day ?? 1)/'

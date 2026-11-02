@@ -26,6 +26,14 @@ struct WalletSpendingFigure: View {
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
+            // **THE PACE (prd §1662):** the last window whole, as what is
+            // left to match it or how far past it, under the line that
+            // compares to the same point. The chart gives up its height.
+            if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
+                Text(verbatim: pace)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
             // **THE THREE ROWS ARE DOORS NOW (prd §1480 item 5):**
             // Subscriptions, Places and Fees stand under the tiles, each
             // opening its page, so the box says the window and its total.
@@ -35,13 +43,20 @@ struct WalletSpendingFigure: View {
             // height the box leaves, as Home's line does (§1102), and the
             // charts' tint, never a state colour (§83). A window's first
             // day is one point, and draws no line.
-            if reading.running.count > 1 {
+            //
+            // **THE PACE (prd §1662):** the line spans the whole window and
+            // stops at today, over the last window's line, whole, in grey.
+            // So a first day draws too once there is a last window: its one
+            // point, at the left, under last month's.
+            if reading.running.count > 1 || !reading.lastRunning.isEmpty {
                 GeometryReader { geo in
                     TokenChartPlot(chart: TokenChart(closes: reading.running,
                                                      price: reading.total, change: 0),
                                    accent: DS.tint, height: geo.size.height, pulses: false,
                                    lineWidth: 2.6, fillOpacity: 0.22,
-                                   endpointDot: true, fillsToLow: true)
+                                   endpointDot: true, fillsToLow: true,
+                                   behind: reading.lastRunning,
+                                   xSpan: Double(max(reading.windowDays - 1, 1)))
                 }
                 .frame(minHeight: 0, maxHeight: .infinity)
                 .layoutPriority(-1)

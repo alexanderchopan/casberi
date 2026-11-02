@@ -70352,3 +70352,14 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 4. **C was declined**: two gaps on one page read as a mistake.
 
 **Mac half (§1402).** The same insets; the rail's Feed pane takes them unchanged.
+
+## §1662 — Spending's pace: last month whole is the bar to beat, drawn behind this month's line and said in one line, with no budget to set (amends §1468 item 1's box, §1480 item 14's running line; the canvas `design/mockups/spending-pace.html`) (user, 2026-11-01: of Dyme's features, "Spending pace first"; "Mock it first"; "Build it")
+
+1. **No budget to set.** The last window, whole, is the bar: last month for Month, last week for Week (`Spending.Reading.lastWhole`, `lastRunning`, from the charges `SpendingSource` already caches two months back; no new fetch). A budget typed in is setup, and setup is a cost; a median of months was dropped because nobody holds three (§1468).
+2. **One line of words**, under the line against the same point: "$436 left to match October", "$144 past all of October", or "about the same as all of October" within a tenth (`FeedScreen.spendingPace`). A fact, never a projection: "on pace for $X" is not drawn (§83). Uncoloured. Under Hide balances, or with nothing read last window, it is absent.
+3. **The running line spans the whole window and stops at today**, over the last window's line, whole, grey (`DS.textTertiary` at 55%), no fill, no dot, stretched so the two months end together (`TokenChartPlot.behind`, `xSpan`; every other chart passes neither and draws as before). The grey line is monotone, because Catmull-Rom overshot each jump into a dip on the simulator; a dip that remains is a refund. A window's first day draws too once there is a last window: its one point, at the left, under last month's.
+4. **Whose follows §1524:** an account picked in the search tray reads its own last window. Home's tile is unchanged.
+5. **Not built:** a projection, a typed budget, per-place limits, and a notification when you pass last month.
+6. `spending-selftest.sh` holds last month whole (not to this point), its line by day, the window's length (31, 7), last week whole, and a first month with no pace; four mutations.
+
+**Seen** on the iPhone 17 Pro simulator over the demo, dark, on Nov 1: "$317 in November", "$3,687 left to match October", the day's one point under October's grey month; Week: "$317 this week", "$160 less than this point last week", "$1,875 left to match last week" over last week's line. **Not seen:** a month past the bar, Hide balances, light theme, the Mac (the same view; Catalyst not compiled in this pass).

@@ -322,6 +322,25 @@ extension FeedScreen {
                                point: true)
     }
 
+    /// **THE PACE (prd §1662):** the last window whole as the bar to beat —
+    /// "$436 left to match October" / "$144 past all of October" / "about
+    /// the same as all of October" within `spendingSameShare`. A fact, never
+    /// a projection (§83). nil under Hide balances or with nothing read in
+    /// the last window (a first month draws no pace).
+    static func spendingPace(_ reading: Spending.Reading, window: Spending.Window = .month,
+                             now: Date = .now, mask: String?) -> String? {
+        guard mask == nil, let whole = reading.lastWhole, whole >= 1 else { return nil }
+        let last = spendingLastWindow(window, now: now)
+        let diff = reading.total - whole
+        if abs(diff) < 1 || abs(diff) <= whole * spendingSameShare {
+            return String(localized: "about the same as all of \(last)")
+        } else if diff < 0 {
+            return String(localized: "\(AppleWalletRoom.money(-diff, "USD")) left to match \(last)")
+        } else {
+            return String(localized: "\(AppleWalletRoom.money(diff, "USD")) past all of \(last)")
+        }
+    }
+
     /// The last window's name as the lines say it: "September" / "last week".
     static func spendingLastWindow(_ window: Spending.Window, now: Date = .now) -> String {
         switch window {
