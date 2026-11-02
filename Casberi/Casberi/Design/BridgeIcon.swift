@@ -18,7 +18,7 @@ import SwiftUI
 /// of about ninety, so the memo is bounded by construction. `nil` is cached
 /// too: a seat with no art must not re-miss the catalog on every pass.
 @MainActor
-private enum BridgeIconArt {
+enum BridgeIconArt {
     private static var names: [String: String] = [:]
     private static var images: [String: UIImage?] = [:]
 

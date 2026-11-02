@@ -55,15 +55,18 @@ struct SubscriptionPage<Tail: View>: View {
     let facts: [SubscriptionFact]
     let doors: [SubscriptionDoor]
     @ViewBuilder var tail: Tail
+    @State private var ground: Color?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             // THE APP'S ART IS THE COVER (prd §1649): drawn large and
             // centred over its name and what it costs, as a money sheet's
-            // face is; the sheet stays ink.
+            // face is; the sheet stands on its colour (§1655), handed up to
+            // `subscriptionSheet()`, which paints it.
             VStack(spacing: DS.Space.s3) {
                 SubscriptionFace(name: name, size: DS.Face.art, url: face, circular: false)
                     .shadow(color: .black.opacity(0.4), radius: 20, y: 12)
+                    .task(id: "\(name)|\(face ?? "")") { await readGround() }
                 Text(verbatim: name)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.center)
@@ -113,6 +116,20 @@ struct SubscriptionPage<Tail: View>: View {
             tail
         }
         .padding(DS.Space.s4)
+        .preference(key: ArtGroundPreference.self, value: ground)
+    }
+
+    /// The picture `SubscriptionFace` draws: its own, else the app's art.
+    /// A lettered face keeps the ink.
+    private func readGround() async {
+        var image: UIImage?
+        if let face {
+            image = await FaceArt.picture(face)
+        } else if let mark = SubscriptionFace.mark(for: name) {
+            image = FaceArt.app(mark)
+        }
+        let colour = image.flatMap(ArtGround.markColor(from:))
+        withAnimation(DS.Motion.standard) { ground = colour }
     }
 }
 
@@ -184,6 +201,8 @@ enum SubscriptionWords {
 struct SubscriptionSheetFit: ViewModifier {
     @State private var detent: PresentationDetent = .medium
     @State private var fitted: CGFloat?
+    /// The page's ground (prd §1655), handed up by `SubscriptionPage`.
+    @State private var ground: Color?
 
     func body(content: Content) -> some View {
         content
@@ -192,6 +211,8 @@ struct SubscriptionSheetFit: ViewModifier {
             } action: { _, height in
                 fit(height)
             }
+            .onPreferenceChange(ArtGroundPreference.self) { ground = $0 }
+            .artGround($ground, resetOn: 0)
             .dsInk()
             .dsReadSheet(detent: $detent, fit: fitted)
     }

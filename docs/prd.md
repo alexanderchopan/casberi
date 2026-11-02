@@ -70286,3 +70286,14 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 **Checks.** `permissions-box-selftest.sh` runs the grouping, the order, the ring, the total, the fold and its dollars, and guards that the page packs every grant and Approvals lists them all.
 
 **Not compiled:** written in a Linux session with no Swift toolchain, so neither the app nor the self-test was built. **Not seen:** the simulator, the Mac (§1402's Mac half: the same box in the Wallet pane).
+
+## §1655 — A money sheet stands on its face's colour, read as the mark's main hue, not its average; a sheet that asks for a signature or warns keeps the ink (amends §1649 item 2) (user, 2026-11-02: "i think perhaps the wallet thing sheets should have the background color like we do on media. mock it up like you had before"; of the canvas https://claude.ai/artifact/W1hMUewYQbWmmdbRe4bgeu round 3, "you decide which")
+
+**Why.** §1649 built the ground and took it out: `ArtGround.color(from:)` averages every pixel, which suits an album cover and fails a mark — a logo is flat colour over black or white, so its average is a colour it does not have (Netflix's black icon read maroon). The colour was right; the reading was wrong.
+
+1. **The reading is the mark's main hue** (`ArtGround.markColor(from:)`): the face drawn at 24×24, pixels under 0.25 saturation or 0.2 brightness set aside as neutral, the rest binned by hue (twelve bins, weighted by saturation × brightness), the heaviest bin's hue and saturation, deepened as a song's ground is (saturation ≤ 0.62, brightness 0.3, §1650 item 4). **A mark more than 60% neutral gives nil and the ink stays.** Album art keeps the average (`color(from:)`).
+2. **The picture is the one the face draws** (`FaceArt`): an app's bundled art (`BridgeIconArt`, internal now), a token's bundled mark then the holdings book's picture, an address's avatar. A face drawn rather than pictured — a glyph on a brand fill, a monogram, an identicon, your own face — keeps the ink. A swap reads the token that came in (the front mark).
+3. **Which sheets** (decided, user: "you decide which"): a record of what happened — a transfer, a swap, a card spend, a receipt, a reading — and the subscription page (`SubscriptionPage` hands its ground up through `ArtGroundPreference`; `subscriptionSheet()` paints it, so Life's lists and the follows' pages take it too). **Ink stays** behind anything that asks for a decision or warns: a Safe proposal (`safeCheck` answered), a Safe statement (`wallet:safemsg:`), a standing permission (`wallet:approval:`, `wallet:sol-approval:`), a flagged box, any security flag (`ThingSheetView.moneyTakesGround`). A sheet whose Safe check answers after its colour landed goes back to ink.
+4. **The wallet pip** on a subject's face rings in the ground's colour, so it sits on the sheet without a halo of ink.
+
+**Not seen:** not built or run in this pass (the session had no Xcode); the simulator pass, light theme and the Mac are owed.

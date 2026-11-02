@@ -646,7 +646,9 @@ struct ThingSheetView: View {
                                            source: thing.source,
                                            unnamed: moneyUnnamed,
                                            hidesDay: MoneyReceipt.isBill(source: thing.source),
-                                           onSubject: openAddressCard)
+                                           onSubject: openAddressCard,
+                                           ground: mediaGround,
+                                           onGround: { mediaGround = moneyTakesGround ? $0 : nil })
                         }
                     }
                         // Read once per open (§628), the spec row's own read.
@@ -1342,6 +1344,11 @@ struct ThingSheetView: View {
         // A song or an episode stands on its cover's colour (prd §1650 item
         // 4), over the ink, and reads dark on it in either theme.
         .artGround($mediaGround, resetOn: thing.id)
+        // A Safe's check answers after the head has read its colour: the
+        // sheet that turns out to ask for a signature goes back to ink.
+        .onChange(of: moneyTakesGround) { _, takes in
+            if !takes, moneyReceipt != nil { mediaGround = nil }
+        }
         .dsInk()
         // The haptics this sheet has always fired, made audible (2026-08-16).
         //
@@ -3452,6 +3459,18 @@ struct ThingSheetView: View {
         // "why do we care about how many times b/c we could be wrong"): a
         // count of what was fetched is not a count of what happened (§83).
         return out
+    }
+
+    /// A money sheet stands on its face's colour (prd §1655) when it
+    /// records what happened. One that asks for a signature (a Safe
+    /// proposal, a statement, a standing permission) or warns (a flag, a
+    /// poisoning) keeps the ink: no colour behind a decision.
+    private var moneyTakesGround: Bool {
+        guard moneyReceipt != nil, moneyFlag == nil, safeCheck == nil,
+              thing.securityFlags.isEmpty else { return false }
+        let ref = thing.sourceRef ?? ""
+        return !["wallet:safemsg:", "wallet:approval:", "wallet:sol-approval:"]
+            .contains(where: ref.hasPrefix)
     }
 
     /// The flag a flagged transfer's box speaks for (prd §1377), one at a time:
