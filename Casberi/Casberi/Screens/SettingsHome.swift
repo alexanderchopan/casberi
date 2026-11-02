@@ -26,6 +26,10 @@ struct SettingsHome: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
+    /// Re-injected into the folder's sheet, where an app's page may read
+    /// them (`HandleSetupScreen`), as `MainSurface.raisedSheet` does.
+    @Environment(FeedFilter.self) private var filter
+    @Environment(PadDetailSelection.self) private var detail
 
     #if DEBUG
     /// `-connectTap` fires once a launch, not at every mount.
@@ -86,6 +90,38 @@ struct SettingsHome: View {
             case .casberi: "casberi"
             }
         }
+    }
+
+    /// Casberi's or a folder's sheet goes down; the Track tray stays.
+    private func closeFolderSheet() {
+        switch librarySheet {
+        case .casberi, .folder: librarySheet = nil
+        default: break
+        }
+    }
+
+    /// An app's page opened inside its folder's sheet (prd §1664 item 6): an
+    /// app you could add, one of yours that needs you or lands nothing.
+    /// Contacts and Calendar keep their lists (§1612); a pageless app (Photos,
+    /// Reminders) and one that needs only a name (its Track tray) go through
+    /// `open`. Nil on the Mac and inside another sheet's stack, where the
+    /// sheet holds no stack of its own.
+    private func folderPage(_ name: String) -> BridgeRouter.Destination? {
+        guard folderStacks, name != "Contacts", name != "Calendar" else { return nil }
+        if let app = yours(name) {
+            guard app.status == .attention || LiveRoomSources.landsNothing.contains(app.name) else { return nil }
+            return BridgeRouter.destination(forID: app.id)
+        }
+        guard FollowingReading.trackRoom(forSeat: name) == nil else { return nil }
+        return BridgeRouter.destination(forOffer: name)
+    }
+
+    private var folderStacks: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        route.sheet == nil
+        #endif
     }
 
     /// A tap in a folder's sheet: the sheet goes down, then the app opens
@@ -231,11 +267,17 @@ struct SettingsHome: View {
                                  folderAct = nil
                                  act?()
                              }))
-        // A setting from Casberi's sheet pushes beside Library (prd §1321):
-        // the sheet goes down so the page is seen.
+        // A setting from Casberi's sheet, or a door on an app's page in a
+        // folder's, pushes beside Library (prd §1321): the sheet goes down so
+        // the page is seen.
         .onChange(of: route.path.count) { old, new in
-            guard new > old, case .casberi = librarySheet else { return }
-            librarySheet = nil
+            guard new > old else { return }
+            closeFolderSheet()
+        }
+        // A connect made on a page in the folder's sheet lands in its room
+        // (prd §1029): the sheet goes down so the room is seen.
+        .onChange(of: chrome.sourceRequest != nil) { _, asked in
+            if asked { closeFolderSheet() }
         }
         // **A DOOR THAT ASKED FOR THE CATALOGUE LANDS HERE (prd §1234)**:
         // Sources, on Apps, and an app it named runs as its row would.
@@ -301,10 +343,13 @@ struct SettingsHome: View {
             case .folder(let category):
                 if let folder = libraryFolders.first(where: { $0.category == category }) {
                     SourcesOpenFolder(folder: folder, has: isYours,
+                                      page: folderPage,
                                       open: { name in takeFromFolder { openFromFolder(name) } },
                                       settings: { name in
                                           yours(name).map { app in { takeFromFolder { openPage(app) } } }
                                       },
+                                      settingsPage: { name in yours(name).map { BridgeRouter.destination(forID: $0.id) } },
+                                      stacks: folderStacks,
                                       // The Notes folder leads with the Notes
                                       // page, pushed beside Library (prd §1347).
                                       notesPage: category == BridgeCatalog.notesCategory
@@ -317,6 +362,8 @@ struct SettingsHome: View {
         .environment(chrome)
         .environment(bridges)
         .environment(route)
+        .environment(filter)
+        .environment(detail)
         .environment(\.modelContext, context)
         .environment(\.locale, LanguageStore.shared.locale)
     }

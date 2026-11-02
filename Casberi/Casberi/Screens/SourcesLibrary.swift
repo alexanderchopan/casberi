@@ -186,50 +186,108 @@ private struct SourcesFolderWords: View {
 /// the dimmed edge; the Wallet's folder filled the screen and left none
 /// (tester: "can't seem to close this. Might be worth to open them as
 /// sheets"). A `DSTray` has the grabber, swipe down closes it, and the Mac's
-/// Done. An app opens from here as its row would (yours goes, the rest their
-/// way in, §1418), once the sheet is down (`SettingsHome.takeFromFolder`).
-/// Yours wear the green dot, the rest the pink plus (§1319).
+/// Done. Yours wear the green dot, the rest the pink plus (§1319).
+///
+/// **AN APP'S PAGE PUSHES INSIDE THE SHEET, AND BACK IS THE FOLDER (prd
+/// §1664 item 6, user: "yes returns to folder").** An app you could add, one
+/// of yours that needs you, and a long press's Settings open their page in
+/// the sheet's own stack (`page`), so adding several from one folder is
+/// Back, not a reopen. Everything else (an app of yours going to its feed,
+/// Contacts, Calendar) takes the sheet down first (`open`).
 struct SourcesOpenFolder: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
+    /// The page a tap opens inside the sheet; nil goes through `open`.
+    let page: (String) -> BridgeRouter.Destination?
     let open: (String) -> Void
     /// An app of yours's page, offered on its long press (prd §1418); nil for
     /// one you could add.
     let settings: (String) -> (() -> Void)?
+    /// That page, pushed inside the sheet where it holds a stack.
+    let settingsPage: (String) -> BridgeRouter.Destination?
+    /// The sheet holds a stack of its own. False inside another sheet's stack
+    /// (prd §1238, the iPad's) and on the Mac, where a page opens in Library's
+    /// pane; `page` is nil there.
+    let stacks: Bool
     /// **THE NOTES FOLDER LEADS WITH YOUR NOTES (prd §1347).** Notes is a
     /// category again, and its folder is where you manage it: the first
     /// cell opens the Notes page itself (All · Folders · Voice · New) as a
     /// page pushed beside Library, the way a setting opens from Casberi's
     /// folder; the apps you write in follow, as in any folder. Nil for
     /// every other folder.
-    var notesPage: (() -> Void)? = nil
+    let notesPage: (() -> Void)?
+
+    @State private var path: [BridgeRouter.Destination] = []
+    /// The grid's height at rest; a page takes the whole sheet.
+    @State private var detent: PresentationDetent
+
+    init(folder: SourcesLibrary.Folder, has: @escaping (String) -> Bool,
+         page: @escaping (String) -> BridgeRouter.Destination?,
+         open: @escaping (String) -> Void,
+         settings: @escaping (String) -> (() -> Void)?,
+         settingsPage: @escaping (String) -> BridgeRouter.Destination?,
+         stacks: Bool, notesPage: (() -> Void)? = nil) {
+        self.folder = folder
+        self.has = has
+        self.page = page
+        self.open = open
+        self.settings = settings
+        self.settingsPage = settingsPage
+        self.stacks = stacks
+        self.notesPage = notesPage
+        _detent = State(initialValue: .height(Self.height(cells: folder.apps.count + (notesPage == nil ? 0 : 1))))
+    }
 
     private static let perRow = 4
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
-                                count: perRow)
+                                count: Self.perRow)
 
     /// The sheet's resting height, by the tray's model (pad, title, gap,
     /// content, pad): every row of the grid when it fits, never past 640; a
     /// longer folder (the Wallet's) drags to `.large` and scrolls.
     private var height: CGFloat {
-        let cells = folder.apps.count + (notesPage == nil ? 0 : 1)
-        let rows = CGFloat(max(1, (cells + Self.perRow - 1) / Self.perRow))
+        Self.height(cells: folder.apps.count + (notesPage == nil ? 0 : 1))
+    }
+
+    private static func height(cells: Int) -> CGFloat {
+        let rows = CGFloat(max(1, (cells + perRow - 1) / perRow))
         // An icon, its gap, and two lines of its name.
         let cell = DS.Face.seat + 12 + DS.Space.s1 + 32
         let grid = DS.Space.s2 + rows * cell + (rows - 1) * DS.Space.s4
         return min(640, DS.Space.s6 + 48 + DS.Space.s4 + grid + DS.Space.s6)
     }
 
-    var body: some View {
+    private func tap(_ name: String) {
+        if let dest = page(name) {
+            DSHaptic.selection()
+            path.append(dest)
+        } else {
+            open(name)
+        }
+    }
+
+    /// The long press's Settings: inside the sheet where it can, else the
+    /// caller's way (the sheet goes down first).
+    private func settingsAct(_ name: String) -> (() -> Void)? {
+        guard let act = settings(name) else { return nil }
+        if stacks, let dest = settingsPage(name) {
+            return { path.append(dest) }
+        }
+        return act
+    }
+
+    private var tray: some View {
         DSTray(title: folder.category, height: height,
-               detents: [.height(height), .large], scrollsItself: true) {
+               detents: [.height(height), .large], scrollsItself: true,
+               selection: stacks ? $detent : nil) {
             ScrollView {
                 LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
                     if let notesPage {
                         SourcesFolderNotesPage(action: notesPage)
                     }
                     ForEach(folder.apps, id: \.self) { name in
-                        SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
+                        SourcesFolderApp(name: name, yours: has(name),
+                                         settings: settingsAct(name)) { tap(name) }
                     }
                 }
                 .padding(.top, DS.Space.s2)
@@ -237,6 +295,33 @@ struct SourcesOpenFolder: View {
             }
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+
+    var body: some View {
+        if stacks {
+            NavigationStack(path: $path) {
+                tray
+                    // A stack's backing is opaque (docs/gotchas.md): the
+                    // tray paints the sheet's ground inside it.
+                    .background(DS.surfaceSheet.ignoresSafeArea())
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(for: BridgeRouter.Destination.self) { dest in
+                        BridgeDestinationView(destination: dest)
+                            .toolbar(.hidden, for: .navigationBar)
+                            // The seat's back door at the foot (prd §1304):
+                            // Back is the folder.
+                            .environment(\.dsInSheet, true)
+                            .dsSheetStep()
+                    }
+            }
+            .environment(\.dsInSheetStack, true)
+            // A page takes the whole sheet; back on the grid it rests again.
+            .onChange(of: path.isEmpty) { _, empty in
+                detent = empty ? .height(height) : .large
+            }
+        } else {
+            tray
         }
     }
 }
