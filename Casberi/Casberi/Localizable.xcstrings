@@ -57463,6 +57463,34 @@
         }
       }
     },
+    "Bank transaction" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Movimiento bancario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "銀行取引"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "은행 거래"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "银行交易"
+          }
+        }
+      }
+    },
     "Bankr" : {
       "localizations" : {
         "es" : {
@@ -65198,6 +65226,34 @@
         }
       }
     },
+    "Claiming the token…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Canjeando el token…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンを引き換えています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰을 받는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在领取令牌…"
+          }
+        }
+      }
+    },
     "Claude answers on this key now." : {
       "localizations" : {
         "es" : {
@@ -71874,6 +71930,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Sentry — 请检查你的网络连接。"
+          }
+        }
+      }
+    },
+    "Couldn't reach SimpleFIN — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con SimpleFIN. Revisa tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN に接続できませんでした。接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN에 연결할 수 없습니다. 연결을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 SimpleFIN，请检查网络连接。"
           }
         }
       }
@@ -93345,6 +93429,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "获取 Logos Observer"
+          }
+        }
+      }
+    },
+    "Get a Setup Token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Obtener un Setup Token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Setup Token を取得"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Setup Token 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "获取 Setup Token"
           }
         }
       }
@@ -136239,6 +136351,34 @@
         }
       }
     },
+    "Paid to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagado a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지급 대상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "付款给"
+          }
+        }
+      }
+    },
     "Paid with %@" : {
       "localizations" : {
         "es" : {
@@ -138170,6 +138310,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从 Wise 设置中粘贴 API 令牌。"
+          }
+        }
+      }
+    },
+    "Paste the Setup Token from SimpleFIN Bridge." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pega el Setup Token de SimpleFIN Bridge."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN Bridge の Setup Token を貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN Bridge의 Setup Token을 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "粘贴 SimpleFIN Bridge 的 Setup Token。"
           }
         }
       }
@@ -145787,6 +145955,34 @@
         }
       }
     },
+    "Reading SimpleFIN…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo SimpleFIN…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN を読み込んでいます…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 SimpleFIN…"
+          }
+        }
+      }
+    },
     "Reading Splits…" : {
       "localizations" : {
         "es" : {
@@ -146679,6 +146875,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取你的 Spotify…"
+          }
+        }
+      }
+    },
+    "Reading your accounts…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tus cuentas…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "口座を読み込んでいます…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계좌를 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的账户…"
           }
         }
       }
@@ -148771,6 +148995,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "通过 Lightning 收到"
+          }
+        }
+      }
+    },
+    "Received · %@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibido · %@ · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金 · %@ · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입금 · %@ · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收到 · %@ · %@"
           }
         }
       }
@@ -167258,6 +167510,90 @@
         }
       }
     },
+    "SimpleFIN didn't answer as expected (%lld)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN no respondió como se esperaba (%lld)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN から想定外の応答がありました（%lld）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN이 예상대로 응답하지 않았습니다(%lld)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN 的响应不符合预期（%lld）。"
+          }
+        }
+      }
+    },
+    "SimpleFIN no longer accepts this connection. It may have been turned off at SimpleFIN Bridge; make a new Setup Token to connect again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN ya no acepta esta conexión. Puede que se haya desactivado en SimpleFIN Bridge; crea un nuevo Setup Token para volver a conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN はこの接続を受け付けなくなりました。SimpleFIN Bridge でオフにされた可能性があります。新しい Setup Token を作成して再接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN이 더 이상 이 연결을 허용하지 않습니다. SimpleFIN Bridge에서 꺼졌을 수 있습니다. 새 Setup Token을 만들어 다시 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN 不再接受此连接。它可能已在 SimpleFIN Bridge 上关闭；请新建一个 Setup Token 重新连接。"
+          }
+        }
+      }
+    },
+    "SimpleFIN refused that connection. Make a new Setup Token and paste it here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN rechazó esa conexión. Crea un nuevo Setup Token y pégalo aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN がその接続を拒否しました。新しい Setup Token を作成してここに貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN이 그 연결을 거부했습니다. 새 Setup Token을 만들어 여기에 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN 拒绝了该连接。请新建一个 Setup Token 并粘贴到这里。"
+          }
+        }
+      }
+    },
     "Simulated as the Safe's call, before signatures and gas." : {
       "localizations" : {
         "es" : {
@@ -175773,6 +176109,34 @@
         }
       }
     },
+    "That isn't a SimpleFIN Setup Token. Copy the whole token from SimpleFIN Bridge." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eso no es un Setup Token de SimpleFIN. Copia el token completo de SimpleFIN Bridge."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これは SimpleFIN の Setup Token ではありません。SimpleFIN Bridge からトークン全体をコピーしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN Setup Token이 아닙니다. SimpleFIN Bridge에서 토큰 전체를 복사하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这不是 SimpleFIN 的 Setup Token。请从 SimpleFIN Bridge 复制完整的令牌。"
+          }
+        }
+      }
+    },
     "That isn't a WalletConnect pairing link." : {
       "localizations" : {
         "es" : {
@@ -176581,6 +176945,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "那个令牌无效 — 检查它（以及你的网络连接）后重新粘贴。"
+          }
+        }
+      }
+    },
+    "That token was already claimed. If you didn't claim it, turn it off at SimpleFIN Bridge, then make a new one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ese token ya se canjeó. Si no fuiste tú, desactívalo en SimpleFIN Bridge y crea uno nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのトークンはすでに引き換えられています。心当たりがない場合は SimpleFIN Bridge でオフにしてから、新しいものを作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이미 사용된 토큰입니다. 직접 사용하지 않았다면 SimpleFIN Bridge에서 끈 다음 새로 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该令牌已被领取。如果不是你领取的，请在 SimpleFIN Bridge 上关闭它，然后新建一个。"
           }
         }
       }
@@ -209257,6 +209649,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的签名者也要签名"
+          }
+        }
+      }
+    },
+    "Your SimpleFIN subscription has lapsed. Renew it at SimpleFIN Bridge and this reads again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu suscripción a SimpleFIN ha vencido. Renuévala en SimpleFIN Bridge y volverá a leerse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN のサブスクリプションが期限切れです。SimpleFIN Bridge で更新すると再び読み込まれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SimpleFIN 구독이 만료되었습니다. SimpleFIN Bridge에서 갱신하면 다시 읽어옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 SimpleFIN 订阅已过期。在 SimpleFIN Bridge 续订后即可重新读取。"
           }
         }
       }
