@@ -1,16 +1,18 @@
 import SwiftUI
 
-/// **PERMISSIONS' BOX IS A PACK (prd §1654).** One circle per app that can
-/// move your tokens, its area the dollars it reaches (`PermissionsPack`), an
-/// app with no limit ringed in amber; past eight apps, one grey "N more". A
-/// circle large enough carries its figure, a larger one what it reaches too;
-/// the rest stand on their mark. Under the pack, the key and the total.
+/// **PERMISSIONS' BOX IS A PACK (prd §1654, coloured by §1656).** One circle
+/// per app that can move your tokens, its area the dollars it reaches
+/// (`PermissionsPack`). The fill says the limit: amber (`DS.attention`) for an
+/// app with no limit, the charts' tint for a capped one; past eight apps, one
+/// grey "N more". The figure leads inside a circle; a larger one names the app
+/// and what it reaches, the largest carries the app's mark too. Under the
+/// pack, the key and the total.
 ///
 /// A tap opens the grant's sheet when the app holds one grant, else the
 /// Approvals list under the box, open in full.
 ///
 /// No plate (§782): the circles are the figure, on the box's well. Amber is
-/// the one status hue, as on the rows.
+/// the rows' status hue; the tint is the charts' (§1385).
 struct WalletPermissionsFigure: View {
     let grants: [WalletApprovalExposure.Grant]
     let open: (PermissionsPack.Piece) -> Void
@@ -59,10 +61,10 @@ struct WalletPermissionsFigure: View {
                 Text("No approvals").foregroundStyle(DS.textTertiary)
             }
             if pieces.contains(where: \.unlimited) {
-                key(Circle().strokeBorder(DS.attention, lineWidth: 2), word: String(localized: "No limit"))
+                key(Circle().fill(PermissionsCircle.unlimitedFill), word: String(localized: "No limit"))
             }
             if pieces.contains(where: { !$0.unlimited }) {
-                key(Circle().fill(DS.fillFaint), word: String(localized: "Capped"))
+                key(Circle().fill(PermissionsCircle.cappedFill), word: String(localized: "Capped"))
             }
             Spacer(minLength: DS.Space.s2)
             if let total = PermissionsPack.total(pieces) {
@@ -87,57 +89,82 @@ struct WalletPermissionsFigure: View {
     }
 }
 
-/// One app's circle: the faint disc, the amber ring when it has no limit, the
-/// mark, and the figure and what it reaches when the circle can hold them.
-private struct PermissionsCircle: View {
+/// One app's circle (prd §1656): filled by its limit, the figure leading.
+///
+///   · 150pt and wider: the app's mark, the figure at `heading34`, then
+///     "Uniswap · USDC".
+///   · 96pt and wider: the figure at `heading24` over the app's name.
+///   · Narrower: the figure alone, or the mark when nothing is priced.
+///   · More: grey, "N more".
+struct PermissionsCircle: View {
     let piece: PermissionsPack.Piece
     let diameter: CGFloat
     let figure: String?
 
-    /// A circle this wide carries its figure; `wide` its tokens too.
-    static let figured: CGFloat = 96
-    static let wide: CGFloat = 150
+    static let named: CGFloat = 96
+    static let marked: CGFloat = 150
+
+    static var unlimitedFill: Color { DS.attention }
+    static var cappedFill: Color { DS.tint }
+
+    private var fill: Color {
+        if piece.isMore { return DS.fillStrong }
+        return piece.unlimited ? Self.unlimitedFill : Self.cappedFill
+    }
+
+    /// Dark words on amber, white on the tint, the page's own on grey.
+    private var ink: Color {
+        if piece.isMore { return DS.textSecondary }
+        return piece.unlimited ? Color.black.opacity(0.88) : .white
+    }
 
     var body: some View {
         ZStack {
-            Circle().fill(DS.fillFaint)
-            if piece.unlimited {
-                Circle().strokeBorder(DS.attention, lineWidth: diameter >= Self.figured ? 3 : 2)
-            }
+            Circle().fill(fill)
             VStack(spacing: 2) {
                 if piece.isMore {
                     Text(verbatim: piece.name)
                         .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                } else if diameter >= Self.marked {
+                    AssetMark(name: piece.name, size: DS.Face.list)
+                        .padding(.bottom, DS.Space.s1)
+                    figureText(.heading34)
+                    caption([piece.name] + piece.symbols.prefix(1))
+                } else if diameter >= Self.named {
+                    if figure == nil { AssetMark(name: piece.name, size: DS.Face.list) }
+                    figureText(.heading24)
+                    caption([piece.name])
+                } else if figure != nil {
+                    figureText(diameter >= 60 ? .body17 : .subhead12)
                 } else {
-                    AssetMark(name: piece.name, size: markSize)
-                }
-                if diameter >= Self.figured, let figure {
-                    Text(verbatim: figure)
-                        .dsText(diameter >= Self.wide ? .heading24 : .body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                if diameter >= Self.wide, !piece.isMore, !piece.symbols.isEmpty {
-                    Text(verbatim: piece.symbols.prefix(2).joined(separator: " · "))
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
+                    AssetMark(name: piece.name, size: min(DS.Face.list, diameter - 20))
                 }
             }
+            .foregroundStyle(ink)
             .padding(.horizontal, DS.Space.s2)
         }
         .frame(width: diameter, height: diameter)
     }
 
-    /// The seat's mark in a large circle, the list's in a small one, never
-    /// wider than the circle leaves room for.
-    private var markSize: CGFloat {
-        let size = diameter >= 120 ? DS.Face.seat : DS.Face.list
-        return min(size, diameter - 14)
+    @ViewBuilder
+    private func figureText(_ rung: DSTextStyle) -> some View {
+        if let figure {
+            Text(verbatim: figure)
+                .dsText(rung)
+                .fontWeight(.bold)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+    }
+
+    private func caption(_ parts: [String]) -> some View {
+        Text(verbatim: parts.joined(separator: " · "))
+            .dsText(.subhead12)
+            .opacity(0.72)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
     }
 }

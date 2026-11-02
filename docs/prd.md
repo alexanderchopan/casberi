@@ -70297,3 +70297,12 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 4. **The wallet pip** on a subject's face rings in the ground's colour, so it sits on the sheet without a halo of ink.
 
 **Not seen:** not built or run in this pass (the session had no Xcode); the simulator pass, light theme and the Mac are owed.
+
+## §1656 — Permissions' circles are filled by their limit: amber for no limit, the charts' tint for capped; the figure leads inside, the name under it, the mark only in the largest (amends §1654 items 2 and 4: the faint disc and the amber ring are gone) (user, 2026-11-02, of the built pack: "will the circles have colors? they can't just have some yellow ring like that."; of three coloured versions (own colour with an ∞ badge, colour says the limit, own colour faded when capped): no pick; then of three refinements of the second (two inks, one ink at two strengths, the circle says it), the first recommended: "ok") — BUILT, NOT COMPILED, NOT SEEN; canvases https://claude.ai/artifact/G2LM6rDs8xJQ2rYokxnQkY (round 2), https://claude.ai/artifact/G4n4BzPkhJdN6o1XCcWWGQ (round 3)
+
+1. **The fill is the reading.** An app with no limit on any grant is filled `DS.attention`, a capped one (a collection included) `DS.tint`, the charts' hue (§1385; `ds-template-audit.py` check E allows the pack's one use as a chart). More is `fillStrong`, grey. Words are dark on amber and white on the tint.
+2. **Not the app's own colour.** The marks are artwork, and `AssetMark` never invents a hue for an app nobody drew: a pack in brand colours would draw every unnamed app grey and mean nothing by its colour.
+3. **Inside a circle, the figure leads** (`PermissionsCircle`): at 150pt and wider the app's mark, the dollars at `heading34`, "Uniswap · USDC"; at 96pt the dollars at `heading24` over the name; narrower the dollars alone, or the mark when nothing is priced. Hide balances masks the dollars and keeps the colours and sizes.
+4. **The key** is two dots, "No limit" and "Capped", each only when the pack holds one, the total trailing.
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the simulator, the Mac (§1402's Mac half: the same box in the Wallet pane); in particular whether dark words hold on `attention` in light mode and Increase Contrast.

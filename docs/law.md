@@ -149,7 +149,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats (§1480; Markets deleted, §1529).
-- Permissions' box names the worst permission (an unknown delegate, else the most dollars at stake) by its kind, "Unlimited approval", over whose it is, "Uniswap · USDC", and nothing more; under it a strip of every priced grant sized by its dollars; its verb (Revoke, Review, Open) is the row under the box and it is not listed again; empty after the last revoke, it says "No permissions" over today's revokes. Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
+- Permissions' box is a pack: one circle per app, its area the dollars it reaches, filled amber when any grant has no limit and the charts' tint when capped, its dollars leading inside; eight apps, then one grey "N more"; under it "No limit" and "Capped" and the total; a tap opens the grant, or Approvals in full. Delegations and Approvals list every grant under it; empty after the last revoke, it draws one faint circle over today's revokes (§1654, §1656). Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
 - The watchlist is yours, apart from Following (§1632): one Home door like Permissions, on All and Yours only, trailing the day's biggest mover in its ink ("WLD −2.3%"), never an average, else the count; empty, it is the verb Watch a token. It pushes `Wallet · Watchlist` (the verb row, then each token: price trailing, the day's change on the line); Watch a token is a token-only search tray; a token's page is its chart, You hold, Coin or Network, Stop watching (no Swap yet). Watch is the verb for tokens, Follow for wallets and feeds, Track for subscriptions (§1632 amends §1120). Prices are keyless (DeFiLlama, CoinGecko's search), read on screen at most once per ten minutes, never through Zerion.
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1791 of 1863 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1792 of 1864 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2039,6 +2039,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1653 — A presented reading sheet stands on its own ground, one step off the page in dark, so the gap iOS 26 leaves under a f…
 - §1654 — Permissions' box is a pack: one circle per app, its area the dollars it reaches, ringed in amber when it has no limit…
 - §1655 — A money sheet stands on its face's colour, read as the mark's main hue, not its average; a sheet that asks for a sign…
+- §1656 — Permissions' circles are filled by their limit: amber for no limit, the charts' tint for capped; the figure leads ins…
 
 ## Dead rulings → what replaced them (generated)
 
