@@ -70379,6 +70379,18 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 
 **Mac half (§1402).** The same seat and page; the Mac claims its own token, since the URL never syncs.
 
+## §1664 — On the Mac, Search opens the rooms tray, as the phone's does (amends §1402 item 4, §1407 item 5; the Mac half of §1422's Search tab, §1524's "search tray is how you narrow", §1589) (user, 2026-11-02: "on mac when you click search it brings up the 'ask' composer but doens't show your connected apps. where should those be on mac?", then "Yes, build it") — BUILT
+
+§1402 sent the rail's Search straight to Find, reasoning that a category's apps are picked from inside its room. Later rulings made the tray the place you narrow and the one list of your connected apps, and the Mac never followed: Search there opened an empty composer.
+
+1. **The rail's Search tile and ⌘F open the rooms tray** beside the rail (`PlaceTab.open(.search)`, one door for the bar, the rail and the menu), in the layout §1133f already drew there: the card hangs from the top-left beside the rail, the search field leads it.
+2. **It opens unfocused, your apps showing**, as the phone's rises with the keyboard down (§1280): a focused empty field draws the search home (§1211 item 5) in place of the apps, which on the first build hid exactly what the person came for. A click in the field types.
+3. **Return in the field still hands the words to Find** (§1133e); Find is reached through the tray, not around it.
+4. **Escape closes the tray** (`.keyboardShortcut(.cancelAction)` on the catcher), as a Mac menu closes.
+5. A swipe past the walk's end still stops on regular width (§1407 item 5); `-openTray YES` now raises the tray beside the rail and logs `openTray: raised beside the rail`.
+
+**Mac half.** This is it. The phone is untouched: its bar already opened the tray.
+
 ## §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks (amends §1542 item 6's "Uniswap's is the one", §1617 for typed words only) (user, 2026-11-02: "swap on aerodrome so more comes up in search") — BUILT, SEEN ON THE SIMULATOR (the build), the search UNSEEN against the live list
 
 Aerodrome was already a swap venue on Base (§1539: three Slipstream deployments and v2). What kept its tokens out of reach was the search: Uniswap's list carries 195 Base tokens and leaves out what Aerodrome mostly trades.

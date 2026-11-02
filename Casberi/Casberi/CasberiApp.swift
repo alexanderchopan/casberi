@@ -298,11 +298,13 @@ struct CasberiApp: App {
             // menu in `buildMenu(with:)` — the only door, since no
             // `CommandGroup` placement can address it — which hands the
             // shortcut back to this item. Edit → Find is where a Mac user
-            // looks for it, and it opens the same Find door the bar's
-            // magnifier does (§215): field focused, nothing running until
-            // they type.
+            // looks for it, and it opens what the rail's Search tile does:
+            // the rooms tray, your apps in it (prd §1664);
+            // Return in the field still hands the words to Find (§215).
             CommandGroup(after: .pasteboard) {
-                Button("Find…") { focusedChrome?.openFind() }
+                Button("Find…") {
+                    withAnimation(DS.Motion.standard) { focusedChrome?.roomsTray = true }
+                }
                 .keyboardShortcut("f", modifiers: .command)
             }
             CommandGroup(after: .toolbar) {

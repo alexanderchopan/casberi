@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1802 of 1874 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1803 of 1875 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1785,12 +1785,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (amended by §1581)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
 - §1401 — The connect and setup screens stand bare too (completes §1393)
-- §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,…
+- §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,… (amended by §1664)
 - §1403 — Where there is a pane, the box lives in it; the list is only a list (amends §760's box on regular-width columns, §248…
 - §1404 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note k…
 - §1405 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the…
 - §1406 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631)
-- §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title… (amended by §1612, §1653)
+- §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title… (amended by §1612, §1653, §1664)
 - §1408 — The Security tile's flagged sections show five rows, then one door (amends §1107's Security list; applies §1386's one…
 - §1409 — A Safe's queue is one Signatures block in the sheet's column (amends §425's queue card and the Safe arm of §887's com…
 - §1410 — The Wallet adds accounts where the Feed adds follows: Accounts leads Overview, its list stands under it, and its + is… (amended by §1480)
@@ -2047,6 +2047,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1661 — A Feed row stands in 16pt of air, the Wallet's keeps 8
 - §1662 — Spending's pace: last month whole is the bar to beat, drawn behind this month's line and said in one line, with no bu…
 - §1663 — SimpleFIN is back: your banks and cards through a SimpleFIN Bridge subscription the person pays for, each bank wearin…
+- §1664 — On the Mac, Search opens the rooms tray, as the phone's does
 - §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks
 - §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
 - §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us…

@@ -13,9 +13,9 @@ import SwiftUI
 ///
 /// Your face stands at the head of the rail, as it has since 2026-07-20, and
 /// it is Library's tile: Library wears your face on the phone's bar too, so
-/// the rail has one door to it, not a face above a Library tile. The rooms
-/// tray no longer opens from here (§1133f): its Search is ⌘F
-/// (`ShellChrome.openFind`), and the three places are ⌘1–⌘3
+/// the rail has one door to it, not a face above a Library tile. The face no
+/// longer opens the rooms tray (§1133f); the Search tile and ⌘F do, as the
+/// phone's Search does (§1664), and the places are ⌘1–⌘5
 /// (`CasberiApp.commands`; a key may not outlive its control, §360).
 ///
 /// Each tile is the bar's own mark over its word, in the bar's inks: the

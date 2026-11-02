@@ -787,10 +787,11 @@ struct MainSurface: View {
         if showsRail {
             // THE RAIL IS THE TAB BAR (prd §1402): the three places and
             // Search, your face at its head as Library's tile; the category
-            // strip turned 90° (§273) went with the phone's dock.
+            // strip turned 90° (§273) went with the phone's dock. Search
+            // opens the rooms tray beside the rail, as the phone's does (§1664).
             PlaceRail(current: PlaceTab.current(filter.source),
                       open: { PlaceTab.open($0, chrome: chrome, route: route) },
-                      search: { chrome.openFind() })
+                      search: { PlaceTab.open(.search, chrome: chrome, route: route) })
                 // Clearance for the traffic lights (2026-08-17). With the
                 // title bar collapsed (`RootShell.applyMacWindowChrome`) the
                 // content runs to the top edge, and the window buttons float
@@ -2676,8 +2677,8 @@ struct MainSurface: View {
             let atEnd = isRegular
                 ? (delta > 0 || HomeScope.contains(filter.source))
                 : true
-            // No tray where the rail stands (prd §1402, §1407): the rail is
-            // the tab bar, and a swipe past the end stops.
+            // Where the rail stands a swipe past the end stops (prd §1402,
+            // §1407): the tray is the Search tile's and ⌘F's there (§1664).
             if atEnd, route.path.isEmpty, !chrome.roomsTray, !isRegular {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }

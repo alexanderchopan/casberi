@@ -125,6 +125,8 @@ struct RoomsTray: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    // Escape closes it on a keyboard (prd §1664), as it closes a Mac menu.
+                    .keyboardShortcut(.cancelAction)
                     // …and a SWIPE anywhere else closes it too (2026-10-03,
                     // user: "trays get stuck … not easy to swipe down or
                     // dismiss"). The drag cancelled the Button's tap, so a
@@ -173,11 +175,8 @@ struct RoomsTray: View {
             guard UserDefaults.standard.bool(forKey: "openTray") else { return }
             // `-openTrayDelay <s>`: after an `-openRoom` has landed (prd §1589).
             try? await Task.sleep(for: .seconds(max(1, UserDefaults.standard.double(forKey: "openTrayDelay"))))
-            // No tray where the rail stands (prd §1402, §1407): the rail is
-            // the tab bar and its Search is ⌘F, so the hook says so rather
-            // than photographing a door with no handle.
-            guard railInset == 0 else { NSLog("[Casberi] openTray: no tray where the rail stands"); return }
-            NSLog("[Casberi] openTray: raised")
+            // Beside the rail too since prd §1664: the rail's Search and ⌘F open it.
+            NSLog("[Casberi] openTray: raised%@", railInset > 0 ? " beside the rail" : "")
             withAnimation(liftMotion) { chrome.roomsTray = true }
             // `-traySearch "<words>"` types into the field (prd §1171): a
             // simctl-booted simulator draws no keyboard to type with.
