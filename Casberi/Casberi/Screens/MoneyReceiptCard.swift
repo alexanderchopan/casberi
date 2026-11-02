@@ -27,9 +27,11 @@ struct MoneySubjectDisc: View {
     /// faces separate without a line. `DS.inkGround` since §542, when every
     /// paper became ink; a caller drawing this on some other surface passes
     /// that surface, and passing a colour the ground is not draws a halo.
-    var ring: Color = DS.inkGround
+    /// nil is the ground it stands on (`dsGround`: a sheet's, or ink).
+    var ring: Color? = nil
     var size: CGFloat = DS.Face.shelf
     var onOpen: ((String) -> Void)?
+    @Environment(\.dsGround) private var ground
 
     var body: some View {
         if let onOpen, let address = openable {
@@ -91,7 +93,7 @@ struct MoneySubjectDisc: View {
     @ViewBuilder private var minePip: some View {
         if let mine, !mine.isEmpty {
             WalletFace(address: mine, size: size * 0.46, circular: true)
-                .overlay(Circle().strokeBorder(ring, lineWidth: 3))
+                .overlay(Circle().strokeBorder(ring ?? ground, lineWidth: 3))
                 .offset(x: 3, y: 3)
         }
     }

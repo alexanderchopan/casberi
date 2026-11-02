@@ -1391,7 +1391,7 @@ struct WalletWorthALookTray: View {
         // one level inside it), so it needs `dsInk()` applied again at this
         // outer level too — the same "wins the preference race" reasoning
         // `dsInk()` documents.
-        .dsIf(!inSheetStack) { $0.dsInk() }
+        .dsIf(!inSheetStack) { $0.dsInk(presented: true) }
         .navigationDestination(item: $opened) { thing in
             ThingSheetView(thing: thing).dsSheetStep()
         }
@@ -1413,7 +1413,7 @@ struct WalletWorthALookTray: View {
             // detents fix.
             // The seat's back door, as every step in a sheet (prd §1304).
             ThingSheetView(thing: thing)
-                .dsIf(!inSheetStack) { $0.presentationDetents(trayDetents).dsSizedSheet(trayHeight).dsInk() }
+                .dsIf(!inSheetStack) { $0.presentationDetents(trayDetents).dsSizedSheet(trayHeight).dsInk(presented: true) }
                 .dsSheetStep()
         }
         }

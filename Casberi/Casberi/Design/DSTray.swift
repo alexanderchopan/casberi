@@ -290,7 +290,7 @@ struct DSTray<Content: View>: View {
                 .background(DS.surfaceSheet.ignoresSafeArea())
                 .dsColorScheme()
         } else if ink {
-            tray.dsInk()
+            tray.dsInk(presented: true)
         } else {
             tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
         }

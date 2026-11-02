@@ -107,6 +107,8 @@ struct ChatFaceMark: View {
     var size: CGFloat = DS.Face.rowCircle
     var badge = false
 
+    @Environment(\.dsGround) private var ground
+
     var body: some View {
         if thing.isLive {
             face
@@ -114,7 +116,7 @@ struct ChatFaceMark: View {
                 .overlay(alignment: .bottomTrailing) {
                     if badge {
                         BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
-                            .background(Circle().fill(DS.surfaceSheet).padding(-2))
+                            .background(Circle().fill(ground).padding(-2))
                             .offset(x: 2, y: 2)
                     }
                 }

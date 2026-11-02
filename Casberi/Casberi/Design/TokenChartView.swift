@@ -291,6 +291,8 @@ struct TokenChartPlot: View {
     @State private var marksLanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
+    /// What a marker punches out: the surface the chart stands on.
+    @Environment(\.dsGround) private var ground
 
     /// **A FLAT HISTORY IS A FLAT LINE AT MID-HEIGHT (prd §920).** Swift
     /// Charts' automatic domain collapses on a series with one value, and the
@@ -444,7 +446,7 @@ struct TokenChartPlot: View {
                        let y = proxy.position(forY: Self.close(chart.closes, at: watchedX)) {
                         Circle()
                             .strokeBorder(DS.brand, lineWidth: 2.5)
-                            .background(Circle().fill(DS.surfaceSheet))
+                            .background(Circle().fill(ground))
                             .frame(width: 11, height: 11)
                             .position(x: plot.minX + x, y: plot.minY + y)
                             .accessibilityLabel(Text("You started following here"))
@@ -531,7 +533,7 @@ struct TokenChartPlot: View {
                     if mark.id == newest {
                         Circle()
                             .strokeBorder(DS.brand, lineWidth: 2.5)
-                            .background(Circle().fill(DS.surfaceSheet))
+                            .background(Circle().fill(ground))
                             .frame(width: 12, height: 12)
                     } else {
                         Circle()

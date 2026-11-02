@@ -2510,7 +2510,7 @@ struct ThingSheetView: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s3)
         .padding(.bottom, DS.Space.s4)
-        .background(DS.inkGround.ignoresSafeArea(edges: .bottom))
+        .background(DSGroundFill(edges: .bottom))
     }
 
     /// One of the band's discs: the composer's disc anatomy (prd §973).

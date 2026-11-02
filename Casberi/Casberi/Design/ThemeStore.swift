@@ -174,6 +174,20 @@ extension DS {
             ? .white : .black
     }
 
+    /// A PRESENTED reading sheet's ground (2026-11-02, user: "clipping at
+    /// bottom of sheet", then option 2). On iOS 26 a sheet below full height
+    /// floats above the screen's bottom edge, and the feed shows in the gap.
+    /// Black on black, the sheet had no edge, so the feed's line in the gap
+    /// read as the sheet's own words cut off. One step off the page gives it
+    /// an edge. Light already has one (white on the light page), so light is
+    /// unchanged; a background photo takes the dark value.
+    ///
+    /// Sheets only: the iPad/Mac pane stays `inkGround` (prd §1407).
+    static var sheetGround: Color {
+        ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
+            ? .white : Color(hex: "#161618")
+    }
+
 
     /// The pour's colour where it PREVIEWS the setting rather than paints it —
     /// the Color row's badge in settings, the pour card's own glyph. Ink has
@@ -330,15 +344,54 @@ extension View {
     /// `NavigationStack` — so a destination pushed past an ink tray/sheet
     /// needs `.dsInk()` applied again at its own call site (see
     /// `WalletWorthALookTray`'s pushed `ThingSheetView`).
-    func dsInk() -> some View {
-        let ground = DS.inkGround
-        return self
+    ///
+    /// In a presented sheet (`dsInSheet`, never the pane) the ground is
+    /// `DS.sheetGround`; everywhere else it is `DS.inkGround`. What it chose
+    /// rides down as `\.dsGround`, for what punches out or repaints the
+    /// surface under it. `presented: true` says so where `dsInSheet` is not
+    /// set above the call: a tray, a sheet's own root stack.
+    func dsInk(presented: Bool = false) -> some View {
+        modifier(DSInk(presented: presented))
+    }
+}
+
+/// `dsInk()`'s body, a modifier so it can read where it stands.
+private struct DSInk: ViewModifier {
+    let presented: Bool
+    @Environment(\.dsInSheet) private var inSheet
+    @Environment(\.dsInPane) private var inPane
+
+    func body(content: Content) -> some View {
+        let ground = (presented || inSheet) && !inPane ? DS.sheetGround : DS.inkGround
+        return content
+            .environment(\.dsGround, ground)
             .background(ground.ignoresSafeArea())
             .presentationBackground(ground)
             // Follows the ground rather than forcing dark, or every adaptive
             // token in the sheet would resolve to its dark value against a
             // white page — which is the black-on-black failure, inverted.
             .colorScheme(ground == .white ? .light : .dark)
+    }
+}
+
+extension EnvironmentValues {
+    /// The ground `dsInk()` painted under this view, nil outside one. Read
+    /// through `dsGround`, which falls back to `DS.inkGround`.
+    @Entry var dsGroundSet: Color? = nil
+    var dsGround: Color {
+        get { dsGroundSet ?? DS.inkGround }
+        set { dsGroundSet = newValue }
+    }
+}
+
+/// The ground under this view, painted again — for a band, a pushed page or
+/// a paper that must be the surface it stands on, never black on a sheet.
+struct DSGroundFill: View {
+    var edges: Edge.Set = []
+    @Environment(\.dsGround) private var ground
+
+    var body: some View {
+        ground.ignoresSafeArea(edges: edges)
     }
 }
 

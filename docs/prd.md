@@ -70264,3 +70264,12 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 4. **Checks.** `watchlist-selftest.sh` fails when `charts` stops asking `ContractCoins` or the token page's fallback stops being the empty state.
 
 **Not measured:** neither host was reachable from the session that wrote this, so whether DeFiLlama has no AZTEC window and whether CoinGecko lists the contract are unconfirmed. **Not seen:** the simulator, the Mac.
+
+## §1653 — A presented reading sheet stands on its own ground, one step off the page in dark, so the gap iOS 26 leaves under a floating sheet reads as a gap (amends §1407's ink for presented sheets only, the 2026-07-18 full-ink ruling for the same; the pane, pages and light mode unchanged) (user, 2026-11-02: "clipping at bottom of sheet", over a thing sheet whose foot showed half a feed line; offered four options, "ok so 2") — BUILT, NOT SEEN
+
+1. **The cause.** On iOS 26 a sheet below full height floats above the screen's bottom edge (UIKit's custom-detent doc: a height is "200 plus `safeAreaInsets.bottom` when the sheet is edge-attached, or 200 when the sheet is floating"), and no API attaches it. A thing sheet opens at its content's height (§886), so it floats. Black on the black feed it had no edge, and the feed line in the gap read as the sheet's own words cut off.
+2. **The ground.** `DS.sheetGround` is `#161618` in dark (a background photo included) and white in light, where the sheet already stands apart from the page. `dsInk()` paints it when it stands in a presented sheet (`dsInSheet`, or `presented: true` where nothing above says so: `DSTray(ink:)`, Worth a look's stack and its pushed thing) and never in the pane (`dsInPane`), which stays `inkGround`.
+3. **What stands on it follows it.** `dsInk()` hands its ground down as `\.dsGround`; the note page's key band, a pushed post's page and `PriceObjectCard` repaint it through `DSGroundFill`, and the money disc's ring, the chat face's badge ring and the chart's markers punch it out. Off a sheet `dsGround` is `inkGround`, the value those sites drew before.
+4. **Not changed.** Trays on `DS.surfaceSheet` (every `DSTray` without `ink:`) float the same way and stay black; their cards are drawn on that ground, and moving it is its own pass.
+
+**Not seen:** the value was chosen without a simulator or a device; one token moves it.

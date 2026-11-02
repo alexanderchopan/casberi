@@ -390,8 +390,10 @@ struct SocialPostSheet: View {
                     }
             }
             .environment(\.dsInSheetStack, true)
-            .dsReadSheet()
+            // Ink inside the presentation, so it reads `dsInSheet` and takes
+            // the sheet's ground.
             .dsInk()
+            .dsReadSheet()
         }
     }
 }
@@ -473,7 +475,7 @@ struct SocialPostThread: View {
         // `presentationBackground` stopped applying the moment it was pushed,
         // so it repaints the ground itself — and since 2026-08-12 that ground
         // follows the theme.
-        .background(DS.inkGround)
+        .background(DSGroundFill())
         .navigationBarTitleDisplayMode(.inline)
         .dsOneSheet(item: $profile, pushes: { _ in inSheetStack }) { p in
             SocialProfileCard(profile: p)
