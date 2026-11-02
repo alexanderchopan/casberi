@@ -841,11 +841,9 @@ extension FeedScreen {
     /// finger landing (corollary 4's stale-array window, one layer up).
     @ViewBuilder
     var walletApprovalsSection: some View {
-        // The box's lead is not listed twice (prd §1633): its verb is the
-        // row under the box.
-        let lead = walletPermissionsLead?.grantID
-        let exposure = Self.exposure(walletLive.exposure, leaving: lead)
-        let revocable = Set(walletRevocable.keys).subtracting(lead.map { [$0] } ?? [])
+        // Every grant, the box's largest too: the pack names no one (prd §1654).
+        let exposure = walletLive.exposure
+        let revocable = Set(walletRevocable.keys)
         if !exposure.isEmpty {
             walletCard(String(localized: "Approvals"), glyph: WalletWarning.Kind.approval.glyph, anchor: SecurityAnchor.approvals.id) {
                 WalletApprovalExposureCard(exposure: exposure,

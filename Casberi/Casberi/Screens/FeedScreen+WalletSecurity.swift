@@ -228,34 +228,23 @@ enum JustRevoked {
 }
 
 extension FeedScreen {
-    // MARK: - Permissions' and Threats' boxes (prd §1633)
+    // MARK: - Permissions' and Threats' boxes (prd §1654, §1633)
 
-    /// What Permissions' box leads with: an unknown delegate, else the grant
-    /// with the most at stake, else your own wallet's delegate.
-    var walletPermissionsLead: PermissionsLead? {
-        let watched = WalletStore.shared.addresses
-        let holders = WalletPermissions.actingHolders(
-            WalletPermissionsSource.holders(exposure: walletLive.exposure, acting: walletLive.acting))
-        let named: ([String]) -> [String] = { $0.map { WalletScopeRail.caption(for: $0, in: watched).name } }
-        let delegates = WalletDelegation.all(walletLive.acting).map { d in
-            let accounts = holders.first { $0.key.lowercased() == d.delegate }?.accounts ?? d.accounts
-            return PermissionsLead.Delegate(key: d.delegate, name: d.name, accounts: named(accounts))
+    /// A circle in Permissions' pack (prd §1654): an app holding one grant
+    /// opens that grant's sheet; an app holding several, or More, opens the
+    /// Approvals list under the box in full.
+    func walletOpenPermission(_ piece: PermissionsPack.Piece) {
+        if !piece.isMore, piece.grantIDs.count == 1 {
+            guard let thing = walletLive.activeApprovals
+                .first(where: { $0.isLive && $0.id == piece.grantIDs[0] }) else {
+                chrome.flash(String(localized: "That grant is no longer here."), tone: .failure)
+                return
+            }
+            feedSheet = .thing(thing, walk: .none)
+            return
         }
-        // Safe modules count on the door and list under Delegations, so they
-        // may lead an otherwise empty page.
-        let modules = holders.filter { $0.power == .movesWithoutSignature }.map {
-            PermissionsLead.Delegate(key: $0.key, name: $0.name, accounts: named($0.accounts), module: true)
-        }
-        return PermissionsLead.pick(grants: walletLive.exposure.all, delegates: delegates + modules)
-    }
-
-    /// The grants with one taken out, priced and unpriced alike.
-    static func exposure(_ exposure: WalletApprovalExposure, leaving id: UUID?) -> WalletApprovalExposure {
-        guard let id else { return exposure }
-        var out = exposure
-        out.priced.removeAll { $0.thingID == id }
-        out.unpriced.removeAll { $0.thingID == id }
-        return out
+        if !walletSecurityOpen(.approvals) { walletSecurityToggle(.approvals) }
+        cardScrollTarget = SecurityAnchor.approvals.id
     }
 
     /// Every flagged transfer Threats lists, of the three kinds.
@@ -266,82 +255,8 @@ extension FeedScreen {
         }
     }
 
-    /// **THE LEAD'S VERB IS THE ROW UNDER THE BOX (prd §1633, §746).**
-    /// Revoke when your own account can take it back here; otherwise the
-    /// grant's own card or the delegate's sheet, which carry the way out.
-    @ViewBuilder
-    var walletPermissionsLeadVerb: some View {
-        switch walletPermissionsLead {
-        case .grant(let grant):
-            if walletRevocable[grant.thingID] != nil {
-                let inFlight = walletRevoking?.ids.contains(grant.thingID) == true
-                walletDoorsSection {
-                    walletLeadVerbRow(glyph: "xmark.shield",
-                                      title: inFlight ? walletRevoking?.word ?? ""
-                                                      : String(localized: "Revoke \(grant.spender)"),
-                                      ink: walletRevoking == nil ? DS.pickInk : DS.textTertiary) {
-                        walletRevoke([grant.thingID])
-                    }
-                    .disabled(walletRevoking != nil)
-                }
-            } else {
-                walletDoorsSection {
-                    walletLeadVerbRow(glyph: "doc.text.magnifyingglass",
-                                      title: String(localized: "Review \(grant.spender)'s grant"),
-                                      ink: DS.textPrimary) {
-                        guard let thing = walletLive.activeApprovals
-                            .first(where: { $0.isLive && $0.id == grant.thingID }) else {
-                            chrome.flash(String(localized: "That grant is no longer here."), tone: .failure)
-                            return
-                        }
-                        feedSheet = .thing(thing, walk: .none)
-                    }
-                }
-            }
-        case .delegate(let key, let name, _):
-            if let d = WalletDelegation.find(key, in: walletLive.acting) {
-                walletDoorsSection {
-                    walletLeadVerbRow(glyph: "arrow.triangle.branch",
-                                      title: name.map { String(localized: "Open \($0)") }
-                                          ?? String(localized: "Open the unknown contract"),
-                                      ink: DS.textPrimary) {
-                        feedSheet = .delegation(d)
-                    }
-                }
-            }
-        // A module's row stays still (§1594): it has no verb here either.
-        case .module, nil:
-            EmptyView()
-        }
-    }
-
-    private func walletLeadVerbRow(glyph: String, title: String, ink: Color,
-                                   act: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.selection()
-            act()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: glyph)
-                    .dsGlyph(.body, weight: .semibold)
-                    .foregroundStyle(DS.brandInk)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
-                    .accessibilityHidden(true)
-                Text(verbatim: title)
-                    .dsText(.body17)
-                    .foregroundStyle(ink)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .walletRowPitch()
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .walletListRow()
-    }
-
     /// The grants taken back today, once nothing is left (prd §1633): the
-    /// empty box says no app can spend from you, and this says what went.
+    /// empty pack draws its one faint circle, and this says what went.
     var walletRevokedTodaySection: some View {
         walletCard(String(localized: "Revoked"), glyph: "checkmark.shield") {
             ForEach(JustRevoked.today(scope: chrome.walletScope), id: \.grant.thingID) { taken in

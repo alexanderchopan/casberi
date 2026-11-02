@@ -70273,3 +70273,16 @@ Mock: Design canvas "Feed, Notes & Tab Bar".
 4. **Not changed.** Trays on `DS.surfaceSheet` (every `DSTray` without `ink:`) float the same way and stay black; their cards are drawn on that ground, and moving it is its own pass.
 
 **Not seen:** the value was chosen without a simulator or a device; one token moves it.
+
+## §1654 — Permissions' box is a pack: one circle per app, its area the dollars it reaches, ringed in amber when it has no limit; eight, then one More; the lists stay under it (retires §1633 items 1–3: the worst one named, the strip and the lead's verb row; keeps item 4's empty page) (user, 2026-11-02: "we have yet to come up with a good design for the permissions. mock up 3. minimal. visual."; of three (A a pack, B bars, C by token): "A"; then: the pack sits above the lists, eight then one More, written in a session that cannot compile) — BUILT, NOT COMPILED, NOT SEEN; canvas https://claude.ai/artifact/G2LM6rDs8xJQ2rYokxnQkY
+
+1. **One circle per app (`PermissionsPack`, `WalletPermissionsFigure`).** Grants group by the spender's name: Uniswap on USDC and WETH is one circle, its dollars added, ringed if any of its grants has no limit. A collection approval is not ringed. An app nobody can name is its short hex, so two unnamed contracts stay two circles.
+2. **The circle is the figure.** A faint disc (`fillFaint`), the app's mark; at 96pt and wider its dollars, at 150pt and wider what it reaches ("USDC · WETH"). Hide balances masks the dollars and leaves the sizes. Largest first; an unpriced app draws at the pack's floor, after the priced ones, no limit first, then a collection. No sentence, no lead: the box names nothing.
+3. **Eight, then one More.** Past eight apps the rest are one grey circle, "N more", holding their dollars; one app past eight is drawn rather than folded.
+4. **Under the pack, the key and the total:** "No limit" (an amber ring) and "Capped" (a faint dot), each only when the pack holds one, and the dollars in reach trailing; nothing priced states no total. No grants draws one faint circle over "No approvals" (§769).
+5. **A tap:** an app with one grant opens that grant's sheet; an app with several, or More, opens Approvals under the box in full (§1408's fold) and scrolls to it.
+6. **The lists stay:** Delegations, then Approvals, every grant listed (the lead's exclusion is gone, and Revoke all counts every grant your account can take back). The lead's verb row is deleted; `PermissionsLead` is deleted with it (§723).
+
+**Checks.** `permissions-box-selftest.sh` runs the grouping, the order, the ring, the total, the fold and its dollars, and guards that the page packs every grant and Approvals lists them all.
+
+**Not compiled:** written in a Linux session with no Swift toolchain, so neither the app nor the self-test was built. **Not seen:** the simulator, the Mac (§1402's Mac half: the same box in the Wallet pane).

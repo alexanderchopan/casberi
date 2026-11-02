@@ -1,131 +1,72 @@
 import SwiftUI
 
-/// **PERMISSIONS' BOX (prd §1633): the worst one, then what each app reaches.**
-/// The permission to look at by its kind ("Unlimited approval") over whose it
-/// is ("Uniswap · USDC", `PermissionsLead`), then one strip of every priced
-/// grant sized by its dollars, the lead's lit. With nothing left it says so
-/// over the strip, empty (§769). No plate (§782); amber is the one status
-/// ink, as on the rows.
+/// **PERMISSIONS' BOX IS A PACK (prd §1654).** One circle per app that can
+/// move your tokens, its area the dollars it reaches (`PermissionsPack`), an
+/// app with no limit ringed in amber; past eight apps, one grey "N more". A
+/// circle large enough carries its figure, a larger one what it reaches too;
+/// the rest stand on their mark. Under the pack, the key and the total.
+///
+/// A tap opens the grant's sheet when the app holds one grant, else the
+/// Approvals list under the box, open in full.
+///
+/// No plate (§782): the circles are the figure, on the box's well. Amber is
+/// the one status hue, as on the rows.
 struct WalletPermissionsFigure: View {
-    let lead: PermissionsLead?
     let grants: [WalletApprovalExposure.Grant]
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let open: (PermissionsPack.Piece) -> Void
 
     var body: some View {
+        let pieces = PermissionsPack.pieces(grants)
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let money: (Double) -> String = { mask ?? WalletValue.exactMoney($0) }
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                mark
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: lead?.title ?? String(localized: "No permissions"))
-                        .dsText(.heading24)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    if let lead {
-                        Text(verbatim: lead.line)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if pieces.isEmpty {
+                // What would fill it, empty (§769).
+                Circle()
+                    .fill(DS.fillFaint)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityHidden(true)
+            } else {
+                DSCirclePack(items: pieces.map { piece in
+                    DSCirclePackItem(id: piece.id, share: piece.usd, label: label(piece, money: money))
+                }, mark: { item, diameter in
+                    if let piece = pieces.first(where: { $0.id == item.id }) {
+                        PermissionsCircle(piece: piece, diameter: diameter,
+                                          figure: piece.priced ? money(piece.usd) : nil)
                     }
-                }
+                }, action: { item in
+                    if let piece = pieces.first(where: { $0.id == item.id }) { open(piece) }
+                })
             }
-            strip
-                .padding(.top, DS.Space.s4)
-            legend(money: money)
+            legend(pieces, money: money)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
-        .animation(reduceMotion ? nil : DS.Motion.standard, value: lead)
     }
 
-    @ViewBuilder
-    private var mark: some View {
-        switch lead {
-        case .grant(let g):
-            AssetMark(name: g.spender, size: DS.Face.seat)
-        case .delegate(_, let name, _):
-            if let name {
-                AssetMark(name: name, size: DS.Face.seat)
-            } else {
-                glyph("questionmark.circle", ink: DS.destructive)
+    private func label(_ piece: PermissionsPack.Piece, money: (Double) -> String) -> String {
+        var parts = [piece.name]
+        if piece.priced { parts.append(money(piece.usd)) }
+        parts += piece.symbols.prefix(3)
+        if piece.unlimited { parts.append(String(localized: "No limit")) }
+        return parts.joined(separator: ", ")
+    }
+
+    /// The key names only what the pack holds; the total trails, and nothing
+    /// priced states none.
+    private func legend(_ pieces: [PermissionsPack.Piece], money: (Double) -> String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+            if pieces.isEmpty {
+                Text("No approvals").foregroundStyle(DS.textTertiary)
             }
-        case .module(_, let name, _):
-            AssetMark(name: name, size: DS.Face.seat)
-        case nil:
-            glyph("checkmark.shield", ink: DS.confirm)
-        }
-    }
-
-    private func glyph(_ name: String, ink: Color) -> some View {
-        Image(systemName: name)
-            .dsGlyph(.title)
-            .foregroundStyle(ink)
-            .frame(width: DS.Face.seat, height: DS.Face.seat)
-            .accessibilityHidden(true)
-    }
-
-    // MARK: - The strip
-
-    private var segments: [PermissionsLead.Segment] {
-        PermissionsLead.strip(grants, lead: lead?.grantID)
-    }
-
-    /// Every priced grant, sized by its dollars; a sliver never thinner than
-    /// a dot. No grants priced draws the track, empty.
-    private var strip: some View {
-        let pieces = segments
-        let total = pieces.map(\.usd).reduce(0, +)
-        return GeometryReader { geo in
-            HStack(spacing: 2) {
-                if pieces.isEmpty || total <= 0 {
-                    Capsule().fill(DS.fillFaint)
-                } else {
-                    let widths = PermissionsLead.widths(pieces.map(\.usd), in: geo.size.width,
-                                                        floor: Self.thickness, gap: 2)
-                    ForEach(Array(pieces.enumerated()), id: \.element.id) { index, piece in
-                        Capsule()
-                            .fill(ink(piece))
-                            .frame(width: widths[index])
-                    }
-                }
+            if pieces.contains(where: \.unlimited) {
+                key(Circle().strokeBorder(DS.attention, lineWidth: 2), word: String(localized: "No limit"))
             }
-        }
-        .frame(height: Self.thickness)
-        .accessibilityHidden(true)
-    }
-
-    static let thickness: CGFloat = 10
-
-    private func ink(_ piece: PermissionsLead.Segment) -> Color {
-        if piece.lit { return DS.attention }
-        return piece.unlimited ? DS.attention.opacity(0.4) : DS.textTertiary.opacity(0.5)
-    }
-
-    private func legend(money: (Double) -> String) -> some View {
-        let pieces = segments
-        let names = pieces.filter { !$0.lit }.map(\.name)
-        let lit = pieces.first(where: \.lit)?.name
-        let total = pieces.map(\.usd).reduce(0, +)
-        var left = Text(verbatim: "")
-        if let lit {
-            left = Text(verbatim: lit).foregroundStyle(DS.attentionInk)
-            if !names.isEmpty { left = left + Text(verbatim: " · ").foregroundStyle(DS.textTertiary) }
-        }
-        if pieces.isEmpty {
-            left = Text(grants.isEmpty ? "No approvals" : "Nothing priced").foregroundStyle(DS.textTertiary)
-        } else {
-            left = left + Text(verbatim: names.joined(separator: " · ")).foregroundStyle(DS.textTertiary)
-        }
-        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            left.lineLimit(1)
+            if pieces.contains(where: { !$0.unlimited }) {
+                key(Circle().fill(DS.fillFaint), word: String(localized: "Capped"))
+            }
             Spacer(minLength: DS.Space.s2)
-            // Nothing priced states no total: a $0 would read as nothing at
-            // stake (`WalletPermissions.totalUSD`'s rule).
-            if !pieces.isEmpty {
-                Text(verbatim: String(localized: "\(money(total)) in all"))
+            if let total = PermissionsPack.total(pieces) {
+                Text(verbatim: money(total))
                     .foregroundStyle(DS.textTertiary)
                     .monospacedDigit()
                     .lineLimit(1)
@@ -133,5 +74,70 @@ struct WalletPermissionsFigure: View {
             }
         }
         .dsText(.subhead12)
+        .lineLimit(1)
+    }
+
+    private func key(_ swatch: some View, word: String) -> some View {
+        HStack(spacing: DS.Space.s1 + 2) {
+            swatch
+                .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
+            Text(verbatim: word).foregroundStyle(DS.textTertiary)
+        }
+    }
+}
+
+/// One app's circle: the faint disc, the amber ring when it has no limit, the
+/// mark, and the figure and what it reaches when the circle can hold them.
+private struct PermissionsCircle: View {
+    let piece: PermissionsPack.Piece
+    let diameter: CGFloat
+    let figure: String?
+
+    /// A circle this wide carries its figure; `wide` its tokens too.
+    static let figured: CGFloat = 96
+    static let wide: CGFloat = 150
+
+    var body: some View {
+        ZStack {
+            Circle().fill(DS.fillFaint)
+            if piece.unlimited {
+                Circle().strokeBorder(DS.attention, lineWidth: diameter >= Self.figured ? 3 : 2)
+            }
+            VStack(spacing: 2) {
+                if piece.isMore {
+                    Text(verbatim: piece.name)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                } else {
+                    AssetMark(name: piece.name, size: markSize)
+                }
+                if diameter >= Self.figured, let figure {
+                    Text(verbatim: figure)
+                        .dsText(diameter >= Self.wide ? .heading24 : .body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                if diameter >= Self.wide, !piece.isMore, !piece.symbols.isEmpty {
+                    Text(verbatim: piece.symbols.prefix(2).joined(separator: " · "))
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, DS.Space.s2)
+        }
+        .frame(width: diameter, height: diameter)
+    }
+
+    /// The seat's mark in a large circle, the list's in a small one, never
+    /// wider than the circle leaves room for.
+    private var markSize: CGFloat {
+        let size = diameter >= 120 ? DS.Face.seat : DS.Face.list
+        return min(size, diameter - 14)
     }
 }

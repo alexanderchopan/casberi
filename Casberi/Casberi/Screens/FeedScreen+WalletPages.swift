@@ -607,7 +607,6 @@ extension FeedScreen {
                 if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }
                 else { walletRevokedTodaySection }
             }
-            walletPermissionsLeadVerb
             walletActingSection
             walletApprovalsSection
         case .threats:
@@ -823,9 +822,9 @@ extension FeedScreen {
         case .needsYou:
             let n = walletNeedsCount(upcoming: upcoming)
             DSFigureReading(number: "\(n)", caption: String(localized: "waiting on you"))
-        // **THE WORST ONE, AND WHAT EACH APP REACHES (prd §1633).**
+        // **ONE CIRCLE PER APP, SIZED BY WHAT IT REACHES (prd §1654).**
         case .permissions:
-            WalletPermissionsFigure(lead: walletPermissionsLead, grants: walletLive.exposure.all)
+            WalletPermissionsFigure(grants: walletLive.exposure.all) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
             let things = walletThreatThings
