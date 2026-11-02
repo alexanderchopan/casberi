@@ -967,6 +967,40 @@
         }
       }
     },
+    "%@ %@ for %@ at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ for %3$@ at %4$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ por %@ a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ を %@ に（%@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ → %@ (%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ 换 %@，价格 %@"
+          }
+        }
+      }
+    },
     "%@ %@ for ≈ %@ %@" : {
       "localizations" : {
         "es" : {
@@ -1081,6 +1115,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ %@ 距离清算 %lld%%"
+          }
+        }
+      }
+    },
+    "%@ %@ more than asked" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ more than asked"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ más de lo pedido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "希望より %@ %@ 多い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "요청보다 %@ %@ 더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比要求多 %@ %@"
           }
         }
       }
@@ -1841,6 +1909,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每月 %@"
+          }
+        }
+      }
+    },
+    "%@ a week to reach it by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ a week to reach it by %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ a la semana para lograrlo antes del %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "週 %@ で %@ までに達成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주당 %@, %@까지 달성"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每周 %@，%@ 前达成"
           }
         }
       }
@@ -8138,6 +8240,62 @@
         }
       }
     },
+    "%@ left to match %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "faltan %@ para igualar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@に並ぶまであと%1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@와 같아지려면 %1$@ 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "距%2$@还差%1$@"
+          }
+        }
+      }
+    },
+    "%@ lent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ prestado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を貸出中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 대출 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已出借 %@"
+          }
+        }
+      }
+    },
     "%@ less than %@" : {
       "localizations" : {
         "es" : {
@@ -10198,6 +10356,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 支付了燃料费。"
+          }
+        }
+      }
+    },
+    "%@ past all of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ más que todo %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@全体より%1$@多い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 전체보다 %1$@ 많음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比整个%2$@多%1$@"
           }
         }
       }
@@ -12882,6 +13068,68 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用于计算 %@"
+          }
+        }
+      }
+    },
+    "%@ to go" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Faltan %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あと %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还差 %@"
+          }
+        }
+      }
+    },
+    "%@ to go · was due %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ to go · was due %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Faltan %@ · vencía el %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あと %@ · 期限 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 남음 · 기한 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还差 %@ · 原定 %@"
           }
         }
       }
@@ -18432,6 +18680,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@，来自 %@"
+          }
+        }
+      }
+    },
+    "%@, lent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@, prestado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@、貸出中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@, 대출 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@，已出借"
           }
         }
       }
@@ -33847,6 +34123,34 @@
         }
       }
     },
+    "%u days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%u días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%u日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%u일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%u 天"
+          }
+        }
+      }
+    },
     "**Whoever has it has your money.** You'll see it once." : {
       "localizations" : {
         "es" : {
@@ -41523,6 +41827,34 @@
         }
       }
     },
+    "A day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一天"
+          }
+        }
+      }
+    },
     "A delegate or a token approval that can spend from you." : {
       "localizations" : {
         "es" : {
@@ -43232,6 +43564,34 @@
         }
       }
     },
+    "A price you set · CoW Swap · %@ fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un precio que fijas · CoW Swap · comisión %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "指定した価格 · CoW Swap · 手数料 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "직접 정한 가격 · CoW Swap · 수수료 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你设定的价格 · CoW Swap · 手续费 %@"
+          }
+        }
+      }
+    },
     "A private account is readable only with its owner's consent." : {
       "localizations" : {
         "es" : {
@@ -44470,6 +44830,34 @@
         }
       }
     },
+    "A week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1週間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일주일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一周"
+          }
+        }
+      }
+    },
     "A year ago today" : {
       "localizations" : {
         "es" : {
@@ -44638,6 +45026,34 @@
         }
       }
     },
+    "Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave"
+          }
+        }
+      }
+    },
     "Aave pays about %lld point more on %@ than your %@ vault" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -44711,6 +45127,40 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Aave's %@ on %@ is not the market Casberi knows, so nothing was signed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Aave's %1$@ on %2$@ is not the market Casberi knows, so nothing was signed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El %@ de Aave en %@ no es el mercado que Casberi conoce, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上の Aave の %1$@ は Casberi が知る市場ではないため、何も署名されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 Aave %1$@은(는) Casberi가 아는 시장이 아니므로 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上 Aave 的 %1$@ 不是 Casberi 认识的市场，因此未签署任何内容"
           }
         }
       }
@@ -50114,6 +50564,34 @@
         }
       }
     },
+    "All, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전체, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部，%@"
+          }
+        }
+      }
+    },
     "Allow" : {
       "localizations" : {
         "es" : {
@@ -51962,6 +52440,34 @@
         }
       }
     },
+    "An order goes alone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una orden va sola"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文は単独で送信されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문은 단독으로 진행됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "订单单独提交"
+          }
+        }
+      }
+    },
     "An ordinary transaction — it reports one result, not a step for each part." : {
       "localizations" : {
         "es" : {
@@ -52669,34 +53175,6 @@
         }
       }
     },
-    "Any token on %@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cualquier token en %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 上のどのトークンでも。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@의 모든 토큰."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 上的任何代币。"
-          }
-        }
-      }
-    },
     "Any one key" : {
       "localizations" : {
         "es" : {
@@ -52862,6 +53340,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "任何带订阅源的站点"
+          }
+        }
+      }
+    },
+    "Any token on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cualquier token en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 上のどのトークンでも。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@의 모든 토큰."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 上的任何代币。"
           }
         }
       }
@@ -56006,6 +56512,40 @@
         }
       }
     },
+    "At least %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "At least %1$@ %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al menos %@ %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最低 %@ %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최소 %@ %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "至少 %@ %@"
+          }
+        }
+      }
+    },
     "At least %@ %@ · fee ≈ %@ %@ · CoW" : {
       "localizations" : {
         "es" : {
@@ -57967,6 +58507,34 @@
         }
       }
     },
+    "Banks, exchanges and apps: what each holds for you, largest first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bancos, exchanges y apps: lo que cada uno guarda para ti, de mayor a menor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "銀行、取引所、アプリ：それぞれが保管している資産を多い順に。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "은행, 거래소, 앱: 각각이 보관 중인 자산을 큰 순서대로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "银行、交易所和应用：各自为你持有的资产，从多到少。"
+          }
+        }
+      }
+    },
     "Barcode" : {
       "localizations" : {
         "es" : {
@@ -58747,6 +59315,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bitrefill 无法交付 · 将退款至付款钱包"
+          }
+        }
+      }
+    },
+    "Bitrefill did not accept your account's signature" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill no aceptó la firma de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill はあなたのアカウントの署名を受け付けませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill이 계정의 서명을 받아들이지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill 未接受你账户的签名"
           }
         }
       }
@@ -60611,6 +61207,62 @@
         }
       }
     },
+    "By %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Antes del %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 前"
+          }
+        }
+      }
+    },
+    "By a date" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Antes de una fecha"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期日まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "날짜까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在某日期前"
+          }
+        }
+      }
+    },
     "By category" : {
       "localizations" : {
         "es" : {
@@ -61564,6 +62216,146 @@
         }
       }
     },
+    "Cancel %@?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Cancelar %@?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ をキャンセルしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) 취소할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消 %@？"
+          }
+        }
+      }
+    },
+    "Cancel order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelar orden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文をキャンセル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문 취소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消订单"
+          }
+        }
+      }
+    },
+    "Cancel sent, not yet seen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelación enviada, aún no vista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセル送信済み、未確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소 전송됨, 아직 확인 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送取消，尚未确认"
+          }
+        }
+      }
+    },
+    "Cancel sent, not yet seen · check before cancelling again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelación enviada, aún no vista · comprueba antes de cancelar otra vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセル送信済み、未確認 · 再度キャンセルする前に確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소 전송됨, 아직 확인 안 됨 · 다시 취소하기 전에 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送取消，尚未确认 · 再次取消前请先检查"
+          }
+        }
+      }
+    },
+    "Cancel your order: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancela tu orden: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文をキャンセル：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문 취소: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消你的订单：%@"
+          }
+        }
+      }
+    },
     "Canceled" : {
       "localizations" : {
         "es" : {
@@ -61620,6 +62412,34 @@
         }
       }
     },
+    "Cancelled · nothing was swapped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelada · no se intercambió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセル済み · 交換は行われませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소됨 · 교환된 것 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消 · 未兑换任何资产"
+          }
+        }
+      }
+    },
     "Cancelled, so nothing was sent" : {
       "localizations" : {
         "es" : {
@@ -61644,6 +62464,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已取消，因此未发送任何内容"
+          }
+        }
+      }
+    },
+    "Cancelling…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancelando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセル中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在取消…"
+          }
+        }
+      }
+    },
+    "Cancels the order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cancela la orden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文をキャンセルします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문을 취소합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取消该订单"
           }
         }
       }
@@ -63458,6 +64334,34 @@
         }
       }
     },
+    "Changes your savings goal" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia tu meta de ahorro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貯蓄目標を変更します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저축 목표를 변경합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更改你的储蓄目标"
+          }
+        }
+      }
+    },
     "Channel" : {
       "localizations" : {
         "es" : {
@@ -63790,6 +64694,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "再次检查"
+          }
+        }
+      }
+    },
+    "Check before placing it again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprueba antes de colocarla otra vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再度注文する前に確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다시 주문하기 전에 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再次下单前请先检查"
           }
         }
       }
@@ -66236,6 +67168,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "CoW 在 %@ 上没有响应"
+          }
+        }
+      }
+    },
+    "CoW does not settle on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW no liquida en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW は %@ で決済しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW는 %@에서 결제하지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW 不在 %@ 上结算"
           }
         }
       }
@@ -84769,6 +85729,34 @@
         }
       }
     },
+    "Expired · nothing was swapped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vencida · no se intercambió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限切れ · 交換は行われませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "만료됨 · 교환된 것 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已过期 · 未兑换任何资产"
+          }
+        }
+      }
+    },
     "Expired — can still be renewed until %@" : {
       "localizations" : {
         "es" : {
@@ -85437,6 +86425,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Face ID 未能解锁安全芯片密钥。"
+          }
+        }
+      }
+    },
+    "Face ID once, good for two hours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID una vez, válido dos horas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID は一度で2時間有効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID 한 번으로 2시간 유효"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一次 Face ID，两小时内有效"
           }
         }
       }
@@ -86765,6 +87781,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已成交"
+          }
+        }
+      }
+    },
+    "Filled by CoW Swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecutada por CoW Swap"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW Swap で約定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW Swap에서 체결됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 CoW Swap 成交"
           }
         }
       }
@@ -95400,6 +96444,34 @@
         }
       }
     },
+    "Held up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Detenido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保留中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보류됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受阻"
+          }
+        }
+      }
+    },
     "Hello" : {
       "localizations" : {
         "es" : {
@@ -101181,6 +102253,34 @@
         }
       }
     },
+    "Keep it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantenerla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのままにする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "유지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保留"
+          }
+        }
+      }
+    },
     "Keep its things" : {
       "localizations" : {
         "es" : {
@@ -104124,6 +105224,90 @@
         }
       }
     },
+    "Lend" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prestar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貸し出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "빌려주기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "出借"
+          }
+        }
+      }
+    },
+    "Lend %@ on Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prestar %@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave で %@ を貸し出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 %@ 빌려주기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 上出借 %@"
+          }
+        }
+      }
+    },
+    "Lend more" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prestar más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "さらに貸し出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "더 빌려주기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "继续出借"
+          }
+        }
+      }
+    },
     "Lending" : {
       "localizations" : {
         "es" : {
@@ -104152,6 +105336,34 @@
         }
       }
     },
+    "Lends on Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Presta en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave で貸し出します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 빌려줍니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 上出借"
+          }
+        }
+      }
+    },
     "Lens" : {
       "localizations" : {
         "es" : {
@@ -104176,6 +105388,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Lens"
+          }
+        }
+      }
+    },
+    "Lent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prestado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貸出中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대출 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已出借"
           }
         }
       }
@@ -115150,6 +116390,40 @@
         }
       }
     },
+    "No %@ on %@ to lend" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No %1$@ on %2$@ to lend"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay %@ en %@ para prestar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ に貸し出せる %1$@ がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에 빌려줄 %1$@이(가) 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上没有可出借的 %1$@"
+          }
+        }
+      }
+    },
     "No Bankr key saved." : {
       "localizations" : {
         "es" : {
@@ -118068,6 +119342,34 @@
         }
       }
     },
+    "No pool pays enough USDC for this" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún pool paga suficiente USDC para esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これに十分な USDC を支払うプールがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이에 충분한 USDC를 지급하는 풀이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有资金池能为此支付足够的 USDC"
+          }
+        }
+      }
+    },
     "No pool trades it" : {
       "localizations" : {
         "es" : {
@@ -118176,6 +119478,68 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无价格"
+          }
+        }
+      }
+    },
+    "No price for %@ on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No price for %1$@ on %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay precio para %@ en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上の %1$@ の価格がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$@ 가격이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上的 %1$@ 没有价格"
+          }
+        }
+      }
+    },
+    "No price for %@ yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay precio para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の価格はまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 가격이 아직 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 暂无价格"
           }
         }
       }
@@ -120360,6 +121724,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未备份"
+          }
+        }
+      }
+    },
+    "Not cancelled" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No cancelada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャンセルされていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "취소되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未取消"
           }
         }
       }
@@ -123620,6 +125012,34 @@
         }
       }
     },
+    "Nothing has been swapped. CoW stops filling it once the cancel lands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se ha intercambiado nada. CoW deja de ejecutarla cuando llega la cancelación."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も交換されていません。キャンセルが届くと CoW は約定を停止します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 교환된 것은 없습니다. 취소가 반영되면 CoW가 체결을 멈춥니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未兑换任何资产。取消生效后，CoW 将停止成交。"
+          }
+        }
+      }
+    },
     "Nothing has come in yet" : {
       "localizations" : {
         "es" : {
@@ -124652,6 +126072,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有任何资产离开你的钱包"
+          }
+        }
+      }
+    },
+    "Nothing lent on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada prestado en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で貸し出しているものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 빌려준 것 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上没有出借"
           }
         }
       }
@@ -128112,6 +129560,34 @@
         }
       }
     },
+    "Now, change" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ahora, cambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ、変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금, 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在，更改"
+          }
+        }
+      }
+    },
     "Numbered list" : {
       "localizations" : {
         "es" : {
@@ -129296,6 +130772,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "自 %@ 起在途。"
+          }
+        }
+      }
+    },
+    "On its way to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ へ移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(으)로 이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在发往 %@"
           }
         }
       }
@@ -134692,6 +136196,62 @@
         }
       }
     },
+    "Order cancelled" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden cancelada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文をキャンセルしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문 취소됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "订单已取消"
+          }
+        }
+      }
+    },
+    "Order placed · Until %@ · CoW Swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden colocada · Hasta %@ · CoW Swap"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文済み · 期限 %@ · CoW Swap"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문 완료 · %@까지 · CoW Swap"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已下单 · 截止 %@ · CoW Swap"
+          }
+        }
+      }
+    },
     "Order placed. CoW fills it at the best price it finds" : {
       "localizations" : {
         "es" : {
@@ -139357,6 +140917,34 @@
         }
       }
     },
+    "Percent from today's price" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Porcentaje desde el precio de hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の価格からの割合"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 가격 대비 비율"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相对今日价格的百分比"
+          }
+        }
+      }
+    },
     "Permanent · never decays" : {
       "localizations" : {
         "es" : {
@@ -140003,6 +141591,34 @@
         }
       }
     },
+    "Pick an amount first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige primero una cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に金額を選んでください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 금액을 선택하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先选择金额"
+          }
+        }
+      }
+    },
     "Pick any folder — Downloads, iCloud Drive, anywhere." : {
       "localizations" : {
         "es" : {
@@ -140115,6 +141731,34 @@
         }
       }
     },
+    "Pick what pays" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige con qué pagar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払いに使うものを選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제 수단 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择支付方式"
+          }
+        }
+      }
+    },
     "Pick what to follow" : {
       "localizations" : {
         "es" : {
@@ -140223,6 +141867,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择你想要的"
+          }
+        }
+      }
+    },
+    "Pick when" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige cuándo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "タイミングを選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시점 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择时间"
           }
         }
       }
@@ -140645,6 +142317,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "地点"
+          }
+        }
+      }
+    },
+    "Place order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Colocar orden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下单"
           }
         }
       }
@@ -141458,6 +143158,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "由 Bitrefill 提供支持"
+          }
+        }
+      }
+    },
+    "Powered by CoW Swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tecnología de CoW Swap"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW Swap を利用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW Swap 제공"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 CoW Swap 提供支持"
           }
         }
       }
@@ -145755,6 +147483,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在读取 AWS…"
+          }
+        }
+      }
+    },
+    "Reading Aave…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo Aave…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 Aave…"
           }
         }
       }
@@ -151423,6 +153179,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从这笔交易中移除"
+          }
+        }
+      }
+    },
+    "Remove goal" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quitar meta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目標を削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "목표 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移除目标"
           }
         }
       }
@@ -157930,6 +159714,34 @@
         }
       }
     },
+    "Savings goal" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Meta de ahorro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貯蓄目標"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저축 목표"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "储蓄目标"
+          }
+        }
+      }
+    },
     "Saving…" : {
       "localizations" : {
         "es" : {
@@ -159692,6 +161504,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查看全部 %lld 个"
+          }
+        }
+      }
+    },
+    "See all %lld tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ver los %lld tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件のトークンをすべて表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰 %lld개 모두 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查看全部 %lld 个代币"
           }
         }
       }
@@ -162050,6 +163890,34 @@
         }
       }
     },
+    "Set a savings goal" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fijar una meta de ahorro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貯蓄目標を設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "저축 목표 설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设定储蓄目标"
+          }
+        }
+      }
+    },
     "Set a spend limit of %@ %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -164042,6 +165910,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收起"
+          }
+        }
+      }
+    },
+    "Show gift cards" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrar tarjetas regalo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ギフトカードを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기프트 카드 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示礼品卡"
           }
         }
       }
@@ -173215,6 +175111,40 @@
         }
       }
     },
+    "Swap %@ %@ for %@ when %@ is %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Swap %1$@ %2$@ for %3$@ when %4$@ is %5$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiar %@ %@ por %@ cuando %@ esté a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@ を %@ に交換（%@ が %@ のとき）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ %@을(를) %@(으)로 교환 (%@이(가) %@일 때)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ %@ 兑换为 %@（当 %@ 为 %@ 时）"
+          }
+        }
+      }
+    },
     "Swap %@ %@ for at least %@ %@" : {
       "localizations" : {
         "es" : {
@@ -173295,6 +175225,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将 %3$@ 上的 %1$@ %2$@ 兑换为 %6$@ 上的 %4$@ %5$@"
+          }
+        }
+      }
+    },
+    "Swap %@ for USDC on Base, to pay for a %@ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Swap %1$@ for USDC on Base, to pay for a %2$@ %3$@ %4$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiar %@ por USDC en Base para pagar %@ %@ %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を Base の USDC に交換して %@ %@ %@ の支払いに"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) Base의 USDC로 교환해 %@ %@ %@ 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 兑换为 Base 上的 USDC，用于支付 %@ %@ %@"
           }
         }
       }
@@ -173463,6 +175427,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 %2$@ 兑换 %1$@"
+          }
+        }
+      }
+    },
+    "Swapped %@ on %@ first" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Swapped %1$@ on %2$@ first"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primero se intercambió %@ en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に %2$@ で %1$@ を交換しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 %2$@에서 %1$@을(를) 교환했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已先在 %2$@ 上兑换 %1$@"
           }
         }
       }
@@ -174202,6 +176200,62 @@
         }
       }
     },
+    "Take back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取回"
+          }
+        }
+      }
+    },
+    "Take back %@ from Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar %@ de Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave から %@ を引き出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 %@ 회수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Aave 取回 %@"
+          }
+        }
+      }
+    },
     "Take back %@?" : {
       "localizations" : {
         "es" : {
@@ -174254,6 +176308,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "取回"
+          }
+        }
+      }
+    },
+    "Takes it back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo retira"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회수합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将其取回"
           }
         }
       }
@@ -174960,62 +177042,6 @@
         }
       }
     },
-    "Test tokens have no value, and the testnet may be reset without notice." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Los tokens de prueba no tienen valor, y la testnet puede reiniciarse sin aviso."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "テストトークンに価値はなく、テストネットは予告なくリセットされることがあります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "테스트 토큰은 가치가 없으며, 테스트넷은 예고 없이 초기화될 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "测试代币没有价值，测试网可能在不通知的情况下重置。"
-          }
-        }
-      }
-    },
-    "Test tokens on Logos are whole numbers." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Los tokens de prueba en Logos son números enteros."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Logos のテストトークンは整数です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Logos 테스트 토큰은 정수입니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Logos 上的测试代币为整数。"
-          }
-        }
-      }
-    },
     "Test fees have no value, and the testnet is replaced when Aztec ships a major version." : {
       "localizations" : {
         "es" : {
@@ -175097,6 +177123,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Test token"
+          }
+        }
+      }
+    },
+    "Test tokens have no value, and the testnet may be reset without notice." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens de prueba no tienen valor, y la testnet puede reiniciarse sin aviso."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストトークンに価値はなく、テストネットは予告なくリセットされることがあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트 토큰은 가치가 없으며, 테스트넷은 예고 없이 초기화될 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试代币没有价值，测试网可能在不通知的情况下重置。"
+          }
+        }
+      }
+    },
+    "Test tokens on Logos are whole numbers." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens de prueba en Logos son números enteros."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos のテストトークンは整数です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 테스트 토큰은 정수입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 上的测试代币为整数。"
           }
         }
       }
@@ -180956,6 +183038,34 @@
         }
       }
     },
+    "The price moved. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El precio cambió. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格が変動しました。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격이 변동되었습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "价格已变动，请重试"
+          }
+        }
+      }
+    },
     "The private account could not be opened" : {
       "localizations" : {
         "es" : {
@@ -184352,6 +186462,34 @@
         }
       }
     },
+    "This could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo escribir esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "書き込めませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "작성할 수 없었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法写入"
+          }
+        }
+      }
+    },
     "This could not be written, so nothing was signed" : {
       "localizations" : {
         "es" : {
@@ -185278,6 +187416,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "当前地址"
+          }
+        }
+      }
+    },
+    "This order could not be cancelled" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo cancelar esta orden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この注文はキャンセルできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 주문을 취소할 수 없었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法取消此订单"
+          }
+        }
+      }
+    },
+    "This order could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo escribir esta orden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この注文は書き込めませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 주문을 작성할 수 없었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法写入此订单"
           }
         }
       }
@@ -187326,6 +189520,34 @@
         }
       }
     },
+    "To go" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Faltan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还差"
+          }
+        }
+      }
+    },
     "To next $%lld, buys %@" : {
       "localizations" : {
         "es" : {
@@ -188107,6 +190329,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用时 %@"
+          }
+        }
+      }
+    },
+    "Took back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出し済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회수됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取回"
           }
         }
       }
@@ -190053,6 +192303,34 @@
         }
       }
     },
+    "Type a price first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe primero un precio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に価格を入力してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 가격을 입력하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先输入价格"
+          }
+        }
+      }
+    },
     "Type a site's address to follow it." : {
       "localizations" : {
         "es" : {
@@ -191471,6 +193749,34 @@
         }
       }
     },
+    "Until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "截止 %@"
+          }
+        }
+      }
+    },
     "Untitled" : {
       "localizations" : {
         "es" : {
@@ -192213,6 +194519,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在这台 %1$@ 上使用你的账户 · %2$@"
+          }
+        }
+      }
+    },
+    "Use your account with Bitrefill" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usa tu cuenta con Bitrefill"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill でアカウントを使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitrefill에서 계정 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Bitrefill 使用你的账户"
           }
         }
       }
@@ -193427,6 +195761,34 @@
         }
       }
     },
+    "Waiting for %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を待機中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 %@"
+          }
+        }
+      }
+    },
     "Waiting for %@…" : {
       "localizations" : {
         "es" : {
@@ -193619,6 +195981,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在等待 Spotify…"
+          }
+        }
+      }
+    },
+    "Waiting for USDC on Base…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando USDC en Base…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base の USDC を待機中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base의 USDC 대기 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 Base 上的 USDC…"
           }
         }
       }
@@ -194585,6 +196975,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待发送自"
+          }
+        }
+      }
+    },
+    "Waiting to swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando para intercambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交換待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "교환 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "等待兑换"
           }
         }
       }
@@ -195875,6 +198293,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "警告：此转账为垃圾信息，并非你发送"
+          }
+        }
+      }
+    },
+    "Was due %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vencía el %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기한 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "原定 %@"
           }
         }
       }
@@ -199059,6 +201505,34 @@
         }
       }
     },
+    "What each account holds for you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que cada cuenta guarda para ti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各アカウントが保管している資産"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 계정이 보관 중인 자산"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各账户为你持有的资产"
+          }
+        }
+      }
+    },
     "What each address you watch holds" : {
       "localizations" : {
         "es" : {
@@ -201942,6 +204416,68 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "时间"
+          }
+        }
+      }
+    },
+    "When %@ is %@, change" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When %1$@ is %2$@, change"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuando %@ esté a %@, cambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が %@ のとき、変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) %@일 때, 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当 %@ 为 %@ 时，更改"
+          }
+        }
+      }
+    },
+    "When %@ is …" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuando %@ esté a …"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が … のとき"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) …일 때"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当 %@ 为 … 时"
           }
         }
       }
@@ -206315,6 +208851,34 @@
         }
       }
     },
+    "You have no ETH or USDC on Base or Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No tienes ETH ni USDC en Base ni en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base や Ethereum に ETH も USDC もありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base나 Ethereum에 ETH 또는 USDC가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 Base 或 Ethereum 上没有 ETH 或 USDC"
+          }
+        }
+      }
+    },
     "You have no USDC on Base" : {
       "localizations" : {
         "es" : {
@@ -209705,6 +212269,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的来源"
+          }
+        }
+      }
+    },
+    "Your USDC has not reached Base yet. Spend again once it has" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu USDC aún no ha llegado a Base. Vuelve a gastar cuando llegue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC がまだ Base に届いていません。届いたら再度お支払いください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC가 아직 Base에 도착하지 않았습니다. 도착하면 다시 지출하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 USDC 尚未到达 Base，到达后再消费"
           }
         }
       }
@@ -217035,6 +219627,34 @@
         }
       }
     },
+    "about the same as all of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "más o menos como todo %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@全体とほぼ同じ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 전체와 거의 같음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与整个%@大致相同"
+          }
+        }
+      }
+    },
     "about the same as this point in %@" : {
       "localizations" : {
         "es" : {
@@ -217945,6 +220565,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还有 %lld 人关注了你"
+          }
+        }
+      }
+    },
+    "and %lld more waiting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "y %lld más esperando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほか %lld 件が待機中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "외 %lld개 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另有 %lld 个在等待"
           }
         }
       }
@@ -222905,6 +225553,34 @@
         }
       }
     },
+    "in %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共 %lld 个"
+          }
+        }
+      }
+    },
     "in %lld Safes" : {
       "localizations" : {
         "es" : {
@@ -227335,6 +230011,34 @@
         }
       }
     },
+    "now." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ahora."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在。"
+          }
+        }
+      }
+    },
     "npm" : {
       "localizations" : {
         "es" : {
@@ -227443,6 +230147,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "共 %@"
+          }
+        }
+      }
+    },
+    "of %@ in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "de %@ en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウント内の %@ のうち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정의 %@ 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "占你账户中 %@ 的"
           }
         }
       }
@@ -232678,6 +235410,34 @@
         }
       }
     },
+    "series" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "serie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "系列"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계열"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "系列"
+          }
+        }
+      }
+    },
     "service · %@" : {
       "localizations" : {
         "es" : {
@@ -233934,6 +236694,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已存入"
+          }
+        }
+      }
+    },
+    "swaps about %@ %@ to USDC on Base first" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "swaps about %1$@ %2$@ to USDC on Base first"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "primero intercambia unos %@ %@ a USDC en Base"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に約 %@ %@ を Base の USDC に交換します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 약 %@ %@을(를) Base의 USDC로 교환합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先将约 %@ %@ 兑换为 Base 上的 USDC"
           }
         }
       }
@@ -235888,6 +238682,34 @@
         }
       }
     },
+    "until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "hasta %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "截止 %@"
+          }
+        }
+      }
+    },
     "unused for %lld days" : {
       "localizations" : {
         "es" : {
@@ -236686,6 +239508,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "什么与什么相邻"
+          }
+        }
+      }
+    },
+    "when" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cuando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "条件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "조건"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "条件"
+          }
+        }
+      }
+    },
+    "when %@ is" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cuando %@ esté a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が次の価格のとき"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 다음일 때"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当 %@ 为"
           }
         }
       }
@@ -238437,118 +241315,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "落地时 ≈ %@"
-          }
-        }
-      }
-    },
-    "%@ left to match %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "faltan %@ para igualar %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@に並ぶまであと%1$@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@와 같아지려면 %1$@ 남음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "距%2$@还差%1$@"
-          }
-        }
-      }
-    },
-    "%@ past all of %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ más que todo %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@全体より%1$@多い"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@ 전체보다 %1$@ 많음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比整个%2$@多%1$@"
-          }
-        }
-      }
-    },
-    "about the same as all of %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "más o menos como todo %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@全体とほぼ同じ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ 전체와 거의 같음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "与整个%@大致相同"
-          }
-        }
-      }
-    },
-    "series" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "serie"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "系列"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "계열"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "系列"
           }
         }
       }
