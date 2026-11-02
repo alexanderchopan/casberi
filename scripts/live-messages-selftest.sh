@@ -64,6 +64,12 @@ fi
 if code "$IGLIVE" | grep -E 'igLiveDM' | grep -E '\.text\b|lines\.map|\.content' >/dev/null; then
   echo "✗ the Instagram messages probe prints message words"; exit 1
 fi
+# A grown chat's picture is its new last line's, or none (prd §1660).
+code "$LAND" | grep -F 'setPicture(conversation.picture, on: existing)' >/dev/null \
+  || { echo "✗ a grown chat keeps an older photo as its last message's (prd §1660)"; exit 1; }
+# The face and the sheet's head read who a chat is with, never its title whole.
+grep -F 'LiveMessages.chatName(title)' Casberi/Casberi/Screens/ThingSheetView.swift >/dev/null \
+  || { echo "✗ chatName no longer strips the live titles — every live chat draws an \"M\" (prd §1660)"; exit 1; }
 echo "live-messages-selftest: drift guards ✓"
 
 TMP="$(mktemp -d)"
@@ -241,6 +247,15 @@ check(climbing?.lines.map(\.text) == ["@rui: sat?", "You: ❤️"], "a nameless 
 check(InstagramLiveMessages.conversations(json(#"{"message": "login_required", "status": "fail"}"#), me: "1") == nil,
       "not an inbox is nil")
 check(InstagramLiveMessages.text(["item_type": "mystery"]) == nil, "an unknown item type is skipped, never guessed")
+
+// ── Who a chat is with, out of its title (prd §1660) ──────────────────
+check(LiveMessages.chatName("Messages with Ana Lima") == "Ana Lima", "a one-to-one's title names the person")
+check(LiveMessages.chatName("Messages in Climbing crew") == "Climbing crew", "a group's title names the group")
+check(LiveMessages.chatName("Chat with Ada") == "Ada", "an import's title names the person")
+check(LiveMessages.chatName("Messages with Ana and Bo") == "Ana and Bo", "two people stay two")
+check(LiveMessages.chatName("Saved Messages") == "Saved Messages", "any other title stands")
+check(LiveMessages.chatName("Messages") == "Messages", "the bare word stands, never an empty name")
+check(LiveMessages.chatName("Messages with ") == "Messages with ", "a format with nothing in it stands")
 
 print(failures == 0 ? "live-messages-selftest: all checks ✓" : "live-messages-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

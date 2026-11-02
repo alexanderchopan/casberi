@@ -2725,10 +2725,10 @@ struct ThingSheetView: View {
         return sender.contains("@") ? sender : nil
     }
 
-    /// "Ada" out of "Chat with Ada"; a group's own name stands as it is.
+    /// "Ada" out of "Chat with Ada" or "Messages with Ada", "Climbing" out
+    /// of "Messages in Climbing" (`LiveMessages.chatName`, prd §1660).
     static func chatName(_ title: String) -> String {
-        let prefix = String(localized: "Chat with ")
-        return title.hasPrefix(prefix) ? String(title.dropFirst(prefix.count)) : title
+        LiveMessages.chatName(title)
     }
 
     /// "Telegram · 6,310 messages", or "@mia · 6,310 messages" where the

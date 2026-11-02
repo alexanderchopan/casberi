@@ -124,13 +124,42 @@ enum TelegramMessagesRead {
                 if sender?["@type"] as? String == "messageSenderUser",
                    let id = TelegramMessages.int64(sender?["user_id"]) { _ = await user(id) }
             }
-            if let conversation = TelegramMessages.conversation(
+            if var conversation = TelegramMessages.conversation(
                 chat: chat, messages: messages, users: users, chatTitles: chatTitles,
                 groupUsername: await groupUsername(chat), me: me) {
+                // A face with no public address, as bytes (prd §1660): a
+                // private group's photo, or a person's with no username.
+                // Saved Messages wears its own title, never your photo.
+                if conversation.avatar == nil,
+                   TelegramMessages.kind(chat, me: me, users: users) != .saved,
+                   let face = TelegramMessages.faceFile(chat) {
+                    conversation.avatarData = await download(face, client: client)
+                }
+                // The last message's picture when it is a photo (prd §1660).
+                if let picture = TelegramMessages.newestPictureFile(messages),
+                   let bytes = await download(picture, client: client) {
+                    conversation.picture = await ImportMedia.thumbnail(data: bytes)
+                }
                 reading.conversations.append(conversation)
             }
         }
         return reading
+    }
+
+    /// One file's bytes, downloaded whole and then dropped from TDLib's
+    /// cache (`deleteFile` removes this device's copy only, never the
+    /// message's), so the files folder holds nothing between reads. nil when
+    /// the download fails or does not finish in time.
+    static func download(_ fileID: Int64, client: TelegramClient) async -> Data? {
+        let file = await client.send([
+            "@type": "downloadFile", "file_id": fileID, "priority": 1,
+            "offset": 0, "limit": 0, "synchronous": true,
+        ], timeout: 30)
+        guard TelegramClient.failed(file) == nil,
+              let path = TelegramMessages.downloadedPath(file) else { return nil }
+        let bytes = FileManager.default.contents(atPath: path)
+        _ = await client.send(["@type": "deleteFile", "file_id": fileID])
+        return bytes
     }
 
     /// Newest first, back to `since` or `pageCap`. TDLib answers the first

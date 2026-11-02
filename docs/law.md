@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1795 of 1867 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1796 of 1868 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2025,8 +2025,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1639 — The app icon is the black tile in every appearance: the default (light) icon is the dark art, byte for byte
 - §1640 — Day is the week: the Feed's Day section draws this week with its faces over the next thing; Search stands apart from…
 - §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed…
-- §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare r…
-- §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's…
+- §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare r… (amended by §1660)
+- §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's… (amended by §1660)
 - §1644 — The co-signer's sheet lets you pick another wallet: Use another wallet on a kept session, Cancel drops a session that…
 - §1645 — A source's row looks like its app: one table of looks, each drawn only from a fact the bridge stored (amends §1497's… (amended by §1648)
 - §1646 — A note of yours is set in New York; everything the app brought in stays Figtree
@@ -2043,6 +2043,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1657 — A presented reading sheet is black again, and opens at full height so it reaches the screen's edge (retires §1653's #…
 - §1658 — A money sheet stands on its face's colour only when the face is a picture (narrows §1655)
 - §1659 — A seller app's sale opens the money receipt
+- §1660 — A Telegram chat wears its group's photo, its last photo is drawn in the bubble, and a live chat's initial is its own…
 
 ## Dead rulings → what replaced them (generated)
 

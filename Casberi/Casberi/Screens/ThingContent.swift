@@ -522,7 +522,7 @@ struct ThingContentView: View {
                 let rest = SheetRepeat.dropping(thing.content, heads: heads)
                 if !rest.isEmpty {
                     PersonChatBubbles(text: rest, times: LiveMessagesLanding.sentTimes(thing),
-                                      chatID: thing.id)
+                                      chatID: thing.id, picture: thing)
                 }
             }
         case .voice:
@@ -1456,6 +1456,9 @@ struct PersonChatBubbles: View {
     var times: [Date] = []
     /// The chat's id, for "N new"; nil marks nothing.
     var chatID: UUID? = nil
+    /// The chat whose stored picture is its LAST message's (prd §1660):
+    /// that one bubble draws the photo. nil draws every photo as its word.
+    var picture: Thing? = nil
     @State private var expanded = false
     /// When the chat was opened before this time, read once on appear.
     @State private var seenBefore: Date?
@@ -1614,8 +1617,16 @@ struct PersonChatBubbles: View {
                         .padding(.leading, DS.Space.s3)
                         .padding(.top, index == start || stamped.contains(index) ? 0 : DS.Space.s2)
                 }
-                DSChatBubble(attributed: Self.bubbleText(message), fromSelf: message.mine,
-                             glyph: message.glyph, joinsAbove: !opens, joinsBelow: !closes)
+                Group {
+                    if index == all.count - 1, let photo = lastPhoto(message),
+                       let picture, let pixels = StoredPixels.probe(picture) {
+                        ChatPhotoBubble(thing: picture, pixels: pixels, photo: photo,
+                                        namesSender: false, onTextEdge: false)
+                    } else {
+                        DSChatBubble(attributed: Self.bubbleText(message), fromSelf: message.mine,
+                                     glyph: message.glyph, joinsAbove: !opens, joinsBelow: !closes)
+                    }
+                }
                     .padding(.top, opens && !stamped.contains(index) && !(named && message.name != nil)
                              && index != start ? DS.Space.s2 : 0)
             }
@@ -1627,6 +1638,13 @@ struct PersonChatBubbles: View {
             seenBefore = ChatSeen.seen(chatID)
             ChatSeen.mark(chatID)
         }
+    }
+
+    /// The last message as a photo, when it is one (prd §1660).
+    private func lastPhoto(_ message: Message) -> ChatFace.LastPhoto? {
+        guard message.media == String(localized: "Photo") else { return nil }
+        return ChatFace.LastPhoto(mine: message.mine, sender: message.name,
+                                  caption: Self.media(message.words)?.caption)
     }
 
     /// The day and time over a message, as the sheet's head draws them; where

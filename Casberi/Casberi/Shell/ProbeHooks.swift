@@ -829,8 +829,11 @@ enum ProbeHooks {
                       String(describing: TelegramClient.shared.step), reading.chatsListed,
                       reading.chatsRead, reading.conversations.count, reading.failure ?? "none")
                 for c in reading.conversations {
-                    NSLog("[Casberi] telegramDM| %@ | lines=%d | handle=%@",
-                          c.isGroup ? "group" : "one", c.lines.count, c.handle == nil ? "no" : "yes")
+                    // The face and the picture by SIZE only (prd §1660).
+                    NSLog("[Casberi] telegramDM| %@ | lines=%d | handle=%@ | face=%@ | picture=%d",
+                          c.isGroup ? "group" : "one", c.lines.count, c.handle == nil ? "no" : "yes",
+                          c.avatar != nil ? "url" : c.avatarData.map { "\($0.count)B" } ?? "none",
+                          c.picture?.count ?? 0)
                 }
             }
         },

@@ -33,6 +33,13 @@ struct LiveConversation: Equatable {
     var isGroup: Bool
     /// Oldest first.
     var lines: [Line]
+    /// The face as bytes when it has no public address (prd §1660): a
+    /// private Telegram group's photo. `avatar` wins when both are set.
+    var avatarData: Data? = nil
+    /// The newest line's picture when that line IS a photo (prd §1660), nil
+    /// when it is not: a landing that grows the chat stores exactly this, so
+    /// a stored picture always belongs to the chat's last message.
+    var picture: Data? = nil
 }
 
 enum LiveMessages {
@@ -145,6 +152,29 @@ enum LiveMessages {
         default:
             return String(localized: "Messages with \(first), \(named[1]) and \(named.count - 2) more")
         }
+    }
+
+    /// Who a chat is with, out of the title a read gave it (prd §1660):
+    /// "Ana" out of "Messages with Ana", "Climbing" out of "Messages in
+    /// Climbing", "Ada" out of an import's "Chat with Ada". Matched against
+    /// the localized formats themselves, so a language that puts the name
+    /// first ("%@ とのメッセージ") strips too. Any other title stands.
+    ///
+    /// Before this the face and the sheet's head read the title whole, so
+    /// every live chat without a photo drew the same "M".
+    static func chatName(_ title: String) -> String {
+        let chat = String(localized: "Chat with ")
+        if title.hasPrefix(chat), title.count > chat.count { return String(title.dropFirst(chat.count)) }
+        let mark = "\u{1}"
+        for format in [String(localized: "Messages with \(mark)"), String(localized: "Messages in \(mark)")] {
+            guard let at = format.range(of: mark) else { continue }
+            let head = String(format[..<at.lowerBound])
+            let tail = String(format[at.upperBound...])
+            guard !(head + tail).isEmpty, title.hasPrefix(head), title.hasSuffix(tail),
+                  title.count > head.count + tail.count else { continue }
+            return String(title.dropFirst(head.count).dropLast(tail.count))
+        }
+        return title
     }
 
     /// An epoch in whatever magnitude the network sent — seconds,

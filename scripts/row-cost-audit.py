@@ -203,6 +203,7 @@ FORGETS = [
     ("Casberi/Casberi/Model/ImportMedia.swift", "thing.previewImageData = data"),
     ("Casberi/Casberi/Model/ContactsIngest.swift", "thing.previewImageData = data"),
     ("Casberi/Casberi/Model/ContactsIngest.swift", "thing.previewImageData = nil"),
+    ("Casberi/Casberi/Model/LiveMessagesLanding.swift", "thing.previewImageData = picture"),
 ]
 # And the flush must NOT come back to the sweep: it is the cost this replaced.
 NO_SWEEP_FLUSH = ("Casberi/Casberi/Shell/RootShell.swift", "StoredPixels.flush()")

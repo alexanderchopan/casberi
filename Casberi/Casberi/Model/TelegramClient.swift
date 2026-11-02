@@ -296,7 +296,9 @@ final class TelegramClient: @unchecked Sendable {
             "files_directory": Self.fsPath(dir.appending(path: "files")),
             "database_encryption_key": key,
             // Chats and their history are kept, so a read asks Telegram only
-            // for what is new; files are never downloaded.
+            // for what is new. Files are not tracked: a read downloads only a
+            // chat's face and its last photo, and deletes each once read
+            // (`TelegramMessagesRead.download`, prd §1660).
             "use_file_database": false,
             "use_chat_info_database": true,
             "use_message_database": true,

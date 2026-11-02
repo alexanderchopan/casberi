@@ -117,8 +117,11 @@ extension FeedScreen {
         return thing.previewImageData != nil
     }
 
+    /// A conversation is never a tile, though its last photo is stored on
+    /// it (prd §1660): `telegram:dm:` is a live prefix too.
     static func isTelegramPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == TelegramChannel.source
+            && thing.kind != .chat
             && Corpus.arrivedLive(thing)
             && (thing.postText ?? "").isEmpty
             && thing.previewImageData != nil

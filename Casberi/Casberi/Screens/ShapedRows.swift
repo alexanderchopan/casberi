@@ -573,6 +573,9 @@ struct BandRow: View {
     /// One definition; the `Group` below only switches on it.
     private enum Leader: Equatable {
         case avatar(String)
+        /// A chat's face with no address: its stored bytes, else its
+        /// initial (`ChatStoredFace`, prd §1660).
+        case chatFace
         /// A watched wallet's face (`WalletFace`, prd §1551).
         case wallet(String)
         case initial(String)
@@ -626,7 +629,7 @@ struct BandRow: View {
         // (prd §1615): Snapchat's conversations stand on this row.
         if ChatFace.isPersonChat(thing) {
             if let url = ChatFace.url(thing) { return .avatar(url) }
-            return .initial(ChatFace.name(thing))
+            return .chatFace
         }
         if let avatar = identityAvatarURL {
             // Whose post this is, when several accounts are followed.
@@ -733,7 +736,13 @@ struct BandRow: View {
                 leaderView
                     .frame(width: DS.Mark.row, height: DS.Mark.row)
             }
-            DSChatBubble(feedText: said.text, fromSelf: said.mine)
+            // The last message's picture when it is a photo and the read
+            // kept it (prd §1660); the word "Photo" when it did not.
+            if let photo = ChatFace.lastPhoto(thing), let pixels = StoredPixels.probe(thing) {
+                ChatPhotoBubble(thing: thing, pixels: pixels, photo: photo)
+            } else {
+                DSChatBubble(feedText: said.text, fromSelf: said.mine)
+            }
         }
         .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .ignore)
@@ -919,6 +928,8 @@ struct BandRow: View {
             WalletFace(address: addr, size: DS.Face.rowCircle, circular: true)
         case .initial(let sender):
             SenderInitial(sender: sender, size: DS.Face.rowCircle)
+        case .chatFace:
+            ChatStoredFace(thing: thing, size: DS.Face.rowCircle)
         case .brand(let mark):
             BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
         case .publisher(let publisher):

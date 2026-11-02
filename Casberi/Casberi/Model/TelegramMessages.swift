@@ -43,6 +43,58 @@ enum TelegramMessages {
         return (usernames?["active_usernames"] as? [String])?.first.flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    /// The chat's own photo, small (160px), as TDLib's file id — the face
+    /// of a chat with no public address (prd §1660). nil when the chat has
+    /// no photo. The bytes are downloaded by the read, never here.
+    static func faceFile(_ chat: [String: Any]) -> Int64? {
+        let small = (chat["photo"] as? [String: Any])?["small"] as? [String: Any]
+        return int64(small?["id"])
+    }
+
+    /// The picture of the newest message that has words (the one the
+    /// conversation's last line is), as TDLib's file id, when that message
+    /// is a photo (prd §1660). nil when the newest is anything else, so a
+    /// stored picture always belongs to the last line.
+    ///
+    /// The size is the smallest at least `pictureSide` pixels on its long
+    /// side (TDLib's "x", 800px, on most photos), else the largest: the
+    /// landing scales it to the app's one stored size.
+    static func newestPictureFile(_ messages: [[String: Any]]) -> Int64? {
+        let worded = messages.filter { message in
+            (message["content"] as? [String: Any]).flatMap(text) != nil
+                && LiveMessages.date(epoch: message["date"]) != nil
+        }
+        let newest = worded.max { a, b in
+            let da = LiveMessages.date(epoch: a["date"]) ?? .distantPast
+            let db = LiveMessages.date(epoch: b["date"]) ?? .distantPast
+            if da != db { return da < db }
+            return (int64(a["id"]) ?? 0) < (int64(b["id"]) ?? 0)
+        }
+        guard let content = newest?["content"] as? [String: Any],
+              content["@type"] as? String == "messagePhoto",
+              let sizes = (content["photo"] as? [String: Any])?["sizes"] as? [[String: Any]]
+        else { return nil }
+        func side(_ size: [String: Any]) -> Int64 {
+            max(int64(size["width"]) ?? 0, int64(size["height"]) ?? 0)
+        }
+        let ranked = sizes.filter { int64(($0["photo"] as? [String: Any])?["id"]) != nil }
+            .sorted { side($0) < side($1) }
+        let pick = ranked.first { side($0) >= pictureSide } ?? ranked.last
+        return int64((pick?["photo"] as? [String: Any])?["id"])
+    }
+
+    /// The long side a stored chat picture is read at, before it is scaled
+    /// to the app's 480pt thumbnail.
+    static let pictureSide: Int64 = 480
+
+    /// Where a `downloadFile` answer put the file, nil until it is whole.
+    static func downloadedPath(_ file: [String: Any]) -> String? {
+        guard let local = file["local"] as? [String: Any],
+              local["is_downloading_completed"] as? Bool == true,
+              let path = local["path"] as? String, !path.isEmpty else { return nil }
+        return path
+    }
+
     /// Telegram's service notifications — login codes among them.
     static let serviceUserID: Int64 = 777000
 
@@ -193,8 +245,8 @@ enum TelegramMessages {
             title: title,
             handle: handle,
             // A one-to-one's face, and a public group's by its username
-            // (prd §1643); a private group's photo is a file on this device
-            // only, so it keeps its initial (§707).
+            // (prd §1643); a private group's photo is read as bytes by the
+            // read (`faceFile`, prd §1660), never as a path on this device.
             avatar: (kind == .group ? groupUsername : handle).map(face(handle:)),
             isGroup: kind == .group,
             lines: lines.sorted { $0.at < $1.at })

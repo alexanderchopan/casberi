@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// WHO A CHAT IS WITH, as Messages draws it (prd §1615, user: "the chats i
 /// think we could make the design nicer"). A conversation on a social network
@@ -27,9 +28,35 @@ enum ChatFace {
         return s.hasPrefix("http") && !s.contains(where: \.isWhitespace)
     }
 
-    /// "Ada", out of "Chat with Ada"; a group's own name stands.
+    /// "Ada", out of "Chat with Ada" or "Messages with Ada"; "Climbing", out
+    /// of "Messages in Climbing" (prd §1660).
     static func name(_ thing: Thing) -> String {
         ThingSheetView.chatName(thing.title)
+    }
+
+    /// The chat's last message when it is a photo (prd §1660): whether it
+    /// was yours, who sent it in a group, and its caption. Read off the
+    /// line's words, never the stored bytes; the row asks `StoredPixels`
+    /// whether the picture itself is here.
+    struct LastPhoto: Equatable {
+        var mine: Bool
+        var sender: String?
+        var caption: String?
+        /// What stands under the picture: "Bo: the view", "Bo", "the view".
+        var words: String? {
+            let parts = [sender, caption].compactMap { $0 }
+            return parts.isEmpty ? nil : parts.joined(separator: ": ")
+        }
+    }
+
+    static func lastPhoto(_ thing: Thing) -> LastPhoto? {
+        guard let last = thing.content.split(separator: "\n")
+            .map({ $0.trimmingCharacters(in: .whitespaces) })
+            .last(where: { !$0.isEmpty }),
+              let message = PersonChatBubbles.messages(last).last,
+              message.media == String(localized: "Photo") else { return nil }
+        return LastPhoto(mine: message.mine, sender: message.name,
+                         caption: PersonChatBubbles.media(message.words)?.caption)
     }
 
     /// The face the chat carries: the one its read stamped, else a live
@@ -127,8 +154,129 @@ struct ChatFaceMark: View {
         if let url = ChatFace.url(thing) {
             RemoteThumb(urlString: url, size: size, fallback: thing.source, circular: true)
         } else {
-            SenderInitial(sender: ChatFace.name(thing), size: size)
+            ChatStoredFace(thing: thing, size: size)
         }
+    }
+}
+
+/// A face kept as bytes (`Thing.authorAvatarData`, prd §1660): a private
+/// Telegram group's photo. The initial draws until the bytes are decoded,
+/// off the main thread and once per row, and stays when there are none.
+struct ChatStoredFace: View {
+    let thing: Thing
+    let size: CGFloat
+    @State private var image: UIImage?
+
+    init(thing: Thing, size: CGFloat) {
+        self.thing = thing
+        self.size = size
+        _image = State(initialValue: thing.isLive ? ChatFaceBytes.cached(thing.id) : nil)
+    }
+
+    /// Liveness guard (build 188): this leaf re-evaluates on the model's
+    /// own observation, so the guard is here.
+    var body: some View {
+        if thing.isLive {
+            SenderInitial(sender: ChatFace.name(thing), size: size)
+                .overlay {
+                    if let image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: size, height: size)
+                            .clipShape(Circle())
+                            .transition(.opacity)
+                    }
+                }
+                // A new message is when a read re-stamps the face, so the
+                // newest line's time is the key; the bytes are read here,
+                // never in the body (an external-storage file).
+                .task(id: thing.capturedAt) { await load() }
+        }
+    }
+
+    private func load() async {
+        guard thing.isLive else { return }
+        guard let data = thing.authorAvatarData else {
+            image = nil
+            return
+        }
+        let id = thing.id
+        let decoded = await ChatFaceBytes.image(id, data: data)
+        guard decoded !== image else { return }
+        withAnimation(DS.Motion.standard) { image = decoded }
+    }
+}
+
+/// The decoded faces, by row, each remembered with its byte count so a new
+/// face replaces the old. A handful of chats, 160px each.
+@MainActor
+enum ChatFaceBytes {
+    private static var memo: [UUID: (count: Int, image: UIImage)] = [:]
+
+    static func cached(_ id: UUID) -> UIImage? { memo[id]?.image }
+
+    static func image(_ id: UUID, data: Data) async -> UIImage? {
+        if let hit = memo[id], hit.count == data.count { return hit.image }
+        let decoded = await Task.detached(priority: .utility) {
+            UIImage(data: data)?.preparingForDisplay() ?? UIImage(data: data)
+        }.value
+        if let decoded { memo[id] = (data.count, decoded) }
+        return decoded
+    }
+}
+
+/// A photo as a chat bubble (prd §1660): the last message's picture in the
+/// bubble's shape and fill, with who sent it and its caption under the
+/// picture inside the same bubble. The Feed's row stands it on the rows'
+/// text edge (§1642); the sheet puts yours on the trailing edge.
+struct ChatPhotoBubble: View {
+    let thing: Thing
+    /// The stored picture's pixel size (`StoredPixels.probe`).
+    let pixels: CGSize
+    let photo: ChatFace.LastPhoto
+    /// The sheet names a group's sender over the bubble, so its bubble
+    /// carries the caption alone; the Feed's row has no name over it.
+    var namesSender = true
+    var onTextEdge = true
+
+    static let width: CGFloat = 200
+
+    /// Liveness guard (build 188): this leaf re-evaluates on the model's
+    /// own observation, so the guard is here.
+    var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
+        let width = Self.width
+        let aspect = pixels.width > 0 ? pixels.height / pixels.width : 1
+        let height = min(max(width * aspect, 120), 260)
+        VStack(alignment: .leading, spacing: 0) {
+            StoredPicture(thing, size: pixels) { image in
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            }
+            .frame(width: width, height: height)
+            .clipped()
+            if let words = namesSender ? photo.words : photo.caption {
+                Text(words)
+                    .dsText(.body17)
+                    .foregroundStyle(photo.mine ? Color.white : DS.textPrimary)
+                    .lineLimit(onTextEdge ? 2 : nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.vertical, DS.Space.s2)
+                    .frame(width: width, alignment: .leading)
+            }
+        }
+        .background(DSChatBubble.fill(fromSelf: photo.mine))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: photo.mine && !onTextEdge ? .trailing : .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(photo.words.map { String(localized: "Photo: \($0)") }
+                                 ?? String(localized: "Photo")))
     }
 }
 

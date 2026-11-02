@@ -939,6 +939,14 @@ final class Thing {
     /// circle) only when more than one account is watched. nil keeps the
     /// source glyph.
     var authorAvatarURL: String? = nil
+    /// A face that has no public address, as bytes (prd §1660): a private
+    /// Telegram group's or a person's with no public username, read off
+    /// TDLib's `chat.photo.small` (160px). A file path would point nowhere
+    /// on any other device; these bytes sync. `authorAvatarURL` wins when
+    /// both are set. externalStorage, as every `Data` here; nil for
+    /// everything that is not such a chat. CloudKit: an additive field,
+    /// deployed per docs/cloudkit-deploy.md before a release.
+    @Attribute(.externalStorage) var authorAvatarData: Data? = nil
     /// A sentence-embedding vector of the thing's title+body, packed as Float32
     /// bytes — the on-device semantic index (2026-07-12), so the answer path can
     /// retrieve by MEANING, not just shared words. Derived by a lazy foreground

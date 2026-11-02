@@ -137,3 +137,14 @@ promoted in the Console by the user. Both re-checked live, 61 of 61. The lesson
 is the one at the top of this file: a green static audit means the snapshot is
 current, not that anything is deployed. Run `--live production` on every ship
 that touches `Thing`.
+
+## `CD_authorAvatarData` — OWED in both environments (2026-11-02, prd §1660)
+
+§1660 added `Thing.authorAvatarData` (a Telegram chat's face as bytes) and
+updated `docs/cloudkit-schema.ckdb` in a session with no Xcode, so neither live
+environment has the field. Before the next TestFlight: export Development,
+insert `CD_authorAvatarData BYTES QUERYABLE SORTABLE,` before
+`CD_authorAvatarURL`, `validate-schema`, `import-schema`, re-export; promote
+Production in the Console; confirm with
+`scripts/cloudkit-schema-audit.py --live production` (64 of 64). Replace this
+section with the dated record once it is done.

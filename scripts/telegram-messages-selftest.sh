@@ -37,6 +37,13 @@ done
 code() { grep -vE '^[[:space:]]*//' "$1"; }
 code "$READ" | grep -F 'groupUsername: await groupUsername(chat)' >/dev/null \
   || { echo "✗ the Telegram read no longer passes a public group's username — every group draws its initial (prd §1643)"; exit 1; }
+# A face with no public address and the last photo are read as bytes (prd §1660).
+code "$READ" | grep -F 'let face = TelegramMessages.faceFile(chat)' >/dev/null \
+  || { echo "✗ the Telegram read no longer reads a private group's face — it draws its initial (prd §1660)"; exit 1; }
+code "$READ" | grep -F 'TelegramMessages.newestPictureFile(messages)' >/dev/null \
+  || { echo "✗ the Telegram read no longer reads the last photo — the bubble says \"Photo\" (prd §1660)"; exit 1; }
+code "$READ" | grep -F '"@type": "deleteFile"' >/dev/null \
+  || { echo "✗ a downloaded file is no longer dropped from TDLib's cache — the files folder grows every read"; exit 1; }
 code "$READ" | grep -F 'guard TelegramClient.signedIn, LiveMessages.reads(.telegram)' >/dev/null \
   || { echo "✗ the Telegram read no longer asks its switch — chats would land for everyone signed in"; exit 1; }
 code "$REFRESH" | grep -F 'if TelegramClient.signedIn, LiveMessages.reads(.telegram)' >/dev/null \
@@ -191,6 +198,32 @@ check(TelegramMessages.conversation(chat: group, messages: [
       "a page of only service lines is no conversation")
 check(TelegramMessages.lastActivity(obj(#"{"last_message":{"date":1757890000}}"#)) == Date(timeIntervalSince1970: 1_757_890_000),
       "a chat's last activity")
+
+// ── A face and a photo, as bytes (prd §1660) ─────────────────────────
+check(TelegramMessages.faceFile(obj(#"{"id":-500,"photo":{"small":{"id":71},"big":{"id":72}}}"#)) == 71,
+      "a chat's face is its small photo")
+check(TelegramMessages.faceFile(group) == nil, "a chat with no photo has no face file")
+func photo(_ id: Int, _ date: Int, caption: String = "") -> [String: Any] {
+    message(id, date, from: 30, #"{"@type":"messagePhoto","caption":{"text":"\#(caption)"},"photo":{"sizes":[{"type":"s","width":90,"height":67,"photo":{"id":81}},{"type":"m","width":320,"height":240,"photo":{"id":82}},{"type":"x","width":800,"height":600,"photo":{"id":83}},{"type":"y","width":1280,"height":960,"photo":{"id":84}}]}}"#)
+}
+check(TelegramMessages.newestPictureFile([photo(1, 1_757_890_000)]) == 83,
+      "the smallest size at least 480px on its long side")
+check(TelegramMessages.newestPictureFile([photo(2, 1_757_890_060), message(1, 1_757_890_000, from: 30, text("look"))]) == 83,
+      "the newest message's photo, in any order")
+check(TelegramMessages.newestPictureFile([photo(1, 1_757_890_000), message(2, 1_757_890_060, from: 30, text("nice"))]) == nil,
+      "an older photo is not the last line's")
+check(TelegramMessages.newestPictureFile([photo(1, 1_757_890_000),
+    message(2, 1_757_890_060, from: 30, #"{"@type":"messagePinMessage"}"#)]) == 83,
+      "a service line after a photo is no line, so the photo is still the last")
+check(TelegramMessages.newestPictureFile([message(1, 1_757_890_000, from: 30,
+    #"{"@type":"messagePhoto","caption":{"text":""},"photo":{"sizes":[{"type":"s","width":90,"height":67,"photo":{"id":81}}]}}"#)]) == 81,
+      "a photo with only small sizes takes its largest")
+check(TelegramMessages.newestPictureFile([]) == nil, "no messages, no picture")
+check(TelegramMessages.downloadedPath(obj(#"{"@type":"file","local":{"path":"/f/a.jpg","is_downloading_completed":true}}"#)) == "/f/a.jpg",
+      "a whole download's path")
+check(TelegramMessages.downloadedPath(obj(#"{"@type":"file","local":{"path":"/f/a.jpg","is_downloading_completed":false}}"#)) == nil
+      && TelegramMessages.downloadedPath(obj(#"{"@type":"file","local":{"path":"","is_downloading_completed":true}}"#)) == nil,
+      "a partial download or an empty path is no file")
 
 print(failures == 0 ? "telegram-messages-selftest: all checks ✓" : "telegram-messages-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

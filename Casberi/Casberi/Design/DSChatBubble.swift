@@ -76,10 +76,16 @@ struct DSChatBubble: View {
         }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
-            .background(fromSelf ? DS.tint : DS.fillStrong, in: shape)
+            .background(Self.fill(fromSelf: fromSelf), in: shape)
             .opacity(faded ? 0.55 : 1)
             .frame(maxWidth: 300, alignment: edge)
             .frame(maxWidth: .infinity, alignment: edge)
+    }
+
+    /// A bubble's fill: yours in the tint, theirs in the strong fill. The
+    /// photo bubble (`ChatPhotoBubble`, prd §1660) wears the same.
+    static func fill(fromSelf: Bool) -> Color {
+        fromSelf ? DS.tint : DS.fillStrong
     }
 
     private var edge: Alignment { fromSelf && !onTextEdge ? .trailing : .leading }

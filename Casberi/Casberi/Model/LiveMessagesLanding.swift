@@ -40,6 +40,9 @@ enum LiveMessagesLanding {
                     existing.messageCount = merge.count
                     setSentTimes(merge.times, on: existing)
                     existing.embedding = nil
+                    // The new last line's picture, or none (prd §1660): a
+                    // stored picture always belongs to the last message.
+                    setPicture(conversation.picture, on: existing)
                     outcome.grew += 1
                     touched = true
                 }
@@ -54,6 +57,10 @@ enum LiveMessagesLanding {
                 }
                 if let avatar = conversation.avatar, existing.authorAvatarURL != avatar {
                     existing.authorAvatarURL = avatar
+                    touched = true
+                }
+                if let face = conversation.avatarData, existing.authorAvatarData != face {
+                    existing.authorAvatarData = face
                     touched = true
                 }
                 continue
@@ -74,6 +81,8 @@ enum LiveMessagesLanding {
             // other person on a one-to-one; a group keeps the source mark.
             thing.authorHandle = conversation.handle
             thing.authorAvatarURL = conversation.avatar
+            thing.authorAvatarData = conversation.avatarData
+            thing.previewImageData = conversation.picture
             context.insert(thing)
             SpotlightIndex.index([thing])
             outcome.added += 1
@@ -81,6 +90,17 @@ enum LiveMessagesLanding {
         }
         if touched { context.saveHonestly() }
         return outcome
+    }
+
+    /// Replaces a chat's picture with its new last line's (prd §1660), and
+    /// forgets the row's decoded copy so a row already drawn shows the new
+    /// one (`StoredPixels`, prd §626). A seat that reads no pictures (X,
+    /// Instagram) passes nil onto a row that holds none, and nothing moves.
+    static func setPicture(_ picture: Data?, on thing: Thing) {
+        guard picture != nil || thing.previewImageData != nil else { return }
+        guard thing.previewImageData != picture else { return }
+        thing.previewImageData = picture
+        StoredPixels.forget(thing.id)
     }
 
     /// When each of a conversation's last lines was sent (prd §1635), off
