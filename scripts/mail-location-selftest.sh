@@ -81,8 +81,9 @@ grep -q 'IngestSupport.mailIDlessThings' "$BRIDGE" \
 grep -q 'static func mailIDlessThings' "$SUPPORT" \
   || { echo "✗ IngestSupport.mailIDlessThings is gone"; exit 1; }
 # A backfill that never saves is a backfill that runs every launch and lands
-# nothing.
-grep -q 'if added > 0 || backfilled > 0 { context.saveHonestly() }' "$BRIDGE" \
+# nothing. A pass that only repaired saves too (8e18214), so the clause may
+# run on past the backfill.
+grep -qE 'if added > 0 \|\| backfilled > 0( \|\| [^{]+)? \{ context\.saveHonestly\(\) \}' "$BRIDGE" \
   || { echo "✗ MailIngest saves only on NEW mail — a pass that backfilled and"; \
        echo "  added nothing would throw the backfill away"; exit 1; }
 # The envelope's field 10 is where the fact comes from. If the parser stops
