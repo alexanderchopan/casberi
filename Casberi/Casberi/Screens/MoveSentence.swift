@@ -100,8 +100,8 @@ struct MoveSentence: View {
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
-    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork }
-    enum Field: Hashable { case amount, search, to }
+    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when }
+    enum Field: Hashable { case amount, search, to, price }
 
     struct Recipient: Equatable {
         let address: String
@@ -206,6 +206,28 @@ struct MoveSentence: View {
     }
     @State private var hint: Hint?
 
+    // MARK: - When (prd §1673)
+
+    /// Swap's last word: Now, or a price CoW fills at. Nothing is signed
+    /// until it is answered, and it is answered for one pair of tokens on
+    /// one network (`whenFor`): another pair asks again.
+    enum WhenPick: Equatable { case now, price }
+    @State private var whenPick: WhenPick?
+    @State private var whenFor = ""
+    /// The price typed, in dollars, or the percent from today's when
+    /// `priceInPercent` (the grey line's pink figure trades them).
+    @State private var priceText = ""
+    @State private var priceInPercent = false
+    /// The priced token's dollars now, and the sold one's when neither is a
+    /// dollar (the rate a price for the bought token is turned into).
+    @State private var nowPrice: Double?
+    @State private var sellDollars: Double?
+    /// The order a receipt is following, until it fills, expires or is cancelled.
+    @State private var orderShown: YourAccountOrders.Placed?
+    #if DEBUG
+    @State private var whenDraftPending: String?
+    #endif
+
     // MARK: - Details (prd §1509)
 
     /// What signing the sentence would do now (`Chain.preview`), and the
@@ -297,6 +319,13 @@ struct MoveSentence: View {
                 .accessibilityLabel(Text(verbatim: service))
         } else if service == "Stripe" {
             Image("brand-stripe")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 16, height: 16)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: service))
+        } else if service == "CoW Swap" {
+            Image("brand-cowswap")
                 .resizable()
                 .scaledToFill()
                 .frame(width: 16, height: 16)
@@ -709,6 +738,9 @@ struct MoveSentence: View {
     /// up, added to what is counted; nil when round-ups are off or nothing
     /// in it is the dollar.
     private var roundUpPlan: RoundUps.Plan? {
+        // A price's order is CoW's to fill later: nothing rides it, so no
+        // round-up or total is said (prd §1673, §83).
+        if limiting { return nil }
         let setting = RoundUps.setting
         // Moving privately, a network with no pool sets nothing aside (prd §1561).
         guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }
@@ -816,6 +848,8 @@ struct MoveSentence: View {
     /// A send whose round-up buys on the exchanges (prd §1545) says it the
     /// same way, from the preview's own quote: "On Aerodrome · 0.01% pool fee".
     private var exchangeCredit: String? {
+        // A price's order credits CoW Swap with its mark, in `foot` (prd §1673).
+        if limiting { return nil }
         if verb == .send {
             guard roundUpCarried != nil, let sold = shownPreview?.sold else { return nil }
             return YourAccountSwap.credit(sold.compactMap(\.route))
@@ -1026,6 +1060,8 @@ struct MoveSentence: View {
             if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
+        .task(id: limitKey) { await readLimitPrices() }
+        .task(id: orderShown?.uid) { await followOrder() }
         // What the account is on this network, read before the tap (prd §1602).
         .task(id: "\(network.chainId)|\(account)") {
             guard !YourAccountDemo.isDemo(account) else { return }
@@ -1214,6 +1250,7 @@ struct MoveSentence: View {
         MoveClause(glue: String(localized: "on")) { originWord }
         MoveClause(glue: String(localized: "for")) { buyWord }
         MoveClause(glue: String(localized: "on")) { destinationWord }
+        if whenOffered { whenClause }
     }
 
     /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
@@ -2161,7 +2198,8 @@ struct MoveSentence: View {
         if let buy {
             // Short in the sentence, the ≈ and the exact figure in the
             // print (§1479), so the clause stays whole at the biggest rung.
-            let back = buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
+            // A price's order states what it gets in the line, never the pools' figure.
+            let back = limiting ? nil : buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
                 ?? (pricing && staleBack?.id == buy.id ? staleBack?.text : nil)
             // The whole swap's result, pink like every value; locked by a
             // kept swap (§1442c), a tap says so (§1442g).
@@ -2232,7 +2270,7 @@ struct MoveSentence: View {
     private var destinationWord: some View {
         Group {
             if networkPicked {
-                blank(buyHome.name + ".", ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
+                blank(buyHome.name + (whenOffered ? "" : "."), ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
@@ -2309,6 +2347,7 @@ struct MoveSentence: View {
                             case .merchant: merchantList
                             case .depositCoin: depositCoinList
                             case .depositNetwork: depositNetworkList
+                            case .when: whenList
                             }
                         }
                         .id(open)
@@ -2486,6 +2525,8 @@ struct MoveSentence: View {
                     }
                 }
             }
+        } else if limiting, let with {
+            limitLine(with)
         } else if let warning = leadWarning {
             // A warning takes the grey line's place (prd §1509 item 2): red
             // when reported or refused, amber to check; one line, and Details
@@ -2616,7 +2657,7 @@ struct MoveSentence: View {
     }
 
     /// Details is offered once there is a transaction to show.
-    private var offersDetails: Bool { (verb == .send || verb == .swap || verb == .sweep) && !signing.isEmpty }
+    private var offersDetails: Bool { (verb == .send || verb == .swap || verb == .sweep) && !signing.isEmpty && !limiting }
 
     /// What the foot's verb signs: the sentence's lines, or Sweep's swaps.
     private var signing: [Chain.Item] { verb == .sweep ? sweepItems : all }
@@ -3518,13 +3559,397 @@ struct MoveSentence: View {
 
     // MARK: - The foot
 
+    // MARK: - When (prd §1673)
+
+    /// The pair "when" is asked for: another network or token asks again.
+    private var limitPair: String {
+        "\(network.chainId)|\(with?.token.symbol ?? "")|\(buy?.token.contract ?? buy?.token.symbol ?? "")"
+    }
+
+    /// Swap ends "when": one network CoW settles on, a price to state, one
+    /// swap alone (an order is never batched).
+    private var whenOffered: Bool {
+        guard verb == .swap, receipt == nil, items.isEmpty, let with, let buy, buyHome == network else { return false }
+        return YourAccountOrder.offersWhen(sell: with.token, buy: buy.token, from: network, to: buyHome)
+    }
+
+    /// The answer, for this pair only.
+    private var when: WhenPick? { whenOffered && whenFor == limitPair ? whenPick : nil }
+
+    /// A price was picked: the sentence is a CoW order.
+    private var limiting: Bool { when == .price }
+
+    /// "when ETH is …": the token the price is of.
+    private var pricedToken: Op.Token? {
+        guard let with, let buy else { return nil }
+        return YourAccountOrder.priced(sell: with.token, buy: buy.token, on: network)
+    }
+
+    /// The price the order is placed at: typed in dollars, or a percent
+    /// from today's turned into dollars now (CoW holds a price).
+    private var limitPrice: YourAccountOrder.Decimal? {
+        guard limiting, let typed = YourAccountOrder.Decimal.parse(priceText, signed: priceInPercent) else { return nil }
+        if priceInPercent { return nowPrice.flatMap { YourAccountOrder.price(percent: typed, from: $0) } }
+        return typed.isZero || typed.negative ? nil : typed
+    }
+
+    /// At least this much comes back at that price.
+    private var limitBuyUnits: String? {
+        guard let with, let buy, let units, let p = limitPrice else { return nil }
+        return YourAccountOrder.buyUnits(sellUnits: units, sell: with.token, buy: buy.token, on: network,
+                                         price: p, sellDollars: sellDollars)
+    }
+
+    private var limitDraft: YourAccountOrders.Draft? {
+        guard limiting, let with, let buy, let units, units != "0", let b = limitBuyUnits,
+              let p = limitPrice, let v = YourAccountOrder.value(p), let priced = pricedToken else { return nil }
+        return .init(network: network, sell: with.token, buy: buy.token, sellUnits: units, buyUnits: b,
+                     pricedSymbol: priced.symbol, priceWords: Self.priceWords(v, places: p.places))
+    }
+
+    private var limitKey: String { "\(limitPair)|\(whenOffered)" }
+
+    /// "$2,248", "$41.20", "$0.8512": a price as people say it.
+    static func dollarWords(_ v: Double) -> String {
+        if v >= 1000 { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        if v >= 1 { return v.formatted(.currency(code: "USD").precision(.fractionLength(2))) }
+        return v.formatted(.currency(code: "USD").precision(.significantDigits(1...4)))
+    }
+
+    /// A typed price as typed, grouped: "$2,400", "$2,400.5".
+    static func priceWords(_ v: Double, places: Int) -> String {
+        v.formatted(.currency(code: "USD").precision(.fractionLength(min(places, 8))))
+    }
+
+    /// The day a week from now, the order's expiry.
+    private var untilWords: String {
+        Date.now.addingTimeInterval(TimeInterval(YourAccountOrder.defaultSeconds))
+            .formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    /// "when", "now." or "when ETH is $2,400." — Swap's last word.
+    @ViewBuilder private var whenClause: some View {
+        switch when {
+        case nil:
+            MoveClause { blank(String(localized: "when"), ink: DS.textTertiary, .when, label: Text("Pick when")) }
+        case .now:
+            MoveClause { blank(String(localized: "now."), ink: DS.pickInk, .when, label: Text("Now, change")) }
+        case .price:
+            MoveClause(glue: String(localized: "when \(pricedToken?.symbol ?? "") is")) { priceWord }
+        }
+    }
+
+    /// The price, a field while it is typed or empty, else a word that
+    /// opens the two rows again (prd §1673a).
+    @ViewBuilder private var priceWord: some View {
+        if focus == .price || limitPrice == nil {
+            priceField
+        } else if let p = YourAccountOrder.Decimal.parse(priceText, signed: priceInPercent), let v = YourAccountOrder.value(p) {
+            let words = priceInPercent
+                ? (v < 0 ? "−" : "+") + String(priceText.drop { $0 == "-" || $0 == "+" || $0 == "−" }) + "%"
+                : Self.priceWords(v, places: p.places)
+            blank(words + ".", ink: DS.pickInk, .when, label: Text("When \(pricedToken?.symbol ?? "") is \(words), change"))
+        }
+    }
+
+    private var priceField: some View {
+        MoveRungReader { rung in
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                if !priceInPercent { Text(verbatim: "$").dsText(rung).foregroundStyle(DS.pickInk) }
+                TextField(text: $priceText, prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+                    // A percent may fall: the minus is on the punctuation keys.
+                    .keyboardType(priceInPercent ? .numbersAndPunctuation : .decimalPad)
+                    .focused($focus, equals: .price)
+                    .dsText(rung)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.pickInk)
+                    .fixedSize()
+                if priceInPercent { Text(verbatim: "%").dsText(rung).foregroundStyle(DS.pickInk) }
+                Text(verbatim: ".").dsText(rung).foregroundStyle(DS.textPrimary)
+            }
+        }
+        .accessibilityLabel(Text(priceInPercent ? "Percent from today's price" : "Price in dollars"))
+    }
+
+    /// Now and When ETH is …, Move's own list rows (prd §1673a).
+    private var whenList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            let figure: String? = buy.flatMap { b in buyTotal.map { "≈ " + Self.short($0, decimals: b.token.decimals) + " " + b.token.symbol } }
+            listRow(String(localized: "Now"), sub: quote?.route.map(YourAccountSwap.words), trailing: figure,
+                    symbol: "bolt.fill", picked: when == .now) {
+                pick {
+                    whenPick = .now
+                    whenFor = limitPair
+                }
+            }
+            listRow(String(localized: "When \(pricedToken?.symbol ?? "") is …"),
+                    sub: String(localized: "A price you set · CoW Swap · \(YourAccountOrder.feeWords) fee"),
+                    symbol: "clock", picked: when == .price) {
+                pick {
+                    whenPick = .price
+                    whenFor = limitPair
+                }
+                focus = .price
+            }
+        }
+    }
+
+    /// "+6.8% · Now $2,248 · At least 2,400 USDC · Until Nov 9": the pink
+    /// figure trades dollars and percent (prd §1673 item 3).
+    private var limitPrint: (pink: String, rest: String) {
+        var rest: [String] = []
+        var pink = ""
+        if let price = limitPrice.flatMap(YourAccountOrder.value), let nowPrice {
+            pink = priceInPercent ? Self.dollarWords(price) : (YourAccountOrder.percentWords(price, from: nowPrice) ?? "")
+        }
+        if let nowPrice { rest.append(String(localized: "Now \(Self.dollarWords(nowPrice))")) }
+        if let buy, let b = limitBuyUnits {
+            rest.append(String(localized: "At least \(Self.figure(b, decimals: buy.token.decimals)) \(buy.token.symbol)"))
+        }
+        rest.append(String(localized: "Until \(untilWords)"))
+        let tail = rest.joined(separator: " · ")
+        return pink.isEmpty ? ("", Self.lineCase(tail)) : (pink, " · " + tail)
+    }
+
+    @ViewBuilder private func limitLine(_ with: Tokens.Held) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if over {
+                Text("More than you have").dsText(.body17).foregroundStyle(DS.attentionInk)
+            }
+            let print = limitPrint
+            Button { tradePriceUnit() } label: {
+                (Text(verbatim: print.pink).foregroundColor(DS.pickInk)
+                 + Text(verbatim: print.rest).foregroundColor(DS.textSecondary))
+                    .dsText(.body17)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(RowPress())
+            .disabled(print.pink.isEmpty)
+            .accessibilityHint(Text(priceInPercent ? "Types the price in dollars" : "Types the price as a percent"))
+            if receipt == nil {
+                HStack(spacing: DS.Space.s4) {
+                    DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
+                    unitSwitch
+                }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The pink figure tapped: the price is typed in the other unit, the
+    /// same price either way.
+    private func tradePriceUnit() {
+        guard let nowPrice, let v = limitPrice.flatMap(YourAccountOrder.value) else { return }
+        withAnimation(DS.Motion.standard) {
+            if priceInPercent {
+                priceText = v >= 1 ? String(format: "%.2f", v) : String(format: "%.6f", v)
+                while priceText.contains("."), priceText.last == "0" || priceText.last == "." { priceText.removeLast() }
+                priceInPercent = false
+            } else {
+                let pct = (v / nowPrice - 1) * 100
+                priceText = String(format: "%.1f", pct)
+                if priceText.hasSuffix(".0") { priceText.removeLast(2) }
+                if priceText == "-0" { priceText = "0" }
+                priceInPercent = true
+            }
+        }
+        DSHaptic.selection()
+    }
+
+    /// Today's dollars for the priced token (and the sold one when neither
+    /// is a dollar), off the pools as every price here is (prd §1542 item 7).
+    private func readLimitPrices() async {
+        nowPrice = nil
+        sellDollars = nil
+        guard whenOffered, let with, let buy, let priced = pricedToken else { return }
+        #if DEBUG
+        if let w = whenDraftPending {
+            whenDraftPending = nil
+            whenFor = limitPair
+            switch w {
+            case "open": open = .when
+            case "now": whenPick = .now
+            default:
+                whenPick = .price
+                priceInPercent = w.hasSuffix("%")
+                priceText = String(w.drop { $0 == "+" }).replacingOccurrences(of: "%", with: "")
+            }
+            NSLog("moveWhenDraft: %@ for %@", w, limitPair)
+        }
+        #endif
+        let net = network
+        nowPrice = await Chain.exchangePrice(net, priced)
+        if !YourAccountOrder.isDollar(with.token, on: net), !YourAccountOrder.isDollar(buy.token, on: net) {
+            sellDollars = await Chain.exchangePrice(net, with.token)
+        }
+        #if DEBUG
+        NSLog("moveWhen| now %@ %@ | sell %@", priced.symbol, nowPrice.map { String($0) } ?? "-", sellDollars.map { String($0) } ?? "-")
+        #endif
+    }
+
+    /// Place the order: CoW must name back the id this phone built, then one
+    /// Face ID pre-signs it (prd §1673 items 5, 7).
+    private func placeOrder() {
+        if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
+        guard let draft = limitDraft else {
+            say(limitPrice == nil ? String(localized: "Type a price first") : String(localized: "Pick an amount first"))
+            if limitPrice == nil { focus = .price }
+            return
+        }
+        focus = nil
+        let net = network
+        let sold = Op.spoken(draft.sellUnits, decimals: draft.sell.decimals)
+        let reason = String(localized: "Swap \(sold) \(draft.sell.symbol) for \(draft.buy.symbol) when \(draft.pricedSymbol) is \(draft.priceWords)")
+        stage = .preparing
+        Task {
+            do {
+                let (sent, placed) = try await Chain.placeOrder(draft, reason: reason) { s in
+                    await MainActor.run { advance(to: s) }
+                }
+                stage = nil
+                chrome.refreshRooms()
+                let made = Self.orderReceipt(placed, sent: sent, on: net)
+                withAnimation(DS.Motion.standard) {
+                    amount = ""
+                    quote = nil
+                    whenPick = nil
+                    priceText = ""
+                    priceInPercent = false
+                    receipt = made
+                    if case .landed = sent.outcome { orderShown = placed }
+                }
+                if case .landed = sent.outcome {
+                    DSHaptic.success()
+                    chrome.rain(sources: ["Wallet"])
+                }
+            } catch let failure as Chain.Failure {
+                stage = nil
+                #if DEBUG
+                NSLog("moveOrder: failed %@", failure.message)
+                #endif
+                say(failure.message, failure: true, seconds: 6, from: failure.from)
+            } catch {
+                stage = nil
+                say(String(localized: "Not sent"), failure: true)
+            }
+        }
+    }
+
+    /// "Waiting to swap 1 ETH on Base for USDC on Base when ETH is $2,400."
+    static func orderReceipt(_ p: YourAccountOrders.Placed, sent: Chain.Sent, on net: Op.Network) -> Receipt {
+        typealias Line = Receipt.Line
+        if case .pending = sent.outcome {
+            return Receipt(past: String(localized: "Sent,"),
+                           lines: [Line(glue: nil, text: String(localized: "not yet seen")), Line(glue: String(localized: "on"), text: net.name + ".")],
+                           detail: String(localized: "Check before placing it again"))
+        }
+        let tx: String? = { if case .landed(let t, _) = sent.outcome { return t } else { return nil } }()
+        let link = tx.flatMap { explorer($0, on: net) }
+        let linkName: String? = net.chainId == 1 ? "Etherscan" : "Basescan"
+        let until = p.expires.formatted(.dateTime.month(.abbreviated).day())
+        return Receipt(past: String(localized: "Waiting to swap"),
+                       lines: [Line(glue: nil, text: figure(p.sellUnits, decimals: p.sellDecimals) + " " + p.sellSymbol),
+                               Line(glue: String(localized: "on"), text: net.name),
+                               Line(glue: String(localized: "for"), text: p.buySymbol),
+                               Line(glue: String(localized: "on"), text: net.name),
+                               Line(glue: String(localized: "when \(p.pricedSymbol) is"), text: p.priceWords + ".")],
+                       detail: String(localized: "Order placed · Until \(until) · CoW Swap"),
+                       link: link, linkName: link == nil ? nil : linkName)
+    }
+
+    /// "Swapped 1 ETH on Base for 2,401.2 USDC on Base." once CoW filled it.
+    static func filledReceipt(_ p: YourAccountOrders.Placed, on net: Op.Network) -> Receipt {
+        typealias Line = Receipt.Line
+        let paid = p.paidUnits ?? p.buyUnits
+        var detail = [String(localized: "Filled by CoW Swap")]
+        let more = Op.difference(paid, p.buyUnits)
+        if more != "0", Op.atMost(p.buyUnits, paid) {
+            detail.append(String(localized: "\(figure(more, decimals: p.buyDecimals)) \(p.buySymbol) more than asked"))
+        }
+        return Receipt(past: String(localized: "Swapped"),
+                       lines: [Line(glue: nil, text: figure(p.sellUnits, decimals: p.sellDecimals) + " " + p.sellSymbol),
+                               Line(glue: String(localized: "on"), text: net.name),
+                               Line(glue: String(localized: "for"), text: figure(paid, decimals: p.buyDecimals) + " " + p.buySymbol),
+                               Line(glue: String(localized: "on"), text: net.name + ".")],
+                       detail: detail.joined(separator: " · "))
+    }
+
+    /// While its receipt is up, the order is asked after every ten seconds.
+    private func followOrder() async {
+        guard let shown = orderShown, let net = shown.network else { return }
+        while !Task.isCancelled, orderShown?.uid == shown.uid {
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled, orderShown?.uid == shown.uid else { return }
+            await Chain.refreshOrders()
+            guard let now = YourAccountOrders.all.first(where: { $0.uid == shown.uid }), now.state != .open else { continue }
+            withAnimation(DS.Motion.standard) {
+                switch now.state {
+                case .filled: receipt = Self.filledReceipt(now, on: net)
+                case .expired: receipt?.detail = String(localized: "Expired · nothing was swapped")
+                case .cancelled: receipt?.detail = String(localized: "Cancelled · nothing was swapped")
+                case .open: break
+                }
+                orderShown = nil
+            }
+            if now.state == .filled {
+                DSHaptic.success()
+                chrome.rain(sources: ["Wallet"])
+                chrome.refreshRooms()
+            }
+            return
+        }
+    }
+
+    /// Cancel: `invalidateOrder`, one Face ID (prd §1673 item 7).
+    private func cancelOrder(_ p: YourAccountOrders.Placed) {
+        guard stage == nil else { return }
+        if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
+        stage = .preparing
+        Task {
+            do {
+                let sent = try await Chain.cancelOrder(p, reason: String(localized: "Cancel your order: \(YourAccountOrders.title(p))")) { s in
+                    await MainActor.run { advance(to: s) }
+                }
+                stage = nil
+                withAnimation(DS.Motion.standard) {
+                    if case .landed = sent.outcome {
+                        receipt?.detail = String(localized: "Cancelled · nothing was swapped")
+                        orderShown = nil
+                    } else {
+                        receipt?.detail = String(localized: "Cancel sent, not yet seen · check before cancelling again")
+                    }
+                }
+                chrome.refreshRooms()
+            } catch let failure as Chain.Failure {
+                stage = nil
+                say(failure.message, failure: true, seconds: 6, from: failure.from)
+            } catch {
+                stage = nil
+                say(String(localized: "Not cancelled"), failure: true)
+            }
+        }
+    }
+
     private var foot: some View {
         VStack(spacing: DS.Space.s2) {
             if receipt != nil {
                 HStack {
+                    // An order still waiting can be withdrawn here (prd §1673 item 7).
+                    if let order = orderShown, order.state == .open {
+                        Button { cancelOrder(order) } label: {
+                            Text(verbatim: stage == nil ? String(localized: "Cancel order") : footVerb)
+                                .dsText(.heading34)
+                                .contentTransition(.interpolate)
+                                .foregroundStyle(stage == nil ? DS.destructiveInk : DS.textSecondary)
+                                .frame(minHeight: 48, alignment: .leading)
+                        }
+                        .buttonStyle(RowPress())
+                        .disabled(stage != nil)
+                    }
                     Spacer()
                     Button {
-                        withAnimation(DS.Motion.standard) { receipt = nil }
+                        withAnimation(DS.Motion.standard) { receipt = nil; orderShown = nil }
                         DSHaptic.selection()
                     } label: {
                         Text("Done").dsText(.heading34).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .trailing)
@@ -3630,6 +4055,22 @@ struct MoveSentence: View {
             // A swap's or a sweep's exchange signs the foot in the same
             // place (prd §1539): "On Uniswap · 0.05% pool fee". It is a fact
             // about this swap, so it carries no "powered by".
+            // **POWERED BY COW SWAP (prd §1673, user: "it needs to say powered
+            // by CoW Swap"):** a price's order is CoW's to fill, credited as
+            // Relay's and Bitrefill's are, its mark beside the name, the fee after.
+            if limiting, receipt == nil {
+                HStack(spacing: DS.Space.s1) {
+                    Text("Powered by CoW Swap")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    Self.mark(of: "CoW Swap")
+                    Text(verbatim: "· " + String(localized: "\(YourAccountOrder.feeWords) fee"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s1)
+            }
             if let exchangeCredit, receipt == nil, !nothingToMove {
                 Text(verbatim: exchangeCredit)
                     .dsText(.label12)
@@ -3713,6 +4154,8 @@ struct MoveSentence: View {
     }
 
     private var footOn: Bool {
+        if whenOffered, when == nil { return stage == nil }
+        if limiting { return stage == nil && limitDraft != nil && !over }
         if verb == .buy { return stage == nil && buyReady }
         if verb == .sweep {
             return stage == nil && !sweepPricing && !sweepItems.isEmpty && failNote == nil && sweepFeeNote == nil
@@ -3738,6 +4181,9 @@ struct MoveSentence: View {
         if verb == .sweep {
             return sweepItems.count < 2 ? String(localized: "Sweep") : String(localized: "Sweep all \(sweepItems.count)")
         }
+        // Swap waits for its last word (prd §1673 item 2).
+        if whenOffered, when == nil { return String(localized: "Pick when") }
+        if limiting { return String(localized: "Place order") }
         // A warning makes it a second tap (prd §1509 item 2).
         if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
         let batch = all
@@ -3807,6 +4253,10 @@ struct MoveSentence: View {
     }
 
     private func add() {
+        if limiting {
+            say(String(localized: "An order goes alone"))
+            return
+        }
         guard let item = pendingItem else {
             #if DEBUG
             NSLog("moveAdd: missing=%@", missing ?? "-")
@@ -3883,6 +4333,13 @@ struct MoveSentence: View {
 
     private func sign() {
         guard stage == nil else { return }
+        // "Pick when" opens its two rows; a price places a CoW order (prd §1673).
+        if whenOffered, when == nil {
+            withAnimation(DS.Motion.standard) { open = .when }
+            DSHaptic.selection()
+            return
+        }
+        if limiting { placeOrder(); return }
         // The first tap on "Send anyway" only arms it; the second signs.
         if verb != .buy, warned, armed != armKey {
             armed = armKey
@@ -4014,6 +4471,7 @@ struct MoveSentence: View {
                         slot = 0
                         amount = ""
                         quote = nil
+                        whenPick = nil
                     }
                     receipt = made
                 }
@@ -5216,7 +5674,7 @@ struct MoveSentence: View {
     #if DEBUG
     /// A launch hook fills the sentence, so the lists are read before it.
     static var drafting: Bool {
-        ["moveWarnProbe", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
+        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
             .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
     }
 
@@ -5246,6 +5704,9 @@ struct MoveSentence: View {
             NSLog("moveWarnProbe: %@", probe)
         } else if let swap = d.string(forKey: "moveSwapDraft"), !swap.isEmpty {
             swapDraft(swap)
+            // `-moveWhenDraft open|now|<price>|<n>%` (prd §1673): answered once
+            // the pair is there to answer it for.
+            if let w = d.string(forKey: "moveWhenDraft"), !w.isEmpty { whenDraftPending = w }
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
             sendDraft()

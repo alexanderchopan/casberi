@@ -191,7 +191,9 @@ extension FeedScreen {
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil }.count : 0
         // A deposit waiting for 0xBow's approval, or refused (prd §1561).
         let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks().count : 0
-        return rows + walletSignatureWarnings.count + nudges + cards + deposits
+        // A limit order waiting for its price (prd §1673 item 7).
+        let orders = walletShowsPrivate ? YourAccountOrders.open.count : 0
+        return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders
     }
 
     /// The asks Needs you can value (prd §1669): a private deposit waiting
@@ -202,7 +204,14 @@ extension FeedScreen {
         guard walletShowsPrivate else { return [] }
         let store = PrivateMoneyStore.shared
         let prices = store.shownPrices
-        return store.asks().map { ask in
+        // A limit order holds what it sells until it fills (prd §1673): its
+        // quantity stands, valued by no price this page reads.
+        let orders = YourAccountOrders.open.map { order in
+            NeedsYouHeld.Part(id: order.uid, label: String(localized: "Waiting for \(order.priceWords)"),
+                              figure: BalancePrivacy.shared.amount(YourAccountOp.spoken(order.sellUnits, decimals: order.sellDecimals), unit: order.sellSymbol),
+                              usd: nil, since: order.placedAt, refused: false)
+        }
+        return orders + store.asks().map { ask in
             let note = ask.note
             let worth = PrivateMoney.worth(note, rates: store.rates)
             let units = Double(worth.amount).map { $0 / pow(10, Double(worth.decimals)) }
@@ -738,6 +747,8 @@ extension FeedScreen {
         walletSignaturesSection
         // Money of yours waiting on 0xBow, or refused (prd §1561).
         if walletShowsPrivate { WalletPrivateAsks() }
+        // A limit order waiting for its price (prd §1673 item 7).
+        if walletShowsPrivate { WalletOrderAsks() }
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }
             // The monthly check (prd §1515): one row when it is due.

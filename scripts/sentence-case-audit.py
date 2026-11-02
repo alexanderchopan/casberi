@@ -190,6 +190,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
     # Apple's own feature names — lowercasing these renames Apple's feature.
     "Secure Enclave", "Face ID", "Touch ID", "Advanced Data Protection",
     "Private Relay", "Camera Uploads",
+    # The exchange that fills a limit order (prd §1673), by its own name:
+    # "Powered by CoW Swap", as "Powered by Relay" credits Relay.
+    "CoW Swap",
     # Apple's name for the server side of Apple Intelligence (prd §833). It is
     # what the seat and the answer badge say ran the ask, so re-casing it names
     # something Apple does not offer. Exempted as the phrase so `Cloud` and
@@ -242,6 +245,9 @@ KNOWN_PROPER: set[str] = {
     # Across, the bridge cross-network swaps go through (prd §1555): "Through
     # Across", "More than Across carries" name the protocol, as "Relay" names Relay.
     "Across",
+    # "On CoW · 0.02% fee", "Filled · On CoW" name CoW Protocol, which fills a
+    # limit order (prd §1673), as "Across" names Across.
+    "CoW",
     # WETH, wrapped ether's ticker (prd §1559): "Unwraps WETH" names the token.
     "WETH",
     # ERC-8213's terms (prd §1509, §1514): "EIP-712 Digest", "Calldata

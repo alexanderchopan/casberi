@@ -2780,6 +2780,9 @@ harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.s
 # writes counted and their hosts pinned to Safe's own.
 harness "Safe signer §913 self-test" "safe-signer self-test" "scripts/safe-signer-selftest.sh" "the §913 signer self-test failed — run scripts/safe-signer-selftest.sh"
 harness "Your account self-test" "your-account self-test" "scripts/your-account-selftest.sh" "your account's address arithmetic or the Move gate drifted — run scripts/your-account-selftest.sh"
+# A limit order is the one CoW names back (prd §1673): its id, exact calls,
+# prices rounded down, "when" only where CoW fills.
+harness "Limit-order self-test" "limit-order self-test" "scripts/limit-order-selftest.sh" "a limit order could be pre-signed that is not the one the sentence said — run scripts/limit-order-selftest.sh"
 # A Signer is a key that answered (prd §1516): the proof's EIP-712 digest
 # against an independent encoder, and the proof before every add.
 harness "Signer-proof self-test" "signer-proof self-test" "scripts/signer-proof-selftest.sh" "a Signer could be added without signing for its address — run scripts/signer-proof-selftest.sh"
