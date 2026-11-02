@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1810 of 1882 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1811 of 1883 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -2058,6 +2058,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1672 — A Holdings tile opens its token's sheet in one tap, every token, and the sheet draws the token's price chart; every t…
 - §1673 — Limit orders are Swap's last word: the sentence ends "when", Now or a price, and a price is a CoW order
 - §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 ite…
+- §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows…
 
 ## Dead rulings → what replaced them (generated)
 

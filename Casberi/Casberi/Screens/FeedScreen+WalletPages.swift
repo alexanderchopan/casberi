@@ -430,6 +430,8 @@ extension FeedScreen {
             }
             // What is private, under the tokens (prd §1554).
             walletPrivateRows
+            // What is lent on Aave, under it (prd §1674).
+            walletLentRows
             if positions > 0 {
                 walletDoor(.positions)
                 ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in

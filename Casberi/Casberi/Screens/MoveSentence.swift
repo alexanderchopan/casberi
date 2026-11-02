@@ -37,19 +37,25 @@ struct MoveSentence: View {
     var arrival: Arrival?
 
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
-         privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false) {
+         privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false, lending: LendMove.Mode? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
         let mode = PrivateMove.available ? privately : nil
         let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil
-        _verb = State(initialValue: mode != nil ? .send : toFresh ? .receive : opening ?? (arrival == nil ? .swap : .receive))
+        let lends = AaveLend.on && lending != nil && mode == nil && !toFresh
+        _verb = State(initialValue: mode != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
-        picksUpDraft = mode == nil && !toFresh && opening == nil && arrival == nil
+        picksUpDraft = mode == nil && !toFresh && opening == nil && arrival == nil && !lends
     }
+
+    /// **LEND (prd §1674): a verb.** Picked, `MoveLendSentence` draws under
+    /// these verbs over the account's sentence, which stays as it was.
+    @State private var lendMove: LendMove
 
     /// **SEND, PRIVATELY (prd §1554): a recipient and a switch, never a
     /// verb.** "Your private balance" leads Send's recipients (`.deposit`);
@@ -93,7 +99,7 @@ struct MoveSentence: View {
     /// `buy` is Bitrefill's gift cards, drawn **Spend**; `deposit` is a card
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
-    enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit }
+    enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
     enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork }
     enum Field: Hashable { case amount, search, to }
 
@@ -682,7 +688,7 @@ struct MoveSentence: View {
             // §1438b): it warns, and the verb takes a second tap.
             guard let r = resolved, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
-        case .receive, .buy, .sweep, .deposit:
+        case .receive, .buy, .sweep, .deposit, .lend:
             return nil
         }
     }
@@ -797,7 +803,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap, .send: roundUpCarried != nil && !RoundUps.setting.target.onExchanges(from: network.chainId)
         case .receive: elsewhere != nil
-        case .buy, .deposit: false
+        case .buy, .deposit, .lend: false
         case .sweep: false
         }
     }
@@ -879,9 +885,13 @@ struct MoveSentence: View {
     var body: some View {
         ZStack {
             accountPage
-                .opacity(privateMode == nil && !freshReceive ? 1 : 0)
-                .allowsHitTesting(privateMode == nil && !freshReceive)
-                .accessibilityHidden(privateMode != nil || freshReceive)
+                .opacity(privateMode == nil && !freshReceive && verb != .lend ? 1 : 0)
+                .allowsHitTesting(privateMode == nil && !freshReceive && verb != .lend)
+                .accessibilityHidden(privateMode != nil || freshReceive || verb == .lend)
+            if verb == .lend, privateMode == nil, !freshReceive {
+                MoveLendSentence(move: lendMove, account: account, inTray: inTray) { verbs }
+                    .transition(.opacity)
+            }
             if freshReceive, privateMode == nil {
                 MoveFreshSentence(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { freshReceive = false }
@@ -900,6 +910,7 @@ struct MoveSentence: View {
         }
         .animation(DS.Motion.standard, value: privateMode)
         .animation(DS.Motion.standard, value: freshReceive)
+        .animation(DS.Motion.standard, value: verb)
     }
 
     private var accountPage: some View {
@@ -1123,6 +1134,8 @@ struct MoveSentence: View {
                     case .buy: buyClauses
                     case .sweep: sweepClauses
                     case .deposit: depositClauses
+                    // Lend draws its own sentence over this one (prd §1674).
+                    case .lend: EmptyView()
                     }
                 }
             }
@@ -1316,7 +1329,7 @@ struct MoveSentence: View {
         case .swap: String(localized: "Nothing to swap yet.")
         case .buy: String(localized: "Nothing to pay with yet.")
         case .sweep: String(localized: "Nothing to sweep yet.")
-        case .send, .receive, .deposit: String(localized: "Nothing to send yet.")
+        case .send, .receive, .deposit, .lend: String(localized: "Nothing to send yet.")
         }
     }
 
@@ -1834,7 +1847,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap: line.id.hasPrefix("to|")
         case .send: line.id.hasPrefix("for|")
-        case .receive, .buy, .sweep, .deposit: true
+        case .receive, .buy, .sweep, .deposit, .lend: true
         }
     }
 
@@ -2056,7 +2069,7 @@ struct MoveSentence: View {
         HStack(alignment: .firstTextBaseline, spacing: spacing) {
             // A–Z in the reader's language (prd §1547); Swap stays the
             // verb Move opens on, wherever it stands in the line.
-            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }
+            ForEach(Verb.allCases.filter { ($0 != .buy || buyAvailable) && ($0 != .lend || AaveLend.on) }
                 .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil || privateMode != nil || freshReceive else { return }
@@ -2077,7 +2090,7 @@ struct MoveSentence: View {
                                          : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
                 .buttonStyle(RowPress())
-                .disabled(stage != nil || privateMove.acting)
+                .disabled(stage != nil || privateMove.acting || lendMove.acting)
                 .accessibilityAddTraits(v == verb ? [.isSelected] : [])
             }
         }
@@ -2092,6 +2105,7 @@ struct MoveSentence: View {
         case .buy: String(localized: "Spend")
         case .sweep: String(localized: "Sweep")
         case .deposit: String(localized: "Buy")
+        case .lend: String(localized: "Lend")
         }
     }
 
@@ -2521,7 +2535,7 @@ struct MoveSentence: View {
                 case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpPlan?.buy != nil ? roundUpPrint : [])
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
-                case .receive, .sweep, .deposit: []
+                case .receive, .sweep, .deposit, .lend: []
                 // A card paid by a swap rounds nothing up (prd §1666 item 5).
                 case .buy: buyPrint + (buySells == nil ? roundUpPrint : [])
                 }
@@ -3786,7 +3800,7 @@ struct MoveSentence: View {
             if quote == nil { return String(localized: "Waiting for the price") }
         case .send:
             if resolved == nil { return String(localized: "Pick who it goes to") }
-        case .receive, .buy, .sweep, .deposit:
+        case .receive, .buy, .sweep, .deposit, .lend:
             break
         }
         return nil

@@ -234,6 +234,9 @@ final class ShellChrome {
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.
     var movePrivately: PrivateMove.Mode?
+    /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
+    /// Cleared when the tray closes.
+    var moveLend: LendMove.Mode?
     /// Move opens on Receive with its Private switch on: a fresh address
     /// (prd §1560). Cleared when the tray closes.
     var moveFreshReceive = false

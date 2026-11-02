@@ -431,3 +431,9 @@ On for the App Store and TestFlight (user: "we want it on for app store and test
 - Proof: `tools/privacy-pools-engine/run-mainnet-sim.sh` runs the app's own `engine.js` in Node against mainnet's real state through an `eth_simulateV1` fork (registration + ETH deposit, USDC deposit, ragequit to the account, relayed withdrawal with 0xBow's approval stood in for), records `mainnet-sim.json`, and checks five mutations fail (dev keys, value short, a flipped proof byte, a ragequit not from the owner, a changed recipient). It never signs; `/v1/relay/*` is refused before it leaves.
 - Not on Ethereum: Receive to a fresh address (its key would need a mainnet signer; `PrivateMove.freshAvailable` is DEBUG + Sepolia), round-ups into private, the background watch, Base (≈30 depositors), USDT.
 - Hooks: `-privateNetwork ethereum` (DEBUG), `-privateMoneySample mainnet|none` (beside the phone's own notes; `clear` still wipes everything).
+
+## Lend on Aave (prd §1674, every build)
+
+- `-moveLend lend|takeBack` raises Move on Lend, as Holdings' Lent head and a lent row do; NSLogs `moveLend: raised <mode>` and, once read, `moveLend| <mode> | <figure> | <network> | <rate>`.
+- The calls are `AaveLend.lend`/`takeBack`, held by `AaveLend.checked`, signed through `YourAccountChain.lendCalls` (private money's simulated path). `AaveLend.on` is the off switch.
+- The demo's Lend reads 150 USDC lent on Base; its act refuses with `YourAccountDemo.actsLater`.

@@ -2093,6 +2093,15 @@ enum YourAccountChain {
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
+    /// **LEND'S CALLS TAKE THE SAME PATH (prd §1674):** run against the real
+    /// state as the account, then one Face ID operation; a call that fails,
+    /// or a node that will not simulate, signs nothing. `AaveLend.checked`
+    /// has already held every call to the market's asset and Pool.
+    static func lendCalls(_ list: [(to: String, data: String, value: String)], on net: Network, reason: String,
+                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        try await privateCalls(list, on: net, reason: reason, stage: stage)
+    }
+
     // MARK: - One operation, end to end
 
     /// Build, price, check, hash, sign, verify, send and follow one

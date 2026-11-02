@@ -1,0 +1,250 @@
+import Foundation
+import Observation
+
+/// **LEND, IN MOVE (prd §1674).** The sentence's state: which market (a
+/// token on a network), how much, and whether it lends or takes back. The
+/// calls are `AaveLend`'s, checked by `AaveLend.checked`, and go through your
+/// account's one simulated path (`YourAccountChain.lendCalls`): run against
+/// the real state as the account, then one Face ID operation. Nothing that
+/// fails the simulation is signed.
+///
+/// Reads, per market, at once: what the account holds, what it has lent
+/// (the aToken's balance, interest included) and Aave's supply rate. The
+/// pinned aToken is held to the reserve's own; a market whose reserve names
+/// another is not offered.
+@MainActor
+@Observable
+final class LendMove {
+
+    enum Mode: Equatable { case lend, takeBack }
+
+    enum Stage: Equatable {
+        case reading
+        case ready
+        case working(YourAccountChain.Stage)
+        case done(String)
+        case failed(String)
+    }
+
+    typealias Market = AaveLend.Market
+
+    var mode: Mode
+    var stage: Stage = .reading
+    var chainId = 8453
+    var symbol = "USDC"
+    /// The amount picked, as typed ("500"); nil until one is.
+    var amount: String?
+    /// Everything there is: the whole balance (lend) or all that is lent.
+    var all = false
+
+    /// Base units, decimal, by `key(market)`.
+    private(set) var held: [String: String] = [:]
+    private(set) var lent: [String: String] = [:]
+    private(set) var rates: [String: Double] = [:]
+    /// The markets whose reserve did not name the pinned aToken.
+    private(set) var refused: Set<String> = []
+    /// ETH kept back for the operation's fee, per network (base units).
+    private(set) var reserve: [Int: String] = [:]
+
+    /// Opened from a lent row (`opens`): its market, once.
+    init(mode: Mode = .lend, opens: Bool = false) {
+        self.mode = mode
+        if opens, let at = Self.opening {
+            chainId = at.chainId
+            symbol = at.symbol
+            Self.opening = nil
+        }
+    }
+
+    /// Holdings' reading of your account's lent money, kept between visits.
+    static let holdings = LendMove(mode: .takeBack)
+    /// The market a lent row opens Take back on.
+    static var opening: (chainId: Int, symbol: String)?
+
+    nonisolated static func key(_ m: Market) -> String { "\(m.chainId)|\(m.symbol)" }
+
+    var market: Market? { AaveLend.market(chainId: chainId, symbol: symbol) }
+    var network: YourAccountOp.Network? { YourAccountOp.networks.first { $0.chainId == chainId } }
+    var acting: Bool { if case .working = stage { true } else { false } }
+
+    /// What the amount may come out of: held (less ETH's fee reserve) to
+    /// lend, lent to take back.
+    func available(_ m: Market) -> String? {
+        switch mode {
+        case .lend:
+            guard let have = held[Self.key(m)] else { return nil }
+            guard m.native else { return have }
+            let keep = Decimal(string: reserve[m.chainId] ?? "0") ?? 0
+            let left = (Decimal(string: have) ?? 0) - keep
+            return left > 0 ? Self.digits(left) : "0"
+        case .takeBack:
+            return lent[Self.key(m)]
+        }
+    }
+
+    /// The amounts offered: the token's ladder under what is available, then
+    /// all of it.
+    func choices(_ m: Market) -> [String] {
+        guard let have = available(m).flatMap({ Decimal(string: $0) }), have > 0 else { return [] }
+        let ladder = m.native ? Self.ethLadder : Self.usdcLadder
+        return ladder.filter { step in
+            guard let units = PrivateMoney.baseUnits(step, decimals: m.decimals).flatMap({ Decimal(string: $0) }) else { return false }
+            return units < have
+        }
+    }
+
+    static let usdcLadder = ["1", "5", "10", "25", "50", "100", "250", "500", "1000", "2500", "5000", "10000"]
+    static let ethLadder = ["0.001", "0.005", "0.01", "0.025", "0.05", "0.1", "0.25", "0.5", "1", "2.5", "5"]
+
+    /// The amount in base units: what was picked, or all of what is available.
+    var units: String? {
+        guard let m = market else { return nil }
+        if all { return available(m).flatMap { $0 == "0" ? nil : $0 } }
+        return amount.flatMap { PrivateMoney.baseUnits($0, decimals: m.decimals) }
+    }
+
+    /// "500 USDC", "0.0842 ETH": what the sentence says it moves.
+    var figure: String {
+        guard let m = market else { return symbol }
+        guard let units else { return "0 \(m.symbol)" }
+        return PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol)
+    }
+
+    func pick(_ step: String?, all: Bool) {
+        self.amount = step
+        self.all = all
+    }
+
+    /// Any market where something is lent: Holdings' rows, and whether Take
+    /// back has anything to say.
+    var anyLent: Bool { lent.values.contains { (Decimal(string: $0) ?? 0) > 0 } }
+
+    // MARK: - Reading
+
+    func read(account: String) async {
+        if case .working = stage { return }
+        stage = .reading
+        if YourAccountDemo.isDemo(account) {
+            readDemo()
+        } else {
+            await readChain(account: account)
+        }
+        settle()
+    }
+
+    /// After a read or a pick: the first market with something to move,
+    /// ready either way (an empty market says so in its line).
+    func settle() {
+        if let m = market, !(Decimal(string: available(m) ?? "0") ?? 0 > 0) {
+            if let first = AaveLend.markets.first(where: { (Decimal(string: available($0) ?? "0") ?? 0) > 0 && !refused.contains(Self.key($0)) }) {
+                chainId = first.chainId
+                symbol = first.symbol
+            }
+        }
+        if let m = market, amount == nil, !all {
+            amount = choices(m).last
+            all = amount == nil && (Decimal(string: available(m) ?? "0") ?? 0) > 0
+        }
+        stage = .ready
+    }
+
+    private func readDemo() {
+        for m in AaveLend.markets {
+            let net = YourAccountOp.networks.first { $0.chainId == m.chainId }
+            let token = m.native ? YourAccountOp.eth : net.map(YourAccountOp.dollar(on:))
+            held[Self.key(m)] = net.flatMap { n in YourAccountDemo.held(on: n).first { $0.token == token }?.units } ?? "0"
+            lent[Self.key(m)] = m.chainId == 8453 && !m.native ? "150000000" : "0"
+        }
+        rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145]
+        reserve = [8453: "100000000000000", 1: "1000000000000000"]
+    }
+
+    private func readChain(account: String) async {
+        typealias Read = (key: String, held: String?, lent: String?, rate: Double?, aToken: String?)
+        let found: [Read] = await withTaskGroup(of: Read.self) { group in
+            for m in AaveLend.markets {
+                guard let net = YourAccountOp.networks.first(where: { $0.chainId == m.chainId }) else { continue }
+                group.addTask {
+                    let token = m.native ? YourAccountOp.eth : YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
+                    async let have = YourAccountChain.balance(net, token, of: account)
+                    async let given = Self.call(net, to: m.aToken, data: AaveLend.lentCall(account: account))
+                    async let reserve = Self.call(net, to: m.pool, data: AaveLend.reserveDataCall(m))
+                    let r = await reserve
+                    return (Self.key(m), await have, await given.map(AaveLend.decimal(hex:)),
+                            r.flatMap(AaveLend.apy(reserveData:)), r.flatMap(AaveLend.aToken(reserveData:)))
+                }
+            }
+            var out: [Read] = []
+            for await r in group { out.append(r) }
+            return out
+        }
+        for r in found {
+            guard let m = AaveLend.markets.first(where: { Self.key($0) == r.key }) else { continue }
+            // A reserve that names another aToken is not the market this was
+            // built for: offered nowhere, signed for never.
+            if let a = r.aToken, a.lowercased() != m.aToken { refused.insert(r.key) } else { refused.remove(r.key) }
+            if let h = r.held { held[r.key] = h }
+            if let l = r.lent { lent[r.key] = l }
+            if let rate = r.rate { rates[r.key] = rate }
+        }
+        for id in AaveLend.chainIds {
+            guard let net = YourAccountOp.networks.first(where: { $0.chainId == id }),
+                  let hex = try? await YourAccountChain.rpc(net, "eth_gasPrice", []) as? String,
+                  let price = Decimal(string: AaveLend.decimal(hex: hex)) else { continue }
+            // Twice today's price for the most a lend of ETH has taken with
+            // the account's own calls around it (246k measured, 600k kept).
+            reserve[id] = Self.digits(price * 600_000 * 2)
+        }
+    }
+
+    private nonisolated static func call(_ net: YourAccountOp.Network, to: String, data: String?) async -> String? {
+        guard let data, let bytes = SafeABI.hexBytes(data) else { return nil }
+        guard let answer = try? await YourAccountChain.ethCall(net, to: to, data: bytes), answer.count > 2 else { return nil }
+        return answer
+    }
+
+    // MARK: - Acting
+
+    func run(account: String) async {
+        guard stage == .ready, let m = market, let net = network, let units else { return }
+        if YourAccountDemo.isDemo(account) {
+            stage = .failed(YourAccountDemo.actsLater)
+            return
+        }
+        guard !refused.contains(Self.key(m)) else {
+            stage = .failed(String(localized: "Aave's \(m.symbol) on \(m.network) is not the market Casberi knows, so nothing was signed"))
+            return
+        }
+        let calls: [AaveLend.Call]? = switch mode {
+        case .lend: AaveLend.lend(units, in: m, account: account)
+        case .takeBack: AaveLend.takeBack(units, all: all, in: m, account: account)
+        }
+        guard let calls, AaveLend.checked(calls, in: m, account: account) else {
+            stage = .failed(String(localized: "This could not be written"))
+            return
+        }
+        let reason = mode == .lend ? String(localized: "Lend \(figure) on Aave") : String(localized: "Take back \(figure) from Aave")
+        stage = .working(.preparing)
+        do {
+            let sent = try await YourAccountChain.lendCalls(calls.map { ($0.to, $0.data, $0.value) }, on: net, reason: reason) { s in
+                await MainActor.run { self.stage = .working(s) }
+            }
+            switch sent.outcome {
+            case .landed(let tx, _): stage = .done(tx ?? "")
+            // Taken and not seen yet: done, with no transaction to name.
+            case .pending: stage = .done("")
+            case .dryRun: stage = .ready
+            }
+        } catch let failure as YourAccountChain.Failure {
+            stage = .failed(failure.message)
+        } catch {
+            stage = .failed(error.localizedDescription)
+        }
+    }
+
+    private static func digits(_ d: Decimal) -> String {
+        var value = d, rounded = Decimal()
+        NSDecimalRound(&rounded, &value, 0, .down)
+        return NSDecimalNumber(decimal: rounded).stringValue
+    }
+}

@@ -37,7 +37,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false }) {
+                      onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -64,6 +64,15 @@ struct MoveTrayPresenter: ViewModifier {
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] movePrivately: raised %@", mode == .send ? "send" : "deposit")
             chrome.movePrivately = mode
+            chrome.moveTray = true
+        }
+        // `-moveLend lend|takeBack` raises Lend, as a lent row in Holdings
+        // does (prd §1674).
+        .task {
+            guard let raw = UserDefaults.standard.string(forKey: "moveLend") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] moveLend: raised %@", raw)
+            chrome.moveLend = raw == "takeBack" ? .takeBack : .lend
             chrome.moveTray = true
         }
         // `-moveFreshReceive YES` raises Receive with its Private switch on: a
@@ -173,7 +182,8 @@ struct MoveScreen: View {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
-                             privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive)
+                             privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,
+                             lending: chrome.moveLend)
                     .transition(.opacity)
             } else if let mode = chrome.movePrivately, PrivateMove.available {
                 // No account yet, so no other verb can be tapped: Send's

@@ -2631,6 +2631,9 @@ harness "Spend top-up" "spend top-up" "scripts/spend-topup-selftest.sh" "the spe
 # A savings goal on the private balance (prd §1667): the percent never rounds
 # up, the weekly pace divides what is left over whole weeks, a passed day is said.
 harness "Savings goal" "savings goal" "scripts/savings-goal-selftest.sh" "the savings goal self-test failed — run scripts/savings-goal-selftest.sh"
+# Lend (prd §1674): the Aave calls byte for byte as simulated, nothing signed
+# that goes anywhere but the market's asset or Pool, the rate read and compounded.
+harness "Aave lend" "aave lend" "scripts/aave-lend-selftest.sh" "the Aave lend self-test failed — run scripts/aave-lend-selftest.sh"
 # The Wallet's watchlist (prd §1632): its order, the price window, the day's
 # change, the keyless answers, and that it never reads Zerion or a sweep.
 harness "Watchlist" "watchlist" "scripts/watchlist-selftest.sh" "the watchlist self-test failed — run scripts/watchlist-selftest.sh"
