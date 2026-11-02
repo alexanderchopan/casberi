@@ -26,23 +26,38 @@ struct SettingsHome: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
+    /// Re-injected into the folder's sheet, where an app's page may read
+    /// them (`HandleSetupScreen`), as `MainSurface.raisedSheet` does.
+    @Environment(FeedFilter.self) private var filter
+    @Environment(PadDetailSelection.self) private var detail
 
     #if DEBUG
     /// `-connectTap` fires once a launch, not at every mount.
     @MainActor static var connectTapped = false
     #endif
-    /// Casberi's own options, opened in place from its pinned row — the way a
-    /// Notes folder opens (prd §980): its name leads back.
-    @State private var casberiOpen = false
+    /// Casberi's folder is up (prd §1321): its sheet (§1664), read and
+    /// written through the screen's one sheet route.
+    private var casberiOpen: Bool {
+        get {
+            if case .casberi = librarySheet { return true }
+            return false
+        }
+        nonmutating set {
+            if newValue { librarySheet = .casberi }
+            else if case .casberi = librarySheet { librarySheet = nil }
+        }
+    }
     /// What Library's field filters (prd §1245).
     @State private var query = ""
     @FocusState private var searchFocused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The Track tray of an app that needs only a name (prd §1119), raised
-    /// by a door that named it (prd §1234; the Apps screen's until then).
-    @State private var trackPick: TrackPick?
-    /// The folder sprung open over the page (prd §1316).
-    @State private var openFolder: String?
+    /// **ONE SHEET FOR THE SCREEN** (docs/gotchas.md, "one screen, one
+    /// `.sheet`"): the Track tray of an app that needs only a name (prd
+    /// §1119, §1234), a folder (§1664) or Casberi's folder (§1321, §1664).
+    @State private var librarySheet: LibrarySheet?
+    /// What a tap in a folder asked for, run once its sheet is down
+    /// (`takeFromFolder`): a push or a sheet raised under a presented sheet
+    /// never shows.
+    @State private var folderAct: (() -> Void)?
     /// The category a door named (`route.openCategory`, prd §1300): its
     /// folder springs open once the page has risen, then lets go.
     @State private var landCategory: String?
@@ -60,7 +75,65 @@ struct SettingsHome: View {
             guard !route.accountsPane.contains(.settingsFolder) else { return }
             route.fromAccountsList { route.push(.settingsFolder) }
         } else {
-            withAnimation(DS.Motion.folder) { casberiOpen = true }
+            casberiOpen = true
+        }
+    }
+
+    enum LibrarySheet: Identifiable {
+        case track(TrackPick)
+        case folder(String)
+        case casberi
+        var id: String {
+            switch self {
+            case .track(let pick): "track:\(pick.id)"
+            case .folder(let category): "folder:\(category)"
+            case .casberi: "casberi"
+            }
+        }
+    }
+
+    /// Casberi's or a folder's sheet goes down; the Track tray stays.
+    private func closeFolderSheet() {
+        switch librarySheet {
+        case .casberi, .folder: librarySheet = nil
+        default: break
+        }
+    }
+
+    /// An app's page opened inside its folder's sheet (prd §1664 item 6): an
+    /// app you could add, one of yours that needs you or lands nothing.
+    /// Contacts and Calendar keep their lists (§1612); a pageless app (Photos,
+    /// Reminders) and one that needs only a name (its Track tray) go through
+    /// `open`. Nil on the Mac and inside another sheet's stack, where the
+    /// sheet holds no stack of its own.
+    private func folderPage(_ name: String) -> BridgeRouter.Destination? {
+        guard folderStacks, name != "Contacts", name != "Calendar" else { return nil }
+        if let app = yours(name) {
+            guard app.status == .attention || LiveRoomSources.landsNothing.contains(app.name) else { return nil }
+            return BridgeRouter.destination(forID: app.id)
+        }
+        guard FollowingReading.trackRoom(forSeat: name) == nil else { return nil }
+        return BridgeRouter.destination(forOffer: name)
+    }
+
+    private var folderStacks: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        route.sheet == nil
+        #endif
+    }
+
+    /// A tap in a folder's sheet: the sheet goes down, then the app opens
+    /// as its row would. Pushed inside a sheet's stack (prd §1238) the
+    /// folder is a page, so it pops and the app opens at once.
+    private func takeFromFolder(_ act: @escaping () -> Void) {
+        if route.sheet != nil {
+            librarySheet = nil
+            act()
+        } else {
+            folderAct = act
+            librarySheet = nil
         }
     }
 
@@ -105,9 +178,7 @@ struct SettingsHome: View {
                         appsList
                     } else {
                         SourcesLibrary(folders: libraryFolders, has: isYours,
-                                       open: { category in
-                                           withAnimation(DS.Motion.folder) { openFolder = category }
-                                       },
+                                       open: { category in librarySheet = .folder(category) },
                                        openCasberi: { openCasberiFolder() })
                         .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset - DS.Space.s1)
                     }
@@ -130,9 +201,9 @@ struct SettingsHome: View {
             NSLog("[Casberi] sourcesCategory: %@", category)
             #endif
             Task { @MainActor in
-                // After the sheet has risen, so the spring is seen.
+                // After the page has risen, so the folder is seen rising.
                 try? await Task.sleep(for: .milliseconds(550))
-                withAnimation(DS.Motion.folder) { openFolder = category }
+                librarySheet = .folder(category)
                 landCategory = nil
             }
         }
@@ -145,29 +216,6 @@ struct SettingsHome: View {
                 }
                 .padding(.trailing, 2)
                 .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
-            }
-        }
-        // Casberi's folder springs open on its settings, each a tile like an
-        // app (prd §1321).
-        .overlay {
-            if casberiOpen {
-                SourcesSettingsFolder(close: { withAnimation(DS.Motion.folder) { casberiOpen = false } })
-                    .transition(folderSpring)
-            }
-        }
-        // A folder springs open over the page (prd §1316).
-        .overlay {
-            if let category = openFolder, !casberiOpen,
-               let folder = libraryFolders.first(where: { $0.category == category }) {
-                SourcesOpenFolder(folder: folder, has: isYours,
-                                  open: { openFromFolder($0) },
-                                  settings: { name in yours(name).map { app in { openPage(app) } } },
-                                  close: { withAnimation(DS.Motion.folder) { openFolder = nil } },
-                                  // The Notes folder leads with the Notes
-                                  // page, pushed beside Library (prd §1347).
-                                  notesPage: category == BridgeCatalog.notesCategory
-                                      ? { route.push(.notes) } : nil)
-                    .transition(folderSpring)
             }
         }
         }
@@ -211,9 +259,26 @@ struct SettingsHome: View {
             }
         }
         #endif
-        .modifier(DSOneSheet(route: $trackPick, pushes: { _ in route.sheet != nil },
-                             raised: { trackTray($0) },
-                             pushed: { trackTray($0).environment(\.dsInPane, true) }))
+        .modifier(DSOneSheet(route: $librarySheet, pushes: { _ in route.sheet != nil },
+                             raised: { librarySheetBody($0) },
+                             pushed: { librarySheetBody($0).environment(\.dsInPane, true) },
+                             onDismiss: {
+                                 let act = folderAct
+                                 folderAct = nil
+                                 act?()
+                             }))
+        // A setting from Casberi's sheet, or a door on an app's page in a
+        // folder's, pushes beside Library (prd §1321): the sheet goes down so
+        // the page is seen.
+        .onChange(of: route.path.count) { old, new in
+            guard new > old else { return }
+            closeFolderSheet()
+        }
+        // A connect made on a page in the folder's sheet lands in its room
+        // (prd §1029): the sheet goes down so the room is seen.
+        .onChange(of: chrome.sourceRequest != nil) { _, asked in
+            if asked { closeFolderSheet() }
+        }
         // **A DOOR THAT ASKED FOR THE CATALOGUE LANDS HERE (prd §1234)**:
         // Sources, on Apps, and an app it named runs as its row would.
         .onChange(of: route.openSources, initial: true) { _, wanted in
@@ -258,11 +323,6 @@ struct SettingsHome: View {
         }
     }
 
-    /// A folder springs open from its tile; under Reduce Motion it fades.
-    private var folderSpring: AnyTransition {
-        reduceMotion ? .opacity : .scale(scale: 0.7).combined(with: .opacity)
-    }
-
     // MARK: - Acts
 
     /// The landed name, over the kind you're on.
@@ -271,18 +331,41 @@ struct SettingsHome: View {
     }
 
     @ViewBuilder
-    private func trackTray(_ pick: TrackPick) -> some View {
+    private func librarySheetBody(_ sheet: LibrarySheet) -> some View {
         Group {
-            if pick.room == .reading {
-                ReadingFindSheet(onTracked: {})
-            } else {
-                FollowTrackTray(room: pick.room, seat: pick.seat, onTracked: {})
+            switch sheet {
+            case .track(let pick):
+                if pick.room == .reading {
+                    ReadingFindSheet(onTracked: {})
+                } else {
+                    FollowTrackTray(room: pick.room, seat: pick.seat, onTracked: {})
+                }
+            case .folder(let category):
+                if let folder = libraryFolders.first(where: { $0.category == category }) {
+                    SourcesOpenFolder(folder: folder, has: isYours,
+                                      page: folderPage,
+                                      open: { name in takeFromFolder { openFromFolder(name) } },
+                                      settings: { name in
+                                          yours(name).map { app in { takeFromFolder { openPage(app) } } }
+                                      },
+                                      settingsPage: { name in yours(name).map { BridgeRouter.destination(forID: $0.id) } },
+                                      stacks: folderStacks,
+                                      // The Notes folder leads with the Notes
+                                      // page, pushed beside Library (prd §1347).
+                                      notesPage: category == BridgeCatalog.notesCategory
+                                          ? { takeFromFolder { route.push(.notes) } } : nil)
+                }
+            case .casberi:
+                SourcesSettingsFolder()
             }
         }
         .environment(chrome)
         .environment(bridges)
         .environment(route)
+        .environment(filter)
+        .environment(detail)
         .environment(\.modelContext, context)
+        .environment(\.locale, LanguageStore.shared.locale)
     }
 
     /// An app that needs only a name, and the room its follows list in.
@@ -305,7 +388,7 @@ struct SettingsHome: View {
         }
         guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }) else { return }
         if let room = FollowingReading.trackRoom(forSeat: name) {
-            trackPick = TrackPick(room: room, seat: name)
+            librarySheet = .track(TrackPick(room: room, seat: name))
             return
         }
         if let destination = BridgeRouter.destination(forOffer: name) {

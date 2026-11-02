@@ -10,11 +10,15 @@ struct DSOneSheet<Route: Identifiable, Raised: View, Pushed: View>: ViewModifier
     let pushes: (Route) -> Bool
     @ViewBuilder let raised: (Route) -> Raised
     @ViewBuilder let pushed: (Route) -> Pushed
+    /// Run once a raised sheet is down (Library's folder opens an app after
+    /// it, prd §1664). A pushed route never calls it.
+    var onDismiss: (() -> Void)? = nil
 
     func body(content: Content) -> some View {
         content
             .sheet(item: Binding(get: { route.flatMap { pushes($0) ? nil : $0 } },
-                                 set: { route = $0 })) { raised($0) }
+                                 set: { route = $0 }),
+                   onDismiss: onDismiss) { raised($0) }
             .navigationDestination(isPresented: Binding(get: { route.map(pushes) ?? false },
                                                         set: { if !$0 { route = nil } })) {
                 if let current = route { pushed(current).dsSheetStep() }

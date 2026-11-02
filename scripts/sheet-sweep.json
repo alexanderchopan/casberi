@@ -57,6 +57,50 @@
    "anchor": "button:=ana@studio.com"
   },
   {
+   "id": "library-folder",
+   "covers": [
+    "Screens/SettingsHome.swift:librarySheet#folder"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Library"
+    },
+    {
+     "tap": "button:^Social, "
+    }
+   ],
+   "anchor": "button:=Contacts",
+   "afterSwipe": "button:^Social, "
+  },
+  {
+   "id": "library-casberi",
+   "covers": [
+    "Screens/SettingsHome.swift:librarySheet#casberi"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Library"
+    },
+    {
+     "tap": "button:=Casberi, Settings"
+    }
+   ],
+   "anchor": "button:=Theme",
+   "afterSwipe": "button:=Casberi, Settings"
+  },
+  {
    "id": "plan-edit",
    "covers": [
     "Screens/SubscriptionSheets.swift:editing"
@@ -1537,7 +1581,7 @@
   },
   {
    "covers": [
-    "Screens/SettingsHome.swift:trackPick"
+    "Screens/SettingsHome.swift:librarySheet#track"
    ],
    "why": "NOT WALKED since Library's box was deleted (2026-10-30): the Track tray rises when a folder's app that needs only a name is not yet yours, or a door names one (route.openOffer); the walk that reached it went through the box's Follow something. Needs a demo app that is not added"
   },
