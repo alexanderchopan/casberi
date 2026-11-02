@@ -556,21 +556,30 @@ struct MoneySheetHead: View {
         }
     }
 
+    /// THE FACE IS THE COVER (prd §1649): drawn at `DS.Face.art`, lifted
+    /// as Apple Music lifts an album. The sheet stays ink: the art is the
+    /// one colour on it.
     @ViewBuilder private var face: some View {
+        art
+            .shadow(color: .black.opacity(0.4), radius: 20, y: 12)
+    }
+
+    @ViewBuilder private var art: some View {
         if let t = transfer {
             // A wallet you watch wears the wallet's mark, never a stranger's
             // person (prd §1349).
             if WalletStore.shared.watches(t.theirAddress) {
-                BridgeIcon(name: "Wallet", size: DS.Face.sheet, circular: true)
+                BridgeIcon(name: "Wallet", size: DS.Face.art, circular: true)
             } else {
-                WalletFace(address: t.theirAddress, size: DS.Face.sheet, circular: true)
+                WalletFace(address: t.theirAddress, size: DS.Face.art, circular: true)
             }
         } else if let s = swap {
             swapFaces(s)
         } else if let c = card {
-            BridgeIcon(name: c.source, size: DS.Face.sheet, circular: true)
+            // An app is a rounded square (§1122): the card's app, as its icon.
+            BridgeIcon(name: c.source, size: DS.Face.art)
         } else {
-            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.sheet, onOpen: nil)
+            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.art, onOpen: nil)
         }
     }
 
@@ -600,7 +609,7 @@ struct MoneySheetHead: View {
     /// the back one, so the two separate on any fill without a line.
     private func swapFaces(_ s: Swap) -> some View {
         let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
-        let size = DS.Face.sheet
+        let size = DS.Face.art
         return ZStack(alignment: .leading) {
             swapMark(s.outApp ? s.outAmount : (out.unit ?? ""), app: s.outApp, size: size)
                 .mask(alignment: .leading) {

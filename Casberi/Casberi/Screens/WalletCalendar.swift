@@ -186,12 +186,15 @@ struct SubscriptionFace: View {
     var size: CGFloat = DS.Face.row
     /// The thing's own picture, where it has one (a feed's mark, prd §1118).
     var url: String? = nil
+    /// An app's own rounded square where the face is the page's art (prd
+    /// §1649, §1122); a row's lead stays round.
+    var circular = true
 
     var body: some View {
         if let url {
             WatchFace(url: url, lettered: name, size: size)
         } else if let mark = Self.mark(for: name) {
-            BridgeIcon(name: mark, size: size, circular: true)
+            BridgeIcon(name: mark, size: size, circular: circular)
         } else {
             Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
                 .dsText(.badgeInitial12).foregroundStyle(DS.textSecondary)

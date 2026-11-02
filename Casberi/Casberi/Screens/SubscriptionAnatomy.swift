@@ -58,26 +58,33 @@ struct SubscriptionPage<Tail: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            HStack(spacing: DS.Space.s3) {
-                SubscriptionFace(name: name, size: DS.Face.rowCircle, url: face)
+            // THE APP'S ART IS THE COVER (prd §1649): drawn large and
+            // centred over its name and what it costs, as a money sheet's
+            // face is; the sheet stays ink.
+            VStack(spacing: DS.Space.s3) {
+                SubscriptionFace(name: name, size: DS.Face.art, url: face, circular: false)
+                    .shadow(color: .black.opacity(0.4), radius: 20, y: 12)
                 Text(verbatim: name)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.center)
                     .lineLimit(2)
-            }
-            if let statement {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: statement.figure)
-                            .dsText(.price40).monospacedDigit().foregroundStyle(DS.textPrimary)
-                        if let word = statement.word {
-                            Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary)
+                if let statement {
+                    VStack(spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(verbatim: statement.figure)
+                                .dsText(.price40).monospacedDigit().foregroundStyle(DS.textPrimary)
+                            if let word = statement.word {
+                                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary)
+                            }
                         }
-                    }
-                    if let note = statement.note {
-                        note.dsText(.heading17).foregroundStyle(DS.attentionInk)
+                        if let note = statement.note {
+                            note.dsText(.heading17).foregroundStyle(DS.attentionInk)
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s4)
             // The Feed's cards (prd §1268): the facts as Details, the
             // doors as More.
             if !facts.isEmpty {

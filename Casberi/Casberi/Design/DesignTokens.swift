@@ -693,6 +693,9 @@ enum DS {
         static let profile: CGFloat = 76
         /// A thing sheet's head, centred (prd §1396): Apple Wallet's transaction face.
         static let sheet: CGFloat = 64
+        /// A money sheet's art (prd §1649): the face as Apple Music's cover,
+        /// the one thing on the sheet drawn large.
+        static let art: CGFloat = 120
         /// The rooms tray's discs (prd §1094): the touch floor, because each
         /// is its own door and a row holds four. Between `row` and `seat`,
         /// and smaller than the face button above them (§1093).
