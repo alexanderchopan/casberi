@@ -56679,6 +56679,34 @@
         }
       }
     },
+    "Back 15 seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retroceder 15 segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15秒戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15초 뒤로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "后退15秒"
+          }
+        }
+      }
+    },
     "Back to %@" : {
       "localizations" : {
         "es" : {
@@ -80850,6 +80878,34 @@
         }
       }
     },
+    "Episodes play once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los episodios se reproducen al salir de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモを終了するとエピソードを再生できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모를 나가면 에피소드를 재생할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可播放单集。"
+          }
+        }
+      }
+    },
     "Epoch %lld" : {
       "localizations" : {
         "es" : {
@@ -90793,6 +90849,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "格式"
+          }
+        }
+      }
+    },
+    "Forward 30 seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avanzar 30 segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30秒進む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30초 앞으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前进30秒"
           }
         }
       }
@@ -133320,6 +133404,34 @@
         }
       }
     },
+    "Opens it in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo abre en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在%@中打开"
+          }
+        }
+      }
+    },
     "Opens its page" : {
       "localizations" : {
         "es" : {
@@ -135787,6 +135899,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已从你的账户以 Base 上的 USDC 支付 %@"
+          }
+        }
+      }
+    },
+    "Paid %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagado %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に支払い済み。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 결제됨."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@已付款。"
           }
         }
       }
@@ -139302,6 +139442,34 @@
         }
       }
     },
+    "Photo: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Foto: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "写真: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사진: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "照片：%@"
+          }
+        }
+      }
+    },
     "Photograph from this entry. Opens it full screen." : {
       "localizations" : {
         "es" : {
@@ -140397,6 +140565,34 @@
         }
       }
     },
+    "Play episode" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reproducir episodio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エピソードを再生"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "에피소드 재생"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "播放单集"
+          }
+        }
+      }
+    },
     "Play video" : {
       "localizations" : {
         "es" : {
@@ -140449,6 +140645,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "播放速度"
+          }
+        }
+      }
+    },
+    "Played %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Jugaste a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をプレイしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 플레이함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "玩过%@"
           }
         }
       }
@@ -149443,6 +149667,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退款方"
+          }
+        }
+      }
+    },
+    "Refunded to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reembolsado a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返金先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "환불 대상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退款至"
           }
         }
       }
