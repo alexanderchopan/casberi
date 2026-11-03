@@ -463,6 +463,17 @@ struct BandRow: View {
         return nil
     }
 
+    /// **A MOVE A PROTOCOL CARRIED LEADS WITH WHAT IT DID (prd §1685).** A
+    /// swap on Uniswap led with your wallet's face, a deposit into Privacy
+    /// Pools with the pool's mark, which reads as the token that moved; the
+    /// action glyph leads and the protocol rides its corner. A card spend's
+    /// subject is the card (§1311).
+    private var carrier: String? {
+        guard thing.kind == .transaction, !WalletCards.isSpend(thing) else { return nil }
+        return ProtocolMark.mark(counterparty: thing.transferCounterparty,
+                                 venue: thing.transferVenue, source: thing.source)
+    }
+
     /// **WHO YOU DEALT WITH, WHEN THEY HAVE A FACE (prd §1552, user: "yes,
     /// show the counterparty's avatar too").** A Wallet row leads with the
     /// other side when it is your own account or set a picture with its name
@@ -584,6 +595,9 @@ struct BandRow: View {
         case initial(String)
         /// A brand the row is ABOUT, wearing its bundled mark (`brandMark`).
         case brand(String)
+        /// A move a protocol carried: what it did, the protocol on the
+        /// corner (`ProtocolMark`, prd §1685).
+        case carried(String)
         case publisher(String)
         case thumb(String, perishable: Bool, circular: Bool)
         case screenshot
@@ -639,6 +653,8 @@ struct BandRow: View {
             return .avatar(avatar)
         } else if let mark = brandMark {
             return .brand(mark)
+        } else if let mark = carrier {
+            return .carried(mark)
         } else if let addr = counterpartyFaceAddress ?? walletFaceAddress {
             return .wallet(addr)
         } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
@@ -935,6 +951,13 @@ struct BandRow: View {
             ChatStoredFace(thing: thing, size: DS.Face.rowCircle)
         case .brand(let mark):
             BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
+        case .carried(let mark):
+            // The row's own flag outranks the badge on that corner.
+            let act = WalletActionMark.action(direction: thing.transferDirection,
+                                              sourceRef: thing.sourceRef)
+            WalletMarkView(mark: .kind(thing.kind, symbol: act.symbol, tint: Color(hex: act.hex),
+                                       badge: thing.isFlagged ? nil : mark),
+                           size: DS.Face.rowCircle)
         case .publisher(let publisher):
             RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
         case .thumb(let image, let perishable, let circular):

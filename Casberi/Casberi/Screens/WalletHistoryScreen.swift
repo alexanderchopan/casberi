@@ -182,8 +182,12 @@ private struct WalletHistoryRow: View {
         // what it may read and what it refuses to guess.
         let act = WalletActionMark.action(direction: thing.transferDirection,
                                           sourceRef: thing.sourceRef)
+        // Who carried it rides the glyph's corner, never leads (prd §1685).
         WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged,
-                              symbol: act.symbol, tint: Color(hex: act.hex)),
+                              symbol: act.symbol, tint: Color(hex: act.hex),
+                              badge: ProtocolMark.mark(counterparty: thing.transferCounterparty,
+                                                       venue: thing.transferVenue,
+                                                       source: thing.source)),
                   title: titleText, subtitle: walletLabel, titleWraps: true) {
             VStack(alignment: .trailing, spacing: 1) {
                 // THE AMOUNT IS A FIGURE, NOT PART OF THE SENTENCE (prd §587).

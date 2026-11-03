@@ -359,6 +359,14 @@ struct MoveSentence: View {
                 .frame(width: 16, height: 16)
                 .background(Circle().fill(.white))
                 .accessibilityLabel(Text(verbatim: service))
+        } else if let mark = ProtocolMark.mark(forVenue: service), let image = BrandMark.image(for: mark) {
+            // Every other protocol whose mark ships (Aave, 0xBow, prd §1685).
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 16, height: 16)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: service))
         }
     }
 

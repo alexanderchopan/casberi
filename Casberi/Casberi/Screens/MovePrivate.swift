@@ -448,6 +448,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// The act at the trailing edge, Move's rung; a quiet word beside it
     /// where there is a second thing to do.
     private var foot: some View {
+        VStack(spacing: 0) {
         HStack(alignment: .firstTextBaseline) {
             switch move.stage {
             case .needsFunds(let address):
@@ -480,9 +481,28 @@ struct MovePrivateSentence<Head: View>: View {
                 .disabled(!ready)
             }
         }
+            switch move.stage {
+            case .done, .nothingPrivate: EmptyView()
+            default: credit
+            }
+        }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+    }
+
+    /// **POWERED BY 0XBOW (prd §1685):** the protocol that does the move signs
+    /// the foot as Relay and CoW Swap do, its mark beside its name, while
+    /// there is a move to make.
+    private var credit: some View {
+        HStack(spacing: DS.Space.s1) {
+            Text("Powered by 0xBow")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+            MoveSentence.mark(of: "0xBow").accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s1)
     }
 
     /// Each stage in the foot's own words, as Move's verb says its own.

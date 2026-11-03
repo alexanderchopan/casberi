@@ -41,9 +41,11 @@ enum WalletRowMark {
     case pair(String, String)
     /// A landed thing's own `KindGlyph`. `symbol`/`tint` override the
     /// kind's glyph and hue for a room where the kind says nothing — see
-    /// `WalletActionMark` (prd §516); nil everywhere else.
+    /// `WalletActionMark` (prd §516); nil everywhere else. `badge` is the
+    /// protocol that carried the row, on the glyph's corner (`ProtocolMark`,
+    /// prd §1685); a flag outranks it.
     case kind(ThingKind, flagged: Bool = false, symbol: String? = nil,
-              tint: Color? = nil)
+              tint: Color? = nil, badge: String? = nil)
 }
 
 /// The wallet room's ONE row shape (prd §212, 2026-07-25 — the Cash App pass).
@@ -169,8 +171,9 @@ struct WalletMarkView: View {
             // about which pool you were looking at.
             AssetPairMark(first: first, second: second, size: size * 0.78)
                 .frame(width: size, height: size)
-        case .kind(let kind, let flagged, let symbol, let tint):
+        case .kind(let kind, let flagged, let symbol, let tint, let badge):
             KindGlyph(kind: kind, size: size, tint: tint, symbol: symbol)
+                .protocolBadge(flagged ? nil : badge)
                 .overlay(alignment: .bottomTrailing) {
                     if flagged {
                         Image(systemName: "exclamationmark.triangle.fill")

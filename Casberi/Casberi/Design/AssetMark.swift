@@ -239,3 +239,52 @@ struct AssetPairMark: View {
         .accessibilityLabel("\(first) and \(second)")
     }
 }
+
+/// **A PROTOCOL'S MARK ON THE CORNER OF A ROW'S LEAD (prd §1685).** The
+/// glyph says what the row did; this says who carried it. 14pt, the inline
+/// rung, ringed by the page showing through as `AssetPairMark`'s second disc
+/// is, so it reads as a second thing and draws no line. A name with no
+/// bundled mark draws nothing: `ProtocolMark` only names venues whose mark
+/// ships.
+struct ProtocolBadge: ViewModifier {
+    let mark: String?
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottomTrailing) {
+            if let mark, let image = BrandMark.image(for: mark) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: DS.Mark.inline, height: DS.Mark.inline)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(DS.page, lineWidth: 1.5))
+                    .offset(x: 3, y: 3)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+extension View {
+    /// A protocol's mark on this lead's corner, or nothing (`ProtocolBadge`).
+    func protocolBadge(_ mark: String?) -> some View {
+        modifier(ProtocolBadge(mark: mark))
+    }
+}
+
+/// A protocol's mark against a row's meta line (prd §1685): the inline rung,
+/// before the words that say what it pays. Nothing when no mark ships.
+struct ProtocolInlineMark: View {
+    let mark: String
+
+    var body: some View {
+        if let image = BrandMark.image(for: mark) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: DS.Mark.inline, height: DS.Mark.inline)
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+        }
+    }
+}

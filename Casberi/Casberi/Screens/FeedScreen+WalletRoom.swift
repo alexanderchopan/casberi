@@ -365,38 +365,13 @@ extension FeedScreen {
     /// Safe transaction someone proposed and you have not signed is a power
     /// over your wallet waiting on you — the first group, before Delegations
     /// and Approvals (user: "signatures, delegations, approvals"). The row
-    /// opens the transaction it counts, signed in the app (prd §1684).
+    /// opens that Safe's own queue.
     var walletSignatureWarnings: [WalletWarning] {
         walletLive.warnings.filter { $0.kind == .safe }
     }
 
-    /// **A SIGNATURE ROW OPENS THE SIGNATURE (prd §1684, user: "do both").**
-    /// The Safe's next queued transaction waiting on you (lowest nonce), on its sheet with
-    /// the sign block (§1249); else Safe's own queue; else the Wallet picked
-    /// to Safe, whose box draws the queue (§1048d). Read on the tap, never in
-    /// a body (§628).
-    func walletOpenSignature(_ warning: WalletWarning, upcoming: [Thing]) {
-        let safe = String(warning.id.dropFirst("safe:".count))
-        // The queue's order is its nonce: the next to sign is the lowest.
-        var nonces: [String: Int] = [:]
-        for p in SafeBridge.pendingSnapshot() where WalletWatch.sameAddress(p.safeAddress, safe) {
-            nonces[p.ref] = p.nonce ?? .max
-        }
-        let asks = upcoming.filter { $0.source == SafeBridge.sourceName && nonces[$0.sourceRef ?? ""] != nil }
-        if let next = asks.min(by: {
-            let a = nonces[$0.sourceRef ?? ""] ?? .max, b = nonces[$1.sourceRef ?? ""] ?? .max
-            return a == b ? $0.capturedAt < $1.capturedAt : a < b
-        }) {
-            openThing(next)
-        } else if let action = warning.action, let url = URL(string: action.url) {
-            openExternal(url)
-        } else {
-            chrome.walletScope = RoomAccounts.seatPrefix + SafeBridge.sourceName
-        }
-    }
-
     @ViewBuilder
-    func walletSignaturesSection(upcoming: [Thing]) -> some View {
+    var walletSignaturesSection: some View {
         let waiting = walletSignatureWarnings
         if !waiting.isEmpty {
             // Five rows, then one door (prd §1408).
@@ -408,7 +383,11 @@ extension FeedScreen {
                     needsYouRow(glyph: warning.kind.glyph, critical: false,
                                 title: warning.rowName ?? warning.title,
                                 line: warning.rowLine ?? warning.subtitle) {
-                        walletOpenSignature(warning, upcoming: upcoming)
+                        if let action = warning.action, let url = URL(string: action.url) {
+                            openExternal(url)
+                        } else {
+                            feedSheet = .worthALook
+                        }
                     }
                     .walletListRow()
                 }
@@ -1500,7 +1479,22 @@ extension FeedScreen {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 let symbol = WalletFlow.tokenSymbol(thing.transferAmount ?? "")
-                if let address = thing.counterpartyAddress, !address.isEmpty {
+                // **A PROTOCOL'S ROW LEADS WITH WHAT IT DID (prd §1685).** A
+                // swap's counterparty is a router, whose face is a stranger's
+                // tint, and a deposit's lead was its token; the action glyph
+                // leads and the protocol rides its corner, so its mark is
+                // never read as the token that moved.
+                let carrier = ProtocolMark.mark(counterparty: thing.transferCounterparty,
+                                                venue: thing.transferVenue, source: thing.source)
+                if let carrier, !WalletCards.isSpend(thing), thing.source != SimpleFINShape.source,
+                   !(thing.counterpartyAddress ?? "").isEmpty || !symbol.isEmpty {
+                    let act = WalletActionMark.action(direction: thing.transferDirection,
+                                                      sourceRef: thing.sourceRef)
+                    WalletMarkView(mark: .kind(thing.kind, flagged: thing.isFlagged,
+                                               symbol: act.symbol, tint: Color(hex: act.hex),
+                                               badge: carrier),
+                                   size: DS.Face.list)
+                } else if let address = thing.counterpartyAddress, !address.isEmpty {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
                 } else if WalletCards.isSpend(thing) {
                     // A card spend's subject is the CARD, not the coin it

@@ -233,10 +233,16 @@ extension FeedScreen {
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
-                    Text(verbatim: state)
-                        .dsText(.subhead12)
-                        .foregroundStyle(stateInk)
-                        .lineLimit(1)
+                    // Private money is held by Privacy Pools, its mark before
+                    // the line once it is held (prd §1685); a waiting or
+                    // refused deposit keeps its state word alone.
+                    HStack(spacing: DS.Space.s1) {
+                        if row.kind == .held { ProtocolInlineMark(mark: "privacy-pools") }
+                        Text(verbatim: state)
+                            .dsText(.subhead12)
+                            .foregroundStyle(stateInk)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)

@@ -283,6 +283,7 @@ struct MoveLendSentence<Head: View>: View {
     // MARK: - The foot
 
     private var foot: some View {
+        VStack(spacing: 0) {
         HStack(alignment: .firstTextBaseline) {
             Spacer(minLength: 0)
             switch move.stage {
@@ -300,9 +301,25 @@ struct MoveLendSentence<Head: View>: View {
                 .disabled(!(live && move.units != nil))
             }
         }
+            if case .done = move.stage {} else { credit }
+        }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+    }
+
+    /// **POWERED BY AAVE (prd §1685):** the protocol that does the move signs
+    /// the foot as Relay and CoW Swap do, its mark beside its name, while
+    /// there is a move to make.
+    private var credit: some View {
+        HStack(spacing: DS.Space.s1) {
+            Text("Powered by Aave")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+            MoveSentence.mark(of: "Aave").accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s1)
     }
 
     private var footVerb: String {

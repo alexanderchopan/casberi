@@ -2240,6 +2240,7 @@ harness "Wallet-NFT pure-logic self-test" "wallet-nft self-test" "scripts/wallet
 # ledger, and the default arm claiming a shape for the swaps and self-moves it
 # exists to refuse. No build, sweep or audit can see any of it.
 harness "Wallet action-mark self-test" "wallet action mark" "scripts/wallet-action-mark-selftest.sh" "the wallet action-mark self-test failed — run scripts/wallet-action-mark-selftest.sh"
+harness "Protocol-mark self-test" "protocol mark" "scripts/protocol-mark-selftest.sh" "the protocol-mark self-test failed — run scripts/protocol-mark-selftest.sh"
 
 harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-selftest.sh" "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
 

@@ -95,10 +95,15 @@ extension FeedScreen {
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
-                    Text(verbatim: state)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
+                    // Who holds it, its mark before the rate (prd §1685); the
+                    // token's mark leads, so Aave's never stands for the coin.
+                    HStack(spacing: DS.Space.s1) {
+                        ProtocolInlineMark(mark: "aave")
+                        Text(verbatim: state)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textPrimary)
