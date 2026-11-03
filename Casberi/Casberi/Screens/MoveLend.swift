@@ -54,8 +54,8 @@ struct MoveLendSentence<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
-        // The sheet is whole while a word's choices are open (prd §1681).
-        .onChange(of: open) { _, now in chrome.moveTall = now != nil }
+        // A word's choices make the sheet whole, and it stays whole (prd §1681b).
+        .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
         }

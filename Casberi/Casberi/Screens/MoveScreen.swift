@@ -19,9 +19,10 @@ import UIKit
 /// as a blank's choices open under it. Untitled, because the verb is its
 /// sentence's first word (prd §1681).
 ///
-/// **TWO HEIGHTS (prd §1681):** short at rest, so the sentence stands in
-/// reach of the thumb, and the whole sheet while a word's choices or the
-/// keys are open (`ShellChrome.moveTall`). The sentence is pinned to the
+/// **TWO HEIGHTS (prd §1681, §1681b):** short when Move opens, so the
+/// sentence stands in reach of the thumb; the first word's choices or the
+/// keys make it the whole sheet, and it stays whole until dragged short or
+/// closed (`ShellChrome.moveTall`). The sentence is pinned to the
 /// sheet's top and never moves inside it; the sheet grows. The short height
 /// is fixed, never fitted to the sentence, so a change of verb moves
 /// nothing. Making an account, and its walk, take the whole sheet.

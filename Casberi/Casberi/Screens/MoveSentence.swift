@@ -1041,11 +1041,12 @@ struct MoveSentence: View {
         .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
         // Never closed by a swipe while Face ID or the network has it.
         .interactiveDismissDisabled(stage != nil)
-        // Two heights (prd §1681): the sheet is whole while a word's choices
-        // or the keys are open, short at rest; dragged short, what was open
-        // closes, so a list never stands cut off in the short sheet.
-        .onChange(of: open) { _, now in chrome.moveTall = now != nil || focus != nil }
-        .onChange(of: focus) { _, now in chrome.moveTall = open != nil || now != nil }
+        // Two heights (prd §1681, §1681b): short when Move opens; the first
+        // word's choices or the keys make it whole, and it stays whole —
+        // coming back down at every pick was the jitter. Dragged short, what
+        // was open closes, so a list never stands cut off in the short sheet.
+        .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
+        .onChange(of: focus) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
             guard !tall, open != nil || focus != nil else { return }
             focus = nil
@@ -2183,12 +2184,12 @@ struct MoveSentence: View {
         }
     }
 
-    /// The verbs as Move's list rows (prd §1681): a glyph, the verb, what it
-    /// does; the current one pink.
+    /// The verbs as Move's list rows (prd §1681): a glyph and the verb, no
+    /// line under it (a verb says what it does); the current one pink.
     private var verbList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(offeredVerbs, id: \.self) { v in
-                listRow(title(v), sub: about(v), symbol: glyph(v),
+                listRow(title(v), symbol: glyph(v),
                         picked: v == verb && privateMode == nil && !freshReceive) { pickVerb(v) }
             }
         }
@@ -2215,18 +2216,6 @@ struct MoveSentence: View {
         case .sweep: "tray.and.arrow.down"
         case .deposit: "plus"
         case .lend: "building.columns"
-        }
-    }
-
-    private func about(_ v: Verb) -> String {
-        switch v {
-        case .swap: String(localized: "One coin for another")
-        case .send: String(localized: "To a name or an address")
-        case .receive: String(localized: "Your address")
-        case .buy: String(localized: "Gift cards and top-ups")
-        case .sweep: String(localized: "Small balances into one coin")
-        case .deposit: String(localized: "Dollars into your account")
-        case .lend: String(localized: "On Aave, for a rate")
         }
     }
 

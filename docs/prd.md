@@ -70632,7 +70632,7 @@ Canvas: "Move menus at sentence scale" (https://claude.ai/artifact/1WxTE6xYzUM2M
 
 ## §1681 — The verb is the sentence's first word, a choice a step under the sentence, and Move a short sheet that grows (amends §1679 items 2 and 3; retires §1438a's verbs on their own line and §1442a's one full height; keeps §1442b's sentence that never moves inside the sheet) (user, 2026-11-02, of §1679 on the simulator: "it now looks like the list is larger than the sentence, and also the verbs gosh, it's a lot of scrolling"; on the canvas "Move at the app's scale", of A (verbs wrap at 24) · B (the verb is the first word) · C (verbs as chips): "I think B is great. its the cleanest"; "does the sentence need to be so high up"; "but if the moment someone taps the first verb the sentence moves to the top what is the point? and also how would they see the list of verbs to pick"; "why not just start with a shorter sheet"; "ok") — BUILT, seen on the simulator
 
-1. **The verb is the sentence's first word:** "**Swap** 1 ETH on Base for USDC on Base when". Pink, as every word that changes is; a tap opens the verbs under the sentence as Move's list rows (`verbList`): a glyph, the verb, what it does ("One coin for another", "To a name or an address", "Your address", "Gift cards and top-ups", "Small balances into one coin", "Dollars into your account", "On Aave, for a rate"), A–Z, the current one pink. The verbs' own line and its sideways scroll (§1679 item 2) are deleted.
+1. **The verb is the sentence's first word:** "**Swap** 1 ETH on Base for USDC on Base when". Pink, as every word that changes is; a tap opens the verbs under the sentence as Move's list rows (`verbList`): a glyph and the verb, A–Z, the current one pink, no line under it (§1681a). The verbs' own line and its sideways scroll (§1679 item 2) are deleted.
 2. **Every verb's sentence leads with it:** Lend's "Lend" / "Take back", Send privately's "Send", a fresh Receive's "Receive" are the same word (`verbWord`), and the list opens over their own sentence on the account page. Done, the past tense ("Lent", "Sent") stands in its place and is not a choice; a sentence still reading, or one with nothing to send, keeps the word on a line above it.
 3. **Two exceptions:** a receipt has no verb word (its foot ends it), and a sentence after one Add kept leads with "Then swap" / "Then send" (§1494) rather than a second verb. With nothing anywhere, the sentence is "Swap needs money first." (was "Nothing to swap yet."), so the verb still opens Receive.
 4. **The first Move opens on the verbs** (`move.verbsSeen`), so every verb is seen once; after that it opens at rest.
@@ -70646,3 +70646,11 @@ Canvas: "Move menus at sentence scale" (https://claude.ai/artifact/1WxTE6xYzUM2M
 **Mac half (§1402).** Catalyst has no sheet heights, so Move is one height there and the verb word and lists are the same views.
 
 Canvas: "Move at the app's scale" (https://claude.ai/artifact/Tc86ZTsfsKYh4e1ZidsjUL).
+
+## §1681a — A verb in the list has no line under it (amends §1681 item 1) (user, 2026-11-02, of "One coin for another", "Small balances into one coin" and the rest: "we never say coin we always say token and we don't need any of the subtext really do we?")
+
+The verbs list draws a glyph and the verb alone: a verb says what it does, and the lines repeated it (two of them in a word Casberi never uses, "coin" for "token"). `about(_:)` is deleted.
+
+## §1681b — Once the sheet grows it stays grown (amends §1681 item 6) (user, 2026-11-02: "once a user picks the verb the sheet should stay at the top"; "it shouldn't come back down that is what makes it jittery")
+
+Move opens short. The first word's choices, or the keys, make it the whole sheet, and it stays whole for the rest of that Move: closing a list, picking a verb or a token, leaves it where it is, since dropping to short only to rise again at the next word is the movement §1681 set out to remove. Only a drag to short (which closes what was open) or closing Move brings it back down; the next Move opens short again. The sentence is pinned to the sheet's top throughout, so it stands in one place while you fill it.
