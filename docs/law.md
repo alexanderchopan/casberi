@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1816 of 1888 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1817 of 1889 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
@@ -1924,7 +1924,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675)
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
-- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673)
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
@@ -2064,6 +2064,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission…
+- §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell…
 
 ## Dead rulings → what replaced them (generated)
 

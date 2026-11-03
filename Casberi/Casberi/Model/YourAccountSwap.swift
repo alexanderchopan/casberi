@@ -3,7 +3,8 @@ import Foundation
 /// **YOUR ACCOUNT'S SWAP, STRAIGHT TO THE EXCHANGES (prd §1539, §1542;
 /// replacing §1440's Relay).** No middleman: the phone asks every pool it
 /// knows on the network itself — Uniswap v3 on Base, Ethereum and Robinhood
-/// Chain; Aerodrome's Slipstream and v2 pools on Base — through the account's
+/// Chain; Uniswap v4 on Ethereum (§1678); Aerodrome's Slipstream and v2 pools
+/// on Base; Sushi on Robinhood — through the account's
 /// own node, takes the best output, and writes the swap's calls itself. The
 /// account signs those calls in its own operation, beside any sends, so Add
 /// and Sweep batch swaps as before.
@@ -58,9 +59,19 @@ enum YourAccountSwap {
         /// same call as Uniswap's), swapped through Sushi's RedSnwapper
         /// handing the tokens to its RouteProcessor (`Venue.executor`).
         case sushi
+        /// Uniswap v4 (prd §1678): V4Quoter and the Universal Router; a pool
+        /// is one of the venue's pinned keys (`Venue.pools`), the step its
+        /// index. Its pools hold ETH itself, never WETH (`Venue.wethIsETH`),
+        /// and the router is handed what it sells rather than approved.
+        case uniswapV4
+    }
 
-        /// Whether a pool's fee is its tier, the step itself, read off nothing.
-        var feeIsTier: Bool { self == .uniswap || self == .sushi }
+    /// One Uniswap v4 pool's key past its two tokens: its fee in millionths,
+    /// its tick spacing, and its hook (the zero address for none).
+    struct V4Pool: Equatable, Hashable, Sendable {
+        let fee: Int
+        let tickSpacing: Int
+        var hooks: String = YourAccountSwap.native
     }
 
     /// One place to swap on one network: who quotes, who swaps, which pools.
@@ -76,10 +87,20 @@ enum YourAccountSwap {
         /// Sushi's RouteProcessor, which the router hands the tokens to and
         /// which swaps them in the pools; nil for every other venue.
         var executor: String? = nil
+        /// Uniswap v4's pinned pool keys, a step indexing them; empty for
+        /// every other venue.
+        var pools: [V4Pool] = []
+        /// The book's WETH, which this venue's pools hold as ETH itself (the
+        /// zero address); nil for every venue that swaps WETH.
+        var wethIsETH: String? = nil
+        /// A token as this venue's pools name it.
+        func currency(_ token: String) -> String { token == wethIsETH ? YourAccountSwap.native : token }
+        /// Whether this venue can be asked about `amount`: v4 takes a uint128.
+        func takes(_ amount: String) -> Bool { kind != .uniswapV4 || YourAccountSwap.fits128(amount) }
         /// The exchange's name, as the sentence says it.
         var exchange: String {
             switch kind {
-            case .uniswap: "Uniswap"
+            case .uniswap, .uniswapV4: "Uniswap"
             case .sushi: "Sushi"
             case .slipstream, .aerodromeV2: "Aerodrome"
             }
@@ -149,6 +170,15 @@ enum YourAccountSwap {
     /// Ethereum deployments": UniswapV3Factory 0x1F98431c…, QuoterV2
     /// 0x61fFE014…, SwapRouter02 0x68b34658…).
     ///
+    /// Uniswap v4 from the same page ("v4 Ethereum deployments": PoolManager
+    /// 0x00000000…4444c5dc, V4Quoter 0x52f0e24d…, UniversalRouter
+    /// 0x66a9893c…), each one's `poolManager()` read on chain 2026-11-02 (prd
+    /// §1678). Its pools are keys, not a factory's: the four standard tiers
+    /// with no hook, and the pools measured where v3 is thin — AZTEC/ETH
+    /// 0.05% (hook 0xd53006d1…, beforeInitialize and beforeSwap only, so it
+    /// can gate a swap and never change one; ~$12M against v3's $7K 1% pool,
+    /// where $500 of USDC bought 6.7% less AZTEC).
+    ///
     /// Slippage 0.3%, tighter than Base: Ethereum's public mempool is where a
     /// swap is sandwiched, and what a sandwich can take is exactly the room
     /// between the quote and the minimum. A fill that moves further fails,
@@ -161,8 +191,22 @@ enum YourAccountSwap {
             Venue(kind: .uniswap, quoter: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
                   router: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
                   factory: "0x1f98431c8ad98523631ae4a59f267346ea31f984", steps: uniswapFees),
+            Venue(kind: .uniswapV4, quoter: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
+                  router: "0x66a9893cc07d91d95644aedd05d03f95e1dba8af",
+                  factory: "0x000000000004444c5dc75cb358380d2e3de08a90", steps: Array(ethereumV4Pools.indices),
+                  pools: ethereumV4Pools, wethIsETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
         ],
         slippageBps: 30)
+
+    /// Uniswap's standard v4 pools: each fee tier at its v3 tick spacing, no hook.
+    static let v4Standard = [V4Pool(fee: 100, tickSpacing: 1), V4Pool(fee: 500, tickSpacing: 10),
+                             V4Pool(fee: 3000, tickSpacing: 60), V4Pool(fee: 10000, tickSpacing: 200)]
+
+    /// Ethereum's v4 pools: the standard four, then AZTEC/ETH's key, read off
+    /// the PoolManager's `Initialize` for pool 0xce2899b1….
+    static let ethereumV4Pools = v4Standard + [
+        V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080"),
+    ]
 
     /// **Robinhood Chain.** Uniswap v3 from Uniswap's deployments page ("v3
     /// Robinhood Chain deployments": UniswapV3Factory 0x1f7d7550…, QuoterV2
@@ -316,6 +360,13 @@ enum YourAccountSwap {
             case .aerodromeV2:
                 return (venue.quoter, YourAccountSwap.call("getAmountsOut(uint256,(address,address,bool,address)[])",
                                                            [amount, .array([v2Route(h, venue)])]))
+            case .uniswapV4:
+                guard venue.pools.indices.contains(h.step) else { return nil }
+                let p = venue.pools[h.step], a = venue.currency(h.from), b = venue.currency(h.to)
+                let (c0, c1) = a < b ? (a, b) : (b, a)
+                return (venue.quoter, YourAccountSwap.call("quoteExactInputSingle(((address,address,uint24,int24,address),bool,uint128,bytes))",
+                                                           [.tuple([.tuple([.address(c0), .address(c1), .uint(p.fee), .uint(p.tickSpacing), .address(p.hooks)]),
+                                                                    .uint(a == c0 ? 1 : 0), amount, .bytes([])])]))
             }
         }
     }
@@ -338,7 +389,7 @@ enum YourAccountSwap {
         guard s != b else { return [] }
         let hubs = book.hubs.filter { $0 != s && $0 != b }
         var asks: [Ask] = []
-        for venue in book.venues {
+        for venue in book.venues where venue.takes(amount) {
             for step in venue.steps {
                 asks.append(Ask(venue: venue, hops: [Hop(from: s, to: b, step: step)], amount: amount))
                 for hub in hubs {
@@ -363,7 +414,7 @@ enum YourAccountSwap {
                 best.append((ask.venue, ask.hop.to, ask, out))
             }
         }
-        return best.flatMap { leg in
+        return best.filter { $0.venue.takes($0.out) }.flatMap { leg in
             leg.venue.steps.map { step in
                 Ask(venue: leg.venue, hops: leg.ask.hops + [Hop(from: leg.hub, to: b, step: step)], amount: leg.out)
             }
@@ -398,7 +449,7 @@ enum YourAccountSwap {
     static func amountOut(_ kind: Kind, ok: Bool, data: [UInt8]) -> String? {
         guard ok, data.count >= 32 else { return nil }
         switch kind {
-        case .uniswap, .slipstream, .sushi:
+        case .uniswap, .slipstream, .sushi, .uniswapV4:
             return SafeCalldata.decimal(Array(data[0..<32]))
         case .aerodromeV2:
             guard let offset = small(data, at: 0), let count = small(data, at: offset), count > 0,
@@ -479,6 +530,14 @@ enum YourAccountSwap {
 
     static func isPositive(_ units: String) -> Bool {
         !units.isEmpty && units.allSatisfy(\.isNumber) && units.contains { $0 != "0" }
+    }
+
+    /// Whether `units` fits a uint128, as v4's amounts must.
+    static func fits128(_ units: String) -> Bool {
+        let max = "340282366920938463463374607431768211455"
+        let n = String(units.drop { $0 == "0" })
+        guard units.allSatisfy(\.isNumber), !units.isEmpty else { return false }
+        return n.count < max.count || (n.count == max.count && n <= max)
     }
 
     // MARK: - The swap's calls
@@ -686,13 +745,49 @@ enum YourAccountSwap {
                                 .uint(0), .uint(0)])
             data = call("snwap(address,uint256,address,address,uint256,address,bytes)",
                         [tokenIn, amountIn, .address(account), tokenOut, least, .address(executor), .bytes(process)])
+        case .uniswapV4:
+            // One V4_SWAP command: the swap along the pinned keys with the
+            // minimum in it, SETTLE paying the pool from what the router was
+            // handed (or the ETH sent with the call), TAKE paying everything
+            // bought to the account by name — so Across's handler, running
+            // it, pays the account too.
+            guard route.hops.allSatisfy({ venue.pools.indices.contains($0.step) }),
+                  writable(route, sellsETH: sellsETH, buysETH: buysETH),
+                  fits128(amount), fits128(minimum) else { return nil }
+            let tokenIn: Arg = .address(venue.currency(first.from))
+            let path: Arg = .array(route.hops.map { h in
+                let p = venue.pools[h.step]
+                return .tuple([.address(venue.currency(h.to)), .uint(p.fee), .uint(p.tickSpacing), .address(p.hooks), .bytes([])])
+            })
+            let swap = encode([.tuple([tokenIn, path, amountIn, least])])
+            let settle = encode([tokenIn, amountIn, .uint(0)])
+            let take = encode([.address(venue.currency(last.to)), .address(account), .uint(0)])
+            let input = encode([.bytes(v4Actions), .array([.bytes(swap), .bytes(settle), .bytes(take)])])
+            data = call("execute(bytes,bytes[],uint256)", [.bytes([v4SwapCommand]), .array([.bytes(input)]), .uint(deadline)])
         }
         var out: [Call] = []
         if !sellsETH {
-            out.append(Call(to: first.from, value: "0", data: approveSelector + YourAccount.w(router) + SafeABI.word(uint256: amount)!))
+            // v4's router is handed exactly what is sold, in the same
+            // transaction, and leaves no allowance behind; every other
+            // router is approved exactly that.
+            out.append(Call(to: first.from, value: "0", data: (venue.kind == .uniswapV4 ? transferSelector : approveSelector)
+                            + YourAccount.w(router) + SafeABI.word(uint256: amount)!))
         }
         out.append(Call(to: router, value: sellsETH ? amount : "0", data: data))
         return out
+    }
+
+    /// The Universal Router's V4_SWAP command, and the v4 actions it runs:
+    /// SWAP_EXACT_IN, SETTLE, TAKE (v4-periphery `Actions.sol`).
+    static let v4SwapCommand: UInt8 = 0x10
+    static let v4Actions: [UInt8] = [0x07, 0x0b, 0x0e]
+
+    /// Whether `route` can be written for what is really sold and bought: a
+    /// v4 pool holds ETH, so WETH itself in or out is not its to swap. Every
+    /// other venue wraps and unwraps through WETH.
+    static func writable(_ route: Route, sellsETH: Bool, buysETH: Bool) -> Bool {
+        guard let weth = route.venue.wethIsETH else { return true }
+        return (route.hops.first?.from != weth || sellsETH) && (route.hops.last?.to != weth || buysETH)
     }
 
     /// Sushi's word for the network's own coin, in `snwap` and the route.
@@ -736,17 +831,35 @@ enum YourAccountSwap {
     // MARK: - The check
 
     /// **NOTHING SIGNED BUT WHAT THESE RULES ALLOW.** The quote's calls, if
-    /// every one is a router pinned for `chainId` or the sold token's exact
-    /// approval to one, ETH leaves only when ETH is sold and only the amount
-    /// sold, and there is exactly one swap; nil otherwise. An `approve` is
-    /// returned apart, so a batch can approve each token once for the sum.
+    /// every one is a router pinned for `chainId`, the sold token's exact
+    /// approval to one, or (Uniswap v4, prd §1678) the sold token's exact
+    /// hand-over to a pinned v4 router just before it swaps; ETH leaves only
+    /// when ETH is sold and only the amount sold, and there is exactly one
+    /// swap; nil otherwise. An `approve` is returned apart, so a batch can
+    /// approve each token once for the sum; a hand-over stays in the calls,
+    /// in front of its swap.
     static func checked(_ quote: Quote, sell: Op.Token, amount: String, chainId: Int)
         -> (approvals: [(token: String, spender: String, amount: String)], calls: [Call])? {
         let pinned = routers(chainId)
+        let handed = Set(book(chainId)?.venues.filter { $0.kind == .uniswapV4 }.map(\.router) ?? [])
         guard quote.sellAmount == amount, !pinned.isEmpty else { return nil }
         var approvals: [(String, String, String)] = []
+        var handOvers: [String] = []
         var calls: [Call] = []
+        var swaps = 0
         for call in quote.calls {
+            if call.data.starts(with: transferSelector) {
+                // transfer(router, amount) of the sold token, to a pinned v4
+                // router, for exactly what is sold (before the swap: the
+                // swap must be the last call).
+                guard let contract = sell.contract?.lowercased(), call.to.lowercased() == contract,
+                      call.value == "0", call.data.count == 4 + 64,
+                      let to = address(fromWord: Array(call.data[4..<36])), handed.contains(to),
+                      case let units = SafeCalldata.decimal(Array(call.data[36..<68])), units == amount else { return nil }
+                handOvers.append(to)
+                calls.append(call)
+                continue
+            }
             if call.data.starts(with: approveSelector) {
                 // approve(spender, amount) on the sold token, to a pinned
                 // router, for exactly what is sold.
@@ -762,13 +875,17 @@ enum YourAccountSwap {
             // ETH leaves only when ETH is sold, and only the amount sold.
             guard call.value == (sell.contract == nil ? amount : "0") else { return nil }
             calls.append(call)
+            swaps += 1
         }
-        guard calls.count == 1 else { return nil }
-        // A token sold is approved once, to the router that swaps it.
+        guard swaps == 1, let swap = calls.last?.to.lowercased() else { return nil }
+        // A token sold is approved once, or handed over once, to the router
+        // that swaps it.
         if sell.contract == nil {
-            guard approvals.isEmpty else { return nil }
+            guard approvals.isEmpty, handOvers.isEmpty else { return nil }
+        } else if handOvers.isEmpty {
+            guard approvals.count == 1, approvals[0].1 == swap else { return nil }
         } else {
-            guard approvals.count == 1, approvals[0].1 == calls[0].to.lowercased() else { return nil }
+            guard approvals.isEmpty, handOvers == [swap] else { return nil }
         }
         return (approvals, calls)
     }
@@ -815,7 +932,7 @@ enum YourAccountSwap {
     /// the pool's own or whose route names its pools; nil for Uniswap.
     static func poolCall(_ venue: Venue, _ hop: Hop) -> (to: String, data: [UInt8])? {
         switch venue.kind {
-        case .uniswap: nil
+        case .uniswap, .uniswapV4: nil
         case .sushi:
             (venue.factory, call("getPool(address,address,uint24)", [.address(hop.from), .address(hop.to), .uint(hop.step)]))
         case .slipstream:
@@ -828,7 +945,7 @@ enum YourAccountSwap {
     /// The question that reads a found pool's fee.
     static func feeCall(_ venue: Venue, _ hop: Hop, pool: String) -> (to: String, data: [UInt8])? {
         switch venue.kind {
-        case .uniswap, .sushi: nil
+        case .uniswap, .sushi, .uniswapV4: nil
         case .slipstream: (pool, YourAccount.sel("fee()"))
         case .aerodromeV2: (venue.factory, call("getFee(address,bool)", [.address(pool), .uint(hop.step == 1 ? 1 : 0)]))
         }
@@ -863,6 +980,17 @@ enum YourAccountSwap {
         return NSDecimalNumber(decimal: r).stringValue + "%"
     }
 
+    /// Each pool's fee in millionths: a Uniswap v3 or Sushi pool's is its
+    /// tier, a v4 pool's its pinned key's, Aerodrome's whatever was read.
+    static func fees(_ route: Route) -> [Int] {
+        let v = route.venue
+        switch v.kind {
+        case .uniswap, .sushi: return route.hops.map(\.step)
+        case .uniswapV4: return route.hops.compactMap { v.pools.indices.contains($0.step) ? v.pools[$0.step].fee : nil }
+        case .slipstream, .aerodromeV2: return route.fees
+        }
+    }
+
     /// "On Uniswap"
     static func on(_ exchange: String) -> String { String(localized: "On \(exchange)") }
 
@@ -872,7 +1000,7 @@ enum YourAccountSwap {
     /// pool fee is part of the price: there is no middleman's fee to add.
     static func words(_ route: Route) -> String {
         let name = route.venue.exchange
-        let fees = route.venue.kind.feeIsTier ? route.hops.map(\.step) : route.fees
+        let fees = Self.fees(route)
         guard fees.count == route.hops.count, !fees.isEmpty else { return on(name) }
         if fees.count == 1 { return String(localized: "On \(name) · \(percent(pips: fees[0])) pool fee") }
         let list = fees.map { percent(pips: $0) }.formatted(.list(type: .and))
@@ -885,7 +1013,7 @@ enum YourAccountSwap {
     /// be read. The row's name ("Swaps", "Round-up") says what it is.
     static func brief(_ route: Route) -> String {
         let name = route.venue.exchange
-        let fees = route.venue.kind.feeIsTier ? route.hops.map(\.step) : route.fees
+        let fees = Self.fees(route)
         guard fees.count == route.hops.count, !fees.isEmpty else { return name }
         return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")
     }

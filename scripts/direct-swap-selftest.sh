@@ -25,6 +25,14 @@
 #   • A MULTICALL ANSWER MISREAD: a real `aggregate3` answer from Base, read
 #     back to the amounts the independent decoder read.
 #   • AN OPEN-LIST ROW TAKEN ON FAITH: a malformed address or decimals kept.
+#   • UNISWAP V4 ON ETHEREUM (prd §1678): the quoter's and the Universal
+#     Router's bytes against `fixtures/direct-swap/uniswap-v4-ethereum.json`,
+#     written by an independent encoder and SIMULATED ON ETHEREUM in one
+#     block (USDC to AZTEC through ETH, ETH in, ETH out); the sold token
+#     HANDED to the router, exactly, just before the swap, never approved,
+#     never to another router; TAKE paying the account by name; WETH itself
+#     never written into a pool that holds ETH; an amount past uint128 never
+#     asked.
 #   • A POOL FEE SAID TO FOUR PLACES (prd §1545): rounded to two, trailing
 #     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
 #   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1545): a buy on the send's own
@@ -52,7 +60,7 @@ WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 TYPED="Casberi/Casberi/Model/SafeTypedData.swift"
 ROUNDUPS="Casberi/Casberi/Model/RoundUps.swift"
 FIXTURES="$PWD/scripts/fixtures/direct-swap"
-for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json" "$FIXTURES/sushi-robinhood.json"; do
+for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json" "$FIXTURES/sushi-robinhood.json" "$FIXTURES/uniswap-v4-ethereum.json"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -86,7 +94,8 @@ check(base.venues.map(\.router) == ["0x2626664c2603336e57b271c5c0b26f421741e481"
                                     "0xcbbb8035cac7d4b3ca7abb74cf7bdf900215ce0d", "0x698cb2b6dd822994581fea6ea4fc755d1363a92f",
                                     "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43"],
       "Base's routers are not the five read on chain (Uniswap SwapRouter02, Slipstream ×3, Aerodrome v2)")
-check(S.ethereum.venues.map(\.router) == ["0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45"], "Ethereum's router is not Uniswap's SwapRouter02")
+check(S.ethereum.venues.map(\.router) == ["0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45", "0x66a9893cc07d91d95644aedd05d03f95e1dba8af"],
+      "Ethereum's routers are not Uniswap's SwapRouter02 and its Universal Router (v4, prd §1678)")
 check(S.robinhood.venues.map(\.router) == ["0xcaf681a66d020601342297493863e78c959e5cb2", "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a"],
       "Robinhood Chain's routers are not Uniswap's SwapRouter02 and Sushi's RedSnwapper there")
 check(S.robinhood.venues.map(\.kind) == [.uniswap, .sushi]
@@ -234,6 +243,94 @@ check(S.words(S.Route(venue: sushi, hops: [S.Hop(from: "a", to: "b", step: 10000
 let sushiHop = S.Hop(from: S.robinhood.weth, to: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", step: 500)
 check(S.poolCall(sushi, sushiHop)?.to == sushi.factory && S.feeCall(sushi, sushiHop, pool: sushi.factory) == nil,
       "Sushi's pools are not found on its factory, or its fee is read off the pool rather than the tier")
+
+// ── Uniswap v4 on Ethereum, byte for byte against simulated vectors (prd §1678) ──
+let v4Fixture = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: dir + "/uniswap-v4-ethereum.json"))) as! [String: Any]
+let eth = S.ethereum
+let v4 = eth.venues[1]
+let v4Account = v4Fixture["account"] as! String, v4Deadline = v4Fixture["deadline"] as! Int
+let aztec = "0xa27ec0006e59f245217ff08cd52a7e8b169e62d2"
+check(v4.kind == .uniswapV4 && v4.quoter == "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203"
+      && v4.factory == "0x000000000004444c5dc75cb358380d2e3de08a90" && v4.wethIsETH == eth.weth && v4.steps == Array(v4.pools.indices),
+      "Ethereum's v4 venue is not V4Quoter and the PoolManager, its steps its pinned keys, its WETH held as ETH")
+check(Array(v4.pools.prefix(4)) == S.v4Standard && S.v4Standard.map(\.fee) == S.uniswapFees && S.v4Standard.map(\.tickSpacing) == [1, 10, 60, 200]
+      && S.v4Standard.allSatisfy { $0.hooks == S.native }
+      && v4.pools.last == S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080"),
+      "Ethereum's v4 keys are not the four standard pools and AZTEC/ETH's hooked one read off the PoolManager")
+check(S.exchange(ofRouter: v4.router) == "Uniswap" && eth.venues.first?.kind == .uniswap, "the Universal Router is not named Uniswap, or v4 leads v3 in the book's order")
+let v4Ask = v4Fixture["ask"] as! [String: Any]
+let askCall = S.Ask(venue: v4, hops: [S.Hop(from: v4Ask["sell"] as! String, to: v4Ask["buy"] as! String, step: v4Ask["step"] as! Int)],
+                    amount: v4Ask["amount"] as! String).call
+check(askCall?.to == v4.quoter && askCall.map { SafeABI.hex($0.data) } == v4Ask["request"] as! String,
+      "v4's quote question is not the bytes Ethereum answered (its key sorted, ETH as the zero address)")
+var v4Quotes: [S.Quote] = []
+for v in v4Fixture["vectors"] as! [[String: Any]] {
+    let name = v["name"] as! String
+    let hops = (v["hops"] as! [[Any]]).map { S.Hop(from: $0[0] as! String, to: $0[2] as! String, step: $0[1] as! Int) }
+    let want = (v["calls"] as! [[String: String]]).map { S.Call(to: $0["to"]!, value: $0["value"]!, data: SafeABI.hexBytes($0["data"]!)!) }
+    let route = S.Route(venue: v4, hops: hops)
+    let sellsETH = v["sellsETH"] as! Bool, buysETH = v["buysETH"] as! Bool, amount = v["amount"] as! String
+    let got = S.calls(route, in: eth, sellsETH: sellsETH, buysETH: buysETH, amount: amount, minimum: v["minimum"] as! String,
+                      account: v4Account, deadline: v4Deadline)
+    check(got == want, "\(name): v4's calls are not the simulated bytes")
+    let sold = sellsETH ? YourAccountOp.eth : YourAccountOp.Token(symbol: "X", decimals: 18, contract: hops[0].from)
+    let quote = S.Quote(sellAmount: amount, buyAmount: v["quoted"] as! String, minimumBuy: v["minimum"] as! String, route: route, calls: want)
+    let passed = S.checked(quote, sell: sold, amount: amount, chainId: 1)
+    check(passed != nil && passed?.approvals.isEmpty == true && passed?.calls == want, "\(name): v4's calls do not pass the check whole, in order, with no approval")
+    check(S.checked(quote, sell: sold, amount: amount, chainId: 8453) == nil, "\(name): Ethereum's Universal Router passes the check on Base")
+    v4Quotes.append(quote)
+}
+// The hand-over: exactly what is sold, to the router that swaps it, before it.
+let usdcEth = YourAccountOp.Token(symbol: "USDC", decimals: 6, contract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+let handQ = v4Quotes[0], hand = handQ.calls[0], v4Swap = handQ.calls[1]
+func v4Refused(_ calls: [S.Call], _ why: String, sell: YourAccountOp.Token = usdcEth) {
+    let q = S.Quote(sellAmount: handQ.sellAmount, buyAmount: handQ.buyAmount, minimumBuy: handQ.minimumBuy, route: handQ.route, calls: calls)
+    check(S.checked(q, sell: sell, amount: handQ.sellAmount, chainId: 1) == nil, why)
+}
+let units = SafeABI.word(uint256: handQ.sellAmount)!
+v4Refused([S.Call(to: hand.to, value: "0", data: S.transferSelector + YourAccount.w(v4.router) + SafeABI.word(uint256: "500000001")!), v4Swap],
+          "a hand-over of more than is sold passes")
+v4Refused([S.Call(to: hand.to, value: "0", data: S.transferSelector + YourAccount.w(eth.venues[0].router) + units), v4Swap],
+          "a hand-over to a router that does not swap it passes")
+v4Refused([S.Call(to: hand.to, value: "0", data: S.transferSelector + YourAccount.w("0x000000000000000000000000000000000000dead") + units), v4Swap],
+          "a hand-over to anyone passes")
+v4Refused([S.Call(to: aztec, value: "0", data: hand.data), v4Swap], "a hand-over of another token passes")
+v4Refused([v4Swap, hand], "a hand-over after the swap passes")
+v4Refused([v4Swap], "a v4 swap of a token with nothing handed over passes")
+v4Refused([hand, hand, v4Swap], "two hand-overs pass")
+v4Refused([S.Call(to: hand.to, value: "0", data: S.approveSelector + YourAccount.w(v4.router) + units), hand, v4Swap],
+          "a hand-over and an approval both pass")
+v4Refused([S.Call(to: hand.to, value: "1", data: hand.data), v4Swap], "a hand-over sending ETH passes")
+let v3TokenRoute = S.Route(venue: eth.venues[0], hops: [S.Hop(from: usdcEth.contract!, to: aztec, step: 10000)])
+let v3Calls = S.calls(v3TokenRoute, in: eth, sellsETH: false, buysETH: false, amount: "500000000", minimum: "1", account: v4Account, deadline: v4Deadline)!
+check(v3Calls[0].data.starts(with: S.approveSelector)
+      && S.checked(S.Quote(sellAmount: "500000000", buyAmount: "2", minimumBuy: "1", route: v3TokenRoute,
+                           calls: [S.Call(to: hand.to, value: "0", data: S.transferSelector + YourAccount.w(eth.venues[0].router) + units), v3Calls[1]]),
+                   sell: usdcEth, amount: "500000000", chainId: 1) == nil,
+      "v3 is handed its token instead of approved, or a hand-over to v3's router passes")
+// WETH itself never goes into, or comes out of, a pool that holds ETH.
+let wethIn = S.Route(venue: v4, hops: [S.Hop(from: eth.weth, to: aztec, step: 4)])
+let wethOut = S.Route(venue: v4, hops: [S.Hop(from: aztec, to: eth.weth, step: 4)])
+check(!S.writable(wethIn, sellsETH: false, buysETH: false) && S.writable(wethIn, sellsETH: true, buysETH: false)
+      && !S.writable(wethOut, sellsETH: false, buysETH: false) && S.writable(wethOut, sellsETH: false, buysETH: true)
+      && S.writable(S.Route(venue: eth.venues[0], hops: wethIn.hops), sellsETH: false, buysETH: false),
+      "WETH itself is written into a v4 pool that holds ETH, or a v3 WETH route is passed over")
+check(S.calls(wethIn, in: eth, sellsETH: false, buysETH: false, amount: "1000", minimum: "1", account: v4Account, deadline: v4Deadline) == nil
+      && S.calls(wethOut, in: eth, sellsETH: false, buysETH: false, amount: "1000", minimum: "1", account: v4Account, deadline: v4Deadline) == nil,
+      "a v4 swap of WETH itself was written")
+// v4's amounts are uint128.
+let max128 = "340282366920938463463374607431768211455", over128 = "340282366920938463463374607431768211456"
+check(S.fits128(max128) && S.fits128("0" + max128) && !S.fits128(over128) && !S.fits128("") && !S.fits128("1x") && S.fits128("0"),
+      "a uint128 is not told from a wider number")
+let ethFirst = S.firstRound(eth, sell: usdcEth.contract!, buy: aztec, amount: "500000000")
+check(ethFirst.count == 18 && ethFirst.filter { $0.venue.kind == .uniswapV4 }.count == 10,
+      "USDC for AZTEC on Ethereum does not ask v3's 4 pools and v4's 5, straight across and into WETH: \(ethFirst.count)")
+check(S.firstRound(eth, sell: usdcEth.contract!, buy: aztec, amount: over128).allSatisfy { $0.venue.kind != .uniswapV4 },
+      "v4 is asked about an amount past uint128")
+check(S.calls(wethIn, in: eth, sellsETH: true, buysETH: false, amount: over128, minimum: "1", account: v4Account, deadline: v4Deadline) == nil,
+      "a v4 swap past uint128 was written")
+check(S.words(handQ.route!) == "On Uniswap · 0.05% and 0.05% pool fees" && S.brief(handQ.route!) == "Uniswap · 0.05% + 0.05%",
+      "a v4 route's pools are not said with their keys' fees: \(S.words(handQ.route!))")
 
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
@@ -538,7 +635,7 @@ mutate "a router address typo'd in the book" "$SWAP" \
 mutate "the check stops asking whether a call's contract is pinned" "$SWAP" \
   'guard pinned.contains(call.to.lowercased()) else { return nil }' 'guard !call.to.isEmpty else { return nil }'
 mutate "the check takes an approval to any pinned router" "$SWAP" \
-  'guard approvals.count == 1, approvals[0].1 == calls[0].to.lowercased() else { return nil }' 'guard approvals.count == 1 else { return nil }'
+  'guard approvals.count == 1, approvals[0].1 == swap else { return nil }' 'guard approvals.count == 1 else { return nil }'
 mutate "the check stops reading the approved amount" "$SWAP" \
   'SafeCalldata.decimal(Array(call.data[36..<68])) == amount else { return nil }' 'call.data.count > 0 else { return nil }'
 mutate "ETH may leave with any value" "$SWAP" \
@@ -548,7 +645,7 @@ mutate "Sushi keeps the surplus over the minimum" "$SWAP" \
 mutate "a Sushi pool swaps the wrong way round" "$SWAP" \
   'let zeroForOne: UInt8 = hop.from.lowercased() < hop.to.lowercased() ? 1 : 0' 'let zeroForOne: UInt8 = hop.from.lowercased() < hop.to.lowercased() ? 0 : 1'
 mutate "two swap calls pass as one" "$SWAP" \
-  'guard calls.count == 1 else { return nil }' 'guard !calls.isEmpty else { return nil }'
+  'guard swaps == 1, let swap = calls.last?.to.lowercased() else { return nil }' 'guard swaps >= 1, let swap = calls.last?.to.lowercased() else { return nil }'
 mutate "the minimum keeps the whole quote" "$SWAP" \
   'return divided(times(quoted, 10_000 - bps), by: 10_000)' 'return divided(times(quoted, 10_000), by: 10_000)'
 mutate "the minimum rounds up" "$SWAP" \
@@ -560,7 +657,7 @@ mutate "Slipstream's unwrap pays the router nothing" "$SWAP" \
 mutate "the deadline is dropped from Uniswap's call" "$SWAP" \
   'data = call("multicall(uint256,bytes[])", [.uint(deadline), .array(inner)])' 'data = call("multicall(uint256,bytes[])", [.uint(0), .array(inner)])'
 mutate "the approval is written for the minimum, not the amount" "$SWAP" \
-  'approveSelector + YourAccount.w(router) + SafeABI.word(uint256: amount)!' 'approveSelector + YourAccount.w(router) + SafeABI.word(uint256: minimum)!'
+  '+ YourAccount.w(router) + SafeABI.word(uint256: amount)!))' '+ YourAccount.w(router) + SafeABI.word(uint256: minimum)!))'
 mutate "a multi-pool path loses its fee bytes' order" "$SWAP" \
   'out += [UInt8(step >> 16 & 0xFF), UInt8(step >> 8 & 0xFF), UInt8(step & 0xFF)]' 'out += [UInt8(step & 0xFF), UInt8(step >> 8 & 0xFF), UInt8(step >> 16 & 0xFF)]'
 mutate "a dynamic value's offset counts from the wrong place" "$SWAP" \
@@ -597,6 +694,32 @@ mutate "Details' swap row says the whole sentence again" "$SWAP" \
   'return name + " · " + fees.map { percent(pips: $0) }.joined(separator: " + ")' 'return words(route)'
 mutate "Ethereum swaps with Base's looser slippage" "$SWAP" \
   '        slippageBps: 30)' '        slippageBps: 50)'
+mutate "v4's router is approved rather than handed what it sells" "$SWAP" \
+  '(venue.kind == .uniswapV4 ? transferSelector : approveSelector)' '(approveSelector)'
+mutate "v4's TAKE pays whoever called, not the account" "$SWAP" \
+  'let take = encode([.address(venue.currency(last.to)), .address(account), .uint(0)])' 'let take = encode([.address(venue.currency(last.to)), .address("0x0000000000000000000000000000000000000001"), .uint(0)])'
+mutate "v4's SETTLE pulls from the account (Permit2) instead of what was handed over" "$SWAP" \
+  'let settle = encode([tokenIn, amountIn, .uint(0)])' 'let settle = encode([tokenIn, amountIn, .uint(1)])'
+mutate "the deadline is dropped from v4's call" "$SWAP" \
+  '.array([.bytes(input)]), .uint(deadline)])' '.array([.bytes(input)]), .uint(0)])'
+mutate "the check takes a hand-over to any pinned router" "$SWAP" \
+  'let to = address(fromWord: Array(call.data[4..<36])), handed.contains(to),' 'let to = address(fromWord: Array(call.data[4..<36])), pinned.contains(to),'
+mutate "the check takes a hand-over of any amount" "$SWAP" \
+  'case let units = SafeCalldata.decimal(Array(call.data[36..<68])), units == amount else { return nil }' 'case let units = SafeCalldata.decimal(Array(call.data[36..<68])), !units.isEmpty else { return nil }'
+mutate "the check takes a hand-over after the swap" "$SWAP" \
+  'guard swaps == 1, let swap = calls.last?.to.lowercased() else { return nil }' 'guard swaps == 1, let swap = calls.first(where: { !$0.data.starts(with: transferSelector) })?.to.lowercased() else { return nil }'
+mutate "the check takes a hand-over to one router and a swap on another" "$SWAP" \
+  'guard approvals.isEmpty, handOvers == [swap] else { return nil }' 'guard approvals.isEmpty else { return nil }'
+mutate "v4's pools are asked about WETH, which they do not hold" "$SWAP" \
+  'func currency(_ token: String) -> String { token == wethIsETH ? YourAccountSwap.native : token }' 'func currency(_ token: String) -> String { token }'
+mutate "a v4 key's tokens are not sorted" "$SWAP" \
+  'let (c0, c1) = a < b ? (a, b) : (b, a)' 'let (c0, c1) = (a, b)'
+mutate "WETH itself is written into a pool that holds ETH" "$SWAP" \
+  'return (route.hops.first?.from != weth || sellsETH) && (route.hops.last?.to != weth || buysETH)' 'return true'
+mutate "AZTEC's hook is pinned wrong" "$SWAP" \
+  'hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080")' 'hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e081")'
+mutate "v4 is asked about an amount past uint128" "$SWAP" \
+  'func takes(_ amount: String) -> Bool { kind != .uniswapV4 || YourAccountSwap.fits128(amount) }' 'func takes(_ amount: String) -> Bool { true }'
 mutate "a pool fee said to four places again" "$SWAP" \
   'NSDecimalRound(&r, &d, 2, .plain)' 'NSDecimalRound(&r, &d, 4, .plain)'
 mutate "a fee under 0.01% said as a rounded number" "$SWAP" \

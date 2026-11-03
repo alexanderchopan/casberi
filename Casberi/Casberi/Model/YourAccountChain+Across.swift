@@ -79,7 +79,7 @@ extension YourAccountChain {
         var arrivalRoute: YourAccountSwap.Route?
         if arrivesAsItself == nil {
             guard let into = Across.bridged(asset, on: dest.chainId), let target = buy.contract?.lowercased(),
-                  let found = try await bestRoute(dest, sell: into, buy: target, amount: bridged) else {
+                  let found = try await bestRoute(dest, sell: into, buy: target, amount: bridged, ends: (false, false)) else {
                 throw Failure(message: String(localized: "No pool on \(dest.name) swaps \(landing.symbol) for \(buy.symbol)"))
             }
             arrivalRoute = found.route
@@ -100,7 +100,7 @@ extension YourAccountChain {
         // The swap there, quoted now for exactly what a relayer will pay.
         if arrivesAsItself == nil {
             guard let destBook, let into = Across.bridged(asset, on: dest.chainId), let target = buy.contract?.lowercased(),
-                  let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount),
+                  let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount, ends: (false, false)),
                   let least = YourAccountSwap.minimum(best.out, bps: destBook.slippageBps), YourAccountSwap.isPositive(least) else {
                 throw Failure(message: String(localized: "No pool on \(dest.name) swaps \(landing.symbol) for \(buy.symbol)"))
             }

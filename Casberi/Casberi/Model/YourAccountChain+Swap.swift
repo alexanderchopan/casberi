@@ -30,8 +30,12 @@ extension YourAccountChain {
     }
 
     /// The best route for `amount` of `sell` into `buy` on `net`, priced;
-    /// nil when no pool trades it. Tokens are contracts, ETH as WETH.
-    static func bestRoute(_ net: Network, sell: String, buy: String, amount: String) async throws -> YourAccountSwap.Priced? {
+    /// nil when no pool trades it. Tokens are contracts, ETH as WETH; `ends`
+    /// says whether WETH at either end is really ETH, so a route that cannot
+    /// be written for it (a v4 pool holds ETH, never WETH) is passed over.
+    /// A price asks with none: any pool's answer is a price.
+    static func bestRoute(_ net: Network, sell: String, buy: String, amount: String,
+                          ends: (sellsETH: Bool, buysETH: Bool)? = nil) async throws -> YourAccountSwap.Priced? {
         typealias S = YourAccountSwap
         guard let book = S.book(net.chainId), S.isPositive(amount) else { return nil }
         func ask(_ asks: [S.Ask]) async throws -> [String?] {
@@ -44,7 +48,8 @@ extension YourAccountChain {
         let firstAnswers = try await ask(first)
         let second = S.secondRound(first, answers: firstAnswers, buy: buy)
         let secondAnswers = second.isEmpty ? [] : try await ask(second)
-        let routes = S.priced(first, answers: firstAnswers, buy: buy) + S.priced(second, answers: secondAnswers, buy: buy)
+        let routes = (S.priced(first, answers: firstAnswers, buy: buy) + S.priced(second, answers: secondAnswers, buy: buy))
+            .filter { p in ends.map { S.writable(p.route, sellsETH: $0.sellsETH, buysETH: $0.buysETH) } ?? true }
         guard var best = S.best(routes, in: book) else { return nil }
         best = S.Priced(route: await withFees(best.route, net), out: best.out)
         return best
@@ -103,7 +108,8 @@ extension YourAccountChain {
         let key = [String(net.chainId), sell.contract?.lowercased() ?? "eth", buy.contract?.lowercased() ?? "eth", amount, account.lowercased()]
             .joined(separator: "|")
         if let kept = await quotes.fresh(key) { return kept }
-        guard let best = try await bestRoute(net, sell: from, buy: to, amount: amount) else {
+        guard let best = try await bestRoute(net, sell: from, buy: to, amount: amount,
+                                             ends: (sell.contract == nil, buy.contract == nil)) else {
             throw Failure(message: String(localized: "No pool on \(net.name) swaps \(sell.symbol) for \(buy.symbol)"))
         }
         let deadline = Int(Date().timeIntervalSince1970) + YourAccountSwap.deadlineSeconds
