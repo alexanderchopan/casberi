@@ -46,6 +46,10 @@ grep -q 'if whenOffered, when == nil { return String(localized: "Pick when") }' 
 grep -q 'if whenOffered, when == nil {' "$MOVE" && grep -q 'if limiting { placeOrder(); return }' "$MOVE" \
   || { echo "✗ sign() no longer waits for when, or no longer places a priced order"; exit 1; }
 
+# At rest the sentence ends "when", before the tokens are picked (prd §1673d).
+grep -q 'if whenDrawn { whenClause }' "$MOVE" && grep -q 'return with == nil || buy == nil' "$MOVE" \
+  || { echo "✗ \"when\" waits for the bought token again (prd §1673d)"; exit 1; }
+
 grep -q 'priceWords: Self.priceWords(v, places: p.places), seconds: orderSeconds)' "$MOVE" \
   || { echo "✗ the order no longer waits as long as Until says"; exit 1; }
 

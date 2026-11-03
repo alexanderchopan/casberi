@@ -70668,3 +70668,16 @@ Move opens short. The first word's choices, or the keys, make it the whole sheet
 **Checks.** `direct-swap-selftest.sh`: the sliver, the measure, the words' threshold and places; three mutations. `uniswap-v4-pools.py --self-test`: four breaks each caught (keccak, WETH rule, the parser's `native`, the diff).
 
 **Mac half (§1402).** Move's foot is shared; nothing Mac-specific.
+
+## §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1) (user, 2026-11-03, of "Swap $0 of AZTEC on Ethereum for token on Ethereum.": "weird. where is the limit order.") — BUILT, not compiled
+
+**Why.** §1673 item 2 ruled the resting sentence in the user's words, "swap token on network for token on network when". §1673b drew the word only once both tokens were picked (`whenOffered` needs `buy`), so a sentence with "token" still blank ended in a full stop and the limit order could not be found.
+
+1. **The word is drawn (`MoveSentence.whenDrawn`)** on Swap, one network, no lines kept, no receipt, until the sentence rules it out: two networks (§1673 item 6), a picked network CoW does not settle on (Robinhood), or two picked tokens with no price to state (two dollars). The destination network drops its full stop while it stands.
+2. **Before the pair is known it opens the blank it waits on (`whenWaitsOn`)**: the network if unpicked, then the token bought, then the token sold (§83: no dead control, and no "When is …" row with no token in it). The word stays grey and its own; it is not lit by the list it opens.
+3. **Unchanged:** the foot reads "Pick when" and nothing signs only once the pair is priced (`whenOffered`); the two rows, the price field and the order are §1673b's.
+4. **Check:** `limit-order-selftest.sh` fails if the clause is drawn on `whenOffered` again.
+
+**Not measured:** built in a cloud session with no Xcode; not compiled or seen on the simulator.
+
+**Mac half (§1402).** The same Move sentence; nothing Mac-specific.

@@ -1326,7 +1326,7 @@ struct MoveSentence: View {
         MoveClause(glue: String(localized: "on")) { originWord }
         MoveClause(glue: String(localized: "for")) { buyWord }
         MoveClause(glue: String(localized: "on")) { destinationWord }
-        if whenOffered { whenClause }
+        if whenDrawn { whenClause }
     }
 
     /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
@@ -1897,8 +1897,11 @@ struct MoveSentence: View {
     }
 
     /// A word that opens its choices under the sentence.
-    private func blank(_ text: String, ink: Color, _ which: Blank, label: Text) -> some View {
-        Button {
+    /// `lit` is the blank whose list lights the word; a word that opens
+    /// another's list (an unanswerable "when") stays its own colour.
+    private func blank(_ text: String, ink: Color, _ which: Blank, lit: Blank? = nil, label: Text) -> some View {
+        let lit = lit ?? which
+        return Button {
             // One transaction is one network: with lines kept, the word says
             // so rather than doing nothing (prd §83).
             if which == .network, !items.isEmpty {
@@ -1941,8 +1944,8 @@ struct MoveSentence: View {
             }
             DSHaptic.selection()
         } label: {
-            word(text, ink: open == which ? DS.pickInk : ink)
-                .environment(\.moveQuiet, open != nil && open != which)
+            word(text, ink: open == lit ? DS.pickInk : ink)
+                .environment(\.moveQuiet, open != nil && open != lit)
         }
         .buttonStyle(RowPress())
         .disabled(stage != nil)
@@ -2366,7 +2369,7 @@ struct MoveSentence: View {
     private var destinationWord: some View {
         Group {
             if networkPicked {
-                blank(buyHome.name + (whenOffered ? "" : "."), ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
+                blank(buyHome.name + (whenDrawn ? "" : "."), ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
@@ -3704,6 +3707,25 @@ struct MoveSentence: View {
         return YourAccountOrder.offersWhen(sell: with.token, buy: buy.token, from: network, to: buyHome)
     }
 
+    /// The word stands at rest, before the tokens and network are picked
+    /// (prd §1673 item 2: "swap token on network for token on network
+    /// when"), and leaves only once the sentence rules it out: two
+    /// networks (item 6), a network CoW does not settle on, or a pair with
+    /// no price to state.
+    private var whenDrawn: Bool {
+        guard verb == .swap, receipt == nil, items.isEmpty else { return false }
+        if whenOffered { return true }
+        guard buyHome == network, !networkPicked || YourAccountOrder.supported(network) else { return false }
+        return with == nil || buy == nil
+    }
+
+    /// An unanswerable "when" opens the blank it waits on: the network,
+    /// then the token bought, then the token sold.
+    private var whenWaitsOn: Blank {
+        if !networkPicked { return .network }
+        return buy == nil ? .buy : .with
+    }
+
     /// The answer, for this pair only.
     private var when: WhenPick? { whenOffered && whenFor == limitPair ? whenPick : nil }
 
@@ -3764,7 +3786,9 @@ struct MoveSentence: View {
     @ViewBuilder private var whenClause: some View {
         switch when {
         case nil:
-            MoveClause { blank(String(localized: "when"), ink: DS.textTertiary, .when, label: Text("Pick when")) }
+            // Until the pair is known there is no price to ask for: the
+            // word opens the blank it waits on (prd §83, no dead control).
+            MoveClause { blank(String(localized: "when"), ink: DS.textTertiary, whenOffered ? .when : whenWaitsOn, lit: .when, label: Text("Pick when")) }
         case .now:
             MoveClause { blank(String(localized: "now."), ink: DS.pickInk, .when, label: Text("Now, change")) }
         case .price:

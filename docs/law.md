@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1823 of 1895 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1824 of 1896 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -2060,6 +2060,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 ite…
 - §1673b — §1673 built: Swap ends "when", a price is a CoW order this phone builds and pre-signs, "Powered by CoW Swap" (builds…
 - §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry)
+- §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1)
 - §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows…
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
