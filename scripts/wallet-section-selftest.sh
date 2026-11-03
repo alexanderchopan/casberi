@@ -54,7 +54,7 @@ func check(_ ok: Bool, _ what: String) {
 
 // ORDER is a ruling, not an accident of declaration.
 check(WalletSection.order == [.home, .holdings, .activity, .spending],
-      "order is home → holdings → activity → spending (prd §1480, §1529)")
+      "order is home → holdings → activity → spending (prd §1480, §1529, §1686)")
 // **FOUR TILES (prd §1480, §1529).** Security is deleted — its parts are Your
 // account, Permissions and Threats, each a page off Home — and Markets is
 // deleted (§1529). A remembered "security" or "markets" must resolve to Home,
@@ -252,6 +252,15 @@ deny()  { have "$1"; if grep -q -- "$2" "$work/$1.bare"; then fail "drift: $3"; 
 
 guard MainSurface.swift "extension WalletSection: DSSectionScope" \
   "the conformance moved — it must stay OUT of the Foundation-only model file"
+
+# **THE TILES DRAW THE ORDER ABOVE, NOT A–Z (prd §1686).** Without
+# `keepsOrder` the grid sorts them Activity · Holdings · Spending after Home,
+# and the order the enum test pins never reaches the screen.
+GLYPHS="Casberi/Casberi/Screens/ScopeTileGlyphs.swift"
+perl -0ne 'print $1 if /(extension WalletSection: DSTileScope \{.*?\n\})/s' "$GLYPHS" \
+  | perl -pe 's{//.*$}{}g' > "$work/WalletTileScope.bare"
+guard WalletTileScope "static var keepsOrder: Bool { true }" \
+  "the Wallet's tiles sort A–Z again — Home · Holdings · Activity · Spending is the order (prd §1686)"
 
 # Markets is deleted (prd §1529): no door, tile or landing names it.
 PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"

@@ -70721,3 +70721,15 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Seen on the simulator** (the demo, iPhone 17): Home's "1,240 USDC for 0.4962 ETH · On Uniswap" with the purple swap glyph and Uniswap's mark on its corner; "Put 0.0700 ETH into Privacy Pools" with the red send arrow and Privacy Pools' mark; Holdings' "USDC, lent" with Aave's mark before "5.1% on Aave · Base" and "USDC, private" with Privacy Pools' before "Ethereum"; Take back's foot, "Powered by Aave" with the mark. **Not seen:** the private send's foot (Sepolia, DEBUG only), the full-history page, a flagged protocol row, the Mac.
 
 **Mac half (§1402).** The same rows, feet and lines; nothing here is phone-only.
+
+## §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet; keeps §1480's four tiles) (user, 2026-11-03, of the Wallet on the phone drawing Home · Activity · Holdings · Spending: "change the order to home holdings activity spending")
+
+1. **The order.** Home, then Holdings (what you have), Activity (how it moved), Spending (what it bought). `WalletSection.order` already held this; §995's A–Z sort in `DSScopeTiles.alphabetical` drew Activity before Holdings.
+2. **How.** `WalletSection`'s `DSTileScope` conformance sets `keepsOrder`, as the thing sheet's tiles and the Feed's section tiles do (§1178, §1345). Both the phone's tile grid and the pane's pills (§1407) read through `alphabetical`, so both draw the order.
+3. **Not touched.** Logos and Aztec keep Home first then A–Z; every other room keeps §995.
+
+**Guard.** `wallet-section-selftest.sh`: the enum's order (already pinned) and a drift guard that the Wallet's tile conformance keeps `keepsOrder`, checked by hand against a copy with the line removed.
+
+**Not seen:** the simulator or the Mac; this session ran on Linux with no Swift toolchain, so neither the build nor `verify.sh` ran.
+
+**Mac half (§1402).** The pane's pills read the same order.

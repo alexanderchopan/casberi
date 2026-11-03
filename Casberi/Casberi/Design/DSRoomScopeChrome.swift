@@ -13,7 +13,8 @@ import SwiftUI
 ///      range chips), the section's figure everywhere else, one fixed box
 ///      (prd §765, §936);
 ///   2. **the tiles** — the four scopes, Home first then A–Z
-///      (`DSScopeTiles.alphabetical`), and no verb (prd §1107, §1108);
+///      (`DSScopeTiles.alphabetical`; the Wallet keeps its own order, prd
+///      §1686), and no verb (prd §1107, §1108);
 ///   3. **the account pick** (prd §936), published as `ShellChrome.accountRail`
 ///      and drawn in the rooms tray's folder since prd §1133 deleted the pill;
 ///   4. **the list** — the room's own, drawn by the room under this chrome:

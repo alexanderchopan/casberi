@@ -220,7 +220,12 @@ extension AgentRoomScope: DSTileScope {
 
 /// The Wallet's four tiles and the pages behind its doors (prd §1480). Watch
 /// is not a tile: it is the first row of the Accounts pill's list.
+///
+/// **THE TILES DRAW IN `WalletSection.order`, NEVER A–Z (prd §1686, user,
+/// 2026-11-03: "change the order to home holdings activity spending").** What
+/// you have, then how it moved, then what it bought.
 extension WalletSection: DSTileScope {
+    static var keepsOrder: Bool { true }
     var glyph: String {
         switch self {
         case .home:            return ScopeTileGlyph.home

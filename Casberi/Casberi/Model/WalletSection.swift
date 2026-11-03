@@ -24,8 +24,9 @@ import Foundation
 /// every door opens one. A page names the page it opened from (`parent`), and
 /// its title's category word goes back there (prd §1480 item 9).
 ///
-/// **ORDER is the publication's**; the tiles DRAW A–Z after Home
-/// (`DSScopeTiles.alphabetical`, §995), and the self-test pins it.
+/// **ORDER is the publication's, and the tiles DRAW it (prd §1686, amending
+/// §995 for the Wallet: `keepsOrder`)**: Home · Holdings · Activity ·
+/// Spending. The self-test pins both.
 ///
 /// Foundation-only by design: `scripts/wallet-section-selftest.sh` compiles it
 /// WHOLE and unmodified.
@@ -82,8 +83,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
 
     /// The tiles, in the publication's order: the ones that are never empty
     /// first (§483), so the strip's head is the same on every wallet. They
-    /// DRAW A–Z after Home — Activity, Holdings, Markets, Spending (§995).
-    /// `allCases` adds the pages.
+    /// draw in this order, not A–Z (prd §1686). `allCases` adds the pages.
     static let order: [WalletSection] = [.home, .holdings, .activity, .spending]
 
     /// Home's doors, in the row's order (prd §1480 item 2; Markets left for
