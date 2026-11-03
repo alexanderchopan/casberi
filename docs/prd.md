@@ -70681,3 +70681,18 @@ Move opens short. The first word's choices, or the keys, make it the whole sheet
 **Not measured:** built in a cloud session with no Xcode; not compiled or seen on the simulator.
 
 **Mac half (§1402).** The same Move sentence; nothing Mac-specific.
+
+## §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 items 2–3, §1673a, §1673d; retires "Pick when") (user, 2026-11-02, of build 934 on the phone: "the 'when' comes after the sentence, it's not even part of it"; "the user needs to be able to toggle between percent and value"; "it needs to have 5 10 25 custom percent"; on the canvas "Limit order in the sentence", of A ("now" is the default word) · B ("when …" is a blank, list rows) · C (at market price): "A for at rest. B for when tapped.")
+
+1. **At rest the sentence ends "now."**, pink like every word that changes, inside the sentence and carrying its full stop: "Swap 1 ETH on Base for USDC on Base now." It is whole and signs as a swap; "Pick when" is deleted (§1673 item 2's unanswered word, and its foot). Before the pair is known the same word opens the blank it waits on (§1673d), and the network placeholder drops its own full stop while it stands (the build 934 bug: "on network. now.").
+2. **Tapping it opens Move's list rows (`whenList`):** a header with today's price ("ETH is $3,850 now") and the % | $ chips the amount already uses (`unitChip`); then **Now** (`bolt.fill`) with what it buys; **+5%, +10%, +25%** (`clock`), titled in the unit picked with the other trailing ("+10%" … "$4,235", or "$4,235" … "+10%"); **Custom** (`pencil`), "A percent you type" or "A price you type", which opens the price field. No lines under the rows (§1681a).
+3. **The sign follows the side:** selling the priced token waits for it to rise (+), buying it for it to fall (−5%, −10%, −25%).
+4. **A preset picked** writes "when ETH is $4,235." (or "+10%.") into the sentence, the pink figure in the grey line still trades the unit, Until is unchanged, and the foot is "Place order". A preset typed over is Custom. Percent is the unit first.
+
+**Seen on the simulator** (the demo, ETH → USDC on Base): "…on network now." before the pair, "…on Base now." after, the rows, and +10% writing "when ETH is $4,235." with Place order. **Not seen:** a buy's negative presets, the % / $ chips flipping a picked price, Custom's field, the Mac.
+
+**Checks:** `limit-order-selftest.sh` holds "now" as the answer at rest, no "Pick when", the presets and the two chips.
+
+**Mac half (§1402).** The same view.
+
+Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYwSvrKrjwH).

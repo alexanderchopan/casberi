@@ -40,11 +40,19 @@ grep -q 'let sent = try await privateCalls(calls, on: net, reason: reason, stage
   || { echo "✗ the order no longer goes through the simulated path (privateCalls)"; exit 1; }
 awk '/service: "Your account"/,/throughTor/' Casberi/Casberi/Model/NetworkReach.swift | grep -q '"api.cow.fi"' \
   || { echo "✗ api.cow.fi is not declared under Your account"; exit 1; }
-# The sentence: nothing signs while "when" is unanswered (prd §1673 item 2).
-grep -q 'if whenOffered, when == nil { return String(localized: "Pick when") }' "$MOVE" \
-  || { echo "✗ the foot no longer says Pick when while when is unanswered"; exit 1; }
-grep -q 'if whenOffered, when == nil {' "$MOVE" && grep -q 'if limiting { placeOrder(); return }' "$MOVE" \
-  || { echo "✗ sign() no longer waits for when, or no longer places a priced order"; exit 1; }
+# The sentence ends "now." at rest, whole and signable, until a price is
+# picked (prd §1683, retiring §1673 item 2's "Pick when"); a price places a
+# CoW order.
+grep -q 'return whenFor == limitPair ? (whenPick ?? .now) : .now' "$MOVE" \
+  || { echo "✗ \"when\" no longer answers Now at rest (prd §1683)"; exit 1; }
+! grep -q 'Pick when' "$MOVE" || { echo "✗ the foot waits on \"when\" again (prd §1683)"; exit 1; }
+grep -q 'if limiting { placeOrder(); return }' "$MOVE" \
+  || { echo "✗ sign() no longer places a priced order"; exit 1; }
+# The presets and the unit (prd §1683).
+grep -q 'static let whenPresets = \[5, 10, 25\]' "$MOVE" \
+  || { echo "✗ the presets are no longer +5% +10% +25% (prd §1683)"; exit 1; }
+grep -q 'unitChip("%", on: priceInPercent' "$MOVE" && grep -q 'unitChip("\$", on: !priceInPercent' "$MOVE" \
+  || { echo "✗ the list no longer offers % and $ (prd §1683)"; exit 1; }
 
 # At rest the sentence ends "when", before the tokens are picked (prd §1673d).
 grep -q 'if whenDrawn { whenClause }' "$MOVE" && grep -q 'return with == nil || buy == nil' "$MOVE" \

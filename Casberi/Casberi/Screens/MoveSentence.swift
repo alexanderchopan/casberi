@@ -215,9 +215,10 @@ struct MoveSentence: View {
     @State private var whenPick: WhenPick?
     @State private var whenFor = ""
     /// The price typed, in dollars, or the percent from today's when
-    /// `priceInPercent` (the grey line's pink figure trades them).
+    /// `priceInPercent` (the grey line's pink figure and the list's % | $
+    /// trade them). Percent first, as the presets are (prd §1683).
     @State private var priceText = ""
-    @State private var priceInPercent = false
+    @State private var priceInPercent = true
     /// The priced token's dollars now, and the sold one's when neither is a
     /// dollar (the rate a price for the bought token is turned into).
     @State private var nowPrice: Double?
@@ -909,7 +910,7 @@ struct MoveSentence: View {
     }
 
     /// The most any swap here moves its pools' price, in words, from 1%
-    /// (prd §1682); a price's order fills at its price, so says nothing.
+    /// (prd §1683); a price's order fills at its price, so says nothing.
     private var impactWarning: String? {
         guard !limiting, verb == .swap || verb == .sweep else { return nil }
         let worst = signing.compactMap { item -> Double? in
@@ -1058,6 +1059,8 @@ struct MoveSentence: View {
         // was open closes, so a list never stands cut off in the short sheet.
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: focus) { _, now in if now != nil { chrome.moveTall = true } }
+        // A price typed over is no longer the preset it started as (prd §1683).
+        .onChange(of: priceText) { if focus == .price { whenPreset = nil } }
         .onChange(of: chrome.moveTall) { _, tall in
             guard !tall, open != nil || focus != nil else { return }
             focus = nil
@@ -2371,7 +2374,9 @@ struct MoveSentence: View {
             if networkPicked {
                 blank(buyHome.name + (whenDrawn ? "" : "."), ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
             } else {
-                blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
+                // "now." carries the full stop while it stands (prd §1683).
+                blank(whenDrawn ? String(localized: "network") : String(localized: "network."),
+                      ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
         }
     }
@@ -3726,8 +3731,12 @@ struct MoveSentence: View {
         return buy == nil ? .buy : .with
     }
 
-    /// The answer, for this pair only.
-    private var when: WhenPick? { whenOffered && whenFor == limitPair ? whenPick : nil }
+    /// The answer, for this pair only; Now until a price is picked (prd
+    /// §1683: the sentence at rest ends "now.", whole and signable).
+    private var when: WhenPick? {
+        guard whenOffered else { return nil }
+        return whenFor == limitPair ? (whenPick ?? .now) : .now
+    }
 
     /// A price was picked: the sentence is a CoW order.
     private var limiting: Bool { when == .price }
@@ -3782,13 +3791,14 @@ struct MoveSentence: View {
         Date.now.addingTimeInterval(TimeInterval(seconds)).formatted(.dateTime.month(.abbreviated).day())
     }
 
-    /// "when", "now." or "when ETH is $2,400." — Swap's last word.
+    /// "now." or "when ETH is $2,400." — Swap's last word, inside the
+    /// sentence, before its full stop (prd §1683).
     @ViewBuilder private var whenClause: some View {
         switch when {
         case nil:
             // Until the pair is known there is no price to ask for: the
             // word opens the blank it waits on (prd §83, no dead control).
-            MoveClause { blank(String(localized: "when"), ink: DS.textTertiary, whenOffered ? .when : whenWaitsOn, lit: .when, label: Text("Pick when")) }
+            MoveClause { blank(String(localized: "now."), ink: DS.pickInk, whenWaitsOn, lit: .when, label: Text("Now, change")) }
         case .now:
             MoveClause { blank(String(localized: "now."), ink: DS.pickInk, .when, label: Text("Now, change")) }
         case .price:
@@ -3828,27 +3838,92 @@ struct MoveSentence: View {
         .accessibilityLabel(Text(priceInPercent ? "Percent from today's price" : "Price in dollars"))
     }
 
-    /// Now and When ETH is …, Move's own list rows (prd §1673a).
+    /// The presets a price is picked from, in percent from today's (prd §1683).
+    static let whenPresets = [5, 10, 25]
+
+    /// A preset picked, until the price is typed over.
+    @State private var whenPreset: Int?
+
+    /// Selling the priced token waits for it to rise, buying it for it to
+    /// fall: the presets carry that sign.
+    private var presetSign: Int { with?.token.symbol == pricedToken?.symbol ? 1 : -1 }
+
+    /// "when"'s choices, Move's list rows (prd §1683, amending §1673a): Now,
+    /// the three presets, Custom; a header with today's price and the unit
+    /// the presets read in, % or $ (the price is the same either way).
     private var whenList: some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: DS.Space.s2) {
+                if let nowPrice, let t = pricedToken {
+                    Text("\(t.symbol) is \(Self.dollarWords(nowPrice)) now")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                HStack(spacing: DS.Space.s1) {
+                    unitChip("%", on: priceInPercent, label: Text("Prices in percent")) { setPriceUnit(percent: true) }
+                    unitChip("$", on: !priceInPercent, label: Text("Prices in dollars")) { setPriceUnit(percent: false) }
+                }
+            }
+            .frame(minHeight: DSFeed.headHeight)
             let figure: String? = buy.flatMap { b in buyTotal.map { "≈ " + Self.short($0, decimals: b.token.decimals) + " " + b.token.symbol } }
-            listRow(String(localized: "Now"), sub: quote?.route.map(YourAccountSwap.words), trailing: figure,
-                    symbol: "bolt.fill", picked: when == .now) {
+            listRow(String(localized: "Now"), trailing: figure, symbol: "bolt.fill", picked: when == .now) {
                 pick {
                     whenPick = .now
                     whenFor = limitPair
                 }
             }
-            listRow(String(localized: "When \(pricedToken?.symbol ?? "") is …"),
-                    sub: String(localized: "A price you set · CoW Swap · \(YourAccountOrder.feeWords) fee"),
-                    symbol: "clock", picked: when == .price) {
+            ForEach(Self.whenPresets, id: \.self) { pct in
+                let signed = pct * presetSign
+                let percentWords = (signed < 0 ? "−" : "+") + "\(pct)%"
+                let dollarWords = nowPrice.map { Self.dollarWords($0 * (1 + Double(signed) / 100)) }
+                listRow(priceInPercent ? percentWords : (dollarWords ?? percentWords),
+                        trailing: priceInPercent ? dollarWords : percentWords,
+                        symbol: "clock", picked: limiting && whenPreset == signed) { pickPreset(signed) }
+            }
+            listRow(String(localized: "Custom"),
+                    trailing: priceInPercent ? String(localized: "A percent you type") : String(localized: "A price you type"),
+                    symbol: "pencil", picked: limiting && whenPreset == nil) {
                 pick {
                     whenPick = .price
                     whenFor = limitPair
+                    whenPreset = nil
+                    priceText = ""
                 }
                 focus = .price
             }
         }
+    }
+
+    /// A preset: the price it names, in the unit the list reads in.
+    private func pickPreset(_ signed: Int) {
+        pick {
+            whenPick = .price
+            whenFor = limitPair
+            whenPreset = signed
+            if !priceInPercent, let nowPrice {
+                priceText = Self.plainPrice(nowPrice * (1 + Double(signed) / 100))
+            } else {
+                priceInPercent = true
+                priceText = String(signed)
+            }
+        }
+    }
+
+    /// % or $: the same price in the other unit, or only the unit while
+    /// none is set.
+    private func setPriceUnit(percent: Bool) {
+        guard percent != priceInPercent else { return }
+        if limitPrice != nil { tradePriceUnit() } else {
+            withAnimation(DS.Motion.standard) { priceInPercent = percent }
+            DSHaptic.selection()
+        }
+    }
+
+    /// A price as typed into the field: "2473.6", "0.8512".
+    static func plainPrice(_ v: Double) -> String {
+        var t = v >= 1 ? String(format: "%.2f", v) : String(format: "%.6f", v)
+        while t.contains("."), t.last == "0" || t.last == "." { t.removeLast() }
+        return t
     }
 
     /// "+6.8% · Now $2,248 · At least 2,400 USDC · Until Nov 9": the pink
@@ -3938,8 +4013,7 @@ struct MoveSentence: View {
         guard let nowPrice, let v = limitPrice.flatMap(YourAccountOrder.value) else { return }
         withAnimation(DS.Motion.standard) {
             if priceInPercent {
-                priceText = v >= 1 ? String(format: "%.2f", v) : String(format: "%.6f", v)
-                while priceText.contains("."), priceText.last == "0" || priceText.last == "." { priceText.removeLast() }
+                priceText = Self.plainPrice(v)
                 priceInPercent = false
             } else {
                 let pct = (v / nowPrice - 1) * 100
@@ -4288,7 +4362,7 @@ struct MoveSentence: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
             }
-            // **"MOVES THE PRICE 6.4%" (prd §1682):** a thin pool, said under
+            // **"MOVES THE PRICE 6.4%" (prd §1683):** a thin pool, said under
             // its credit in the attention ink; a warning, never a refusal.
             if let impact = impactWarning, receipt == nil, !nothingToMove {
                 Text(verbatim: impact)
@@ -4372,7 +4446,6 @@ struct MoveSentence: View {
     }
 
     private var footOn: Bool {
-        if whenOffered, when == nil { return stage == nil }
         if limiting { return stage == nil && limitDraft != nil && !over }
         if verb == .buy { return stage == nil && buyReady }
         if verb == .sweep {
@@ -4399,8 +4472,6 @@ struct MoveSentence: View {
         if verb == .sweep {
             return sweepItems.count < 2 ? String(localized: "Sweep") : String(localized: "Sweep all \(sweepItems.count)")
         }
-        // Swap waits for its last word (prd §1673 item 2).
-        if whenOffered, when == nil { return String(localized: "Pick when") }
         if limiting { return String(localized: "Place order") }
         // A warning makes it a second tap (prd §1509 item 2).
         if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
@@ -4551,12 +4622,7 @@ struct MoveSentence: View {
 
     private func sign() {
         guard stage == nil else { return }
-        // "Pick when" opens its two rows; a price places a CoW order (prd §1673).
-        if whenOffered, when == nil {
-            withAnimation(DS.Motion.standard) { open = .when }
-            DSHaptic.selection()
-            return
-        }
+        // A price places a CoW order (prd §1673); Now swaps (prd §1683).
         if limiting { placeOrder(); return }
         // The first tap on "Send anyway" only arms it; the second signs.
         if verb != .buy, warned, armed != armKey {
