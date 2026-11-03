@@ -1178,6 +1178,33 @@
    "anchor": "text:=Savings goal"
   },
   {
+   "id": "wallet-token",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#walletToken"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Holdings"
+    },
+    {
+     "maybe": "button:=All"
+    },
+    {
+     "tap": "button:^ETH"
+    }
+   ],
+   "anchor": "button:=Networks"
+  },
+  {
    "id": "wallet-follow",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
