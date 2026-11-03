@@ -34,35 +34,43 @@
 <body>
 <div class="wrap">
   <a class="home" href="/">← Casberi</a>
-  <p class="eyebrow">Privacy Policy · Effective September 17, 2026</p>
+  <p class="eyebrow">Privacy Policy · Effective November 3, 2026</p>
   <h1>Your things stay yours.</h1>
-  <p class="lede">Casberi is built so your data lives on your iPhone, not on our servers — because we don't run any. This page explains, plainly, what that means.</p>
+  <p class="lede">Casberi is built so your data lives on your device, not on our servers — because we don't run any. This page explains, plainly, what that means.</p>
 
   <h2>What Casberi stores, and where</h2>
-  <p>Everything you capture or connect — notes, links, screenshots, events, chats, voice notes, and the things your connected apps bring in — is stored <strong>on your device</strong>, in Casberi's own local database. Casberi has no backend: your corpus is never uploaded to us, because there is no "us" server to upload it to.</p>
+  <p>Everything you capture or connect — notes, links, screenshots, events, chats, voice notes, and the things your connected apps bring in — is stored <strong>on your device</strong>, in Casberi's own local database. Casberi has no backend: your things are never uploaded to us, because there is no "us" server to upload them to.</p>
 
   <h2>iCloud sync (optional, off by default)</h2>
-  <p>If you turn on iCloud sync, your things are mirrored through <strong>your own private iCloud account</strong> using Apple's CloudKit, so they can appear on your other devices. This is Apple's infrastructure, tied to your Apple ID — only you can read it, and Casberi never sees it. Sync is off until you choose to enable it, and turning it off (or using Delete things) removes the iCloud copy.</p>
+  <p>If you turn on iCloud sync, your things are mirrored through <strong>your own private iCloud account</strong> using Apple's CloudKit, so they appear on your other devices. Casberi never sees that copy. It is encrypted in transit and on Apple's servers, with Apple holding the keys — unless you turn on Apple's <strong>Advanced Data Protection</strong>, which makes it end-to-end encrypted, readable only by your own devices. Sync is off until you turn it on, and turning it off (or using Delete things) removes the iCloud copy.</p>
 
   <h2>Connecting other apps</h2>
-  <p>When you connect a service — a feed, a social handle, a token, a calendar — Casberi talks to that service <strong>directly from your iPhone</strong> to fetch your data. Nothing routes through a Casberi server.</p>
+  <p>When you connect a service — a feed, a social account, a wallet, a calendar — Casberi talks to that service <strong>directly from your device</strong> to fetch your data. Nothing routes through a Casberi server.</p>
   <ul>
-    <li>For services that need a token or key, that credential is stored in your iPhone's <strong>Keychain</strong> and used only to call that service. It never leaves your device except to the service it belongs to.</li>
+    <li>A token or key a service needs is stored in your device's <strong>Keychain</strong> and used only to call that service. A key you paste syncs through iCloud Keychain, end-to-end encrypted, to your other devices; sign-ins and tokens that refresh stay on the device they were made on. <strong>Delete access</strong> removes them all.</li>
     <li>For public data (a Bluesky handle, a public feed, a token's price), Casberi reads what's already public — no account of yours is required.</li>
     <li>Each service you connect has its own privacy policy governing the data on <em>their</em> side; connecting it here doesn't change that.</li>
   </ul>
 
+  <h2>Wallets, and Tor</h2>
+  <p>On iPhone and iPad, every request that names a wallet — yours or one you follow — goes through <strong>Tor</strong>, with one route per wallet, so the services that answer it can't learn where you are, or that the wallets you look at are one person's. A few services refuse Tor and are read directly; Casberi says so where it happens. The Mac has no Tor yet, and says so too.</p>
+
+  <h2>Your account and your money</h2>
+  <ul>
+    <li><strong>Casberi holds none of your keys.</strong> Your account's key is made in your device's Secure Enclave and never leaves it; your recovery key and your private balance's key are kept in your iCloud Keychain. We can't move your money, and have no key to hand anyone who asks.</li>
+    <li><strong>Networks are public.</strong> What you send, swap or receive is recorded on that network for anyone to read: the addresses, the amounts and the time.</li>
+    <li><strong>Your private balance</strong> uses 0xBow's Privacy Pools on Ethereum. Money going in and coming out is public; what stays hidden is which deposit paid which payment. 0xBow reviews each deposit before it can be spent privately, and its relayer sends what you pay out, so it sees where that money goes and how much. Their privacy policy covers what they keep.</li>
+    <li><strong>Others your moves reach</strong> — the services that carry a transaction to the network, the exchanges a swap uses, the services that price a token — see the request itself. Through Tor, they don't see where it came from.</li>
+  </ul>
+
   <h2>On-device intelligence</h2>
-  <p>On iPhones that support Apple Intelligence, Casberi uses <strong>Apple's on-device model</strong> to name your screenshots and summarize long chats so you can find them — from your things, on your device. Your data is not sent to Casberi, to Apple's servers, or to any third party to do this. The text inside your screenshots is read the same way — by Apple's Vision framework, on your device.</p>
+  <p>On devices that support Apple Intelligence, Casberi uses <strong>Apple's on-device model</strong> to name your screenshots so you can find them — from your things, on your device. Your data is not sent to Casberi, to Apple's servers, or to any third party to do this. The text inside your screenshots is read the same way, by Apple's Vision framework, on your device. A screenshot that shows a password, a recovery phrase, a key, a card number or a code keeps those lines out of Spotlight and out of anything sent to an agent.</p>
 
-  <h2>Your own AI key (optional, off by default)</h2>
-  <p>If you add <strong>your own AI key</strong> in Settings — Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), Venice, Bankr, OpenRouter, or xAI (Grok) — the composer gains an "Ask" button carrying that agent's name. Only when you tap it, your question and the few matched things are sent from your iPhone <strong>directly to that provider</strong> to write a stronger answer — never through a Casberi server, and never on their own. Answers written this way say so, right on the answer. The key lives in your iPhone's Keychain, goes only to the provider you chose, and that provider bills you directly under its own privacy policy. Remove the key and the button disappears.</p>
-
-  <h2>Price charts</h2>
-  <p>When you watch a token, Casberi fetches its public price data from public market APIs (such as GeckoTerminal, Alchemy, and Dexscreener) to draw the chart. These requests carry only the token you're viewing — nothing about you or your identity.</p>
+  <h2>Agents (optional, off by default)</h2>
+  <p>If you connect an agent — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok, NEAR AI or Muse — what you send it goes from your device <strong>directly to that provider</strong>, only when you send it, never through a Casberi server, billed to you under that provider's own privacy policy. Its key lives in your Keychain. <strong>Your own model</strong> is a server you run; what you send goes to the address you gave. <strong>Apple Intelligence</strong> answers on Apple's Private Cloud Compute, under Apple's privacy policy.</p>
 
   <h2>See it for yourself</h2>
-  <p>Because there's no server to hide anything behind, you can read the whole list. <strong>Settings › Data › What this app reaches</strong> shows every service Casberi talks to — straight from your iPhone — and exactly what each request carries: which apps are reaching out right now, which reach nothing until you connect them, and the agent key that reaches out only when you tap "Ask" with that agent's name. And if you turn on iCloud sync, Casberi points you at Apple's <strong>Advanced Data Protection</strong>, which makes that copy end-to-end encrypted — readable only by your own devices, not even Apple.</p>
+  <p>Because there's no server to hide anything behind, you can read the whole list. <strong>What this app reaches</strong>, in Casberi's settings under Data, shows every service Casberi can talk to — straight from your device — and what it actually reached, including how much went through Tor. The source code is public, too.</p>
 
   <h2>What Casberi does <em>not</em> do</h2>
   <ul>
@@ -70,10 +78,11 @@
     <li>No advertising, and no advertising identifiers.</li>
     <li>No selling, sharing, or renting of your data — there's nothing to sell, since we never receive it.</li>
     <li>No accounts, no sign-up, no password to give us.</li>
+    <li>No push server: notifications are made on your device.</li>
   </ul>
 
-  <h2>During the TestFlight beta</h2>
-  <p>While Casberi is distributed through Apple's TestFlight, Apple may collect standard beta diagnostics — crash reports and basic usage metrics — under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>, to help improve the app. This is Apple's collection, not Casberi's, and you can disable sharing in the TestFlight app.</p>
+  <h2>Crash reports</h2>
+  <p>If you choose to share analytics with app developers in your device's settings, Apple may pass Casberi crash reports and performance data, and TestFlight builds may send Apple standard beta diagnostics. That is Apple's collection, under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>, and you can turn it off in Settings or in the TestFlight app. Performance readings Apple hands the app on your device stay there.</p>
 
   <h2>Children</h2>
   <p>Casberi is not directed at children under 13 and does not knowingly collect information from them. (It doesn't knowingly collect information from anyone — see above.)</p>
@@ -89,8 +98,8 @@
 
 <footer>
   <p class="tagline">An inbox for your apps. No account, no server, all on device.</p>
-  <p>© 2026 Casberi · <a href="/">Home</a> · <a href="docs.html">Docs</a> · <a href="mailto:privacy@casberi.app">Contact</a> · <a href="https://x.com/casberi_app">@casberi_app</a></p>
-  <p>Made by <a href="https://linktr.ee/alexanderchopan">Alexander Chopan</a> · <a href="https://www.linkedin.com/in/alexanderchopan">LinkedIn</a> · <a href="https://x.com/alexanderchopan">X</a></p>
+  <p>© 2026 Casberi Labs · <a href="/">Home</a> · <a href="docs.html">Docs</a> · <a href="mailto:privacy@casberi.app">Contact</a> · <a href="https://x.com/casberi_app">@casberi_app</a> · <a href="https://github.com/alexanderchopan/casberi">Source (GPLv3)</a></p>
+  <p>Made by Casberi Labs</p>
   <p>Or <a href="blocks.html">play a game</a> made of app icons.</p>
 </footer>
 </body>
