@@ -129,7 +129,7 @@ grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'retu
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
 # would be a private flow outside Move.
-! grep 'feedSheet' "$HOLD" | grep -vq 'feedSheet = .savingsGoal' || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
+[[ -z "$(grep 'feedSheet' "$HOLD" | grep -v 'feedSheet = \.savingsGoal')" ]] || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
 use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
