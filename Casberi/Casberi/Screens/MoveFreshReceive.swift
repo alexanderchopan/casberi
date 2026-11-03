@@ -33,10 +33,10 @@ struct MoveFreshSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                head()
-                    .padding(.bottom, DS.Space.s4)
+                // Receive is Move's verb word (`head`), the sentence's first
+                // (prd §1681).
                 MoveFlow {
-                    MovePhrase(String(localized: "Receive"))
+                    head()
                     MovePhrase(network.name, glue: String(localized: "on"))
                     MovePhrase(String(localized: "privately."), ink: DS.pickInk)
                 }

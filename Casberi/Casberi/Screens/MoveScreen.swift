@@ -16,11 +16,23 @@ import UIKit
 /// or whatever and not a page?"): an act, not a place. It is one height,
 /// the full sheet, and never changes shape (§1442a, user: "it is very
 /// jittery. needs to be stable"): the sentence stands at its foot and rises
-/// as a blank's choices open under it. Untitled, because the verbs are its
-/// head.
+/// as a blank's choices open under it. Untitled, because the verb is its
+/// sentence's first word (prd §1681).
+///
+/// **TWO HEIGHTS (prd §1681):** short at rest, so the sentence stands in
+/// reach of the thumb, and the whole sheet while a word's choices or the
+/// keys are open (`ShellChrome.moveTall`). The sentence is pinned to the
+/// sheet's top and never moves inside it; the sheet grows. The short height
+/// is fixed, never fitted to the sentence, so a change of verb moves
+/// nothing. Making an account, and its walk, take the whole sheet.
 struct MoveTray: View {
+    @Environment(ShellChrome.self) private var chrome
+    static let short: PresentationDetent = .fraction(0.6)
+
     var body: some View {
-        DSTray(title: "Move", height: 600, detents: [.large], titled: false) {
+        DSTray(title: "Move", height: 600, detents: [Self.short, .large], titled: false,
+               selection: Binding(get: { chrome.moveTall ? .large : Self.short },
+                                  set: { chrome.moveTall = $0 == .large })) {
             MoveScreen(inTray: true)
         }
     }
@@ -37,7 +49,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil }) {
+                      onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -178,6 +190,7 @@ struct MoveScreen: View {
                     if ending == .close, inTray { chrome.moveTray = false }
                 }
                 .transition(.opacity)
+                .onAppear { chrome.moveTall = true }
             } else if let address {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
@@ -193,25 +206,19 @@ struct MoveScreen: View {
                 MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
                     privateMove.mode = why == .switchOff ? .deposit : .send
                 }) {
-                    Text("Send")
-                        .dsText(.heading24)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(minHeight: 44, alignment: .leading)
-                        .accessibilityAddTraits(.isHeader)
+                    // The sentence's first word, not a choice (prd §1681).
+                    MoveWord(String(localized: "Send"), ink: DS.textPrimary)
                 }
                 .onAppear { privateMove.mode = mode }
             } else if chrome.moveFreshReceive, PrivateMove.freshAvailable {
                 // No account yet: Receive's fresh address under its one
                 // word (prd §1560). It never needs your account.
                 MoveFreshSentence(inTray: inTray, leave: { chrome.moveFreshReceive = false }) {
-                    Text("Receive")
-                        .dsText(.heading24)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(minHeight: 44, alignment: .leading)
-                        .accessibilityAddTraits(.isHeader)
+                    MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
                 }
             } else {
                 before
+                    .onAppear { chrome.moveTall = true }
             }
         }
     }

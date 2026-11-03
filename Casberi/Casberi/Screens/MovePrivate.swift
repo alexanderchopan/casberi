@@ -56,8 +56,12 @@ struct MovePrivateSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                head()
-                    .padding(.bottom, DS.Space.s4)
+                // The verb leads the sentence it acts in (prd §1681); a
+                // sentence that is not yet one keeps it on a line above.
+                if !leadsWithVerb {
+                    head()
+                        .padding(.bottom, DS.Space.s4)
+                }
                 MoveFlow { sentence }
                     .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.stage)
@@ -86,6 +90,11 @@ struct MovePrivateSentence<Head: View>: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
+        // The sheet is whole while a word's choices are open (prd §1681).
+        .onChange(of: open) { _, now in chrome.moveTall = now != nil }
+        .onChange(of: chrome.moveTall) { _, tall in
+            if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
+        }
         .task(id: move.mode) {
             move.context = context
             await move.read()
@@ -162,6 +171,15 @@ struct MovePrivateSentence<Head: View>: View {
 
     // MARK: - The sentence
 
+    /// Ready or working: the verb (Move's word, `head`) is the sentence's
+    /// first word (prd §1681). Done says "Sent" in its place.
+    private var leadsWithVerb: Bool {
+        switch move.stage {
+        case .reading, .needsFunds, .nothingPrivate: false
+        default: !isDone
+        }
+    }
+
     @ViewBuilder private var sentence: some View {
         switch move.stage {
         case .reading:
@@ -181,7 +199,8 @@ struct MovePrivateSentence<Head: View>: View {
         default:
             // Ready, working, done or refused: the sentence stands as written
             // (past tense once done), and the foot or the line says the rest.
-            MoveClause(glue: isDone ? String(localized: "Sent") : String(localized: "Send")) {
+            if !isDone { head() }
+            MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
                 Button {
                     guard move.stage == .ready else { return }
                     toggle(.amount)

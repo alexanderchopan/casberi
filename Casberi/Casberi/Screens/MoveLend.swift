@@ -27,8 +27,12 @@ struct MoveLendSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                head()
-                    .padding(.bottom, DS.Space.s4)
+                // The verb leads the sentence (prd §1681); while Aave is
+                // read it stands on a line above.
+                if move.stage == .reading {
+                    head()
+                        .padding(.bottom, DS.Space.s4)
+                }
                 MoveFlow { sentence }
                     .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.figure)
@@ -50,6 +54,11 @@ struct MoveLendSentence<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
+        // The sheet is whole while a word's choices are open (prd §1681).
+        .onChange(of: open) { _, now in chrome.moveTall = now != nil }
+        .onChange(of: chrome.moveTall) { _, tall in
+            if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
+        }
         .task(id: account) {
             await move.read(account: account)
             #if DEBUG
@@ -80,7 +89,10 @@ struct MoveLendSentence<Head: View>: View {
             case (.takeBack, false): String(localized: "Take back")
             case (.takeBack, true): String(localized: "Took back")
             }
-            MoveClause(glue: glue) {
+            // "Lend" and "Take back" are Move's verb word (`head`, prd §1681),
+            // which opens the verbs; done, the past tense stands in its place.
+            if !done { head() }
+            MoveClause(glue: done ? glue : nil) {
                 Button { toggle(.amount) } label: {
                     MoveWord(move.figure, ink: live ? DS.pickInk : DS.textPrimary)
                         .environment(\.moveQuiet, open != nil && open != .amount)

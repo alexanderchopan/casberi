@@ -230,6 +230,9 @@ final class ShellChrome {
     var roomsTray = false
     /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
     var moveTray = false
+    /// Move's sheet is whole (prd §1681): a word's choices or the keys are
+    /// open, or an account is being made. Short at rest.
+    var moveTall = false
     /// Move opens on Send, privately (prd §1554): Holdings' Private header
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.

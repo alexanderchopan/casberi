@@ -100,7 +100,7 @@ struct MoveSentence: View {
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
-    enum Blank: Equatable { case with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until }
+    enum Blank: Equatable { case verb, with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until }
     enum Field: Hashable { case amount, search, to, price }
 
     struct Recipient: Equatable {
@@ -390,6 +390,8 @@ struct MoveSentence: View {
     /// Bumped to shake the To word once: an address that imitates a book entry.
     @State private var shake = 0
     @FocusState private var focus: Field?
+    /// The verbs have been shown once (prd §1681).
+    @AppStorage("move.verbsSeen") private var verbsSeen = false
 
     /// The sentence in the past tense, and how it went.
     struct Receipt: Equatable {
@@ -958,28 +960,32 @@ struct MoveSentence: View {
     // MARK: - The page
 
     var body: some View {
+        // The verbs open on the account page over any verb's own sentence
+        // (Lend, Send privately, a fresh Receive), so every verb word opens
+        // the one list (prd §1681).
+        let ownSentence = (privateMode != nil || freshReceive || verb == .lend) && open != .verb
         ZStack {
             accountPage
-                .opacity(privateMode == nil && !freshReceive && verb != .lend ? 1 : 0)
-                .allowsHitTesting(privateMode == nil && !freshReceive && verb != .lend)
-                .accessibilityHidden(privateMode != nil || freshReceive || verb == .lend)
-            if verb == .lend, privateMode == nil, !freshReceive {
-                MoveLendSentence(move: lendMove, account: account, inTray: inTray) { verbs }
+                .opacity(ownSentence ? 0 : 1)
+                .allowsHitTesting(!ownSentence)
+                .accessibilityHidden(ownSentence)
+            if verb == .lend, privateMode == nil, !freshReceive, open != .verb {
+                MoveLendSentence(move: lendMove, account: account, inTray: inTray) { verbWord(lendWord) }
                     .transition(.opacity)
             }
-            if freshReceive, privateMode == nil {
+            if freshReceive, privateMode == nil, open != .verb {
                 MoveFreshSentence(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { freshReceive = false }
-                }) { verbs }
+                }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
-            if privateMode != nil {
+            if privateMode != nil, open != .verb {
                 MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
                         privateMode = nil
                         if why == .pickRecipient { open = .to; search = "" }
                     }
-                }) { verbs }
+                }) { verbWord(title(.send)) }
                 .transition(.opacity)
             }
         }
@@ -1035,6 +1041,23 @@ struct MoveSentence: View {
         .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
         // Never closed by a swipe while Face ID or the network has it.
         .interactiveDismissDisabled(stage != nil)
+        // Two heights (prd §1681): the sheet is whole while a word's choices
+        // or the keys are open, short at rest; dragged short, what was open
+        // closes, so a list never stands cut off in the short sheet.
+        .onChange(of: open) { _, now in chrome.moveTall = now != nil || focus != nil }
+        .onChange(of: focus) { _, now in chrome.moveTall = open != nil || now != nil }
+        .onChange(of: chrome.moveTall) { _, tall in
+            guard !tall, open != nil || focus != nil else { return }
+            focus = nil
+            withAnimation(DS.Motion.standard) { open = nil }
+        }
+        // The first Move opens on the verbs, so every one is seen once; the
+        // verb word is how they are reached after (prd §1681).
+        .onAppear {
+            guard !verbsSeen, receipt == nil, !fresh || arrived, stage == nil else { return }
+            verbsSeen = true
+            open = .verb
+        }
         .onDisappear { chrome.moveDraft = keptDraft }
         .alert("Name this address", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
             TextField("Name", text: $nameDraft)
@@ -1179,14 +1202,7 @@ struct MoveSentence: View {
 
     private var sentence: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            // An arrival's sentence has no verbs until it has finished itself
-            // (§1442j): before the account existed none could be tapped.
-            if !fresh || arrived {
-                verbs
-                    .padding(.bottom, DS.Space.s4)
-                    .transition(.opacity)
-            }
-            // What Add kept of the other verb stands under the verbs,
+            // What Add kept of the other verb stands over the sentence,
             // numbered, quieter than the sentence being filled (§1442c) —
             // on Receive and Buy; Swap and Send say it as a sentence of
             // its own (prd §1494).
@@ -1195,6 +1211,13 @@ struct MoveSentence: View {
                     .padding(.bottom, DS.Space.s4)
             }
             MoveFlow {
+                // The verb is the sentence's first word (prd §1681): pink, it
+                // opens the verbs as any word opens its choices. An arrival's
+                // sentence has none until it has finished itself (§1442j); a
+                // sentence after one Add kept leads with "Then swap" instead.
+                if receipt == nil, thenWord == nil, !fresh || arrived {
+                    verbWord(title(verb))
+                }
                 if let receipt {
                     receiptClauses(receipt)
                 } else if emptyEverywhere, verb != .receive, verb != .deposit {
@@ -1404,10 +1427,8 @@ struct MoveSentence: View {
     /// What the sentence says with nothing to spend anywhere.
     private var nothingYet: String {
         switch verb {
-        case .swap: String(localized: "Nothing to swap yet.")
-        case .buy: String(localized: "Nothing to pay with yet.")
-        case .sweep: String(localized: "Nothing to sweep yet.")
-        case .send, .receive, .deposit, .lend: String(localized: "Nothing to send yet.")
+        case .swap, .buy, .sweep: String(localized: "needs money first.")
+        case .send, .receive, .deposit, .lend: String(localized: "needs money first.")
         }
     }
 
@@ -1835,11 +1856,15 @@ struct MoveSentence: View {
     /// `heading34` since prd §1679 (was `heading52`): the verbs, the sentence,
     /// its choices and the foot are one size, a screen's name in the app.
     static let rung: DSTextStyle = .heading34
-    /// A choice's mark beside a word at the rung (prd §1679): the Wallet's
-    /// 30pt `Face.list` read as a footnote beside it.
-    static let listMark: CGFloat = 44
-    /// A choice's row, at least: the word's line with air (prd §1679).
-    static let listRowHeight: CGFloat = 64
+    /// A choice's word, a step under the sentence (prd §1681, amending
+    /// §1679 item 3): at the rung a list outweighed the sentence it serves.
+    /// The Wallet's section and door rung (§1496), so a list here reads as
+    /// one there does.
+    static let choiceRung: DSTextStyle = .heading24
+    /// A choice's mark: the Wallet's list size (prd §1681, was 44).
+    static let listMark: CGFloat = DS.Face.list
+    /// A choice's row, at least: the word and its line with air (prd §1681).
+    static let listRowHeight: CGFloat = 52
     /// The space between a phrase's words, as a share of the size: Figtree's
     /// own space advance (measured 0.231em, Figtree Bold).
     static let wordSpace: CGFloat = 0.231
@@ -2133,60 +2158,76 @@ struct MoveSentence: View {
         DSHaptic.selection()
     }
 
-    /// The three verbs on their own line, the picked one bright (user:
-    /// "send swap receive should be its own line user chooses which"). The
-    /// sentence under it is what that verb does.
-    private var verbs: some View {
-        // The verbs are the sentence's size (prd §1679, amending §1558's "no
-        // scrolling": shrunk to the width, seven verbs read small and sat
-        // too close to tap). The line scrolls, and moves only as far as it
-        // must to keep the picked verb in view, so a verb at the start stays
-        // where it was.
-        ScrollViewReader { line in
-            ScrollView(.horizontal) {
-                verbRow(spacing: DS.Space.s4)
-            }
-            .scrollIndicators(.hidden)
-            .scrollClipDisabled()
-            .onAppear { line.scrollTo(verb) }
-            .onChange(of: verb) { _, v in
-                withAnimation(DS.Motion.standard) { line.scrollTo(v) }
-            }
-        }
-        .frame(minHeight: 44, alignment: .leading)
+    /// The verbs Move offers here, A–Z in the reader's language (prd §1547).
+    private var offeredVerbs: [Verb] {
+        Verb.allCases.filter { ($0 != .buy || buyAvailable) && ($0 != .lend || AaveLend.on) }
+            .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }
     }
 
-    private func verbRow(spacing: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: spacing) {
-            // A–Z in the reader's language (prd §1547); Swap stays the
-            // verb Move opens on, wherever it stands in the line.
-            ForEach(Verb.allCases.filter { ($0 != .buy || buyAvailable) && ($0 != .lend || AaveLend.on) }
-                .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }, id: \.self) { v in
-                Button {
-                    guard v != verb || receipt != nil || privateMode != nil || freshReceive else { return }
-                    withAnimation(DS.Motion.standard) {
-                        privateMode = nil
-                        freshReceive = false
-                        verb = v
-                        open = nil
-                        receipt = nil
-                    }
-                    DSHaptic.selection()
-                } label: {
-                    // The sentence's size (prd §1679); the picked verb is
-                    // bright, the rest grey, so they still read as a choice.
-                    Text(verbatim: title(v))
-                        .dsText(Self.rung)
-                        .foregroundStyle(v == verb ? DS.textPrimary
-                                         : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
-                }
-                .buttonStyle(RowPress())
-                .disabled(stage != nil || privateMove.acting || lendMove.acting)
-                .accessibilityAddTraits(v == verb ? [.isSelected] : [])
-                .id(v)
+    /// **THE VERB IS THE SENTENCE'S FIRST WORD (prd §1681, retiring the
+    /// verbs' own line, §1438a, and its scroll, §1679 item 2).** Pink, as
+    /// every word that changes is; a tap opens the verbs under the sentence.
+    private func verbWord(_ text: String) -> some View {
+        blank(text, ink: DS.pickInk, .verb, label: Text("\(text), change what Move does"))
+            .disabled(stage != nil || privateMove.acting || lendMove.acting)
+    }
+
+    /// Lend's own word, which its sentence leads with (prd §1674).
+    private var lendWord: String {
+        let done = if case .done = lendMove.stage { true } else { false }
+        return switch (lendMove.mode, done) {
+        case (.lend, false): String(localized: "Lend")
+        case (.lend, true): String(localized: "Lent")
+        case (.takeBack, false): String(localized: "Take back")
+        case (.takeBack, true): String(localized: "Took back")
+        }
+    }
+
+    /// The verbs as Move's list rows (prd §1681): a glyph, the verb, what it
+    /// does; the current one pink.
+    private var verbList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(offeredVerbs, id: \.self) { v in
+                listRow(title(v), sub: about(v), symbol: glyph(v),
+                        picked: v == verb && privateMode == nil && !freshReceive) { pickVerb(v) }
             }
         }
-        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func pickVerb(_ v: Verb) {
+        withAnimation(DS.Motion.standard) {
+            open = nil
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive else { return }
+            privateMode = nil
+            freshReceive = false
+            verb = v
+            receipt = nil
+        }
+        DSHaptic.selection()
+    }
+
+    private func glyph(_ v: Verb) -> String {
+        switch v {
+        case .swap: "arrow.up.arrow.down"
+        case .send: "arrow.up"
+        case .receive: "arrow.down"
+        case .buy: "creditcard"
+        case .sweep: "tray.and.arrow.down"
+        case .deposit: "plus"
+        case .lend: "building.columns"
+        }
+    }
+
+    private func about(_ v: Verb) -> String {
+        switch v {
+        case .swap: String(localized: "One coin for another")
+        case .send: String(localized: "To a name or an address")
+        case .receive: String(localized: "Your address")
+        case .buy: String(localized: "Gift cards and top-ups")
+        case .sweep: String(localized: "Small balances into one coin")
+        case .deposit: String(localized: "Dollars into your account")
+        case .lend: String(localized: "On Aave, for a rate")
+        }
     }
 
     private func title(_ v: Verb) -> String {
@@ -2379,8 +2420,8 @@ struct MoveSentence: View {
     /// for it (§1679: its prompt may take two lines).
     @State private var searchHeight: CGFloat = 0
 
-    /// A search field at the sentence's size (prd §1679): what you type wears
-    /// the rung, and so does the prompt, drawn here because a field's own
+    /// A search field at a choice's size (prd §1681): what you type wears
+    /// the choice's rung, and so does the prompt, drawn here because a field's own
     /// placeholder can neither wrap nor shrink — two lines, then smaller,
     /// never cut ("Search or paste an address" keeps §1533's words).
     private func wordField<Field: View>(_ prompt: String, text: String,
@@ -2388,7 +2429,7 @@ struct MoveSentence: View {
         ZStack(alignment: .leading) {
             if text.isEmpty {
                 Text(verbatim: prompt)
-                    .dsText(Self.rung)
+                    .dsText(Self.choiceRung)
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.5)
@@ -2396,7 +2437,7 @@ struct MoveSentence: View {
                     .accessibilityHidden(true)
             }
             field()
-                .dsText(Self.rung)
+                .dsText(Self.choiceRung)
                 .foregroundStyle(DS.textPrimary)
         }
     }
@@ -2418,6 +2459,7 @@ struct MoveSentence: View {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
+                            case .verb: verbList
                             case .with: withList
                             case .buy: buyList
                             case .to: toList
@@ -3109,8 +3151,8 @@ struct MoveSentence: View {
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
                          picked: Bool = false,
                          act: @escaping () -> Void) -> some View {
-        // A choice is a word at the sentence's size (prd §1679): the mark,
-        // the word and its line under it, the figure trailing. The current
+        // A choice is a word a step under the sentence (prd §1681): the
+        // mark, the word and its line under it, the figure trailing. The current
         // pick wears the pick's ink, the sentence's word in the list (prd
         // §1616); `dim` is for a row left out.
         return Button(action: act) {
@@ -3143,14 +3185,14 @@ struct MoveSentence: View {
                     // categories, a person with no face, prd §1534).
                     Circle().fill(DS.fillStrong)
                         .frame(width: Self.listMark, height: Self.listMark)
-                        .overlay(Image(systemName: symbol).dsGlyph(.title, weight: .semibold)
+                        .overlay(Image(systemName: symbol).dsGlyph(.body, weight: .semibold)
                             .foregroundStyle(DS.textSecondary))
                         .accessibilityHidden(true)
                 } else if let mark {
                     AssetMark(name: mark, size: Self.listMark)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: title).dsText(Self.rung)
+                    Text(verbatim: title).dsText(Self.choiceRung)
                         .foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.5)
                     if let sub { Text(verbatim: sub).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(2) }
