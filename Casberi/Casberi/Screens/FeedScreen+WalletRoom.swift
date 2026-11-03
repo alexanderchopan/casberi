@@ -365,13 +365,38 @@ extension FeedScreen {
     /// Safe transaction someone proposed and you have not signed is a power
     /// over your wallet waiting on you — the first group, before Delegations
     /// and Approvals (user: "signatures, delegations, approvals"). The row
-    /// opens that Safe's own queue.
+    /// opens the transaction it counts, signed in the app (prd §1684).
     var walletSignatureWarnings: [WalletWarning] {
         walletLive.warnings.filter { $0.kind == .safe }
     }
 
+    /// **A SIGNATURE ROW OPENS THE SIGNATURE (prd §1684, user: "do both").**
+    /// The Safe's next queued transaction waiting on you (lowest nonce), on its sheet with
+    /// the sign block (§1249); else Safe's own queue; else the Wallet picked
+    /// to Safe, whose box draws the queue (§1048d). Read on the tap, never in
+    /// a body (§628).
+    func walletOpenSignature(_ warning: WalletWarning, upcoming: [Thing]) {
+        let safe = String(warning.id.dropFirst("safe:".count))
+        // The queue's order is its nonce: the next to sign is the lowest.
+        var nonces: [String: Int] = [:]
+        for p in SafeBridge.pendingSnapshot() where WalletWatch.sameAddress(p.safeAddress, safe) {
+            nonces[p.ref] = p.nonce ?? .max
+        }
+        let asks = upcoming.filter { $0.source == SafeBridge.sourceName && nonces[$0.sourceRef ?? ""] != nil }
+        if let next = asks.min(by: {
+            let a = nonces[$0.sourceRef ?? ""] ?? .max, b = nonces[$1.sourceRef ?? ""] ?? .max
+            return a == b ? $0.capturedAt < $1.capturedAt : a < b
+        }) {
+            openThing(next)
+        } else if let action = warning.action, let url = URL(string: action.url) {
+            openExternal(url)
+        } else {
+            chrome.walletScope = RoomAccounts.seatPrefix + SafeBridge.sourceName
+        }
+    }
+
     @ViewBuilder
-    var walletSignaturesSection: some View {
+    func walletSignaturesSection(upcoming: [Thing]) -> some View {
         let waiting = walletSignatureWarnings
         if !waiting.isEmpty {
             // Five rows, then one door (prd §1408).
@@ -383,11 +408,7 @@ extension FeedScreen {
                     needsYouRow(glyph: warning.kind.glyph, critical: false,
                                 title: warning.rowName ?? warning.title,
                                 line: warning.rowLine ?? warning.subtitle) {
-                        if let action = warning.action, let url = URL(string: action.url) {
-                            openExternal(url)
-                        } else {
-                            feedSheet = .worthALook
-                        }
+                        walletOpenSignature(warning, upcoming: upcoming)
                     }
                     .walletListRow()
                 }

@@ -1058,27 +1058,6 @@
    "afterControl": "button:^Follow, Follow"
   },
   {
-   "id": "wallet-worth-a-look",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Needs you"
-    },
-    {
-     "tap": "button:^Everyday's Safe"
-    }
-   ],
-   "anchor": "text:=Worth a look"
-  },
-  {
    "id": "wallet-subscription",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscription"

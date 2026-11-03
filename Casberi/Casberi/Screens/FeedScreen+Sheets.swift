@@ -25,7 +25,6 @@ extension FeedScreen {
         case token(TokenQuickRoute)
         /// One held token, itemized by where it is (prd §1670), by symbol.
         case walletToken(String)
-        case worthALook
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -95,7 +94,6 @@ extension FeedScreen {
             case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
             case .walletToken(let symbol): "walletToken:\(symbol)"
-            case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room, let seat): "followingAdd:\(room.rawValue):\(seat ?? "")"
@@ -289,7 +287,15 @@ extension FeedScreen {
             TokenQuickSheet(route: route)
         case .walletToken(let symbol):
             if let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
-                WalletTokenSheet(position: position)
+                WalletTokenSheet(position: position) { draft in
+                    feedSheet = nil
+                    // Move rises once this sheet has gone (§872).
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(450))
+                        chrome.moveDraft = draft
+                        chrome.moveTray = true
+                    }
+                }
             }
         case .socialFaces:
             socialFacesTray
@@ -358,28 +364,6 @@ extension FeedScreen {
             GitHubWatchTray()
         case .delegation(let d):
             WalletDelegationSheet(delegation: d)
-        case .worthALook:
-            // The two walk doors (prd §449). Each is handed over ONLY
-            // when its card is really on screen — the sheet falls back to
-            // enumerating that group itself otherwise, so a pill can
-            // never point at a card this room isn't drawing (§83's dead
-            // control, and the same nil-able shape
-            // `WalletCompositionStrip` keeps for Deposited and Locked).
-            //
-            // Dismiss and scroll are set TOGETHER on purpose: `scrollTo`
-            // animates over ~0.3s and the sheet's dismissal over ~0.35s,
-            // so the card is already centred as the sheet clears — the
-            // room moving to meet you rather than a jump you arrive to.
-            WalletWorthALookTray(
-                warnings: walletLive.warnings,
-                flagged: walletLive.flagged,
-                activeApprovals: walletLive.activeApprovals,
-                exposure: walletLive.exposure,
-                // No walk doors (prd §947): the tray opens from Risk, and the
-                // approvals and lending cards it walked to are Permissions'
-                // and Positions' now, so it enumerates those groups itself.
-                onWalkToApprovals: nil,
-                onWalkToLending: nil)
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):

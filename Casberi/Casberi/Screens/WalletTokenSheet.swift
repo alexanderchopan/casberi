@@ -10,6 +10,9 @@ import SwiftUI
 /// chart stands under the total (prd §1672).
 struct WalletTokenSheet: View {
     let position: WalletPortfolio.Position
+    /// Opens Move with this token picked (prd §1684): the sheet closes first,
+    /// one sheet at a time (§872).
+    let move: (MoveSentence.Draft) -> Void
 
     /// The read's route, else one off its biggest contract.
     private var chartRoute: String? {
@@ -110,6 +113,25 @@ struct WalletTokenSheet: View {
                     TokenChartView(chain: r.chain, address: r.address) { EmptyView() }
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
+                }
+                // **ACT WHERE YOU LOOK (prd §1684):** what your account holds
+                // of it sends or swaps from here, Move's sentence filled in
+                // on the network you hold most of it on; nothing for a token
+                // only a followed wallet, an exchange or an app holds.
+                let account = YourAccountDemo.shownAddress
+                let send = MoveSentence.holdingDraft(.send, symbol: position.symbol, parts: position.parts, account: account)
+                let swap = MoveSentence.holdingDraft(.swap, symbol: position.symbol, parts: position.parts, account: account)
+                if send != nil || swap != nil {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let send {
+                            DSDoorRow(icon: "arrow.up.right", title: Text("Send \(position.symbol)")) { move(send) }
+                        }
+                        if let swap {
+                            DSDoorRow(icon: "arrow.left.arrow.right", title: Text("Swap \(position.symbol)")) { move(swap) }
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
                 }
                 ForEach(groups, id: \.0) { kind, rows in
                     VStack(alignment: .leading, spacing: DS.Space.s1) {

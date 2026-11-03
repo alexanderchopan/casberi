@@ -162,8 +162,6 @@ ENTRIES = [
          OPEN("Ethereum")+[{"tap": "button:=Alert, Alert"}, {"tap": "button:=+10%"}, {"tap": "button:=Set alert"}, {"tap": "button:^Rises to "}],
          "text:=Edit alert", "button:^Rises to ", swipe_to=SEARCH),
   # ---- The Wallet: every tile is the Wallet's page (prd §1321); what a tile raises rises over it ----
-  rises("wallet-worth-a-look", [FS+"worthALook"], [D],
-        WALLET+[{"tap": "button:^Security, Who"}, {"tap": "button:=1, Poisoning"}, {"tap": "button:^1 lookalike address, "}], "text:=Worth a look"),
   rises("wallet-subscription", [FS+"subscription"], [D], WALLET+[{"tap": "button:^Subscriptions. "}, {"tap": "button:^Netflix, $12.99"}], "text:=Paid so far"),
   rises("wallet-track-subscription", [FS+"subscriptionAdd"], [D], WALLET+[{"tap": "button:^Subscriptions. "}, {"tap": "button:=Track a subscription"}],
         "field:?Search, or type any name"),

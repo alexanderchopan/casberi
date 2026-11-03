@@ -70696,3 +70696,13 @@ Move opens short. The first word's choices, or the keys, make it the whole sheet
 **Mac half (§1402).** The same view.
 
 Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYwSvrKrjwH).
+
+## §1684 — Act where you look: a held token's sheet sends and swaps it, and a signature row in Needs you opens the transaction it counts; the Worth a look tray is deleted (amends §1670, §947; retires §212's tray) (user, 2026-11-03, after an end-to-end walk of the Wallet on the simulator found the token sheet had no Send or Swap, Move opened blank, and a Safe row in Needs you raised a tray that relisted Needs you and whose own Safe row did nothing: "do both")
+
+1. **The token sheet (§1670) carries Send ETH and Swap ETH** as `DSDoorRow`s under its total (and chart), the verbs `TokenHideMenu`'s long press already offered. Each closes the sheet and raises Move with the sentence filled in on the network your account holds most of it on (`MoveSentence.holdingDraft`), one sheet at a time (§872). A token only a followed wallet, an exchange or an app holds draws neither row: Move cannot spend it.
+2. **A Safe row in Needs you' Signatures opens the transaction it counts:** the Safe's next queued transaction waiting on you, by nonce (`SafeBridge.pendingSnapshot` matched to Needs you's rows), on its sheet, where the sign block stands when this phone holds an owner key (§1249). Else Safe's own queue (the row's "Open Safe" link), else the Wallet picked to Safe, whose box draws the queue (§1048d).
+3. **The Worth a look tray is deleted, view and route** (`WalletWorthALookTray`, `FeedSheetRoute.worthALook`, and the long-unused `WalletWarningsStrip`). Its one door was that row's fallback, and it relisted what Needs you, Permissions and Threats already list (§1480). The data it read stays: Needs you, Permissions and Threats read it, and so do `-worthALookProbe` and the census's `wallet.worthALook` line.
+
+**Seen on the simulator** (the demo): ETH's sheet with both rows, Swap ETH landing on "Swap $0 of ETH on Base for token on Base now."; Everyday's Safe in Needs you opening "Send 1,500 USDC to payroll.eth", Waiting on you. **Not seen:** the sign block (the demo's phone holds no owner key), Send's landing, the two fallbacks, the Mac.
+
+**Mac half (§1402).** The same sheet and rows; Move rises as it does from the rail.

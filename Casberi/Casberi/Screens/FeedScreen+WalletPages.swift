@@ -744,7 +744,7 @@ extension FeedScreen {
         let onAll = walletOnAll
         let cards = onAll ? SpendingReading.shared.cards.filter { Self.cardAsk($0) != nil } : []
         if walletNeedsCount(upcoming: upcoming) == 0 { walletSkeletonRowsSection }
-        walletSignaturesSection
+        walletSignaturesSection(upcoming: upcoming)
         // Money of yours waiting on 0xBow, or refused (prd §1561).
         if walletShowsPrivate { WalletPrivateAsks() }
         // A limit order waiting for its price (prd §1673 item 7).
