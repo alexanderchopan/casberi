@@ -75,14 +75,14 @@ enum RoundUps {
         /// says `.waits`), never `target` instead.
         var movesPrivately: Bool { RoundUps.movesPrivately(self, chains: RoundUps.privateChains) }
 
-        /// **ONE SWITCH (prd §1572, user: "we are offering too many choices
-        /// to a user"):** on is the next dollar, into your private balance;
-        /// the step and the token are no longer choices. A setting kept by
-        /// an older build reads this way too. It saves with your sends only,
-        /// in USDC, ETH swapped to USDC where the dollar is short (prd §1578).
+        /// **A SWITCH AND A STEP (prd §1572, §1685):** on rounds up to the
+        /// next $1 or $5, into your private balance; the token is not a
+        /// choice. A step other than 1 or 5 reads as 1, and a setting kept by
+        /// an older build keeps its step. It saves with your sends only, in
+        /// USDC, ETH swapped to USDC where the dollar is short (prd §1578).
         var simple: Setting {
             var s = self
-            s.step = 1
+            s.step = RoundUps.steps.contains(step) ? step : 1
             s.toPrivate = true
             return s
         }
@@ -104,6 +104,9 @@ enum RoundUps {
         /// submits (§1473), so no call of ours rides it; it only counts.
         case buy
     }
+
+    /// The two steps a person may pick (prd §1685).
+    static let steps = [1, 5]
 
     static func carriesBuy(_ act: Act) -> Bool {
         switch act {

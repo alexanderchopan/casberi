@@ -172,6 +172,12 @@ check(RoundUps.change("4300000", step: 1) == "700000" && RoundUps.change("400000
       && RoundUps.change("0", step: 1) == "0"
       && RoundUps.change("4300000", step: 5) == "700000" && RoundUps.change("5300000", step: 5) == "4700000"
       && RoundUps.change("1", step: 1) == "999999", "a round-up's change is wrong")
+// $1 or $5 is the person's choice again (prd §1685): kept by `simple`,
+// anything else reads as $1.
+var ruFive = RoundUps.Setting(); ruFive.step = 5
+var ruOdd = RoundUps.Setting(); ruOdd.step = 3
+check(ruFive.simple.step == 5 && ruOdd.simple.step == 1 && RoundUps.Setting().simple.step == 1,
+      "the round-up step the person picked is not kept, or a step that is not $1 or $5 survives")
 check(RoundUps.plan(dollarSent: "4300000", saved: "3400000", step: 1) == .init(change: "700000", buy: nil, savedAfter: "4100000"),
       "a round-up under $5 is not counted")
 check(RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1) == .init(change: "700000", buy: "5200000", savedAfter: "0"),

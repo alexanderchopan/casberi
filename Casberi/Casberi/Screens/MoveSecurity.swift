@@ -318,7 +318,7 @@ struct MoveSecurity: View {
     /// the glass box Move opens (tokens by network, then your private
     /// balance); the example under it; the switch at the foot.
     @ViewBuilder private var roundUpsTraySheet: some View {
-        DSTray(title: String(localized: "Round-ups"), height: 420) {
+        DSTray(title: String(localized: "Round-ups"), height: 480) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text("Your spare change is saved privately in dollars, and earns interest.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -326,6 +326,24 @@ struct MoveSecurity: View {
                 Text(verbatim: Self.roundUpsExample(roundUps))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
+                // $1 or $5 (prd §1685): the one choice beside the switch.
+                HStack(spacing: DS.Space.s2) {
+                    Text("Round up to the next").dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: DS.Space.s2)
+                    ForEach(RoundUps.steps, id: \.self) { step in
+                        Button {
+                            saveRoundUps { $0 = $0.simple; $0.step = step }
+                        } label: {
+                            Chip(text: "$\(step)", selected: roundUps.step == step)
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text("Round up to the next $\(step)"))
+                        .accessibilityAddTraits(roundUps.step == step ? [.isSelected] : [])
+                    }
+                }
+                .frame(minHeight: 44)
+                .padding(.top, DS.Space.s4)
                 HStack {
                     Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
                     Spacer()
@@ -336,14 +354,13 @@ struct MoveSecurity: View {
                     .tint(DS.pickInk)
                 }
                 .frame(minHeight: 44)
-                .padding(.top, DS.Space.s4)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s4)
         }
     }
 
-    /// On or Off: the one choice (prd §1572).
+    /// On or Off (prd §1572); the step is the tray's (prd §1685).
     private var roundUpWord: String {
         guard roundUps.on else { return String(localized: "Off") }
         let saved = RoundUps.privateSaved(on: RoundUps.ethereumPool)
@@ -363,7 +380,10 @@ struct MoveSecurity: View {
         // saved, and when it moves, the threshold read live.
         let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum)
             .map { WalletValue.money(YourAccountOp.dollars($0, decimals: RoundUps.dollarDecimals, price: 1)) } ?? "$10"
-        return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send.")
+        // The change at the step picked (prd §1685): 60¢ at $1, $1.60 at $5.
+        let cents = (Int(RoundUps.change("3400000", step: setting.step)) ?? 0) / 10_000
+        let saved = cents < 100 ? "\(cents)¢" : (Double(cents) / 100).formatted(.currency(code: "USD"))
+        return String(localized: "Spend $3.40 and \(saved) is saved. Once about \(at) adds up, it moves into your private balance with your next send.")
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,

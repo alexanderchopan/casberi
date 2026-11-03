@@ -170955,30 +170955,86 @@
         }
       }
     },
-    "Spend $3.40 and 60¢ is saved. Once about %@ adds up, it moves into your private balance with your next send." : {
+    "Spend $3.40 and %@ is saved. Once about %@ adds up, it moves into your private balance with your next send." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Gasta $3.40 y se guardan 60¢. Cuando se acumulen unos %@, pasa a tu saldo privado con tu próximo envío."
+            "value" : "Gasta $3.40 y se guardan %1$@. Cuando se acumulen unos %2$@, pasa a tu saldo privado con tu próximo envío."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "$3.40使うと60¢が保存されます。約%@たまると、次の送金でプライベート残高に移ります。"
+            "value" : "$3.40使うと%1$@が保存されます。約%2$@たまると、次の送金でプライベート残高に移ります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "$3.40를 쓰면 60¢가 저장됩니다. 약 %@가 모이면 다음 송금 때 비공개 잔액으로 옮겨집니다."
+            "value" : "$3.40를 쓰면 %1$@가 저장됩니다. 약 %2$@가 모이면 다음 송금 때 비공개 잔액으로 옮겨집니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "花 $3.40，就存下 60¢。累计约 %@ 后，会在你下一次发送时转入你的私密余额。"
+            "value" : "花 $3.40，就存下 %1$@。累计约 %2$@ 后，会在你下一次发送时转入你的私密余额。"
+          }
+        }
+      }
+    },
+    "Round up to the next" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondear al siguiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "切り上げ単位"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "올림 단위"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向上取整到"
+          }
+        }
+      }
+    },
+    "Round up to the next $%lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondear a los siguientes $%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の$%lldに切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음 $%lld로 올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向上取整到下一个 $%lld"
           }
         }
       }
