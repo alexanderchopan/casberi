@@ -36,6 +36,9 @@ enum DSSkeleton {
         /// Reminders room, prd §993). Reached by its caller, never a glyph —
         /// no wallet-family scope is a list of to-dos.
         case checklist
+        /// The circle pack, five circles of falling size in `CirclePack`'s
+        /// own layout — Permissions' box (prd §1654, §1677).
+        case pack
 
         init(glyph: String) {
             switch glyph {
@@ -43,6 +46,7 @@ enum DSSkeleton {
             case ScopeTileGlyph.activity:    self = .bars
             case ScopeTileGlyph.holdings:    self = .treemap
             case ScopeTileGlyph.accounts:    self = .graph
+            case ScopeTileGlyph.permissions: self = .pack
             default:                         self = .ranked
             }
         }
@@ -170,6 +174,18 @@ struct DSSkeletonFigure: View {
                 pill(0, 30 + y, CGFloat(w), 14)
             }
             dashed([(225, 8), (225, 250)])
+        case .pack:
+            // The pack's own geometry at the size offered, so the skeleton is
+            // the drawing a full box makes, not a likeness of it. Drawn in the
+            // box's units (never the 300×264 design space): a circle stays round.
+            let shares: [Double] = [5, 3, 2, 1.3, 0.8]
+            let fills = [DSSkeleton.shape, DSSkeleton.shape, DSSkeleton.track,
+                         DSSkeleton.track, DSSkeleton.track]
+            for (i, c) in CirclePack.layout(shares: shares, in: size).enumerated() {
+                ctx.fill(Path(ellipseIn: CGRect(x: c.center.x - c.radius, y: c.center.y - c.radius,
+                                                width: 2 * c.radius, height: 2 * c.radius)),
+                         with: .color(fills[i]))
+            }
         case .checklist:
             // Open circles, never a filled one: a checked circle would say
             // something was done, and this says nothing is here.

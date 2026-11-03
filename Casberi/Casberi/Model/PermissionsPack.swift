@@ -19,12 +19,28 @@ import Foundation
 ///    circle, "N more", whose dollars are theirs; one app past eight is drawn
 ///    rather than folded, so More always holds two or more.
 ///
+/// 4. **A delegate and a Safe module are circles too (prd §1677).** They are
+///    on the page's Delegations list, so a box that left them out said "No
+///    approvals" over a list that held one. Each is its own circle, keyed on
+///    the contract (never the name), unpriced, filled as no limit — both reach
+///    everything of yours — and sorted first among the unpriced.
+///
 /// Foundation-only, so `permissions-box-selftest.sh` compiles it as shipped.
 enum PermissionsPack {
     typealias Grant = WalletApprovalExposure.Grant
 
     static let cap = 8
     static let moreID = "permissions.more"
+
+    /// A delegate or module, as the Delegations list carries it
+    /// (`WalletPermissions.Holder`, reduced to what the pack draws).
+    struct Acting: Equatable {
+        /// The acting contract or key id — the holder's `key`.
+        let key: String
+        let name: String
+        /// A Safe module; false for a delegate.
+        let module: Bool
+    }
 
     struct Piece: Equatable, Identifiable {
         /// The app's name, or `moreID`.
@@ -40,19 +56,24 @@ enum PermissionsPack {
         let grantIDs: [UUID]
         /// How many apps a More circle holds; 1 for an app.
         let apps: Int
+        /// The delegate's or module's key; nil for an app's grants.
+        var actingKey: String? = nil
+        var module = false
+
+        var isActing: Bool { actingKey != nil }
 
         var isMore: Bool { id == PermissionsPack.moreID }
         var priced: Bool { usd > 0 }
     }
 
-    static func pieces(_ grants: [Grant], cap: Int = cap) -> [Piece] {
+    static func pieces(_ grants: [Grant], acting: [Acting] = [], cap: Int = cap) -> [Piece] {
         var order: [String] = []
         var groups: [String: [Grant]] = [:]
         for g in grants {
             if groups[g.spender] == nil { order.append(g.spender) }
             groups[g.spender, default: []].append(g)
         }
-        let apps = order.map { name -> Piece in
+        let granted = order.map { name -> Piece in
             let gs = (groups[name] ?? []).sorted { ($0.usd ?? 0) > ($1.usd ?? 0) }
             var symbols: [String] = []
             for g in gs where !symbols.contains(g.symbol) { symbols.append(g.symbol) }
@@ -61,7 +82,15 @@ enum PermissionsPack {
                          unlimited: gs.contains { $0.unlimited && !$0.forAll },
                          forAll: gs.contains { $0.forAll },
                          grantIDs: gs.map(\.thingID), apps: 1)
-        }.sorted(by: before)
+        }
+        var keys: Set<String> = []
+        let actors = acting.filter { keys.insert($0.key).inserted }.map { a in
+            Piece(id: "acting:\(a.key)", name: a.name,
+                  symbols: [a.module ? String(localized: "Safe module") : String(localized: "Delegate")],
+                  usd: 0, unlimited: true, forAll: false, grantIDs: [], apps: 1,
+                  actingKey: a.key, module: a.module)
+        }
+        let apps = (granted + actors).sorted(by: before)
         guard apps.count > cap + 1 else { return apps }
         let rest = apps.dropFirst(cap)
         let more = Piece(id: moreID, name: String(localized: "\(rest.count) more"), symbols: [],
@@ -73,6 +102,7 @@ enum PermissionsPack {
     private static func before(_ a: Piece, _ b: Piece) -> Bool {
         if a.priced != b.priced { return a.priced }
         if a.priced, a.usd != b.usd { return a.usd > b.usd }
+        if a.isActing != b.isActing { return a.isActing }
         if a.unlimited != b.unlimited { return a.unlimited }
         if a.forAll != b.forAll { return a.forAll }
         return a.name.localizedStandardCompare(b.name) == .orderedAscending

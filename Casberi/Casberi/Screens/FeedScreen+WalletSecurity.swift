@@ -233,7 +233,31 @@ extension FeedScreen {
     /// A circle in Permissions' pack (prd §1654): an app holding one grant
     /// opens that grant's sheet; an app holding several, or More, opens the
     /// Approvals list under the box in full.
+    /// What the Delegations list holds, as the pack draws it (prd §1677):
+    /// the same read `walletActingSection` lists, so a circle and a row can
+    /// never disagree.
+    var walletPermissionsActing: [PermissionsPack.Acting] {
+        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                      acting: walletLive.acting)
+        return WalletPermissions.actingHolders(holders).map {
+            PermissionsPack.Acting(key: $0.key, name: $0.name,
+                                   module: $0.power == .movesWithoutSignature)
+        }
+    }
+
     func walletOpenPermission(_ piece: PermissionsPack.Piece) {
+        // A delegate opens its sheet (§1594), as its row does; a module, or a
+        // More holding only these, lands on Delegations.
+        if let key = piece.actingKey, !piece.module,
+           let d = WalletDelegation.find(key, in: walletLive.acting) {
+            feedSheet = .delegation(d)
+            return
+        }
+        if piece.isActing || (piece.isMore && piece.grantIDs.isEmpty) {
+            if !walletSecurityOpen(.delegations) { walletSecurityToggle(.delegations) }
+            cardScrollTarget = SecurityAnchor.delegations.id
+            return
+        }
         if !piece.isMore, piece.grantIDs.count == 1 {
             guard let thing = walletLive.activeApprovals
                 .first(where: { $0.isLive && $0.id == piece.grantIDs[0] }) else {
@@ -256,7 +280,7 @@ extension FeedScreen {
     }
 
     /// The grants taken back today, once nothing is left (prd §1633): the
-    /// empty pack draws its one faint circle, and this says what went.
+    /// empty pack draws its skeleton (§1677), and this says what went.
     var walletRevokedTodaySection: some View {
         walletCard(String(localized: "Revoked"), glyph: "checkmark.shield") {
             ForEach(JustRevoked.today(scope: chrome.walletScope), id: \.grant.thingID) { taken in

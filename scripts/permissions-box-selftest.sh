@@ -21,10 +21,18 @@ EXPO="Casberi/Casberi/Model/WalletApprovalExposure.swift"
 for f in "$PACK" "$TREND" "$EXPO"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
-grep -q 'WalletPermissionsFigure(grants: walletLive.exposure.all)' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift \
+grep -q 'WalletPermissionsFigure(grants: walletLive.exposure.all,' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift \
   || { echo "✗ Permissions' box no longer packs every grant"; exit 1; }
-grep -q 'PermissionsPack.pieces(grants)' Casberi/Casberi/Screens/WalletPermissionsFigure.swift \
+grep -q 'acting: walletPermissionsActing)' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift \
+  || { echo "✗ Permissions' box no longer packs the delegates and modules (§1677)"; exit 1; }
+grep -q 'WalletPermissions.actingHolders(holders).map' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift \
+  || { echo "✗ the pack's delegates are not the Delegations list's read (§1677)"; exit 1; }
+grep -q 'PermissionsPack.pieces(grants, acting: acting)' Casberi/Casberi/Screens/WalletPermissionsFigure.swift \
   || { echo "✗ the pack no longer draws PermissionsPack's pieces"; exit 1; }
+grep -q 'WalletScopeEmptyFigure(section: .permissions' Casberi/Casberi/Screens/WalletPermissionsFigure.swift \
+  || { echo "✗ an empty pack no longer draws its skeleton and short state (§1677)"; exit 1; }
+grep -q 'case ScopeTileGlyph.permissions: self = .pack' Casberi/Casberi/Design/DSSkeleton.swift \
+  || { echo "✗ Permissions' skeleton is no longer the pack (§1677)"; exit 1; }
 grep -q 'ThreatTrend.read(' Casberi/Casberi/Screens/FeedScreen+WalletPages.swift \
   || { echo "✗ Threats' box no longer reads the trend"; exit 1; }
 grep -q 'let exposure = walletLive.exposure$' Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
@@ -80,6 +88,23 @@ check(folded.count == 9 && folded.last?.isMore == true, "past eight, the rest ar
 check(folded.last?.apps == 4 && folded.last?.grantIDs.count == 4, "More holds the four it folds")
 check(folded.last?.usd == (9...12).map { Double(100 - $0) }.reduce(0, +), "More's dollars are theirs")
 check(folded.last?.unlimited == false, "More is grey")
+
+// ── Delegates and modules are circles (§1677) ────────────────────────
+let module = PermissionsPack.Acting(key: "0xmod", name: "Allowance module", module: true)
+let delegate = PermissionsPack.Acting(key: "0xdel", name: "MetaMask", module: false)
+let onlyModule = PermissionsPack.pieces([], acting: [module])
+check(onlyModule.count == 1 && onlyModule[0].isActing && onlyModule[0].module,
+      "a module alone is a circle, so the box never says empty over a Delegations row")
+check(onlyModule[0].unlimited && !onlyModule[0].priced, "a module is no limit and unpriced")
+check(onlyModule[0].symbols == ["Safe module"], "a module says what it is")
+let mixed = PermissionsPack.pieces([sea, uni, free], acting: [module, delegate])
+check(mixed.map(\.name) == ["Uniswap", "Allowance module", "MetaMask", "Freebie", "OpenSea"],
+      "priced first, then delegates and modules, then the unpriced grants")
+check(PermissionsPack.pieces([], acting: [delegate, delegate]).count == 1, "one circle per delegate contract")
+let twin = PermissionsPack.Acting(key: "0xother", name: "MetaMask", module: false)
+check(PermissionsPack.pieces([], acting: [delegate, twin]).count == 2,
+      "two contracts with one name stay two circles")
+check(PermissionsPack.total(mixed) == 1820, "a delegate adds no dollars")
 
 // ── The trend ────────────────────────────────────────────────────────
 var cal = Calendar(identifier: .gregorian)

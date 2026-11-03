@@ -888,9 +888,11 @@ extension FeedScreen {
             let n = walletNeedsCount(upcoming: upcoming)
             let parts = walletNeedsHeldParts
             WalletNeedsHeldFigure(reading: NeedsYouHeld.read(parts, others: n - parts.count), count: n)
-        // **ONE CIRCLE PER APP, SIZED BY WHAT IT REACHES (prd §1654).**
+        // **ONE CIRCLE PER APP, SIZED BY WHAT IT REACHES (prd §1654)**, and
+        // one per delegate or module the Delegations list holds (§1677).
         case .permissions:
-            WalletPermissionsFigure(grants: walletLive.exposure.all) { walletOpenPermission($0) }
+            WalletPermissionsFigure(grants: walletLive.exposure.all,
+                                    acting: walletPermissionsActing) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
             let things = walletThreatThings

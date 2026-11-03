@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// **PERMISSIONS' BOX IS A PACK (prd §1654, coloured by §1656).** One circle
-/// per app that can move your tokens, its area the dollars it reaches
+/// per app that can move your tokens, and one per delegate or Safe module
+/// (§1677), its area the dollars it reaches
 /// (`PermissionsPack`). The fill says the limit: amber (`DS.attention`) for an
 /// app with no limit, the charts' tint for a capped one; past eight apps, one
 /// grey "N more". The figure leads inside a circle; a larger one names the app
 /// and what it reaches, the largest carries the app's mark too. Under the
-/// pack, the key and the total.
+/// pack, the key and the total. Empty, the pack's own skeleton with "No
+/// permissions" on it (§769, §1677), no key.
 ///
 /// A tap opens the grant's sheet when the app holds one grant, else the
 /// Approvals list under the box, open in full.
@@ -15,20 +17,19 @@ import SwiftUI
 /// the rows' status hue; the tint is the charts' (§1385).
 struct WalletPermissionsFigure: View {
     let grants: [WalletApprovalExposure.Grant]
+    var acting: [PermissionsPack.Acting] = []
     let open: (PermissionsPack.Piece) -> Void
 
     var body: some View {
-        let pieces = PermissionsPack.pieces(grants)
+        let pieces = PermissionsPack.pieces(grants, acting: acting)
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let money: (Double) -> String = { mask ?? WalletValue.exactMoney($0) }
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if pieces.isEmpty {
-                // What would fill it, empty (§769).
-                Circle()
-                    .fill(DS.fillFaint)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityHidden(true)
-            } else {
+        if pieces.isEmpty {
+            // What would fill it, empty (§769): the pack's own drawing, the
+            // short state on it. Not one disc: a single circle is no pack.
+            WalletScopeEmptyFigure(section: .permissions, padded: false)
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSCirclePack(items: pieces.map { piece in
                     DSCirclePackItem(id: piece.id, share: piece.usd, label: label(piece, money: money))
                 }, mark: { item, diameter in
@@ -39,10 +40,10 @@ struct WalletPermissionsFigure: View {
                 }, action: { item in
                     if let piece = pieces.first(where: { $0.id == item.id }) { open(piece) }
                 })
+                legend(pieces, money: money)
             }
-            legend(pieces, money: money)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func label(_ piece: PermissionsPack.Piece, money: (Double) -> String) -> String {
@@ -57,9 +58,6 @@ struct WalletPermissionsFigure: View {
     /// priced states none.
     private func legend(_ pieces: [PermissionsPack.Piece], money: (Double) -> String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
-            if pieces.isEmpty {
-                Text("No approvals").foregroundStyle(DS.textTertiary)
-            }
             if pieces.contains(where: \.unlimited) {
                 key(Circle().fill(PermissionsCircle.unlimitedFill), word: String(localized: "No limit"))
             }
