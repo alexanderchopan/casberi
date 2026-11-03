@@ -70709,6 +70709,6 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 1. **Two choices, no more:** Round-ups' tray in Your account › Spending holds "Round up to the next" with `$1` and `$5` as `Chip`s, above the switch (`MoveSecurity.roundUpsTraySheet`, `RoundUps.steps`). $1 is the default; the token, network and public-or-private stay gone (§1572).
 2. **The step is kept:** `Setting.simple` keeps 1 or 5 and reads anything else as 1, so an older build's $5 setting comes back as it was saved.
 3. **The example names the step:** "Spend $3.40 and 60¢ is saved" at $1, "$1.60" at $5 (`roundUpsExample`, off `RoundUps.change`).
-4. **With §1684, a whole $5 send at $5 saves $5.** Said by nothing beyond the example; the row's word stays On / "$X to save".
+4. **With §1684, a whole $5 send at $5 rounds up to $10:** $5 of change, and Send's Total reads $10.00 (user, 2026-11-03: "the 5$ setting with a 5$ tx should round up to 10$"). Said by nothing beyond the example; the row's word stays On / "$X to save".
 5. **Create's round-ups step stays one switch at $1** (§1572 item 4); the step is changed in the tray only.
 6. **Checks:** `your-account-selftest.sh` holds $5 kept, 3 read as 1, the default 1.
