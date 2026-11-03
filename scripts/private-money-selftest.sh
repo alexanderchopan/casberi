@@ -123,11 +123,13 @@ awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}'
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
 ! grep -q 'PrivateMove.available ? \[nil\]' "$SENT" || { echo "✗ Private is in the verbs row"; exit 1; }
 use "$MPRIV" 'if move.mode == .send, !isDone {' "the switch shows on a deposit, or is gone from a private send"
-use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive)' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false }' "a closed Move keeps opening privately"
+use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
+use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
-! grep -q 'feedSheet' "$HOLD" || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
+# The savings goal's sheet is the section's own (prd §1667); any other sheet
+# would be a private flow outside Move.
+! grep 'feedSheet' "$HOLD" | grep -vq 'feedSheet = .savingsGoal' || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
 use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)' "the recipient is no longer drawn by its tail"
