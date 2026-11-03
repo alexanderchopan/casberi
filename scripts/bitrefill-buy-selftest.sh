@@ -253,7 +253,7 @@ mutate 's/\.sorted \{ \$0\.value < \$1\.value \}//' "packages in the server's or
 
 # ── Reachability: the words are wired (a guard asserts the USE) ────────────
 grep -q 'case .buy: buyClauses' "$MOVE" || fail "Move's sentence has no Buy clauses"
-grep -q 'Verb.allCases.filter { \$0 != .buy || buyAvailable }' "$MOVE" || fail "Buy is drawn with no account (§83)"
+grep -qF 'Verb.allCases.filter { ($0 != .buy || buyAvailable) &&' "$MOVE" || fail "Buy is drawn with no account (§83)"
 grep -q 'if verb == .buy { buyNow(); return }' "$MOVE" || fail "the foot's verb does not buy"
 grep -q 'BitrefillCodeRows(thing: thing)' "$SHEET" || fail "the sheet draws no code rows"
 grep -q 'paid\["PAYMENT-SIGNATURE"\] = header' "$X402" || fail "the payment is not sent in PAYMENT-SIGNATURE"

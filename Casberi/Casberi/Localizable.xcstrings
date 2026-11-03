@@ -18566,6 +18566,34 @@
         }
       }
     },
+    "%@, change what Move does" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@, cambiar lo que hace Move"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@、Moveの操作を変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@, Move에서 할 일 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@，更改 Move 要做的事"
+          }
+        }
+      }
+    },
     "%@, closed" : {
       "localizations" : {
         "es" : {
@@ -43284,6 +43312,34 @@
         }
       }
     },
+    "A percent you type" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un porcentaje que escribes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入力する割合"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "직접 입력하는 비율"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你输入的百分比"
+          }
+        }
+      }
+    },
     "A person" : {
       "localizations" : {
         "es" : {
@@ -43588,6 +43644,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你设定的价格 · CoW Swap · 手续费 %@"
+          }
+        }
+      }
+    },
+    "A price you type" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un precio que escribes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入力する価格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "직접 입력하는 가격"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你输入的价格"
           }
         }
       }
@@ -112643,6 +112727,34 @@
         }
       }
     },
+    "Moves the price %@%%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mueve el precio un %@%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格を%@%%動かします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격을 %@%% 움직입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会使价格变动 %@%%"
+          }
+        }
+      }
+    },
     "Moves to private" : {
       "localizations" : {
         "es" : {
@@ -143774,6 +143886,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "以美元计价、以 ETH 支付，因此转移的是精确金额。你的钱包会多发一点，ENS 会退回差额。"
+          }
+        }
+      }
+    },
+    "Prices in dollars" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Precios en dólares"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドルで表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "달러로 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以美元计价"
+          }
+        }
+      }
+    },
+    "Prices in percent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Precios en porcentaje"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "割合で表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비율로 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以百分比计价"
           }
         }
       }
@@ -228271,6 +228439,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要处理"
+          }
+        }
+      }
+    },
+    "needs money first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "necesita dinero primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "には先に資金が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하려면 먼저 돈이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要先有资金。"
           }
         }
       }

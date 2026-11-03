@@ -223,6 +223,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Move, the tab (prd §1422): the verb word's VoiceOver label names the
+    # place, "change what Move does" (prd §1681), as Wallet names its tab.
+    "Move",
     # SimpleFIN's own name for the one-time code a person makes at the bridge
     # (prd §1663): "Setup Token" is what its page calls it and what they copy.
     "Setup", "Token",

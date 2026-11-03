@@ -565,7 +565,7 @@ wire "$CHAIN" 'if YourAccountAcross.viaHandler(leg) { arrives = await arrivalChe
   "the handler's run on the receiving network is not simulated before Face ID (prd §1566)"
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute)' \
   "Across's fee for a swap on arrival is asked without its message"
-wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount),' \
+wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount, ends: (false, false)),' \
   "the swap on arrival is not quoted on the receiving network for exactly what a relayer pays"
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'read = ["to": bought, "data": SafeABI.hex(YourAccount.sel("balanceOf(address)") + YourAccount.w(account))]' \
   "the simulation on the receiving network does not read the token bought"
