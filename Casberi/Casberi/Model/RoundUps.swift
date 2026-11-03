@@ -118,7 +118,8 @@ enum RoundUps {
     /// — for a token with no price and for WETH⇄ETH (one for one, no trade).
     ///
     /// A price is an estimate, so it is counted to the CENT: $10 of DAI
-    /// priced at $9.999999 is $10.00, never a round-up of $0.000001.
+    /// priced at $9.999999 is $10.00, rounding up by $1.00 (prd §1684),
+    /// never by $0.000001.
     static func soldUnits(usd: Double?, wrap: Bool) -> String? {
         guard !wrap, let usd, usd.isFinite, usd > 0 else { return nil }
         let micro = (usd * 100).rounded() * 10_000
@@ -416,16 +417,18 @@ enum RoundUps {
         Dictionary(deposits.map { ($0.address.lowercased(), $0.target) }, uniquingKeysWith: { _, newer in newer })
     }
 
-    /// What `units` of the dollar rounds up by, to the next `step` dollars;
-    /// nothing when it is already whole.
+    /// What `units` of the dollar rounds up by, to the next `step` dollars.
+    /// **A WHOLE AMOUNT STILL ROUNDS UP (prd §1684):** $5.00 adds a full
+    /// step, to $6.00, so every send saves something. Nothing sent, nothing
+    /// added.
     static func change(_ units: String, step: Int) -> String {
-        guard step > 0, let n = Decimal(string: units) else { return "0" }
+        guard step > 0, let n = Decimal(string: units), n > 0 else { return "0" }
         let stepUnits = Decimal(step) * pow(10, dollarDecimals)
         var quotient = n / stepUnits
         var floored = Decimal()
         NSDecimalRound(&floored, &quotient, 0, .down)
         let rest = n - floored * stepUnits
-        return rest == 0 ? "0" : NSDecimalNumber(decimal: stepUnits - rest).stringValue
+        return NSDecimalNumber(decimal: stepUnits - rest).stringValue
     }
 
     /// One send's round-up: the change it adds, and — when the count reaches

@@ -70696,3 +70696,10 @@ Move opens short. The first word's choices, or the keys, make it the whole sheet
 **Mac half (§1402).** The same view.
 
 Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYwSvrKrjwH).
+
+## §1684 — A whole-dollar send still rounds up: $5.00 saves $1.00 (amends §1452 item 1's "the next $1", §1572 item 1) (user, 2026-11-03: "we need it to still round up if a user sends an even dollar like $5") — RULED, built, not yet compiled
+
+1. **Every send rounds up by something.** The change is the distance to the next whole step strictly above what was sent: $4.30 adds $0.70, $5.00 adds $1.00 (to $6.00). Before, an amount already whole added nothing, so a person sending round figures never saved (`RoundUps.change`).
+2. **Nothing sent, nothing added:** a zero amount adds no change.
+3. **Swaps and Buy follow it** (§1561): their dollar value is counted to the cent (`soldUnits`), so $10 of DAI priced at $9.999999 is $10.00 and adds $1.00.
+4. **Checks:** `your-account-selftest.sh` holds $4.00 and $5.00 at a full step, $0 at nothing.

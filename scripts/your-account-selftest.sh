@@ -164,9 +164,12 @@ for (label, tdOp) in [("the adapter's op", aop), ("a keyed-nonce op", { var o = 
 check(YourAccountOp.decimal(YourAccount.w(0)) == "0" && YourAccountOp.decimal(YourAccount.w(1234567890)) == "1234567890"
       && YourAccountOp.decimal(sop.nonceWord) == "57532766240966947952054840643333136270388981957654712034659401735",
       "a word's decimal is wrong")
-// Round-ups (prd §1452): the change to the next $1 or $5, nothing when whole,
-// counted until the count reaches $5, then everything counted is bought.
-check(RoundUps.change("4300000", step: 1) == "700000" && RoundUps.change("4000000", step: 1) == "0"
+// Round-ups (prd §1452): the change to the next $1 or $5, a full step when
+// whole (prd §1684), nothing when nothing is sent, counted until the count
+// reaches $5, then everything counted is bought.
+check(RoundUps.change("4300000", step: 1) == "700000" && RoundUps.change("4000000", step: 1) == "1000000"
+      && RoundUps.change("5000000", step: 1) == "1000000" && RoundUps.change("5000000", step: 5) == "5000000"
+      && RoundUps.change("0", step: 1) == "0"
       && RoundUps.change("4300000", step: 5) == "700000" && RoundUps.change("5300000", step: 5) == "4700000"
       && RoundUps.change("1", step: 1) == "999999", "a round-up's change is wrong")
 check(RoundUps.plan(dollarSent: "4300000", saved: "3400000", step: 1) == .init(change: "700000", buy: nil, savedAfter: "4100000"),
