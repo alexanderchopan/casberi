@@ -161,7 +161,9 @@ enum WalletConnectBridge {
             name: "Casberi",
             description: "Follow your accounts. A send is asked only to move your own money into Casberi.",
             url: "https://casberi.app",
-            icons: [],
+            // The wallet fetches this, never the app (user, 2026-11-03: Rainbow
+            // drew a bare "c" over an empty list). The app icon, 256px.
+            icons: ["https://casberi.app/icons/casberi-app-icon.png"],
             redirect: redirect
         )
 

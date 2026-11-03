@@ -46,10 +46,11 @@ func check(_ ok: Bool, _ what: String) {
 
 let pairing = URL(string: "wc:8a5e5bdc@2?relay-protocol=irn&symKey=" + String(repeating: "7", count: 64))!
 let names = SignerSwitch.wallets.map(\.name)
-check(names == ["MetaMask", "Rainbow", "Rabby"], "MetaMask, Rainbow and Rabby, in that order")
+check(names == ["Base", "Ambire", "MetaMask", "Rabby", "Zerion", "Rainbow", "OKX", "OKX"], "the user's seven, in the user's order (OKX under both its apps)")
+check(Set(SignerSwitch.wallets.map(\.scheme)).count == SignerSwitch.wallets.count, "no scheme twice")
 
 print("the wallet doors")
-let mm = SignerSwitch.wallets[0]
+let mm = SignerSwitch.wallets.first { $0.scheme == "metamask" }!
 let link = SignerSwitch.link(mm, pairing: pairing)
 let comps = link.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
 check(link?.scheme == "metamask" && link?.host == "wc", "the wallet's own scheme, onto wc")
@@ -60,9 +61,13 @@ check(!raw.contains(where: { ":@?&=/".contains($0) }), "the pairing is percent-e
 
 let none = SignerSwitch.doors(pairing: pairing, installed: { _ in false })
 check(none == [SignerSwitch.Door(wallet: nil, url: pairing)], "none installed: the one wc: door, as before")
-let some = SignerSwitch.doors(pairing: pairing, installed: { $0.scheme != "rainbow" })
+let some = SignerSwitch.doors(pairing: pairing, installed: { ["metamask", "rabby"].contains($0.scheme) })
 check(some.map { $0.wallet?.name } == ["MetaMask", "Rabby"], "one door per installed wallet, in order")
-check(some.allSatisfy { $0.url.absoluteString.hasPrefix("\($0.wallet!.scheme)://wc?uri=") }, "each onto its own link")
+check(some.allSatisfy { $0.url.absoluteString.hasPrefix("\($0.wallet!.scheme)://\($0.wallet!.path)wc?uri=") }, "each onto its own link")
+let okx = SignerSwitch.doors(pairing: pairing, installed: { $0.name == "OKX" })
+check(okx.count == 1 && okx[0].url.absoluteString.hasPrefix("okxwallet://main/wc?uri="), "both OKX apps installed: one OKX row, OKX Wallet's")
+let okex = SignerSwitch.doors(pairing: pairing, installed: { $0.scheme == "okex" })
+check(okex.count == 1 && okex[0].url.absoluteString.hasPrefix("okex://main/wc?uri="), "the OKX app alone: its own main/ link")
 check(!some.contains { $0.wallet == nil }, "with a wallet installed, no bare wc: door")
 
 print("how an ending treats the session")
@@ -156,7 +161,9 @@ wiring() {
 
   # `canOpenURL` answers only for a declared scheme.
   local scheme
-  for scheme in metamask rainbow rabby; do
+  local schemes=( ${(f)"$(grep -o 'scheme: "[a-z0-9-]*"' "$PURE" | sed 's/scheme: "\(.*\)"/\1/')"} )
+  (( ${#schemes} >= 7 )) || { echo "  ✗ the wallet list was not read (${#schemes} schemes)"; return 1; }
+  for scheme in $schemes; do
     sed -n '/LSApplicationQueriesSchemes/,/<\/array>/p' "$plist" | grep -q "<string>$scheme</string>" \
       || { echo "  ✗ $scheme is not in LSApplicationQueriesSchemes, so its door never shows"; return 1; }
   done
@@ -225,14 +232,21 @@ mutate "a fresh pairing gone is chased forever" "$PURE" \
 mutate "the pairing not encoded (its & splits the query)" "$PURE" \
   'unreserved.insert(charactersIn: "-._~")' 'unreserved.insert(charactersIn: "-._~:@?&=/")'
 mutate "every wallet's door opens MetaMask" "$PURE" \
-  'return URL(string: "\(wallet.scheme)://wc?uri=\(uri)")' 'return URL(string: "metamask://wc?uri=\(uri)")'
+  'return URL(string: "\(wallet.scheme)://\(wallet.path)wc?uri=\(uri)")' 'return URL(string: "metamask://wc?uri=\(uri)")'
+mutate "OKX's main/ dropped" "$PURE" \
+  'return URL(string: "\(wallet.scheme)://\(wallet.path)wc?uri=\(uri)")' 'return URL(string: "\(wallet.scheme)://wc?uri=\(uri)")'
+mutate "two OKX rows" "$PURE" \
+  '!named.contains(where: { $0.wallet?.name == w.name })' 'true'
 mutate "none installed: no door at all" "$PURE" \
   'return named.isEmpty ? [Door(wallet: nil, url: pairing)] : named' 'return named'
 mutate "the bare wc: door beside the named ones" "$PURE" \
   'return named.isEmpty ? [Door(wallet: nil, url: pairing)] : named' 'return named + [Door(wallet: nil, url: pairing)]'
 mutate "Rabby dropped" "$PURE" \
-  ',
-                          Wallet(name: "Rabby", scheme: "rabby")]' ']'
+  '
+                          Wallet(name: "Rabby", scheme: "rabby"),' ''
+mutate "Ambire dropped" "$PURE" \
+  '
+                          Wallet(name: "Ambire", scheme: "ambire"),' ''
 mutate "the signal a single stream (Ask again dead after a re-pair)" "$PURE" \
   'if !isOver { waiting[id] = continuation }' 'if !isOver, waiting.isEmpty { waiting[id] = continuation }'
 mutate "sign ignores the closing rule" "$LINK" \
@@ -269,5 +283,9 @@ mutate "the sheet done leaves the switch listening" "$SHEET" \
   '        switches.finish()' ''
 mutate "rabby undeclared" "$PLIST" \
   '<string>rabby</string>' ''
+mutate "zerion undeclared" "$PLIST" \
+  '<string>zerion</string>' ''
+mutate "cbwallet undeclared (Base never shows)" "$PLIST" \
+  '<string>cbwallet</string>' ''
 
 echo "✓ signer-switch self-test"

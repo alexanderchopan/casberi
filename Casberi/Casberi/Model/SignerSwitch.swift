@@ -9,16 +9,32 @@ import Foundation
 enum SignerSwitch {
     /// A wallet with its own WalletConnect deep link (item 3). Each scheme
     /// is in `LSApplicationQueriesSchemes`, so `canOpenURL` can answer.
+    /// `path` sits between the scheme and `wc?uri=` (OKX's `main/`).
     struct Wallet: Equatable, Sendable {
         let name: String
         let scheme: String
+        var path: String = ""
     }
 
-    /// UNMEASURED (§780b): Rabby's form is the other two's, unconfirmed;
-    /// whether each opens onto the pairing is settled on a phone.
-    static let wallets = [Wallet(name: "MetaMask", scheme: "metamask"),
+    /// The user's seven, in the user's order (2026-11-03: "doesn't give
+    /// option to open walletconnect and pick. so i get stuck"; "Base, Ambire,
+    /// MetaMask, Rabby, Zerion, Rainbow, OKX"). The links are each wallet's
+    /// `mobile_link` in WalletConnect's own registry (api.web3modal.org
+    /// `getWallets`, read 2026-11-03) with `wc?uri=` after it, as AppKit's
+    /// modal opens them. Two are not in that form there: Base (formerly
+    /// Coinbase Wallet) lists no link, and opens over Coinbase's documented
+    /// `cbwallet://wc?uri=`; OKX lists `okex://main` (the OKX app) and
+    /// `okxwallet://main` (OKX Wallet), one row whichever is installed.
+    /// UNMEASURED (§780b): whether each opens onto the pairing is settled on
+    /// a phone.
+    static let wallets = [Wallet(name: "Base", scheme: "cbwallet"),
+                          Wallet(name: "Ambire", scheme: "ambire"),
+                          Wallet(name: "MetaMask", scheme: "metamask"),
+                          Wallet(name: "Rabby", scheme: "rabby"),
+                          Wallet(name: "Zerion", scheme: "zerion"),
                           Wallet(name: "Rainbow", scheme: "rainbow"),
-                          Wallet(name: "Rabby", scheme: "rabby")]
+                          Wallet(name: "OKX", scheme: "okxwallet", path: "main/"),
+                          Wallet(name: "OKX", scheme: "okex", path: "main/")]
 
     /// A door onto a pairing: a named wallet's own link, or (`wallet` nil)
     /// the bare `wc:` link whichever app claims the scheme takes.
@@ -32,13 +48,17 @@ enum SignerSwitch {
         var unreserved = CharacterSet.alphanumerics
         unreserved.insert(charactersIn: "-._~")
         guard let uri = pairing.absoluteString.addingPercentEncoding(withAllowedCharacters: unreserved) else { return nil }
-        return URL(string: "\(wallet.scheme)://wc?uri=\(uri)")
+        return URL(string: "\(wallet.scheme)://\(wallet.path)wc?uri=\(uri)")
     }
 
-    /// One door per installed wallet, in `wallets`' order; none installed,
+    /// One door per installed wallet, in `wallets`' order, one per name (the
+    /// first installed OKX); none installed,
     /// the one `wc:` door as before (item 3).
     static func doors(pairing: URL, installed: (Wallet) -> Bool) -> [Door] {
-        let named = wallets.filter(installed).compactMap { w in link(w, pairing: pairing).map { Door(wallet: w, url: $0) } }
+        var named: [Door] = []
+        for w in wallets where installed(w) && !named.contains(where: { $0.wallet?.name == w.name }) {
+            if let url = link(w, pairing: pairing) { named.append(Door(wallet: w, url: url)) }
+        }
         return named.isEmpty ? [Door(wallet: nil, url: pairing)] : named
     }
 
