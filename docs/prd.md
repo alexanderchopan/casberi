@@ -70592,3 +70592,20 @@ Now and When ETH is … are drawn by the same row as the token and network lists
 **Checks.** `direct-swap-selftest.sh`: `fixtures/direct-swap/uniswap-v4-ethereum.json`, written by an independent encoder and simulated on Ethereum in one block (USDC to AZTEC through ETH, ETH in, ETH out, as the account); the quoter's bytes; nine refusals of a bad hand-over; WETH never into an ETH pool; uint128; thirteen mutations.
 
 **Mac half (§1402).** The engine is shared; nothing Mac-specific.
+
+## §1679 — Move is one size, heading34: the verbs, the sentence, its choices and the foot (amends §1501's `heading52` and §1558's verbs shrunk to the width, "no scrolling"; §1616 and §1673a's choice row, which borrowed the Wallet's 30pt mark and 17pt title) (user, 2026-11-02: "the menus seem like they are small, the tappable tokens i mean for the network, and it reduces the value of the larger sentence we have. they should both feel similar"; "like, are they the same size as the icons in the wallet?" [yes: `DS.Face.list` is `Face.row`, 30]; on the canvas "Move menus at sentence scale", of Now · A (rows at the foot's 34) · B (the next word, at 52) · C (words that flow): "Go with B", then, seeing B built on the simulator, "that looks too large on the sim", "it looks terrible", "we need to go with A"; "does it make it weird that Move has such large font but rest of our app doesn't?"; "i think if we go with A we should make the sentence be the same size"; "and also the verbs in the header probably too"; of the seven verbs, "it's too much to fit on the screen and tap") — BUILT, seen on the simulator
+
+1. **One size, `heading34`** (`MoveSentence.rung`, was `heading52`): every word of every Move sentence and of the create flow, as §1501 ruled, at the size a screen's name has everywhere else in the app (§915) and the foot already had (§1616 item 8). Move stops being the one screen drawn at 52.
+2. **The verbs are that size too,** the picked one bright and the rest grey. Seven verbs at 34 outgrow a phone's line, so the line scrolls sideways (amending §1558's "no scrolling", which shrank them to fit until they read small and sat too close to tap), moving only as far as it must to keep the picked verb in view; it draws past the column into the gutter so a verb past the edge shows it is there. `ScaledToWidth`, which only the verbs used, is deleted.
+3. **A choice is a word at that size** (A on the canvas): `MoveSentence.listRow` draws its title at the rung, one line, a name wider than the room shrinking to fit; a 44pt mark (`MoveSentence.listMark`) beside it; its line under it in `body17` grey (was `subhead12`), up to two lines (When's "A price you set · CoW Swap · 0.02% fee" cut at one, seen on the simulator); the figure trailing in `body17`; rows at least 64pt. The current pick stays pink (§1616 item 3).
+4. **The search row is a word too:** what you type, and its prompt, at the rung; the prompt may take two lines and shrinks before it is cut ("Search or paste an address" keeps §1533's words). The box keeps the search row's measured height.
+5. **Every list under a blank** takes it: coins, networks, To and the address book, Buy's and Deposit's, Sweep's, Spend's merchants, and When's Now / When ETH is …, since they are `listRow` (§1673a).
+6. **What is not a choice keeps its size:** "Reading…", "Asking Relay", a refusal's line, the grey line under the sentence.
+
+**Why not B** (every choice at the sentence's 52, built first): on the phone a list of 52pt words with their lines under them showed four rows and read as shouting; at 34 the sentence, its choices and the foot are one voice and the rest of the app's screen names are the same size.
+
+**Checks:** `your-account-selftest.sh` holds the rung at `heading34`.
+
+**Mac half (§1402).** The same view; nothing Mac-specific.
+
+Canvas: "Move menus at sentence scale" (https://claude.ai/artifact/1WxTE6xYzUM2Mt6D1thnaD).

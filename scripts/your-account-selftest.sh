@@ -514,7 +514,8 @@ grep -q 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); re
 [[ $(grep -c 'if demoSays() { return }' Casberi/Casberi/Screens/MoveSecurity.swift) -ge 5 ]] || { echo "✗ a Security act changes a key in the demo (prd §1475)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 # ONE SIZE, ALWAYS (prd §1501, retiring §1479's pick-by-fit): every Move
-# sentence and every screen of the create flow is heading52; a clause wider
+# sentence and every screen of the create flow is one size, heading34 since
+# §1679 (was heading52); a clause wider
 # than a whole line wraps inside itself and a word wider than a line shrinks,
 # so nothing ever steps the sentence down. These guards hold the mechanism,
 # not the look: a fit returning (a ladder, a measurement feeding a pick) is
@@ -523,7 +524,7 @@ SENTENCE=Casberi/Casberi/Screens/MoveSentence.swift
 FLOW=Casberi/Casberi/Screens/ThingSheetView.swift
 WALK=Casberi/Casberi/Screens/MoveKeysWalk.swift
 [[ -f Casberi/Casberi/Model/MoveFit.swift ]] && { echo "✗ MoveFit is back — the sentence picks a size again (prd §1501)"; exit 1; }
-grep -q 'static let rung: DSTextStyle = .heading52' "$SENTENCE" || { echo "✗ Move's one size is no longer heading52 (prd §1501)"; exit 1; }
+grep -q 'static let rung: DSTextStyle = .heading34' "$SENTENCE" || { echo "✗ Move's one size is no longer heading34 (prd §1501, §1679)"; exit 1; }
 grep -q '.environment(\\.moveRung, MoveSentence.rung)' "$SENTENCE" || { echo "✗ MoveFlow no longer sets the one size for every word under it (prd §1501)"; exit 1; }
 grep -q 'fitsWide: true' "$SENTENCE" && grep -q 'var fitsWide = false' "$FLOW" \
   || { echo "✗ a clause wider than a line is no longer offered the line — it would overflow the screen (prd §1501)"; exit 1; }

@@ -1832,7 +1832,14 @@ struct MoveSentence: View {
 
     /// **THE SENTENCE'S ONE SIZE (prd §1501).** Every word of every Move
     /// sentence, and of the create flow, wears it; nothing picks another.
-    static let rung: DSTextStyle = .heading52
+    /// `heading34` since prd §1679 (was `heading52`): the verbs, the sentence,
+    /// its choices and the foot are one size, a screen's name in the app.
+    static let rung: DSTextStyle = .heading34
+    /// A choice's mark beside a word at the rung (prd §1679): the Wallet's
+    /// 30pt `Face.list` read as a footnote beside it.
+    static let listMark: CGFloat = 44
+    /// A choice's row, at least: the word's line with air (prd §1679).
+    static let listRowHeight: CGFloat = 64
     /// The space between a phrase's words, as a share of the size: Figtree's
     /// own space advance (measured 0.231em, Figtree Bold).
     static let wordSpace: CGFloat = 0.231
@@ -2130,15 +2137,21 @@ struct MoveSentence: View {
     /// "send swap receive should be its own line user chooses which"). The
     /// sentence under it is what that verb does.
     private var verbs: some View {
-        // Five verbs outgrow a phone's line at this spacing (prd §1537): the
-        // gap narrows first, and past that the whole line shrinks evenly to
-        // the width, its one rung kept — never a scroll, never a clip, never
-        // a size of its own (prd §1558, user: "no scrolling", "we don't want
-        // to hand roll sizes").
-        ViewThatFits(in: .horizontal) {
-            verbRow(spacing: DS.Space.s4)
-            verbRow(spacing: DS.Space.s3)
-            ScaledToWidth { verbRow(spacing: DS.Space.s2) }
+        // The verbs are the sentence's size (prd §1679, amending §1558's "no
+        // scrolling": shrunk to the width, seven verbs read small and sat
+        // too close to tap). The line scrolls, and moves only as far as it
+        // must to keep the picked verb in view, so a verb at the start stays
+        // where it was.
+        ScrollViewReader { line in
+            ScrollView(.horizontal) {
+                verbRow(spacing: DS.Space.s4)
+            }
+            .scrollIndicators(.hidden)
+            .scrollClipDisabled()
+            .onAppear { line.scrollTo(verb) }
+            .onChange(of: verb) { _, v in
+                withAnimation(DS.Motion.standard) { line.scrollTo(v) }
+            }
         }
         .frame(minHeight: 44, alignment: .leading)
     }
@@ -2160,16 +2173,17 @@ struct MoveSentence: View {
                     }
                     DSHaptic.selection()
                 } label: {
-                    // A step under the sentence's floor (§1479): the verbs
-                    // name what the sentence does, they are not the sentence.
+                    // The sentence's size (prd §1679); the picked verb is
+                    // bright, the rest grey, so they still read as a choice.
                     Text(verbatim: title(v))
-                        .dsText(.heading24)
+                        .dsText(Self.rung)
                         .foregroundStyle(v == verb ? DS.textPrimary
                                          : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
                 .buttonStyle(RowPress())
                 .disabled(stage != nil || privateMove.acting || lendMove.acting)
                 .accessibilityAddTraits(v == verb ? [.isSelected] : [])
+                .id(v)
             }
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -2323,40 +2337,68 @@ struct MoveSentence: View {
     private func searchRow(for which: Blank) -> some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "magnifyingglass")
-                .dsGlyph(.body, weight: .medium)
+                .dsGlyph(.title, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
-                .frame(width: DS.Face.list)
+                .frame(width: Self.listMark)
                 .accessibilityHidden(true)
             if which == .to {
                 // To opens like a token list (§1442b, §1442h): keyboard down,
                 // the book in reach, and this row for a name, an ENS name or
                 // an address; Done takes what resolved.
-                TextField(String(localized: "Name, ENS or address"), text: $to)
-                    .focused($focus, equals: .to)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.done)
-                    .onSubmit { if resolved != nil { pick {} } }
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
+                wordField(String(localized: "Name, ENS or address"), text: to) {
+                    TextField(String(localized: "Name, ENS or address"), text: $to, prompt: Text(verbatim: ""))
+                        .focused($focus, equals: .to)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .onSubmit { if resolved != nil { pick {} } }
+                }
             } else {
                 // A contract pasted here is read off each network
                 // (`lookUpPasted`), so the field says so and the list keeps no
                 // paste row at its foot (prd §1533, user: "inside search bar
                 // say search or paste").
-                TextField(open == .buy || open == .arrives
-                          ? String(localized: "Search or paste an address")
-                          : String(localized: "Search"), text: $search)
-                    .focused($focus, equals: .search)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.done)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .task(id: search) { await lookUpPasted() }
+                let prompt = open == .buy || open == .arrives
+                    ? String(localized: "Search or paste an address")
+                    : String(localized: "Search")
+                wordField(prompt, text: search) {
+                    TextField(prompt, text: $search, prompt: Text(verbatim: ""))
+                        .focused($focus, equals: .search)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .task(id: search) { await lookUpPasted() }
+                }
             }
         }
-        .frame(minHeight: DSFeed.headHeight)
+        .frame(minHeight: Self.listRowHeight)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
+    }
+
+    /// The search row's own height, which the box under the sentence keeps
+    /// for it (§1679: its prompt may take two lines).
+    @State private var searchHeight: CGFloat = 0
+
+    /// A search field at the sentence's size (prd §1679): what you type wears
+    /// the rung, and so does the prompt, drawn here because a field's own
+    /// placeholder can neither wrap nor shrink — two lines, then smaller,
+    /// never cut ("Search or paste an address" keeps §1533's words).
+    private func wordField<Field: View>(_ prompt: String, text: String,
+                                        @ViewBuilder _ field: () -> Field) -> some View {
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(verbatim: prompt)
+                    .dsText(Self.rung)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.5)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            field()
+                .dsText(Self.rung)
+                .foregroundStyle(DS.textPrimary)
+        }
     }
 
     // MARK: - The space under it
@@ -2429,7 +2471,7 @@ struct MoveSentence: View {
     /// above never moves (§1442b). A token list leads with its search.
     private func choices<Rows: View>(room: CGFloat, inset: CGFloat = 0, searches: Bool, which: Blank,
                                      @ViewBuilder _ rows: () -> Rows) -> some View {
-        let head: CGFloat = searches ? 52 : 0
+        let head: CGFloat = searches ? max(searchHeight, Self.listRowHeight) : 0
         return VStack(alignment: .leading, spacing: 0) {
             if let hint {
                 hintText(hint)
@@ -3067,54 +3109,59 @@ struct MoveSentence: View {
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
                          picked: Bool = false,
                          act: @escaping () -> Void) -> some View {
-        Button(action: act) {
+        // A choice is a word at the sentence's size (prd §1679): the mark,
+        // the word and its line under it, the figure trailing. The current
+        // pick wears the pick's ink, the sentence's word in the list (prd
+        // §1616); `dim` is for a row left out.
+        return Button(action: act) {
             HStack(spacing: DS.Space.s3) {
                 if let face {
                     // A person: the face the Wallet draws for that address
                     // (its ENS avatar, else its tinted mark), never initials
                     // or an empty column (prd §1534).
-                    WalletFace(address: face, size: DS.Face.list, circular: true)
+                    WalletFace(address: face, size: Self.listMark, circular: true)
                         .accessibilityHidden(true)
                 } else if let brand {
                     // An app's or a company's own mark (`BridgeIcon`), not a
                     // token's (`AssetMark` reads token art only, prd §1481).
-                    BridgeIcon(name: brand, size: DS.Face.list, circular: true)
+                    BridgeIcon(name: brand, size: Self.listMark, circular: true)
                         .accessibilityHidden(true)
                 } else if let image {
                     Image(image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: DS.Face.list, height: DS.Face.list)
+                        .frame(width: Self.listMark, height: Self.listMark)
                         .clipShape(Circle())
                         .accessibilityHidden(true)
                 } else if let remote {
                     // A picture the read named (Relay's network icon), over
                     // the letters until it lands (prd §1534).
-                    RemoteAssetMark(urlString: remote, size: DS.Face.list,
+                    RemoteAssetMark(urlString: remote, size: Self.listMark,
                                     monogram: String((mark ?? title).prefix(2)).uppercased())
                 } else if let symbol {
                     // A glyph for what has no logo of its own (Buy's
                     // categories, a person with no face, prd §1534).
                     Circle().fill(DS.fillStrong)
-                        .frame(width: DS.Face.list, height: DS.Face.list)
-                        .overlay(Image(systemName: symbol).dsGlyph(.body, weight: .semibold)
+                        .frame(width: Self.listMark, height: Self.listMark)
+                        .overlay(Image(systemName: symbol).dsGlyph(.title, weight: .semibold)
                             .foregroundStyle(DS.textSecondary))
                         .accessibilityHidden(true)
                 } else if let mark {
-                    AssetMark(name: mark, size: DS.Face.list)
+                    AssetMark(name: mark, size: Self.listMark)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    // The current pick wears the pick's ink, the sentence's word in the
-                    // list (prd §1616); `dim` is for a row left out.
-                    Text(verbatim: title).dsText(.body17).foregroundStyle(picked ? DS.pickInk : DS.textPrimary).lineLimit(1)
-                    if let sub { Text(verbatim: sub).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1) }
+                    Text(verbatim: title).dsText(Self.rung)
+                        .foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                    if let sub { Text(verbatim: sub).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(2) }
                 }
+                .layoutPriority(1)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
                     Text(verbatim: trailing).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                 }
             }
-            .frame(minHeight: DSFeed.headHeight)
+            .frame(minHeight: Self.listRowHeight)
             .contentShape(Rectangle())
             .opacity(dim ? 0.55 : 1)
         }
@@ -5993,7 +6040,7 @@ struct MoveSentence: View {
 /// **ONE SIZE, ALWAYS (prd §1501, retiring §1479's pick-by-fit; user: "it
 /// can go on more than one row"; "same for move it should be same size
 /// regardless").** Every Move sentence and every screen of the create flow
-/// is `heading52`. A clause that fits the line it would start keeps to it;
+/// is `MoveSentence.rung` (`heading34` since §1679). A clause that fits the line it would start keeps to it;
 /// one that does not hops to the next line whole, as §1466 ruled; and a
 /// clause wider than a whole line — "in iCloud Keychain.", "Round up each
 /// move" — wraps inside itself (`MoveClauseLayout`), so nothing steps the
