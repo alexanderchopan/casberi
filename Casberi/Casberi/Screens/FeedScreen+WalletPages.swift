@@ -552,10 +552,11 @@ extension FeedScreen {
             if falls.isEmpty {
                 rows.append((String(localized: "Lending"), "Aave", nil, false))
             } else {
+                // Each borrow by the protocol it is on, in its own mark:
+                // the key is already that name, so prefixing "Aave · " drew
+                // "Aave · Aave" and dressed a Spark loan in Aave's mark.
                 for (name, fall) in falls {
-                    let protocolName = name == "Morpho" ? "Morpho" : "Aave"
-                    let shown = name == "Morpho" ? name : "Aave · \(name)"
-                    rows.append((shown, protocolName, fall, true))
+                    rows.append((name, name, fall, true))
                 }
             }
         }
