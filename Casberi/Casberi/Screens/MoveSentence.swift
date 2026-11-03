@@ -908,6 +908,17 @@ struct MoveSentence: View {
         return CreditLine.of(routes)
     }
 
+    /// The most any swap here moves its pools' price, in words, from 1%
+    /// (prd §1682); a price's order fills at its price, so says nothing.
+    private var impactWarning: String? {
+        guard !limiting, verb == .swap || verb == .sweep else { return nil }
+        let worst = signing.compactMap { item -> Double? in
+            if case .swap(let s) = item { return s.quote.impact }
+            return nil
+        }.max()
+        return YourAccountSwap.impactWords(worst)
+    }
+
     /// One line of the swap's credit: its words and the services they name,
     /// whose marks lead it (prd §1675).
     struct CreditLine: Hashable {
@@ -4252,6 +4263,15 @@ struct MoveSentence: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
+            }
+            // **"MOVES THE PRICE 6.4%" (prd §1682):** a thin pool, said under
+            // its credit in the attention ink; a warning, never a refusal.
+            if let impact = impactWarning, receipt == nil, !nothingToMove {
+                Text(verbatim: impact)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.attentionInk)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DS.Space.s1)
             }
             // Both keys sign this one (prd §1456): said before the tap, not
             // when the Signer's sheet rises.

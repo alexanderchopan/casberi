@@ -127,9 +127,16 @@ enum YourAccountDemo {
         let book = YourAccountSwap.base
         let hop = YourAccountSwap.Hop(from: sell.contract?.lowercased() ?? book.weth, to: buy.contract?.lowercased() ?? book.weth,
                                       step: 500)
-        return YourAccountSwap.Quote(sellAmount: amount, buyAmount: base(dollars * Decimal(0.997)),
-                                     minimumBuy: base(dollars * Decimal(0.99)),
-                                     route: YourAccountSwap.Route(venue: book.venues[0], hops: [hop]), calls: [])
+        var quote = YourAccountSwap.Quote(sellAmount: amount, buyAmount: base(dollars * Decimal(0.997)),
+                                          minimumBuy: base(dollars * Decimal(0.99)),
+                                          route: YourAccountSwap.Route(venue: book.venues[0], hops: [hop]), calls: [])
+        #if DEBUG
+        // `-swapImpactSample 0.064`: the demo's swaps move the price 6.4%, so
+        // the warning can be seen (prd §1682). The demo's pools are deep.
+        let sample = UserDefaults.standard.double(forKey: "swapImpactSample")
+        if sample > 0 { quote.impact = sample }
+        #endif
+        return quote
     }
 
     /// The demo's round-ups: to the next $1, buying ETH on Base.

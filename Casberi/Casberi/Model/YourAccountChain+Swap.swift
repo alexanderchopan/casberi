@@ -118,9 +118,27 @@ extension YourAccountChain {
                                                 amount: amount, minimum: least, account: account, deadline: deadline) else {
             throw Failure(message: String(localized: "This swap could not be written"))
         }
-        let quote = YourAccountSwap.Quote(sellAmount: amount, buyAmount: best.out, minimumBuy: least, route: best.route, calls: calls)
+        var quote = YourAccountSwap.Quote(sellAmount: amount, buyAmount: best.out, minimumBuy: least, route: best.route, calls: calls)
+        // How far it moves the price (prd §1682): the same route asked for a
+        // sliver of the amount.
+        if let probe = YourAccountSwap.probe(amount), let probeOut = await routeOut(net, best.route, amount: probe) {
+            quote.impact = YourAccountSwap.impact(amount: amount, out: best.out, probe: probe, probeOut: probeOut)
+        }
         await quotes.keep(quote, key)
         return quote
+    }
+
+    /// What `route` pays for `amount`, its pools asked one after another;
+    /// nil when one does not answer.
+    static func routeOut(_ net: Network, _ route: YourAccountSwap.Route, amount: String) async -> String? {
+        var units = amount
+        for i in route.hops.indices {
+            let ask = YourAccountSwap.Ask(venue: route.venue, hops: Array(route.hops[...i]), amount: units)
+            guard let call = ask.call, let answer = try? await aggregate(net, [call]).first,
+                  let out = YourAccountSwap.amountOut(route.venue.kind, ok: answer.ok, data: answer.data) else { return nil }
+            units = out
+        }
+        return units
     }
 
     /// **ONE QUOTE, ASKED ONCE (prd §1601).** The sentence's quote, its

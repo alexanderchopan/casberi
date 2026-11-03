@@ -1009,6 +1009,17 @@ print -P "%F{green}✓ walletbeat snapshot generator self-test%f"
 # and must not be: that needs network, which would break this pass's deterministic contract
 # — the same line `live-integrations.sh` exists on the other side of. It runs there,
 # warn-only, and again at ship time.
+# The Uniswap v4 pool list's MEASURER, self-tested (prd §1682). Offline: the parser
+# against the shipped YourAccountSwap.swift (so an edit to the lists that it can no
+# longer read is caught here, not by a silent nightly), the key hash against a
+# measured pool id, and the drift diff. Its `--check` needs the network and minutes,
+# so it runs nightly in `live-integrations.sh`, warn-only, and its findings come
+# back to this pass through the live ledger read above.
+step "Uniswap v4 pool list self-test"
+python3 -I "$ROOT/scripts/uniswap-v4-pools.py" --self-test >/dev/null \
+  || fail "the Uniswap v4 pool measurer's self-test failed — run scripts/uniswap-v4-pools.py --self-test"
+print -P "%F{green}✓ uniswap v4 pool list self-test%f"
+
 step "L2BEAT snapshot generator self-test"
 python3 "$ROOT/scripts/l2beat-snapshot.py" --self-test >/dev/null \
   || fail "the L2BEAT snapshot generator's self-test failed — run scripts/l2beat-snapshot.py --self-test"

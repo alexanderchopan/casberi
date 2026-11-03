@@ -707,6 +707,9 @@ enum YourAccountSwap {
         /// WETH and ETH on one network: the network's own WETH contract,
         /// one for one, no pool (prd §1559).
         var wrap: Wrap? = nil
+        /// How far this swap moves its pools' price (prd §1682): 0.064 for
+        /// 6.4%; nil where it could not be read.
+        var impact: Double? = nil
 
         var exchange: String? { route?.venue.exchange }
     }
@@ -1103,6 +1106,43 @@ enum YourAccountSwap {
     static func pool(fromAnswer answer: [UInt8]) -> String? {
         guard answer.count >= 32, let a = address(fromWord: Array(answer[0..<32])), a != native else { return nil }
         return a
+    }
+
+    // MARK: - How far a swap moves the price (prd §1682)
+
+    /// **THE PRICE IT MOVES.** A thin pool fills, and the swap pays for its
+    /// thinness in a worse rate than the pool's own price (the AZTEC swap
+    /// that prompted this lost ~6% in a $7K pool). Read off the same route,
+    /// no outside price: the rate a tiny amount gets is the pool's price, so
+    /// one less this swap's rate over that one is how far it moves it, the
+    /// pools' fee in both and so in neither. Said from 1%, never refused.
+    static let impactWarnsAt = 0.01
+
+    /// What to ask the route for to read its price before this swap: a
+    /// thousandth of the amount, else a hundredth or a tenth, whichever first
+    /// still has four digits, so the answer's rounding stays far under the
+    /// warning; nil for an amount too small to measure.
+    static func probe(_ amount: String) -> String? {
+        let units = String(amount.drop { $0 == "0" })
+        guard isPositive(units) else { return nil }
+        for digits in [3, 2, 1] where units.count - digits >= 4 { return String(units.dropLast(digits)) }
+        return nil
+    }
+
+    /// One less the rate `amount` gets over the rate `probe` got; never below
+    /// zero (a tick's rounding), nil when an answer is missing.
+    static func impact(amount: String, out: String, probe: String, probeOut: String) -> Double? {
+        guard let a = Double(amount), let o = Double(out), let p = Double(probe), let po = Double(probeOut),
+              a > 0, o > 0, p > 0, po > 0 else { return nil }
+        return max(0, 1 - (o / a) / (po / p))
+    }
+
+    /// "Moves the price 6.4%", whole from 10%; nil under `impactWarnsAt`.
+    static func impactWords(_ impact: Double?) -> String? {
+        guard let impact, impact.isFinite, impact >= impactWarnsAt else { return nil }
+        let percent = impact * 100
+        let figure = percent.formatted(.number.precision(.fractionLength(percent < 10 ? 1 : 0)))
+        return String(localized: "Moves the price \(figure)%")
     }
 
     // MARK: - In words

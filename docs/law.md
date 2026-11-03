@@ -246,10 +246,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1819 of 1891 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1823 of 1895 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a, §1568)
+- §3 — Goals (amended by §1103a, §1568, §1681)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677)
 - §5 — How it works today — Bob (amended by §1208c, §1680)
 - §6 — How it works today — Alice (amended by §1113, §1568)
@@ -2065,8 +2065,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission…
 - §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell… (amended by §1680)
-- §1679 — Move is one size, heading34: the verbs, the sentence, its choices and the foot
+- §1679 — Move is one size, heading34: the verbs, the sentence, its choices and the foot (amended by §1681)
 - §1680 — Swap asks Uniswap v4 on Base and Robinhood too, and every pool key that holds money: the standard four for every pair…
+- §1681 — The verb is the sentence's first word, a choice a step under the sentence, and Move a short sheet that grows
+- §1681a — A verb in the list has no line under it (amends §1681 item 1)
+- §1681b — Once the sheet grows it stays grown (amends §1681 item 6)
+- §1682 — A swap that moves the price says so: "Moves the price 6.4%" in the attention ink under the exchange's credit, from 1%…
 
 ## Dead rulings → what replaced them (generated)
 

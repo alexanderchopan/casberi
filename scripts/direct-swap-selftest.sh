@@ -37,6 +37,9 @@
 #     there; Robinhood's router's newer encoding (a per-hop slippage list);
 #     a measured key asked for its own pair only; a pool fee said only where
 #     the pool charges it (no dynamic fee, no hook that takes a cut).
+#   • A THIN POOL SAID (prd §1682): a swap's price impact read against a
+#     sliver of it through the same route, the sliver far enough above the
+#     answer's rounding, the warning from 1% and never under.
 #   • A POOL FEE SAID TO FOUR PLACES (prd §1545): rounded to two, trailing
 #     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
 #   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1545): a buy on the send's own
@@ -395,6 +398,19 @@ check(S.words(S.Route(venue: rh4, hops: [S.Hop(from: S.robinhood.weth, to: usdg,
       && S.words(S.Route(venue: rh4, hops: [S.Hop(from: usdg, to: pons, step: 4), S.Hop(from: pons, to: usdg, step: 6)])) == "On Uniswap"
       && S.words(S.Route(venue: rh4, hops: [S.Hop(from: usdg, to: "0xce24439f2d9c6a2289f741120fe202248b666666", step: 15)])) == "On Uniswap · under 0.01% pool fee",
       "a dynamic-fee pool's words name a fee, or a measured static fee is not said")
+
+// ── How far a swap moves the price (prd §1682) ───────────────────────────
+check(S.probe("500000000") == "500000" && S.probe("0500000000") == "500000" && S.probe("123456") == "1234"
+      && S.probe("12345") == "1234" && S.probe("1234") == nil && S.probe("0") == nil && S.probe("") == nil,
+      "the sliver is not a thousandth, else a hundredth or a tenth, with four digits left: \(S.probe("123456") ?? "nil")")
+// The AZTEC swap: $500 of USDC got 32,701 where a sliver's rate gave 34,857 a $500: 6.2%.
+let aztecImpact = S.impact(amount: "500000000", out: "32701000000000000000000", probe: "500000", probeOut: "34857000000000000000")
+check(aztecImpact.map { abs($0 - 0.06185) < 0.0001 } == true, "the price moved is not one less the rate over the sliver's: \(aztecImpact ?? -1)")
+check(S.impact(amount: "100", out: "101", probe: "1", probeOut: "1") == 0 && S.impact(amount: "100", out: "0", probe: "1", probeOut: "1") == nil
+      && S.impact(amount: "100", out: "90", probe: "1", probeOut: "0") == nil, "a better rate than the sliver's reads below zero, or a missing answer reads as a figure")
+check(S.impactWords(0.064) == "Moves the price 6.4%" && S.impactWords(0.01) == "Moves the price 1.0%" && S.impactWords(0.123) == "Moves the price 12%"
+      && S.impactWords(0.0099) == nil && S.impactWords(nil) == nil && S.impactWords(.nan) == nil,
+      "the warning is not said from 1%, one place under 10% and whole above: \(S.impactWords(0.064) ?? "nil")")
 
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
@@ -794,6 +810,12 @@ mutate "the second round asks every key from the hub" "$SWAP" \
   'leg.venue.steps.filter { leg.venue.asks($0, leg.hub, b) }.map { step in' 'leg.venue.steps.map { step in'
 mutate "v4 is asked about an amount past uint128" "$SWAP" \
   'func takes(_ amount: String) -> Bool { kind != .uniswapV4 || YourAccountSwap.fits128(amount) }' 'func takes(_ amount: String) -> Bool { true }'
+mutate "the warning is said from 2%, not 1%" "$SWAP" \
+  'static let impactWarnsAt = 0.01' 'static let impactWarnsAt = 0.02'
+mutate "the sliver is the whole amount" "$SWAP" \
+  'for digits in [3, 2, 1] where units.count - digits >= 4 { return String(units.dropLast(digits)) }' 'return units'
+mutate "the price moved is read the wrong way round" "$SWAP" \
+  'return max(0, 1 - (o / a) / (po / p))' 'return max(0, 1 - (po / p) / (o / a))'
 mutate "a pool fee said to four places again" "$SWAP" \
   'NSDecimalRound(&r, &d, 2, .plain)' 'NSDecimalRound(&r, &d, 4, .plain)'
 mutate "a fee under 0.01% said as a rounded number" "$SWAP" \

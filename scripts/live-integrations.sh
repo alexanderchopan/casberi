@@ -630,6 +630,23 @@ case "$revname" in
 esac
 
 hr
+# ── Uniswap v4's pinned pools (prd §1682) ───────────────────────────────────
+# Swap's v4 venues ask the four standard keys for every pair and a measured
+# list for their own pair (prd §1680); a pool that came to hold money since
+# the list was measured is reached only through a standard key, so its swaps
+# fill worse. This names each such pool, and each pinned key that stopped
+# quoting, with the line to paste. Slow (minutes: every key is read off a
+# public node's logs), which is why it lives here and not in verify.sh.
+print -P "%BUniswap v4 pools Swap pins%b  (pools holding ≥ \$500K, by key)"
+v4out=$(python3 "${0:A:h}/uniswap-v4-pools.py" --check 2>&1); v4rc=$?
+case $v4rc in
+  0) pass "Uniswap v4 — every pool holding ≥ \$500K is pinned or standard, every pinned key quotes" ;;
+  1) warn "Uniswap v4 — $(print -r -- "$v4out" | grep -c '^[a-z]*: ') pool(s) drifted from YourAccountSwap.swift's lists:"
+     print -r -- "$v4out" | grep -v '^uniswap-v4-pools:' | sed 's/^/      /' ;;
+  *) warn "Uniswap v4 — the pool list could not be checked (GeckoTerminal or the nodes did not answer)" ;;
+esac
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then
