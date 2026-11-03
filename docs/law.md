@@ -246,12 +246,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1817 of 1889 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1819 of 1891 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677)
-- §5 — How it works today — Bob (amended by §1208c)
+- §5 — How it works today — Bob (amended by §1208c, §1680)
 - §6 — How it works today — Alice (amended by §1113, §1568)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
@@ -1883,7 +1883,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
-- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
+- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
@@ -1940,7 +1940,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
-- §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width
+- §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567)
 - §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576)
@@ -2064,7 +2064,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission…
-- §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell…
+- §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell… (amended by §1680)
+- §1679 — Move is one size, heading34: the verbs, the sentence, its choices and the foot
+- §1680 — Swap asks Uniswap v4 on Base and Robinhood too, and every pool key that holds money: the standard four for every pair…
 
 ## Dead rulings → what replaced them (generated)
 

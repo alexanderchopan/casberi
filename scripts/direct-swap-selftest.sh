@@ -33,6 +33,10 @@
 #     never to another router; TAKE paying the account by name; WETH itself
 #     never written into a pool that holds ETH; an amount past uint128 never
 #     asked.
+#   • UNISWAP V4 ON BASE AND ROBINHOOD (prd §1680): their vectors simulated
+#     there; Robinhood's router's newer encoding (a per-hop slippage list);
+#     a measured key asked for its own pair only; a pool fee said only where
+#     the pool charges it (no dynamic fee, no hook that takes a cut).
 #   • A POOL FEE SAID TO FOUR PLACES (prd §1545): rounded to two, trailing
 #     zeros trimmed, "under 0.01%" below that; the route keeps the exact fee.
 #   • A ROUND-UP BOUGHT THE WRONG WAY (prd §1545): a buy on the send's own
@@ -60,7 +64,7 @@ WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 TYPED="Casberi/Casberi/Model/SafeTypedData.swift"
 ROUNDUPS="Casberi/Casberi/Model/RoundUps.swift"
 FIXTURES="$PWD/scripts/fixtures/direct-swap"
-for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json" "$FIXTURES/sushi-robinhood.json" "$FIXTURES/uniswap-v4-ethereum.json"; do
+for f in "$SWAP" "$LIST" "$ACCOUNT" "$OP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$FIXTURES/vectors.json" "$FIXTURES/sushi-robinhood.json" "$FIXTURES/uniswap-v4-ethereum.json" "$FIXTURES/uniswap-v4-base.json" "$FIXTURES/uniswap-v4-robinhood.json"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -92,13 +96,16 @@ let base = S.base
 // ── The book: every router pinned, the quoters on their factories ─────────
 check(base.venues.map(\.router) == ["0x2626664c2603336e57b271c5c0b26f421741e481", "0xbe6d8f0d05cc4be24d5167a3ef062215be6d18a5",
                                     "0xcbbb8035cac7d4b3ca7abb74cf7bdf900215ce0d", "0x698cb2b6dd822994581fea6ea4fc755d1363a92f",
-                                    "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43"],
-      "Base's routers are not the five read on chain (Uniswap SwapRouter02, Slipstream ×3, Aerodrome v2)")
+                                    "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43", "0x6ff5693b99212da76ad316178a184ab56d299b43"],
+      "Base's routers are not the six read on chain (Uniswap SwapRouter02, Slipstream ×3, Aerodrome v2, the Universal Router)")
+// The book as Base's recorded answer saw it: every venue before v4 (prd §1680).
+let base5 = S.Book(chainId: 8453, weth: base.weth, hubs: base.hubs, venues: Array(base.venues.prefix(5)), slippageBps: base.slippageBps)
 check(S.ethereum.venues.map(\.router) == ["0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45", "0x66a9893cc07d91d95644aedd05d03f95e1dba8af"],
       "Ethereum's routers are not Uniswap's SwapRouter02 and its Universal Router (v4, prd §1678)")
-check(S.robinhood.venues.map(\.router) == ["0xcaf681a66d020601342297493863e78c959e5cb2", "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a"],
-      "Robinhood Chain's routers are not Uniswap's SwapRouter02 and Sushi's RedSnwapper there")
-check(S.robinhood.venues.map(\.kind) == [.uniswap, .sushi]
+check(S.robinhood.venues.map(\.router) == ["0xcaf681a66d020601342297493863e78c959e5cb2", "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a",
+                                            "0x8876789976decbfcbbbe364623c63652db8c0904"],
+      "Robinhood Chain's routers are not Uniswap's SwapRouter02, Sushi's RedSnwapper and the Universal Router there")
+check(S.robinhood.venues.map(\.kind) == [.uniswap, .sushi, .uniswapV4]
       && S.robinhood.venues[1].executor == "0x0e867974275cd31c25015c2753c9d75f9f355379"
       && S.robinhood.venues[1].quoter == "0x3e290e5e01818002a0b672148bdc7514d861c7b3"
       && S.robinhood.venues[1].factory == "0xe51960f1b45f1c9fb6d166e6a884f866fc70433b",
@@ -175,7 +182,7 @@ check(S.minimum("0", bps: 50) == nil && S.minimum("5", bps: 10_000) == nil, "a z
 
 // ── Asking: the rounds, a real answer, the best route ────────────────────
 let agg = fixture["aggregate"] as! [String: Any]
-let asks = S.firstRound(base, sell: agg["sell"] as! String, buy: agg["buy"] as! String, amount: agg["amount"] as! String)
+let asks = S.firstRound(base5, sell: agg["sell"] as! String, buy: agg["buy"] as! String, amount: agg["amount"] as! String)
 check(asks.count == 21, "WETH for USDC on Base does not ask the 21 pools (4 Uniswap, 3 × 5 Slipstream, 2 v2): \(asks.count)")
 let request = S.aggregate3(asks.compactMap(\.call))
 check(SafeABI.hex(request) == agg["request"] as! String, "the aggregate3 request is not the bytes Base answered")
@@ -191,7 +198,7 @@ check(S.best(priced, in: base)?.out == top, "the best route is not the most paid
 check(S.secondRound(asks, answers: outs, buy: agg["buy"] as! String).isEmpty, "a swap between the two hubs asked a second round")
 
 // Hubs and two pools: USDC → AERO goes through WETH on every venue.
-let first = S.firstRound(base, sell: usdc.contract!, buy: aero, amount: "1000")
+let first = S.firstRound(base5, sell: usdc.contract!, buy: aero, amount: "1000")
 check(first.count == 42, "USDC for AERO does not ask every pool straight across and into WETH (21 × 2): \(first.count)")
 check(first.allSatisfy { $0.hop.from == usdc.contract!.lowercased() }, "a token is not lowercased before it is compared")
 var fake = first.map { _ -> String? in nil }
@@ -255,7 +262,8 @@ check(v4.kind == .uniswapV4 && v4.quoter == "0x52f0e24d1c21c8a0cb1e5a5dd6198556b
       "Ethereum's v4 venue is not V4Quoter and the PoolManager, its steps its pinned keys, its WETH held as ETH")
 check(Array(v4.pools.prefix(4)) == S.v4Standard && S.v4Standard.map(\.fee) == S.uniswapFees && S.v4Standard.map(\.tickSpacing) == [1, 10, 60, 200]
       && S.v4Standard.allSatisfy { $0.hooks == S.native }
-      && v4.pools.last == S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080"),
+      && v4.pools[4] == S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080",
+                                 pair: [S.native, "0xa27ec0006e59f245217ff08cd52a7e8b169e62d2"]),
       "Ethereum's v4 keys are not the four standard pools and AZTEC/ETH's hooked one read off the PoolManager")
 check(S.exchange(ofRouter: v4.router) == "Uniswap" && eth.venues.first?.kind == .uniswap, "the Universal Router is not named Uniswap, or v4 leads v3 in the book's order")
 let v4Ask = v4Fixture["ask"] as! [String: Any]
@@ -323,14 +331,70 @@ let max128 = "340282366920938463463374607431768211455", over128 = "3402823669209
 check(S.fits128(max128) && S.fits128("0" + max128) && !S.fits128(over128) && !S.fits128("") && !S.fits128("1x") && S.fits128("0"),
       "a uint128 is not told from a wider number")
 let ethFirst = S.firstRound(eth, sell: usdcEth.contract!, buy: aztec, amount: "500000000")
-check(ethFirst.count == 18 && ethFirst.filter { $0.venue.kind == .uniswapV4 }.count == 10,
-      "USDC for AZTEC on Ethereum does not ask v3's 4 pools and v4's 5, straight across and into WETH: \(ethFirst.count)")
+check(ethFirst.count == 17 && ethFirst.filter { $0.venue.kind == .uniswapV4 }.count == 9,
+      "USDC for AZTEC on Ethereum does not ask v3's 4 pools both ways, v4's standard 4 both ways and ETH/USDC's hooked pool into ETH: \(ethFirst.count)")
 check(S.firstRound(eth, sell: usdcEth.contract!, buy: aztec, amount: over128).allSatisfy { $0.venue.kind != .uniswapV4 },
       "v4 is asked about an amount past uint128")
 check(S.calls(wethIn, in: eth, sellsETH: true, buysETH: false, amount: over128, minimum: "1", account: v4Account, deadline: v4Deadline) == nil,
       "a v4 swap past uint128 was written")
 check(S.words(handQ.route!) == "On Uniswap · 0.05% and 0.05% pool fees" && S.brief(handQ.route!) == "Uniswap · 0.05% + 0.05%",
       "a v4 route's pools are not said with their keys' fees: \(S.words(handQ.route!))")
+
+// ── Uniswap v4 on Base and Robinhood, byte for byte (prd §1680) ──────────
+for (file, book, other) in [("uniswap-v4-base.json", S.base, 4663), ("uniswap-v4-robinhood.json", S.robinhood, 8453)] {
+    let fx = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: dir + "/" + file))) as! [String: Any]
+    let venue = book.venues.last!, acct = fx["account"] as! String, dl = fx["deadline"] as! Int
+    check(venue.kind == .uniswapV4 && venue.wethIsETH == book.weth && venue.steps == Array(venue.pools.indices)
+          && Array(venue.pools.prefix(4)) == S.v4Standard && venue.pools.dropFirst(4).allSatisfy { $0.pair?.count == 2 },
+          "\(file): the venue is not v4 last, its WETH held as ETH, the standard keys then measured keys with their pairs")
+    let fa = fx["ask"] as! [String: Any]
+    let call = S.Ask(venue: venue, hops: [S.Hop(from: fa["sell"] as! String, to: fa["buy"] as! String, step: fa["step"] as! Int)],
+                     amount: fa["amount"] as! String).call
+    check(call?.to == venue.quoter && call.map { SafeABI.hex($0.data) } == fa["request"] as! String, "\(file): the quote question is not the bytes the network answered")
+    for v in fx["vectors"] as! [[String: Any]] {
+        let name = v["name"] as! String
+        let hops = (v["hops"] as! [[Any]]).map { S.Hop(from: $0[0] as! String, to: $0[2] as! String, step: $0[1] as! Int) }
+        let want = (v["calls"] as! [[String: String]]).map { S.Call(to: $0["to"]!, value: $0["value"]!, data: SafeABI.hexBytes($0["data"]!)!) }
+        let sellsETH = v["sellsETH"] as! Bool, buysETH = v["buysETH"] as! Bool, amount = v["amount"] as! String
+        let route = S.Route(venue: venue, hops: hops)
+        check(S.calls(route, in: book, sellsETH: sellsETH, buysETH: buysETH, amount: amount, minimum: v["minimum"] as! String,
+                      account: acct, deadline: dl) == want, "\(file) · \(name): the calls are not the simulated bytes")
+        check(hops.allSatisfy { venue.asks($0.step, $0.from, $0.to) }, "\(file) · \(name): a pool the vector swaps through is never asked for its pair")
+        let sold = sellsETH ? YourAccountOp.eth : YourAccountOp.Token(symbol: "X", decimals: 18, contract: hops[0].from)
+        let q = S.Quote(sellAmount: amount, buyAmount: v["quoted"] as! String, minimumBuy: v["minimum"] as! String, route: route, calls: want)
+        check(S.checked(q, sell: sold, amount: amount, chainId: book.chainId)?.calls == want, "\(file) · \(name): the calls do not pass the check whole")
+        check(S.checked(q, sell: sold, amount: amount, chainId: other) == nil, "\(file) · \(name): another network's check passes them")
+    }
+}
+check(S.robinhood.venues[2].hopSlippage && !S.base.venues[5].hopSlippage && !S.ethereum.venues[1].hopSlippage,
+      "the newer encoding is not Robinhood's router's alone")
+// A measured key is asked for its own pair, never another's.
+let rh4 = S.robinhood.venues[2], usdg = "0x5fc5360d0400a0fd4f2af552add042d716f1d168", pons = "0x8ca4ce3546a620bd0f540297fbd41c8552d6defb"
+check(rh4.asks(4, usdg, pons) && rh4.asks(4, pons, usdg) && !rh4.asks(4, usdg, S.robinhood.weth) && !rh4.asks(7, usdg, pons)
+      && rh4.asks(6, S.robinhood.weth, usdg) && rh4.asks(1, usdg, pons) && !rh4.asks(99, usdg, pons),
+      "a measured key is asked for another pair, a standard key not for every pair, or a step past the list")
+let rhFirst = S.firstRound(S.robinhood, sell: usdg, buy: pons, amount: "1000000").filter { $0.venue.kind == .uniswapV4 }
+check(rhFirst.count == 5 + 7 && rhFirst.contains { $0.hop.step == 4 && $0.hop.to == pons } && !rhFirst.contains { $0.hop.step == 7 }
+      && rhFirst.filter { $0.hop.to == S.robinhood.weth }.map(\.hop.step) == [0, 1, 2, 3, 5, 6, 16],
+      "USDG for PONS on Robinhood does not ask v4's standard keys and PONS's own, and ETH/USDG's hooked keys into ETH: \(rhFirst.map(\.hop.step))")
+// And on from the hub: only the keys of the hub's pair with what is bought.
+let mow = "0x0b7c6c138dc75622f4200d157b13fb93e6bd94fa"
+let rhAsked = S.firstRound(S.robinhood, sell: usdg, buy: mow, amount: "1000000")
+let rhAnswers = rhAsked.map { a -> String? in a.venue.kind == .uniswapV4 && a.hop.to == S.robinhood.weth && a.hop.step == 6 ? "500" : nil }
+let rhSecond = S.secondRound(rhAsked, answers: rhAnswers, buy: mow)
+check(rhSecond.map(\.hop.step) == [0, 1, 2, 3, 7] && rhSecond.allSatisfy { $0.hops.count == 2 && $0.hops[0].step == 6 && $0.amount == "500" },
+      "USDG for MOW on Robinhood does not go on from ETH through the standard keys and MOW/ETH's alone: \(rhSecond.map(\.hop.step))")
+// A pool fee is said only where the pool charges it.
+check(S.V4Pool(fee: 500, tickSpacing: 10).saysFee && S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080").saysFee
+      && !S.V4Pool(fee: 8388608, tickSpacing: 10).saysFee
+      && !S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0x0000000000000000000000000000000000000008").saysFee
+      && !S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0x0000000000000000000000000000000000000004").saysFee
+      && S.V4Pool(fee: 500, tickSpacing: 10, hooks: "0x0000000000000000000000000000000000000080").saysFee,
+      "a dynamic fee, or a hook that may take its own cut, is said as the pool's fee; or a beforeSwap-only hook is not")
+check(S.words(S.Route(venue: rh4, hops: [S.Hop(from: S.robinhood.weth, to: usdg, step: 6)])) == "On Uniswap"
+      && S.words(S.Route(venue: rh4, hops: [S.Hop(from: usdg, to: pons, step: 4), S.Hop(from: pons, to: usdg, step: 6)])) == "On Uniswap"
+      && S.words(S.Route(venue: rh4, hops: [S.Hop(from: usdg, to: "0xce24439f2d9c6a2289f741120fe202248b666666", step: 15)])) == "On Uniswap · under 0.01% pool fee",
+      "a dynamic-fee pool's words name a fee, or a measured static fee is not said")
 
 // ── Each pool's fee, in words ────────────────────────────────────────────
 check(S.percent(pips: 100) == "0.01%" && S.percent(pips: 500) == "0.05%" && S.percent(pips: 3000) == "0.3%"
@@ -717,7 +781,17 @@ mutate "a v4 key's tokens are not sorted" "$SWAP" \
 mutate "WETH itself is written into a pool that holds ETH" "$SWAP" \
   'return (route.hops.first?.from != weth || sellsETH) && (route.hops.last?.to != weth || buysETH)' 'return true'
 mutate "AZTEC's hook is pinned wrong" "$SWAP" \
-  'hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080")' 'hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e081")'
+  'V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080",' 'V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e081",'
+mutate "Robinhood's router is written the older way" "$SWAP" \
+  'encode([.tuple(venue.hopSlippage ? [tokenIn, path, .array([]), amountIn, least] : [tokenIn, path, amountIn, least])])' 'encode([.tuple([tokenIn, path, amountIn, least])])'
+mutate "a measured key is asked for every pair" "$SWAP" \
+  'return Set(pair) == Set([currency(a), currency(b)])' 'return true'
+mutate "a hook that takes a cut is said as the pool's fee" "$SWAP" \
+  'return flags & 0b1100 == 0' 'return true'
+mutate "a dynamic fee is said as a fee" "$SWAP" \
+  'guard fee & 0x80_0000 == 0, fee <= 1_000_000 else { return false }' 'guard fee <= 100_000_000 else { return false }'
+mutate "the second round asks every key from the hub" "$SWAP" \
+  'leg.venue.steps.filter { leg.venue.asks($0, leg.hub, b) }.map { step in' 'leg.venue.steps.map { step in'
 mutate "v4 is asked about an amount past uint128" "$SWAP" \
   'func takes(_ amount: String) -> Bool { kind != .uniswapV4 || YourAccountSwap.fits128(amount) }' 'func takes(_ amount: String) -> Bool { true }'
 mutate "a pool fee said to four places again" "$SWAP" \

@@ -59,19 +59,34 @@ enum YourAccountSwap {
         /// same call as Uniswap's), swapped through Sushi's RedSnwapper
         /// handing the tokens to its RouteProcessor (`Venue.executor`).
         case sushi
-        /// Uniswap v4 (prd §1678): V4Quoter and the Universal Router; a pool
-        /// is one of the venue's pinned keys (`Venue.pools`), the step its
-        /// index. Its pools hold ETH itself, never WETH (`Venue.wethIsETH`),
+        /// Uniswap v4 (prd §1678, §1680): V4Quoter and the Universal Router;
+        /// a pool is one of the venue's pinned keys (`Venue.pools`), the step
+        /// its index. Its pools hold ETH itself, never WETH (`Venue.wethIsETH`),
         /// and the router is handed what it sells rather than approved.
         case uniswapV4
     }
 
-    /// One Uniswap v4 pool's key past its two tokens: its fee in millionths,
-    /// its tick spacing, and its hook (the zero address for none).
+    /// One Uniswap v4 pool's key: its fee in millionths, its tick spacing,
+    /// its hook (the zero address for none), and its two tokens as the pool
+    /// names them (ETH the zero address) — nil for a standard key, asked
+    /// for every pair; a measured key is asked for its own pair only
+    /// (`scripts/uniswap-v4-pools.py`, prd §1680).
     struct V4Pool: Equatable, Hashable, Sendable {
         let fee: Int
         let tickSpacing: Int
         var hooks: String = YourAccountSwap.native
+        var pair: [String]? = nil
+
+        /// Whether `fee` is what the pool charges: never a dynamic fee (the
+        /// hook sets it per swap) or a hook that may take its own cut of a
+        /// swap (beforeSwapReturnDelta, afterSwapReturnDelta: the address's
+        /// low bits 3 and 2). Otherwise the words name the exchange alone;
+        /// the quote is what the swap pays either way.
+        var saysFee: Bool {
+            guard fee & 0x80_0000 == 0, fee <= 1_000_000 else { return false }
+            guard hooks != YourAccountSwap.native, let flags = Int(hooks.suffix(4), radix: 16) else { return true }
+            return flags & 0b1100 == 0
+        }
     }
 
     /// One place to swap on one network: who quotes, who swaps, which pools.
@@ -93,8 +108,22 @@ enum YourAccountSwap {
         /// The book's WETH, which this venue's pools hold as ETH itself (the
         /// zero address); nil for every venue that swaps WETH.
         var wethIsETH: String? = nil
+        /// Whether this venue's router takes v4's newer swap encoding, a
+        /// per-hop slippage list after the path (left empty: the minimum
+        /// holds the whole route). Robinhood's two Universal Routers revert
+        /// without it, Ethereum's and Base's with it (measured 2026-11-03).
+        var hopSlippage = false
         /// A token as this venue's pools name it.
         func currency(_ token: String) -> String { token == wethIsETH ? YourAccountSwap.native : token }
+        /// Whether pool `step` is asked between `a` and `b`: every step on
+        /// every other venue; on v4, a standard key always, a measured key
+        /// only for its own pair.
+        func asks(_ step: Int, _ a: String, _ b: String) -> Bool {
+            guard kind == .uniswapV4 else { return true }
+            guard pools.indices.contains(step) else { return false }
+            guard let pair = pools[step].pair else { return true }
+            return Set(pair) == Set([currency(a), currency(b)])
+        }
         /// Whether this venue can be asked about `amount`: v4 takes a uint128.
         func takes(_ amount: String) -> Bool { kind != .uniswapV4 || YourAccountSwap.fits128(amount) }
         /// The exchange's name, as the sentence says it.
@@ -140,6 +169,13 @@ enum YourAccountSwap {
     /// router's `defaultFactory()` read on chain. Every router's `WETH9()`
     /// (v2: `weth()`) reads 0x4200…0006.
     ///
+    /// Uniswap v4 from Uniswap's deployments page ("v4 Base deployments":
+    /// PoolManager 0x498581ff…, V4Quoter 0x0d5e0f97…, UniversalRouter
+    /// 0x6ff5693b…), each one's `poolManager()` read on chain (prd §1680).
+    /// Its pools that hold money and are not a standard key are measured
+    /// (`baseV4Pools`); a pool of WETH itself (Base's launchpad coins pair
+    /// with it, not ETH) is not asked, since v4 here swaps ETH.
+    ///
     /// Slippage 0.5%: Base's sequencer orders by fee, not by a public
     /// mempool's bidding, and measured direct quotes sat within 0.12% of
     /// each other (prd §1539).
@@ -163,6 +199,10 @@ enum YourAccountSwap {
             Venue(kind: .aerodromeV2, quoter: "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43",
                   router: "0xcf77a3ba9a5ca399b7c97c74d54e5b1beb874e43",
                   factory: "0x420dd381b31aef6683db6b902084cb0ffece40da", steps: [1, 0]),
+            Venue(kind: .uniswapV4, quoter: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
+                  router: "0x6ff5693b99212da76ad316178a184ab56d299b43",
+                  factory: "0x498581ff718922c3f8e6a244956af099b2652b2b", steps: Array(baseV4Pools.indices),
+                  pools: baseV4Pools, wethIsETH: "0x4200000000000000000000000000000000000006"),
         ],
         slippageBps: 50)
 
@@ -198,14 +238,47 @@ enum YourAccountSwap {
         ],
         slippageBps: 30)
 
-    /// Uniswap's standard v4 pools: each fee tier at its v3 tick spacing, no hook.
+    /// Uniswap's standard v4 pools: each fee tier at its v3 tick spacing, no
+    /// hook, asked for every pair.
     static let v4Standard = [V4Pool(fee: 100, tickSpacing: 1), V4Pool(fee: 500, tickSpacing: 10),
                              V4Pool(fee: 3000, tickSpacing: 60), V4Pool(fee: 10000, tickSpacing: 200)]
 
-    /// Ethereum's v4 pools: the standard four, then AZTEC/ETH's key, read off
-    /// the PoolManager's `Initialize` for pool 0xce2899b1….
+    /// Ethereum's v4 pools: the standard four, then AZTEC/ETH's key (read off
+    /// the PoolManager's `Initialize` for pool 0xce2899b1…, prd §1678), then
+    /// the rest measured (prd §1680).
     static let ethereumV4Pools = v4Standard + [
-        V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080"),
+        V4Pool(fee: 500, tickSpacing: 10, hooks: "0xd53006d1e3110fd319a79aeec4c527a0d265e080",
+               pair: [native, "0xa27ec0006e59f245217ff08cd52a7e8b169e62d2"]),  // AZTEC / ETH 0.05%
+        V4Pool(fee: 8388608, tickSpacing: 4, hooks: "0x000022ec4ebd6b12294396e852e4c3876b253cc0",
+               pair: [native, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // ETH / USDC
+        V4Pool(fee: 0, tickSpacing: 1, pair: [native, "0x0f96c0ab492369cdcac4572b0b7c0f8f9f3dd4bf"]),  // ANT / ETH
+        V4Pool(fee: 0, tickSpacing: 60, pair: [native, "0xc8fb80fcc03f699c70ff0cc08c09106288888888"]),  // CTM / ETH
+        V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x0000113dcf4add69999fad8f20f2b63f979bfcc0",
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // USDC / USDT
+        V4Pool(fee: 7, tickSpacing: 1,
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // USDC / USDT
+        V4Pool(fee: 10, tickSpacing: 1,
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // USDC / USDT 0.001%
+        V4Pool(fee: 5, tickSpacing: 1,
+               pair: ["0x6c3ea9036406852006290770bedfcaba0e23a0e8", "0xdc035d45d973e3ec169d2276ddab16f1e407384f"]),  // PYUSD / USDS
+        V4Pool(fee: 5, tickSpacing: 1,
+               pair: ["0xdac17f958d2ee523a2206206994597c13d831ec7", "0xdc035d45d973e3ec169d2276ddab16f1e407384f"]),  // USDT / USDS
+        V4Pool(fee: 25, tickSpacing: 1,
+               pair: ["0x4c9edd5852cd905f086c759e8383e09bff1e68b3", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // USDe / USDC 0.003%
+        V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x0000113dcf4add69999fad8f20f2b63f979bfcc0",
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xe343167631d89b6ffc58b88d6b7fb0228795491d"]),  // USDG / USDC
+        V4Pool(fee: 0, tickSpacing: 1,
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xaca92e438df0b2401ff60da7e4337b687a2435da"]),  // USDC / mUSD
+        V4Pool(fee: 300, tickSpacing: 6,
+               pair: ["0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // EUROC / USDC 0.03%
+        V4Pool(fee: 80, tickSpacing: 2,
+               pair: ["0x9d39a5de30e57443bff2a8307a4256c8797a3497", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // sUSDe / USDT 0.008%
+        V4Pool(fee: 68, tickSpacing: 1,
+               pair: ["0x6b175474e89094c44da98b954eedeac495271d0f", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // DAI / USDT 0.007%
+        V4Pool(fee: 800, tickSpacing: 5,
+               pair: ["0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // syrupUSDT / USDT 0.08%
+        V4Pool(fee: 800, tickSpacing: 5,
+               pair: ["0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // syrupUSDC / USDC 0.08%
     ]
 
     /// **Robinhood Chain.** Uniswap v3 from Uniswap's deployments page ("v3
@@ -222,6 +295,13 @@ enum YourAccountSwap {
     /// on the network is Sushi's MUSEGOD/WETH 1% (~$93K), so without it "No
     /// pool on Robinhood swaps MUSEGOD for ETH"; Sushi's own WETH/USDG pools
     /// carry it on to USDG.
+    ///
+    /// Uniswap v4 from Uniswap's deployments page ("v4 Robinhood Chain
+    /// deployments": PoolManager 0x8366a39c…, Quoter 0x8dc178ef…,
+    /// UniversalRouter 0x88767899…), each one's `poolManager()` read on chain
+    /// (prd §1680). Most of the network's money is v4 (PONS/USDG ~$66M,
+    /// ETH/USDG ~$16M, MOW and BLORB ~$10M each, measured 2026-11-03), most
+    /// of it behind hooks; its router takes the newer encoding (`hopSlippage`).
     static let robinhood = Book(
         chainId: 4663,
         weth: "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
@@ -234,8 +314,66 @@ enum YourAccountSwap {
                   router: "0x8e6fd69a77e88ee20ba4b4fbd59dfcda3ec0e98a",
                   factory: "0xe51960f1b45f1c9fb6d166e6a884f866fc70433b", steps: uniswapFees,
                   executor: "0x0e867974275cd31c25015c2753c9d75f9f355379"),
+            Venue(kind: .uniswapV4, quoter: "0x8dc178efb8111bb0973dd9d722ebeff267c98f94",
+                  router: "0x8876789976decbfcbbbe364623c63652db8c0904",
+                  factory: "0x8366a39cc670b4001a1121b8f6a443a643e40951", steps: Array(robinhoodV4Pools.indices),
+                  pools: robinhoodV4Pools, wethIsETH: "0x0bd7d308f8e1639fab988df18a8011f41eacad73", hopSlippage: true),
         ],
         slippageBps: 50)
+
+
+    // MARK: - Uniswap v4's measured pools (prd §1680)
+    //
+    // Written by `scripts/uniswap-v4-pools.py` on 2026-11-03: every v4 pool
+    // holding at least $500K whose key is not standard, its key read off the
+    // PoolManager's own `Initialize`, hashed back to its pool id, and quoted.
+    // Each is asked for its own pair only. Run the script again to refresh.
+
+    static let baseV4Pools = v4Standard + [
+        V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x7ee62731ef799f653e520a26f9428b419ecbd000",
+               pair: ["0x3c5cd672b204ba0fc48e93b98c0922920a87912d", "0x3d66e6fe9a3cf698db5af3d70830b299c9235151"]),  // BSW / USAD
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xab60e33e7af5f369607a94626c3718abbcc95000",
+               pair: ["0x08c5dd8b64ec620aa31914bba13984b57e40c30b", "0x3d66e6fe9a3cf698db5af3d70830b299c9235151"]),  // XAUG / USAD
+        V4Pool(fee: 100, tickSpacing: 1, hooks: "0xb0b24b89db0dafbe43c5b40226b63a179f592880",
+               pair: ["0x5be75e3b0aff5d1a042a5363ae36acb1d6d755ea", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"]),  // AXIS / USDC 0.01%
+        V4Pool(fee: 4900, tickSpacing: 98,
+               pair: ["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083"]),  // DRV / USDC 0.49%
+    ]
+
+    static let robinhoodV4Pools = v4Standard + [
+        V4Pool(fee: 0, tickSpacing: 1,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0x8ca4ce3546a620bd0f540297fbd41c8552d6defb"]),  // PONS / USDG
+        V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x987e330f00b79864a07fe81dfac344d0078abcc0",
+               pair: [native, "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // ETH / USDG
+        V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0x06a889870c8f83640d6816319f72e2aa579b6080",
+               pair: [native, "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // ETH / USDG
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xb3ca29cf721380cee8b8e4755f3865ebc68fe8cc",
+               pair: [native, "0x0b7c6c138dc75622f4200d157b13fb93e6bd94fa"]),  // MOW / ETH
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xc15b155a3094934171a15625d1a80aba267b6080",
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0x84cab63bc87912e71ad199ff14a0ba45de68fef8"]),  // SKHY / USDG
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xc15b155a3094934171a15625d1a80aba267b6080",
+               pair: ["0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // SPCX / USDG
+        V4Pool(fee: 200, tickSpacing: 2,
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68"]),  // QQQ / SPY 0.02%
+        V4Pool(fee: 250, tickSpacing: 3,
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec"]),  // SPY / NVDA 0.025%
+        V4Pool(fee: 500, tickSpacing: 5,
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // SPY / USDG 0.05%
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xb3ca29cf721380cee8b8e4755f3865ebc68fe8cc",
+               pair: [native, "0x4d14284afe559b7c6b9e6fad6ebaeaa0f6051818"]),  // BLORB / ETH
+        V4Pool(fee: 2500, tickSpacing: 25,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xec262a75e413fafd0df80480274532c79d42da09"]),  // MSTR / USDG 0.25%
+        V4Pool(fee: 75, tickSpacing: 1,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xce24439f2d9c6a2289f741120fe202248b666666"]),  // U / USDG 0.008%
+        V4Pool(fee: 460, tickSpacing: 9,
+               pair: [native, "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // ETH / USDG 0.046%
+        V4Pool(fee: 250, tickSpacing: 3,
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3"]),  // GOOGL / SPY 0.025%
+        V4Pool(fee: 0, tickSpacing: 1,
+               pair: [native, "0xd167df6670106e9292177144beb70d9a376b6010"]),  // HPHONE / ETH
+        V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0xa0e8fbff13e24af2b5e61a72800e08a161bde080",
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // SPY / USDG
+    ]
 
     static let books: [Book] = [base, ethereum, robinhood]
 
@@ -391,8 +529,10 @@ enum YourAccountSwap {
         var asks: [Ask] = []
         for venue in book.venues where venue.takes(amount) {
             for step in venue.steps {
-                asks.append(Ask(venue: venue, hops: [Hop(from: s, to: b, step: step)], amount: amount))
-                for hub in hubs {
+                if venue.asks(step, s, b) {
+                    asks.append(Ask(venue: venue, hops: [Hop(from: s, to: b, step: step)], amount: amount))
+                }
+                for hub in hubs where venue.asks(step, s, hub) {
                     asks.append(Ask(venue: venue, hops: [Hop(from: s, to: hub, step: step)], amount: amount))
                 }
             }
@@ -415,7 +555,7 @@ enum YourAccountSwap {
             }
         }
         return best.filter { $0.venue.takes($0.out) }.flatMap { leg in
-            leg.venue.steps.map { step in
+            leg.venue.steps.filter { leg.venue.asks($0, leg.hub, b) }.map { step in
                 Ask(venue: leg.venue, hops: leg.ask.hops + [Hop(from: leg.hub, to: b, step: step)], amount: leg.out)
             }
         }
@@ -759,7 +899,7 @@ enum YourAccountSwap {
                 let p = venue.pools[h.step]
                 return .tuple([.address(venue.currency(h.to)), .uint(p.fee), .uint(p.tickSpacing), .address(p.hooks), .bytes([])])
             })
-            let swap = encode([.tuple([tokenIn, path, amountIn, least])])
+            let swap = encode([.tuple(venue.hopSlippage ? [tokenIn, path, .array([]), amountIn, least] : [tokenIn, path, amountIn, least])])
             let settle = encode([tokenIn, amountIn, .uint(0)])
             let take = encode([.address(venue.currency(last.to)), .address(account), .uint(0)])
             let input = encode([.bytes(v4Actions), .array([.bytes(swap), .bytes(settle), .bytes(take)])])
@@ -981,12 +1121,14 @@ enum YourAccountSwap {
     }
 
     /// Each pool's fee in millionths: a Uniswap v3 or Sushi pool's is its
-    /// tier, a v4 pool's its pinned key's, Aerodrome's whatever was read.
+    /// tier, a v4 pool's its pinned key's when that is what it charges
+    /// (`V4Pool.saysFee`), Aerodrome's whatever was read.
     static func fees(_ route: Route) -> [Int] {
         let v = route.venue
         switch v.kind {
         case .uniswap, .sushi: return route.hops.map(\.step)
-        case .uniswapV4: return route.hops.compactMap { v.pools.indices.contains($0.step) ? v.pools[$0.step].fee : nil }
+        case .uniswapV4:
+            return route.hops.compactMap { v.pools.indices.contains($0.step) && v.pools[$0.step].saysFee ? v.pools[$0.step].fee : nil }
         case .slipstream, .aerodromeV2: return route.fees
         }
     }

@@ -70609,3 +70609,23 @@ Now and When ETH is … are drawn by the same row as the token and network lists
 **Mac half (§1402).** The same view; nothing Mac-specific.
 
 Canvas: "Move menus at sentence scale" (https://claude.ai/artifact/1WxTE6xYzUM2Mt6D1thnaD).
+
+## §1680 — Swap asks Uniswap v4 on Base and Robinhood too, and every pool key that holds money: the standard four for every pair, measured keys for their own pair (amends §1678 items 1 and 5; keeps §1542's "no indexer, no quote service") (user, 2026-11-03, of §1678's "Not done": "well can we fix the not done? i mean why even use v3") — BUILT; quoted, written and simulated against each network's real state; NOTHING signed
+
+**Why v3 stays.** Every swap asks every venue and takes the best output, so v3 is used only where it pays more, and for many pairs it does (Ethereum's and Base's deepest USDC/ETH pools; most of Base's and Robinhood's tokens). Dropping it would make those swaps worse; §1678's loss was a missing venue, not v3.
+
+**Measured (2026-11-03).** Robinhood's money is mostly v4: PONS/USDG ~$66M, ETH/USDG ~$16M, MOW/ETH and BLORB/ETH ~$10M each, most behind hooks with a dynamic fee. Base's v4 adds ETH/cbBTC, ETH/USDC 0.3%, OUSD/USDC and cbBTC/USDC in standard keys, and AXIS/USDC, DRV/USDC, BSW and XAUG in measured ones. Ethereum's measured keys include PYUSD/USDS (~$100M) and USDT/USDS (~$55M) at 0.0005%, ETH/USDC behind a hook, and several stablecoin pools under 0.01%. The account's own nodes cannot list v4 keys (Base's public nodes refuse wide log reads; Robinhood's caps them at 10M blocks), so keys are measured at a desk.
+
+1. **Venues.** Base: PoolManager 0x498581ff…, V4Quoter 0x0d5e0f97…, Universal Router 0x6ff5693b…. Robinhood: PoolManager 0x8366a39c…, Quoter 0x8dc178ef…, Universal Router 0x88767899…. Each `poolManager()` read on chain; v4 last in each book, so a tie still goes to v3.
+2. **Keys.** The four standard keys are asked for every pair; a measured key carries its pair and is asked for that pair only (`Venue.asks`), in the first round and on from a hub, so a long list costs nothing on other swaps. A pool of WETH itself is not pinned (v4 there swaps ETH, §1678 item 2).
+3. **The list is measured, not typed.** `scripts/uniswap-v4-pools.py`: GeckoTerminal's busiest v4 pools holding ≥ $500K (a desk-only read; the app never asks it), each key read off the PoolManager's own `Initialize`, hashed back to its pool id, and quoted through the pinned quoter; standard keys and WETH pools are left out and said so. Run it to refresh; its output is pasted into `YourAccountSwap.swift`.
+4. **Robinhood's router takes the newer encoding**: a per-hop slippage list after the path, left empty (the minimum holds the route). Measured: both of Robinhood's Universal Routers revert without it; Ethereum's and Base's revert with it (`Venue.hopSlippage`).
+5. **A fee is said only where it is the pool's.** A dynamic fee (the hook sets it per swap) or a hook that may take its own cut (beforeSwapReturnDelta, afterSwapReturnDelta) reads "On Uniswap" alone; the quote is what the swap pays either way (`V4Pool.saysFee`).
+
+**Simulated.** Base: ETH for cbBTC, USDC for AXIS (handed over, a hooked pool), cbBTC for ETH paid as ETH. Robinhood: ETH for USDG (hooked, dynamic fee), USDG for PONS (zero fee), USDG for MOW through ETH (two hooked pools), USDG for ETH paid as ETH. Every call status 1, in one block per network. PONS refuses a sale in the block it was bought ("anti-MEV: cooldown"), a token's own rule.
+
+**Not done.** The list goes stale as pools come and go until the script is run again; a pool that holds money but is not on it is reached only through a standard key. No price-impact warning (open, the user's call). Nothing signed.
+
+**Checks.** `direct-swap-selftest.sh`: `uniswap-v4-base.json` and `uniswap-v4-robinhood.json` byte for byte; pair scoping in both rounds; the encoding flag; fee words; six more mutations.
+
+**Mac half (§1402).** The engine is shared; nothing Mac-specific.
