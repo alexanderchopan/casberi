@@ -4793,6 +4793,23 @@ enum ProbeHooks {
         Hook(key: "simplefinProbe") { _, _ in
             Task { await SimpleFINFetch.probe() }
         },
+        // `-nymisSample YES|<0x…>` — a made-up Nymis reading for an address
+        // (YES: the first wallet in the Wallet), so Threats' Privacy row and
+        // its sheet draw with no scan (prd §1701). Never anyone's real report.
+        Hook(key: "nymisSample") { spec, _ in
+            Task { @MainActor in
+                let address = NymisScan.isEVMAddress(spec) ? spec
+                    : WalletStore.shared.addresses.map(\.address).first(where: NymisScan.isEVMAddress)
+                guard let address else { NSLog("[Casberi] nymis| sample | no EVM address"); return }
+                NymisScans.shared.seedSample(address)
+                NSLog("[Casberi] nymis| sample | %@", NymisScan.key(address))
+            }
+        },
+        // `-nymisScan <0x…>` — the Scan control's own path, headless: loads
+        // Nymis's page, follows the scan, logs `nymis| <address> | read|failed`.
+        Hook(key: "nymisScan") { address, _ in
+            Task { @MainActor in NymisScans.shared.scan(address) }
+        },
         // `-simplefinIconProbe "<conn id>=<the bank's https address>"` — fetch a
         // bank's icon through the shipped path (`SimpleFINLogos`) for that
         // connection, so a demo connection can wear a real bank's mark on

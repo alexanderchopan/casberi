@@ -1781,6 +1781,10 @@ harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the 
 # token off), one transaction id in two accounts landed once, and a transfer
 # off checking counted as spending.
 harness "SimpleFIN self-test" "SimpleFIN self-test" "scripts/simplefin-selftest.sh" "the SimpleFIN self-test failed — run scripts/simplefin-selftest.sh"
+# Nymis (prd §1701) — Threats' Privacy rows: a report split across React
+# pushes read as half, an unknown progress word read as done, a typed name
+# reaching Nymis's URL, a score drawn, a scan started by anything but a tap.
+harness "Nymis self-test" "Nymis self-test" "scripts/nymis-selftest.sh" "the Nymis self-test failed — run scripts/nymis-selftest.sh"
 # Bankr's key, made in the app (prd §800) — the request asks for Agent API
 # and read-only and nothing else, a key that comes back wider is never
 # stored (an ABSENT flag included), and the sign-in's jar never outlives the

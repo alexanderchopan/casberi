@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1843 of 1915 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1844 of 1916 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2092,6 +2092,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1699 — L2BEAT is ETHBEAT
 - §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
+- §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 
 ## Dead rulings → what replaced them (generated)
 

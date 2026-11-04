@@ -85,6 +85,8 @@ extension FeedScreen {
         case githubWatch
         /// One EIP-7702 delegation, from Permissions (prd §1594). Values only.
         case delegation(WalletDelegation)
+        /// What Nymis read about one address, from Threats' Privacy (prd §1701).
+        case nymisReading(address: String, name: String)
 
         var id: String {
             switch self {
@@ -115,6 +117,7 @@ extension FeedScreen {
             case .logosChat(let id, _): "logosChat:\(id)"
             case .githubWatch: "githubWatch"
             case .delegation(let d): "delegation:\(d.delegate)"
+            case .nymisReading(let address, _): "nymis:\(address)"
             }
         }
     }
@@ -365,6 +368,8 @@ extension FeedScreen {
             GitHubWatchTray()
         case .delegation(let d):
             WalletDelegationSheet(delegation: d)
+        case .nymisReading(let address, let name):
+            NymisReadingSheet(address: address, name: name)
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):

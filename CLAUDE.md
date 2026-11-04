@@ -381,6 +381,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-torProbe YES|fail` — iOS wallet reads via Tor, a circuit per wallet, watched while it runs (`tor-health-selftest.sh`) → docs/hooks/wallet.md · prd §1495 · §1546
 - `-lightningConnect "<nostr+walletconnect://…>"|forget` — Lightning over Nostr Wallet Connect, kept only if it cannot pay → prd §1098
 - `-simplefinConnect "<token|URL>"|forget` `-simplefinProbe` `-simplefinIconProbe` — SimpleFIN: banks, no server, an hour between reads → prd §1663
+- `-nymisSample YES|<0x…>` `-nymisScan <0x…>` — Privacy on Wallet › Threats, by Nymis: a tap loads nymis.io/analyze in a hidden web view, the report is read once and kept on the phone, no score anywhere (`nymis-selftest.sh`) → prd §1701
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Solana reads forward from a cursor, takes v1 transactions (`maxSupportedTransactionVersion: 1`; 0 dropped 18% of mainnet), lands SPL delegates as `wallet:sol-approval:` grants (still standing, never `WalletPrepare`'s), and resolves `.sol` through web3.bio (Bonfida's proxy is dead) (prd §1096)** → prd §1096
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597

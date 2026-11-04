@@ -1103,6 +1103,27 @@
    "anchor": "text:=Contract"
   },
   {
+   "id": "wallet-nymis-reading",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#nymisReading"
+   ],
+   "launch": [
+    "demo",
+    "-nymisSample",
+    "YES",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "threats"
+   ],
+   "steps": [
+    {
+     "tap": "button:^Main"
+    }
+   ],
+   "anchor": "text:=Nymis's reading"
+  },
+  {
    "id": "wallet-track-subscription",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscriptionAdd"

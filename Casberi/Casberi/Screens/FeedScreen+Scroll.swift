@@ -712,6 +712,9 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
 struct SectionPanelName<Trailing: View>: View {
     let name: String
     let glyph: String
+    /// An app's own mark in the glyph column, in place of `glyph`: the
+    /// section is that app's reading (Privacy, by Nymis, prd §1701).
+    var mark: String? = nil
     /// **A SECTION'S NAME IS `heading24` (prd §1496, user: "would that mean
     /// dropping feed headers to 24?"; "i am now starting to feel the experience
     /// i wanted in the app from the very beginning, the stupid simple").** The
@@ -739,11 +742,18 @@ struct SectionPanelName<Trailing: View>: View {
             // different indentation on the headers"): a symbol drawn at its own
             // width put every title at a different x. Centered in a fixed
             // column, every section's name starts at one edge.
-            Image(systemName: glyph)
-                .dsGlyph(.body)
-                .foregroundStyle(DS.brandInk)
-                .frame(width: DSRoomChassis.headGlyph)
-                .accessibilityHidden(true)
+            if let mark {
+                BridgeIcon(name: mark, size: DS.Mark.row, circular: false)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 8 }
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: glyph)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+            }
             if choices.isEmpty {
                 Text(verbatim: name)
                     .dsText(.heading24)
@@ -1007,8 +1017,8 @@ extension FeedScreen {
 }
 
 extension SectionPanelName where Trailing == EmptyView {
-    init(name: String, glyph: String, inset: CGFloat = DSRoomChassis.rowInset) {
-        self.init(name: name, glyph: glyph, inset: inset) { EmptyView() }
+    init(name: String, glyph: String, mark: String? = nil, inset: CGFloat = DSRoomChassis.rowInset) {
+        self.init(name: name, glyph: glyph, mark: mark, inset: inset) { EmptyView() }
     }
 }
 

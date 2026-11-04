@@ -668,7 +668,10 @@ extension FeedScreen {
             walletActingSection
             walletApprovalsSection
         case .threats:
-            if walletSecurityCounts.flagged == 0 { walletSkeletonRowsSection }
+            // What gives your addresses away, by Nymis (prd §1701).
+            let privacy = walletPrivacySlots
+            walletPrivacySection(privacy)
+            if walletSecurityCounts.flagged == 0 && privacy.isEmpty { walletSkeletonRowsSection }
             walletFlaggedSection(.poisoning, anchor: .poisoning,
                                  word: String(localized: "Address poisoning"))
             walletFlaggedSection(.spoofedSymbol, anchor: .fakeTokens,

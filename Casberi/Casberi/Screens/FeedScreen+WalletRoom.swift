@@ -1808,6 +1808,7 @@ extension FeedScreen {
     /// (Needs you, Permissions, Threats) keeps each group's name.
     @ViewBuilder
     func walletCard<Rows: View>(_ name: String, glyph: String, anchor: String? = nil,
+                                mark: String? = nil,
                                 @ViewBuilder rows: () -> Rows) -> some View {
         if walletPageNames(name) {
             Section { rows() }
@@ -1815,7 +1816,7 @@ extension FeedScreen {
                 .environment(\.feedSectionPanelFilled, false)
         } else {
             SectionPanelGroup(anchor: anchor) {
-                SectionPanelName(name: name, glyph: glyph)
+                SectionPanelName(name: name, glyph: glyph, mark: mark)
             } rows: {
                 Section { rows() }
             }

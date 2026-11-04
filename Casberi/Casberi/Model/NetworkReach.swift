@@ -737,6 +737,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wise"),
                  purpose: "Reads which profile your token belongs to, your balances, and the transfers you have sent — with a personal API token you mint yourself and can scope read-only. Nothing here can send money, convert a balance, or add a recipient. Your card spending is not read at all: it lives in Wise's balance statement, behind a signed-approval step this app does not implement. wise.com is where the token is created — opened in your browser, never called by the app.",
                  hosts: ["api.transferwise.com"]),
+        // Nymis (2026-11-04, prd §1701) — no seat: Wallet › Threats'
+        // Privacy rows. Reached only when you tap Scan on an address, and
+        // then only until that scan is read: its page in a hidden web view
+        // (which starts the scan), its progress, and its report once.
+        Endpoint(service: "Nymis",
+                 reach: .always,
+                 purpose: "Only when you tap Scan on an address in Wallet › Threats: sends that address to Nymis, which reads what its public activity gives away, then reads Nymis's report once it is done. The reading is kept on this phone.",
+                 hosts: ["nymis.io"]),
         // SimpleFIN (2026-11-02, prd §1663) — the claim host is whatever the
         // pasted Setup Token names and the read host whatever the claim hands
         // back, so the FAMILY is declared, AWS's way; `SimpleFINShape.
