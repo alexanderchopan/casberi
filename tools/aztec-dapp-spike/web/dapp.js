@@ -69,6 +69,7 @@ import { SponsoredFeePaymentMethod } from '@aztec-labs/aztec.js/fee/testing';
 import { getContractInstanceFromInstantiationParams } from '@aztec-labs/stdlib/contract';
 import { AztecAddress } from '@aztec-labs/stdlib/aztec-address';
 import { TxStatus } from '@aztec-labs/stdlib/tx';
+import { createAztecNodeClient } from '@aztec-labs/stdlib/interfaces/client';
 
 window.runSend = async function runSend() {
   const chainInfo = { chainId: new Fr(11155111n), version: new Fr(679261766n) };
@@ -117,6 +118,35 @@ window.runSend = async function runSend() {
       const { result } = await token.methods.balance_of_private(me).simulate({ from: me });
       return { mine: result.toString() };
     });
+    say('done', true);
+    return out;
+  }
+  say('noWallet', true);
+  return out;
+};
+
+// Reads a token's private balance for the connected account: what a new phone
+// sees for money the old one received.
+window.runBalance = async function runBalance(tokenAddress) {
+  const chainInfo = { chainId: new Fr(11155111n), version: new Fr(679261766n) };
+  const discovery = WalletManager.configure({ extensions: { enabled: true } }).getAvailableWallets({
+    chainInfo, appId: 'casberi-spike-balance', timeout: 5000,
+  });
+  for await (const provider of discovery.wallets) {
+    discovery.cancel();
+    const wallet = await (await provider.establishSecureChannel('casberi-spike-balance')).confirm();
+    await wallet.requestCapabilities({ version: '1.0', metadata: { name: 'Casberi balance spike', version: '0.0.1' }, capabilities: [{ type: 'accounts', canGet: true }] });
+    const me = (await wallet.getAccounts())[0].item;
+    say('account', me.toString());
+    const address = AztecAddress.fromStringUnsafe(tokenAddress);
+    // The contract's public instance comes from an Aztec node, as any app reads it.
+    const node = createAztecNodeClient('https://aztec-testnet.drpc.org', { maxBatchSize: 3 });
+    const instance = await node.getContract(address);
+    await wallet.registerContract(instance, TokenContract.artifact);
+    const token = await TokenContract.at(address, wallet);
+    const t = performance.now();
+    const { result } = await token.methods.balance_of_private(me).simulate({ from: me });
+    say('balance', { token: tokenAddress, mine: result.toString(), ms: Math.round(performance.now() - t) });
     say('done', true);
     return out;
   }

@@ -12,8 +12,9 @@ xcrun -sdk iphonesimulator clang -c -O2 -target arm64-apple-ios17.0-simulator de
 xcrun -sdk iphonesimulator swiftc -parse-as-library -O \
   -target arm64-apple-ios17.0-simulator \
   -import-objc-header Bridging.h \
-  main.swift EngineServer.swift Prover.swift build/obj/deflate_shim.o \
+  main.swift EngineServer.swift Prover.swift AztecRoot.swift build/obj/deflate_shim.o \
   vendor/sim/libbb-external.a -lc++ -lz \
+  -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker Spike.entitlements \
   -o $APP/AztecDapp
 cp Info.plist $APP/Info.plist
 cp ../dist/relay.js $APP/

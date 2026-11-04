@@ -43,19 +43,41 @@ function getWallet() {
       nodeClientOptions: { maxBatchSize: 3 }, // dRPC's free plan refuses larger batches
     });
     log('pxeReady', { chain: summarise(await wallet.getChainInfo()) });
-    let keys = JSON.parse(localStorage.getItem('casberi.aztec.spike') ?? 'null');
-    if (!keys) {
-      keys = { secret: Fr.random().toString(), signingKey: GrumpkinScalar.random().toString() };
-      localStorage.setItem('casberi.aztec.spike', JSON.stringify(keys));
-    }
-    const manager = await wallet.createSchnorrInitializerlessAccount(
-      Fr.fromString(keys.secret), Fr.ZERO, GrumpkinScalar.fromString(keys.signingKey), 'Casberi',
-    );
+    const { secret, signingKey } = await accountKeys();
+    const manager = await wallet.createSchnorrInitializerlessAccount(secret, Fr.ZERO, signingKey, 'Casberi');
     accountAddress = manager.address.toString();
     log('accountReady', { address: accountAddress });
     return wallet;
   })();
   return walletPromise;
+}
+
+// The account's two keys, derived from the one root the shell keeps in iCloud
+// Keychain (SHA-512 of the root and a label, reduced into each field). Outside
+// the app (desktop debugging) a random root is kept in this page's storage.
+let rootResolve;
+const rootPromise = new Promise(r => (rootResolve = r));
+async function accountKeys() {
+  let hex;
+  if (window.webkit) {
+    native('engineNeedsRoot', {});
+    hex = await rootPromise;
+  } else {
+    hex = localStorage.getItem('casberi.aztec.root');
+    if (!hex) {
+      hex = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('casberi.aztec.root', hex);
+    }
+  }
+  const root = Uint8Array.from(hex.match(/../g).map(h => parseInt(h, 16)));
+  const derive = async label => {
+    const input = new Uint8Array([...root, ...new TextEncoder().encode(label)]);
+    return Buffer.from(await crypto.subtle.digest('SHA-512', input));
+  };
+  return {
+    secret: Fr.fromBufferReduce(await derive('casberi/aztec/v1/secret')),
+    signingKey: GrumpkinScalar.fromBufferReduce(await derive('casberi/aztec/v1/signing')),
+  };
 }
 
 async function callWallet(method, args, origin) {
@@ -157,6 +179,9 @@ background.initialize();
 window.casberiEngine = {
   fromContent(json, tabId, url) {
     contentListener?.(JSON.parse(json), { tab: { id: tabId, url } });
+  },
+  setRoot(hex) {
+    rootResolve(hex);
   },
   answerConnect(requestId, yes) {
     if (!connecting.delete(requestId)) return;
