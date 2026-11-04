@@ -40,6 +40,10 @@ final class LendMove {
     /// Base units, decimal, by `key(market)`.
     private(set) var held: [String: String] = [:]
     private(set) var lent: [String: String] = [:]
+    /// **ROUND-UPS IS NOT LENT (prd §1690).** What Round-ups keeps in Aave's
+    /// USDC on Base, split off the account's aUSDC there: never offered to
+    /// Take back, never drawn as lent, held as its own row in Holdings.
+    private(set) var roundUps = "0"
     private(set) var rates: [String: Double] = [:]
     /// The markets whose reserve did not name the pinned aToken.
     private(set) var refused: Set<String> = []
@@ -155,6 +159,7 @@ final class LendMove {
             held[Self.key(m)] = net.flatMap { n in YourAccountDemo.held(on: n).first { $0.token == token }?.units } ?? "0"
             lent[Self.key(m)] = m.chainId == 8453 && !m.native ? "150000000" : "0"
         }
+        roundUps = RoundUpsPot.demoPot
         rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145]
         reserve = [8453: "100000000000000", 1: "1000000000000000"]
     }
@@ -184,7 +189,20 @@ final class LendMove {
             // built for: offered nowhere, signed for never.
             if let a = r.aToken, a.lowercased() != m.aToken { refused.insert(r.key) } else { refused.remove(r.key) }
             if let h = r.held { held[r.key] = h }
-            if let l = r.lent { lent[r.key] = l }
+            if let l = r.lent {
+                if let pot = RoundUpsPot.market, r.key == Self.key(pot) {
+                    // Held to the chain: a pot larger than what is there is cut to it.
+                    let parts = RoundUpsPot.split(aBalance: l, pot: RoundUpsPot.pot)
+                    // Never while change carried from another network may still be on its way.
+                    if parts.roundUps != RoundUpsPot.pot, RoundUpsPot.mayHeal(carriedAt: RoundUpsPot.carriedAt) {
+                        RoundUpsPot.pot = parts.roundUps
+                    }
+                    roundUps = parts.roundUps
+                    lent[r.key] = parts.lent
+                } else {
+                    lent[r.key] = l
+                }
+            }
             if let rate = r.rate { rates[r.key] = rate }
         }
         for id in AaveLend.chainIds {
@@ -217,7 +235,9 @@ final class LendMove {
         }
         let calls: [AaveLend.Call]? = switch mode {
         case .lend: AaveLend.lend(units, in: m, account: account)
-        case .takeBack: AaveLend.takeBack(units, all: all, in: m, account: account)
+        // All of what you lent, never Round-ups beside it: Aave's `max` only
+        // where Round-ups holds nothing in this market (prd §1690).
+        case .takeBack: AaveLend.takeBack(units, all: all && !(RoundUpsPot.market == m && roundUps != "0"), in: m, account: account)
         }
         guard let calls, AaveLend.checked(calls, in: m, account: account) else {
             stage = .failed(String(localized: "This could not be written"))

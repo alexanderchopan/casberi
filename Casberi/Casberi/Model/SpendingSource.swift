@@ -97,7 +97,8 @@ final class SpendingReading {
         fees = SpendingSource.walletFees(things, followed: followed)
         unpricedSends = SpendingSource.unpricedSends(things, followed: followed)
         roundUps = SpendingSource.walletRoundUps(things, followed: followed)
-        roundUpsWaiting = RoundUps.waitingUSD
+        // What Round-ups holds now, set aside on Aave (prd §1690).
+        roundUpsWaiting = RoundUpsPot.dollars(RoundUpsPot.shown)
         recurringKeys = Self.recurring()
         readPage(now: now, calendar: calendar)
         let roll = WalletCardRoll.compose(

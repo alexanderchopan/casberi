@@ -294,13 +294,13 @@ struct MoveSecurity: View {
         .task {
             // Where round-ups move privately on Ethereum: the pool's smallest
             // deposit, read live for the sentence below (prd §1567).
-            if RoundUps.privatePools.contains(RoundUps.ethereumPool), PrivateMove.available {
+            if PrivateMove.available {
                 await PrivateMoneyStore.shared.readYield(including: .ethereum)
             }
         }
         if roundUps.on {
-            // Saved with your sends only (prd §1578): no Save now.
-            Text(verbatim: Self.roundUpsExample(roundUps))
+            // Set aside with your sends only (prd §1578, §1690): no Save now.
+            Text(verbatim: Self.roundUpsSentence)
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, DS.Space.s2)
@@ -320,7 +320,7 @@ struct MoveSecurity: View {
     @ViewBuilder private var roundUpsTraySheet: some View {
         DSTray(title: String(localized: "Round-ups"), height: 420) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("Your spare change is saved privately in dollars, and earns interest.")
+                Text(verbatim: Self.roundUpsSentence)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(verbatim: Self.roundUpsExample(roundUps))
@@ -343,27 +343,26 @@ struct MoveSecurity: View {
         }
     }
 
-    /// On or Off: the one choice (prd §1572).
+    /// The setting only: Off, or On and what it rounds to (user: "here it
+    /// should just be on or off and the amount you have it set to"). What
+    /// Round-ups holds is Holdings' and Spending's (prd §1690).
     private var roundUpWord: String {
         guard roundUps.on else { return String(localized: "Off") }
-        let saved = RoundUps.privateSaved(on: RoundUps.ethereumPool)
-        guard saved != "0" else { return String(localized: "On") }
-        let usd = WalletValue.money(YourAccountOp.dollars(saved, decimals: RoundUps.dollarDecimals, price: 1))
-        // "To save", never "saved": it is a count, not money set aside, so
-        // spending the USDC does not empty it (user: "so it won't say 0 if
-        // they spend their money before?").
-        return String(localized: "\(usd) to save")
+        return String(localized: "On · $\(roundUps.step)")
+    }
+
+    /// **HOW ROUND-UPS WORKS, IN ONE SENTENCE (prd §1690, user: "we need to
+    /// make it clear in the UI tho that this is how it works").** Said where
+    /// it is turned on: here, the keys walk and Create.
+    @MainActor static var roundUpsSentence: String {
+        let at = RoundUpsPot.figure(RoundUpsPot.shownTarget)
+        return String(localized: "Round up your sends. The change goes to Round-ups and earns interest. At \(at), it moves to your private balance, where it keeps earning.")
     }
 
     /// A worked send, because "the next $1" read as a $1 round-up: what a
-    /// $3.40 send sets aside, and when that buys. Security and the keys walk
-    /// say it the same way.
+    /// $3.40 send sets aside. Security and the keys walk say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
-        // **ONE SENTENCE (prd §1572, user: "explain this shorter"):** what is
-        // saved, and when it moves, the threshold read live.
-        let at = RoundUps.privateMoveAt(on: RoundUps.ethereumPool, poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum)
-            .map { WalletValue.money(YourAccountOp.dollars($0, decimals: RoundUps.dollarDecimals, price: 1)) } ?? "$10"
-        return String(localized: "Spend $3.40 and 60¢ is saved. Once about \(at) adds up, it moves into your private balance with your next send.")
+        String(localized: "Spend $3.40 and 60¢ goes to Round-ups.")
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,

@@ -94,6 +94,19 @@ final class PrivateMoneyStore {
         return PrivateYield.line(apy: apys[pool.share.lowercased()])
     }
 
+    /// A held private row's line, as a lent row's: "3.8% on Aave ·
+    /// Ethereum" where its token earns ("On Aave · Ethereum" before the rate
+    /// is read), else the network alone (prd §1690).
+    func heldLine(_ row: PrivateMoney.Row) -> String {
+        let network = PrivateMoney.network(row.chainId)
+        guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
+            return network
+        }
+        // The demo reads nothing: its rates are Lend's demo rates on Ethereum.
+        let apy = DemoMode.isActive ? (row.symbol == "ETH" ? 0.0145 : 0.0379) : apys[pool.share.lowercased()]
+        return [PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), network].joined(separator: " · ")
+    }
+
     /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.
     var ethereumYieldLine: String? { yieldLine(symbol: "ETH") }
 

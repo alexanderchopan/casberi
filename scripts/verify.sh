@@ -2473,6 +2473,9 @@ harness "Direct-swap self-test" "direct swap self-test" "scripts/direct-swap-sel
 harness "Across-swap self-test" "across swap self-test" "scripts/across-swap-selftest.sh" "Move's swap to another network drifted — run scripts/across-swap-selftest.sh"
 harness "Move-clock self-test" "move clock self-test" "scripts/move-clock-selftest.sh" "Move's stage clock drifted — run scripts/move-clock-selftest.sh"
 harness "Private-bridge self-test" "private bridge self-test" "scripts/private-bridge-selftest.sh" "round-ups saved from Base or Robinhood drifted — run scripts/private-bridge-selftest.sh"
+# Round-ups set aside as you go (prd §1690): the step, Across's floor, the
+# pot held to the chain, the move at $10, and the change carried to Aave on Base.
+harness "Round-ups self-test" "round-ups self-test" "scripts/round-ups-pot-selftest.sh" "Round-ups drifted — run scripts/round-ups-pot-selftest.sh"
 harness "Voice-timeline self-test" "voice timeline self-test" "scripts/voice-timeline-selftest.sh" "the voice-timeline self-test failed — run scripts/voice-timeline-selftest.sh"
 
 # The feed's day seam and the corpus floor (prd §866). Every failure here is

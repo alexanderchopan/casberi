@@ -40,6 +40,14 @@ final class FaceIDAhead<Context>: @unchecked Sendable {
     /// it waits for the answer, and throws `Refused` if Face ID was turned
     /// down. Every later signature of the same operation gets nil and asks
     /// Face ID itself, as before.
+    /// **THE SAME FACE ID, ONE MORE OPERATION (prd §1690).** A fresh hand
+    /// on this context for the one operation Round-ups adds after the send
+    /// (its move on Base): its first signature takes the context this tap
+    /// unlocked, so it asks nothing; refused here, refused there.
+    func again() -> FaceIDAhead<Context> {
+        FaceIDAhead(context: context) { [self] in await self.passed() }
+    }
+
     func take() async throws -> Context? {
         let first: Bool = lock.withLock {
             defer { taken = true }

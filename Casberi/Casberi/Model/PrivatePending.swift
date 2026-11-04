@@ -70,12 +70,9 @@ final class PrivatePending {
                 }
             case .failed:
                 // The batch it carried goes back on the count it came off.
+                // Since §1690 the count is Round-ups' `owed`: the next send sets it aside.
                 if let reserved = op.reserved {
-                    if op.toPrivate {
-                        RoundUps.setPrivateSaved(RoundUps.released(reserved, onto: RoundUps.privateSaved(on: op.chainId)), on: op.chainId)
-                    } else {
-                        RoundUps.setSaved(RoundUps.released(reserved, onto: RoundUps.saved(on: op.chainId)), on: op.chainId)
-                    }
+                    RoundUpsPot.owed = RoundUpsPot.sum(RoundUpsPot.owed, reserved)
                 }
                 if carriesNote, let c = op.commitment { store.remove(commitment: c) }
             }

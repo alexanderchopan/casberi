@@ -210,8 +210,10 @@ extension FeedScreen {
         let figure = mask ?? PrivateMoney.rowUSD(row, prices: prices).map(WalletValue.money)
             ?? PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)
         let (glyph, hue, state, stateInk): (String?, Color, String, Color) = switch row.kind {
-        // What earns says so, the rate read live (prd §1563); else the network.
-        case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldLine(row) ?? PrivateMoney.network(row.chainId), DS.textSecondary)
+        // What earns says so, worded as Lent and Round-ups are: "3.8% on Aave
+        // · Ethereum" (prd §1563, §1690, user: "it should be consistent w/
+        // how it is in round ups"); the rate unread, "On Aave · Ethereum".
+        case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }

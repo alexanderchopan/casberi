@@ -583,6 +583,8 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
+                // Round-ups' old counts become owed, once (prd §1690).
+                RoundUpsPot.migrate()
                 // Markets' sweeps (Stocktwits into Markets, coin converge, dead
                 // logos, removed alerts) went with Markets (prd §1529); its
                 // rows go through `sweepRetiredSeats` below.

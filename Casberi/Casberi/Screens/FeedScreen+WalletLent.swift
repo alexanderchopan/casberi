@@ -24,8 +24,46 @@ extension FeedScreen {
                 ForEach(rows, id: \.aToken) { m in
                     walletLentRow(m, lend: lend, mask: mask, prices: prices)
                 }
+                if lend.roundUps != "0" { walletRoundUpsRow(lend.roundUps, mask: mask) }
             }
         }
+    }
+
+    /// **ROUND-UPS, IN HOLDINGS (prd §1690).** Its own row under Lent, never
+    /// one of its markets: "Round-ups" over "$6.20 of $10 on Aave · Base", the
+    /// dollars trailing. What it holds is set aside, earning, and moves into
+    /// your private balance at the figure the line names.
+    private func walletRoundUpsRow(_ units: String, mask: String?) -> some View {
+        let usd = RoundUpsPot.dollars(units)
+        let figure = mask ?? WalletValue.money(usd)
+        let at = RoundUpsPot.figure(RoundUpsPot.shownTarget)
+        // Worded as a lent row is ("5.1% on Aave · Base"): both are Aave on Base.
+        let state = [mask == nil ? String(localized: "\(RoundUpsPot.figure(units)) of \(at) on Aave") : String(localized: "On Aave"),
+                     "Base"].joined(separator: " · ")
+        return HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+            AssetMark(name: "USDC", size: DS.Mark.badge)
+                .frame(width: DSRoomChassis.headGlyph)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Round-ups")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                HStack(spacing: DS.Space.s1) {
+                    ProtocolInlineMark(mark: "aave")
+                    Text(verbatim: state)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            walletRowFigure(figure, tone: DS.textPrimary)
+        }
+        .walletRowPitch()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: [String(localized: "Round-ups"), state, figure].joined(separator: ". ")))
+        .walletListRow()
     }
 
     private func walletLentUSD(_ m: AaveLend.Market, lend: LendMove, prices: [String: Double]) -> Double? {

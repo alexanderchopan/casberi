@@ -112,24 +112,23 @@ extension FeedScreen {
         return parts.joined(separator: " · ")
     }
 
-    /// The change counted and not yet bought (prd §1523): what it buys, and
-    /// at what.
+    /// What Round-ups holds now (prd §1690): set aside on Aave, earning,
+    /// and when it moves into your private balance.
     func spendingRoundUpWaitingRow(_ usd: Double, mask: String?) -> some View {
-        let setting = RoundUps.setting
-        let at = AppleWalletRoom.money((Double(RoundUps.buyAt) ?? 5_000_000) / pow(10, Double(RoundUps.dollarDecimals)), "USD")
-        return SubscriptionRow(name: String(localized: "Waiting"),
-                               line: Text(verbatim: String(localized: "Buys \(setting.target.symbol) at \(at)"))) {
+        let at = RoundUpsPot.figure(RoundUpsPot.shownTarget)
+        return SubscriptionRow(name: String(localized: "Round-ups"),
+                               line: Text(verbatim: String(localized: "Set aside · private at \(at)"))) {
             Text(verbatim: mask ?? AppleWalletRoom.money(usd, "USD"))
                 .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
         .walletListRow()
     }
 
-    /// The Round-ups door's word while nothing is bought this window:
-    /// "$2.60 waiting"; under Hide balances "Waiting".
+    /// The Round-ups door's word while nothing moved this window: "$6.20 of
+    /// $10"; under Hide balances "Set aside".
     static func spendingRoundUpWaiting(_ usd: Double, mask: String?) -> String {
-        guard mask == nil else { return String(localized: "Waiting") }
-        return String(localized: "\(AppleWalletRoom.money(usd, "USD")) waiting")
+        guard mask == nil else { return String(localized: "Set aside") }
+        return String(localized: "\(AppleWalletRoom.money(usd, "USD")) of \(RoundUpsPot.figure(RoundUpsPot.shownTarget))")
     }
 
     /// A subscription's row (prd §1469): its newest charge's day and what

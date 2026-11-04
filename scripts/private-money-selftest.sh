@@ -175,10 +175,10 @@ SEC="Casberi/Casberi/Screens/MoveSecurity.swift"
 # USDC: no Save now, no ppETH, ETH swapped for a dollar that is short (prd §1578).
 grep -qF 'saveRoundUpsNow' "$SEC" && { echo "✗ Save now is back (prd §1578)"; exit 1; }
 grep -qF 'roundUpsRideInETH' Casberi/Casberi/Model/PrivateOnEthereum.swift && { echo "✗ round-ups deposit into ppETH again (prd §1578)"; exit 1; }
-use "$SENT" 'ride = await PrivateOnEthereum.fundedByETH(made, units: rideUnits, on: net, account: account,' "a ride short of the dollar no longer swaps ETH for it (prd §1578)"
+grep -qF 'fundedByETH' "$SENT" && { echo "✗ round-ups swap ETH ahead of the ride again: the change is set aside in USDC as you go (prd §1690)"; exit 1; }
 use Casberi/Casberi/Model/PrivateOnEthereum.swift 'checked.approvals.isEmpty else {' "the ETH swap before a round-up is not Swap's checked call (prd §1578)"
-use "$SEC" 'Text("Your spare change is saved privately in dollars, and earns interest.")' "the round-ups tray no longer says what the one switch does (prd §1572)"
-use "$SENT" 'guard RoundUps.applies(setting, on: network.chainId), !network.isTest else { return nil }' "a send rounds up toward a private balance its network has no pool for"
+use "$SEC" 'Text(verbatim: Self.roundUpsSentence)' "the round-ups tray no longer says how Round-ups works (prd §1690)"
+use "$SENT" 'guard RoundUps.setting.on, !network.isTest else { return nil }' "a send on a test network rounds up into Round-ups (prd §1690)"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
 [[ -n "$mv" && -n "$dn" && "$mv" -lt "$dn" ]] || { echo "✗ due round-ups no longer ride the deposit you confirmed"; exit 1; }
@@ -188,11 +188,11 @@ use "$MOVE" 'let batch = RoundUps.privateMove(saved: RoundUps.privateSaved(on: c
 # a wrap and an unpriced token never; the buy rides only what can carry it;
 # a Buy counts its change once paid.
 use "$SENT" 'return s.quote.wrap == nil ? soldDollars(s) : nil' "a swap's round-up no longer reads what it sells, or rounds up a wrap"
-use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),' "a swap or a Buy carries a buy it cannot pay, or a private target buys publicly"
-use "$SENT" 'let bought = !toPrivate && buy != nil && !done.roundUpWaits' "a send or swap that did not carry the buy empties the count"
-use "$SENT" 'RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: bought), on: net.chainId)' "a send or swap that did not carry the buy empties the count"
-use "$SENT" 'if let roundUp { RoundUps.setSaved(RoundUps.savedAfter(roundUp, bought: false), on: net.chainId) }' "a paid Buy's change is not counted"
-use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpPlan?.buy != nil ? roundUpPrint : [])' "a swap's small print says nothing of the round-up it carries (the row above says the rest, user: \"below the fold\")"
+use "$SENT" 'return RoundUps.carriesBuy(roundUpAct) && RoundUpsPot.carries(step.carry, from: network.chainId)' "a swap of ETH or a Buy carries change it cannot pay, or change under Across's minimum is carried (prd §1690)"
+use "$SENT" 'let after = RoundUpsPot.after(roundUp, pot: RoundUpsPot.pot, setAside: rodeAside, moved: made?.moved)' "a send whose set-aside did not ride empties what was owed (prd §1690)"
+use "$SENT" 'RoundUpsPot.owed = after.owed' "a send whose set-aside did not ride forgets the change (prd §1690)"
+use "$SENT" 'if let roundUp { RoundUpsPot.owed = roundUp.carry }' "a paid Buy's change is not owed to the next send (prd §1690)"
+use "$SENT" 'case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpStep?.moves == true ? roundUpPrint : [])' "a swap's small print says nothing of the round-up it carries (the row above says the rest, user: \"below the fold\")"
 echo "  ok   round-ups to private: offered where a pool is (Ethereum; Sepolia in DEBUG), moved together on a deposit you confirmed"
 echo "  ok   swaps and Buy round up: what is sold, carried only where the dollar pays, a Buy counted"
 echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, relayed, the address by its tail"
@@ -285,9 +285,9 @@ awk '/switch await Self.rideVerdict\(ride, check:/,/^        }$/' "$TMPF" | grep
 grep -q 'rode: rode)' "$TMPF" || { echo "✗ a dropped ride still reads as ridden"; exit 1; }
 awk '/static func rideVerdict\(_ ride:/,/^    }$/' "$CHAIN" | grep -q 'let verdict = RoundUps.rideVerdict(written: true, checked: checked)' || { echo "✗ the ride's verdict is not RoundUps.rideVerdict's"; exit 1; }
 grep -q 'let kept = ride.isEmpty ? await Prepared.take(' "$TMPF" || { echo "✗ a riding deposit signs the preview's operation without it"; exit 1; }
-use "$SENT" 'try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,' "round-ups into private no longer ride the Face ID operation"
-use "$SENT" 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: moved), on: RoundUps.privateCount(for: net.chainId))' "round-ups that did not ride are emptied, or counted off Ethereum's count (prd §1572)"
-use "$SENT" 'guard !privateRoundUps, !RoundUps.setting.movesPrivately, RoundUps.carriesBuy(roundUpAct),' "private round-ups also buy a token"
+use "$SENT" 'try await Self.spend(batch, on: net, account: account, roundUp: nil, ride: ride, reason: reason,' "Round-ups no longer ride the Face ID operation (prd §1690)"
+use "$SENT" 'let rode = done.rode && !ride.isEmpty' "Round-ups that did not ride are counted as set aside (prd §1690)"
+grep -qF 'roundUpCarried' "$SENT" && { echo "✗ round-ups buy a token again (prd §1690)"; exit 1; }
 use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "round-ups ride a deposit to something other than ppUSDC's router"
 awk '/static func schedule\(\)/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch is scheduled in DEBUG builds only"; exit 1; }
 awk '/private static func handle\(/,/^    }$/' "$WATCH" | grep -q '#if DEBUG' && { echo "✗ the background watch's pass runs in DEBUG builds only"; exit 1; }
@@ -337,7 +337,8 @@ sim=$(grep -n 'let simulated = await check(net, account: account' "$TMP0" | cut 
 req=$(grep -n 'try require(simulated, on: net, swaps: false)' "$TMP0" | cut -d: -f1)
 op=$(grep -n 'let outcome = try await operate(' "$TMP0" | cut -d: -f1)
 [[ -n "$sim" && -n "$req" && -n "$op" && "$sim" -lt "$req" && "$req" -lt "$op" ]] || { echo "✗ a private call is signed before its simulation is required to land"; exit 1; }
-use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.yieldLine(row) ?? PrivateMoney.network(row.chainId), DS.textSecondary)' "a private row no longer says its rate"
+use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)' "a private row no longer says its rate"
+use Casberi/Casberi/Model/PrivateMoneyStore.swift 'return [PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), network].joined(separator: " · ")' "a private row is not worded as a lent row: \"3.8% on Aave · Ethereum\" (prd §1690)"
 use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
 ! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
 use "$TAKE" 'let (hash, figure, pending) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
@@ -980,8 +981,8 @@ use "$FRESHM" 'if try await FreshSigner.landed(hash, on: network) {' "a fresh de
 # 2: a deposit, a round-up ride and Take it back not seen in two minutes are kept and followed.
 use "$ETH" 'if case .pending = sent.outcome, let id = followed.id {' "a deposit not seen in two minutes is not followed (finding 2)"
 use "$ETH" 'tx: hash ?? "", at: Date(),' "a deposit that landed with no transaction named is not kept (finding 2)"
-use "$SENT" 'PrivatePending.shared.add(.init(id: id, chainId: net.chainId, account: account, nonceKey: SafeABI.hex(followed.nonceKey),' "a round-up ride not seen in two minutes is not followed (findings 2, 3)"
-use "$SENT" 'if moved, let ride { Self.landPrivateRoundUps(ride, tx: tx, context: context) }' "a ride that landed with no transaction named drops its note (finding 2)"
+use "$SENT" 'PrivatePending.shared.add(.init(id: id, chainId: chainId, account: account, nonceKey: SafeABI.hex(followed.nonceKey),' "a Round-ups move not seen in two minutes is not followed (findings 2, 3, prd §1690)"
+use "$SENT" 'landPrivateRoundUps(move.ride, tx: tx, context: context)' "a Round-ups move that landed with no transaction named drops its note (finding 2, prd §1690)"
 use "$CHAIN" 'if let followed = following {' "submit no longer names the operation it sent (findings 2, 3)"
 # 2: every root's notes on a cadence: Holdings, Needs you, the background pass.
 use "$HOLD" 'await PrivateWatch.findNotes(context: modelContext)' "Holdings no longer finds every root's notes on a cadence (finding 2)"
@@ -990,10 +991,10 @@ use "$WATCH" 'if left() > 15 { await findNotes(context: context) }' "the backgro
 awk '/static func findNotes\(context: ModelContext\?, force: Bool = false\) async \{/,/^    }$/' "$WATCH" | grep -q 'await PrivatePending.shared.resolve(context: context)' \
     || { echo "✗ what was sent and not seen is never asked about (finding 2)"; exit 1; }
 # 3: a ride on its way empties the count and reserves it; failed, the reserve comes back.
-awk '/case \.pending:/,/case \.dryRun:/' "$SENT" | grep -q 'RoundUps.setPrivateSaved(RoundUps.savedAfter(roundUp, bought: true), on: RoundUps.privateCount(for: net.chainId))' \
-    || { echo "✗ a ride still on its way leaves the count whole: the next send rides it again (finding 3)"; exit 1; }
-use "$SENT" 'reserved: RoundUps.reserve(roundUp), toPrivate: toPrivate))' "a ride on its way reserves nothing (finding 3)"
-use "$PEND" 'RoundUps.setPrivateSaved(RoundUps.released(reserved, onto: RoundUps.privateSaved(on: op.chainId)), on: op.chainId)' "a failed ride's round-ups never come back (finding 3)"
+awk '/case \.landed, \.pending:/,/case \.dryRun:/' "$SENT" | grep -q 'RoundUpsPot.pot = after.pot' \
+    || { echo "✗ a ride still on its way leaves Round-ups whole: the next send moves it again (finding 3, prd §1690)"; exit 1; }
+use "$SENT" 'reserved: nil, toPrivate: true))' "a Round-ups move on its way is not followed (finding 2, prd §1690)"
+use "$PEND" 'RoundUpsPot.owed = RoundUpsPot.sum(RoundUpsPot.owed, reserved)' "a failed ride's round-ups never come back (finding 3, prd §1690)"
 # 6: the gas payment is kept before the relayer is asked.
 awk '/private func lookToken\(/,/^    }$/' "$FRESHM" > "$TMP/ftoken"
 sg=$(grep -n 'set(entry.id, .sent(amount: held, tx: "", step: .gas, nonce: nil, at: Date()), symbol: symbol)' "$TMP/ftoken" | cut -d: -f1)
@@ -1004,9 +1005,7 @@ use "$FRESHM" 'if !(await allowanceCovers(pool, owner: entry.address, amount: mo
 # 4: ETH and USDC apart.
 use "$FRESHM" 'switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool: usdcPool != nil) {' "a fresh address's USDC still decides for its ETH (finding 4)"
 # 7: a private target counts on Ethereum whatever is available, and rides only where it can move.
-awk '/private var privateRoundUps: Bool \{/,/^    }$/' "$SENT" | grep -q 'PrivateMove.available\|owner != nil' && { echo "✗ a private target with private money unavailable falls back to a public buy (finding 7)"; exit 1; }
-awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'let here = RoundUps.privateRoute(on: network.chainId, bySession: false) == .deposit' \
-    && awk '/private var privateRide: String\? \{/,/^    }$/' "$SENT" | grep -q 'PrivateBridge.carries(from: network.chainId) && RoundUps.privatePools.contains(RoundUps.ethereumPool)' \
-    || { echo "✗ round-ups ride where private money is not available, here or bridged (finding 7, prd §1574)"; exit 1; }
+awk '/static func move\(account: String\) async throws -> Move \{/,/^    }$/' "Casberi/Casberi/Model/RoundUpsPot+Chain.swift" | grep -q 'PrivateMove.available && PrivateOnEthereum.owner != nil' \
+    || { echo "✗ Round-ups moves where private money is not available (finding 7, prd §1690)"; exit 1; }
 echo "  ok   the review's fixes in use: kept before sent, followed past two minutes, reserved, the gas paid once, ETH apart from USDC, never public"
 echo "  ok   74 mutations"

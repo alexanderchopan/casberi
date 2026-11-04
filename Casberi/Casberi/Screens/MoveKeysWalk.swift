@@ -126,12 +126,12 @@ struct MoveKeysWalk: View {
             }
             small(String(localized: "You can turn it off later in Account. Getting your account back needs it too."))
         case .roundUps:
-            // One switch (prd §1572): spare change, saved privately.
+            // One switch (prd §1572); set aside as you go, then private (prd §1690).
             MoveFlow {
-                MoveWord(String(localized: "Save your spare change"))
-                MoveClause(glue: String(localized: "in your")) { MoveWord(String(localized: "private balance."), ink: DS.pickInk) }
+                MoveWord(String(localized: "Round up your sends"))
+                MoveClause(glue: String(localized: "into")) { MoveWord(String(localized: "Round-ups."), ink: DS.pickInk) }
             }
-            small(String(localized: "Your spare change is saved privately in dollars, and earns interest."))
+            small(MoveSecurity.roundUpsSentence)
         case .created:
             MoveFlow {
                 MoveWord(String(localized: "Created"), ink: DS.textSecondary)

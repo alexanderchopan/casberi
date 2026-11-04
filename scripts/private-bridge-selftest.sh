@@ -89,6 +89,7 @@ xcrun swiftc -Onone -o "$TMP/run" "$BRIDGE" "$ACROSS" "Casberi/Shared/AddressTai
 # Save now is deleted (prd §1578): a round-up saves with your sends only.
 grep -qF 'saveRoundUpsNow' Casberi/Casberi/Screens/MoveSecurity.swift \
   && { echo "✗ Save now is back: round-ups save with your sends only (prd §1578)"; exit 1; }
-grep -qF ': try await PrivateBridge.ride(budget: rideUnits, from: net, account: account)' Casberi/Casberi/Screens/MoveSentence.swift \
-  || { echo "✗ a send on Base or Robinhood no longer carries the save"; exit 1; }
+# Since §1690 the bridged save is Round-ups' move from Base.
+grep -qF 'let ride = try await PrivateBridge.ride(budget: w.amount, from: base, account: account)' Casberi/Casberi/Model/RoundUpsPot+Chain.swift \
+  || { echo "✗ Round-ups no longer moves into the private pool from Base"; exit 1; }
 echo "✓ private bridge: the handler's message, the fee and the two calls (prd §1574)"
