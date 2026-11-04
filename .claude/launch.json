@@ -24,6 +24,26 @@
         "design/mockups"
       ],
       "port": 8778
+    },
+    {
+      "name": "aztec-dapp-spike",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8779",
+        "--directory",
+        "tools/aztec-dapp-spike/dist"
+      ],
+      "port": 8779
+    },
+    {
+      "name": "aztec-engine",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/aztec-dapp-spike/serve.mjs"
+      ],
+      "port": 8780
     }
   ]
 }

@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Casberi Aztec dApp spike (iOS)</title>
+<body style="font:15px -apple-system,system-ui;padding:24px"><h3>Aztec wallet-sdk handshake</h3>
+<p>No wallet script on this page: Casberi's web view adds it.</p>
+<button onclick="runDapp()">Connect Aztec wallet</button><pre id="out" style="white-space:pre-wrap"></pre>
+<script src="dapp.js"></script>
+<script>if (location.search.includes('auto=1')) setTimeout(() => runDapp().then(r => window.webkit?.messageHandlers?.casberi?.postMessage(JSON.stringify({event:'dappResult', detail:r}))), 1500)</script>
+</body>
