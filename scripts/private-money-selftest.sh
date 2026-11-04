@@ -154,6 +154,10 @@ use "Casberi/Casberi/Model/LendMove.swift" 'lentAnswered = found.count == AaveLe
 use "Casberi/Casberi/Model/LendMove.swift" 'guard let last = Self.lastReading(for: account) else { return nil }' "Lent does not stand on its last reading when Aave is not reached (prd §1697)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'if let lentAsOf { portfolio.asOf = min(portfolio.asOf ?? lentAsOf, lentAsOf) }' "a last Lent reading is presented as current (prd §1697)"
 use "Casberi/Casberi/Model/WalletPortfolio.swift" '|| holderID == privateHolderID || holderID == lentHolderID' "Lent is drawn as a wallet or an app (prd §1695)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'portfolio.sectionCells(appsApart: appsApart).joined(separator: ", ")' "the Holdings box is cut by token, not as the list is (prd §1698)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)' "All's box keeps an app's money in its tokens' tiles (prd §1698)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift" 'if let symbol, WalletPortfolio.appCell(symbol) != nil {' "an app's tile opens a token sheet, or nothing (prd §1698)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift" '} else if symbol == WalletPortfolio.lentSymbol {' "Lent's tile opens a token sheet named Lent (prd §1698)"
 awk '/walletLentRows$/{l=NR} /walletPrivateRows$/{p=NR} END{exit !(l && p && l<p)}' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" || { echo "✗ Private stands over Lent (prd §1695)"; exit 1; }
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
 # Needs you and Take it back (prd §1561): the rows stand on Needs you's page

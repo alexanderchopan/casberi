@@ -74,7 +74,7 @@ extension FeedScreen {
         return NSDecimalNumber(decimal: units / pow(10, m.decimals)).doubleValue * price
     }
 
-    private func walletOpenLend(_ mode: LendMove.Mode, _ m: AaveLend.Market? = nil) {
+    func walletOpenLend(_ mode: LendMove.Mode, _ m: AaveLend.Market? = nil) {
         DSHaptic.selection()
         if let m {
             LendMove.opening = (m.chainId, m.symbol)

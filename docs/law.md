@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1839 of 1911 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1840 of 1912 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -1301,7 +1301,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
 - §938 — A day whose only row is the cover draws no header
-- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (amended by §1090, §1595; part superseded by §957)
+- §939 — The Wallet's holdings are a true-area treemap: the total alone, grey tiles with the mark and the share, the tail as o… (amended by §1090, §1595, §1698; part superseded by §957)
 - §940 — The Wallet's Accounts: the crown counts what it draws, the list is yours then the accounts tied to them, a row names… (part superseded by §941, §954)
 - §941 — The Wallet's Accounts crown is your accounts, face by face, and a face picks the account
 - §942 — The Wallet's Activity is the moves in time: one number over one noun, bars to the floor, the window as slim text, and…
@@ -1937,7 +1937,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
 - §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
-- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695)
+- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
@@ -2088,6 +2088,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1695 — Holdings' parts add up: Tokens, Lent and Private each carry their dollars, Lent counts in the Wallet's number, an aTo…
 - §1696 — On All, an app's money is Apps', never Tokens': every Holdings section is separate (resolves §1695's open question)
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent)
+- §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 
 ## Dead rulings → what replaced them (generated)
 

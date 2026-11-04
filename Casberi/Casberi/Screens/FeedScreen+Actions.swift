@@ -360,7 +360,7 @@ extension FeedScreen {
         if portfolio == nil || portfolioScope != scopeKey, !DemoMode.isActive,
            let last = WalletLastReading.reading(scope: scopeKey, wallets: watched) {
             let shown = last.hiding(walletHidden)
-            blockStream.paint(shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
+            blockStream.paint(shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown, appsApart: walletOnAll))
             portfolio = last
             portfolioScope = scopeKey
         }
@@ -378,7 +378,7 @@ extension FeedScreen {
             guard scope == selectedWallet, scopeKey == chrome.walletScope else { return }
             if let seat, let whole = read?.portfolio {
                 let slice = Self.slice(whole, for: seat)
-                read = slice.isEmpty ? nil : (WalletIngest.holdingsDoc(slice), slice)
+                read = slice.isEmpty ? nil : (WalletIngest.holdingsDoc(slice, appsApart: false), slice)
             }
             if let read {
                 // Same animated landing as `loadWalletLive` — the treemap is
@@ -388,7 +388,7 @@ extension FeedScreen {
                 let hides = !read.portfolio.hiddenItems(walletHidden).isEmpty
                 let shown = read.portfolio.hiding(walletHidden)
                 withAnimation(DS.Motion.standard) {
-                    blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
+                    blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown, appsApart: walletOnAll))
                     portfolio = read.portfolio
                     portfolioScope = scopeKey
                 }

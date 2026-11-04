@@ -1013,6 +1013,36 @@ eq(wpBook.positions.first?.usd, 12_100, "…summed across both wallets holding i
 check(wpBook.positions.map(\.symbol).count == Set(wpBook.positions.map(\.symbol)).count,
       "no symbol appears twice — a duplicate would split a share and understate it")
 
+// ── Holdings by section (prd §1695, §1696, §1698) ──────────────────────────
+// A book with a wallet, an exchange, a cash account, Lent and Private: every
+// section separate, so Tokens is the wallet's alone on All.
+let wpAll = WalletPortfolio.from(groups: [wpGroup("main", ["ETH": 2_100, "USDC": 640])],
+    exchange: [(symbol: "ETH", usd: 700, venue: .kraken), (symbol: "BTC", usd: 350, venue: .kraken)],
+    venues: [(symbol: "USD", usd: 190, holderID: "cash:wise:1", label: "Wise"),
+             (symbol: "Lent", usd: 303, holderID: "lent", label: "Lent"),
+             (symbol: "Private", usd: 289, holderID: "private", label: "Private")])
+eq(wpAll.totalUSD, 4_572, "the whole number counts every section once")
+let wpTokens = wpAll.tokensOnly(appsApart: true)
+eq(wpTokens.positions.first { $0.symbol == "ETH" }?.usd, 2_100, "on All, Tokens' ETH is the wallet's, not Kraken's too")
+check(!wpTokens.positions.contains { ["BTC", "USD", "Lent", "Private"].contains($0.symbol) },
+      "on All, Tokens holds no app's, Lent's or Private's money")
+let wpApps = wpAll.venueTotals.filter { $0.address != "lent" && $0.address != "private" }.reduce(0) { $0 + $1.usd }
+eq(wpTokens.totalUSD + wpApps + 303 + 289, wpAll.totalUSD, "Apps, Tokens, Lent and Private add up to the number")
+let wpPicked = wpAll.tokensOnly(appsApart: false)
+eq(wpPicked.positions.first { $0.symbol == "ETH" }?.usd, 2_800, "with no Apps beside it, an app's tokens stay in Tokens")
+check(!wpPicked.positions.contains { $0.symbol == "Lent" || $0.symbol == "Private" }, "…but never Lent or Private")
+// An app's tile id survives the cell parser: no space, no colon, no comma,
+// and it reads back to the same holder.
+for h in [WalletPortfolio.Holder(address: "cash:wise:1", label: "Wise, US", usd: 1),
+          WalletPortfolio.Holder(address: "privy:abc", label: "Zora app", usd: 1),
+          WalletPortfolio.Holder(address: "kraken", label: "Kraken", usd: 1)] {
+    let id = WalletPortfolio.appCellID(h)
+    check(!id.contains(" ") && !id.contains(":") && !id.contains(","), "an app tile's id is one parser token: \(id)")
+    check(WalletPortfolio.appCell(id)?.address == h.address && WalletPortfolio.appCell(id)?.label == h.label,
+          "an app tile's id reads back to its holder: \(h.label)")
+}
+check(WalletPortfolio.appCell("ETH") == nil && WalletPortfolio.appCell("@other") == nil, "a token or Other is no app")
+
 print("")
 if failures == 0 {
     print("✓ wallet-viz self-test: \(checks) checks passed")

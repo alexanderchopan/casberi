@@ -75,7 +75,7 @@ extension FeedScreen {
         DSHaptic.selection()
         withAnimation(DS.Motion.standard) {
             walletHidden = HiddenTokens.current
-            if let shown = portfolioShown { blockStream.paint(WalletIngest.holdingsDoc(shown)) }
+            if let shown = portfolioShown { blockStream.paint(WalletIngest.holdingsDoc(shown, appsApart: walletOnAll)) }
             else if portfolio != nil { blockStream.paint([]) }
         }
     }

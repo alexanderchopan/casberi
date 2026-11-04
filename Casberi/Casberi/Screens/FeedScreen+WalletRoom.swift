@@ -1668,7 +1668,17 @@ extension FeedScreen {
                             // opens its sheet, as its row does.
                             let symbol = TokenQuickRoute.from(sentinel: name)?.symbol
                                 ?? (name.hasPrefix("@wallet:") ? String(name.dropFirst("@wallet:".count)) : nil)
-                            if let symbol,
+                            // **A SECTION'S TILE OPENS WHAT ITS HEAD OPENS (prd
+                            // §1698):** an app's, Apps; Lent's, Lend; Private's,
+                            // Move to private. Never a token sheet for a section.
+                            if let symbol, WalletPortfolio.appCell(symbol) != nil {
+                                DSHaptic.selection()
+                                chrome.walletSection = .apps
+                            } else if symbol == WalletPortfolio.lentSymbol {
+                                walletOpenLend(.lend)
+                            } else if symbol == PrivateMoney.walletSymbol {
+                                walletOpenPrivate(.deposit)
+                            } else if let symbol,
                                let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
                                 walletOpenToken(position)
                             } else if let route = TokenQuickRoute.from(sentinel: name) {

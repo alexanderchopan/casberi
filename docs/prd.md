@@ -70894,3 +70894,15 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `private-money-selftest.sh`: the read's completeness test, the standing rule, the dated total, Lent's head on the standing figure.
 
 **Mac half (§1402).** The same; nothing here is phone-only.
+
+## §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private (amends §939's cells, §1554's Private block; follows §1695, §1696) (user, 2026-11-04: "The treemap should reflect ALL don't you think? not just Tokens list", then, shown both cuts on a canvas, "you decide and build this new version you are talking about") — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **The box draws the whole number, cut by section** (`WalletPortfolio.sectionCells(appsApart:)`): the Tokens section's tokens (`tokensOnly`), on All one tile per app (an exchange, a cash account, a Privy app, the validators: `venueTotals` less Lent and Private), Lent, and Private, each sized by its share of the total. A token's tile now says what its row says: Kraken's ETH is Kraken's tile, never part of the ETH tile.
+2. **Still five and Other** (§939): apps and tokens share the five, the tail folds, a tile under 3% or 44pt joins Other.
+3. **An app's tile** is `@app.<holder>.<name>`, each percent-encoded to letters and digits (the cell parser slices on a space, a sentinel on a colon); it wears its Apps row's mark (`BankMark` for a bank, else `BridgeIcon` by `venueMark`) and VoiceOver says its name. Lent's tile wears the percent glyph, Private's the eye.
+4. **A section's tile opens what its head opens:** an app's, Apps; Lent's, Lend; Private's, Move to private. Before, Private's tile opened a token sheet named "Private".
+5. **Where it applies:** All (`walletOnAll`, the live read's `combined`, the demo's), apps apart; Yours, Following, an address or an app picked in the menu keep their tokens as tiles, with Lent and Private where they stand. The box's count line is the Tokens section's.
+
+**Guard.** `wallet-viz-selftest.sh` compiles `WalletPortfolio` as shipped: on All Tokens' ETH is the wallet's alone, Tokens holds no app's, Lent's or Private's money, the sections add up to the number, an app picked keeps its tokens, and an app tile's id is one parser token that reads back to its holder. `private-money-selftest.sh`: the box goes through `sectionCells`, All's read is cut apps apart, an app's and Lent's tiles open their sections.
+
+**Mac half (§1402).** The same box; nothing here is phone-only.

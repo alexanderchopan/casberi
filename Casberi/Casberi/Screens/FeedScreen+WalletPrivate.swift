@@ -164,7 +164,7 @@ extension FeedScreen {
 
     /// Opens Send privately (prd §1554): to your private balance from the
     /// header, from it (the switch on) from a row.
-    private func walletOpenPrivate(_ mode: PrivateMove.Mode) {
+    func walletOpenPrivate(_ mode: PrivateMove.Mode) {
         DSHaptic.selection()
         chrome.movePrivately = mode
         chrome.moveTray = true

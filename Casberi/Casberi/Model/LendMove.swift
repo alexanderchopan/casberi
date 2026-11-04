@@ -72,7 +72,7 @@ final class LendMove {
     /// Lent's one position in the portfolio, as Private's is: one block in
     /// the box and one share of the total, never folded into the token it
     /// is, so Tokens, Lent and Private add up to the number above them.
-    static let walletSymbol = "Lent"
+    static let walletSymbol = WalletPortfolio.lentSymbol
     static let holderID = "lent"
 
     /// What is lent in dollars: every market priced, and Round-ups (USDC,

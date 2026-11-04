@@ -2267,11 +2267,8 @@ enum WalletIngest {
             let account = await MainActor.run { WalletPortfolio.demoAccountHeld(scopeTo: address, only: only) }
             let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account)
             guard !portfolio.isEmpty else { return (read: nil, failed: false) }
-            let cells = portfolio.treemapCells.joined(separator: ", ")
-            // The line carries the total the room's crown reads (prd §953);
-            // `GenTagMap` hides it wherever the crown draws it.
-            let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount, stale: nil)
-            return (read: (doc: ["root = TagMap(\(q("")), \(q(line)), [\(cells)], \(q("token")))"], portfolio: portfolio), failed: false)
+            // Cut by section, as the live read is (prd §1698).
+            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)
         }
         let read = await holdingsByWallet()
         var groups = read.groups
@@ -2408,7 +2405,7 @@ enum WalletIngest {
             // The line carries the total the room's crown reads (prd §953) —
             // it was "" and the true-area treemap (§939) never drew for the
             // combined portfolio; `GenTagMap` hides it where the crown draws.
-            return (read: (doc: holdingsDoc(portfolio), portfolio: portfolio), failed: false)
+            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)
         }
 
         let ids = groups.indices.map { "w\($0)" }
@@ -2421,10 +2418,13 @@ enum WalletIngest {
 
     /// One map over a whole portfolio — the combined read's, and an app's
     /// slice of it when the menu picks one (prd §1048b).
-    static func holdingsDoc(_ portfolio: WalletPortfolio) -> [String] {
-        let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount,
+    /// The Holdings box: cut by section (prd §1698), `appsApart` on All,
+    /// where Apps stands beside Tokens. Its count is the Tokens section's.
+    static func holdingsDoc(_ portfolio: WalletPortfolio, appsApart: Bool) -> [String] {
+        let line = subline(totalUSD: portfolio.totalUSD,
+                           tokenCount: portfolio.tokensOnly(appsApart: appsApart).tokenCount,
                            stale: portfolio.asOf)
-        return ["root = TagMap(\(q("")), \(q(line)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
+        return ["root = TagMap(\(q("")), \(q(line)), [\(portfolio.sectionCells(appsApart: appsApart).joined(separator: ", "))], \(q("token")))"]
     }
 
     private static func q(_ s: String) -> String {

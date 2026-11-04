@@ -409,6 +409,57 @@ struct WalletPortfolio: Equatable, Codable {
         return split.map { Part(key: $0.key, holder: holder, usd: usd * $0.share) }
     }
 
+    /// Lent's position symbol (prd §1695), here so code off the main actor
+    /// can name it; `LendMove.walletSymbol` is this.
+    static let lentSymbol = "Lent"
+
+    // MARK: - The box by section (prd §1698)
+
+    /// An app's tile in the treemap: its holder id and its name, each
+    /// percent-encoded to letters and digits, because the cell parser slices
+    /// on a space and a tap's sentinel on a colon (`cash:`, `privy:`).
+    static let appCellPrefix = "@app."
+    private static let cellSafe = CharacterSet(charactersIn:
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+    static func appCellID(_ holder: Holder) -> String {
+        func enc(_ s: String) -> String { s.addingPercentEncoding(withAllowedCharacters: cellSafe) ?? "" }
+        return appCellPrefix + enc(holder.address) + "." + enc(holder.label)
+    }
+
+    /// The app a tile names, or nil for any other tile.
+    static func appCell(_ id: String) -> Holder? {
+        guard id.hasPrefix(appCellPrefix) else { return nil }
+        let parts = id.dropFirst(appCellPrefix.count).split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 2, let address = String(parts[0]).removingPercentEncoding, !address.isEmpty,
+              let label = String(parts[1]).removingPercentEncoding else { return nil }
+        return Holder(address: address, label: label, usd: 0)
+    }
+
+    /// **THE BOX IS CUT AS THE LIST IS (prd §1698).** The treemap's cells:
+    /// the Tokens section's tokens (`tokensOnly`), one tile per app on All
+    /// (`appsApart`), Lent and Private, each sized by its share of the whole
+    /// number. So every tile is a row or a head below it, and a token's tile
+    /// says what its row says. The tail still folds into one Other.
+    func sectionCells(appsApart: Bool) -> [String] {
+        let tokens = tokensOnly(appsApart: appsApart).positions
+        var bySymbol = Dictionary(tokens.map { ($0.symbol, $0.usd) }, uniquingKeysWith: +)
+        let routes = Dictionary(tokens.compactMap { p in p.route.map { (p.symbol, $0) } }, uniquingKeysWith: { a, _ in a })
+        // Private and Lent, by their holders (never a symbol another file
+        // owns: this file compiles alone in `wallet-viz-selftest.sh`).
+        for p in positions {
+            for h in p.holders where h.address == Self.privateHolderID || h.address == Self.lentHolderID {
+                bySymbol[p.symbol, default: 0] += h.usd
+            }
+        }
+        if appsApart {
+            for app in venueTotals where app.address != Self.privateHolderID && app.address != Self.lentHolderID && app.usd > 0 {
+                bySymbol[Self.appCellID(app)] = app.usd
+            }
+        }
+        return WalletIngest.treemapCells(bySymbol: bySymbol, routes: routes)
+    }
+
     var treemapCells: [String] {
         WalletIngest.treemapCells(
             bySymbol: Dictionary(uniqueKeysWithValues: positions.map { ($0.symbol, $0.usd) }),

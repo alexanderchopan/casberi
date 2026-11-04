@@ -273,6 +273,8 @@ struct HoldingsTreemap: View {
     private func tileView(_ tile: HoldingsTreemapLayout.Tile, widest: Double) -> some View {
         let isOther = tile.id == HoldingsTreemapLayout.otherID
         let isLit = lit == tile.id
+        // What VoiceOver says: an app's name, never its cell id.
+        let spoken = WalletPortfolio.appCell(tile.id)?.label ?? tile.id
         let small = min(tile.rect.width, tile.rect.height) < 72
         let large = tile.rect.width >= 120 && tile.rect.height >= 90
         // **A TILE DROPS WORDS, NEVER CLIPS THEM (user: "clipping").** What
@@ -317,6 +319,26 @@ struct HoldingsTreemap: View {
                             .frame(width: mark * 0.8, height: mark * 0.8)
                             .frame(width: mark, height: mark, alignment: .leading)
                             .accessibilityHidden(true)
+                    } else if tile.id == WalletPortfolio.lentSymbol {
+                        // Lent wears its head's glyph (prd §1698).
+                        Image(systemName: "percent")
+                            .resizable()
+                            .scaledToFit()
+                            .fontWeight(.semibold)
+                            .foregroundStyle(DS.pickInk)
+                            .frame(width: mark * 0.7, height: mark * 0.7)
+                            .frame(width: mark, height: mark, alignment: .leading)
+                            .accessibilityHidden(true)
+                    } else if let app = WalletPortfolio.appCell(tile.id) {
+                        // An app's tile wears its Apps row's mark (prd §1698).
+                        Group {
+                            if let bank = SimpleFINShape.connID(fromHolder: app.address) {
+                                BankMark(connID: bank, size: mark)
+                            } else {
+                                BridgeIcon(name: FeedScreen.venueMark(app), size: mark)
+                            }
+                        }
+                        .accessibilityHidden(true)
                     } else {
                         AssetMark(name: tile.id, size: mark)
                     }
@@ -380,10 +402,10 @@ struct HoldingsTreemap: View {
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(move(tile.id).map {
-                Text("\(tile.id), \(HoldingsTreemapLayout.percent(tile.share)), \(TokenChartStyle.changeText($0)) today")
+                Text("\(spoken), \(HoldingsTreemapLayout.percent(tile.share)), \(TokenChartStyle.changeText($0)) today")
             } ?? (showsShares
-            ? Text("\(isOther ? String(localized: "Other") : tile.id), \(HoldingsTreemapLayout.percent(tile.share))")
-            : Text(isOther ? String(localized: "Other") : tile.id)))
+            ? Text("\(isOther ? String(localized: "Other") : spoken), \(HoldingsTreemapLayout.percent(tile.share))")
+            : Text(isOther ? String(localized: "Other") : spoken)))
         .accessibilityAddTraits(isLit ? .isSelected : [])
     }
 }
