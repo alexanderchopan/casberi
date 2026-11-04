@@ -286,6 +286,14 @@ struct MovePrivateSentence<Head: View>: View {
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
             }
+        case .needsFunds:
+            // Why it asks for funds, in the figures the check uses: the
+            // pool's smallest step, and the ETH kept for the network fee.
+            if let words = fundsLine {
+                Text(verbatim: words)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .nothingPrivate:
             Button {
                 DSHaptic.selection()
@@ -316,6 +324,15 @@ struct MovePrivateSentence<Head: View>: View {
         default:
             EmptyView()
         }
+    }
+
+    /// "At least 0.005 ETH or 20 USDC moves in, plus 0.0044 ETH kept for
+    /// the network fee." Nil until the read has the figures.
+    private var fundsLine: String? {
+        guard let eth = move.leastETH, let fee = move.feeKept else { return nil }
+        let coin = move.onEthereum ? "ETH" : String(localized: "test ETH")
+        let least = move.leastUSDC.map { String(localized: "\(eth) \(coin) or \($0) USDC") } ?? "\(eth) \(coin)"
+        return String(localized: "At least \(least) moves in, plus \(fee) \(coin) kept for the network fee.")
     }
 
     /// Switch on: the relayer's fee and about how long (the relayed

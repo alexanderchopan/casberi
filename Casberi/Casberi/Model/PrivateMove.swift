@@ -137,6 +137,24 @@ final class PrivateMove {
         }
     }
 
+    /// Moving in, nothing offered: the least ETH step the pool takes, and
+    /// the ETH kept for the network fee (`PrivateMoney.leastMoveIn`), the
+    /// same figures `choices` holds the balance to.
+    var leastETH: String? {
+        guard mode == .deposit else { return nil }
+        return PrivateMoney.leastMoveIn(ladder: onEthereum ? PrivateMoney.mainnetLadder : PrivateMoney.ladder,
+                                        decimals: 18, minimum: onEthereum ? (minimum ?? "0") : "0")?.step
+    }
+
+    /// The least USDC step ppUSDC takes, on Ethereum, once its minimum is read.
+    var leastUSDC: String? {
+        guard onEthereum, mode == .deposit, let usdcMinimum else { return nil }
+        return PrivateMoney.leastMoveIn(ladder: PrivateMoney.usdcLadder, decimals: 6, minimum: usdcMinimum)?.step
+    }
+
+    /// The ETH kept back for the network fee, rounded up.
+    var feeKept: String? { reserve.flatMap { PrivateMoney.numberUp($0, decimals: 18) } }
+
     /// Every amount the sentence offers, ETH's then USDC's.
     var options: [(symbol: String, amount: String)] {
         choices.map { ("ETH", $0) } + usdcChoices.map { ("USDC", $0) }

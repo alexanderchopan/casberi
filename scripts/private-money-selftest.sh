@@ -732,6 +732,17 @@ check(gasNeed?.need == "127643633810000" && gasNeed?.shortfall == "1276436338100
 check(F.tokenGas(ethHeld: "200000000000000", maxFee: "95972657")?.shortfall == "0", "ETH already there pays it")
 check(F.tokenGas(ethHeld: "27643633810000", maxFee: "95972657")?.shortfall == "100000000000000", "private ETH pays only the shortfall")
 // USDC's amounts start at the pool's minimum.
+// What moving in takes (the "Fund" sentence's line): the step choices() first offers, plus the reserve.
+check(P.leastMoveIn(ladder: P.mainnetLadder, decimals: 18, minimum: "4000000000000000", reserve: "4400000000000000")! == (step: "0.005", total: "9400000000000000"),
+      "the least ETH move in is the first step over the pool's minimum, plus the gas kept")
+check(P.leastMoveIn(ladder: P.usdcLadder, decimals: 6, minimum: "10046461")?.step == "20", "ppUSDC's minimum over $10 makes $20 the least")
+check(P.leastMoveIn(ladder: P.usdcLadder, decimals: 6, minimum: "9000000000") == nil, "no step covers the minimum: nothing claimed")
+check(P.choices(balance: "9400000000000000", reserve: "4400000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000") == ["0.005"],
+      "holding exactly the least offers its step")
+check(P.choices(balance: "9399999999999999", reserve: "4400000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000").isEmpty,
+      "a wei under the least offers nothing")
+check(P.numberUp("4400000000000001", decimals: 18) == "0.0045", "a fee is rounded up, never under")
+check(P.numberUp("4400000000000000", decimals: 18) == "0.0044", "an exact figure stays")
 check(P.choices(balance: "25000000", reserve: "0", decimals: 6, ladder: P.usdcLadder, minimum: "10046461") == ["20"],
       "10 USDC is under ppUSDC's minimum; 20 of 25 is offered")
 // Balance to balance: the keystore's viewing key.

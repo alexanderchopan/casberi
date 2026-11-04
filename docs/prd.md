@@ -70837,3 +70837,12 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Seen on the simulator** (the demo, iPhone 17 Pro; `-moveSendDraft "20|zac.zk.money|USDC@Ethereum"`): "Send 20 USDC to zac.zk.money on Ethereum.", Send live, no first-send warning; on Base, "zk.money takes DAI, USDC or USDT on Ethereum" with Send dimmed. The demo pays a made-up address and reaches nothing. **Not seen:** a real account's resolution in the app (the same calls ran from a script against mainnet), a payment landing, Tor reaching the gateway, the Mac.
 
 **Mac half (§1402).** The same sentence; nothing here is phone-only.
+
+## §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (user, 2026-11-04: "when i went to send money to my private balance it told me to fund eth but didn't say why. shouldn't it say something like requires 10 minimum?") — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **The line under "Fund …e07a on Ethereum first."** was empty. It now says "At least 0.005 ETH or 20 USDC moves in, plus 0.0044 ETH kept for the network fee." — the figures `PrivateMove.choices`/`usdcChoices` hold the balance to, never a separate rule: the first ladder step at or over the pool's minimum (`PrivateMoney.leastMoveIn`), and the gas reserve rounded UP (`PrivateMoney.numberUp`), so what you must hold is never understated. USDC is named only once ppUSDC's minimum is read; Sepolia says "test ETH".
+2. **Not "$10".** 0xBow's floor is about $10 (10 ppUSDC shares, ~$10.05; 0.004 ETH), but Move's USDC ladder steps 10 → 20, so $20 is the least it offers today, and every move in keeps ETH for the fee, USDC included. The line states what the app does; whether the USDC ladder should start at the pool's minimum is open.
+
+**Guard.** `private-money-selftest.sh`: the least ETH step over the minimum plus the reserve, $20 over a $10.05 minimum, nil where no step covers it, a balance of exactly the least offered its step and a wei under offered nothing, the fee rounded up.
+
+**Mac half (§1402).** The same sentence and line; nothing here is phone-only.

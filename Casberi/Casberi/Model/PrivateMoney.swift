@@ -357,6 +357,31 @@ enum PrivateMoney {
         return body.count == 64 && body.allSatisfy(\.isHexDigit) && body.contains { $0 != "0" }
     }
 
+    /// **WHAT MOVING IN TAKES (the "Fund" sentence's line).** The smallest
+    /// step on `ladder` the pool takes (at or over `minimum`, base units),
+    /// and that step with `reserve` kept back: the least the account must
+    /// hold for `choices` to offer anything. Nil when no step covers the
+    /// minimum.
+    static func leastMoveIn(ladder: [String], decimals: Int, minimum: String,
+                            reserve: String = "0") -> (step: String, total: String)? {
+        guard let floor = Decimal(string: minimum), let keep = Decimal(string: reserve) else { return nil }
+        for step in ladder {
+            guard let units = baseUnits(step, decimals: decimals).flatMap({ Decimal(string: $0) }) else { continue }
+            if units >= floor { return (step, plain(units + keep)) }
+        }
+        return nil
+    }
+
+    /// A figure's number rounded UP to `places`: what an account must hold
+    /// is never understated by rounding.
+    static func numberUp(_ amount: String, decimals: Int, places: Int = 4) -> String? {
+        guard let units = Decimal(string: amount) else { return nil }
+        var whole = units / pow10(decimals)
+        var up = Decimal()
+        NSDecimalRound(&up, &whole, places, .up)
+        return up.formatted(.number.precision(.fractionLength(0...places)))
+    }
+
     /// The amounts on `ladder` the balance covers with `reserve` kept back,
     /// none under `minimum` (base units: the pool's smallest deposit).
     static func choices(balance: String, reserve: String, decimals: Int = 18,
