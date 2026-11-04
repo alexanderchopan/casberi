@@ -2339,10 +2339,18 @@ enum WalletIngest {
         // "shouldn't my private balance number be part of my Yours?").
         let yours = address.map(YourAccountDemo.isYours) ?? false
         let privately = combined || yours ? await PrivateMoneyStore.shared.walletHolding() : []
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || (!privately.isEmpty && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
+        // What your account has lent on Aave, Round-ups included (prd §1695):
+        // counted where Private is, the same way, so Tokens, Lent and Private
+        // add up to this number. Zerion leaves the aTokens out and
+        // `collectCandidates` drops them from Alchemy's read: never twice.
+        var lent: [(symbol: String, usd: Double, holderID: String, label: String)] = []
+        if combined || yours, AaveLend.on, let account = YourAccountDemo.shownAddress {
+            lent = await LendMove.holdings.walletHolding(account: account)
+        }
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || ((!privately.isEmpty || !lent.isEmpty) && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
-                                             venues: cash + privy + privately,
+                                             venues: cash + privy + privately + lent,
                                              asOf: asOf)
         portfolio.unpricedCash = unpricedCash
         // What the total leaves out (prd §1078). Combined read only, as the
@@ -2359,8 +2367,8 @@ enum WalletIngest {
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
         // Yours with private money is two places too (prd §1590).
-        if address == nil || !privately.isEmpty, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
-            + (privy.isEmpty ? 0 : 1) + (privately.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
+        if address == nil || !privately.isEmpty || !lent.isEmpty, groups.count + (exchange.isEmpty ? 0 : 1) + (cash.isEmpty ? 0 : 1)
+            + (privy.isEmpty ? 0 : 1) + (privately.isEmpty ? 0 : 1) + (lent.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
             // bare, and both empties are load-bearing rather than tidying.
             //
@@ -2631,7 +2639,7 @@ enum WalletIngest {
         // wallet's whole point is small change and its addresses come from
         // Privy, not from a stranger's airdrop.
         // Uncached: the Privy seat's own six-hour/weekly budget is the bound.
-        let (candidates, reached) = await collectCandidates(addresses: [address])
+        let (candidates, reached) = await heldCandidates(addresses: [address])
         guard reached else { return nil }
         let priced = await backstopPrices(await priceSPL(candidates))
         var bySymbol: [String: Double] = [:]
@@ -3035,7 +3043,7 @@ enum WalletIngest {
     }
 
     private static func fetchHeldTokensUncached(addresses: [String]) async -> [HeldToken]? {
-        let (candidates, reached) = await collectCandidates(addresses: addresses)
+        let (candidates, reached) = await heldCandidates(addresses: addresses)
         guard reached else { return nil }
         // **THE FLOOR IS THE ARM'S, AND $1.99 WAS EATING REAL MONEY (prd §826,
         // user: "my balance is showing 6$ but i have more than that").**
@@ -3130,6 +3138,16 @@ enum WalletIngest {
     /// selected chains it does NOT, in the same pass. That second call happens
     /// only when such a chain is switched on, so nobody pays for a chain they
     /// do not follow.
+    /// **WHAT IS LENT IS NOT A TOKEN (prd §1695).** Every arm's holdings,
+    /// less the Aave markets' aTokens Lend pins: Zerion already leaves them
+    /// out (`only_simple`), Alchemy lists them as plain ERC-20s, and Lent
+    /// counts your account's in the total once.
+    private static func heldCandidates(addresses: [String])
+        async -> (candidates: [Candidate], reached: Bool) {
+        let read = await collectCandidates(addresses: addresses)
+        return (read.candidates.filter { !AaveLend.isReceipt($0.contract) }, read.reached)
+    }
+
     private static func collectCandidates(addresses: [String])
         async -> (candidates: [Candidate], reached: Bool) {
         guard !addresses.isEmpty else { return ([], false) }

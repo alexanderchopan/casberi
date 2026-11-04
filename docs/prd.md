@@ -70857,3 +70857,17 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `private-money-selftest.sh`: the ladder from a $10.046461 minimum leads "10.05" then "20"; $10.05 held offers $10.05 and a unit under offers nothing; the Fund line's least is $10.05; a minimum on a step is not repeated; no minimum leaves the ladder alone; a minimum a unit over a cent rounds up; the sentence's USDC ladder is the one built from the minimum.
 
 **Mac half (§1402).** The same sentence; nothing here is phone-only.
+
+## §1695 — Holdings' parts add up: Tokens, Lent and Private each carry their dollars, Lent counts in the Wallet's number, an aToken is never a token, and Lent stands over Private (amends §1674's "under Private", §1554's total; extends §240's ruling for your own account's Aave only) (user, 2026-11-04: "in Tokens it tells me balances, are those separate or a superset of the private and lent?", "its confusing when looking at it to know if it is subset or not", "should Lent be first since that is where roundups go before they go to private?", then "yes build all three like you said") — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **Every section head carries its dollars.** Tokens' door draws the sum of its rows (`walletDoor(.holdings, …, figure:)`), beside Lent's and Private's heads, so the three read as parts of the number above them, never as a set and its subsets.
+2. **Lent is in the Wallet's number, as Private is.** Your account's lent markets, priced, and Round-ups (USDC, a dollar each) are one venue, `Lent` (`LendMove.walletHolding`, holder `lent`, a place in `WalletPortfolio.isVenue`), read where Private is (combined and Yours, `AaveLend.on`). Tokens and the Tokens sheet leave it out by symbol, Apps by holder. A lent market with no price states nothing (`lentUSD` nil): never part of it as all of it. §240 kept protocol positions out of the total; this is your own account's savings beside Private, not a followed wallet's DeFi, which stays under Positions. The value line steps up once, the day it ships, by what is lent.
+3. **An aToken is not a token.** Zerion's `only_simple` already drops Aave deposits; Alchemy's fallback listed them as ERC-20s, so on a fallback day lent money stood in Tokens and in Lent. `heldCandidates` drops the four aTokens Lend pins (`AaveLend.isReceipt`) from every arm. Other aTokens on an Alchemy day are unchanged.
+4. **Lent's head counts Round-ups.** Its total summed the market rows only while the Round-ups row stood under it; now it is `lentUSD`, the same figure the total counts.
+5. **Lent stands over Private**: Tokens, Lent (Round-ups last), Private — the order the money moves, and what you can reach first first.
+
+**Open (not ruled):** on All, an app's tokens (Kraken's ETH, cash, Privy) are merged into Tokens' rows by symbol, so Apps is a part of Tokens, not beside it. Tokens + Lent + Private add up to the number; Apps does not add on top.
+
+**Guard.** `private-money-selftest.sh`: Tokens and its sheet leave Lent out; the venue list counts Lent; the holdings read goes through the aToken filter; Lent's head is `lentUSD`; Lent's holder is a place; Lent's rows stand before Private's. `wallet-total-audit.py` stays green.
+
+**Mac half (§1402).** The same Holdings; nothing here is phone-only.

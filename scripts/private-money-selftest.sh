@@ -139,12 +139,18 @@ use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shar
 use "tools/privacy-pools-engine/src/engine.js" 'const r = await s.relayWithdraw(option);' "the engine no longer relays a withdrawal"
 use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped bundle cannot relay — rebuild with tools/privacy-pools-engine/build.mjs"
 use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
-use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately,' "private money no longer counts in the Wallet's total"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "private money no longer counts in the Wallet's total"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'let privately = combined || yours ? await PrivateMoneyStore.shared.walletHolding() : []' "Yours no longer counts your private balance; only All does (prd §1590)"
-use "Casberi/Casberi/Model/WalletIngest.swift" 'if address == nil || !privately.isEmpty, groups.count' "Yours with private money draws one wallet's map and drops the Private block (prd §1590)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'if address == nil || !privately.isEmpty || !lent.isEmpty, groups.count' "Yours with private money draws one wallet's map and drops the Private block (prd §1590)"
 use "$HOLD" 'selectedSeat == nil, !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true,' "the Private section shows under Following again (prd §1590)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens rows count private money twice"
-use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol }' "the Tokens sheet counts private money twice"
+use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" '.filter { $0.symbol != PrivateMoney.walletSymbol && $0.symbol != LendMove.walletSymbol }' "the Tokens rows count private or lent money twice"
+use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol && $0.symbol != LendMove.walletSymbol }' "the Tokens sheet counts private or lent money twice"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "Lent is not in the Wallet's number (prd §1695)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'let (candidates, reached) = await heldCandidates(addresses: addresses)' "the holdings read skips the aToken filter (prd §1695)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read.candidates.filter { !AaveLend.isReceipt($0.contract) }, read.reached)' "an aToken counts in Tokens beside Lent (prd §1695)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletLent.swift" 'walletLentHead(total: mask ?? lend.lentUSD().map(WalletValue.money))' "Lent's head leaves Round-ups out of its total (prd §1695)"
+use "Casberi/Casberi/Model/WalletPortfolio.swift" '|| holderID == privateHolderID || holderID == lentHolderID' "Lent is drawn as a wallet or an app (prd §1695)"
+awk '/walletLentRows$/{l=NR} /walletPrivateRows$/{p=NR} END{exit !(l && p && l<p)}' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" || { echo "✗ Private stands over Lent (prd §1695)"; exit 1; }
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
 # Needs you and Take it back (prd §1561): the rows stand on Needs you's page
 # and in its count, the act is a word in a push row behind a dialog, the

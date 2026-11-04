@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **LENT, IN HOLDINGS (prd §1674).** Under Private: a head, "Lent", with
+/// **LENT, IN HOLDINGS (prd §1674, §1695).** Over Private: a head, "Lent", with
 /// what is lent in dollars, then one row per market with something in it —
 /// "USDC" over "5.1% on Aave · Base", its worth in dollars trailing (the
 /// head already says lent). The head opens
@@ -20,7 +20,8 @@ extension FeedScreen {
             let prices = lend.prices
             let rows = AaveLend.markets.filter { (Decimal(string: lend.lent[LendMove.key($0)] ?? "0") ?? 0) > 0 }
             Group {
-                walletLentHead(total: mask ?? walletLentTotal(rows, lend: lend, prices: prices))
+                // Round-ups included: its row stands under this head (prd §1695).
+                walletLentHead(total: mask ?? lend.lentUSD().map(WalletValue.money))
                     .task(id: account) { await lend.read(account: account) }
                 ForEach(rows, id: \.aToken) { m in
                     walletLentRow(m, lend: lend, mask: mask, prices: prices)
@@ -70,11 +71,6 @@ extension FeedScreen {
     private func walletLentUSD(_ m: AaveLend.Market, lend: LendMove, prices: [String: Double]) -> Double? {
         guard let price = prices[m.symbol.lowercased()], let units = Decimal(string: lend.lent[LendMove.key(m)] ?? "") else { return nil }
         return NSDecimalNumber(decimal: units / pow(10, m.decimals)).doubleValue * price
-    }
-
-    private func walletLentTotal(_ rows: [AaveLend.Market], lend: LendMove, prices: [String: Double]) -> String? {
-        let usd = rows.compactMap { walletLentUSD($0, lend: lend, prices: prices) }
-        return usd.isEmpty || usd.count < rows.count ? nil : WalletValue.money(usd.reduce(0, +))
     }
 
     private func walletOpenLend(_ mode: LendMove.Mode, _ m: AaveLend.Market? = nil) {

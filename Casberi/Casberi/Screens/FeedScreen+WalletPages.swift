@@ -383,7 +383,7 @@ extension FeedScreen {
                 // Private money is a place but no app's (prd §1554): it is
                 // its own section and block, never an Apps row.
                 rest.filter { WalletPortfolio.isVenue($0.address) && $0.usd > 0
-                    && $0.address != WalletPortfolio.privateHolderID })
+                    && $0.address != WalletPortfolio.privateHolderID && $0.address != WalletPortfolio.lentHolderID })
     }
 
     /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503, §1536).** The
@@ -396,8 +396,9 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let groups = walletHolderGroups
         let appAccounts = walletAccountRows(all)
-        // Public balances only: private money is its own section (prd §1554).
-        let tokens = (portfolioShown?.positions ?? []).filter { $0.symbol != PrivateMoney.walletSymbol }
+        // Public balances only: private and lent money are their own
+        // sections (prd §1554, §1695).
+        let tokens = (portfolioShown?.positions ?? []).filter { $0.symbol != PrivateMoney.walletSymbol && $0.symbol != LendMove.walletSymbol }
         // Every token hidden still leaves the door, to the Hidden row.
         let anyHidden = !(portfolioUnhidden?.hiddenItems(walletHidden).isEmpty ?? true)
         let positions = walletPositionCount
@@ -426,7 +427,11 @@ extension FeedScreen {
                 }
             }
             if !tokens.isEmpty || anyHidden {
-                walletDoor(.holdings, name: String(localized: "Tokens"), act: { feedSheet = .walletTokens })
+                // Its dollars, as Lent's and Private's heads carry theirs: the
+                // three add up to the number above them (prd §1695).
+                walletDoor(.holdings, name: String(localized: "Tokens"),
+                           figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd }),
+                           act: { feedSheet = .walletTokens })
                 // A token's row opens that token, every one (prd §1670); the
                 // door and See all open the list.
                 walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)), mask: mask) { token in
@@ -437,10 +442,10 @@ extension FeedScreen {
                         .walletListRow()
                 }
             }
-            // What is private, under the tokens (prd §1554).
-            walletPrivateRows
-            // What is lent on Aave, under it (prd §1674).
+            // What is lent on Aave, Round-ups last, then what is private: the
+            // order the money moves (prd §1695, amends §1674's "under Private").
             walletLentRows
+            walletPrivateRows
             if positions > 0 {
                 walletDoor(.positions)
                 ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in

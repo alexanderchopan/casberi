@@ -66,6 +66,34 @@ final class LendMove {
 
     /// Holdings' reading of your account's lent money, kept between visits.
     static let holdings = LendMove(mode: .takeBack)
+
+    // MARK: - In the Wallet's number (prd §1695)
+
+    /// Lent's one position in the portfolio, as Private's is: one block in
+    /// the box and one share of the total, never folded into the token it
+    /// is, so Tokens, Lent and Private add up to the number above them.
+    static let walletSymbol = "Lent"
+    static let holderID = "lent"
+
+    /// What is lent in dollars: every market priced, and Round-ups (USDC,
+    /// a dollar each). Nil while a lent market has no price, so the head
+    /// and the total never state part of it as all of it.
+    func lentUSD() -> Double? {
+        var usd = RoundUpsPot.dollars(roundUps)
+        for m in AaveLend.markets {
+            guard let units = Decimal(string: lent[Self.key(m)] ?? "0"), units > 0 else { continue }
+            guard let price = prices[m.symbol.lowercased()] else { return nil }
+            usd += NSDecimalNumber(decimal: units / pow(10, m.decimals)).doubleValue * price
+        }
+        return usd
+    }
+
+    /// Your account's lent money, read fresh, as the portfolio's venue.
+    func walletHolding(account: String) async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
+        await read(account: account)
+        guard let usd = lentUSD(), usd > 0 else { return [] }
+        return [(symbol: Self.walletSymbol, usd: usd, holderID: Self.holderID, label: String(localized: "Lent"))]
+    }
     /// The market a lent row opens Take back on.
     static var opening: (chainId: Int, symbol: String)?
 

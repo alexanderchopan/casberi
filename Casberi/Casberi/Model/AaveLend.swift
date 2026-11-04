@@ -63,6 +63,14 @@ enum AaveLend {
     /// on Robinhood Chain.
     static let chainIds = [8453, 1]
 
+    /// Whether a token is one of these markets' aTokens (prd §1695): what
+    /// is lent, never a token you can spend, so the Tokens list never counts
+    /// it beside Lent (an Alchemy read lists an aToken as a plain ERC-20).
+    static func isReceipt(_ contract: String?) -> Bool {
+        guard let c = contract?.lowercased() else { return false }
+        return markets.contains { $0.aToken == c }
+    }
+
     static func market(chainId: Int, symbol: String) -> Market? {
         markets.first { $0.chainId == chainId && $0.symbol == symbol }
     }

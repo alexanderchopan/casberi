@@ -100,8 +100,12 @@ struct WalletPortfolio: Equatable, Codable {
     static func isVenue(_ holderID: String) -> Bool {
         holderID == validatorHolderID || ExchangeBridge.Venue(rawValue: holderID) != nil
             || holderID.hasPrefix(WalletCash.holderPrefix) || holderID.hasPrefix(privyHolderPrefix)
-            || holderID == privateHolderID
+            || holderID == privateHolderID || holderID == lentHolderID
     }
+
+    /// What your account has lent on Aave, Round-ups included (prd §1695,
+    /// `LendMove.holderID`): a place, like Private, never an app.
+    static let lentHolderID = "lent"
 
     /// Private money's holder (`PrivateMoney.holderID`, prd §1554): a place,
     /// not a wallet, and not an app either.

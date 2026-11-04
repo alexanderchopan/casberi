@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1836 of 1908 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1837 of 1909 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -533,7 +533,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §238 — Safe becomes about people, not a fraction
 - §238b — Four follow-ups: forced refresh, freshness, corpus crossing, curve shape
 - §239 — Social grows an inbound half: what an account amplifies, and what happens to YOU
-- §240 — The crown counts wallets; the protocols get their own lines (amended by §387)
+- §240 — The crown counts wallets; the protocols get their own lines (amended by §387, §1695)
 - §241 — Worth a look: every actionable row gets its door, and the rows get a surface
 - §242 — Grok joins the agents, and the agents get two structural fixes (amended by §1626)
 - §243 — The key picker becomes a list
@@ -1937,7 +1937,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
 - §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
-- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590)
+- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
@@ -2062,7 +2062,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1673b — §1673 built: Swap ends "when", a price is a CoW order this phone builds and pre-signs, "Powered by CoW Swap" (builds…
 - §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry)
 - §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1)
-- §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows…
+- §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows… (amended by §1695)
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission…
@@ -2085,6 +2085,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f…
 - §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (amended by §1694)
 - §1694 — Move to private's USDC starts at the pool's minimum, to the cent
+- §1695 — Holdings' parts add up: Tokens, Lent and Private each carry their dollars, Lent counts in the Wallet's number, an aTo…
 
 ## Dead rulings → what replaced them (generated)
 
