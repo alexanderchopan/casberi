@@ -58,7 +58,7 @@ function getWallet() {
   return walletPromise;
 }
 
-async function callWallet(method, args) {
+async function callWallet(method, args, origin) {
   const wallet = await getWallet();
   if (method === 'requestCapabilities') {
     const manifest = args?.[0] ?? {};
@@ -73,7 +73,7 @@ async function callWallet(method, args) {
   if (!READS.has(method)) {
     // Anything else needs the person's yes. The native shell raises the sheet (the
     // spike's shell approves on testnet and logs it); a no refuses the call.
-    const yes = await askPerson(method, args);
+    const yes = await askPerson(method, args, origin);
     log('approval', { method, yes });
     if (!yes) throw new Error(`The person declined ${method}`);
   }
@@ -86,11 +86,30 @@ async function callWallet(method, args) {
 
 // --- approval -------------------------------------------------------------------
 let asks = 0;
+const connecting = new Map();
 const waiting = new Map();
-function askPerson(method, args) {
+// What the sheet says about a transaction, read from the request itself: each
+// call's function and contract, whether it runs privately or in public, and who
+// pays the fee. (A private call can start public steps of its own; the spike
+// does not read those yet, so the sheet does not claim to.)
+const SPONSOR_FUNCTION = 'sponsor_unconditionally';
+const tail = a => '...' + String(a ?? '').slice(-4);
+function describe(method, args) {
+  const calls = (args?.[0]?.calls ?? []).map(c => ({ name: c.name, to: tail(c.to), type: c.type }));
+  const sponsored = calls.some(c => c.name === SPONSOR_FUNCTION);
+  const shown = calls.filter(c => c.name !== SPONSOR_FUNCTION);
+  return {
+    calls: shown,
+    fee: sponsored ? 'The testnet sponsor pays the fee' : 'Paid from your Fee Juice',
+    private: shown.filter(c => c.type === 'private').map(c => c.name),
+    public: shown.filter(c => c.type === 'public').map(c => c.name),
+  };
+}
+
+function askPerson(method, args, origin) {
   const id = ++asks;
   if (!window.webkit) return Promise.resolve(true); // desktop debugging: no shell to ask
-  native('engineApprove', { id, method, summary: summarise(args) });
+  native('engineApprove', { id, method, origin, ...describe(method, args) });
   return new Promise(resolve => waiting.set(id, resolve));
 }
 
@@ -107,7 +126,10 @@ const background = new BackgroundConnectionHandler(
   {
     onPendingDiscovery: discovery => {
       log('discovery', { appId: discovery?.appId, origin: discovery?.origin, chain: discovery?.chainInfo });
-      background.approveDiscovery(discovery.requestId); // a real Casberi asks first, naming the origin
+      // The shell asks the person, naming the site; desktop debugging (no shell) says yes.
+      if (!window.webkit) return background.approveDiscovery(discovery.requestId);
+      connecting.set(discovery.requestId, true);
+      native('engineConnect', { requestId: discovery.requestId, origin: discovery.origin, appId: discovery.appId });
     },
     onSessionEstablished: session => {
       const emoji = hashToEmoji(session.verificationHash);
@@ -121,7 +143,7 @@ const background = new BackgroundConnectionHandler(
       let result;
       let error;
       try {
-        result = await callWallet(type, args);
+        result = await callWallet(type, args, session.origin);
       } catch (e) {
         error = { message: String(e?.message ?? e).slice(0, 400) };
       }
@@ -135,6 +157,12 @@ background.initialize();
 window.casberiEngine = {
   fromContent(json, tabId, url) {
     contentListener?.(JSON.parse(json), { tab: { id: tabId, url } });
+  },
+  answerConnect(requestId, yes) {
+    if (!connecting.delete(requestId)) return;
+    log('connectAnswer', { yes });
+    if (yes) background.approveDiscovery(requestId);
+    else background.rejectDiscovery(requestId);
   },
   answerApproval(id, yes) {
     waiting.get(id)?.(yes);

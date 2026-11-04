@@ -91,3 +91,15 @@ Same simulator, same flow:
 Inside a native proof, `bbapi` itself spends ~6–7 s (ChonkProve 2.9–4.1 s); the
 rest is the commands' round trips between the web view and the app. The rest of
 each total is simulation, witness generation and waiting for the block.
+
+## Round five: the person is asked
+
+The engine no longer says yes on its own. A site's connect asks the shell
+(`engineConnect`); every `sendTx` asks too (`engineApprove`), described from the
+request itself: each call's function, its contract's last four characters, and
+whether it runs PRIVATELY (lock) or in PUBLIC (eye), plus who pays the fee. The
+shell raises one native sheet at a time (`Ask`, `AskSheet`, a queue so a second
+ask waits for the first sheet to go) and shows the session's nine emoji in a
+banner to compare with the site's. `-autoApprove YES` says yes 2.5 s after a
+sheet appears, for unattended runs. Not yet read: public steps a private call
+starts on its own (the sheet does not claim to know them).
