@@ -29,8 +29,24 @@ func resource(_ name: String, _ ext: String) -> String {
     Bundle.main.url(forResource: name, withExtension: ext).flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
 }
 
-/// Owns both web views and every message between them.
-final class Shell: NSObject, WKScriptMessageHandler {
+/// What the person is asked: to connect a site, or to approve a transaction.
+struct Ask: Identifiable {
+    enum Kind { case connect, send }
+    let id: String
+    let kind: Kind
+    let host: String
+    let calls: [(name: String, to: String, type: String)]
+    let fee: String
+}
+
+/// Owns both web views and every message between them, and what the person is asked.
+final class Shell: NSObject, WKScriptMessageHandler, ObservableObject {
+    /// The sheet on screen; the rest wait in `queue`, one at a time, in order.
+    @Published var ask: Ask?
+    @Published var emoji: String?
+    private var queue: [Ask] = []
+    /// `-autoApprove YES`: say yes after a moment, so a test run needs no hand.
+    let autoApprove = UserDefaults.standard.bool(forKey: "autoApprove")
     let engine: WKWebView
     let page: WKWebView
     let tabID = 1
@@ -53,7 +69,7 @@ final class Shell: NSObject, WKScriptMessageHandler {
         page.isInspectable = true
         super.init()
 
-        for name in ["engineLog", "engineToTab", "engineEmoji", "engineApprove"] { engineController.add(self, name: name) }
+        for name in ["engineLog", "engineToTab", "engineEmoji", "engineApprove", "engineConnect"] { engineController.add(self, name: name) }
         pageController.add(self, contentWorld: relayWorld, name: "casberiRelay")
         pageController.add(self, contentWorld: .page, name: "casberi") // the test page's own result line
 
@@ -87,20 +103,51 @@ final class Shell: NSObject, WKScriptMessageHandler {
                   let innerData = try? JSONSerialization.data(withJSONObject: inner),
                   let innerJSON = String(data: innerData, encoding: .utf8) else { return }
             page.evaluateJavaScript("window.__casberiDeliver(\(jsString(innerJSON)))", in: nil, in: relayWorld) { _ in }
-        case "engineApprove":
-            // The real app raises a sheet: who asks, what it does, what goes public.
-            // The spike approves on the testnet and logs what it was asked.
-            log("{\"event\":\"approve\",\"detail\":\(body)}")
-            if let data = body.data(using: .utf8),
-               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let id = obj["id"] as? Int {
-                engine.evaluateJavaScript("casberiEngine.answerApproval(\(id), true)")
+        case "engineConnect", "engineApprove":
+            log("{\"event\":\"\(message.name)\",\"detail\":\(body)}")
+            guard let data = body.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            let host = URL(string: obj["origin"] as? String ?? "")?.host(percentEncoded: false) ?? "This site"
+            let next: Ask
+            if message.name == "engineConnect" {
+                next = Ask(id: obj["requestId"] as? String ?? "", kind: .connect, host: host, calls: [], fee: "")
+            } else {
+                let calls = (obj["calls"] as? [[String: Any]] ?? []).map {
+                    (name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "", type: $0["type"] as? String ?? "")
+                }
+                next = Ask(id: "\(obj["id"] as? Int ?? 0)", kind: .send, host: host, calls: calls, fee: obj["fee"] as? String ?? "")
             }
+            enqueue(next)
         case "engineEmoji":
             log("{\"event\":\"nativeEmoji\",\"detail\":\(body)}")
+            if let data = body.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                emoji = obj["emoji"] as? String
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in self?.emoji = nil }
+            }
         default:
             log(body)
         }
+    }
+
+    private func enqueue(_ next: Ask) {
+        if ask == nil { ask = next } else { queue.append(next) }
+    }
+
+    /// The sheet has gone; show the next ask, if any.
+    func sheetDismissed() {
+        guard ask == nil, !queue.isEmpty else { return }
+        ask = queue.removeFirst()
+    }
+
+    func answer(_ ask: Ask, yes: Bool) {
+        queue.removeAll { $0.id == ask.id }
+        log("{\"event\":\"answer\",\"detail\":{\"kind\":\"\(ask.kind)\",\"yes\":\(yes)}}")
+        switch ask.kind {
+        case .connect: engine.evaluateJavaScript("casberiEngine.answerConnect(\(jsString(ask.id)), \(yes))")
+        case .send: engine.evaluateJavaScript("casberiEngine.answerApproval(\(ask.id), \(yes))")
+        }
+        if self.ask?.id == ask.id { self.ask = nil }
     }
 
     private func jsString(_ s: String) -> String {
@@ -124,10 +171,82 @@ struct Browser: UIViewRepresentable {
     func updateUIView(_ view: UIView, context: Context) {}
 }
 
+/// The sheet: who asks, what it does, what stays private, who pays. Two buttons.
+struct AskSheet: View {
+    let ask: Ask
+    let answer: (Bool) -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(ask.kind == .connect ? "Connect \(ask.host)?" : "\(ask.host) wants to send")
+                .font(.title2.weight(.semibold))
+            if ask.kind == .connect {
+                Text("It will see your Aztec account's address. It can ask to send; Casberi asks you each time.")
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(ask.calls.enumerated()), id: \.offset) { _, call in
+                        HStack(alignment: .firstTextBaseline) {
+                            Image(systemName: call.type == "public" ? "eye" : "lock.fill")
+                                .foregroundStyle(call.type == "public" ? Color.orange : Color.secondary)
+                                .frame(width: 22)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(call.name.replacingOccurrences(of: "_", with: " ")).font(.body.weight(.medium))
+                                Text("\(call.type == "public" ? "Public" : "Private") · \(call.to)")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                Text(ask.fee).font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: 12) {
+                Button("Decline") { answer(false) }
+                    .buttonStyle(.bordered).controlSize(.large).frame(maxWidth: .infinity)
+                Button(ask.kind == .connect ? "Connect" : "Approve") { answer(true) }
+                    .buttonStyle(.borderedProminent).controlSize(.large).frame(maxWidth: .infinity)
+            }
+        }
+        .padding(24)
+        .presentationDetents([.medium])
+        .interactiveDismissDisabled()
+    }
+}
+
+struct Root: View {
+    @ObservedObject var shell: Shell
+    var body: some View {
+        Browser(shell: shell)
+            .ignoresSafeArea()
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let emoji = shell.emoji {
+                    VStack(spacing: 4) {
+                        Text("Check the site shows").font(.footnote).foregroundStyle(.secondary)
+                        Text(emoji).font(.title2)
+                    }
+                    .padding(.horizontal, 18).padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .onAppear { log("{\"event\":\"emojiShown\"}") }
+                }
+            }
+            .sheet(item: $shell.ask, onDismiss: { shell.sheetDismissed() }) { ask in
+                AskSheet(ask: ask) { shell.answer(ask, yes: $0) }
+                    .task {
+                        log("{\"event\":\"sheetShown\",\"detail\":\"\(ask.kind)\"}")
+                        // -autoApprove: say yes once the sheet has been on screen a moment.
+                        guard shell.autoApprove else { return }
+                        try? await Task.sleep(for: .seconds(2.5))
+                        if shell.ask?.id == ask.id { shell.answer(ask, yes: true) }
+                    }
+            }
+    }
+}
+
 @main
 struct AztecDappSpike: App {
-    let shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? "http://localhost:8779/ios.html?auto=send")!)
+    @StateObject var shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? "http://localhost:8779/ios.html?auto=send")!)
     var body: some Scene {
-        WindowGroup { Browser(shell: shell).ignoresSafeArea() }
+        WindowGroup { Root(shell: shell) }
     }
 }
