@@ -12,7 +12,7 @@ Key facts:
 - Move: an account of your own (a Safe on Base, Ethereum and Robinhood Chain, no seed phrase) and five verbs, each approved with Face ID: Buy a gift card, Receive, Send, Swap and Sweep. Swaps go straight to Uniswap and Aerodrome from the phone, through Tor; a swap to another network crosses through Across. Sweep turns every token under $1 or $5 on a network into ETH in one transaction. Sends, swaps and gift cards can round up, the change buying a token you pick.
 - Library: Casberi's settings, then every app you have by category, and eight counts — Apps, Calendars, Cards, Contacts, Mail lists, Media, Subscriptions and Wallet.
 - Subscriptions are found on their own from your cards, Apple Wallet and Rocket Money; what they cost lives in the Wallet's Spending.
-- Testnets: the Logos testnet and the Aztec testnet and its sequencers, with test coins only.
+- Testnets: the Logos testnet, with test coins only.
 - Agents: read what the agents you use did, in one place. Ask Claude, ChatGPT, Gemini and others with your own key, kept in the Keychain and sent from the device straight to that provider; your own OpenAI-compatible server; or Apple Intelligence with no key.
 - Notes and voice notes, Contacts across your accounts, and share cards. Widgets for your notes, your wallet and your feed.
 - No Casberi account, no server, no analytics. Every request that names a wallet goes through Tor on iPhone and iPad. iCloud sync is opt-in. Export, import and delete-everything are real controls.

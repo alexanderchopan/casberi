@@ -214,7 +214,7 @@
       }
     },
     "NSFaceIDUsageDescription": {
-      "comment": "Why the app asks for Face ID before signing a Safe or Aztec testnet transaction (prd §425, §1419)",
+      "comment": "Why the app asks for Face ID before signing a Safe transaction (prd §425)",
       "extractionState": "manual",
       "localizations": {
         "en": {

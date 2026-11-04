@@ -2656,56 +2656,6 @@ enum ProbeHooks {
                 NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
             }
         },
-        // `-aztecWatch "network|<attester>[,…]|clear"` — follow the Aztec
-        // testnet and sequencers, read once, and print what the room holds:
-        // the heads, then each sequencer's line, or UNSEEN when the node has
-        // never seen it. Run twice to see a transition: a first reading lands
-        // nothing by design. An Aztec ACCOUNT address prints `account`.
-        Hook(key: "aztecWatch") { spec, context in
-            Task { @MainActor in
-                let store = AztecStore.shared
-                if spec == "clear" { store.disconnect(); NSLog("aztecWatch: cleared"); return }
-                for raw in spec.split(separator: ",") {
-                    let one = String(raw).trimmingCharacters(in: .whitespaces)
-                    if one == "network" { store.follow(network: true); continue }
-                    let result = store.add(one)
-                    NSLog("aztecWatch: %@ | %@", one, "\(result)")
-                    if result == .added || result == .addedAccount { store.follow(network: true) }
-                }
-                let outcome = await AztecIngest.refresh(context: context)
-                let tips = store.network?.tips
-                NSLog("aztecWatch: %@ | proposed=%@ | proven=%@ | lag=%@ | fee=%@",
-                      outcome.map { "+\($0.added)" } ?? "FAILED",
-                      tips.map { String($0.proposed) } ?? "-", tips?.proven.map(String.init) ?? "-",
-                      tips?.provenLag.map(String.init) ?? "-",
-                      store.network?.minL2Fee.map { "\($0)" } ?? "-")
-                for address in store.sequencers {
-                    NSLog("aztecWatch: %@ | %@ | %@ | %@ | epochs=%@", address,
-                          store.reading(for: address).map(AztecWire.line) ?? "UNSEEN",
-                          AztecRoomFigure.stakeLine(store.stake(for: address), symbol: store.stakeSymbol) ?? "-",
-                          AztecRoomFigure.dutyLine(store.duty(for: address)) ?? "-",
-                          store.reading(for: address).map { $0.recentEpochs.map(String.init).joined(separator: ",") } ?? "-")
-                }
-                for account in store.accounts {
-                    NSLog("aztecWatch: %@ | feeJuice=%@", account,
-                          store.publicFeeJuice(for: account).map { "\($0)" } ?? "-")
-                }
-            }
-        },
-        // `-aztecSignerKey make|show|remove` — this phone's Aztec TESTNET signing
-        // key (prd §1276), NSLogged as `aztecSignerKey: <x‖y hex>` for the
-        // computer's tool (`tools/aztec-signer`). On a simulator it is the
-        // DEBUG software stand-in; pair with `-aztecAutoSign YES` so a request
-        // link opened by `simctl openurl` signs without a tap.
-        Hook(key: "aztecSignerKey") { spec, _ in
-            Task { @MainActor in
-                if spec == "remove" { AztecSignerKey.delete(); NSLog("aztecSignerKey: removed"); return }
-                if spec == "make", AztecSignerKey.publicKeyHex() == nil {
-                    do { try AztecSignerKey.create() } catch { NSLog("aztecSignerKey: FAILED %@", "\(error)"); return }
-                }
-                NSLog("aztecSignerKey: %@", AztecSignerKey.publicKeyHex() ?? "NONE")
-            }
-        },
         // `-zkMoneyProbe "<tag.zk.money | zk.money link | deposit=<0x…> | portal>"`
         // — what the app reads about zk.money (2026-10-11), NSLogged as
         // `zkMoney:` lines: a tag's public record, a link as capture would

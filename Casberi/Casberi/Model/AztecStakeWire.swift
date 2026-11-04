@@ -111,8 +111,8 @@ enum AztecStakeWire {
     static let getProposal = "0xc7f758a8"
     static let getProposalState = "0x9080936f"
 
-    /// Missed attestations in a row before a sequencer reads as stopped: the
-    /// testnet Node view's own threshold (`AztecWire`, §1271).
+    /// Missed attestations in a row before a sequencer reads as stopped:
+    /// three slots is ~4 minutes of silence while its committee voted (§1271).
     static let stoppedStreak = 3
 
     static let decimals = 1e18
@@ -223,6 +223,36 @@ enum AztecStakeWire {
         f["address"] = coinbase.lowercased()
         f["topics"] = [splitUpdated]
         return f
+    }
+
+    // MARK: - Health, off Aztec's node
+
+    /// Whether a staked sequencer is attesting, as Aztec's mainnet node saw
+    /// it (`node_getValidatorStats`): its missed attestations in a row and
+    /// the slot of its last one. The testnet room's whole duty record went
+    /// with that room (prd §1688); a stake's line needs these two.
+    struct Health: Equatable, Sendable {
+        let missedStreak: Int
+        let lastAttestationSlot: Int?
+    }
+
+    /// nil for an attester the node has never seen: the reply carries no
+    /// `result` at all (measured: `{"jsonrpc":"2.0","id":1}`).
+    static func health(reply: Any?) -> Health? {
+        guard let obj = reply as? [String: Any], obj["error"] == nil,
+              let result = obj["result"] as? [String: Any],
+              let v = result["validator"] as? [String: Any], v["address"] is String else { return nil }
+        func int(_ any: Any?) -> Int? {
+            switch any {
+            case let n as Int: return n
+            case let n as Double: return Int(n)
+            case let s as String: return Int(s)
+            default: return nil
+            }
+        }
+        let missed = v["missedAttestations"] as? [String: Any] ?? [:]
+        let last = v["lastAttestation"] as? [String: Any]
+        return Health(missedStreak: int(missed["currentStreak"]) ?? 0, lastAttestationSlot: int(last?["slot"]))
     }
 
     // MARK: - Words off the wire
@@ -512,14 +542,9 @@ enum AztecStakeWire {
         String(localized: "Your Aztec sequencer \(AddressTail.short(stake.attester, wholeUpTo: 10)) stopped attesting")
     }
 
-    static func voteTitle(_ p: Proposal, now: Date = .now, testnet: Bool = false) -> String {
+    static func voteTitle(_ p: Proposal, now: Date = .now) -> String {
         let day: (Date) -> String = { $0.formatted(.dateTime.month(.abbreviated).day()) }
         let open = p.state == 1 || p.opens <= now
-        if testnet {
-            return open
-                ? String(localized: "Aztec testnet proposal \(p.id) is open for votes until \(day(p.closes))")
-                : String(localized: "Aztec testnet proposal \(p.id) opens for votes \(day(p.opens))")
-        }
         return open
             ? String(localized: "Aztec proposal \(p.id) is open for votes until \(day(p.closes))")
             : String(localized: "Aztec proposal \(p.id) opens for votes \(day(p.opens))")

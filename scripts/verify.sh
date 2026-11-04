@@ -2521,12 +2521,10 @@ harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-self
 # failures that render as a clean row — a u128 read backwards, a timestamp read as
 # seconds, a hash that opens nothing, the per-block clock landing a row a minute.
 harness "Logos pure-logic self-test" "logos self-test" "scripts/logos-selftest.sh" "the Logos logic self-test failed — run scripts/logos-selftest.sh"
-harness "Aztec pure-logic self-test" "aztec self-test" "scripts/aztec-selftest.sh" "the Aztec logic self-test failed — run scripts/aztec-selftest.sh"
 harness "zk.money pure-logic self-test" "zkmoney self-test" "scripts/zkmoney-selftest.sh" "the zk.money logic self-test failed — run scripts/zkmoney-selftest.sh"
 # The Aztec testnet signer (prd §1276): the phone rebuilds the hash from the calls and
 # refuses anything not on an Aztec testnet, so a mainnet request or a blind hash never
 # reaches Face ID.
-harness "Aztec signing self-test" "aztec signing self-test" "scripts/aztec-sign-selftest.sh" "the Aztec signing self-test failed — run scripts/aztec-sign-selftest.sh"
 harness "Aztec staking self-test" "aztec staking self-test" "scripts/aztec-stake-selftest.sh" "the Aztec staking self-test failed — run scripts/aztec-stake-selftest.sh"
 # zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
 # as yours, an expired one read as open, a router's leg titled as a pool move.

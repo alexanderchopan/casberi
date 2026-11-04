@@ -16,7 +16,7 @@ import Security
 /// Kept in the Keychain on this device only, behind Face ID: readable only
 /// when the phone has a passcode, never in a backup or iCloud Keychain, and
 /// gone if Face ID is re-enrolled (`.biometryCurrentSet`), as
-/// `AztecSignerKey` and `SignerKey` are. Every read asks for Face ID.
+/// `SignerKey` is. Every read asks for Face ID.
 ///
 /// **The device-only account (prd §1562).** Since the private root, no
 /// product flow makes this seed: the private account's seed is derived from

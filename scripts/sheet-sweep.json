@@ -1541,13 +1541,6 @@
   },
   {
    "covers": [
-    "Shell/RootShell.swift:aztecSign",
-    "Screens/AztecScreen.swift:pastedSign"
-   ],
-   "why": "raised by a signing link from the Aztec wallet; there is no peer on the simulator to make one"
-  },
-  {
-   "covers": [
     "Shell/RootShell.swift:observerOffer",
     "Screens/LogosScreen.swift:pairOffer"
    ],

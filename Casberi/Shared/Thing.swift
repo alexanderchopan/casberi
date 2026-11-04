@@ -168,6 +168,9 @@ enum Corpus {
         // Markets the same way (prd §1529, user: "i do want to cut it"), with
         // the two names its rows were stored under before the renames.
         "Markets", "Tokens", "Dexscreener",
+        // Aztec's testnet room the same way (prd §1688, user: "ok delete the
+        // testnet room"); Aztec mainnet's rows are the Wallet's.
+        "Aztec",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now

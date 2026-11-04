@@ -232,10 +232,6 @@ enum NotifySweep {
         //   Every other Logos row stays quiet: test coins are not news (§522).
         if ref.hasPrefix("logos:node:offline:") { return .nodeDown }
 
-        // — Aztec: a sequencer you follow stopped attesting (2026-10-11,
-        //   `AztecWire.events`, `aztec:seq:<address>:stopped:<slot>`). A
-        //   missed proposal, a recovery and every proposal stay rows.
-        if ref.hasPrefix("aztec:seq:"), ref.contains(":stopped:") { return .nodeDown }
         // — Aztec mainnet: a sequencer holding your staked AZTEC stopped
         //   attesting (prd §1279, `aztec:stake:<attester>:stopped:<slot>`),
         //   and staked AZTEC you can now withdraw (`aztec:exit:`), the

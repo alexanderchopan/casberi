@@ -74,8 +74,8 @@ enum RelatedThings {
 
     /// The rooms whose rows are readings of an account, stamped with one
     /// dashboard, queue or explorer link (the Safe queue, Polar's and Dodo's
-    /// dashboards, Bitrefill's orders page, PostHog, Logos' and Aztec's
-    /// explorers). There a row is the same object only by a link that NAMES
+    /// dashboards, Bitrefill's orders page, PostHog, Logos'
+    /// explorer). There a row is the same object only by a link that NAMES
     /// one — §1079's per-service test (`ObjectFold.workKey`).
     static let accountRooms: Set<String> = [CategoryFold.walletRoom, RoomAccounts.testnetsRoom,
                                             RoomAccounts.workRoom]

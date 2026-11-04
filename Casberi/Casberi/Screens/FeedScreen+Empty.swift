@@ -121,7 +121,7 @@ extension FeedScreen {
     /// 2026-10-18, of "One inbox for all your apps" and its pile of apps:
     /// "it should not exist why does it always come up"). That start screen
     /// replaced ANY page that had no rows and no exception of its own (Today,
-    /// Day, the Wallet's pages, Notes, agents, Logos, Aztec…), so every new
+    /// Day, the Wallet's pages, Notes, agents, Logos…), so every new
     /// or quiet page fell into it, Testnets the latest. An empty page now
     /// says so in the house template and keeps nothing else: no headline about
     /// the app, no catalogue door, no pile.

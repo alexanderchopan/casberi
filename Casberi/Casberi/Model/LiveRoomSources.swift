@@ -35,9 +35,7 @@ enum LiveRoomSources {
     /// Logos (prd §991) joins for the devnets' reason with one difference: it
     /// DOES land rows, but a watch or a node with nothing landed yet is still
     /// a room with a crown and tiles, never the corpus-shaped empty state.
-    /// Aztec (2026-10-11) for Logos' reason: following the network alone
-    /// is a room with a box and tiles before any sequencer row lands.
-    static let all: Set<String> = [LogosRoom.source, AztecRoom.source]
+    static let all: Set<String> = [LogosRoom.source]
 
     /// **A KEYED AGENT EARNS ITS CHIP BY HOLDING A KEY (prd §842).**
     ///

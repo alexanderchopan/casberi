@@ -195,8 +195,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 // A tile pick ARRIVES (prd §1379): the slot dissolve lost its
-                // last caller with Vibenet (§1038), so the Wallet, Logos and
-                // Aztec boxes swapped in a cut. Opacity only: the box is fixed.
+                // last caller with Vibenet (§1038), so the Wallet's and Logos'
+                // boxes swapped in a cut. Opacity only: the box is fixed.
                 .roomFigureDissolve(active)
             }
         // THE WELL (prd §766), the head template's own. The box is still

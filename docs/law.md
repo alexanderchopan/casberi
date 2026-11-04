@@ -18,7 +18,7 @@ parser.
 Then regenerate, and edit the matching line here if it changed the law.
 
 Retired seats are left out on purpose: Altana, Hegotá UTXO, Base Vibenet, Hegotá
-Privacy and Reddit. Frames and Logos are the devnets that remain.
+Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logos is the one devnet that remains.
 
 ## Current law by area
 
@@ -140,7 +140,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
-- Testnets (Hegotá Frames, Logos, `flask`) is its own category, never inside Wallet (§1050, §1050a).
+- Testnets (Logos, `flask`) is its own category, never inside Wallet (§1050, §1050a). Aztec's testnet room is deleted; Aztec lives in the Wallet as its mainnet staking (§1688).
 - Aztec mainnet is the Wallet's, never Testnets': its contracts are named, and AZTEC staked is a Positions row per sequencer, in AZTEC, never priced. A stake is found by its withdrawer (the wallet, or its token vault's staker) and read on the Registry's canonical Rollup, never the one that queued it. Its line says its health and the wallet's share of unclaimed rewards. Withdrawable money and a stopped sequencer notify; an Aztec vote is a quiet row (§1277, §1279).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
@@ -175,8 +175,6 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Accounts split into On this phone, Watching, then Tied to yours (§964). Every Frames page offers New account in the Accounts menu, Logos' while the phone holds no key; Frames' own pages lead Holdings with Send and Top up, Logos' with Send (§774, §1108). No suggested addresses (§990).
 - Frames runs on ethpandaops' frames-devnet-0. `FramesNetwork.current` is the one value that names the chain (§962).
 - Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
-- Aztec is Testnets' second network, on the CURRENT testnet (v6): Home (the network and its proving-lag line), Holdings (a followed account's PUBLIC Fee Juice only) and Node (sequencers by attester: duty, stake and rewards and schedule off the Rollup on Ethereum, a 48-epoch strip), keyless. Rows on a final proposal, a missed one, a stake status change, or a missed streak of three ("Stopped attesting", `nodeDown`); a new rollup is a reset. Mainnet is measured but has no place yet (§1270, §1271).
-- Aztec signing is TESTNET ONLY: the phone holds a Secure Enclave key for an Aztec `EcdsaRAccount` that a computer runs (`tools/aztec-signer/`). It rebuilds every request's hash from its calls before offering Sign, and refuses any chain but Sepolia and any rollup but Aztec's testnets. No mainnet signing, no contract of ours (§1276).
 
 ### 13. Notes and voice
 - Notes is a place in Home, reached through the tray's You row and its folder, always drawn (§1127, §1133). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
@@ -247,7 +245,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1829 of 1901 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1830 of 1902 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -1660,13 +1658,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1267 — No tile has a backing; Notes' folders are a Feed card
 - §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks
 - §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates (amended by §1611)
-- §1270 — Aztec joins Testnets: the network and its sequencers, watched keylessly (amended by §1271)
-- §1271 — Aztec, round two: the current testnet, stake and schedule, the epoch strip, the proving line, public Fee Juice
+- §1270 — Aztec joins Testnets: the network and its sequencers, watched keylessly (amended by §1271; part superseded by §1688)
+- §1271 — Aztec, round two: the current testnet, stake and schedule, the epoch strip, the proving line, public Fee Juice (part superseded by §1688)
 - §1272 — No chevrons, no icon discs, the last grey labels; Degen out of the demo for good
 - §1273 — zk.money: its moves named in the Wallet, its tags read, its links kept safely
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
-- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538, §1565)
+- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538, §1565; part superseded by §1688)
 - §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions (amended by §1419, §1446)
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1… (amended by §1446)
@@ -1803,7 +1801,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
 - §1417 — Connect a wallet is back in Follow an account, every time
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444, §1612)
-- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565)
+- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565; part superseded by §1688)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493, §1628)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
@@ -1948,7 +1946,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
-- §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's…
+- §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's… (part superseded by §1688)
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu… (amended by §1675)
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
@@ -2078,6 +2076,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car…
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
 - §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
+- §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565'…
 
 ## Dead rulings → what replaced them (generated)
 

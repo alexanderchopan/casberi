@@ -450,13 +450,6 @@ enum NetworkReach {
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.
                  hosts: ["testnet.lez.logos.co", "the node address you give it"]),
-        // Aztec (2026-10-11) — the testnet's public node, keyless JSON-RPC.
-        // The explorer is a link a row opens, never fetched.
-        Endpoint(service: "Aztec",
-                 reach: .whenConnected(bridge: "Aztec"),
-                 purpose: "Reads the Aztec testnet's block heights, proving and minimum fee, the attestation and proposal record of the sequencers you follow and the public Fee Juice of the accounts you follow, from dRPC's public Aztec testnet node; and those sequencers' stake, rewards, committee seat and proposal schedule from the Aztec Rollup contract, through a public Sepolia node. Carries the addresses you asked about and nothing else about you.",
-                 hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"],
-                 throughTor: true),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
@@ -467,8 +460,7 @@ enum NetworkReach {
         // view, on Ethereum (§1563) and Sepolia. The page can reach no host itself (its
         // Content-Security-Policy); every request it makes is handed to
         // `PrivacyEngine`, which sends it only to a host listed HERE
-        // (`PrivacyEngineWire.allows`), through the funnel. The Sepolia node
-        // is the Aztec entry's too, which already routes it through Tor.
+        // (`PrivacyEngineWire.allows`), through the funnel.
         Endpoint(service: "Privacy Pools engine",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",

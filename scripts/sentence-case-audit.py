@@ -291,6 +291,9 @@ KNOWN_PROPER: set[str] = {
     "Basecamp",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
+    # Aztec, the network whose mainnet staking the Wallet reads (§1277); a
+    # catalogue name until its testnet seat was deleted (§1688).
+    "Aztec",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
     # Ethereum's test network, where Move to private runs (prd §1554).

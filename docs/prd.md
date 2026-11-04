@@ -449,6 +449,8 @@ marks chronological position within the pair.
 | §1049 (Life holds Contacts) | Contacts was a Life app | amended by §1612 — Contacts is Social's |
 | §1508 (Settings › Licenses carries every library's notice, one scroll) | Casberi's license sentence, then every library's text stacked in one page | amended by §1613 — one row per library, each opening its page; the words are unchanged |
 | §1573 item 2 (web3.bio is the only resolver) | forward, reverse and avatar reads went to web3.bio alone | amended by §1629 — an ENS name's address is read on chain through ENS's Universal Resolver; web3.bio keeps gateway names, reverse names and avatars |
+| §1270 / §1271 / §1419 / §1565 (Aztec's testnet room) | Testnets holds an Aztec room: the network, followed sequencers and public Fee Juice, on the current testnet | superseded by §1688 — the room, its seat and its reads are deleted; Aztec mainnet staking stays the Wallet's (§1277, §1279) |
+| §1276 (this phone signs for an Aztec testnet account) | a Secure Enclave key signs a testnet account a computer runs | superseded by §1688 — the in-app signer is deleted; `tools/aztec-signer` stays in the repo for a future account |
 
 ## §1 — Thesis
 
@@ -70753,3 +70755,22 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **UNMEASURED (§780b).** That the Secure Enclave takes a context passed by `evaluatePolicy` with no second prompt on a `.biometryCurrentSet` key is Apple's documented behaviour, not seen here: the simulator has no Secure Enclave and its demo account signs nothing. If a phone shows two Face IDs, the fallback is `evaluateAccessControl(_:operation: .useKeySign)` over the key's own access control. Read the next TestFlight send's Took line before claiming a number.
 
 **Mac half (§1402).** The Mac signs nothing for the account (§1628); the same code compiles there and asks nothing it did not ask before.
+
+## §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565's seat; keeps §1277, §1279, §1273, §1281) (user, 2026-11-03: "now that aztec is live it is no longer a testnet so we need to remove it from testnets and somehow put it in wallet", then, of adding stake, withdraw and claim, "i don't think its worth it … if aztec isn't our account", "i feel lke i am trying to force something", "ok detlet the tesntet room") — BUILT
+
+**Why.** The Testnets room was a node operator's dashboard on test money: the testnet's blocks and proving lag, sequencers followed by attester address, and an account's public Fee Juice. Aztec mainnet is live on V6, and what matters there is already the Wallet's: AZTEC a watched wallet staked, one Positions row per sequencer with its health and rewards, its token-sale vaults, Aztec's contracts named, withdrawable money and a stopped sequencer notified, a vote as a quiet row (§1277, §1279). Moving the room to mainnet would hand the Wallet a dashboard almost nobody opens.
+
+**Declined, measured.** Stake, start or finish an exit, claim a vault and vote all work from Your account on Ethereum (measured 2026-11-03, `eth_simulateV1`, nothing signed), but one stake is exactly 200,000 AZTEC (≈$2.9K) and the rest only serve people who already staked elsewhere. Not built.
+
+**Parked, and why.** Aztec as your own account waits on three things: a stock V6 account whose key can be rotated or recovered (§1380), the phone proving alone (the testnet signer needed a computer), and zk.money on V6 (its public manifests read rollup 4248422647, V5, on 2026-11-03; the user reports it is on V6 now, unconfirmed: `zk.money` redirects to a new `wallet.zk.money`). zk.money signs in with a passkey and proves in the browser, so it answers the first two; when its V6 deployment is confirmed, an "Open zk.money" door and Pay a zk.money tag in Move are the next proposals.
+
+**What.**
+1. **Gone from the app** (§723): the catalogue's Aztec offer, its routing and page, the room and its tiles and box, the Testnets account-menu seat, the testnet reads and refresh, the reset notification, the `nodeDown` rule for `aztec:seq:` rows, the sign-request link and its tray, the testnet signing key, the demo's sequencer, the `-aztecWatch` and `-aztecSignerKey` hooks, and eleven files (`AztecBridge`, `AztecRoom`, `AztecWire`, `AztecPoseidon2`, `AztecSignRequest`, `AztecSignedLog`, `AztecSignerKey`, `AztecRoomCard`, `AztecScreen`, `AztecSignTray`, `FeedScreen+AztecRoom`). Testnets is Logos alone again.
+2. **The one part mainnet kept.** A staked sequencer's health (missed attestations in a row, its last attestation's slot) was read through the testnet wire's `Sequencer`; it is `AztecStakeWire.Health` now, read off the same `node_getValidatorStats` reply.
+3. **A phone that had it converges at launch** (`SourceRename.sweepRetiredSeats`, `.v8`): "Aztec" is a retired source (`Corpus.retiredSources`) and a dropped seat, its rows and seat record go every launch, and once its defaults key by key (`aztec.stake.` is mainnet staking's and survives), its proving-lag history and the `com.casberi.app.aztec.signer` Keychain item. Mainnet's rows land under "Wallet", never "Aztec".
+4. **The website** loses Aztec's shelf cell, docs line and llms line; not deployed, that is the user's.
+5. **Kept:** `tools/aztec-signer` and `tools/aztec-account` (the computer side, for a future account), zk.money's label, zFi's orders, the AZTEC/ETH swap pool, Aztec's mark.
+
+**Guards.** `aztec-selftest.sh` and `aztec-sign-selftest.sh` are deleted with their code; `aztec-stake-selftest.sh` gains the health reader (a real mainnet reply, an unseen attester, an error, a string slot) and three mutations; `address-tail-selftest.sh` pins four forwarders; `RoomAccountsTests` asserts Aztec is no seat.
+
+**Mac half (§1402).** The same: the Mac's Testnets pane shows Logos alone.

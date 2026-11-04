@@ -162,9 +162,9 @@ enum AztecStaking {
             if case .direct = via { stake.via = .provider(p.id) }
             stake.rewards = await rewards(coinbase: p.coinbase, recipients: [owner, withdrawer], head: head)
         }
-        if stake.status == .validating, let seq = await sequencer(stake.attester) {
-            stake.missedStreak = seq.attestations.streak
-            stake.lastAttestationSlot = seq.lastAttestation?.slot
+        if stake.status == .validating, let health = await health(stake.attester) {
+            stake.missedStreak = health.missedStreak
+            stake.lastAttestationSlot = health.lastAttestationSlot
         }
         return (stake, false)
     }
@@ -386,10 +386,9 @@ enum AztecStaking {
 
     // MARK: - Health and governance
 
-    private static func sequencer(_ attester: String) async -> AztecWire.Sequencer? {
+    private static func health(_ attester: String) async -> AztecStakeWire.Health? {
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "node_getValidatorStats", "params": [attester]]
-        guard let reply = await IngestSupport.postJSON(node, body: body) as? [String: Any] else { return nil }
-        return AztecWire.sequencer(reply["result"])
+        return AztecStakeWire.health(reply: await IngestSupport.postJSON(node, body: body))
     }
 
     /// The newest three proposals still pending or open.

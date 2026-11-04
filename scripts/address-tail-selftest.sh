@@ -11,8 +11,7 @@
 # purpose and the run must notice.
 #
 # The forwarders (`WalletStore.shortAddress`, `LogosWire.short`,
-# `YourAccount.short`, `YourAccountPreview.short`, `AztecWire.short`,
-# `AztecSignRequest.short`) are pinned to the helper by grep below, so a
+# `YourAccount.short`, `YourAccountPreview.short`) are pinned to the helper by grep below, so a
 # forwarder that grows its own spelling again fails here, not on screen.
 # `address-tail-audit.py` is the tree-wide half: no new shortener elsewhere.
 #
@@ -29,9 +28,7 @@ pin Casberi/Casberi/Model/WalletStore.swift        '        AddressTail.short(ad
 pin Casberi/Casberi/Model/LogosWire.swift          'static func short(_ id: String) -> String { AddressTail.short(id, wholeUpTo: 10) }' "LogosWire.short"
 pin Casberi/Casberi/Model/YourAccount.swift        'static func short(_ address: String) -> String { AddressTail.short(address, wholeUpTo: 4) }' "YourAccount.short"
 pin Casberi/Casberi/Model/YourAccountPreview.swift 'static func short(_ address: String) -> String { AddressTail.short(address) }' "YourAccountPreview.short"
-pin Casberi/Casberi/Model/AztecWire.swift          'static func short(_ address: String) -> String { AddressTail.short(address) }' "AztecWire.short"
-pin Casberi/Casberi/Model/AztecSignRequest.swift   'AddressTail.short(normalized(hex), wholeUpTo: 20)'      "AztecSignRequest.short"
-echo "✓ the six forwarders pass straight through"
+echo "✓ the four forwarders pass straight through"
 
 TMP=$(mktemp -d /tmp/address-tail-selftest.XXXXXX)
 WORK="$TMP/work"

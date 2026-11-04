@@ -37,7 +37,8 @@ for f in "$WIRE" "$APP" "$FIX"/stake-logs-delegator.json "$FIX"/stake-view-valid
          "$FIX"/stake-view-atp.json "$FIX"/stake-logs-atp.json "$FIX"/stake-provider-logs.json "$FIX"/stake-split-logs.json \
          "$FIX"/stake-rewards.json "$FIX"/atp-created-logs.json "$FIX"/atp-staker.json "$FIX"/atp-held.json \
          "$FIX"/atp-claimable.json "$FIX"/atp-beneficiary.json "$FIX"/registry-canonical.json "$FIX"/gov-count.json \
-         "$FIX"/gov-proposal-4.json "$FIX"/gov-state-4.json "$FIX"/governance-v6-upgrade.json; do
+         "$FIX"/gov-proposal-4.json "$FIX"/gov-state-4.json "$FIX"/governance-v6-upgrade.json \
+         "$FIX"/seq-stats.json "$FIX"/validator-unknown.json; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 # The app half: reads through the Wallet's declared pool and Aztec's own
@@ -208,6 +209,17 @@ check(silent.isStopped && AztecStakeWire.state(silent) == "Missing attestations"
 var quiet = carried!; quiet.missedStreak = 2
 check(!quiet.isStopped && AztecStakeWire.state(quiet) == "Validating", "two is not yet a stop")
 check(AztecStakeWire.stoppedTitle(silent) == "Your Aztec sequencer ...e5f1 stopped attesting", "its row")
+// What Aztec's node says of a staked sequencer (prd §1688: the testnet wire's
+// one part mainnet kept).
+let seen = AztecStakeWire.health(reply: json("seq-stats.json"))
+check(seen == AztecStakeWire.Health(missedStreak: 0, lastAttestationSlot: 125_119), "the node's reading: \(String(describing: seen))")
+check(AztecStakeWire.health(reply: json("validator-unknown.json")) == nil, "an attester the node never saw reads as nothing, never as healthy")
+check(AztecStakeWire.health(reply: ["jsonrpc": "2.0", "id": 1, "error": ["code": -32000]]) == nil, "an error is no reading")
+let missing: [String: Any] = ["result": ["validator": ["address": "0xab",
+    "missedAttestations": ["currentStreak": 4, "count": 4, "total": 31],
+    "lastAttestation": ["slot": "125100"]] as [String: Any]]]
+check(AztecStakeWire.health(reply: missing) == AztecStakeWire.Health(missedStreak: 4, lastAttestationSlot: 125_100),
+      "a streak read off missed ATTESTATIONS, a slot sent as a string")
 
 print("governance")
 check(AztecStakeWire.count(reply: reply("gov-count.json")) == 5, "five proposals")
@@ -368,5 +380,14 @@ mutate "V6's Rollup left off the known list" \
 mutate "an executed proposal drawn as a vote" \
   'guard let state = small(s[0]), state == 0 || state == 1 else { return nil }' \
   'guard let state = small(s[0]), state >= 0 else { return nil }'
+mutate "the streak read off missed proposals" \
+  'let missed = v["missedAttestations"] as? [String: Any] ?? [:]' \
+  'let missed = v["missedProposals"] as? [String: Any] ?? [:]'
+mutate "an unseen attester read as healthy" \
+  'let v = result["validator"] as? [String: Any], v["address"] is String else { return nil }' \
+  'let v = result["validator"] as? [String: Any] ?? ["address": ""] as [String: Any], v["address"] is String else { return nil }'
+mutate "a slot sent as a string dropped" \
+  'case let s as String: return Int(s)' \
+  'case let s as String: return nil'
 
 echo "✓ Aztec staking self-test passed"

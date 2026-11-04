@@ -230,7 +230,6 @@ EXEMPT = [
   dict(covers=["Screens/FileverseDocPage.swift:webDoor", "Shell/NoteCaptureSheet.swift:hosted&&chrome.docToRead"],
        why="NOT WALKED YET: a dDoc's page (prd §1355) and a link inside it; the journey to a demo Fileverse doc is not written (2026-10-16)"),
   dict(covers=[RS+"safeAsk", "Screens/SafeScreen.swift:pastedAsk"], why="raised by a live Safe pairing (SafePeer) or a pasted ask from it; there is no Safe on the simulator to ask"),
-  dict(covers=[RS+"aztecSign", "Screens/AztecScreen.swift:pastedSign"], why="raised by a signing link from the Aztec wallet; there is no peer on the simulator to make one"),
   dict(covers=[RS+"observerOffer", "Screens/LogosScreen.swift:pairOffer"], why="raised by a logos-observer pairing offer from a Logos node; there is no node on the simulator"),
 ]
 X = "text:=__never__"
