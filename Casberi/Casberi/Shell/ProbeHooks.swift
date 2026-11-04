@@ -4173,6 +4173,10 @@ enum ProbeHooks {
         // — the Privacy Pools engine on Sepolia (prd §1540), headless; logs
         // `privacyEngine|` lines (`Shell/PrivacyEngineProbe.swift`).
         Hook(key: "privacyEngineProbe") { raw, _ in PrivacyEngineProbe.run(raw) },
+        // `-aztecEngineProbe YES` — your Aztec account's engine on mainnet
+        // (prd §1700), headless; logs `aztecEngine| probe |` lines
+        // (`Shell/AztecEngineProbe.swift`).
+        Hook(key: "aztecEngineProbe") { raw, _ in AztecEngineProbe.run(raw) },
         // `-privateMoneySample YES|mainnet|none|clear` — sample private notes
         // (approved, waiting; `mainnet`: ppETH and ppUSDC on Ethereum, worth
         // and rate read live, prd §1563) beside the phone's own, no funds

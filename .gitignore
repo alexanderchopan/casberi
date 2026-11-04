@@ -43,3 +43,8 @@ __pycache__/
 
 # TDLib, built and cached by scripts/tdlib.sh (a symlink into ~/Library/Caches; never committed)
 Vendor/TDLib/
+
+# Your Aztec account (prd §1700): built and fetched by scripts/aztec-engine.sh
+Casberi/AztecEngine/
+Casberi/vendor/aztec/
+tools/aztec-engine/node_modules/

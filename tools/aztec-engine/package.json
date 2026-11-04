@@ -1,0 +1,18 @@
+{
+  "name": "casberi-aztec-engine",
+  "private": true,
+  "type": "module",
+  "description": "Casberi's Aztec wallet engine: Aztec's EmbeddedWallet behind the wallet-sdk background handler, for a hidden web view. Built into Casberi (prd §1700).",
+  "scripts": { "build": "vite build" },
+  "dependencies": {
+    "@aztec-labs/accounts": "6.0.0",
+    "@aztec-labs/aztec.js": "6.0.0",
+    "@aztec-labs/foundation": "6.0.0",
+    "@aztec-labs/wallet-sdk": "6.0.0",
+    "@aztec-labs/wallets": "6.0.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.12",
+    "vite-plugin-node-polyfills": "0.24.0"
+  }
+}

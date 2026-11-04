@@ -71,6 +71,12 @@ KNOWN_EXEMPT: dict[str, str] = {
     # encrypted), AfterFirstUnlock, in the app id's shared group; spending
     # asks for the device owner first.
     "PrivateRootKey.swift": "the private money root syncs through iCloud Keychain so a new phone gets private money back (prd §1562)",
+    # Your Aztec account's root (prd §1700): the account's secret and signing
+    # key are derived from it, so a new phone signed in to the same Apple
+    # account gets the same Aztec account and its notes back. Stored as the
+    # private money root is: synchronizable through iCloud Keychain (end-to-end
+    # encrypted), AfterFirstUnlock, in the app id's shared group.
+    "AztecRoot.swift": "your Aztec account's root syncs through iCloud Keychain so a new phone gets the account back (prd §1700)",
 }
 
 # Files that write BOTH kinds by a stated rule (prd §1162, user 2026-10-07:

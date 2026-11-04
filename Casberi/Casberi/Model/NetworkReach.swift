@@ -334,6 +334,22 @@ enum NetworkReach {
                  hosts: ["aztec-mainnet.drpc.org"],
                  credentialed: false,
                  throughTor: true),
+        // Your Aztec account (prd §1700): Aztec's own wallet in a hidden web
+        // view (`AztecEngine`). The page reaches no host itself (its
+        // Content-Security-Policy); every request it makes comes to
+        // `AztecEngineServer`'s `/net`, which sends it only to a host listed
+        // in one of these two entries, through the funnel.
+        Endpoint(service: "Your Aztec account",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Your Aztec account's wallet on this iPhone asks Aztec mainnet, through dRPC's public node, for the blocks and the encrypted notes it decrypts on the phone to find what is yours, and sends the transactions you approve, already proved on the phone. The node sees requests and proofs, never a key or what a private note holds.",
+                 hosts: ["aztec-mainnet.drpc.org"],
+                 credentialed: false,
+                 throughTor: true),
+        Endpoint(service: "Aztec proving parameters",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Downloads, once, the public parameters Aztec's prover needs to make a proof on this iPhone, from Aztec's own servers. Public files; the request names no one.",
+                 hosts: ["crs.aztec-cdn.foundation", "crs.aztec-labs.com"],
+                 credentialed: false),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
                  // A SEND in a registry that is otherwise all reads, and it is

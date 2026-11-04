@@ -1666,7 +1666,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1273 — zk.money: its moves named in the Wallet, its tags read, its links kept safely
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
-- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538, §1565, §1700; part superseded by §1688)
+- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419, §1538, §1565; part superseded by §1688)
 - §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions (amended by §1419, §1446)
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1… (amended by §1446)
@@ -1764,7 +1764,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1377 — A transfer made to fool you says what it is, in its box (amends §160's red line under the tiles, §1350, §1181's tiles…
 - §1378 — Under "Needs you" a row does not say it needs you
 - §1379 — Every box moves once: it arrives, its numbers roll, a new cover lands (amends §495 for the wallet family's pick, §119…
-- §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key (amended by §1700)
+- §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
@@ -1923,7 +1923,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
 - §1538 — Private money is CROPS: a private pocket on Aztec, our own open-source account, the engine on the phone, no gatekeeper
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675)
-- §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541, §1700)
+- §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
 - §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)

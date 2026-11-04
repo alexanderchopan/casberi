@@ -44,6 +44,14 @@
         "tools/aztec-dapp-spike/serve.mjs"
       ],
       "port": 8780
+    },
+    {
+      "name": "aztec-engine-debug",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/aztec-engine/debug-serve.mjs"
+      ],
+      "port": 48713
     }
   ]
 }

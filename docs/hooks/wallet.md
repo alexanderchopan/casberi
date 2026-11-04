@@ -439,3 +439,12 @@ On for the App Store and TestFlight (user: "we want it on for app store and test
 - The demo's Lend reads 150 USDC lent on Base; its act refuses with `YourAccountDemo.actsLater`.
 
 - **Pay a zk.money tag (prd §1692).** `-openMove YES -moveSendDraft "20|zac.zk.money|USDC@Ethereum"`: a trailing `@<network>` on a send draft picks the network before the lines fill. The demo pays a made-up deposit address (`ZkMoney.demoDeposit`) and asks nothing; a real account asks zk.money's resolver, its gateway, then `resolveWithProof` on Ethereum. A tag on Base or in ETH draws the refusal line.
+
+## `-aztecEngineProbe YES` — your Aztec account's engine (prd §1700)
+
+Starts the engine headless and logs `aztecEngine| probe | <step> | <ms> | <detail>`: `prover` (native, or none on Mac Catalyst), `pageReady`, `account` (the address's tail), `chain` (1 / 2070860440 on mainnet). The engine logs its own `aztecEngine|` lines: `walletStarting`, `pxeReady`, `root | made|found`, `accountReady`, and in DEBUG one `net |` line per request (host, status, bytes, ms).
+
+- The page is Aztec's `EmbeddedWallet` bundled by `tools/aztec-engine` into `Casberi/AztecEngine`, served by `AztecEngineServer` on **127.0.0.1:48713** — fixed, because the wallet's OPFS storage belongs to the origin. The simulator shares the Mac's network, so a running simulator Casberi holds the port (stop it before `tools/aztec-engine/debug-serve.mjs`, the desktop stand-in for driving the page in a browser).
+- `scripts/aztec-engine.sh ensure` (run by `xcb.sh`) rebuilds the page when its sources change and fetches Aztec's v6 iOS prover; neither is committed. `--self-test` proves the stamp sees a source change.
+- **Paid for, 2026-11-04:** a fetch rewrite must leave `data:`/`blob:` alone (bb.js loads its WebAssembly from a 5 MB `data:` URL; rewritten, it became a header that hung WebKit); WebKit throttles a web view in no window until the wallet's storage worker never answers, so the engine's view rides the app's window, hidden; SQLite's `opfs-async-proxy` is NOT needed (Aztec's store is `opfs-sahpool`) and shipping it hangs WebKit's VFS probe.
+- First start on the simulator 29–31 s (Tor's first circuit ~22 s); node calls ~0.5 s each over Tor after.

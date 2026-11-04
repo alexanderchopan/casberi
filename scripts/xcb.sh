@@ -45,6 +45,11 @@ fi
 
 CMD=${XCB_CMD:-xcodebuild}
 [[ -n "${XCB_NO_LOCK:-}" ]] && exec "$CMD" "$@"
+# Your Aztec account's engine and prover are fetched and built, not committed
+# (prd §1700); a real build needs them current. A no-op when they are.
+if [[ -z "${XCB_CMD:-}" ]]; then
+  "${0:A:h}/aztec-engine.sh" ensure || { print -u2 "xcb: the Aztec engine could not be made"; exit 1; }
+fi
 
 exec /usr/bin/perl -MFcntl=:flock -MPOSIX=WNOHANG -e '
   my ($lock, @cmd) = @ARGV;
