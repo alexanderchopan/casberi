@@ -396,9 +396,9 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let groups = walletHolderGroups
         let appAccounts = walletAccountRows(all)
-        // Public balances only: private and lent money are their own
-        // sections (prd §1554, §1695).
-        let tokens = (portfolioShown?.positions ?? []).filter { $0.symbol != PrivateMoney.walletSymbol && $0.symbol != LendMove.walletSymbol }
+        // What your wallets hold, and nothing another section counts: not
+        // Lent, not Private, and on All not an app's (prd §1695, §1696).
+        let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []
         // Every token hidden still leaves the door, to the Hidden row.
         let anyHidden = !(portfolioUnhidden?.hiddenItems(walletHidden).isEmpty ?? true)
         let positions = walletPositionCount
@@ -427,8 +427,8 @@ extension FeedScreen {
                 }
             }
             if !tokens.isEmpty || anyHidden {
-                // Its dollars, as Lent's and Private's heads carry theirs: the
-                // three add up to the number above them (prd §1695).
+                // Its dollars, as Apps', Lent's and Private's heads carry
+                // theirs: they add up to the number above them (prd §1695, §1696).
                 walletDoor(.holdings, name: String(localized: "Tokens"),
                            figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd }),
                            act: { feedSheet = .walletTokens })

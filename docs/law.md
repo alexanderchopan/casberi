@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1837 of 1909 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1838 of 1910 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -2086,6 +2086,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (amended by §1694)
 - §1694 — Move to private's USDC starts at the pool's minimum, to the cent
 - §1695 — Holdings' parts add up: Tokens, Lent and Private each carry their dollars, Lent counts in the Wallet's number, an aTo…
+- §1696 — On All, an app's money is Apps', never Tokens': every Holdings section is separate (resolves §1695's open question)
 
 ## Dead rulings → what replaced them (generated)
 

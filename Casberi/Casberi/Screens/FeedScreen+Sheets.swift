@@ -313,10 +313,11 @@ extension FeedScreen {
             // Off the unhidden read, so hiding the last token leaves the
             // tray standing on its Hidden row instead of emptying it.
             if let whole = portfolioUnhidden {
-                let portfolio = whole.hiding(walletHidden)
+                // The Tokens section's own rows and total (prd §1695, §1696):
+                // never Lent, Private, or on All an app's.
+                let portfolio = whole.hiding(walletHidden).tokensOnly(appsApart: walletOnAll)
                 let hidden = whole.hiddenItems(walletHidden)
-                // Public balances only: private money is its own section (prd §1554).
-                WalletTokensSheet(positions: portfolio.positions.filter { $0.symbol != PrivateMoney.walletSymbol && $0.symbol != LendMove.walletSymbol },
+                WalletTokensSheet(positions: portfolio.positions,
                                   total: portfolio.totalUSD,
                                   moves: walletHoldingMoves, hidden: hidden) { position in
                     feedSheet = nil

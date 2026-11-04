@@ -264,6 +264,17 @@ struct WalletPortfolio: Equatable, Codable {
         scoped { addresses.contains($0.lowercased()) }
     }
 
+    /// **WHAT THE TOKENS SECTION HOLDS (prd §1695, §1696).** Never Lent or
+    /// Private (their own sections), and with `appsApart` (All, where Apps
+    /// stands beside Tokens) never an app's money either: an exchange, cash,
+    /// a Privy app, the validators. So no dollar is in two sections, and
+    /// Apps, Tokens, Lent and Private add up to the Wallet's number.
+    func tokensOnly(appsApart: Bool) -> WalletPortfolio {
+        scoped { holder in
+            holder != Self.privateHolderID && holder != Self.lentHolderID && !(appsApart && Self.isVenue(holder))
+        }
+    }
+
     private func scoped(_ keeps: (String) -> Bool) -> WalletPortfolio {
         let kept = positions.compactMap { position -> Position? in
             let holders = position.holders.filter { keeps($0.address) }

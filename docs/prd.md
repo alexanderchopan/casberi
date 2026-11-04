@@ -70871,3 +70871,15 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `private-money-selftest.sh`: Tokens and its sheet leave Lent out; the venue list counts Lent; the holdings read goes through the aToken filter; Lent's head is `lentUSD`; Lent's holder is a place; Lent's rows stand before Private's. `wallet-total-audit.py` stays green.
 
 **Mac half (§1402).** The same Holdings; nothing here is phone-only.
+
+## §1696 — On All, an app's money is Apps', never Tokens': every Holdings section is separate (resolves §1695's open question) (user, 2026-11-04, asked "should Apps keep its tokens out of the Tokens list, so every section is separate?": "ya") — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **Tokens is what your wallets hold.** `WalletPortfolio.tokensOnly(appsApart:)` cuts each position to its wallet holders: never Lent or Private, and on All (`walletOnAll`, where Apps stands) never an exchange, a cash account, a Privy app or the validators (`isVenue`). Kraken's ETH is in Apps and only there; your wallets' ETH is in Tokens.
+2. **The sections add up.** Apps, Tokens, Lent and Private each carry their dollars, and on All they sum to the Wallet's number; on Yours and Following, which have no Apps, Tokens, Lent and Private do.
+3. **The Tokens sheet is the same cut,** its rows and its total (`total:` was the whole portfolio's, Private included).
+4. **A token's page is unchanged:** it is opened by symbol off the whole portfolio, so it still lists every place holding it, an exchange included. The box's treemap still draws the whole number.
+5. **An app picked in the menu** (not All) keeps its tokens in Tokens: there is no Apps section beside it to hold them.
+
+**Guard.** `private-money-selftest.sh`: Holdings' and the sheet's Tokens go through `tokensOnly(appsApart: walletOnAll)`, and it drops Private, Lent and, apart, every place.
+
+**Mac half (§1402).** The same Holdings; nothing here is phone-only.
