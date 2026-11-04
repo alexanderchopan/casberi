@@ -16,6 +16,9 @@ import { hashToEmoji } from '@aztec-labs/wallet-sdk/crypto';
 import { BrowserEmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { Fr, GrumpkinScalar } from '@aztec-labs/aztec.js/fields';
 import { WalletSchema } from '@aztec-labs/aztec.js/wallet';
+import { Contract } from '@aztec-labs/aztec.js/contracts';
+import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
+import { getCanonicalFeeJuice } from '@aztec-labs/protocol-contracts/fee-juice/lazy';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 
@@ -82,6 +85,51 @@ const own = {
   async account() {
     await getWallet();
     return { address: accountAddress };
+  },
+  // What the account holds (prd §1700, step 2): Fee Juice, the gas every
+  // transaction pays, read from Aztec's own protocol contract; and every token
+  // an app taught the wallet (an app registers its contracts, interface and
+  // all, when it connects — Shield's USDC and WETH, measured 2026-11-04), read
+  // privately and publicly. Nothing is hard-coded but Fee Juice.
+  async holdings() {
+    const wallet = await getWallet();
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const out = [];
+    const read = async (contract, fn) => {
+      try {
+        const { result } = await contract.methods[fn](me).simulate({ from: me });
+        return BigInt(result.toString()).toString();
+      } catch (e) {
+        log('holdingSkipped', { fn, error: String(e?.message ?? e).slice(0, 160) });
+        return null;
+      }
+    };
+    const feeJuice = await getCanonicalFeeJuice();
+    if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
+      await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
+    }
+    const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+    out.push({ kind: 'feeJuice', address: feeJuice.address.toString(), symbol: 'Fee Juice', decimals: 18,
+               public: await read(fj, 'balance_of_public'), private: null });
+    for (const address of await wallet.pxe.getContracts()) {
+      if (address.equals(feeJuice.address) || address.equals(me)) continue;
+      try {
+        const instance = await wallet.pxe.getContractInstance(address);
+        const classId = instance?.currentContractClassId ?? instance?.originalContractClassId;
+        const artifact = classId && (await wallet.pxe.getContractArtifact(classId));
+        const names = new Set((artifact?.functions ?? []).map(f => f.name));
+        if (!names.has('balance_of_private')) continue;
+        const token = await Contract.at(address, artifact, wallet);
+        out.push({
+          kind: 'token', address: address.toString(), name: artifact.name,
+          private: await read(token, 'balance_of_private'),
+          public: names.has('balance_of_public') ? await read(token, 'balance_of_public') : null,
+        });
+      } catch (e) {
+        log('holdingSkipped', { address: address.toString(), error: String(e?.message ?? e).slice(0, 160) });
+      }
+    }
+    return out;
   },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
