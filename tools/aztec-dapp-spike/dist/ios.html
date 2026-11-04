@@ -4,5 +4,6 @@
 <p>No wallet script on this page: Casberi's web view adds it.</p>
 <button onclick="runDapp()">Connect Aztec wallet</button><pre id="out" style="white-space:pre-wrap"></pre>
 <script src="dapp.js"></script>
-<script>if (location.search.includes('auto=1')) setTimeout(() => runDapp().then(r => window.webkit?.messageHandlers?.casberi?.postMessage(JSON.stringify({event:'dappResult', detail:r}))), 1500)</script>
+<script>const autoRun = location.search.includes('auto=send') ? () => runSend() : location.search.includes('auto=1') ? () => runDapp() : null;
+if (autoRun) setTimeout(() => autoRun().then(r => window.webkit?.messageHandlers?.casberi?.postMessage(JSON.stringify({event:'dappResult', detail:r})), e => window.webkit?.messageHandlers?.casberi?.postMessage(JSON.stringify({event:'dappError', detail:String(e?.stack ?? e).slice(0, 1500)}))), 1500)</script>
 </body>

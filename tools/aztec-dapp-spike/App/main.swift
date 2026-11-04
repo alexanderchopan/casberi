@@ -53,7 +53,7 @@ final class Shell: NSObject, WKScriptMessageHandler {
         page.isInspectable = true
         super.init()
 
-        for name in ["engineLog", "engineToTab", "engineEmoji"] { engineController.add(self, name: name) }
+        for name in ["engineLog", "engineToTab", "engineEmoji", "engineApprove"] { engineController.add(self, name: name) }
         pageController.add(self, contentWorld: relayWorld, name: "casberiRelay")
         pageController.add(self, contentWorld: .page, name: "casberi") // the test page's own result line
 
@@ -87,6 +87,15 @@ final class Shell: NSObject, WKScriptMessageHandler {
                   let innerData = try? JSONSerialization.data(withJSONObject: inner),
                   let innerJSON = String(data: innerData, encoding: .utf8) else { return }
             page.evaluateJavaScript("window.__casberiDeliver(\(jsString(innerJSON)))", in: nil, in: relayWorld) { _ in }
+        case "engineApprove":
+            // The real app raises a sheet: who asks, what it does, what goes public.
+            // The spike approves on the testnet and logs what it was asked.
+            log("{\"event\":\"approve\",\"detail\":\(body)}")
+            if let data = body.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let id = obj["id"] as? Int {
+                engine.evaluateJavaScript("casberiEngine.answerApproval(\(id), true)")
+            }
         case "engineEmoji":
             log("{\"event\":\"nativeEmoji\",\"detail\":\(body)}")
         default:
@@ -117,7 +126,7 @@ struct Browser: UIViewRepresentable {
 
 @main
 struct AztecDappSpike: App {
-    let shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? "http://localhost:8779/ios.html?auto=1&chain=testnet")!)
+    let shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? "http://localhost:8779/ios.html?auto=send")!)
     var body: some Scene {
         WindowGroup { Browser(shell: shell).ignoresSafeArea() }
     }

@@ -41,3 +41,31 @@ Measured on the iPhone 17 Pro simulator, 2026-11-04: PXE ready 1.9 s, account
 2.1 s, handshake to the app ~50 ms after that, `getContractMetadata` from the
 testnet node 417 ms. Not yet: proving (prover off), fees, sending, an approval
 sheet, keys from iCloud Keychain.
+
+## Round three: the first private send, through Casberi, on a phone web view
+
+`dist/ios.html?auto=send` (the app side, Aztec's own `WalletManager` and
+`TokenContract`) deploys a token, mints to the person's PRIVATE balance, sends
+250,000 PRIVATELY to a random address and reads the balance back. Every
+`sendTx` stops at the engine's approval (`engineApprove` → the shell; the spike
+says yes and logs what it was asked), is simulated, PROVED on the device
+(ClientIVC, Aztec's WebAssembly prover with threads) and sent; fees come from the
+testnet's Sponsored FPC; the account is Aztec's stock `SchnorrInitializerlessAccount`
+(no deployment transaction).
+
+iPhone 17 Pro simulator, V6 testnet, 2026-11-04 (each to PROPOSED):
+
+| step | through Casberi | of which the proof |
+|---|---|---|
+| deploy token | 26.4 s | 16.3 s |
+| mint privately | 20.0 s | 11.4 s |
+| send privately | 26.4 s | 14.2 s |
+| read private balance | 1.6 s (750,000, correct) | — |
+
+Desktop Chrome, same engine (`?local=1` runs the relay and test app in the
+engine page): 20.6 / 13.8 / 16.9 / 1.5 s. The proof is the Mac's cores through
+WebAssembly; the phone spike's native prover made one in 2.1 s on an iPhone.
+
+Traps: never log an aztec.js `Contract` (it holds the wallet proxy); Aztec's
+loggers bind `console` at import, so the bridge that forwards them
+(`engine-web/src/console-bridge.js`) is imported first.

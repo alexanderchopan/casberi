@@ -47,7 +47,7 @@ ws.addEventListener('message', ev => {
   }
   if (m.method === 'Runtime.consoleAPICalled') {
     const text = m.params.args.map(a => a.value ?? a.description ?? '').join(' ');
-    if (text.includes('[casberi]') || text.includes('[dapp]') || text.includes('[engine]') || m.params.type === 'error') console.log('console:', text.slice(0, 900));
+    if (process.env.ALL === '1' || text.includes('[casberi]') || text.includes('[dapp]') || text.includes('[engine]') || m.params.type === 'error') console.log('console:', text.slice(0, 900));
   }
 });
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });

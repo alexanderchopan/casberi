@@ -6,7 +6,8 @@
 // The account is Aztec's stock Schnorr account. Its secret and signing key are
 // made here once and kept in this view's storage; in Casberi they would come
 // from the private-money root in iCloud Keychain (prd §1562).
-import { BackgroundConnectionHandler } from '@aztec-labs/wallet-sdk/extension/handlers';
+import './console-bridge.js';
+import { BackgroundConnectionHandler, ContentScriptConnectionHandler } from '@aztec-labs/wallet-sdk/extension/handlers';
 import { hashToEmoji } from '@aztec-labs/wallet-sdk/crypto';
 import { BrowserEmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { Fr, GrumpkinScalar } from '@aztec-labs/aztec.js/fields';
@@ -37,7 +38,8 @@ function getWallet() {
   walletPromise ??= (async () => {
     log('walletStarting', { node: NODE_URL });
     const wallet = await BrowserEmbeddedWallet.create(NODE_URL, {
-      pxe: { proverEnabled: false },
+      logger: undefined,
+      pxe: { proverEnabled: true },
       nodeClientOptions: { maxBatchSize: 3 }, // dRPC's free plan refuses larger batches
     });
     log('pxeReady', { chain: summarise(await wallet.getChainInfo()) });
@@ -46,7 +48,7 @@ function getWallet() {
       keys = { secret: Fr.random().toString(), signingKey: GrumpkinScalar.random().toString() };
       localStorage.setItem('casberi.aztec.spike', JSON.stringify(keys));
     }
-    const manager = await wallet.createSchnorrAccount(
+    const manager = await wallet.createSchnorrInitializerlessAccount(
       Fr.fromString(keys.secret), Fr.ZERO, GrumpkinScalar.fromString(keys.signingKey), 'Casberi',
     );
     accountAddress = manager.address.toString();
@@ -69,8 +71,11 @@ async function callWallet(method, args) {
   }
   if (typeof wallet[method] !== 'function') throw new Error(`Unknown wallet method: ${method}`);
   if (!READS.has(method)) {
-    // A real Casberi raises a native sheet here: who asks, what it does, what goes public.
-    throw new Error(`Casberi spike answers reads only; ${method} needs the person's yes`);
+    // Anything else needs the person's yes. The native shell raises the sheet (the
+    // spike's shell approves on testnet and logs it); a no refuses the call.
+    const yes = await askPerson(method, args);
+    log('approval', { method, yes });
+    if (!yes) throw new Error(`The person declined ${method}`);
   }
   const parsed = schemaHasMethod(WalletSchema, method)
     ? await parseWithOptionals(args ?? [], getSchemaParameters(WalletSchema[method]))
@@ -79,12 +84,22 @@ async function callWallet(method, args) {
   return result === undefined ? undefined : JSON.parse(jsonStringify(result));
 }
 
+// --- approval -------------------------------------------------------------------
+let asks = 0;
+const waiting = new Map();
+function askPerson(method, args) {
+  const id = ++asks;
+  if (!window.webkit) return Promise.resolve(true); // desktop debugging: no shell to ask
+  native('engineApprove', { id, method, summary: summarise(args) });
+  return new Promise(resolve => waiting.set(id, resolve));
+}
+
 // --- the connection -------------------------------------------------------------
 let contentListener = null;
 const background = new BackgroundConnectionHandler(
   { ...WALLET, walletIcon: 'https://casberi.app/favicon.ico' },
   {
-    sendToTab: (tabId, message) => native('engineToTab', { tabId, message }),
+    sendToTab: (tabId, message) => (window.webkit ? native('engineToTab', { tabId, message }) : queueMicrotask(() => window.webkitShim?.(message))),
     addContentListener: handler => {
       contentListener = handler;
     },
@@ -121,7 +136,26 @@ window.casberiEngine = {
   fromContent(json, tabId, url) {
     contentListener?.(JSON.parse(json), { tab: { id: tabId, url } });
   },
+  answerApproval(id, yes) {
+    waiting.get(id)?.(yes);
+    waiting.delete(id);
+  },
 };
+
+// Desktop debugging (?local=1): the relay and a test app in THIS page, wired in
+// memory, so the whole send path runs where its console can be read.
+if (new URLSearchParams(location.search).get('local') === '1') {
+  let deliver = null;
+  const relay = new ContentScriptConnectionHandler({
+    sendToBackground: m => queueMicrotask(() => contentListener?.(m, { tab: { id: 1, url: location.href } })),
+    addBackgroundListener: h => { deliver = h; },
+  });
+  relay.start();
+  window.webkitShim = m => { console.log('[engine] toPage', m.type, JSON.stringify(m.content ?? '').length); deliver?.(m); };
+  const s = document.createElement('script');
+  s.src = '/dapp.js';
+  document.head.appendChild(s);
+}
 
 window.casberiEngine.debugCall = (m, a) => callWallet(m, a);
 
