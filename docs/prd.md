@@ -70805,3 +70805,18 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `round-ups-pot-selftest.sh` (in `verify.sh`): the step, the floor, the pot after a send, the split, the withdrawal, the migration, the handler's message and the two calls, and drift guards that the send sets aside, moves after another network under the tap's Face ID, and that Take back all cannot take Round-ups. `private-bridge-selftest.sh`'s guard follows the save to `RoundUpsPot+Chain`.
 
 **Mac half (§1402).** The same sends, rows and words; nothing here is phone-only.
+
+## §1691 — The cycle turns where a landing is SEEN: the Feed's cover disc and Newest's app icon (amends §901, §1689; answers §1689's "not seen") (user, 2026-11-03, on the finding that the Feed draws the newest arrival as its cover and the next few in Newest, neither carrying the cycle, and that the sections hide both: "yes, dig in", then "yes, flip those") — BUILT; seen on the simulator
+
+1. **Why §901's cycle was never seen on the phone.** Measured with the gate logged (`landedAt`, `waveAt`, `fires`) over `-leadCycleProbe`: the Feed's snapshot held the new thing 0.4s after it landed, and no `LeadCycle` for it ever mounted. On the Feed the newest thing is the cover (`homeCover`, `FeedLedeCard`), the next few stand in Newest, whose rows lead with the app's icon and never draw their own lead (§1103a: `DSFeedRow` drops it under `dsGroupedSource`), and the category sections hide both (`feedScrollSections(…, hiding:)`). The only lead carrying the cycle was a section row, which a landing never is.
+2. **The cover's disc turns** (`FeedLedeCard.eyebrow`, `postDisc(…).leadCycle`): a face (a post's author, a person chat) to its app's mark, the app's mark to its category's glyph (`discIsMark`, §1689's `restsOnMark`), at the disc's size and circle (`faceSize: DS.Face.list`, `markCircular`). The cover is keyed on its thing, so a new newest mounts afresh and its arrival is read on appear; the cover's own 0.18s fade (§1379) is over before the turn starts at 0.3s.
+3. **Newest's app icon turns** (`appLead` in `shapedListRow`, `restsOnMark: true`) to the category's glyph: Newest is where a landing's neighbours stand when several arrive in one sync. A row with no app icon draws none and turns nothing.
+4. **Unchanged:** the section rows keep §1689's flip on their own lead; one cycle, never a switch (a retitle during a landing's turn is swallowed); the clock, the arrival rule, Reduce Motion.
+
+**Probe.** `-leadCycleProbe` retitles 4s after landing (was 3s, and 10s for the face case), after the landing's turn has come back, so the second cycle is its own and not swallowed.
+
+**Seen on the simulator** (a fresh iPhone 17 Pro, iOS 27.0, the demo; back-to-back screenshots, as `recordVideo` drops frames): the Trello probe lands as the cover with Work's glyph in the disc, turns edge-on and back to Trello's mark; on "· moved" it turns to Work's glyph again and back. **Not seen:** a face on the cover turning to its app (an X person chat probe landed nowhere on the Feed; the demo's covers are notes and marks), and Newest's turn (a single landing is the cover). Both are the same modifier with one argument changed.
+
+**Guard.** `lead-cycle-audit.py` rule H: one cycle on the cover's disc with the thing's id and title and `restsOnMark: discIsMark(…)`, one on Newest's `appLead` with `restsOnMark: true`; five mutations (either removed, either turning a mark to itself, Newest handed the wrong fact) each fire.
+
+**Mac half (§1402).** The cover and the grouped rows are the same views on the Mac; the turn is the same.

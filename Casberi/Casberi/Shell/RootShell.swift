@@ -1187,9 +1187,10 @@ struct RootShell: View {
                     modelContext.insert(probe)
                     try? modelContext.save()
                     NSLog("[Casberi] leadCycle: landed \(probe.id)")
-                    // A room's list takes a few seconds to draw a landing, so
-                    // the face case moves later, on a row already on screen.
-                    try? await Task.sleep(for: .seconds(face ? 10 : 3))
+                    // After the landing's cycle has come back (about 2.7s),
+                    // so the move turns it a second time rather than being
+                    // swallowed by the first: one cycle, never a switch.
+                    try? await Task.sleep(for: .seconds(4))
                     probe.title = "Lead cycle probe · moved"
                     try? modelContext.save()
                     NSLog("[Casberi] leadCycle: moved \(probe.id)")

@@ -34,6 +34,12 @@ WHAT IT CHECKS (each with a mutation in the self-test that must fire):
      thing.title`, `cyclesOnChange: !moneyColumn` — the ledger keeps §171's
      ripple as its one motion on a retitle — and `restsOnMark: leader ==
      .glyph`. The fold rows never carry it.
+  H  the two places a landing is SEEN on the Feed carry it too (prd §1691):
+     the cover's disc (`FeedLedeCard`, `restsOnMark: discIsMark(…)`) and
+     Newest's app icon (`appLead` in `shapedListRow`, `restsOnMark: true`),
+     each with the thing's id and title. Without them the newest arrival is
+     the cover and its neighbours stand in Newest, so no landing ever turned
+     a lead the eye could see — which also renders perfectly.
      (The Addresses list is the one OTHER door, `faceCycle`, 2026-09-25: a
      contact's face turns when the contact was SAVED after the list's wave —
      `arrival` stands in for the ledger, which never sees a contact. It is
@@ -63,6 +69,8 @@ import sys
 from pathlib import Path
 
 CYCLE = "Casberi/Casberi/Design/LeadCycle.swift"
+COVER = "Casberi/Casberi/Screens/FeedLedeCard.swift"
+LIST = "Casberi/Casberi/Screens/FeedScreen+Rows.swift"
 ROWS = "Casberi/Casberi/Screens/ShapedRows.swift"
 FEED = "Casberi/Casberi/Screens/FeedScreen.swift"
 LEDGER = "Casberi/Casberi/Model/LandingLedger.swift"
@@ -77,7 +85,7 @@ def strip_comments(text: str) -> str:
 
 
 def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
-          demo: str = "") -> list:
+          demo: str = "", cover: str = "", listrows: str = "") -> list:
     out = []
     c = strip_comments(cycle)
     r = strip_comments(rows)
@@ -85,6 +93,8 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
     l = strip_comments(ledger)
     s = strip_comments(root)
     d = strip_comments(demo)
+    cv = strip_comments(cover)
+    lr = strip_comments(listrows)
 
     # A — the back face is the app's mark or the dock category's glyph, nothing else.
     assigns = re.findall(r"\bback\s*=\s*([^\n]+)", c)
@@ -141,6 +151,30 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
             out.append("D: the ledger's rows are not opted out of the change cycle (§171's ripple is their motion)")
         if "restsOnMark: leader == .glyph" not in flat:
             out.append("D: the caller does not say when its lead rests on the app's mark — the mark would turn to itself (§1689)")
+
+    # H — where a landing is seen on the Feed (§1691).
+    def calls(text):
+        return [" ".join(c.split()) for c in re.findall(r"\.leadCycle\(([^)]*(?:\([^)]*\)[^)]*)*)\)", text)]
+    cover_calls = calls(cv)
+    if len(cover_calls) != 1:
+        out.append(f"H: expected ONE .leadCycle( on the cover's disc in FeedLedeCard.swift, found {len(cover_calls)}")
+    for flat in cover_calls:
+        if "id: thing.id" not in flat or "fact: thing.title" not in flat:
+            out.append("H: the cover's cycle is not handed the thing's id and title")
+        if "restsOnMark: discIsMark(" not in flat:
+            out.append("H: the cover's cycle does not say when its disc is the app's mark")
+    if not re.search(r"postDisc\(castFace:\s*castFace\)\s*\.leadCycle\(", cv):
+        out.append("H: the cover's cycle is not on its disc (postDisc)")
+    list_calls = calls(lr)
+    if len(list_calls) != 1:
+        out.append(f"H: expected ONE .leadCycle( on Newest's app icon in FeedScreen+Rows.swift, found {len(list_calls)}")
+    for flat in list_calls:
+        if "id: thing.id" not in flat or "fact: thing.title" not in flat:
+            out.append("H: Newest's cycle is not handed the thing's id and title")
+        if "restsOnMark: true" not in flat:
+            out.append("H: Newest's app icon is the app's mark, so its cycle must rest on it")
+    if not re.search(r"appLead\(app\.source\)\s*\.leadCycle\(", lr):
+        out.append("H: Newest's cycle is not on the app icon (appLead)")
 
     # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
     if not re.search(r"landed\s*=\s*(?:arrival\s*\?\?\s*)?LandingLedger\.landedAt\(id\)", c):
@@ -262,6 +296,24 @@ enum LandingLedger {
     }
 }
 """
+GOOD_COVER = """
+        HStack(spacing: DS.Space.s2) {
+            postDisc(castFace: castFace)
+                .leadCycle(source: thing.source, id: thing.id, fact: thing.title,
+                           faceSize: DS.Face.list, markCircular: true,
+                           restsOnMark: discIsMark(castFace: castFace))
+"""
+GOOD_LIST = """
+            if grouped {
+                if let app {
+                    appLead(app.source)
+                        .leadCycle(source: thing.source, id: thing.id, fact: thing.title,
+                                   index: index, restsOnMark: true)
+                } else {
+                    appLead(nil)
+                }
+            }
+"""
 GOOD_ROOT = """
         SaveCoalescer.holdForHand = { await GestureGate.idle() }
         LandingLedger.install()
@@ -275,7 +327,8 @@ GOOD_DEMO = """
 
 def self_test() -> bool:
     GOOD = dict(cycle=GOOD_CYCLE, rows=GOOD_ROWS, feed=GOOD_FEED,
-                ledger=GOOD_LEDGER, root=GOOD_ROOT, demo=GOOD_DEMO)
+                ledger=GOOD_LEDGER, root=GOOD_ROOT, demo=GOOD_DEMO,
+                cover=GOOD_COVER, listrows=GOOD_LIST)
     cases = [
         ("healthy tree is clean", GOOD_CYCLE, GOOD_ROWS, GOOD_FEED, 0),
         ("A: a state glyph — the tick for delivered",
@@ -341,6 +394,16 @@ def self_test() -> bool:
              demo=GOOD_DEMO.replace('LandingLedger.suspended = true', '')),
         dict(GOOD, name="G: the ledger ignores its suspension", want=1,
              ledger=GOOD_LEDGER.replace('guard !suspended else { return }', '')),
+        dict(GOOD, name="H: the cover's disc carries no cycle — the newest landing never turns", want=1,
+             cover=re.sub(r"\s*\.leadCycle\([\s\S]*?castFace\)\)", "", GOOD_COVER)),
+        dict(GOOD, name="H: the cover's disc turns its app's mark to itself", want=1,
+             cover=GOOD_COVER.replace("restsOnMark: discIsMark(castFace: castFace)", "restsOnMark: false")),
+        dict(GOOD, name="H: Newest's app icon carries no cycle", want=1,
+             listrows=re.sub(r"\s*\.leadCycle\([\s\S]*?restsOnMark: true\)", "", GOOD_LIST)),
+        dict(GOOD, name="H: Newest's app icon turns to itself", want=1,
+             listrows=GOOD_LIST.replace("restsOnMark: true", "restsOnMark: false")),
+        dict(GOOD, name="H: Newest's cycle handed the wrong fact", want=1,
+             listrows=GOOD_LIST.replace("fact: thing.title", "fact: app.source")),
         dict(GOOD, name="a comment naming the install does not satisfy it", want=1,
              root=GOOD_ROOT.replace('LandingLedger.install()', '// LandingLedger.install()')),
     ]
@@ -373,7 +436,8 @@ def main() -> int:
     # FeedScreen is split across files (prd §718): read the room as ONE text.
     feed = "".join([read(FEED)] + [p.read_text(encoding="utf-8", errors="replace")
                                    for p in sorted((root / FEED).parent.glob("FeedScreen+*.swift"))])
-    findings = audit(read(CYCLE), read(ROWS), feed, read(LEDGER), read(ROOT), read(DEMO))
+    findings = audit(read(CYCLE), read(ROWS), feed, read(LEDGER), read(ROOT), read(DEMO),
+                     read(COVER), read(LIST))
     if findings:
         print(f"lead-cycle-audit: {len(findings)} finding(s)")
         for f in findings:

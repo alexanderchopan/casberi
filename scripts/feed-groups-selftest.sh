@@ -228,8 +228,8 @@ guard "the app's name and time ride the row's top line (§1157)" \
       "$FEED" 'if let app \{ appLine\(app\.source, at: app\.date(, place: place)?\) \}'
 guard "Home draws the whole day, no window and no Show older (§1154)" \
       "$FEED" 'let window = \(shown: byApp\.groups, more: false, hidden: 0\)'
-guard "the app's icon leads its row on Home (§1157)" \
-      "$FEED" 'if grouped \{ appLead\(app\?\.source\) \}'
+guard "the app's icon leads its row on Home (§1157; it carries the cycle since §1691)" \
+      "$FEED" '^ *appLead\(app\.source\)$'
 guard "the icon draws at the one row lead, a door to the app's room (§1157, §1496)" \
       "$FEED" 'BridgeIcon\(name: source, size: DS\.Mark\.row\)'
 guard "a row under a header is told whose header it stands under" \

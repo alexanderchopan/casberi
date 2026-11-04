@@ -79,6 +79,8 @@ struct LeadCycle: ViewModifier {
     /// Whether the lead at rest already IS the app's mark (the row's `.glyph`
     /// lead). Then the back is the category glyph, never the same mark twice.
     var restsOnMark: Bool = false
+    /// The mark's shape on the back: the cover's disc is a circle (§1691).
+    var markCircular: Bool = false
 
     /// The clock, shared by both moments. `out` sits after the row's own
     /// entrance spring (`DS.Motion.duration`), so the cycle FOLLOWS the
@@ -116,7 +118,7 @@ struct LeadCycle: ViewModifier {
                 .modifier(Face(angle: angle, back: false))
             switch back {
             case .mark(let name):
-                BridgeIcon(name: name, size: faceSize)
+                BridgeIcon(name: name, size: faceSize, circular: markCircular)
                     .accessibilityHidden(true)
                     .modifier(Face(angle: angle, back: true))
             case .glyph(let glyph):
@@ -213,10 +215,12 @@ extension View {
     /// The one cycle on a row lead — see `LeadCycle`.
     func leadCycle(source: String, id: UUID, fact: String,
                    index: Int = 0, cyclesOnChange: Bool = true,
+                   faceSize: CGFloat = DS.Mark.row, markCircular: Bool = false,
                    restsOnMark: Bool = false) -> some View {
         modifier(LeadCycle(source: source, id: id, fact: fact,
                            index: index, cyclesOnChange: cyclesOnChange,
-                           restsOnMark: restsOnMark))
+                           faceSize: faceSize, restsOnMark: restsOnMark,
+                           markCircular: markCircular))
     }
 
     /// The same cycle on a contact's FACE (the Addresses list, 2026-09-25):

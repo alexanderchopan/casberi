@@ -488,6 +488,13 @@ struct FeedLedeCard: View {
     /// The cast is the picture, and the person the eyebrow names is already
     /// its first face; their avatar in the disc too drew the same face twice,
     /// one row apart.
+    /// Whether `postDisc` draws the app's own mark (its last arm), so the
+    /// cycle turns it to the category's glyph instead of to itself (§1689).
+    private func discIsMark(castFace: Bool) -> Bool {
+        let face = isPost && !castFace && !(thing.authorAvatarURL ?? "").isEmpty
+        return !face && !ChatFace.isPersonChat(thing)
+    }
+
     @ViewBuilder private func postDisc(castFace: Bool) -> some View {
         if isPost, !castFace, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
             RemoteThumb(urlString: avatar, size: DS.Face.list,
@@ -548,7 +555,15 @@ struct FeedLedeCard: View {
     /// which is a real regression to buy a tidier line.
     private func eyebrow(castFace: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
+            // WHERE A LANDING IS SEEN (prd §1691): on the Feed the newest
+            // thing is this cover, never a row, so the one cycle (§901) turns
+            // this disc — a face to its app's mark, the app's mark to its
+            // category's glyph (§1689). The card is keyed on the thing, so a
+            // new newest mounts afresh and its arrival is read on appear.
             postDisc(castFace: castFace)
+                .leadCycle(source: thing.source, id: thing.id, fact: thing.title,
+                           faceSize: DS.Face.list, markCircular: true,
+                           restsOnMark: discIsMark(castFace: castFace))
             // The person leads on a post (prd §756), in the primary tier, and
             // the network follows in the quiet one — the order the row itself
             // uses, and the order that makes "who" the first thing read.

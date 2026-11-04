@@ -318,7 +318,20 @@ extension FeedScreen {
         // the rest of the row opens the thing.
         let skin = rowSkin(thing)
         return HStack(alignment: .top, spacing: DS.Space.s3) {
-            if grouped { appLead(app?.source) }
+            if grouped {
+                // A row under an app header leads with the app's icon, and
+                // its own lead is not drawn (§1103a), so the one cycle turns
+                // THIS icon — to the category's glyph, since it already is
+                // the app's mark (prd §1691, §1689). Newest is where a
+                // landing's neighbours stand when several arrive at once.
+                if let app {
+                    appLead(app.source)
+                        .leadCycle(source: thing.source, id: thing.id, fact: thing.title,
+                                   index: index, restsOnMark: true)
+                } else {
+                    appLead(nil)
+                }
+            }
             Button {
                 openThing(thing)
             } label: {
