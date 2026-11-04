@@ -437,3 +437,5 @@ On for the App Store and TestFlight (user: "we want it on for app store and test
 - `-moveLend lend|takeBack` raises Move on Lend, as Holdings' Lent head and a lent row do; NSLogs `moveLend: raised <mode>` and, once read, `moveLend| <mode> | <figure> | <network> | <rate>`.
 - The calls are `AaveLend.lend`/`takeBack`, held by `AaveLend.checked`, signed through `YourAccountChain.lendCalls` (private money's simulated path). `AaveLend.on` is the off switch.
 - The demo's Lend reads 150 USDC lent on Base; its act refuses with `YourAccountDemo.actsLater`.
+
+- **Pay a zk.money tag (prd §1692).** `-openMove YES -moveSendDraft "20|zac.zk.money|USDC@Ethereum"`: a trailing `@<network>` on a send draft picks the network before the lines fill. The demo pays a made-up deposit address (`ZkMoney.demoDeposit`) and asks nothing; a real account asks zk.money's resolver, its gateway, then `resolveWithProof` on Ethereum. A tag on Base or in ETH draws the refusal line.

@@ -74,7 +74,8 @@ enum YourAccountDemo {
             // "for mag 7 just replace it with a different token like … USDG").
             return [h(Op.dollar(on: net), "195.00"), h(Op.eth, "0.0031")]
         case Op.ethereum.chainId:
-            return [h(Op.eth, "0.021")]
+            // USDC on Ethereum, so the demo can pay a zk.money tag (prd §1692).
+            return [h(Op.dollar(on: net), "120.00"), h(Op.eth, "0.021")]
         default:
             return []
         }

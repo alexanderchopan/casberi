@@ -8,8 +8,9 @@ import Foundation
 ///
 /// Every read rides the Wallet's mainnet hosts (`WalletApprovals.rpcRead`),
 /// already disclosed under the Wallet in `NetworkReach`. Nothing here reaches
-/// zk.money's own servers, and the ENS gateway (a fresh deposit address per
-/// lookup — the payment path) is never asked.
+/// zk.money's own servers, except `depositAddress(tag:)`: Move's Send asks
+/// the resolver's gateway for a fresh deposit address when you pay a tag
+/// (prd §1692), disclosed under Your account.
 enum ZkMoney {
     /// The name every zk.money counterparty wears. A rename of the row
     /// (`CounterpartyRetitle`) reads it back through `knownName`.
@@ -120,5 +121,48 @@ enum ZkMoney {
         let raw = await WalletApprovals.rpcRead(network: network, method: "eth_call",
                                                 params: (record["params"] as? [Any]) ?? []) as? String
         return ZkMoneyWire.record(tag: tag, account: account, userRecord: raw)
+    }
+
+    // MARK: - Paying a tag (Aztec V6, 2026-11-03)
+
+    /// What asking for a tag's deposit address came to.
+    enum PayAnswer: Equatable {
+        /// A fresh deposit address, proven on chain for today.
+        case address(String)
+        case notOnV6, unclaimed, unreachable
+    }
+
+    /// The demo's deposit address: made up, never asked of anyone.
+    static let demoDeposit = "0x5a3e9d1b2c4f6a8e0d7c9b1a3f5e7d9c2b4a6e8f"
+
+    /// A FRESH deposit address for `tag`, the one Move's Send pays: the
+    /// resolver's lookup, its operator's gateway, then `resolveWithProof`
+    /// on chain, which rebuilds the address and refuses any other
+    /// (`ZkMoneyWire`'s MARK). Asked once per send, never kept: a deposit
+    /// address is single-use, and its proof holds for its day only. The
+    /// gateway learns which tag is paid and when, nothing about who pays
+    /// (it is asked through Tor, as every Your account request is).
+    static func depositAddress(tag: String) async -> PayAnswer {
+        guard !DemoMode.isActive, let call = ZkMoneyWire.resolveCall(tag: tag) else { return .unreachable }
+        let lookup: ZkMoneyWire.Lookup
+        switch await WalletApprovals.ethCallKeepingRevert(network: network, to: ZkMoneyWire.resolver, data: call) {
+        case .reverted(let data): lookup = ZkMoneyWire.lookup(revert: data)
+        case .result, .unreachable: return .unreachable
+        }
+        switch lookup {
+        case .notOnV6: return .notOnV6
+        case .unclaimed: return .unclaimed
+        case .unreadable: return .unreachable
+        case .offchain(let o):
+            guard let url = ZkMoneyWire.gatewayURL(o),
+                  let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url, timeoutInterval: 30),
+                                                                     service: "Your account"),
+                  http.statusCode == 200,
+                  let response = ZkMoneyWire.gatewayData(try? JSONSerialization.jsonObject(with: data)) else { return .unreachable }
+            guard case .result(let proven) = await WalletApprovals.ethCallKeepingRevert(
+                network: network, to: o.sender, data: ZkMoneyWire.callbackCall(o, response: response)),
+                  let address = ZkMoneyWire.depositAddress(callbackResult: proven) else { return .unreachable }
+            return .address(address)
+        }
     }
 }

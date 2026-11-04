@@ -29,7 +29,10 @@ LINK="Casberi/Shared/ZkMoneyLink.swift"
 FIX="scripts/fixtures/zkmoney"
 for f in "$WIRE" "$KECCAK" "$LINK" "$FIX/ownerof-zac.json" "$FIX/userrecord-zac.json" "$FIX/code-deposit.json" \
          "$FIX/code-portal-head.json" "$FIX/portal-dai.json" "$FIX/request-link.txt" "$FIX/request-link-v3.txt" \
-         "$FIX/code-swap-escrow.json" "$FIX/code-swap-escrow-v2.json" "$FIX/code-savings-escrow.json"; do
+         "$FIX/code-swap-escrow.json" "$FIX/code-swap-escrow-v2.json" "$FIX/code-savings-escrow.json" \
+         "$FIX/code-deposit-aztec-v6.json" "$FIX/code-registration-aztec-v6.json" "$FIX/resolve-call-zac.txt" \
+         "$FIX/lookup-zac.txt" "$FIX/lookup-charlie.txt" "$FIX/lookup-unclaimed.txt" "$FIX/gateway-zac.json" \
+         "$FIX/callback-call-zac.txt" "$FIX/callback-zac.txt"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -113,6 +116,13 @@ check(ZkMoneyWire.move(token: usdc, from: me, to: deposit, watched: me, counterp
       "USDC out to a deposit address is a deposit (it is swapped on the way in)")
 check(ZkMoneyWire.move(token: ZkMoneyWire.dai, from: deposit, to: me, watched: me, counterpartyCode: nil) == nil,
       "DAI in from anyone else is nothing of zk.money's")
+// Aztec V6 (2026-11-03): measured clones and the executor that paid 9 of 9.
+check(ZkMoneyWire.role(code: result("code-deposit-aztec-v6.json")) == .deposit, "an Aztec V6 deposit address (a SIPA clone) is a deposit")
+check(ZkMoneyWire.role(code: result("code-registration-aztec-v6.json")) == .deposit, "…and so is the registration clone a first deposit uses")
+check(ZkMoneyWire.move(token: ZkMoneyWire.dai, from: "0x7c8c2147d1bb8b83e0a0501097372de170ee702a", to: me, watched: me, counterpartyCode: nil) == .withdrawal,
+      "DAI in from Aztec V6's withdrawal executor is a withdrawal")
+check(ZkMoneyWire.isPortal("0xCB99C58Fe81Ae6b2cB4835e46F7b703745879042") && ZkMoneyWire.currentPortal == "0xcb99c58fe81ae6b2cb4835e46f7b703745879042",
+      "the current portal is Aztec V6's")
 check(ZkMoneyWire.title(.deposit, amount: "459.58", symbol: "DAI") == "Deposited 459.58 DAI to zk.money", "the deposit's words")
 check(ZkMoneyWire.dai(result("portal-dai.json")).map { $0 > 25_000 && $0 < 26_000 } == true, "the portal's DAI, whole units")
 
@@ -161,6 +171,41 @@ check(ZkMoneyLink.link("https://evil.example/request#" + request.split(separator
 check(ZkMoneyLink.link("https://zk.money/request#!!") == nil, "a broken fragment is no request")
 check(CBOR.decode([0xbf]) == nil, "an indefinite map is refused")
 
+print("paying a tag (Aztec V6)")
+func text(_ name: String) -> String {
+    (try! String(contentsOfFile: fix + "/" + name, encoding: .utf8)).trimmingCharacters(in: .whitespacesAndNewlines)
+}
+// Every vector below was produced by viem against mainnet, 2026-11-03.
+check(ZkMoneyWire.resolveCall(tag: "zac") == text("resolve-call-zac.txt"), "resolve(dnsName, addr(node)) as viem encodes it")
+guard case .offchain(let lookup) = ZkMoneyWire.lookup(revert: text("lookup-zac.txt")) else {
+    print("  ✗ a V6 tag's OffchainLookup did not decode"); exit(1)
+}
+check(lookup.sender == ZkMoneyWire.resolver && lookup.url == "https://rop-v6.v6-prod.oxide.zk.money/{sender}/{data}.json",
+      "the lookup names zk.money's resolver and its gateway")
+check("0x" + Keccak256.hexString(lookup.callData) == text("resolve-call-zac.txt"), "…and asks the gateway the same call")
+check(ZkMoneyWire.gatewayURL(lookup)?.host == ZkMoneyWire.gatewayHost, "the gateway's URL, filled in")
+let elsewhere = ZkMoneyWire.Offchain(sender: lookup.sender, url: "https://evil.example/{sender}/{data}.json",
+                                     callData: lookup.callData, callback: lookup.callback, extraData: lookup.extraData)
+check(ZkMoneyWire.gatewayURL(elsewhere) == nil, "a gateway on any other host is refused")
+let gateway = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: fix + "/gateway-zac.json")))
+guard let response = ZkMoneyWire.gatewayData(gateway) else { print("  ✗ the gateway's data did not read"); exit(1) }
+check(ZkMoneyWire.callbackCall(lookup, response: response) == text("callback-call-zac.txt"), "resolveWithProof(response, extraData) as viem encodes it")
+check(ZkMoneyWire.depositAddress(callbackResult: text("callback-zac.txt")) == "0x72b68e65538aa7664544c7390f7cb9aa191352ca",
+      "the proven deposit address")
+check(ZkMoneyWire.lookup(revert: text("lookup-charlie.txt")) == .notOnV6, "a tag still on Alpha V5 is refused by the resolver itself")
+check(ZkMoneyWire.lookup(revert: text("lookup-unclaimed.txt")) == .unclaimed, "an unclaimed tag")
+check(ZkMoneyWire.lookup(revert: "0x08c379a0") == .unreadable && ZkMoneyWire.lookup(revert: nil) == .unreadable, "any other revert reads nothing")
+var forged = text("lookup-zac.txt")
+forged = forged.replacingOccurrences(of: "c329a74542688a3c4948b7d46f204d3d7e5dd525", with: "1111111111111111111111111111111111111111")
+check(ZkMoneyWire.lookup(revert: forged) == .unreadable, "a lookup from any other contract is refused")
+check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 20) == nil, "20 DAI on Ethereum pays")
+check(ZkMoneyWire.payRefusal(chainId: 1, token: "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eB48", usd: 20) == nil, "…and USDC, checksummed")
+check(ZkMoneyWire.payRefusal(chainId: 8453, token: ZkMoneyWire.usdc, usd: 20) != nil, "not on Base")
+check(ZkMoneyWire.payRefusal(chainId: 1, token: nil, usd: 20) != nil, "not ETH")
+check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 0.35) != nil, "not the fee or less")
+check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 5_000) != nil, "not $5,000 or more")
+check(ZkMoneyWire.dnsName(String(repeating: "a", count: 64)) == nil, "a label DNS cannot carry")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
@@ -205,6 +250,24 @@ PY
   echo "  ✓ $name"
 }
 
+mutate "a lookup trusted from any contract" \
+  'sender == resolver,' \
+  'sender.count == 42,'
+mutate "a gateway on any host" \
+  'url.scheme == "https", url.host == gatewayHost else { return nil }' \
+  'url.scheme == "https" else { return nil }'
+mutate "a V5 tag not refused" \
+  'if selector == Selector3668.rollupMismatch { return .notOnV6 }' \
+  'if selector == Selector3668.rollupMismatch { return .unreadable }'
+mutate "a deposit over the cap paid" \
+  'if usd >= payCapUSD {' \
+  'if usd > payCapUSD * 2 {'
+mutate "a deposit on another network paid" \
+  'guard chainId == 1, let token,' \
+  'guard let token,'
+mutate "an Aztec V6 deposit clone not read" \
+  '|| registrationImplementations.contains(implementation)' \
+  '|| false'
 mutate "the withdrawal executor not named" \
   'return isPortal(a) || withdrawalExecutors.contains(a)' \
   'return isPortal(a)'

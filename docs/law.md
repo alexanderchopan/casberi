@@ -152,7 +152,8 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Permissions' box is a pack: one circle per app, its area the dollars it reaches, and one per delegate or Safe module, filled amber when it has no limit and the charts' tint when capped, its dollars leading inside; eight, then one grey "N more"; under it "No limit" and "Capped" and the total; a tap opens the grant or the delegate, or the list in full. Delegations and Approvals list every grant under it; empty after the last revoke, it draws the pack's skeleton with "No permissions" on it, over today's revokes (§1654, §1656, §1677). Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
 - The watchlist is yours, apart from Following (§1632): one Home door like Permissions, on All and Yours only, trailing the day's biggest mover in its ink ("WLD −2.3%"), never an average, else the count; empty, it is the verb Watch a token. It pushes `Wallet · Watchlist` (the verb row, then each token: price trailing, the day's change on the line); Watch a token is a token-only search tray; a token's page is its chart, You hold, Coin or Network, Stop watching (no Swap yet). Watch is the verb for tokens, Follow for wallets and feeds, Track for subscriptions (§1632 amends §1120). Prices are keyless (DeFiLlama, CoinGecko's search), read on screen at most once per ten minutes, never through Zerion.
 
-- zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
+- zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry and refuse a follow (§1273, §1384). It reads both Aztec V5 and V6 deployments (§1692).
+- Move's Send pays a `<tag>.zk.money` at a fresh deposit address its ENS resolver proves on chain, asked at pay time, one per payment, never stored; DAI, USDC or USDT on Ethereum, over $0.35, under $5,000; a tag still on V5 is refused by name. No seat: a zk.money passkey cannot be used by another app (§1692).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
@@ -246,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1833 of 1905 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1834 of 1906 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -2081,6 +2082,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1689 — A row lead flips to its APP's mark, and to its category's glyph only when it already wears the app's mark (amended by §1691)
 - §1690 — Round-ups are set aside as you go: every send puts its change in Round-ups (Aave on Base), and at $10 the next send m…
 - §1691 — The cycle turns where a landing is SEEN: the Feed's cover disc and Newest's app icon
+- §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f…
 
 ## Dead rulings → what replaced them (generated)
 

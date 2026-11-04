@@ -118,7 +118,7 @@ HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 use "$SENT" 'listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {' "your private balance is no longer a recipient"
 use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))' "the Private switch is not off on arrival under Send"
-awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .send, receipt == nil, PrivateMove.available {' \
+awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .send, receipt == nil, PrivateMove.available, !paysZkMoney {' \
     || { echo "✗ the Private switch stands somewhere other than Send, or where the sender cannot move"; exit 1; }
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
 ! grep -q 'PrivateMove.available ? \[nil\]' "$SENT" || { echo "✗ Private is in the verbs row"; exit 1; }

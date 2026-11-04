@@ -99,7 +99,8 @@ xcrun swiftc -O -o "$TMP/t" "$WARN" "$TMP/main.swift" 2>"$TMP/err" || { cat "$TM
 "$TMP/t" || exit 1
 
 # The wiring.
-grep -q 'guard let r = resolved, stands(r) else { return nil }' "$SENTENCE" \
+# (prd §1686 adds the zk.money terms after `stands(r)`; still no lookalike term.)
+grep -q 'guard let r = resolved, stands(r), !zkMoneyUsed.contains(r.address.lowercased()),' "$SENTENCE" \
   || { echo "✗ a lookalike blocks the line again — §1509 amends §1438b to a second tap"; exit 1; }
 grep -q 'if verb != .buy, warned, armed != armKey {' "$SENTENCE" \
   || { echo "✗ a warned verb signs on the first tap (prd §1509 item 2)"; exit 1; }

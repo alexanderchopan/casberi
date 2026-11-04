@@ -157,8 +157,16 @@ struct MoveSentence: View {
     @State private var pastedTo = false
     /// A name in To being asked of its resolver, or one none answered for:
     /// said under the sentence, never a grey word left to guess (prd §1586).
-    enum Lookup: Equatable { case looking(String), missing(String) }
+    enum Lookup: Equatable { case looking(String), missing(String), refused(String) }
     @State private var lookup: Lookup?
+    /// **PAY A zk.money TAG (prd §1692).** The deposit addresses zk.money's
+    /// resolver proved for a tag this visit, lowercased: each is single-use
+    /// (a second payment to one is marked recoverable and never arrives), so
+    /// one a kept or sent line took is `zkMoneyUsed`, and To asks for a
+    /// fresh one (`zkMoneyFresh` re-runs `resolve`).
+    @State private var zkMoneyDeposits: Set<String> = []
+    @State private var zkMoneyUsed: Set<String> = []
+    @State private var zkMoneyFresh = 0
     @State private var amount = ""
     /// Dollars first (§1442a, user: "user may want to say a dollar value
     /// before they choose token"): the amount can be typed before anything
@@ -755,7 +763,8 @@ struct MoveSentence: View {
         case .send:
             // A lookalike no longer blocks the line (prd §1509 item 2, amends
             // §1438b): it warns, and the verb takes a second tap.
-            guard let r = resolved, stands(r) else { return nil }
+            guard let r = resolved, stands(r), !zkMoneyUsed.contains(r.address.lowercased()),
+                  zkMoneyRefusal == nil else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
         case .receive, .buy, .sweep, .deposit, .lend:
             return nil
@@ -771,6 +780,34 @@ struct MoveSentence: View {
     }
 
     private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) }
+
+    /// To holds a deposit address zk.money's resolver proved for a tag.
+    private var paysZkMoney: Bool {
+        verb == .send && resolved.map { zkMoneyDeposits.contains($0.address.lowercased()) } == true
+    }
+
+    /// A deposit's own limits, said before the tap (DAI, USDC or USDT on
+    /// Ethereum, over the $0.35 fee, under $5,000); nil once a token is
+    /// picked and they pass.
+    private var zkMoneyRefusal: String? {
+        guard paysZkMoney, let with else { return nil }
+        // The three tokens it takes are dollars: with no price read, a token
+        // is a dollar, so the cap never goes unchecked.
+        let usd = units.map { Op.dollars($0, decimals: with.token.decimals, price: with.price ?? 1) }
+        return ZkMoneyWire.payRefusal(chainId: network.chainId, token: with.token.contract, usd: usd)
+    }
+
+    /// The deposit addresses `lines` pay are spent: To asks for a fresh one
+    /// if it holds one of them.
+    private func spendZkMoney(_ lines: [Chain.Item]) {
+        let paid = lines.compactMap { item -> String? in
+            if case .send(let p) = item, zkMoneyDeposits.contains(p.to.lowercased()) { return p.to.lowercased() }
+            return nil
+        }
+        guard !paid.isEmpty else { return }
+        zkMoneyUsed.formUnion(paid)
+        if let r = resolved, zkMoneyUsed.contains(r.address.lowercased()) { zkMoneyFresh += 1 }
+    }
 
     // MARK: - Round-ups (prd §1452, §1690)
 
@@ -1118,7 +1155,17 @@ struct MoveSentence: View {
         .task(id: sweepKey) { await resweep() }
         .task(id: previewKey) { await repreview() }
         .task(id: checkKey) { await recheck() }
-        .task(id: to) { await resolve() }
+        .task(id: "\(to)|\(zkMoneyFresh)") { await resolve() }
+        // A deposit address's proof holds for its day, and how long the
+        // operator watches one is unmeasured: one left standing ten minutes
+        // is spent and asked for afresh (prd §1692).
+        .task(id: paysZkMoney ? resolved?.address : nil) {
+            guard paysZkMoney, let address = resolved?.address.lowercased() else { return }
+            try? await Task.sleep(for: .seconds(600))
+            guard !Task.isCancelled, resolved?.address.lowercased() == address else { return }
+            zkMoneyUsed.insert(address)
+            zkMoneyFresh += 1
+        }
         .task {
             // What you hold opens the first list; Uniswap's lists, which only
             // For and a pasted contract need, follow (prd §1586).
@@ -1223,7 +1270,7 @@ struct MoveSentence: View {
             // comes to with it (user: "needs to be clear that the 5$ is
             // the total tx").
             // The Private switch (prd §1554): off, always, on arrival.
-            if verb == .send, receipt == nil, PrivateMove.available {
+            if verb == .send, receipt == nil, PrivateMove.available, !paysZkMoney {
                 MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))
                     .padding(.top, DS.Space.s4)
                     .disabled(stage != nil)
@@ -2119,6 +2166,8 @@ struct MoveSentence: View {
             amount = Op.display(units, decimals: token.decimals, places: token.decimals)
             // A sent line carries its person back into the sentence.
             if let sent {
+                // Its deposit address was never paid: the line holds it again.
+                zkMoneyUsed.remove(sent.to.lowercased())
                 to = sent.toName ?? sent.to
                 resolved = Recipient(address: sent.to, name: sent.toName, imitates: nil)
             }
@@ -2727,6 +2776,9 @@ struct MoveSentence: View {
                     .fixedSize(horizontal: false, vertical: true)
                 pasteRow { to = $0 }
             }
+        case .refused(let words):
+            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -2737,6 +2789,7 @@ struct MoveSentence: View {
         if verb == .swap, let quoteNote { return quoteNote }
         if verb == .send {
             if malformed { return String(localized: "Check the address") }
+            if let zkMoneyRefusal { return zkMoneyRefusal }
         }
         // What signing would refuse, said before the tap: a fee the account
         // cannot pay, a node that would not price it (prd §1509).
@@ -2833,14 +2886,17 @@ struct MoveSentence: View {
             }
         }
         if YourAccountDemo.isDemo(account) {
-            let demo = YourAccountDemo.findings(to: to, token: token)
+            let demo = YourAccountDemo.findings(to: to.filter { !zkMoneyDeposits.contains($0.lowercased()) }, token: token)
             found += demo.findings
             with += demo.checkedWith
         } else {
             let sent = MoveChecks.sentTo(account, context: context)
             let named = MoveChecks.named()
             let own = Set([account.lowercased()] + [YourAccountKey.address?.lowercased()].compactMap { $0 })
-            for a in to where !MoveWarnings.isKnown(a, sentTo: sent, named: Set(named.keys), own: own) {
+            // A zk.money deposit address is new by design and proven to be
+            // the tag's on chain: "never sent here" would be true of every one.
+            for a in to where !zkMoneyDeposits.contains(a.lowercased())
+                && !MoveWarnings.isKnown(a, sentTo: sent, named: Set(named.keys), own: own) {
                 found.append(MoveWarnings.imitated(a, sentTo: sent, named: named, own: own,
                                                    looksLike: AddressSafety.isLookalike) ?? .firstSend)
             }
@@ -4542,6 +4598,7 @@ struct MoveSentence: View {
             }
             slot = items.count
         }
+        spendZkMoney([item])
         DSHaptic.tap()
         // The next sentence keeps what it is for or who it is to, and the
         // network; it moves to the next token with something left.
@@ -4743,6 +4800,7 @@ struct MoveSentence: View {
                 if case .landed = sent.outcome {
                     for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
                 }
+                spendZkMoney(batch)
                 withAnimation(DS.Motion.standard) {
                     if sweeping {
                         sweepItems = []
@@ -5345,7 +5403,8 @@ struct MoveSentence: View {
 
     private func resolve() async {
         let text = to.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let r = resolved, r.name?.caseInsensitiveCompare(text) == .orderedSame { lookup = nil; return }
+        if let r = resolved, r.name?.caseInsensitiveCompare(text) == .orderedSame,
+           !zkMoneyUsed.contains(r.address.lowercased()) { lookup = nil; return }
         resolved = nil
         malformed = false
         lookup = nil
@@ -5377,6 +5436,33 @@ struct MoveSentence: View {
                 DSHaptic.failure()
             } else if book.name(for: address) != nil {
                 DSHaptic.snap()
+            }
+            return
+        }
+        // A zk.money tag is paid at a fresh deposit address its resolver
+        // proves on chain, never at the account the tag names (prd §1692),
+        // and is read before your book: a name there may hold a deposit
+        // address already paid.
+        if let tag = ZkMoneyWire.tag(text) {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            withAnimation(DS.Motion.standard) { lookup = .looking(text) }
+            let paid = YourAccountDemo.isDemo(account) ? ZkMoney.PayAnswer.address(ZkMoney.demoDeposit)
+                : await ZkMoney.depositAddress(tag: tag)
+            guard !Task.isCancelled, text == to.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+            withAnimation(DS.Motion.standard) {
+                switch paid {
+                case .address(let address):
+                    zkMoneyDeposits.insert(address.lowercased())
+                    lookup = nil
+                    resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
+                case .notOnV6:
+                    lookup = .refused(String(localized: "\(ZkMoneyWire.display(tag)) hasn't moved to Aztec's new network yet"))
+                case .unclaimed:
+                    lookup = .missing(text)
+                case .unreachable:
+                    lookup = .refused(String(localized: "zk.money's resolver didn't answer. Try again in a minute."))
+                }
             }
             return
         }
@@ -6177,12 +6263,22 @@ struct MoveSentence: View {
     }
 
     /// Lines are `;`-separated, each `<amount>|<to>[|<SYM>]`; every line but
-    /// the last is Added once its recipient resolves.
+    /// the last is Added once its recipient resolves. A trailing
+    /// `@<network>` sends on that network (`20|zac.zk.money|USDC@Ethereum`).
     private func sendDraft(_ given: String? = nil) {
-        guard let draft = given ?? UserDefaults.standard.string(forKey: "moveSendDraft"), !draft.isEmpty else { return }
+        guard let given = given ?? UserDefaults.standard.string(forKey: "moveSendDraft"), !given.isEmpty else { return }
+        // The suffix is the LAST "@", and only when a network answers to it:
+        // a recipient may be written "@zac.zk.money".
+        var draft = given
+        if let at = given.lastIndex(of: "@"),
+           let named = Op.networks.first(where: { $0.name.lowercased() == given[given.index(after: at)...].lowercased() }) {
+            draft = String(given[..<at])
+            switchNetwork(named)
+        }
         let lines = draft.split(separator: ";").map { $0.split(separator: "|").map(String.init) }
         networkPicked = true
         Task { @MainActor in
+            for _ in 0..<50 where held.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
             for (n, parts) in lines.enumerated() {
                 if parts.count > 2, let h = held.first(where: { $0.token.symbol == parts[2] }) { with = h }
                 if with == nil { with = held.first }
