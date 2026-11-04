@@ -47,7 +47,7 @@ struct L2beatChainSheet<Tiles: View>: View {
 
     private var box: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(verbatim: "L2BEAT")
+            Text(verbatim: "ETHBEAT")
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
             CheckLadder(lit: project?.stage?.rung)

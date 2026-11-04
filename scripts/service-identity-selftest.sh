@@ -47,7 +47,7 @@ typealias S = ServiceIdentity
 // The catalogue, as `ServiceLinks.catalogue` builds it: every offer's name,
 // and the hosts its bridge reaches, by the same name (`NetworkReach`).
 let offers = ["Claude", "Linear", "Notion", "Apple Music", "Markets", "Gmail", "Wallet",
-              "Hugging Face", "GitHub", "L2BEAT", "Walletbeat", "Cal.com", "Binance",
+              "Hugging Face", "GitHub", "ETHBEAT", "Walletbeat", "Cal.com", "Binance",
               "Polar", "Polar.sh"]
 let hosts: [String: [String]] = [
     "Linear": ["api.linear.app"],
@@ -57,7 +57,7 @@ let hosts: [String: [String]] = [
     "Wallet": ["api.zerion.io", "eth-mainnet.g.alchemy.com"],
     "Hugging Face": ["huggingface.co"],
     "GitHub": ["api.github.com", "github.com"],
-    "L2BEAT": ["l2beat.com", "raw.githubusercontent.com"],
+    "ETHBEAT": ["ethbeat.org", "raw.githubusercontent.com"],
     "Walletbeat": ["raw.githubusercontent.com", "walletbeat.eth.limo"],
     "Cal.com": ["api.cal.com"],
     "Binance": ["api.binance.com", "api.binance.us"],

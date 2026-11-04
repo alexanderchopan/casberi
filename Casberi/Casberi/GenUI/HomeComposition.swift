@@ -185,7 +185,7 @@ enum HomeComposition {
         // is a subject somebody's corpus can be about, and the themes map is right to
         // draw it. "Incident" is already above, from Walletbeat's own entry.
         "Layer 2", "Layer 3",                         // which layer a chain sits on
-        "Stage 0", "Stage 1", "Stage 2",              // L2BEAT's own rung, not a subject
+        "Stage 0", "Stage 1", "Stage 2",              // ETHBEAT's own rung, not a subject
         "Milestone", "Stage",                         // which kind of record
         // AWS bridge — landed without a ledger entry, so no prd § to cite here.
         // "Alarm" and "Cost" are CloudWatch/Cost Explorer STATE labels stamped

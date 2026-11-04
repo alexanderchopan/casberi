@@ -1245,7 +1245,7 @@ if "NFTs" in wallet_groups:
 # L2BEAT and Walletbeat read as Reading (prd §1051a): incidents, reviews and
 # ratings you read, not money you hold. Matched on ONE line each — the old
 # check spanned lines (`re.S`) and so could pass on the next offer's group.
-for name in ("L2BEAT", "Walletbeat"):
+for name in ("ETHBEAT", "Walletbeat"):
     if not re.search(r'Offer\(name:\s*"%s",[^\n]*group:\s*"Reading"' % name, src):
         sys.exit(f'✗ "{name}" is no longer a Reading-group offer (prd §1051a)')
 # The seven retired seats are RETIRED: named in `Corpus.retiredSources` and

@@ -228,7 +228,7 @@ extension FeedScreen {
             case "Walletbeat":          self = .walletbeat
             // The LITERAL, for the same reason as `case "Walletbeat"` above —
             // `demo-selftest.py`'s check F reads this switch by name.
-            case "L2BEAT":              self = .l2beat
+            case "ETHBEAT":              self = .l2beat
             case "Reminders", "Todoist": self = .reminders
             // This case was written 2026-07-13 for a "Safari" bridge that
             // never shipped — Safari and Chrome exports merged into ONE

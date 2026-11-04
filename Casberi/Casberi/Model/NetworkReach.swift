@@ -415,10 +415,10 @@ enum NetworkReach {
         // NOTE `l2beat.com` is their SITE's own data endpoint, not the
         // documented API: measured 2026-08-21, `api.l2beat.com` answers 401
         // without a key. Disclosed as what it is.
-        Endpoint(service: "L2BEAT",
-                 reach: .whenConnected(bridge: "L2BEAT"),
-                 purpose: "Reads L2BEAT's public risk assessment of every chain they cover, and the incidents they have recorded. Carries nothing about you — not even which chains you follow, since one request returns them all; there is no account and no key.",
-                 hosts: ["l2beat.com", "raw.githubusercontent.com"]),
+        Endpoint(service: "ETHBEAT",
+                 reach: .whenConnected(bridge: "ETHBEAT"),
+                 purpose: "Reads ETHBEAT's public risk assessment of every chain they cover, and the incidents they have recorded. Carries nothing about you — not even which chains you follow, since one request returns them all; there is no account and no key.",
+                 hosts: ["ethbeat.org", "raw.githubusercontent.com"]),
         // CardPointers (prd §420). ONE host, and it covers the sign-in too —
         // the device flow reads as "plain REST outside MCP", which invites the
         // assumption it lives on their marketing domain; measured 2026-08-20,

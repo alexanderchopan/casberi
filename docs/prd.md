@@ -70906,3 +70906,13 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `wallet-viz-selftest.sh` compiles `WalletPortfolio` as shipped: on All Tokens' ETH is the wallet's alone, Tokens holds no app's, Lent's or Private's money, the sections add up to the number, an app picked keeps its tokens, and an app tile's id is one parser token that reads back to its holder. `private-money-selftest.sh`: the box goes through `sectionCells`, All's read is cut apps apart, an app's and Lent's tiles open their sections.
 
 **Mac half (§1402).** The same box; nothing here is phone-only.
+
+## §1699 — L2BEAT is ETHBEAT (user, 2026-11-04: "L2 Beat just changed its name to EthBeat it announced today", then "please replace in app"; the logo they saved) — BUILT and compiled; NOTHING shipped
+
+1. **The seat takes the company's new name**, spelled as they spell it: their site's title is "ETHBEAT (formerly L2BEAT)", so the offer, the rows' `source`, the reach entry, the homepage (`ethbeat.org`), every sentence that named them and the website's shelf cell, tile and docs list say ETHBEAT. The String Catalog's 43 keys move with their translations.
+2. **What stays `l2beat`:** the seat id, the ref namespace (`l2beat:`), the defaults, the type and file names, and the GitHub config path (`l2beat/l2beat` still answers). No row is re-keyed and no follow is lost.
+3. **Old rows converge** through `Corpus.renamedSources` ("L2BEAT" → "ETHBEAT") at every launch (§647), the Privacy.com precedent (§1564); the health record's name through `healthSeatNames`.
+4. **The host is `ethbeat.org`.** `l2beat.com/api/*` now answers a 301 to it, which is what turned the nightly's three L2BEAT rows red (#429–#431): the summary on the new host has the same shape (95 projects, every one staged, the five axes). The project page path (`/scaling/projects/<slug>`) redirects on the same host and is left as is. The bundled directory is NOT regenerated here (it was already stale; `l2beat-snapshot.py` now reads the new host).
+5. **The mark** is their heart with ETH in it (`brand-ethbeat`, drawn from their site icon), on the old tile's near-black; the hue is the heart's `#ff3776`.
+
+**Mac half (§1402).** The same seat and mark; nothing here is phone-only.

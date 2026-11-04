@@ -46,8 +46,8 @@ struct L2beatScreen: View {
 
 	var body: some View {
 		AccountPage(
-			name: "L2BEAT", seatID: L2beatWatch.seatID, source: L2beatWatch.source,
-			state: AccountPageState.of(name: "L2BEAT", seatID: L2beatWatch.seatID,
+			name: "ETHBEAT", seatID: L2beatWatch.seatID, source: L2beatWatch.source,
+			state: AccountPageState.of(name: "ETHBEAT", seatID: L2beatWatch.seatID,
 									   connected: connected, store: store),
 			mode: .noAccount,
 			// THE SHELF IS THE CHASSIS'S ROSTER NOW, and the defect it was
@@ -130,7 +130,7 @@ struct L2beatScreen: View {
 	@ViewBuilder private var followBlock: some View {
 		if following {
 			DSCheckList(lines: [
-				"Following L2BEAT — incidents for every chain"
+				"Following ETHBEAT — incidents for every chain"
 			])
 		} else {
 			DSSlabButton(tile: .follow, title: String(localized: "Follow the incidents"),
@@ -157,7 +157,7 @@ struct L2beatScreen: View {
 			ForEach(hits) { project in
 				BridgeSearchResultRow(
 					imageURL: nil,
-					fallbackIcon: "L2BEAT",
+					fallbackIcon: "ETHBEAT",
 					title: project.name,
 					subtitle: subtitle(project),
 					action: { watch(project) })
@@ -168,7 +168,7 @@ struct L2beatScreen: View {
 				// match" is a common answer and must not read as an error. It no longer
 				// carries the count: the door directly beneath it states it, and saying it
 				// twice two lines apart is the wordiness §315 exists to stop.
-				DSSlabNote(text: String(localized: "L2BEAT doesn't cover that one."), plain: true)
+				DSSlabNote(text: String(localized: "ETHBEAT doesn't cover that one."), plain: true)
 			}
 
 			// A DOOR, in the shape every other push on this screen wears — and it states
@@ -186,7 +186,7 @@ struct L2beatScreen: View {
 			// browse link being broken.
 			BridgeSyncStatusRows(
 				syncing: syncing,
-				syncingLine: String(localized: "Reading L2BEAT…"),
+				syncingLine: String(localized: "Reading ETHBEAT…"),
 				proof: result)
 		}
 	}
@@ -197,7 +197,7 @@ struct L2beatScreen: View {
 	/// it, rather than inventing a verdict.
 	private func rowSubline(_ id: String) -> String {
 		guard let project = L2beatState.best(id) else {
-			return String(localized: "Reading L2BEAT…")
+			return String(localized: "Reading ETHBEAT…")
 		}
 		return subtitle(project)
 	}
@@ -237,7 +237,7 @@ struct L2beatScreen: View {
 
 	private func load() {
 		watched = ((try? modelContext.fetch(FetchDescriptor<Thing>(
-			predicate: #Predicate { $0.source == "L2BEAT" },
+			predicate: #Predicate { $0.source == "ETHBEAT" },
 			sortBy: [SortDescriptor(\.title)]))) ?? [])
 			.live
 			.filter { L2beatWatch.isChainRef($0.sourceRef) }
@@ -283,7 +283,7 @@ struct L2beatScreen: View {
 			if let added {
 				result = added > 0 ? .landed(added) : .upToDate
 			} else {
-				result = .failed(String(localized: "Couldn't reach L2BEAT — check your connection."))
+				result = .failed(String(localized: "Couldn't reach ETHBEAT — check your connection."))
 			}
 		} while syncPending
 	}

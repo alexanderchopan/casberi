@@ -115,7 +115,7 @@ ENTRIES = [
   dict(id="work-watch", covers=[FS+"githubWatch"], launch=[D, "-openRoom", "Work"], steps=section("Work", "GitHub, A person"), anchor=GRAB, afterSwipe="button:=Add to Work"),
   dict(id="life-track-mail-list", covers=[FS+"mailSubscriptionAdd"], launch=[D, "-openRoom", "Life"], steps=section("Life", "Gmail, A sender"), anchor="text:=Uma Patel", afterSwipe="button:=Add to Life"),
   # An app's directory pushes inside its app sheet: a pull closes the sheet, Back returns to the app.
-  pushed("l2beat-directory", [], [D, "-openRoom", "Media"], section("Media", "L2BEAT, A chain")+[{"tap": "button:^Browse every chain"}],
+  pushed("l2beat-directory", [], [D, "-openRoom", "Media"], section("Media", "ETHBEAT, A chain")+[{"tap": "button:^Browse every chain"}],
          BACK, "button:^Browse every chain", swipe_to="button:=Add to Media"),
   pushed("walletbeat-directory", [], [D, "-openRoom", "Media"], section("Media", "Walletbeat, A wallet")+[{"tap": "button:^Browse every wallet"}],
          BACK, "button:^Browse every wallet", swipe_to="button:=Add to Media"),
@@ -143,7 +143,7 @@ ENTRIES = [
          section("Media", "Walletbeat, A wallet")+[{"tap": "button:^Browse every wallet"}, {"tap": "text:=Ambire"}], "link:=Full review on Walletbeat",
          "text:=Ambire", swipe_to="button:=Add to Media", offscreen=True),
   pushed("l2beat-chain", ["Screens/L2beatDirectoryScreen.swift:opened"], [D, "-openRoom", "Media"],
-         section("Media", "L2BEAT, A chain")+[{"tap": "button:^Browse every chain"}, {"tap": "text:=Abstract"}], "link:=Full assessment on L2BEAT",
+         section("Media", "ETHBEAT, A chain")+[{"tap": "button:^Browse every chain"}, {"tap": "text:=Abstract"}], "link:=Full assessment on ETHBEAT",
          "text:=Abstract", swipe_to="button:=Add to Media", offscreen=True),
   pushed("thing-walletbeat", ["Screens/WalletbeatSheetViews.swift:openedWallet"], [D],
          OPEN("Customer Data Exposed")+[{"tap": "button:^What Walletbeat says about Trezor"}], "link:=Full review on Walletbeat",

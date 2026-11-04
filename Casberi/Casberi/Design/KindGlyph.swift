@@ -297,7 +297,7 @@ enum BridgeGlyph {
         // not hold for 76 of the 105 chains it covers (§83); `list.clipboard` is
         // taken by Walletbeat, whose job this most resembles, and reusing it
         // would make two different registries indistinguishable in the strip.
-        case "l2beat": return "square.stack.3d.up"
+        case "ethbeat": return "square.stack.3d.up"
         // The offers sitting unused on your cards — a reward, not a card. The
         // card glyphs are taken by the seats that ARE cards (Privacy, Apple
         // Wallet), and reusing one would file this beside them as a third card.

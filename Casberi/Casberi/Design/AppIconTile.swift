@@ -132,7 +132,7 @@ extension DS {
         // separate two seats is the invented-brand-colour move `AssetMark`
         // refuses. They never sit adjacent — one is a Wallet venue and this is a
         // Markets one — and the marks themselves are nothing alike.
-        case "l2beat":              return Color.fixed("#f9347b")
+        case "ethbeat":             return Color.fixed("#ff3776")
 
         // Circle's mark is a logo-on-white lockup (the PostHog/Hugging Face
         // shape), so the brand is the mark, not the field — and the mark is a

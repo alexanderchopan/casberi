@@ -130,23 +130,23 @@ struct L2beatRoom: Equatable {
 		guard let top = room.items.first else { return newsHeadline(room) }
 		if top.recentIncidents > 0 {
 			return top.recentIncidents == 1
-				? String(localized: "L2BEAT recorded an incident on \(top.name)")
-				: String(localized: "L2BEAT recorded \(top.recentIncidents) incidents on \(top.name)")
+				? String(localized: "ETHBEAT recorded an incident on \(top.name)")
+				: String(localized: "ETHBEAT recorded \(top.recentIncidents) incidents on \(top.name)")
 		}
 		if top.underReview {
-			return String(localized: "L2BEAT is re-examining \(top.name)")
+			return String(localized: "ETHBEAT is re-examining \(top.name)")
 		}
 		switch top.lead {
 		case .finding(let risk) where risk.worstSentiment == .bad:
-			return String(localized: "L2BEAT faults \(top.name) on \(risk.axis.label.lowercased())")
+			return String(localized: "ETHBEAT faults \(top.name) on \(risk.axis.label.lowercased())")
 		case .finding(let risk):
-			return String(localized: "L2BEAT flags \(top.name)'s \(risk.axis.label.lowercased())")
+			return String(localized: "ETHBEAT flags \(top.name)'s \(risk.axis.label.lowercased())")
 		case .nothingFlagged:
-			return String(localized: "L2BEAT flags nothing on \(top.name)")
+			return String(localized: "ETHBEAT flags nothing on \(top.name)")
 		case .underReview:
-			return String(localized: "L2BEAT is re-examining \(top.name)")
+			return String(localized: "ETHBEAT is re-examining \(top.name)")
 		case .unread:
-			return String(localized: "Reading L2BEAT…")
+			return String(localized: "Reading ETHBEAT…")
 		}
 	}
 
@@ -159,13 +159,13 @@ struct L2beatRoom: Equatable {
 	static func note(_ room: L2beatRoom) -> String {
 		guard !room.items.isEmpty else { return newsNote(room) }
 		let unread = room.items.filter { !$0.read }.count
-		if unread == room.total { return String(localized: "Reading L2BEAT…") }
+		if unread == room.total { return String(localized: "Reading ETHBEAT…") }
 
 		let onLadder = room.items.compactMap { $0.stage?.rung }
 		guard !onLadder.isEmpty else {
 			return room.total == 1
-				? String(localized: "L2BEAT doesn't place this chain on its stage ladder.")
-				: String(localized: "L2BEAT doesn't place any of these on its stage ladder.")
+				? String(localized: "ETHBEAT doesn't place this chain on its stage ladder.")
+				: String(localized: "ETHBEAT doesn't place any of these on its stage ladder.")
 		}
 		let zero = onLadder.filter { $0 == 0 }.count
 		if zero == onLadder.count {
@@ -190,12 +190,12 @@ struct L2beatRoom: Equatable {
 	/// words about their reading where there is not — never a sentence they didn't write
 	/// dressed as one they did.
 	static func leadLine(_ item: Item) -> String {
-		guard item.read else { return String(localized: "Reading L2BEAT…") }
+		guard item.read else { return String(localized: "Reading ETHBEAT…") }
 		switch item.lead {
 		case .unread:
 			return String(localized: "Not assessed yet")
 		case .underReview:
-			return String(localized: "L2BEAT is re-examining this assessment")
+			return String(localized: "ETHBEAT is re-examining this assessment")
 		case .finding(let risk):
 			let text = risk.worstExplanation
 			return text.isEmpty ? "\(risk.axis.label): \(risk.value)" : text
@@ -218,7 +218,7 @@ struct L2beatRoom: Equatable {
 		guard let news = room.news, news.total > 0 else {
 			// Nothing landed on this device yet, which is a fact about the read rather than
 			// about the world — §83's rule in the one room built to report what is known.
-			return String(localized: "Reading L2BEAT…")
+			return String(localized: "Reading ETHBEAT…")
 		}
 		if news.recent > 0 {
 			return news.recent == 1
@@ -254,12 +254,12 @@ struct L2beatRoom: Equatable {
 		guard !room.items.isEmpty else {
 			return room.news == nil
 				? nil
-				: String(localized: "L2BEAT's reading, not ours · every chain they cover")
+				: String(localized: "ETHBEAT's reading, not ours · every chain they cover")
 		}
 		let shown = room.items.count
 		if shown < room.total {
-			return String(localized: "Showing \(shown) of \(room.total) · L2BEAT's assessment, read on this device")
+			return String(localized: "Showing \(shown) of \(room.total) · ETHBEAT's assessment, read on this device")
 		}
-		return String(localized: "L2BEAT's assessment, not ours · read on this device")
+		return String(localized: "ETHBEAT's assessment, not ours · read on this device")
 	}
 }
