@@ -298,6 +298,10 @@ KNOWN_PROPER: set[str] = {
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
     # Ethereum's test network, where Move to private runs (prd §1554).
     "Sepolia",
+    # Round-ups, the pot your account's change is set aside in (prd §1452,
+    # §1690), named as a place: "To Round-ups", "Move Round-ups to your
+    # private balance" (user, 2026-11-04: "It's a name").
+    "Round",
     "Ethrex", "Reown", "WalletConnect", "Visa", "Mastercard", "Metamask", "Delegator",
     # The CHAIN is Hegotá; the SEAT is "Hegotá UTXO" since §629. The rename
     # took the accented spelling out of the catalog (which is where proper
