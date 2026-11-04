@@ -247,10 +247,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1842 of 1914 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1843 of 1915 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a, §1568, §1681)
+- §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677)
 - §5 — How it works today — Bob (amended by §1208c, §1680)
 - §6 — How it works today — Alice (amended by §1113, §1568)
@@ -2090,7 +2090,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
-- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'…
+- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a)
+- §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
 
 ## Dead rulings → what replaced them (generated)
 
