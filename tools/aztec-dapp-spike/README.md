@@ -131,3 +131,15 @@ device the test app's page is bundled and served by the app itself on
 `127.0.0.1:8489`, a second origin, so the phone needs no Mac. A generic iOS
 build signs with the Apple Development identity; `Device/run.sh --auto` installs
 and runs it once the iPhone is reachable.
+
+### On the iPhone 17 Pro Max, 2026-11-04 (`Device/run.sh --auto`, V6 testnet)
+
+| step | proof | ChonkProve | transaction |
+|---|---|---|---|
+| deploy token | 5.6 s | 1.65 s | 16.2 s |
+| mint privately | 3.1 s | 1.48 s | 55.7 s |
+| send privately | 3.4 s | 1.38 s | 26.8 s |
+| read private balance (750,000) | — | — | 2.2 s |
+
+Proofs are about three times the Mac simulator's speed; the transactions'
+spread is the testnet's blocks (each waits to be proposed), not the phone.
