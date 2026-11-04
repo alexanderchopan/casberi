@@ -50,7 +50,30 @@ enum PrivacyFetch {
         guard let rows = await list(url, token: token) else { return nil }
         let shaped = rows.compactMap(txnThing)
         await repairLanded(shaped)
+        await readCards(token: token, transactions: rows)
         return shaped
+    }
+
+    /// Each card's limit, for its pick's Holdings (prd §1701): `GET /v1/cards`
+    /// on the same host and key, read-only. A MONTHLY limit says what is left
+    /// this calendar month from the approved purchases this pass read, keyed
+    /// by each transaction's `card.token`. UNMEASURED (prd §780b): the field
+    /// names are Privacy's published ones, never read live here; the probe
+    /// (`-privacyProbe`) is where they get reconciled. A failed read keeps
+    /// the last answer.
+    private static func readCards(token: String, transactions: [[String: Any]]) async {
+        guard let raw = await list("\(api)/cards?page_size=50", token: token) else { return }
+        let month = Calendar.current.dateInterval(of: .month, for: .now)
+        var spent: [String: Int] = [:]
+        for txn in transactions {
+            guard let card = (txn["card"] as? [String: Any])?["token"] as? String,
+                  let cents = centsFor(txn),
+                  let when = IngestSupport.isoDate(txn["created"]),
+                  month?.contains(when) == true else { continue }
+            spent[card, default: 0] += cents
+        }
+        SeatHoldingsStore.keep(SeatHoldings.privacy(raw.compactMap(SeatHoldings.privacyCard),
+                                                    spentCents: spent), .privacy)
     }
 
     /// A purchase: "Netflix.com · $12.99", dated when Privacy recorded it.

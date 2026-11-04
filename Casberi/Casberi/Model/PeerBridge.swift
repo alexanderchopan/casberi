@@ -374,7 +374,37 @@ enum PeerBridge {
         // dropped by `clearCursor` — this filter is belt-and-suspenders).
         added += await pollOpenDeposits(context: context, addresses: Set(addresses.map { $0.lowercased() }),
                                         existing: existing)
+        await readEscrowed(addresses: Set(addresses.map { $0.lowercased() }))
         return added
+    }
+
+    /// What a seller has in Peer's escrow, for its pick's Holdings (prd
+    /// §1701): each open deposit's `remainingDeposits` + `outstandingIntentAmount`
+    /// (`getDeposit` words 6 and 7, after the `acceptingIntents` word 5 this
+    /// seat measured). The struct order is Peer's `IEscrow.sol`; words 6–7
+    /// were never read live: UNMEASURED (prd §780b). That money left the
+    /// wallet, so it is in no total, and none is made of it here.
+    private static func readEscrowed(addresses: Set<String>) async {
+        let entries = openDeposits().filter { addresses.contains($0["wallet"] ?? "") }
+        var deposits: [(id: String, symbol: String?, amount: Double)] = []
+        var reached = entries.isEmpty
+        for entry in entries {
+            guard let depositId = entry["depositId"],
+                  let ret = await call(method: "eth_call",
+                                       params: [["to": escrow, "data": "0x9f9fb968" + depositId.dropFirst(2)],
+                                                "latest"]) as? String,
+                  let remaining = word(ret, 6), let outstanding = word(ret, 7)
+            else { continue }
+            reached = true
+            guard let token = await depositToken(escrow: escrow, depositId: depositId),
+                  let decimals = token.decimals else { continue }
+            let scale = pow(10, Double(decimals))
+            let held = SeatHoldings.peerHeld(remaining: WalletIngest.hexToDouble("0x" + remaining) / scale,
+                                             outstanding: WalletIngest.hexToDouble("0x" + outstanding) / scale)
+            let number = String(format: "%.0f", WalletIngest.hexToDouble(depositId))
+            deposits.append((id: number, symbol: token.symbol, amount: held))
+        }
+        if reached { SeatHoldingsStore.keep(SeatHoldings.peer(deposits), .peer) }
     }
 
     /// `-peerProbe <blocksBack|YES>` — runs the sweep headlessly. A numeric

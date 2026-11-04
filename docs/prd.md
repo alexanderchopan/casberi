@@ -70928,3 +70928,17 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Not built, proposed:** what the other picks' Holdings would show, from what each app already reads — in the session's report, for a ruling.
 
 **Mac half (§1402).** The same views on Catalyst; nothing here is phone-only.
+
+## §1701 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", Privacy.com's limits, ether.fi's Cash accounts and Peer's escrow (extends §1700; amends §1618 item 2 and §1078's dimmed Holdings for these six) (user, 2026-11-04, offered dimming or "Show something" for the picks with nothing held: "Show something", then "Also add new reads") — BUILT and compiled; NOT seen on the simulator here; three reads UNMEASURED
+
+1. **ENS** lists the names you follow, A–Z, each with the words after its name in its own title ("expires 9 Dec 2027"); a name nobody registered is left out. A row opens the name.
+2. **CardPointers** lists the cards its offers name, each with how many offers are still unused; a card whose offers are all used stays, at none.
+3. **MetaMask Card** states "Can spend": per wallet, chain (Linea, Base) and dollar token, the lower of the larger foxConnect allowance and the wallet's balance, summed. The spenders are MetaMask's own `cardFeature` defaults, read 2026-11-04. A plain ERC-20 `allowance`/`balanceOf` on the chain's own hosts — UNMEASURED live (§780b). That money is the wallet's, already in Tokens.
+4. **Privacy.com** lists each open or paused card with its limit, and what is left of a monthly one this calendar month from the purchases the same pass read (by `card.token`). `GET /v1/cards`, same host and key, read-only — UNMEASURED: the field names are Privacy's published ones (§780b). A limit is no money: words, never summed.
+5. **ether.fi** lists each Cash account by its tail with its collateral and what it can still borrow — the DebtManager read the seat already makes (§311's measurements), now kept. The collateral sits in the safe you watch, already in the Wallet's number.
+6. **Peer** lists each open deposit's money in escrow: `remainingDeposits` + `outstandingIntentAmount`, `getDeposit` words 6 and 7 after the `acceptingIntents` word 5 the seat measured, in Peer's `IEscrow.sol` order — UNMEASURED live (§780b). Dollars for a dollar stablecoin, the token's own quantity otherwise. It left the wallet and is in no total.
+7. **Never counted.** None of these reaches the Wallet's number: `wallet-total-audit.py` fails `SeatHoldings` in `WalletIngest`, `WalletPortfolio` or `WalletCash`, and each seat leaving its Holdings, with three new mutations. `seat-holdings-selftest.sh` holds the compositions (seven mutations) and the reads' wiring.
+8. **The demo holds each** (`SeatHoldingsStore.demo`), so every pick's Holdings is lit and the sweep's `held=` reads full.
+9. **Not built:** Rocket Money (its read is bills, "Never a balance": a balance read means learning its accounts query from the live page, §780b's walk, then measuring it) and Railgun (its private balance is deliberately unbuilt: it means scanning the pool's notes with the viewing key). Their Holdings keep dimming.
+
+**Mac half (§1402).** The same views on Catalyst; nothing here is phone-only.

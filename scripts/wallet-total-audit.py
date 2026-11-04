@@ -415,9 +415,23 @@ def audit(texts: dict) -> list:
         if re.search(r"PlasmaOneCard\.(balance|storedBalances)\(", code[name]):
             bad.append(f"{name} reads Plasma One's card balance — the card's money may "
                        "already be in the total through its watched contract (prd §1700)")
-    own = body(code["FeedScreen"], "func walletSeatOwnHeld(")
+    own = body(code["FeedScreen"], "func walletSeatItems(")
     if "case PlasmaOneCard.source" not in own or "walletPlasmaOneCard" not in code["FeedScreen"]:
         bad.append("Plasma One's card balance no longer stands in its Holdings (prd §1700)")
+
+    # §1701 — every other app's own holdings (MetaMask Card's "Can spend",
+    # Privacy.com's limits, ether.fi's Cash accounts, Peer's escrow, ENS's
+    # names, CardPointers' cards) stand in Holdings on the pick and NEVER in
+    # the Wallet's number: a card's wallet and a Cash safe are already in it,
+    # a limit and a name are no money, and escrow is in no total by rule.
+    for name in ("WalletIngest", "WalletPortfolio", "WalletCash"):
+        if "SeatHoldings" in code[name]:
+            bad.append(f"{name} reads an app's own holdings (SeatHoldings) — they stand in "
+                       "Holdings on its pick and are never counted (prd §1701)")
+    for seat in ("MetaMaskCardBridge.source", "WalletCards.privacySource", "EtherFiCash.source",
+                 "PeerBridge.sourceName", "ENSWatch.source", "CardPointersIngest.source"):
+        if f"case {seat}" not in own:
+            bad.append(f"{seat}'s holdings no longer stand in its Holdings (prd §1701)")
     return bad
 
 
@@ -552,8 +566,15 @@ def self_test() -> int:
         ("Plasma One's card joins the portfolio read", "WalletIngest",
          lambda t: t.replace("let pools = await DexPrices.prices(for: dexAsk)",
                              "_ = PlasmaOneCard.balance(watched: [])\n        let pools = await DexPrices.prices(for: dexAsk)", 1)),
+        ("an app's own holdings join the cash total", "WalletCash",
+         lambda t: t.replace("        return out\n    }\n",
+                             "        _ = SeatHoldingsStore.items(.peer)\n        return out\n    }\n", 1)),
+        ("an app's own holdings join the portfolio", "WalletPortfolio",
+         lambda t: t + "\nlet _leak = SeatHoldingsStore.items(.etherFi)\n"),
+        ("Peer's escrow leaves its Holdings", "FeedScreen",
+         lambda t: t.replace("case PeerBridge.sourceName:", "case \"none\":", 1)),
         ("Plasma One's card leaves its Holdings", "FeedScreen",
-         lambda t: t.replace("case PlasmaOneCard.source?:", "case \"none\"?:", 1)),
+         lambda t: t.replace("case PlasmaOneCard.source:", "case \"none\":", 1)),
         ("the flat $1.99 floor comes back", "WalletIngest",
          lambda t: t.replace("let floor = (c.trashFiltered || c.contract == nil) ? unwatchedFloor : holdingFloor",
                              "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),

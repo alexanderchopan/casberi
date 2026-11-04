@@ -442,13 +442,19 @@ extension FeedScreen {
                         .walletListRow()
                 }
             }
-            // Plasma One's card, on its pick (prd §1700): what the card
-            // can still spend, as its last read left it. Never in the total.
-            if selectedSeat?.source == PlasmaOneCard.source, let card = walletPlasmaOneCard {
-                walletPreviewRow(String(localized: "Card balance"),
-                                 figure: mask ?? WalletValue.money(card.amount),
-                                 act: { appSettings?() }) {
-                    BridgeIcon(name: PlasmaOneCard.source, size: DS.Mark.badge)
+            // What the app picked holds of its own (prd §1700, §1701), as its
+            // read left it: a card's balance, a name, a card's limit, a Cash
+            // account, money in escrow. Never in the total. A row that is a
+            // landed thing opens it; the rest open the app's page.
+            if let seat = selectedSeat {
+                ForEach(walletSeatItems(all), id: \.name) { item in
+                    walletPreviewRow(item.name,
+                                     figure: item.usd > 0 ? (mask ?? WalletValue.money(item.usd)) : item.figure,
+                                     act: {
+                                         if let ref = item.ref { openBySourceRef(ref, in: all) } else { appSettings?() }
+                                     }) {
+                        BridgeIcon(name: seat.mark, size: DS.Mark.badge)
+                    }
                 }
             }
             // What is lent on Aave, Round-ups last, then what is private: the

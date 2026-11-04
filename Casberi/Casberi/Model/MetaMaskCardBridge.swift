@@ -402,7 +402,62 @@ enum MetaMaskCardBridge {
             anyChainAnswered = true
             added += n
         }
+        await readCanSpend(addresses: addresses)
         return anyChainAnswered ? added : nil
+    }
+
+    // MARK: - What the card can draw (prd §1701)
+
+    /// The foxConnect spenders per chain, global then US — from MetaMask's
+    /// own `cardFeature` defaults (`metamask-mobile`, `app/selectors/
+    /// featureFlagController/card/defaults.ts`, read 2026-11-04: Linea
+    /// `eip155:59144`, Base `eip155:8453`; Base's two are one address). A
+    /// REMOTE flag: re-read that file before trusting a stale constant.
+    /// Monad is left out: it is read through Alchemy's index, not `call`.
+    static let foxConnect: [String: [String]] = [
+        "Linea": ["0x9dd23a4a0845f10d65d293776b792af1131c7b30",
+                  "0xa90b298d05c2667ddc64e2a4e17111357c215dd2"],
+        "Base": ["0xdabdafc43b2bc1c7d10c2bbce950a8cad4a367f8"],
+    ]
+
+    /// "Can spend" (prd §1701): per watched wallet, chain and dollar token,
+    /// the lower of the larger foxConnect allowance and the wallet's balance
+    /// (`allowance(owner, spender)`, `balanceOf(owner)`, plain `eth_call`s on
+    /// the chain's own hosts). The balance is the wallet's own, already in
+    /// Tokens, so this is NEVER counted (`wallet-total-audit.py`). Kept only
+    /// when a chain answered; a wallet that granted no allowance reads 0 and
+    /// keeps nothing. The ABI is ERC-20's own; the read was not run live from
+    /// this app: UNMEASURED (prd §780b).
+    private static func readCanSpend(addresses: [String]) async {
+        var pairs: [(allowance: Double, balance: Double)] = []
+        var answered = false
+        for chain in chains where chain.alchemyNetwork == nil {
+            let spenders = foxConnect[chain.name] ?? []
+            guard !spenders.isEmpty else { continue }
+            for address in addresses {
+                let owner = String(repeating: "0", count: 24) + address.lowercased().dropFirst(2)
+                for (token, spendable) in chain.spendable where spendable.currency == "USD" {
+                    var allowance = 0.0
+                    for spender in spenders {
+                        let arg = owner + String(repeating: "0", count: 24) + spender.dropFirst(2)
+                        guard let hex = await call(chain, method: "eth_call",
+                                                   params: [["to": token, "data": "0xdd62ed3e" + arg], "latest"]) as? String
+                        else { continue }
+                        answered = true
+                        allowance = max(allowance, WalletIngest.hexToDouble(hex))
+                    }
+                    guard allowance > 0,
+                          let hex = await call(chain, method: "eth_call",
+                                               params: [["to": token, "data": "0x70a08231" + owner], "latest"]) as? String
+                    else { continue }
+                    let scale = pow(10, Double(spendable.decimals))
+                    pairs.append((allowance / scale, WalletIngest.hexToDouble(hex) / scale))
+                }
+            }
+        }
+        if answered {
+            SeatHoldingsStore.keep(SeatHoldings.metaMask(SeatHoldings.canSpend(pairs)), .metaMask)
+        }
     }
 
     @MainActor

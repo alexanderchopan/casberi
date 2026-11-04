@@ -40,7 +40,7 @@ extension FeedScreen {
             // lands no rows, so its holdings are its content (the sweep's rule).
             if shown == .holdings || selectedSeat != nil {
                 held = walletScopeIsEmpty(.holdings) && walletSeatHeld(visible).isEmpty
-                    && walletSeatOwnHeld().isEmpty ? "empty" : "full"
+                    && walletSeatOwnHeld(visible).isEmpty ? "empty" : "full"
             }
         }
         return "\(source) | pick=\(pick) | tile=\(tile) | rows=\(visible.live.count) | held=\(held)"

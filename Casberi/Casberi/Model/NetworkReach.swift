@@ -496,7 +496,7 @@ enum NetworkReach {
                  refusesTor: ["gateway.tenderly.co"]),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
-                 purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow.",
+                 purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow, and what a deposit of yours still holds in Peer's escrow.",
                  hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"],
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
@@ -621,7 +621,7 @@ enum NetworkReach {
                  refusesTor: ["9745.rpc.thirdweb.com"]),
         Endpoint(service: "MetaMask Card",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the accounts you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
+                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the accounts you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. On Linea and Base it also reads the card's allowance and your balance of each card token, to say what the card can spend. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
                  hosts: ["rpc.linea.build", "linea.gateway.tenderly.co",
                          // Base's three: `mainnet.base.org` for the block
                          // number, publicnode and Tenderly for the logs it
@@ -1039,7 +1039,7 @@ enum NetworkReach {
                  hosts: ["api-bitrefill.com", "www.bitrefill.com"]),
         Endpoint(service: "Privacy.com",
                  reach: .whenConnected(bridge: "Privacy.com"),
-                 purpose: "Reads your approved card purchases with an API key you provide. Read-only by conduct — it only ever reads.",
+                 purpose: "Reads your approved card purchases and your cards' limits with an API key you provide. Read-only by conduct — it only ever reads.",
                  hosts: ["api.privacy.com"]),
 
         // MARK: On tap — your own agent key, only when you press it

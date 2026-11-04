@@ -1913,6 +1913,34 @@
         }
       }
     },
+    "%@ a purchase" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ por compra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1回あたり%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결제당 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每笔 %@"
+          }
+        }
+      }
+    },
     "%@ a week to reach it by %@" : {
       "localizations" : {
         "en" : {
@@ -8240,6 +8268,34 @@
         }
       }
     },
+    "%@ left of %@ a month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quedan %1$@ de %2$@ al mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "月%2$@のうち残り%1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "월 %2$@ 중 %1$@ 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每月 %2$@,剩余 %1$@"
+          }
+        }
+      }
+    },
     "%@ left to match %@" : {
       "localizations" : {
         "es" : {
@@ -13012,6 +13068,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 至 %@"
+          }
+        }
+      }
+    },
+    "%@ to borrow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ para pedir prestado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "借入可能 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대출 가능 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可借 %@"
           }
         }
       }
@@ -32736,6 +32820,34 @@
         }
       }
     },
+    "%lld unused offers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ofertas sin usar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未使用のオファー %lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용하지 않은 혜택 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个未使用的优惠"
+          }
+        }
+      }
+    },
     "%lld up" : {
       "localizations" : {
         "es" : {
@@ -39843,6 +39955,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 轮"
+          }
+        }
+      }
+    },
+    "1 unused offer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 oferta sin usar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未使用のオファー 1件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용하지 않은 혜택 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 个未使用的优惠"
           }
         }
       }
@@ -61992,6 +62132,34 @@
         }
       }
     },
+    "Can spend" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puede gastar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用可能額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용 가능"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可消费"
+          }
+        }
+      }
+    },
     "Can spend without a signature" : {
       "localizations" : {
         "es" : {
@@ -62704,6 +62872,34 @@
         }
       }
     },
+    "Card balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saldo de la tarjeta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カード残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡内余额"
+          }
+        }
+      }
+    },
     "Card copied. Paste it in X" : {
       "localizations" : {
         "es" : {
@@ -62728,6 +62924,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已复制卡片。请粘贴到 X"
+          }
+        }
+      }
+    },
+    "Card ending %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarjeta terminada en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "末尾%@のカード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝자리 %@ 카드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尾号 %@ 的卡"
           }
         }
       }
@@ -63848,6 +64072,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi，设置"
+          }
+        }
+      }
+    },
+    "Cash account %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuenta Cash %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cashアカウント %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cash 계정 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cash 账户 %@"
           }
         }
       }
@@ -78096,6 +78348,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已发布的部署"
+          }
+        }
+      }
+    },
+    "Deposit #%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Depósito n.º %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デポジット #%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예치 #%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存款 #%@"
           }
         }
       }
@@ -120044,6 +120324,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在本次读取覆盖的链段上，你关注的对象没有任何交易记录。"
+          }
+        }
+      }
+    },
+    "No unused offers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin ofertas sin usar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未使用のオファーなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용하지 않은 혜택 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有未使用的优惠"
           }
         }
       }
@@ -221697,6 +222005,62 @@
         }
       }
     },
+    "card" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tarjeta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "枚のカード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "张卡"
+          }
+        }
+      }
+    },
+    "cards" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tarjetas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "枚のカード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "张卡"
+          }
+        }
+      }
+    },
     "category" : {
       "localizations" : {
         "es" : {
@@ -222427,6 +222791,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "委托"
+          }
+        }
+      }
+    },
+    "deposit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "depósito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件のデポジット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "笔存款"
           }
         }
       }
@@ -227401,6 +227793,34 @@
         }
       }
     },
+    "name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件の名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个名称"
+          }
+        }
+      }
+    },
     "named %@" : {
       "localizations" : {
         "es" : {
@@ -227515,6 +227935,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "指定了链 %@，但数据属于链 %lld"
+          }
+        }
+      }
+    },
+    "names" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nombres"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件の名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "个名称"
           }
         }
       }
@@ -237350,6 +237798,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "个关注的代币"
+          }
+        }
+      }
+    },
+    "tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "種類のトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "种代币"
           }
         }
       }
