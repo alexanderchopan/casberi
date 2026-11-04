@@ -64,8 +64,26 @@ final class AztecAccountStore {
             .flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) } ?? Snapshot()
     }
 
+    /// What the screens show: the demo's sample account in the demo (prd
+    /// §1618: demo data on every tab, never the phone's own), else this
+    /// phone's reading.
+    var shown: Snapshot { DemoMode.isActive ? Self.demo : snapshot }
+
     /// Whether the row and the Holdings place show (§1700a item 2).
-    var isShown: Bool { snapshot.used }
+    var isShown: Bool { shown.used }
+
+    /// The demo's Aztec account: an address no key derives, a little private
+    /// USDC on Aztec (Shield's bridged USDC) and some Fee Juice for gas.
+    static let demo = Snapshot(
+        used: true,
+        address: "0x0de70a11ce0c4f7e2b9a1d3c5e7f90b2d4a6c8e01f2a3b4c5d6e7f8091a2b3c",
+        holdings: [
+            Holding(kind: .token, address: "0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38",
+                    name: "USDC", decimals: 6, privateUnits: "120000000", publicUnits: "0"),
+            Holding(kind: .feeJuice, address: "0x0000000000000000000000000000000000000000000000000000000000000003",
+                    name: "Fee Juice", decimals: 18, privateUnits: nil, publicUnits: "2500000000000000000"),
+        ],
+        readAt: nil)
 
     /// The account was used: an app connected, money moved to it, something arrived.
     func markUsed(address: String) {

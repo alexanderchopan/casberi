@@ -19,12 +19,12 @@ extension FeedScreen {
         let store = AztecAccountStore.shared
         // Yours and All only, as private money (prd §1590): the account is yours.
         if store.isShown, selectedSeat == nil, !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true {
-            let held = store.snapshot.holdings.filter(\.isHeld)
+            let held = store.shown.holdings.filter(\.isHeld)
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
                 if held.isEmpty {
                     aztecRow(title: String(localized: "Your Aztec account"),
-                             line: store.snapshot.address.map { AddressTail.short($0) } ?? "",
+                             line: store.shown.address.map { AddressTail.short($0) } ?? "",
                              figure: String(localized: "Nothing yet"), mark: nil, tone: DS.textSecondary)
                 } else {
                     ForEach(held) { holding in
@@ -36,7 +36,9 @@ extension FeedScreen {
                     }
                 }
             }
-            .task(id: store.snapshot.address) {
+            .task(id: store.shown.address) {
+                // Never in the demo: its account is sample data, no engine runs.
+                guard !DemoMode.isActive else { return }
                 let stale = store.snapshot.readAt.map { Date().timeIntervalSince($0) > Self.aztecReadInterval } ?? true
                 if stale, AztecProver.isAvailable { await store.refresh() }
             }
@@ -90,7 +92,7 @@ extension FeedScreen {
     @ViewBuilder
     var walletAztecAccountRow: some View {
         let store = AztecAccountStore.shared
-        if store.isShown, let address = store.snapshot.address {
+        if store.isShown, let address = store.shown.address {
             HStack(spacing: DSRoomChassis.headGap) {
                 ProtocolInlineMark(mark: "aztec")
                     .frame(width: DSRoomChassis.headGlyph)
