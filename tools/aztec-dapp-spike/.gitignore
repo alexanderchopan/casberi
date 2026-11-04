@@ -4,3 +4,4 @@ dist/dapp.js
 dist/engine/
 out/
 App/build/
+App/vendor/
