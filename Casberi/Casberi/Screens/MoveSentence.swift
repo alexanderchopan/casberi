@@ -180,6 +180,12 @@ struct MoveSentence: View {
     /// a service's rather than the app's.
     @State private var quoteFrom: String?
     @State private var stage: Chain.Stage?
+    /// Face ID, asked at the tap, has passed (prd §1687): the foot no longer
+    /// says "Confirm with Face ID" once preparing is done.
+    @State private var faceIDPassed = false
+    /// Which send `faceIDPassed` is about: a Face ID answering late for a
+    /// send that already ended never marks the next one.
+    @State private var faceIDSend: UUID?
     /// Where this send's time is going, from the tap (prd §1602), and its
     /// requests (prd §1605).
     @State private var clock: MoveClock?
@@ -1137,7 +1143,11 @@ struct MoveSentence: View {
             pick {}
         }
         .onChange(of: scenePhase) { _, now in
-            if now == .active, !heldBy.isEmpty {
+            // Face ID's own sheet passes through here (prd §1687: it rises at
+            // the tap now): while the send prepares and signs it reads its own
+            // balances, so nothing competes with it; back from the Signer's
+            // wallet the page reads as before.
+            if now == .active, stage != .preparing, stage != .signing, !heldBy.isEmpty {
                 Task { await readHoldings() }
                 if !YourAccountDemo.isDemo(account) { Task { [account, network] in await Chain.readAhead(account, on: network) } }
             }
@@ -4466,7 +4476,8 @@ struct MoveSentence: View {
     private var footVerb: String {
         switch stage {
         case .preparing: return String(localized: "Preparing…")
-        case .signing: return String(localized: "Confirm with Face ID")
+        // Passed at the tap (prd §1687), Face ID is not asked for again.
+        case .signing: return faceIDPassed ? String(localized: "Preparing…") : String(localized: "Confirm with Face ID")
         case .cosigning: return String(localized: "Waiting for your Signer…")
         case .sending: return String(localized: "Sending…")
         case .landing:
@@ -4658,7 +4669,20 @@ struct MoveSentence: View {
         clock = MoveClock()
         let tripLog = IngestSupport.TripLog()
         trips = tripLog
-        Task {
+        // **FACE ID AT THE TAP (prd §1687, user: "the preparing stage is
+        // where it lags").** Asked now, beside the reads; the operation's
+        // signature takes what it passed. Turned down, the send stops at once.
+        let unlock = YourAccountKey.unlockAhead(reason: reason)
+        let thisSend = UUID()
+        faceIDSend = thisSend
+        faceIDPassed = false
+        let work = Task {
+            // Done either way: a Face ID still up for a send that already
+            // ended is taken down, and a passed one signs nothing more.
+            defer {
+                if faceIDSend == thisSend { faceIDPassed = false; faceIDSend = nil }
+                unlock?.context.invalidate()
+            }
             do {
                 let buy = carried
                 // Round-ups due into your private balance (prd §1567): the
@@ -4686,9 +4710,11 @@ struct MoveSentence: View {
                 let followed = Chain.Followed()
                 let done = try await IngestSupport.$tripLog.withValue(tripLog) {
                     try await Chain.$following.withValue(followed) {
-                        try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
-                                             said: { line in await MainActor.run { say(line) } }) { s in
-                            await MainActor.run { advance(to: s) }
+                        try await YourAccountKey.$ahead.withValue(unlock) {
+                            try await Self.spend(batch, on: net, account: account, roundUp: buy, ride: ride?.calls ?? [], reason: reason,
+                                                 said: { line in await MainActor.run { say(line) } }) { s in
+                                await MainActor.run { advance(to: s) }
+                            }
                         }
                     }
                 }
@@ -4828,6 +4854,9 @@ struct MoveSentence: View {
             } catch let failure as Chain.Failure {
                 stage = nil
                 _ = timed(nil)
+                // Face ID turned down at the tap stopped the reads (prd §1687):
+                // whatever they threw, nothing was signed.
+                if unlock?.refused == true { say(String(localized: "Not sent"), failure: true); return }
                 // A stale fact could explain it (prd §1602): read afresh.
                 Task { await Chain.forgetFacts(net, account); await Chain.readAhead(account, on: net) }
                 #if DEBUG
@@ -4844,12 +4873,24 @@ struct MoveSentence: View {
                 say(String(localized: "Not sent"), failure: true)
             }
         }
+        // Face ID's answer, as it comes: passed is felt and changes the foot's
+        // words; turned down ends the send where it is.
+        if let unlock {
+            Task { @MainActor in
+                if await unlock.passed() {
+                    if faceIDSend == thisSend, stage != nil { faceIDPassed = true; DSHaptic.tap() }
+                } else {
+                    work.cancel()
+                }
+            }
+        }
     }
 
     /// **FACE ID PASSING IS FELT (prd §1586).** One light tap as the foot's
-    /// words turn from "Confirm with Face ID" to "Sending…".
+    /// words turn from "Confirm with Face ID" to "Sending…"; Face ID asked at
+    /// the tap is felt as it passes instead (prd §1687).
     private func advance(to s: Chain.Stage) {
-        if stage == .signing, s == .sending || s == .cosigning { DSHaptic.tap() }
+        if stage == .signing, s == .sending || s == .cosigning, !faceIDPassed { DSHaptic.tap() }
         stage = s
         clock?.enter(Self.clockMark(s))
     }

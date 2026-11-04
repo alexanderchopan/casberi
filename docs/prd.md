@@ -70733,3 +70733,23 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Not seen:** the simulator or the Mac; this session ran on Linux with no Swift toolchain, so neither the build nor `verify.sh` ran.
 
 **Mac half (§1402).** The pane's pills read the same order.
+
+## §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed (amends §1601 item 4's foot, §1586's felt Face ID; keeps §1602's bounds) (user, 2026-11-03: "how do we make send and swap feel faster"; "the preparing stage is where it lags"; of Face ID at the tap running while the reads do, "Yes, build it") — BUILT, NOT SEEN ON A PHONE
+
+**Why.** A send or swap went tap → preparing (the preview's recheck, the nonce and balances, the gas estimate, the module's hash, each over Tor) → Face ID → the Signer. Face ID waited on all of preparing, so the person tapped, watched "Preparing…", and only then was asked for their face. Build 897's Took line had Face ID at 0.5s and preparing at 1.3s warm; §1610 measured 15s cold. Face ID needs nothing preparing reads: the phone's key is unlocked by a passed `LAContext`, and the digest it signs is worked out after.
+
+**What.**
+1. **Asked at the tap.** Move's `sign()` asks `YourAccountKey.unlockAhead(reason:)` before the send's work starts: an `LAContext` evaluating `.deviceOwnerAuthenticationWithBiometrics`, the policy the keys are made under (`.biometryCurrentSet`). A phone whose keys carry no Face ID asks nothing (nil), as before.
+2. **Carried to the signature, once.** The send runs inside `YourAccountKey.$ahead.withValue(unlock)`; `YourAccountKey.sign` takes the context (`FaceIDAhead.take`), waiting for Face ID if it is still up, and signs with no second prompt. Only the operation's FIRST signature takes it; any later one (a second operation, a fallback from the spend limit to both keys) asks Face ID itself. What is signed is unchanged: the bytes are built, priced, hashed and agreed with the module before the key signs, and the Signer and the Safe check them after.
+3. **Turned down, it stops at once.** A Face ID turned down at the tap cancels the reads still running and says "Not sent", never the read that the cancel broke. The context is invalidated when the send ends either way, so a Face ID still up for a send that already failed is taken down.
+4. **The foot and the feel.** Face ID passing is felt as it passes (one tap, §1586), not when the signature completes; once passed the foot never says "Confirm with Face ID" (it keeps "Preparing…" until the Signer or Sending). The Took line is unchanged: preparing is still the tap to the signature, so it compares with every earlier line; Face ID there is what was left of it after preparing.
+5. **Nothing reads beside preparing.** Face ID's sheet takes the app inactive and back; Move's return-to-foreground read (holdings and read-ahead) now waits while a send prepares or signs, so it does not compete with preparing over Tor; back from the Signer's wallet it reads as before. A Face ID answering late for a send that already ended never marks the next one (`faceIDSend`).
+6. **The prompt's words.** The Face ID reason is the sentence's (`faceIDWords`); the fee is no longer in it, since it is priced after. Face ID on iPhone does not draw the reason; Details shows the fee before the tap.
+
+**Bounds (§1602).** Every read stays on Tor; every swap is signed by both keys; nothing is signed before the module agrees on the bytes.
+
+**Guards.** `scripts/faceid-ahead-selftest.sh` (in `verify.sh`): `FaceIDAhead` compiled whole (one use, waits for the answer, refused throws and is recorded) and the wiring read by source (the signature takes it, a key with no Face ID asks none, Move asks before the work and carries it around `spend`, a refusal cancels and says "Not sent", the context is invalidated, the foot's word); ten mutations, each caught.
+
+**UNMEASURED (§780b).** That the Secure Enclave takes a context passed by `evaluatePolicy` with no second prompt on a `.biometryCurrentSet` key is Apple's documented behaviour, not seen here: the simulator has no Secure Enclave and its demo account signs nothing. If a phone shows two Face IDs, the fallback is `evaluateAccessControl(_:operation: .useKeySign)` over the key's own access control. Read the next TestFlight send's Took line before claiming a number.
+
+**Mac half (§1402).** The Mac signs nothing for the account (§1628); the same code compiles there and asks nothing it did not ask before.

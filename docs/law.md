@@ -156,9 +156,10 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
-- Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before Face ID as before. The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
+- Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before the key signs (Face ID itself is asked at the tap, §1687). The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
 - WETH and ETH swap one for one on their network, no pool and no new verb (§1559): ETH for WETH is WETH's `deposit()`; WETH for ETH goes to the pinned SwapRouter02 and its `unwrapWETH9` pays the account in full (WETH's own `withdraw` pays 2,300 gas, which a Safe refuses); checked and simulated as every swap; the foot "Unwraps WETH · no fee", no ≈; Face ID only.
+- Face ID is asked the moment Send or Swap is tapped, beside preparing's reads (§1687): the operation's first signature takes the context it passed, a later one asks again; turned down, the reads stop and it says "Not sent"; once passed the foot never asks for Face ID. Nothing is signed before the bytes are built and the module agrees on them.
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -246,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1828 of 1900 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1829 of 1901 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -1968,7 +1969,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1583 — 0xBow's Privacy Pools v2 is watched weekly: a script compares what we pin with what 0xBow ships, and a Monday task re…
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in (amended by §1619)
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
-- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th…
+- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687)
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
@@ -1983,7 +1984,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
-- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644)
+- §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644, §1687)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
 - §1604 — Deposit's on-chain half: the curator's signature read strictly, the reservation and the release encoded as Peer's orc… (amended by §1606)
@@ -2076,6 +2077,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1684 — Act where you look: a held token's sheet sends and swaps it, and a signature row in Needs you opens the transaction i…
 - §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car…
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
+- §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
 
 ## Dead rulings → what replaced them (generated)
 

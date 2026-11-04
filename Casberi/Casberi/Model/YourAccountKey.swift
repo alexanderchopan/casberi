@@ -350,6 +350,24 @@ enum YourAccountKey {
 
     // MARK: - Signing
 
+    /// **FACE ID AT THE TAP (prd §1687).** Move sets this around a send, and
+    /// the operation's first signature takes its context (`FaceIDAhead`).
+    @TaskLocal static var ahead: FaceIDAhead<LAContext>?
+
+    /// Face ID asked now, for the signature preparing will end in; nil when
+    /// this phone's keys sign with no Face ID on them (nothing to ask).
+    static func unlockAhead(reason: String) -> FaceIDAhead<LAContext>? {
+        guard biometric else { return nil }
+        let context = LAContext()
+        context.localizedReason = reason
+        // The key takes Face ID alone (`.biometryCurrentSet`), so no
+        // passcode door: "Enter Password" would only end in Not sent.
+        context.localizedFallbackTitle = ""
+        return FaceIDAhead(context: context) { [context] in
+            (try? await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)) ?? false
+        }
+    }
+
     /// Sign 32 pre-hashed bytes with key `index`, behind Face ID with
     /// `reason`: `r ‖ s`, `s` low.
     static func sign(_ digest: [UInt8], with index: Int, reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
@@ -381,7 +399,9 @@ enum YourAccountKey {
         var out: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &out)
         guard status == errSecSuccess, let blob = out as? Data else { throw Failure.keychainRefused(status) }
-        let context = LAContext()
+        // Face ID asked at the tap (prd §1687): its context, already passed,
+        // signs with no second prompt. Later signatures ask as before.
+        let context = try await ahead?.take() ?? LAContext()
         context.localizedReason = reason
         let key = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: blob, authenticationContext: context)
         let raw = [UInt8](try key.signature(for: AccountDigest(Data(digest))).rawRepresentation)

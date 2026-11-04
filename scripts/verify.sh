@@ -2802,6 +2802,9 @@ harness "Signer-proof self-test" "signer-proof self-test" "scripts/signer-proof-
 # wallet re-pairs on the same ask, Cancel drops a wallet that never answered,
 # one door per installed wallet onto its own `wc?uri=` link, `wc:` otherwise.
 harness "Signer-switch self-test" "signer-switch self-test" "scripts/signer-switch-selftest.sh" "the co-signer's sheet can be stuck on one wallet again — run scripts/signer-switch-selftest.sh"
+# Face ID at the tap (prd §1687): asked beside preparing, taken by the send's
+# first signature only, a turned-down one ending the send at once.
+harness "Face ID-ahead self-test" "faceid-ahead self-test" "scripts/faceid-ahead-selftest.sh" "Face ID could sign twice, or wait for preparing again — run scripts/faceid-ahead-selftest.sh"
 # Off never needs the co-signer (prd §1647): the phone's key and the recovery
 # key as Safe reads two contract signatures, offered only where both are
 # owners, and the walk asking no co-signer there.
