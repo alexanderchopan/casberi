@@ -3,12 +3,12 @@
 
 ONE CYCLE, NOT A SWITCH. A feed row's lead turns over and back when the row
 lands while you look or its title moves in place — to the APP's mark (prd
-§1687, amending §901), or to its dock CATEGORY's glyph when the lead already
+§1689, amending §901), or to its dock CATEGORY's glyph when the lead already
 rests on the app's mark. The user's rules, each of which a later pass could
 quietly undo while the build stays green and the row still animates:
 
   · "what if instead of category icon it flipped to show the source one?"
-    (§1687) — so the back face is `.mark(source)`, drawn by `BridgeIcon`,
+    (§1689) — so the back face is `.mark(source)`, drawn by `BridgeIcon`,
     unless the caller says the lead `restsOnMark` (the `.glyph` lead), where
     a mark turning to itself is no turn.
 
@@ -97,7 +97,7 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
         if not a.startswith(".glyph(CategoryFold.glyph(for:"):
             out.append(f"A: a back face that is neither the app's mark nor CategoryFold.glyph(for:) — `{a}`")
     if ".mark(source)" not in c:
-        out.append("A: the back face never shows the app's mark (§1687)")
+        out.append("A: the back face never shows the app's mark (§1689)")
     if not re.search(r"if\s+!restsOnMark\b[^{]*\{\s*[^}]*back\s*=\s*\.mark\(source\)", c):
         out.append("A: the app's mark is not guarded by !restsOnMark — a mark lead would turn to itself")
     if not re.search(r"case\s+\.mark\(let\s+(\w+)\):\s*BridgeIcon\(name:\s*\1", c):
@@ -140,7 +140,7 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
         if "cyclesOnChange: !moneyColumn" not in flat:
             out.append("D: the ledger's rows are not opted out of the change cycle (§171's ripple is their motion)")
         if "restsOnMark: leader == .glyph" not in flat:
-            out.append("D: the caller does not say when its lead rests on the app's mark — the mark would turn to itself (§1687)")
+            out.append("D: the caller does not say when its lead rests on the app's mark — the mark would turn to itself (§1689)")
 
     # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
     if not re.search(r"landed\s*=\s*(?:arrival\s*\?\?\s*)?LandingLedger\.landedAt\(id\)", c):
@@ -286,7 +286,7 @@ def self_test() -> bool:
          GOOD_CYCLE.replace('BridgeCatalog.category(forSource: source)', 'myCategory(source)'), GOOD_ROWS, GOOD_FEED, 1),
         ("A: the flipped face drawn by hand",
          GOOD_CYCLE.replace('DSGlyphLead(glyph: glyph)', 'Image(systemName: glyph)'), GOOD_ROWS, GOOD_FEED, 1),
-        ("A: the category everywhere again — the app's mark never shown (§1687)",
+        ("A: the category everywhere again — the app's mark never shown (§1689)",
          GOOD_CYCLE.replace('back = .mark(source)', 'back = .glyph(CategoryFold.glyph(for: BridgeCatalog.category(forSource: source) ?? ""))'), GOOD_ROWS, GOOD_FEED, 1),
         ("A: a mark lead turns to itself — the restsOnMark guard dropped",
          GOOD_CYCLE.replace('if !restsOnMark, !source.isEmpty,', 'if !source.isEmpty,'), GOOD_ROWS, GOOD_FEED, 1),

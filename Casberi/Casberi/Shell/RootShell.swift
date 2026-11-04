@@ -1173,7 +1173,7 @@ struct RootShell: View {
                     // grouped, and a grouped lead never turns (§901a's trap).
                     clearLeadCycleProbes(in: modelContext)
                     try? await Task.sleep(for: .seconds(cycleDelay))
-                    // `-leadCycleFace YES` (prd §1687): land a Slack message
+                    // `-leadCycleFace YES` (prd §1689): land a Slack message
                     // from a PERSON, whose lead rests on the sender's initial
                     // and turns to Slack's mark and back; the Trello row rests
                     // on its own mark and turns to Work's glyph. Both in Work.

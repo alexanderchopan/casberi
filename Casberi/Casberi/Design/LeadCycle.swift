@@ -5,7 +5,7 @@ import SwiftUI
 /// always be the category not a state b/c then we'd be making up new icons or
 /// glyphs for a user to learn").
 ///
-/// THE FLIP SHOWS THE OTHER ONE (prd §1687, amends §901; user: "what if
+/// THE FLIP SHOWS THE OTHER ONE (prd §1689, amends §901; user: "what if
 /// instead of category icon it flipped to show the source one?" → "yes,
 /// build it", 2026-11-03). A feed row's lead mostly rests on WHO or WHAT —
 /// a face, a wallet, a sender's initial, a publisher, a picture, what a
@@ -143,7 +143,7 @@ struct LeadCycle: ViewModifier {
     private func fire() {
         guard !reduceMotion, !cycling else { return }
         if !restsOnMark, !source.isEmpty, BridgeIcon.hasMark(source) {
-            // The app's own mark, as the bare lead draws it (§1687). A source
+            // The app's own mark, as the bare lead draws it (§1689). A source
             // with no mark of its own would turn to the blank `app` square,
             // which says nothing, so it falls to the category below.
             back = .mark(source)

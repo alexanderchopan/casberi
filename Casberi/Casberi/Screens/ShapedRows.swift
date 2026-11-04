@@ -820,7 +820,7 @@ struct BandRow: View {
                 // ONE CYCLE (prd §901): a row that lands while you look, or
                 // whose title moves in place, turns its lead over and back —
                 // to the app's mark, or to its dock category's glyph when the
-                // lead already is the app's mark (§1687). The ledger's rows
+                // lead already is the app's mark (§1689). The ledger's rows
                 // keep §171's ripple as their one motion on a retitle. The
                 // landing is the thing's ARRIVAL (`LandingLedger`, §901b).
                 .leadCycle(source: thing.source, id: thing.id,
