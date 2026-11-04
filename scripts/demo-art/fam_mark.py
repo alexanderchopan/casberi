@@ -108,6 +108,24 @@ def quiet_builds():
     return icon("#4dabf7", "#1864ab", motif)
 
 
+def harborline():
+    # A made-up bank (prd §1338's rule: no drawn logo on a real product): a
+    # bank's portico — a pediment over three columns on a step — in white on
+    # harbour navy. Full-bleed, as a bank's touch icon is: `BankMark` sets it
+    # on its own white plate.
+    motif = ("<path d='M42 74 L90 44 L138 74 Z' fill='#fff'/>"
+             "<rect x='52' y='82' width='14' height='46' rx='3' fill='#fff'/>"
+             "<rect x='83' y='82' width='14' height='46' rx='3' fill='#fff'/>"
+             "<rect x='114' y='82' width='14' height='46' rx='3' fill='#fff'/>"
+             "<rect x='40' y='134' width='100' height='10' rx='3' fill='#7fd1c7'/>")
+    return ("<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'>"
+            "<defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'>"
+            "<stop offset='0' stop-color='#1d4e89'/><stop offset='1' stop-color='#0b2545'/>"
+            "</linearGradient></defs>"
+            "<rect width='180' height='180' fill='url(#g)'/>"
+            f"{motif}</svg>")
+
+
 DRAW = {
     "avatar-crimpchalk": crimp_chalk,
     "avatar-tram28notes": tram_28_notes,
@@ -118,6 +136,7 @@ DRAW = {
     "privy-mossline": mossline,
     "privy-pebble-arcade": pebble_arcade,
     "privy-sundial": sundial,
+    "bank-harborline": harborline,
 }
 
 

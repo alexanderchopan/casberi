@@ -109,6 +109,10 @@ enum SimpleFINLogos {
     /// on screen trades SimpleFIN's for the bank's.
     static let arrived = Notification.Name("SimpleFINLogos.arrived")
 
+    /// The demo's one bank connection (`DemoSeedAll`'s SimpleFIN rows,
+    /// `WalletCash.demoHeld`).
+    static let demoConnID = "demo"
+
     /// Smaller than this draws as a smear at a row's size.
     static let minimumSide = 32
     /// A bank whose site had none is asked again after this.
@@ -136,6 +140,11 @@ enum SimpleFINLogos {
     /// The bank's icon, or nil. Reads a small file once, then memory; call it
     /// from a `.task`, never a body.
     static func image(connID: String) -> UIImage? {
+        // The demo's bank is drawn and bundled (it reaches nothing, §483):
+        // its connection wears that mark, as a real one wears its site's.
+        if DemoMode.isActive, connID == demoConnID {
+            return UIImage.demoSample(for: DemoSeedAll.bankMark)
+        }
         lock.lock(); defer { lock.unlock() }
         if let held = memory[connID] { return held }
         guard let url = file(connID), let data = try? Data(contentsOf: url),
