@@ -3,10 +3,10 @@ import SwiftUI
 /// **PRIVATE, IN HOLDINGS (prd §1554).** Under Tokens, Holdings only SHOWS
 /// what is private: a head naming it with its total, then one row per token,
 /// state and network off the notes Move to private kept (`PrivateMoney.rows`)
-/// — "ETH, private" over "1.0% on Aave" where it earns (Ethereum's yield
-/// pools, the rate read live, prd §1563) or its network ("Sepolia", which has
-/// no Aave), "ETH, moving in" with the amber clock and
-/// "Waiting for approval", "ETH, not approved". The Tokens rows above are
+/// — "ETH" over "1.0% on Aave" where it earns (Ethereum's yield pools, the
+/// rate read live, prd §1563) or its network ("Sepolia", which has no Aave),
+/// "ETH" with the amber clock over "Waiting for approval", "ETH" over "Not
+/// approved". The token alone: the head already says private. The Tokens rows above are
 /// public balances only; the box counts approved private money as one
 /// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`).
 /// No verb here: the acts are Send's (`MovePrivateSentence`). The header

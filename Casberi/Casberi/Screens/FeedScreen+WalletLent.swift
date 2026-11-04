@@ -2,7 +2,8 @@ import SwiftUI
 
 /// **LENT, IN HOLDINGS (prd §1674).** Under Private: a head, "Lent", with
 /// what is lent in dollars, then one row per market with something in it —
-/// "USDC, lent" over "5.1% on Aave · Base", its worth trailing. The head opens
+/// "USDC" over "5.1% on Aave · Base", its worth in dollars trailing (the
+/// head already says lent). The head opens
 /// Lend; a row opens Take back on its market. Your account only, as Private
 /// is: a followed wallet's Aave stays under Positions.
 ///
@@ -16,7 +17,7 @@ extension FeedScreen {
            selectedWallet.map(YourAccountDemo.isYours) ?? true, let account = YourAccountDemo.shownAddress {
             let lend = LendMove.holdings
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            let prices = PrivateMoneyStore.shared.shownPrices
+            let prices = lend.prices
             let rows = AaveLend.markets.filter { (Decimal(string: lend.lent[LendMove.key($0)] ?? "0") ?? 0) > 0 }
             Group {
                 walletLentHead(total: mask ?? walletLentTotal(rows, lend: lend, prices: prices))
@@ -121,7 +122,7 @@ extension FeedScreen {
         let units = lend.lent[LendMove.key(m)] ?? "0"
         let figure = mask ?? walletLentUSD(m, lend: lend, prices: prices).map(WalletValue.money)
             ?? PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol)
-        let title = String(localized: "\(m.symbol), lent")
+        let title = m.symbol
         let state = [AaveLend.rateLine(lend.rates[LendMove.key(m)]), m.network].compactMap { $0 }.joined(separator: " · ")
         return Button { walletOpenLend(.takeBack, m) } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {

@@ -45,6 +45,10 @@ final class LendMove {
     /// Take back, never drawn as lent, held as its own row in Holdings.
     private(set) var roundUps = "0"
     private(set) var rates: [String: Double] = [:]
+    /// USD per unit by lower-cased symbol, for every market's token: Holdings'
+    /// Lent rows draw dollars off these, never Private's prices, which only
+    /// name what is held privately.
+    private(set) var prices: [String: Double] = [:]
     /// The markets whose reserve did not name the pinned aToken.
     private(set) var refused: Set<String> = []
     /// ETH kept back for the operation's fee, per network (base units).
@@ -133,6 +137,8 @@ final class LendMove {
         } else {
             await readChain(account: account)
         }
+        let found = await MainnetPrices.prices(for: AaveLend.markets.map(\.symbol))
+        if found != prices { prices = found }
         settle()
     }
 

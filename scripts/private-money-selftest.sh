@@ -414,7 +414,7 @@ check(rows.first?.amount == "4000000000000000", "a token's private notes are sum
 check(rows[2].amount == "1500000000000000" && rows[2].since == t0, "a waiting row sums its notes and dates from the oldest")
 check(rows[3].amount == "2500000000000000", "poi_required is not approved either: drawn with the refused (prd §1561)")
 check(rows[0].since == nil, "a private row has no since")
-check(rows[0].title == "ETH, private" && rows[2].title == "ETH, moving in" && rows[3].title == "ETH, not approved", "the rows' names")
+check(rows[0].title == "ETH" && rows[2].title == "ETH" && rows[3].title == "ETH", "the rows' names: the token alone, the section says private")
 check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a zero or unreadable amount draws nothing")
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
 check(P.anyWaiting([note("p", "1", .needsProof)]) && !P.anyWaiting([note("r", "1", .rejected)]), "poi_required is asked again, rejected is not")

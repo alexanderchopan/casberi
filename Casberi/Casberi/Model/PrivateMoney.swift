@@ -7,8 +7,8 @@ import Foundation
 /// label's hash, the amount, the transaction) and never its secret, which
 /// lives only in the engine's page. A note is waiting until 0xBow's ASP
 /// approves its label; approved, it is private money; rejected, it can only
-/// go back. Holdings draws one row per token and state: "ETH, private",
-/// "ETH, moving in", "ETH, not approved".
+/// go back. Holdings draws one row per token and state, named by the token
+/// alone ("ETH"): the section says private, the line under it the state.
 ///
 /// Pure (Foundation only): `scripts/private-money-selftest.sh` compiles it.
 enum PrivateMoney {
@@ -115,13 +115,9 @@ enum PrivateMoney {
         let since: Date?
         var id: String { "\(kind.rawValue):\(symbol):\(chainId)" }
 
-        var title: String {
-            switch kind {
-            case .held: String(localized: "\(symbol), private")
-            case .waiting: String(localized: "\(symbol), moving in")
-            case .refused: String(localized: "\(symbol), not approved")
-            }
-        }
+        /// The token alone: the section's head says private, and the line
+        /// under it says waiting or not approved.
+        var title: String { symbol }
     }
 
     /// `poi_required` is not approved either (prd §1561): 0xBow wants a proof
