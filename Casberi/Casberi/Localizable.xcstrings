@@ -27784,36 +27784,36 @@
         }
       }
     },
-    "%lld on record %@. Name the chains you use and L2BEAT's assessment of each arrives too — who can stop your transactions, and how long you'd have to get out." : {
+    "%lld on record %@. Name the chains you use and ETHBEAT's assessment of each arrives too — who can stop your transactions, and how long you'd have to get out." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$lld on record %2$@. Name the chains you use and L2BEAT's assessment of each arrives too — who can stop your transactions, and how long you'd have to get out."
+            "value" : "%1$lld on record %2$@. Name the chains you use and ETHBEAT's assessment of each arrives too — who can stop your transactions, and how long you'd have to get out."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld registrados %@. Indica las cadenas que usas y llegará también la evaluación de L2BEAT de cada una: quién puede detener tus transacciones y cuánto tiempo tendrías para salir."
+            "value" : "%lld registrados %@. Indica las cadenas que usas y llegará también la evaluación de ETHBEAT de cada una: quién puede detener tus transacciones y cuánto tiempo tendrías para salir."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ に %lld 件の記録があります。利用しているチェーンを指定すると、各チェーンに対する L2BEAT の評価も届きます — 誰があなたの取引を止められるのか、そして資金を引き出すのにどれだけの猶予があるのか。"
+            "value" : "%@ に %lld 件の記録があります。利用しているチェーンを指定すると、各チェーンに対する ETHBEAT の評価も届きます — 誰があなたの取引を止められるのか、そして資金を引き出すのにどれだけの猶予があるのか。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ %lld건이 기록되어 있습니다. 사용하는 체인을 지정하면 각 체인에 대한 L2BEAT의 평가도 함께 도착합니다 — 누가 거래를 멈출 수 있는지, 자금을 빼내는 데 얼마나 시간이 있는지."
+            "value" : "%@ %lld건이 기록되어 있습니다. 사용하는 체인을 지정하면 각 체인에 대한 ETHBEAT의 평가도 함께 도착합니다 — 누가 거래를 멈출 수 있는지, 자금을 빼내는 데 얼마나 시간이 있는지."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@共记录 %lld 起。指定你使用的链，L2BEAT 对每条链的评估也会一并送达 — 谁能中止你的交易，以及你有多长时间撤出资金。"
+            "value" : "%@共记录 %lld 起。指定你使用的链，ETHBEAT 对每条链的评估也会一并送达 — 谁能中止你的交易，以及你有多长时间撤出资金。"
           }
         }
       }
@@ -72306,6 +72306,62 @@
         }
       }
     },
+    "Couldn't reach ETHBEAT — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con ETHBEAT: comprueba tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT に接続できませんでした — 接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT에 연결할 수 없습니다 — 연결을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 ETHBEAT — 请检查网络连接。"
+          }
+        }
+      }
+    },
+    "Couldn't reach ETHBEAT, and this chain isn't in the copy bundled with the app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con ETHBEAT, y esta cadena no está en la copia incluida con la app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT に接続できず、このチェーンはアプリに同梱されたデータにも含まれていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT에 연결할 수 없으며, 이 체인은 앱에 포함된 사본에도 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 ETHBEAT，且此链不在随应用打包的副本中。"
+          }
+        }
+      }
+    },
     "Couldn't reach Fileverse — try again in a moment." : {
       "localizations" : {
         "es" : {
@@ -72442,62 +72498,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接到 Kraken 以验证此密钥。"
-          }
-        }
-      }
-    },
-    "Couldn't reach L2BEAT — check your connection." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se pudo conectar con L2BEAT: comprueba tu conexión."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT に接続できませんでした — 接続を確認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT에 연결할 수 없습니다 — 연결을 확인하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无法连接 L2BEAT — 请检查网络连接。"
-          }
-        }
-      }
-    },
-    "Couldn't reach L2BEAT, and this chain isn't in the copy bundled with the app." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No se pudo conectar con L2BEAT, y esta cadena no está en la copia incluida con la app."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT に接続できず、このチェーンはアプリに同梱されたデータにも含まれていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT에 연결할 수 없으며, 이 체인은 앱에 포함된 사본에도 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "无法连接 L2BEAT，且此链不在随应用打包的副本中。"
           }
         }
       }
@@ -80324,6 +80324,842 @@
         }
       }
     },
+    "ETHBEAT" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT"
+          }
+        }
+      }
+    },
+    "ETHBEAT %@ %@ on %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ETHBEAT %1$@ %2$@ on %3$@: %4$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT %@ %@ en %@: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ %@ を %@ について: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT %@ %@ · %@: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT %@ %@ 于 %@：%@"
+          }
+        }
+      }
+    },
+    "ETHBEAT does not place this chain on its stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no sitúa esta cadena en su escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこのチェーンを Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 체인을 Stage 단계에 두지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未将此链列入其 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT does not place this chain on the stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no sitúa esta cadena en la escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこのチェーンを Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 체인을 Stage 단계에 두지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未将此链列入 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT doesn't cover that one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no cubre esa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はそのチェーンを扱っていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 해당 체인을 다루지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未覆盖该链。"
+          }
+        }
+      }
+    },
+    "ETHBEAT doesn't cover that one. It assesses %lld chains so far." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no cubre esa. De momento evalúa %lld cadenas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はそのチェーンを扱っていません。現在 %lld 件のチェーンを評価しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 해당 체인을 다루지 않습니다. 현재 %lld개 체인을 평가하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未覆盖该链。目前评估了 %lld 条链。"
+          }
+        }
+      }
+    },
+    "ETHBEAT doesn't place any of these on its stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no sitúa ninguna de estas en su escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこれらのいずれも Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 중 어느 것도 Stage 단계에 두지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未将其中任何一条列入其 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT doesn't place these chains on its stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no sitúa estas cadenas en su escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこれらのチェーンを Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 체인들을 Stage 단계에 두지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未将这些链列入其 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT doesn't place this chain on its stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no sitúa esta cadena en su escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこのチェーンを Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 체인을 Stage 단계에 두지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未将此链列入其 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT faults %@ on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ETHBEAT faults %1$@ on %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT señala a %@ por %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT は %@ の %@ を問題視しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@의 %@을(를) 지적했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 就 %@ 的 %@ 提出问题"
+          }
+        }
+      }
+    },
+    "ETHBEAT flags %@'s %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ETHBEAT flags %1$@'s %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT marca %@ de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ の %@ に注意を促しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@의 %@에 주의를 표시했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 标记了 %@ 的 %@"
+          }
+        }
+      }
+    },
+    "ETHBEAT flags nothing on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no señala nada en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT は %@ について何も指摘していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 %@에 대해 아무것도 지적하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 未对 %@ 标记任何问题"
+          }
+        }
+      }
+    },
+    "ETHBEAT has not placed this chain on its stage ladder." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT no ha situado esta cadena en su escala de stages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT はこのチェーンを Stage の段階に位置づけていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT는 이 체인을 Stage 단계에 두지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 尚未将此链列入其 Stage 阶梯。"
+          }
+        }
+      }
+    },
+    "ETHBEAT is re-examining %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT está reexaminando %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ を再検証しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@을(를) 재검토하고 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 正在重新审查 %@"
+          }
+        }
+      }
+    },
+    "ETHBEAT is re-examining this assessment" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT está reexaminando esta evaluación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT がこの評価を再検証しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 이 평가를 재검토하고 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 正在重新审查此评估"
+          }
+        }
+      }
+    },
+    "ETHBEAT is re-examining this chain, so these readings may change." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT está reexaminando esta cadena, así que estas lecturas pueden cambiar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT がこのチェーンを再検証中のため、これらの判断は変わる可能性があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 이 체인을 재검토 중이므로 이 판단은 바뀔 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 正在重新审查此链，因此这些判断可能会变化。"
+          }
+        }
+      }
+    },
+    "ETHBEAT moved this chain's stage" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT ha cambiado el stage de esta cadena"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT がこのチェーンの Stage を変更しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 이 체인의 Stage를 변경했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 变更了此链的 Stage"
+          }
+        }
+      }
+    },
+    "ETHBEAT recorded %lld incidents on %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ETHBEAT recorded %1$lld incidents on %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT registró %lld incidentes en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ について %lld 件のインシデントを記録しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@에서 %lld건의 사고를 기록했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 记录了 %@ 上的 %lld 起事件"
+          }
+        }
+      }
+    },
+    "ETHBEAT recorded an incident on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT registró un incidente en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ についてインシデントを記録しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@에서 사고를 기록했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 记录了 %@ 上的一起事件"
+          }
+        }
+      }
+    },
+    "ETHBEAT revised its assessment" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT revisó su evaluación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が評価を見直しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 평가를 수정했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 修订了其评估"
+          }
+        }
+      }
+    },
+    "ETHBEAT stage today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Stage actual en ETHBEAT"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在の ETHBEAT Stage"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 ETHBEAT Stage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当前 ETHBEAT Stage"
+          }
+        }
+      }
+    },
+    "ETHBEAT took %@ off the stage ladder" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT retiró %@ de la escala de stages"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が %@ を Stage の段階から外しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 %@을(를) Stage 단계에서 제외했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 将 %@ 移出了 Stage 阶梯"
+          }
+        }
+      }
+    },
+    "ETHBEAT's assessment, not ours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La evaluación de ETHBEAT, no la nuestra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "評価は ETHBEAT のものであり、当社のものではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT의 평가이며, 저희의 평가가 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是 ETHBEAT 的评估，而非我们的"
+          }
+        }
+      }
+    },
+    "ETHBEAT's assessment, not ours · read on this device" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La evaluación de ETHBEAT, no la nuestra · leída en este dispositivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "評価は ETHBEAT のもの · この端末で取得"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT의 평가 · 이 기기에서 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 的评估 · 于本设备读取"
+          }
+        }
+      }
+    },
+    "ETHBEAT's assessment, not ours. The five cells are their own risk axes, always in their order — open a chain to see which question sits in which cell. A chain with nothing flagged is one they found nothing to flag, not one they call safe.\n\nBundled as of %@; read live once connected." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La evaluación de ETHBEAT, no la nuestra. Las cinco celdas son sus propios ejes de riesgo, siempre en su orden: abre una cadena para ver qué pregunta ocupa cada celda. Una cadena sin nada señalado es una en la que no encontraron nada que señalar, no una que llamen segura.\n\nIncluido a fecha de %@; se lee en directo al conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "評価は ETHBEAT のものであり、当社のものではありません。5 つのセルは ETHBEAT 自身のリスク軸を常に同じ順序で示しています — どのセルがどの項目かは、チェーンを開くと確認できます。何も指摘のないチェーンとは、指摘すべきものが見つからなかったチェーンであり、安全だと宣言されたチェーンではありません。\n\n%@ 時点で同梱。接続後はライブで取得されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT의 평가이며, 저희의 평가가 아닙니다. 다섯 칸은 그들 자신의 위험 축을 항상 같은 순서로 나타냅니다 — 어느 칸이 어느 항목인지는 체인을 열어 확인하세요. 아무것도 지적되지 않은 체인은 지적할 것을 찾지 못한 체인이지, 안전하다고 선언된 체인이 아닙니다.\n\n%@ 기준으로 포함됨. 연결하면 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是 ETHBEAT 的评估，而非我们的。这五格是他们自己的风险维度，始终按其顺序排列 — 打开某条链即可看到哪一格对应哪个问题。没有被标记的链，是他们没有找到可标记之处的链，而不是他们称之为安全的链。\n\n截至 %@ 打包；连接后实时读取。"
+          }
+        }
+      }
+    },
+    "ETHBEAT's assessment, not ours. The five cells are their own risk axes, in their order — a chain with nothing flagged is one they found nothing to flag, not one they call safe.\n\nBundled as of %@; read live once connected." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La evaluación de ETHBEAT, no la nuestra. Las cinco celdas son sus propios ejes de riesgo, en su orden: una cadena sin nada señalado es una en la que no encontraron nada que señalar, no una que llamen segura.\n\nIncluido a fecha de %@; se lee en directo al conectar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "評価は ETHBEAT のものであり、当社のものではありません。5 つのセルは ETHBEAT 自身のリスク軸を、その順序で示しています — 何も指摘のないチェーンとは、指摘すべきものが見つからなかったチェーンであり、安全だと宣言されたチェーンではありません。\n\n%@ 時点で同梱。接続後はライブで取得されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT의 평가이며, 저희의 평가가 아닙니다. 다섯 칸은 그들 자신의 위험 축을 그들의 순서대로 나타냅니다 — 아무것도 지적되지 않은 체인은 지적할 것을 찾지 못한 체인이지, 안전하다고 선언된 체인이 아닙니다.\n\n%@ 기준으로 포함됨. 연결하면 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是 ETHBEAT 的评估，而非我们的。这五格是他们自己的风险维度，按其顺序排列 — 没有被标记的链，是他们没有找到可标记之处的链，而不是他们称之为安全的链。\n\n截至 %@ 打包；连接后实时读取。"
+          }
+        }
+      }
+    },
+    "ETHBEAT's own reading, not ours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La lectura de ETHBEAT, no la nuestra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "判断は ETHBEAT のものであり、当社のものではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 자신의 판단이며, 저희의 판단이 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这是 ETHBEAT 自己的判断，而非我们的"
+          }
+        }
+      }
+    },
+    "ETHBEAT's reading, not ours · every chain they cover" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La lectura de ETHBEAT, no la nuestra · todas las cadenas que cubren"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "判断は ETHBEAT のもの · 彼らが扱うすべてのチェーン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT의 판단 · 그들이 다루는 모든 체인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 的判断 · 他们覆盖的每一条链"
+          }
+        }
+      }
+    },
+    "ETHBEAT's recorded incidents arrive here. Name the chains you use to add their risk assessments." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los incidentes registrados por ETHBEAT llegan aquí. Indica las cadenas que usas para añadir sus evaluaciones de riesgo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT が記録したインシデントがここに届きます。利用しているチェーンを指定すると、そのリスク評価が追加されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT가 기록한 사고가 여기에 도착합니다. 사용하는 체인을 지정하면 위험 평가가 추가됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT 记录的事件会送达这里。指定你使用的链，即可加入其风险评估。"
+          }
+        }
+      }
+    },
     "Each address you watch, with its balance and how much it has sent. None is watched here." : {
       "localizations" : {
         "es" : {
@@ -82709,30 +83545,30 @@
         }
       }
     },
-    "Every chain L2BEAT covers" : {
+    "Every chain ETHBEAT covers" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Todas las cadenas que cubre L2BEAT"
+            "value" : "Todas las cadenas que cubre ETHBEAT"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT が扱うすべてのチェーン"
+            "value" : "ETHBEAT が扱うすべてのチェーン"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT가 다루는 모든 체인"
+            "value" : "ETHBEAT가 다루는 모든 체인"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT 覆盖的所有链"
+            "value" : "ETHBEAT 覆盖的所有链"
           }
         }
       }
@@ -83241,30 +84077,30 @@
         }
       }
     },
-    "Every reading here is L2BEAT's own, in their words. Casberi reads their public assessment and never rates a chain itself." : {
+    "Every reading here is ETHBEAT's own, in their words. Casberi reads their public assessment and never rates a chain itself." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cada lectura aquí es de L2BEAT, con sus propias palabras. Casberi lee su evaluación pública y nunca califica una cadena por su cuenta."
+            "value" : "Cada lectura aquí es de ETHBEAT, con sus propias palabras. Casberi lee su evaluación pública y nunca califica una cadena por su cuenta."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ここに表示される判断はすべて L2BEAT 自身のものであり、その表現のままです。Casberi は公開された評価を読むだけで、チェーンを自ら格付けすることはありません。"
+            "value" : "ここに表示される判断はすべて ETHBEAT 自身のものであり、その表現のままです。Casberi は公開された評価を読むだけで、チェーンを自ら格付けすることはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "여기의 모든 판단은 L2BEAT 자신의 것이며 그들의 표현 그대로입니다. Casberi는 공개된 평가를 읽을 뿐, 체인을 직접 평가하지 않습니다."
+            "value" : "여기의 모든 판단은 ETHBEAT 자신의 것이며 그들의 표현 그대로입니다. Casberi는 공개된 평가를 읽을 뿐, 체인을 직접 평가하지 않습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "此处的每一项判断都出自 L2BEAT 本身，用的是他们自己的措辞。Casberi 只读取其公开评估，从不自行评级。"
+            "value" : "此处的每一项判断都出自 ETHBEAT 本身，用的是他们自己的措辞。Casberi 只读取其公开评估，从不自行评级。"
           }
         }
       }
@@ -93383,30 +94219,30 @@
         }
       }
     },
-    "Full assessment on L2BEAT" : {
+    "Full assessment on ETHBEAT" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Evaluación completa en L2BEAT"
+            "value" : "Evaluación completa en ETHBEAT"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT で完全な評価を見る"
+            "value" : "ETHBEAT で完全な評価を見る"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT에서 전체 평가 보기"
+            "value" : "ETHBEAT에서 전체 평가 보기"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "在 L2BEAT 查看完整评估"
+            "value" : "在 ETHBEAT 查看完整评估"
           }
         }
       }
@@ -99221,30 +100057,30 @@
         }
       }
     },
-    "Incidents arrive on their own, for every chain L2BEAT covers." : {
+    "Incidents arrive on their own, for every chain ETHBEAT covers." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Los incidentes llegan solos, para todas las cadenas que cubre L2BEAT."
+            "value" : "Los incidentes llegan solos, para todas las cadenas que cubre ETHBEAT."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "インシデントは、L2BEAT が扱うすべてのチェーンについて自動的に届きます。"
+            "value" : "インシデントは、ETHBEAT が扱うすべてのチェーンについて自動的に届きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "사고는 L2BEAT가 다루는 모든 체인에 대해 자동으로 도착합니다."
+            "value" : "사고는 ETHBEAT가 다루는 모든 체인에 대해 자동으로 도착합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "事件会自动送达，涵盖 L2BEAT 覆盖的每一条链。"
+            "value" : "事件会自动送达，涵盖 ETHBEAT 覆盖的每一条链。"
           }
         }
       }
@@ -103033,842 +103869,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Kraken 拒绝了密钥验证：%@"
-          }
-        }
-      }
-    },
-    "L2BEAT" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT"
-          }
-        }
-      }
-    },
-    "L2BEAT %@ %@ on %@: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "L2BEAT %1$@ %2$@ on %3$@: %4$@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT %@ %@ en %@: %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ %@ を %@ について: %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT %@ %@ · %@: %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT %@ %@ 于 %@：%@"
-          }
-        }
-      }
-    },
-    "L2BEAT does not place this chain on its stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no sitúa esta cadena en su escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこのチェーンを Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 체인을 Stage 단계에 두지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未将此链列入其 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT does not place this chain on the stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no sitúa esta cadena en la escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこのチェーンを Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 체인을 Stage 단계에 두지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未将此链列入 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT doesn't cover that one." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no cubre esa."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はそのチェーンを扱っていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 해당 체인을 다루지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未覆盖该链。"
-          }
-        }
-      }
-    },
-    "L2BEAT doesn't cover that one. It assesses %lld chains so far." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no cubre esa. De momento evalúa %lld cadenas."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はそのチェーンを扱っていません。現在 %lld 件のチェーンを評価しています。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 해당 체인을 다루지 않습니다. 현재 %lld개 체인을 평가하고 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未覆盖该链。目前评估了 %lld 条链。"
-          }
-        }
-      }
-    },
-    "L2BEAT doesn't place any of these on its stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no sitúa ninguna de estas en su escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこれらのいずれも Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 중 어느 것도 Stage 단계에 두지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未将其中任何一条列入其 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT doesn't place these chains on its stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no sitúa estas cadenas en su escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこれらのチェーンを Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 체인들을 Stage 단계에 두지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未将这些链列入其 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT doesn't place this chain on its stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no sitúa esta cadena en su escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこのチェーンを Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 체인을 Stage 단계에 두지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未将此链列入其 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT faults %@ on %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "L2BEAT faults %1$@ on %2$@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT señala a %@ por %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT は %@ の %@ を問題視しています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@의 %@을(를) 지적했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 就 %@ 的 %@ 提出问题"
-          }
-        }
-      }
-    },
-    "L2BEAT flags %@'s %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "L2BEAT flags %1$@'s %2$@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT marca %@ de %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ の %@ に注意を促しています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@의 %@에 주의를 표시했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 标记了 %@ 的 %@"
-          }
-        }
-      }
-    },
-    "L2BEAT flags nothing on %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no señala nada en %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT は %@ について何も指摘していません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 %@에 대해 아무것도 지적하지 않았습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 未对 %@ 标记任何问题"
-          }
-        }
-      }
-    },
-    "L2BEAT has not placed this chain on its stage ladder." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT no ha situado esta cadena en su escala de stages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT はこのチェーンを Stage の段階に位置づけていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT는 이 체인을 Stage 단계에 두지 않았습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 尚未将此链列入其 Stage 阶梯。"
-          }
-        }
-      }
-    },
-    "L2BEAT is re-examining %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT está reexaminando %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ を再検証しています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@을(를) 재검토하고 있습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 正在重新审查 %@"
-          }
-        }
-      }
-    },
-    "L2BEAT is re-examining this assessment" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT está reexaminando esta evaluación"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT がこの評価を再検証しています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 이 평가를 재검토하고 있습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 正在重新审查此评估"
-          }
-        }
-      }
-    },
-    "L2BEAT is re-examining this chain, so these readings may change." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT está reexaminando esta cadena, así que estas lecturas pueden cambiar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT がこのチェーンを再検証中のため、これらの判断は変わる可能性があります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 이 체인을 재검토 중이므로 이 판단은 바뀔 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 正在重新审查此链，因此这些判断可能会变化。"
-          }
-        }
-      }
-    },
-    "L2BEAT moved this chain's stage" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT ha cambiado el stage de esta cadena"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT がこのチェーンの Stage を変更しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 이 체인의 Stage를 변경했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 变更了此链的 Stage"
-          }
-        }
-      }
-    },
-    "L2BEAT recorded %lld incidents on %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "L2BEAT recorded %1$lld incidents on %2$@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT registró %lld incidentes en %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ について %lld 件のインシデントを記録しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@에서 %lld건의 사고를 기록했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 记录了 %@ 上的 %lld 起事件"
-          }
-        }
-      }
-    },
-    "L2BEAT recorded an incident on %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT registró un incidente en %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ についてインシデントを記録しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@에서 사고를 기록했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 记录了 %@ 上的一起事件"
-          }
-        }
-      }
-    },
-    "L2BEAT revised its assessment" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT revisó su evaluación"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が評価を見直しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 평가를 수정했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 修订了其评估"
-          }
-        }
-      }
-    },
-    "L2BEAT stage today" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Stage actual en L2BEAT"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "現在の L2BEAT Stage"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "현재 L2BEAT Stage"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "当前 L2BEAT Stage"
-          }
-        }
-      }
-    },
-    "L2BEAT took %@ off the stage ladder" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT retiró %@ de la escala de stages"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が %@ を Stage の段階から外しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 %@을(를) Stage 단계에서 제외했습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 将 %@ 移出了 Stage 阶梯"
-          }
-        }
-      }
-    },
-    "L2BEAT's assessment, not ours" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La evaluación de L2BEAT, no la nuestra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "評価は L2BEAT のものであり、当社のものではありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT의 평가이며, 저희의 평가가 아닙니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "这是 L2BEAT 的评估，而非我们的"
-          }
-        }
-      }
-    },
-    "L2BEAT's assessment, not ours · read on this device" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La evaluación de L2BEAT, no la nuestra · leída en este dispositivo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "評価は L2BEAT のもの · この端末で取得"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT의 평가 · 이 기기에서 읽음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 的评估 · 于本设备读取"
-          }
-        }
-      }
-    },
-    "L2BEAT's assessment, not ours. The five cells are their own risk axes, always in their order — open a chain to see which question sits in which cell. A chain with nothing flagged is one they found nothing to flag, not one they call safe.\n\nBundled as of %@; read live once connected." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La evaluación de L2BEAT, no la nuestra. Las cinco celdas son sus propios ejes de riesgo, siempre en su orden: abre una cadena para ver qué pregunta ocupa cada celda. Una cadena sin nada señalado es una en la que no encontraron nada que señalar, no una que llamen segura.\n\nIncluido a fecha de %@; se lee en directo al conectar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "評価は L2BEAT のものであり、当社のものではありません。5 つのセルは L2BEAT 自身のリスク軸を常に同じ順序で示しています — どのセルがどの項目かは、チェーンを開くと確認できます。何も指摘のないチェーンとは、指摘すべきものが見つからなかったチェーンであり、安全だと宣言されたチェーンではありません。\n\n%@ 時点で同梱。接続後はライブで取得されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT의 평가이며, 저희의 평가가 아닙니다. 다섯 칸은 그들 자신의 위험 축을 항상 같은 순서로 나타냅니다 — 어느 칸이 어느 항목인지는 체인을 열어 확인하세요. 아무것도 지적되지 않은 체인은 지적할 것을 찾지 못한 체인이지, 안전하다고 선언된 체인이 아닙니다.\n\n%@ 기준으로 포함됨. 연결하면 실시간으로 읽습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "这是 L2BEAT 的评估，而非我们的。这五格是他们自己的风险维度，始终按其顺序排列 — 打开某条链即可看到哪一格对应哪个问题。没有被标记的链，是他们没有找到可标记之处的链，而不是他们称之为安全的链。\n\n截至 %@ 打包；连接后实时读取。"
-          }
-        }
-      }
-    },
-    "L2BEAT's assessment, not ours. The five cells are their own risk axes, in their order — a chain with nothing flagged is one they found nothing to flag, not one they call safe.\n\nBundled as of %@; read live once connected." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La evaluación de L2BEAT, no la nuestra. Las cinco celdas son sus propios ejes de riesgo, en su orden: una cadena sin nada señalado es una en la que no encontraron nada que señalar, no una que llamen segura.\n\nIncluido a fecha de %@; se lee en directo al conectar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "評価は L2BEAT のものであり、当社のものではありません。5 つのセルは L2BEAT 自身のリスク軸を、その順序で示しています — 何も指摘のないチェーンとは、指摘すべきものが見つからなかったチェーンであり、安全だと宣言されたチェーンではありません。\n\n%@ 時点で同梱。接続後はライブで取得されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT의 평가이며, 저희의 평가가 아닙니다. 다섯 칸은 그들 자신의 위험 축을 그들의 순서대로 나타냅니다 — 아무것도 지적되지 않은 체인은 지적할 것을 찾지 못한 체인이지, 안전하다고 선언된 체인이 아닙니다.\n\n%@ 기준으로 포함됨. 연결하면 실시간으로 읽습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "这是 L2BEAT 的评估，而非我们的。这五格是他们自己的风险维度，按其顺序排列 — 没有被标记的链，是他们没有找到可标记之处的链，而不是他们称之为安全的链。\n\n截至 %@ 打包；连接后实时读取。"
-          }
-        }
-      }
-    },
-    "L2BEAT's own reading, not ours" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La lectura de L2BEAT, no la nuestra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "判断は L2BEAT のものであり、当社のものではありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 자신의 판단이며, 저희의 판단이 아닙니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "这是 L2BEAT 自己的判断，而非我们的"
-          }
-        }
-      }
-    },
-    "L2BEAT's reading, not ours · every chain they cover" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La lectura de L2BEAT, no la nuestra · todas las cadenas que cubren"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "判断は L2BEAT のもの · 彼らが扱うすべてのチェーン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT의 판단 · 그들이 다루는 모든 체인"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 的判断 · 他们覆盖的每一条链"
-          }
-        }
-      }
-    },
-    "L2BEAT's recorded incidents arrive here. Name the chains you use to add their risk assessments." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Los incidentes registrados por L2BEAT llegan aquí. Indica las cadenas que usas para añadir sus evaluaciones de riesgo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT が記録したインシデントがここに届きます。利用しているチェーンを指定すると、そのリスク評価が追加されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT가 기록한 사고가 여기에 도착합니다. 사용하는 체인을 지정하면 위험 평가가 추가됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT 记录的事件会送达这里。指定你使用的链，即可加入其风险评估。"
           }
         }
       }
@@ -128916,30 +128916,30 @@
         }
       }
     },
-    "Noticed %@ · L2BEAT's reading, not ours" : {
+    "Noticed %@ · ETHBEAT's reading, not ours" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Detectado el %@ · la lectura de L2BEAT, no la nuestra"
+            "value" : "Detectado el %@ · la lectura de ETHBEAT, no la nuestra"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ に確認 · 判断は L2BEAT のもの"
+            "value" : "%@ に確認 · 判断は ETHBEAT のもの"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ 확인 · L2BEAT의 판단"
+            "value" : "%@ 확인 · ETHBEAT의 판단"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ 发现 · L2BEAT 的判断"
+            "value" : "%@ 发现 · ETHBEAT 的判断"
           }
         }
       }
@@ -147207,6 +147207,34 @@
         }
       }
     },
+    "Reading ETHBEAT…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo ETHBEAT…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT を読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT를 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 ETHBEAT…"
+          }
+        }
+      }
+    },
     "Reading Ethereum…" : {
       "localizations" : {
         "es" : {
@@ -147231,34 +147259,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取 Ethereum…"
-          }
-        }
-      }
-    },
-    "Reading L2BEAT…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Leyendo L2BEAT…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT を読み込み中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "L2BEAT를 읽는 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在读取 L2BEAT…"
           }
         }
       }
@@ -148915,30 +148915,30 @@
         }
       }
     },
-    "Reads L2BEAT's public risk assessment for the chains you name." : {
+    "Reads ETHBEAT's public risk assessment for the chains you name." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lee la evaluación pública de riesgo de L2BEAT para las cadenas que indiques."
+            "value" : "Lee la evaluación pública de riesgo de ETHBEAT para las cadenas que indiques."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "指定したチェーンについて、L2BEAT の公開リスク評価を読み取ります。"
+            "value" : "指定したチェーンについて、ETHBEAT の公開リスク評価を読み取ります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "지정한 체인에 대한 L2BEAT의 공개 위험 평가를 읽습니다."
+            "value" : "지정한 체인에 대한 ETHBEAT의 공개 위험 평가를 읽습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "读取 L2BEAT 对你指定的链的公开风险评估。"
+            "value" : "读取 ETHBEAT 对你指定的链的公开风险评估。"
           }
         }
       }
@@ -149199,30 +149199,30 @@
         }
       }
     },
-    "Reads the incidents L2BEAT has recorded across every chain it covers." : {
+    "Reads the incidents ETHBEAT has recorded across every chain it covers." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lee los incidentes que L2BEAT ha registrado en todas las cadenas que cubre."
+            "value" : "Lee los incidentes que ETHBEAT ha registrado en todas las cadenas que cubre."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT が扱うすべてのチェーンについて記録したインシデントを読み取ります。"
+            "value" : "ETHBEAT が扱うすべてのチェーンについて記録したインシデントを読み取ります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT가 다루는 모든 체인에서 기록한 사고를 읽습니다."
+            "value" : "ETHBEAT가 다루는 모든 체인에서 기록한 사고를 읽습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "读取 L2BEAT 在其覆盖的每一条链上记录的事件。"
+            "value" : "读取 ETHBEAT 在其覆盖的每一条链上记录的事件。"
           }
         }
       }
@@ -150727,30 +150727,30 @@
         }
       }
     },
-    "Recorded %@ · From L2BEAT, an open registry of layer-2 risk" : {
+    "Recorded %@ · From ETHBEAT, an open registry of layer-2 risk" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Registrado el %@ · De L2BEAT, un registro abierto de riesgo de layer 2"
+            "value" : "Registrado el %@ · De ETHBEAT, un registro abierto de riesgo de layer 2"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ に記録 · layer 2 のリスクに関するオープンな登録簿 L2BEAT より"
+            "value" : "%@ に記録 · layer 2 のリスクに関するオープンな登録簿 ETHBEAT より"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%@ 기록 · layer 2 위험에 관한 공개 등록부 L2BEAT 제공"
+            "value" : "%@ 기록 · layer 2 위험에 관한 공개 등록부 ETHBEAT 제공"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "记录于 %@ · 来自 L2BEAT，一个公开的 layer 2 风险登记库"
+            "value" : "记录于 %@ · 来自 ETHBEAT，一个公开的 layer 2 风险登记库"
           }
         }
       }
@@ -165836,36 +165836,36 @@
         }
       }
     },
-    "Showing %lld of %lld · L2BEAT's assessment, read on this device" : {
+    "Showing %lld of %lld · ETHBEAT's assessment, read on this device" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Showing %1$lld of %2$lld · L2BEAT's assessment, read on this device"
+            "value" : "Showing %1$lld of %2$lld · ETHBEAT's assessment, read on this device"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mostrando %lld de %lld · la evaluación de L2BEAT, leída en este dispositivo"
+            "value" : "Mostrando %lld de %lld · la evaluación de ETHBEAT, leída en este dispositivo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld/%lld 件を表示 · L2BEAT の評価、この端末で取得"
+            "value" : "%lld/%lld 件を表示 · ETHBEAT の評価、この端末で取得"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "%lld/%lld개 표시 · L2BEAT의 평가, 이 기기에서 읽음"
+            "value" : "%lld/%lld개 표시 · ETHBEAT의 평가, 이 기기에서 읽음"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "显示 %lld/%lld · L2BEAT 的评估，于本设备读取"
+            "value" : "显示 %lld/%lld · ETHBEAT 的评估，于本设备读取"
           }
         }
       }
@@ -200665,30 +200665,30 @@
         }
       }
     },
-    "What L2BEAT checks" : {
+    "What ETHBEAT checks" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lo que comprueba L2BEAT"
+            "value" : "Lo que comprueba ETHBEAT"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT が確認する項目"
+            "value" : "ETHBEAT が確認する項目"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT가 확인하는 항목"
+            "value" : "ETHBEAT가 확인하는 항목"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "L2BEAT 检查的内容"
+            "value" : "ETHBEAT 检查的内容"
           }
         }
       }

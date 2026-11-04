@@ -114,7 +114,7 @@ enum L2beatSheet {
 /// constants the landing writes. `L2beatWatch` forwards to these rather than re-declaring
 /// them — two spellings of a ref prefix is exactly the §311 bug.
 enum L2beatIdentity {
-	static let source = "L2BEAT"
+	static let source = "ETHBEAT"
 	static let seatID = "l2beat"
 	static let chainPrefix = "l2beat:chain:"
 	static let newsPrefix = "l2beat:news:"

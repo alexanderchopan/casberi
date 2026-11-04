@@ -174,7 +174,7 @@ enum SourceRename {
         "binance": "Binance", "cardpointers": "CardPointers",
         "cloudflare": "Cloudflare", "dodopayments": "Dodo Payments",
         "duolingo": "Duolingo", "ethvalidators": "ETH Validators",
-        "geminiExchange": "Gemini Exchange", "l2beat": "L2BEAT",
+        "geminiExchange": "Gemini Exchange", "l2beat": "ETHBEAT",
         "lightning": "Lightning", "pagerduty": "PagerDuty", "polar": "Polar",
         "posthog": "PostHog", "pypi": "PyPI", "sentry": "Sentry",
         "slack": "Slack", "splits": "Splits", "spotify": "Spotify",

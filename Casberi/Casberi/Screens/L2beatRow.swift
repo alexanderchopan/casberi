@@ -50,7 +50,7 @@ struct L2beatChainRow: View {
 	/// ("Optimistic Rollup"); measured 2026-08-21 it reads "Other" for 77 of 105, and in that
 	/// case the layer is the only thing left worth saying.
 	private func subtitle(_ project: L2beatProject?) -> String {
-		guard let project else { return String(localized: "Reading L2BEAT…") }
+		guard let project else { return String(localized: "Reading ETHBEAT…") }
 		let category = project.category ?? ""
 		let host = project.hostChain.map { String(localized: "on \($0)") }
 		let head = (category.isEmpty || category == "Other") ? project.layer.label : category

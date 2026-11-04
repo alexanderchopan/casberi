@@ -1841,7 +1841,7 @@ enum ProbeHooks {
                       fresh.isEmpty ? "UNREACHABLE" : "\(fresh.count) projects")
                 for id in watched {
                     guard let live = fresh.first(where: { $0.id == id }) else {
-                        NSLog("[Casberi] l2beatLive| %@ — NOT IN L2BEAT'S SUMMARY", id)
+                        NSLog("[Casberi] l2beatLive| %@ — NOT IN ETHBEAT'S SUMMARY", id)
                         continue
                     }
                     NSLog("[Casberi] l2beatLive| %@ stage=%@ review=%@ flagged=%d/%d",
@@ -1866,7 +1866,7 @@ enum ProbeHooks {
         // never recorded, and only the second is visible from the row itself.
         Hook(key: "l2beatSheetProbe") { _, context in
             let rows = ((try? context.fetch(FetchDescriptor<Thing>(
-                predicate: #Predicate<Thing> { $0.source == "L2BEAT" },
+                predicate: #Predicate<Thing> { $0.source == "ETHBEAT" },
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
             let book = L2beatMilestoneBook.all()
             NSLog("[Casberi] l2beatSheet| rows=%d milestoneBook=%d assessments=%d",

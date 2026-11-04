@@ -54,11 +54,11 @@ struct L2beatRiskCard: View {
 				if !milestones.isEmpty { milestoneCrossLink }
 				riskSection(project)
 			} else if loading {
-				Text(String(localized: "Reading L2BEAT…"))
+				Text(String(localized: "Reading ETHBEAT…"))
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 			} else if failed {
-				DSProse.text("Couldn't reach L2BEAT, and this chain isn't in the copy bundled with the app.")
+				DSProse.text("Couldn't reach ETHBEAT, and this chain isn't in the copy bundled with the app.")
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
@@ -104,7 +104,7 @@ struct L2beatRiskCard: View {
 	}
 
 	private var subtitleLine: String {
-		guard let project else { return String(localized: "Reading L2BEAT…") }
+		guard let project else { return String(localized: "Reading ETHBEAT…") }
 		var parts: [String] = [project.layer.label]
 		if let category = project.category, !category.isEmpty, category != "Other" {
 			parts.append(category)
@@ -134,12 +134,12 @@ struct L2beatRiskCard: View {
 				Spacer(minLength: 0)
 			}
 			Text(project.stage?.meaning
-				?? String(localized: "L2BEAT does not place this chain on its stage ladder."))
+				?? String(localized: "ETHBEAT does not place this chain on its stage ladder."))
 				.dsText(.body17)
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 			if project.underReview {
-				DSProse.text("L2BEAT is re-examining this chain, so these readings may change.")
+				DSProse.text("ETHBEAT is re-examining this chain, so these readings may change.")
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
@@ -237,7 +237,7 @@ struct L2beatRiskCard: View {
 		if !project.risks.isEmpty {
 			VStack(alignment: .leading, spacing: DS.Space.s3) {
 				HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-					Text(String(localized: "What L2BEAT checks"))
+					Text(String(localized: "What ETHBEAT checks"))
 						.dsText(.heading17)
 						.foregroundStyle(DS.textPrimary)
 					Spacer(minLength: DS.Space.s2)
@@ -278,7 +278,7 @@ struct L2beatRiskCard: View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
 			if let url = project?.pageURL {
 				Link(destination: url) {
-					Text(String(localized: "Full assessment on L2BEAT"))
+					Text(String(localized: "Full assessment on ETHBEAT"))
 						.dsText(.subhead12)
 						.foregroundStyle(DS.textSecondary)
 				}

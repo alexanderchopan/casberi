@@ -49,7 +49,7 @@ struct RoomAccountsTests {
         // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to
         // Reading, which folded into Media (§1204).
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
-        #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.mediaRoom)
+        #expect(RoomAccounts.host(ofSource: "ETHBEAT")?.room == RoomAccounts.mediaRoom)
         #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.mediaRoom)
         for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
@@ -66,7 +66,7 @@ struct RoomAccountsTests {
     @Test func readHalfListsReadingsAppsAToZ() {
         let names = RoomAccounts.seats(for: RoomAccounts.readingRoom).map(\.name)
         for app in ["RSS", "Substack", "Readwise", "Kindle", "Bookmarks", "Raindrop",
-                    "NerdWallet", "L2BEAT", "Walletbeat"] {
+                    "NerdWallet", "ETHBEAT", "Walletbeat"] {
             #expect(names.contains(app), "\(app) is in Media's Read half")
         }
         #expect(!names.contains("Safe"))
@@ -78,9 +78,9 @@ struct RoomAccountsTests {
     /// A reading app lands in Media, scoped to it; a share stamped "Reading"
     /// rides Media and is Read; no room is named Reading any more.
     @Test func aReadingAppFoldsIntoMedia() throws {
-        let host = try #require(RoomAccounts.host(ofSource: "L2BEAT"))
+        let host = try #require(RoomAccounts.host(ofSource: "ETHBEAT"))
         #expect(host.room == RoomAccounts.mediaRoom)
-        #expect(host.seat.owns("L2BEAT"))
+        #expect(host.seat.owns("ETHBEAT"))
         #expect(!host.seat.owns("Walletbeat"))
         #expect(RoomAccounts.rides(room: RoomAccounts.mediaRoom, source: "RSS"))
         #expect(RoomAccounts.rides(room: RoomAccounts.mediaRoom, source: RoomAccounts.readingRoom))

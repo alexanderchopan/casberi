@@ -31,7 +31,7 @@ enum FollowByName {
         "PyPI": String(localized: "A package"),
         "Radicle": String(localized: "A repo"),
         // Media
-        "L2BEAT": String(localized: "A chain"),
+        "ETHBEAT": String(localized: "A chain"),
         "Pinterest": String(localized: "A board or a person"),
         "Podcasts": String(localized: "A show"),
         "RSS": String(localized: "A site"),

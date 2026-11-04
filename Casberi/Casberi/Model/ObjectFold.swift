@@ -49,7 +49,7 @@ enum ObjectFold {
     }
 
     /// Reading's rows that are readings, not articles.
-    static let readingExcluded: Set<String> = ["L2BEAT", "Walletbeat"]
+    static let readingExcluded: Set<String> = ["ETHBEAT", "Walletbeat"]
 
     /// The object a row is about, or nil when it names none we can be sure of.
     /// `link` is the row's own permalink (`Thing.content` for a link row).

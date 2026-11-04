@@ -142,8 +142,8 @@ enum L2beatWatch {
 			proof: proof,
 			can: [
 				count > 0
-					? String(localized: "Reads L2BEAT's public risk assessment for the chains you name.")
-					: String(localized: "Reads the incidents L2BEAT has recorded across every chain it covers."),
+					? String(localized: "Reads ETHBEAT's public risk assessment for the chains you name.")
+					: String(localized: "Reads the incidents ETHBEAT has recorded across every chain it covers."),
 				String(localized: "Read-only — no account, no key, and nothing about you is sent."),
 			]
 		)
@@ -513,7 +513,7 @@ enum L2beatIngest {
 		switch change {
 		case .stage(let before, let after):
 			if after == .notApplicable {
-				return String(localized: "L2BEAT took \(project.name) off the stage ladder")
+				return String(localized: "ETHBEAT took \(project.name) off the stage ladder")
 			}
 			if let was = before?.rung, let now = after.rung, now < was {
 				return String(localized: "\(project.name) dropped to \(after.label)")
@@ -523,7 +523,7 @@ enum L2beatIngest {
 			let verb = after.isConcerning
 				? String(localized: "now faults")
 				: String(localized: "re-rated")
-			return String(localized: "L2BEAT \(verb) \(project.name) on \(axis.label.lowercased()): \(value)")
+			return String(localized: "ETHBEAT \(verb) \(project.name) on \(axis.label.lowercased()): \(value)")
 		}
 	}
 

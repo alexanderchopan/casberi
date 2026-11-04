@@ -41,7 +41,7 @@ import urllib.request
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PATH = os.path.join(REPO_ROOT, "Casberi", "Casberi", "Model", "L2beatDirectory.swift")
 
-SITE = "l2beat.com"
+SITE = "ethbeat.org"  # L2BEAT renamed itself ETHBEAT, 2026-11-04 (prd §1699)
 SUMMARY_URL = f"https://{SITE}/api/scaling/summary"
 RAW = "https://raw.githubusercontent.com/l2beat/l2beat/main"
 CONFIG_PATH = "packages/config/src/projects/{pid}/{pid}.ts"

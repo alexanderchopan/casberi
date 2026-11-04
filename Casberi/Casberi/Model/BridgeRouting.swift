@@ -428,7 +428,7 @@ enum BridgeRouter {
         Row(offer: "ETH Validators", id: "ethvalidators", destination: .ethValidators),
         Row(offer: "ENS",        id: "ens",        destination: .ens),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
-        Row(offer: "L2BEAT",     id: "l2beat",     destination: .l2beat),
+        Row(offer: "ETHBEAT",     id: "l2beat",     destination: .l2beat),
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),

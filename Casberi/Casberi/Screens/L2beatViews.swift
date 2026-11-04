@@ -263,7 +263,7 @@ enum L2beatCopy {
 
 	static func stageReadout(_ stage: L2beatStage?) -> String {
 		guard let stage else {
-			return String(localized: "L2BEAT has not placed this chain on its stage ladder.")
+			return String(localized: "ETHBEAT has not placed this chain on its stage ladder.")
 		}
 		return "\(stage.label). \(stage.meaning)"
 	}
@@ -312,5 +312,5 @@ enum L2beatCopy {
 
 	/// How L2BEAT's own attribution reads. Every surface says this; none of them ever states
 	/// an assessment as the app's own finding.
-	static let attribution = String(localized: "L2BEAT's assessment, not ours")
+	static let attribution = String(localized: "ETHBEAT's assessment, not ours")
 }
