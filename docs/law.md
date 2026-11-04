@@ -85,7 +85,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Rows are bare, with no plate or card. The cover has no backing (§749).
 - Nothing from today is dimmed (§773).
 - Pictures tile under their own day, three across, in the room's own shape, with the caption under the picture (§910).
-- A row's lead turns to its dock category's glyph and back, once, when it lands while you watch or its title moves in place (§901, §901b).
+- A row's lead turns to its app's mark and back, once, when it lands while you watch or its title moves in place; a lead that already is the app's mark turns to its dock category's glyph (§1689, §901, §901b).
 - The feed's days are felt: a tick as a divider passes. The floor draws the mark (§866, §866a).
 - The Feed stacks every category but the Wallet and Testnets: the Wallet is its own tab (§1489). No tab wears a badge, dot or ring, on the phone's bar or the Mac's rail: the Wallet's asks are its Home's Needs you, a broken app says so on its own row (§1490).
 
@@ -245,7 +245,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1830 of 1902 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1831 of 1903 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -1259,7 +1259,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §898e — The swipe's table is the crown's charcoal, and the card's edge is lit from above
 - §899 — The brand stays pink; orange was mocked and declined
 - §900 — One grammar down the All feed's column: money on the right, blue only for taps, one padding, folds named by their new…
-- §901 — A row lead turns to its dock category's glyph and back, once
+- §901 — A row lead turns to its dock category's glyph and back, once (amended by §1689)
 - §901a — The turn is an ease, not a spring: two frames read as a flicker
 - §901b — The landing is the thing's ARRIVAL, never its date: the cycle was live and almost never fired
 - §902 — The All feed's Apple pass: one row head, one-line titles, no ages, no counts, no source in the line, the day alone (amended by §1103; part superseded by §1017)
@@ -2077,6 +2077,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
 - §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
 - §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565'…
+- §1689 — A row lead flips to its APP's mark, and to its category's glyph only when it already wears the app's mark
 
 ## Dead rulings → what replaced them (generated)
 

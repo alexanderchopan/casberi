@@ -70774,3 +70774,17 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guards.** `aztec-selftest.sh` and `aztec-sign-selftest.sh` are deleted with their code; `aztec-stake-selftest.sh` gains the health reader (a real mainnet reply, an unseen attester, an error, a string slot) and three mutations; `address-tail-selftest.sh` pins four forwarders; `RoomAccountsTests` asserts Aztec is no seat.
 
 **Mac half (§1402).** The same: the Mac's Testnets pane shows Logos alone.
+
+## §1689 — A row lead flips to its APP's mark, and to its category's glyph only when it already wears the app's mark (amends §901, keeps §901a's clock and §901b's landing) (user, 2026-11-03: "you know how in the feed when a new item arrives the icon flips to show the category icon? what if instead of category icon it flipped to show the source one?" → on the reply that most leads now rest on a face, a sender's initial, a publisher or a picture, and that a category page's rows all share the category: "yes, build it", then "write up and commit") — BUILT, compiled; the flip NOT seen on the simulator
+
+1. **The back face is the app** (`LeadCycle.Back.mark`, drawn by `BridgeIcon` at the lead's size, as the bare `.glyph` lead draws it). Since §1071 and §1551 most rows rest on WHO or WHAT (a face, a wallet, a sender's initial, a publisher's icon, a picture, what a protocol did), so the one fact the flip can add is WHERE it came from. On a category page every row already shares the category; the category glyph said nothing there.
+2. **The fallback is §901's category glyph** (`Back.glyph`, `CategoryFold.glyph(for:)` and nothing else), for a row whose lead already IS its app's mark (`restsOnMark`, `BandRow` passing `leader == .glyph`) — a mark turning to itself is no turn — and for a source with no mark of its own (`BridgeIcon.hasMark` false), which would turn to the blank `app` square. A contact's face (`faceCycle`) has no source and keeps the category.
+3. **Unchanged:** one cycle, never a switch; no state glyphs (an app's mark is a word the app already taught, as the category was); the clock (§901a); the landing is the arrival (§901b); the ledger's rows keep §171's ripple; Reduce Motion turns nothing; the glyph is resolved when the cycle fires, never per body pass (§626).
+
+**Guard.** `lead-cycle-audit.py` rule A now admits exactly two back faces, `.mark(source)` and `.glyph(CategoryFold.glyph(for:))`, requires the mark arm behind `!restsOnMark` and drawn by `BridgeIcon`; rule D requires the caller's `restsOnMark: leader == .glyph`. Four new mutations (the category everywhere again, the guard dropped, the mark drawn by another view, the caller's flag dropped) each fire.
+
+**Probe.** `-leadCycleProbe <s>` deletes its own earlier rows before it lands (three on a day grouped, and a grouped lead never turns, §901a's trap); `-leadCycleFace YES` lands a Slack row from a person ("Ana Ruiz", an initial lead) in place of the Trello one and retitles it 10s after landing, not 3s.
+
+**Not seen.** Recorded on the simulator (iPhone 17 Pro, the demo) five times on Home's sections and Work's page, and the flip never fired — for the new face or the old category glyph. Home draws a landing about four seconds late, after the probe's 3s retitle, and Work's page reorders its rows when one lands. Whether the cycle fires at all on today's pages is open; it is the §901b question again and is not answered here.
+
+**Mac half (§1402).** The same rows and the same flip; nothing here is phone-only.

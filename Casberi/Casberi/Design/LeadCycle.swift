@@ -5,15 +5,25 @@ import SwiftUI
 /// always be the category not a state b/c then we'd be making up new icons or
 /// glyphs for a user to learn").
 ///
-/// A feed row's 26pt lead is the source's mark. When the row LANDS while you
-/// are looking, or its fact MOVES in place (a package delivered, a Safe
-/// transaction executed), the mark turns over to the glyph of its dock
-/// category — the one the category chip already wears, read from
-/// `CategoryFold.glyph(for:)` and nowhere else — holds, and turns back. It
-/// ends where it began, so the source is never lost; the WORDS carry what
-/// happened, the glyph only says "this one moved", in a word the dock already
-/// taught. No state glyphs (a tick, a clock): those would be a second
-/// vocabulary to learn, and the category is a fact the row already has.
+/// THE FLIP SHOWS THE OTHER ONE (prd §1687, amends §901; user: "what if
+/// instead of category icon it flipped to show the source one?" → "yes,
+/// build it", 2026-11-03). A feed row's lead mostly rests on WHO or WHAT —
+/// a face, a wallet, a sender's initial, a publisher, a picture, what a
+/// protocol did — so the back of the disc is the APP's mark (`BridgeIcon`,
+/// as the bare lead draws it): where it came from. Only a row that already
+/// rests on its app's mark (`restsOnMark`, the `.glyph` lead) turns to the
+/// glyph of its dock category instead — the one the category chip wears,
+/// read from `CategoryFold.glyph(for:)` and nowhere else — because turning a
+/// mark to itself is no turn. On a category page every row shares the
+/// category, so the app is the one fact the flip can add there.
+///
+/// When the row LANDS while you are looking, or its fact MOVES in place (a
+/// package delivered, a Safe transaction executed), the lead turns over,
+/// holds, and turns back. It ends where it began; the WORDS carry what
+/// happened, the back face only says "this one moved", in a mark the app
+/// already taught. No state glyphs (a tick, a clock): those would be a second
+/// vocabulary to learn (§901), and the app and the category are facts the row
+/// already has.
 ///
 /// Two moments, ONE rule, one clock: out at `out`, back at `back`, once.
 ///
@@ -43,7 +53,7 @@ import SwiftUI
 /// on the back is `DSGlyphLead`, the row lead the Readings rows already wear
 /// (§763), so the flipped face is a shape the feed already draws.
 struct LeadCycle: ViewModifier {
-    /// The thing's source; the category glyph is resolved from it on fire.
+    /// The thing's source: the back face's mark, or its category's glyph.
     let source: String
     /// The thing, for its arrival in `LandingLedger` against the page's wave.
     let id: UUID
@@ -66,6 +76,9 @@ struct LeadCycle: ViewModifier {
     var category: String? = nil
     /// The turning disc's size: the feed lead's 26pt, or a contact's 36pt face.
     var faceSize: CGFloat = DS.Mark.row
+    /// Whether the lead at rest already IS the app's mark (the row's `.glyph`
+    /// lead). Then the back is the category glyph, never the same mark twice.
+    var restsOnMark: Bool = false
 
     /// The clock, shared by both moments. `out` sits after the row's own
     /// entrance spring (`DS.Motion.duration`), so the cycle FOLLOWS the
@@ -88,17 +101,30 @@ struct LeadCycle: ViewModifier {
     /// and reset to 0 with no animation — visually identical, so the next
     /// cycle starts from the same place.
     @State private var angle: Double = 0
-    @State private var glyph: String?
+    @State private var back: Back?
+
+    /// What the disc turns to: the app's mark, or the category's glyph.
+    enum Back: Equatable {
+        case mark(String)
+        case glyph(String)
+    }
     @State private var cycling = false
 
     func body(content: Content) -> some View {
         ZStack {
             content
                 .modifier(Face(angle: angle, back: false))
-            if let glyph {
+            switch back {
+            case .mark(let name):
+                BridgeIcon(name: name, size: faceSize)
+                    .accessibilityHidden(true)
+                    .modifier(Face(angle: angle, back: true))
+            case .glyph(let glyph):
                 DSGlyphLead(glyph: glyph, size: faceSize)
                     .accessibilityHidden(true)
                     .modifier(Face(angle: angle, back: true))
+            case nil:
+                EmptyView()
             }
         }
         .onAppear { if landedWhileLooking { fire() } }
@@ -116,11 +142,18 @@ struct LeadCycle: ViewModifier {
 
     private func fire() {
         guard !reduceMotion, !cycling else { return }
-        // The dock's own table, and nothing else: a category added there is a
-        // glyph here the same day, and no glyph exists here that a chip does
-        // not wear (`lead-cycle-audit.py`).
-        guard let category = category ?? BridgeCatalog.category(forSource: source) else { return }
-        glyph = CategoryFold.glyph(for: category)
+        if !restsOnMark, !source.isEmpty, BridgeIcon.hasMark(source) {
+            // The app's own mark, as the bare lead draws it (§1687). A source
+            // with no mark of its own would turn to the blank `app` square,
+            // which says nothing, so it falls to the category below.
+            back = .mark(source)
+        } else {
+            // The dock's own table, and nothing else: a category added there
+            // is a glyph here the same day, and no glyph exists here that a
+            // chip does not wear (`lead-cycle-audit.py`).
+            guard let category = category ?? BridgeCatalog.category(forSource: source) else { return }
+            back = .glyph(CategoryFold.glyph(for: category))
+        }
         cycling = true
         let delay = Double(min(index, 12)) * Self.stagger
         withAnimation(DS.Motion.turn.delay(delay + Self.out)) { angle = 180 }
@@ -179,9 +212,11 @@ extension EnvironmentValues {
 extension View {
     /// The one cycle on a row lead — see `LeadCycle`.
     func leadCycle(source: String, id: UUID, fact: String,
-                   index: Int = 0, cyclesOnChange: Bool = true) -> some View {
+                   index: Int = 0, cyclesOnChange: Bool = true,
+                   restsOnMark: Bool = false) -> some View {
         modifier(LeadCycle(source: source, id: id, fact: fact,
-                           index: index, cyclesOnChange: cyclesOnChange))
+                           index: index, cyclesOnChange: cyclesOnChange,
+                           restsOnMark: restsOnMark))
     }
 
     /// The same cycle on a contact's FACE (the Addresses list, 2026-09-25):

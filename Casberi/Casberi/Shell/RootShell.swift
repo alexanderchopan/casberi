@@ -1169,14 +1169,25 @@ struct RootShell: View {
             let cycleDelay = UserDefaults.standard.double(forKey: "leadCycleProbe")
             if cycleDelay > 0 {
                 Task { @MainActor in
+                    // Earlier runs' probe rows go first: three on one day
+                    // grouped, and a grouped lead never turns (§901a's trap).
+                    clearLeadCycleProbes(in: modelContext)
                     try? await Task.sleep(for: .seconds(cycleDelay))
+                    // `-leadCycleFace YES` (prd §1687): land a Slack message
+                    // from a PERSON, whose lead rests on the sender's initial
+                    // and turns to Slack's mark and back; the Trello row rests
+                    // on its own mark and turns to Work's glyph. Both in Work.
+                    let face = UserDefaults.standard.bool(forKey: "leadCycleFace")
                     let probe = Thing(kind: .note, title: "Lead cycle probe",
-                                      content: "", source: "Trello",
+                                      content: "", source: face ? "Slack" : "Trello",
                                       sourceRef: "leadCycleProbe:\(Date.now.timeIntervalSince1970)")
+                    if face { probe.authorHandle = "Ana Ruiz" }
                     modelContext.insert(probe)
                     try? modelContext.save()
                     NSLog("[Casberi] leadCycle: landed \(probe.id)")
-                    try? await Task.sleep(for: .seconds(3))
+                    // A room's list takes a few seconds to draw a landing, so
+                    // the face case moves later, on a row already on screen.
+                    try? await Task.sleep(for: .seconds(face ? 10 : 3))
                     probe.title = "Lead cycle probe · moved"
                     try? modelContext.save()
                     NSLog("[Casberi] leadCycle: moved \(probe.id)")
@@ -5009,3 +5020,16 @@ private struct MacDemoWatch: ViewModifier {
     }
 }
 #endif
+
+/// `-leadCycleProbe`'s earlier rows, deleted before it lands another (DEBUG
+/// probe only): three on one day grouped, and a grouped lead never turns.
+@MainActor private func clearLeadCycleProbes(in context: ModelContext) {
+    for source in ["Trello", "Slack"] {
+        let rows = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source }))) ?? []
+        for row in rows where row.sourceRef?.hasPrefix("leadCycleProbe:") == true {
+            context.delete(row)
+        }
+    }
+    try? context.save()
+}

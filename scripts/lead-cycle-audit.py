@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Casberi lead-cycle audit (prd §901, 2026-09-23).
 
-ONE CYCLE, NOT A SWITCH. A feed row's lead turns over to its dock CATEGORY's
-glyph and back when the row lands while you look or its title moves in place.
-The user's two rules, each of which a later pass could quietly undo while the
-build stays green and the row still animates:
+ONE CYCLE, NOT A SWITCH. A feed row's lead turns over and back when the row
+lands while you look or its title moves in place — to the APP's mark (prd
+§1687, amending §901), or to its dock CATEGORY's glyph when the lead already
+rests on the app's mark. The user's rules, each of which a later pass could
+quietly undo while the build stays green and the row still animates:
+
+  · "what if instead of category icon it flipped to show the source one?"
+    (§1687) — so the back face is `.mark(source)`, drawn by `BridgeIcon`,
+    unless the caller says the lead `restsOnMark` (the `.glyph` lead), where
+    a mark turning to itself is no turn.
 
   · "it should always be the category not a state b/c then we'd be making up
     new icons or glyphs for a user to learn" — so the glyph the disc turns to
@@ -16,15 +22,18 @@ build stays green and the row still animates:
 
 WHAT IT CHECKS (each with a mutation in the self-test that must fire):
 
-  A  every `glyph =` in `LeadCycle` is `CategoryFold.glyph(for:)`, resolved
-     from `BridgeCatalog.category(forSource:)`; no `Image(systemName:` and no
-     literal symbol name anywhere in the file.
+  A  every `back =` in `LeadCycle` is `.mark(source)` or
+     `.glyph(CategoryFold.glyph(for:))`, resolved from
+     `BridgeCatalog.category(forSource:)`; the mark arm is guarded by
+     `!restsOnMark`; no `Image(systemName:` and no literal symbol name
+     anywhere in the file.
   B  the turn comes back: `angle = 360` is animated, then reset to 0 under
      `disablesAnimations`, and `back` is later than `out`.
   C  Reduce Motion is read where the cycle fires (`guard !reduceMotion`).
   D  ONE caller, `BandRow`'s lead in ShapedRows.swift, passing `fact:
-     thing.title` and `cyclesOnChange: !moneyColumn` — the ledger keeps §171's
-     ripple as its one motion on a retitle. The fold rows never carry it.
+     thing.title`, `cyclesOnChange: !moneyColumn` — the ledger keeps §171's
+     ripple as its one motion on a retitle — and `restsOnMark: leader ==
+     .glyph`. The fold rows never carry it.
      (The Addresses list is the one OTHER door, `faceCycle`, 2026-09-25: a
      contact's face turns when the contact was SAVED after the list's wave —
      `arrival` stands in for the ledger, which never sees a contact. It is
@@ -77,13 +86,22 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
     s = strip_comments(root)
     d = strip_comments(demo)
 
-    # A — the glyph is the dock category's, from the dock's table, and nothing else.
-    assigns = re.findall(r"\bglyph\s*=\s*([^\n]+)", c)
+    # A — the back face is the app's mark or the dock category's glyph, nothing else.
+    assigns = re.findall(r"\bback\s*=\s*([^\n]+)", c)
     if not assigns:
-        out.append("A: LeadCycle never assigns its glyph")
+        out.append("A: LeadCycle never assigns its back face")
     for a in assigns:
-        if "CategoryFold.glyph(for:" not in a:
-            out.append(f"A: a glyph assigned from something other than CategoryFold.glyph(for:) — `{a.strip()}`")
+        a = a.strip()
+        if a == ".mark(source)":
+            continue
+        if not a.startswith(".glyph(CategoryFold.glyph(for:"):
+            out.append(f"A: a back face that is neither the app's mark nor CategoryFold.glyph(for:) — `{a}`")
+    if ".mark(source)" not in c:
+        out.append("A: the back face never shows the app's mark (§1687)")
+    if not re.search(r"if\s+!restsOnMark\b[^{]*\{\s*[^}]*back\s*=\s*\.mark\(source\)", c):
+        out.append("A: the app's mark is not guarded by !restsOnMark — a mark lead would turn to itself")
+    if not re.search(r"case\s+\.mark\(let\s+(\w+)\):\s*BridgeIcon\(name:\s*\1", c):
+        out.append("A: the mark face is not drawn by BridgeIcon, the bare lead's own drawing")
     if "BridgeCatalog.category(forSource:" not in c:
         out.append("A: the category is not resolved through BridgeCatalog.category(forSource:)")
     if re.search(r"Image\(systemName:", c):
@@ -121,6 +139,8 @@ def audit(cycle: str, rows: str, feed: str, ledger: str = "", root: str = "",
             out.append("D: the caller does not hand the cycle the thing's id for its arrival (§901b) — `capturedAt` is the thing's own date")
         if "cyclesOnChange: !moneyColumn" not in flat:
             out.append("D: the ledger's rows are not opted out of the change cycle (§171's ripple is their motion)")
+        if "restsOnMark: leader == .glyph" not in flat:
+            out.append("D: the caller does not say when its lead rests on the app's mark — the mark would turn to itself (§1687)")
 
     # E — the landing rule: the ARRIVAL against the wave, and a fresh window.
     if not re.search(r"landed\s*=\s*(?:arrival\s*\?\?\s*)?LandingLedger\.landedAt\(id\)", c):
@@ -172,11 +192,15 @@ struct LeadCycle: ViewModifier {
     @Environment(\\.feedWaveAt) private var waveAt
     @Environment(\\.accessibilityReduceMotion) private var reduceMotion
     @State private var angle: Double = 0
-    @State private var glyph: String?
+    @State private var back: Back?
     func body(content: Content) -> some View {
         ZStack {
             content
-            if let glyph { DSGlyphLead(glyph: glyph) }
+            switch back {
+            case .mark(let name): BridgeIcon(name: name, size: faceSize)
+            case .glyph(let glyph): DSGlyphLead(glyph: glyph)
+            case nil: EmptyView()
+            }
         }
         .onAppear { if landedWhileLooking { fire() } }
         .onChange(of: fact) { if cyclesOnChange { fire() } }
@@ -187,8 +211,12 @@ struct LeadCycle: ViewModifier {
     }
     private func fire() {
         guard !reduceMotion, !cycling else { return }
-        guard let category = BridgeCatalog.category(forSource: source) else { return }
-        glyph = CategoryFold.glyph(for: category)
+        if !restsOnMark, !source.isEmpty, BridgeIcon.hasMark(source) {
+            back = .mark(source)
+        } else {
+            guard let category = BridgeCatalog.category(forSource: source) else { return }
+            back = .glyph(CategoryFold.glyph(for: category))
+        }
         withAnimation(DS.Motion.standard.delay(delay + Self.out)) { angle = 180 }
         Task { @MainActor in
             withAnimation(DS.Motion.standard) { angle = 360 }
@@ -209,7 +237,8 @@ struct BandRow: View {
                 .overlay(alignment: .bottomTrailing) { flag }
                 .leadCycle(source: thing.source, id: thing.id,
                            fact: thing.title, index: rippleIndex,
-                           cyclesOnChange: !moneyColumn)
+                           cyclesOnChange: !moneyColumn,
+                           restsOnMark: leader == .glyph)
         }
     }
 }
@@ -250,13 +279,21 @@ def self_test() -> bool:
     cases = [
         ("healthy tree is clean", GOOD_CYCLE, GOOD_ROWS, GOOD_FEED, 0),
         ("A: a state glyph — the tick for delivered",
-         GOOD_CYCLE.replace('glyph = CategoryFold.glyph(for: category)', 'glyph = "checkmark"'), GOOD_ROWS, GOOD_FEED, 1),
+         GOOD_CYCLE.replace('back = .glyph(CategoryFold.glyph(for: category))', 'back = .glyph("checkmark")'), GOOD_ROWS, GOOD_FEED, 1),
         ("A: a glyph table of its own beside the dock's",
-         GOOD_CYCLE.replace('glyph = CategoryFold.glyph(for: category)', 'glyph = LeadGlyphs.table[category]'), GOOD_ROWS, GOOD_FEED, 1),
+         GOOD_CYCLE.replace('back = .glyph(CategoryFold.glyph(for: category))', 'back = .glyph(LeadGlyphs.table[category])'), GOOD_ROWS, GOOD_FEED, 1),
         ("A: the category resolved by hand, not the catalog",
          GOOD_CYCLE.replace('BridgeCatalog.category(forSource: source)', 'myCategory(source)'), GOOD_ROWS, GOOD_FEED, 1),
         ("A: the flipped face drawn by hand",
          GOOD_CYCLE.replace('DSGlyphLead(glyph: glyph)', 'Image(systemName: glyph)'), GOOD_ROWS, GOOD_FEED, 1),
+        ("A: the category everywhere again — the app's mark never shown (§1687)",
+         GOOD_CYCLE.replace('back = .mark(source)', 'back = .glyph(CategoryFold.glyph(for: BridgeCatalog.category(forSource: source) ?? ""))'), GOOD_ROWS, GOOD_FEED, 1),
+        ("A: a mark lead turns to itself — the restsOnMark guard dropped",
+         GOOD_CYCLE.replace('if !restsOnMark, !source.isEmpty,', 'if !source.isEmpty,'), GOOD_ROWS, GOOD_FEED, 1),
+        ("A: the mark face drawn as a different picture than the lead's",
+         GOOD_CYCLE.replace('case .mark(let name): BridgeIcon(name: name, size: faceSize)', 'case .mark(let name): RemoteThumb(urlString: name, size: faceSize)'), GOOD_ROWS, GOOD_FEED, 1),
+        ("D: the caller never says the lead rests on the mark",
+         GOOD_CYCLE, GOOD_ROWS.replace(',\n                           restsOnMark: leader == .glyph', ''), GOOD_FEED, 1),
         ("B: a switch — the turn never comes back",
          GOOD_CYCLE.replace('withAnimation(DS.Motion.standard) { angle = 360 }', ''), GOOD_ROWS, GOOD_FEED, 1),
         ("B: the reset animates (a third visible turn)",
@@ -270,7 +307,7 @@ def self_test() -> bool:
         ("D: a second caller on another row's lead",
          GOOD_CYCLE, GOOD_ROWS + 'struct OtherRow: View { var body: some View { BridgeIcon(name: source, size: DS.Mark.row).leadCycle(source: source, capturedAt: .now, fact: name) }\n}\n', GOOD_FEED, 1),
         ("D: the caller deleted",
-         GOOD_CYCLE, re.sub(r"\.leadCycle\([\s\S]*?cyclesOnChange: !moneyColumn\)", "", GOOD_ROWS), GOOD_FEED, 1),
+         GOOD_CYCLE, re.sub(r"\.leadCycle\([\s\S]*?restsOnMark: leader == \.glyph\)", "", GOOD_ROWS), GOOD_FEED, 1),
         ("D: the fact is not the title",
          GOOD_CYCLE, GOOD_ROWS.replace('fact: thing.title', 'fact: thing.source'), GOOD_FEED, 1),
         ("healthy tree with the arrival door (faceCycle) is clean",
@@ -288,7 +325,7 @@ def self_test() -> bool:
         ("F: the change trigger lost its opt-out",
          GOOD_CYCLE.replace('.onChange(of: fact) { if cyclesOnChange { fire() } }', '.onChange(of: fact) { fire() }'), GOOD_ROWS, GOOD_FEED, 1),
         ("a comment quoting the rule does not satisfy it",
-         GOOD_CYCLE.replace('glyph = CategoryFold.glyph(for: category)', '// glyph = CategoryFold.glyph(for: category)\n        glyph = "checkmark"'), GOOD_ROWS, GOOD_FEED, 1),
+         GOOD_CYCLE.replace('back = .glyph(CategoryFold.glyph(for: category))', '// back = .glyph(CategoryFold.glyph(for: category))\n            back = .glyph("checkmark")'), GOOD_ROWS, GOOD_FEED, 1),
     ]
     cases = [dict(GOOD, cycle=cy, rows=ro, feed=fe) | {"name": n, "want": w} for n, cy, ro, fe, w in cases]
     cases += [
@@ -342,7 +379,7 @@ def main() -> int:
         for f in findings:
             print(f"  ✗ {f}")
         return 1
-    print("lead-cycle-audit: clean — the lead turns to its dock category's glyph and back, once")
+    print("lead-cycle-audit: clean — the lead turns to its app's mark (or its category's glyph) and back, once")
     return 0
 
 
