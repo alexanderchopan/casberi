@@ -2343,9 +2343,14 @@ enum WalletIngest {
         // counted where Private is, the same way, so Tokens, Lent and Private
         // add up to this number. Zerion leaves the aTokens out and
         // `collectCandidates` drops them from Alchemy's read: never twice.
+        // A missed Aave read stands on Lent's last reading, and dates the
+        // number (prd §1697): a dated number may be shown, never as current.
         var lent: [(symbol: String, usd: Double, holderID: String, label: String)] = []
+        var lentAsOf: Date?
         if combined || yours, AaveLend.on, let account = YourAccountDemo.shownAddress {
-            lent = await LendMove.holdings.walletHolding(account: account)
+            let lentRead = await LendMove.holdings.walletHolding(account: account)
+            lent = lentRead.venues
+            lentAsOf = lentRead.asOf
         }
         guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || ((!privately.isEmpty || !lent.isEmpty) && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
@@ -2353,6 +2358,7 @@ enum WalletIngest {
                                              venues: cash + privy + privately + lent,
                                              asOf: asOf)
         portfolio.unpricedCash = unpricedCash
+        if let lentAsOf { portfolio.asOf = min(portfolio.asOf ?? lentAsOf, lentAsOf) }
         // What the total leaves out (prd §1078). Combined read only, as the
         // cash and Privy themselves are.
         if combined {

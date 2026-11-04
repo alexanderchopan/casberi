@@ -70883,3 +70883,14 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `private-money-selftest.sh`: Holdings' and the sheet's Tokens go through `tokensOnly(appsApart: walletOnAll)`, and it drops Private, Lent and, apart, every place.
 
 **Mac half (§1402).** The same Holdings; nothing here is phone-only.
+
+## §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent) (user, 2026-11-04, on the finding that a relaunch with Aave unreachable left Lent out of the Wallet's number with nothing said: "Fix 2") — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **A read knows whether it heard everything.** `LendMove.lentAnswered`: every market's aToken balance answered. Only then is an empty market nothing lent; otherwise the read is partial.
+2. **What was heard is kept.** A complete, priced read saves `Reading(account, usd, at)` through `DefaultsWrite` (never the demo's).
+3. **A partial read stands on it.** `standing(account:)`: this read when complete (nil when nothing is lent), else the last reading for this account if under three days old (`readingFloor`, the wallets' own floor), else nothing. The Wallet's number counts it and takes its date as `asOf` (the earliest wins), so the crown says "as of"; Lent's head draws the same figure.
+4. **Never zero for "not reached".** Before this, the in-memory figures survived a missed read but a relaunch did not: the total fell by everything lent, unmarked.
+
+**Guard.** `private-money-selftest.sh`: the read's completeness test, the standing rule, the dated total, Lent's head on the standing figure.
+
+**Mac half (§1402).** The same; nothing here is phone-only.

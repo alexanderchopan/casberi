@@ -21,7 +21,8 @@ extension FeedScreen {
             let rows = AaveLend.markets.filter { (Decimal(string: lend.lent[LendMove.key($0)] ?? "0") ?? 0) > 0 }
             Group {
                 // Round-ups included: its row stands under this head (prd §1695).
-                walletLentHead(total: mask ?? lend.lentUSD().map(WalletValue.money))
+                // What the total counts, a last reading included (prd §1697).
+                walletLentHead(total: mask ?? lend.standing(account: account).map { WalletValue.money($0.usd) })
                     .task(id: account) { await lend.read(account: account) }
                 ForEach(rows, id: \.aToken) { m in
                     walletLentRow(m, lend: lend, mask: mask, prices: prices)

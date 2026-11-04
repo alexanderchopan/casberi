@@ -149,7 +149,10 @@ use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'let portfolio = whole.hid
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "Lent is not in the Wallet's number (prd §1695)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'let (candidates, reached) = await heldCandidates(addresses: addresses)' "the holdings read skips the aToken filter (prd §1695)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read.candidates.filter { !AaveLend.isReceipt($0.contract) }, read.reached)' "an aToken counts in Tokens beside Lent (prd §1695)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletLent.swift" 'walletLentHead(total: mask ?? lend.lentUSD().map(WalletValue.money))' "Lent's head leaves Round-ups out of its total (prd §1695)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletLent.swift" 'walletLentHead(total: mask ?? lend.standing(account: account).map { WalletValue.money($0.usd) })' "Lent's head is not the figure the total counts (prd §1695, §1697)"
+use "Casberi/Casberi/Model/LendMove.swift" 'lentAnswered = found.count == AaveLend.markets.count && found.allSatisfy { $0.lent != nil }' "a partial Aave read is taken for nothing lent (prd §1697)"
+use "Casberi/Casberi/Model/LendMove.swift" 'guard let last = Self.lastReading(for: account) else { return nil }' "Lent does not stand on its last reading when Aave is not reached (prd §1697)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'if let lentAsOf { portfolio.asOf = min(portfolio.asOf ?? lentAsOf, lentAsOf) }' "a last Lent reading is presented as current (prd §1697)"
 use "Casberi/Casberi/Model/WalletPortfolio.swift" '|| holderID == privateHolderID || holderID == lentHolderID' "Lent is drawn as a wallet or an app (prd §1695)"
 awk '/walletLentRows$/{l=NR} /walletPrivateRows$/{p=NR} END{exit !(l && p && l<p)}' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" || { echo "✗ Private stands over Lent (prd §1695)"; exit 1; }
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"

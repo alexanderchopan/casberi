@@ -88,11 +88,54 @@ final class LendMove {
         return usd
     }
 
-    /// Your account's lent money, read fresh, as the portfolio's venue.
-    func walletHolding(account: String) async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
+    /// Whether the last read heard every market's aToken balance: only then
+    /// is an empty market "nothing lent" rather than "not reached".
+    private(set) var lentAnswered = false
+
+    /// **LENT STANDS ON ITS LAST READING (prd §1697, as a wallet does, §825).**
+    /// What was lent, in dollars, when every market last answered and was
+    /// priced, kept on the phone per account; a read that misses a market, or
+    /// a price, stands on it, dated, for up to three days. Never zero for
+    /// "not reached": a relaunch with Aave unreachable kept the total short by
+    /// everything lent and said nothing.
+    struct Reading: Codable, Equatable {
+        let account: String
+        let usd: Double
+        let at: Date
+    }
+
+    private static let readingKey = "lend.lastReading.v1"
+    static let readingFloor: TimeInterval = 3 * 86_400
+
+    static func lastReading(for account: String, now: Date = .now) -> Reading? {
+        guard let data = UserDefaults.standard.data(forKey: readingKey),
+              let r = try? JSONDecoder().decode(Reading.self, from: data),
+              r.account.lowercased() == account.lowercased(),
+              now.timeIntervalSince(r.at) <= readingFloor else { return nil }
+        return r
+    }
+
+    /// What Lent stands on now: this read when it heard everything (nil when
+    /// nothing is lent), else the last reading, with its date.
+    func standing(account: String) -> (usd: Double, asOf: Date?)? {
+        if lentAnswered, let usd = lentUSD() {
+            guard usd > 0 else { return nil }
+            return (usd: usd, asOf: nil)
+        }
+        guard let last = Self.lastReading(for: account) else { return nil }
+        return (usd: last.usd, asOf: last.at)
+    }
+
+    /// Your account's lent money, read fresh, as the portfolio's venue, and
+    /// the date it stands on when that is a last reading.
+    func walletHolding(account: String) async -> (venues: [(symbol: String, usd: Double, holderID: String, label: String)], asOf: Date?) {
         await read(account: account)
-        guard let usd = lentUSD(), usd > 0 else { return [] }
-        return [(symbol: Self.walletSymbol, usd: usd, holderID: Self.holderID, label: String(localized: "Lent"))]
+        if lentAnswered, let usd = lentUSD(), !YourAccountDemo.isDemo(account),
+           let data = try? JSONEncoder().encode(Reading(account: account, usd: usd, at: .now)) {
+            DefaultsWrite.set(data, forKey: Self.readingKey)
+        }
+        guard let stand = standing(account: account) else { return ([], nil) }
+        return ([(symbol: Self.walletSymbol, usd: stand.usd, holderID: Self.holderID, label: String(localized: "Lent"))], stand.asOf)
     }
     /// The market a lent row opens Take back on.
     static var opening: (chainId: Int, symbol: String)?
@@ -194,6 +237,7 @@ final class LendMove {
             lent[Self.key(m)] = m.chainId == 8453 && !m.native ? "150000000" : "0"
         }
         roundUps = RoundUpsPot.demoPot
+        lentAnswered = true
         rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145]
         reserve = [8453: "100000000000000", 1: "1000000000000000"]
     }
@@ -217,6 +261,8 @@ final class LendMove {
             for await r in group { out.append(r) }
             return out
         }
+        // Every market's aToken balance heard, or the reading is partial.
+        lentAnswered = found.count == AaveLend.markets.count && found.allSatisfy { $0.lent != nil }
         for r in found {
             guard let m = AaveLend.markets.first(where: { Self.key($0) == r.key }) else { continue }
             // A reserve that names another aToken is not the market this was
