@@ -5,3 +5,7 @@ dist/engine/
 out/
 App/build/
 App/vendor/
+Device/AztecDapp/
+Device/Bundle/
+Device/vendor/
+Device/results.log

@@ -120,3 +120,14 @@ OPFS store, its notes and its account list gone), reinstall, open a balance page
 (`ios.html?auto=balance&token=…`): the root came back (`made: false`), the same
 account, and the PXE found the 750,000 again in 2.3 s. Not proved: iCloud
 carrying the root to ANOTHER device (needs a build signed on a real team).
+
+## Round seven: a device build
+
+`Device/` is the October phone spike's Xcode project, renamed
+(`com.casberi.aztecdapp`, team-signed, automatic provisioning), building the same
+sources as `App/` (staged by `Device/run.sh`; `main.swift` becomes
+`AztecDappApp.swift`, since in Xcode that file name means top-level code). On a
+device the test app's page is bundled and served by the app itself on
+`127.0.0.1:8489`, a second origin, so the phone needs no Mac. A generic iOS
+build signs with the Apple Development identity; `Device/run.sh --auto` installs
+and runs it once the iPhone is reachable.

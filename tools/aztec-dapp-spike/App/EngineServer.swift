@@ -7,14 +7,17 @@ import Network
 /// WebAssembly its threads. No app page ever loads from here.
 final class EngineServer: @unchecked Sendable {
     static let port: UInt16 = 8488
+    /// The test app's page on a device: a second origin (another port), so it is
+    /// never the engine's.
+    static let dappPort: UInt16 = 8489
     private let listener: NWListener
     private let queue = DispatchQueue(label: "engine-server", attributes: .concurrent)
     private let root: URL
 
-    init() throws {
-        root = Bundle.main.url(forResource: "Engine", withExtension: nil)!
+    init(root: URL = resourceRoot.appendingPathComponent("Engine"), port: UInt16 = EngineServer.port) throws {
+        self.root = root
         let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: Self.port)!)
+        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!)
         parameters.allowLocalEndpointReuse = true
         listener = try NWListener(using: parameters)
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }

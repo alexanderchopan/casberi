@@ -25,9 +25,23 @@ func log(_ line: String) {
     else { try? data.write(to: logURL) }
 }
 
+/// Where the spike's web files are: the app's resources, or their `Bundle`
+/// folder in the Xcode-built device app.
+let resourceRoot: URL = {
+    let base = Bundle.main.resourceURL!
+    let folder = base.appendingPathComponent("Bundle")
+    return FileManager.default.fileExists(atPath: folder.path) ? folder : base
+}()
+
 func resource(_ name: String, _ ext: String) -> String {
-    Bundle.main.url(forResource: name, withExtension: ext).flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
+    (try? String(contentsOf: resourceRoot.appendingPathComponent("\(name).\(ext)"), encoding: .utf8)) ?? ""
 }
+
+/// The test app's page: bundled and served by the app on a device (no Mac
+/// needed), or the Mac's dev server for the simulator.
+let bundledDapp = FileManager.default.fileExists(atPath: resourceRoot.appendingPathComponent("Dapp/ios.html").path)
+let defaultURL = bundledDapp ? "http://127.0.0.1:\(EngineServer.dappPort)/ios.html?auto=send" : "http://localhost:8779/ios.html?auto=send"
+var dappServer: EngineServer?
 
 /// What the person is asked: to connect a site, or to approve a transaction.
 struct Ask: Identifiable {
@@ -78,6 +92,10 @@ final class Shell: NSObject, WKScriptMessageHandler, ObservableObject {
         log("{\"event\":\"open\",\"detail\":\"\(url.absoluteString)\"}")
         do {
             server = try EngineServer()
+            if bundledDapp {
+                dappServer = try EngineServer(root: resourceRoot.appendingPathComponent("Dapp"), port: EngineServer.dappPort)
+                dappServer?.start {}
+            }
             server?.start { [weak self] in
                 self?.engine.load(URLRequest(url: URL(string: "http://127.0.0.1:\(EngineServer.port)/")!))
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self?.page.load(URLRequest(url: url)) }
@@ -250,7 +268,7 @@ struct Root: View {
 
 @main
 struct AztecDappSpike: App {
-    @StateObject var shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? "http://localhost:8779/ios.html?auto=send")!)
+    @StateObject var shell = Shell(url: URL(string: UserDefaults.standard.string(forKey: "url") ?? defaultURL)!)
     var body: some Scene {
         WindowGroup { Root(shell: shell) }
     }
