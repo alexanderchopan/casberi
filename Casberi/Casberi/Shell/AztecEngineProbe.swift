@@ -8,7 +8,9 @@ import Foundation
 enum AztecEngineProbe {
     @MainActor
     static func run(_ raw: String) {
-        guard raw == "YES" || raw == "1" else { return }
+        // `used`: also mark the account used and read its holdings, so the
+        // Wallet's row and Holdings › Private › Aztec show (prd §1700a).
+        guard raw == "YES" || raw == "1" || raw == "used" else { return }
         Task { @MainActor in
             let start = Date()
             func say(_ step: String, _ detail: String) {
@@ -22,6 +24,12 @@ enum AztecEngineProbe {
                 say("account", AddressTail.short(address))
                 let chain = try await AztecEngine.shared.call("chain") as? [String: Any]
                 say("chain", "\(chain?["chainId"] ?? "?") / \(chain?["version"] ?? "?")")
+                if raw == "used" {
+                    AztecAccountStore.shared.markUsed(address: address)
+                    let read = await AztecAccountStore.shared.refresh()
+                    let held = AztecAccountStore.shared.snapshot.holdings
+                    say("holdings", "\(read ? "read" : "kept the last") · " + held.map { "\($0.name) \($0.privateUnits ?? "-")/\($0.publicUnits ?? "-")" }.joined(separator: ", "))
+                }
             } catch {
                 say("failed", error.localizedDescription)
             }

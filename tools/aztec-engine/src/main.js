@@ -80,6 +80,20 @@ function getWallet() {
   return walletPromise;
 }
 
+// A compressed string a token returns (a field, or `{ value }`), as text.
+function fieldText(raw) {
+  if (raw == null) return null;
+  try {
+    let n = BigInt((raw.value ?? raw).toString());
+    const bytes = [];
+    while (n > 0n) { bytes.unshift(Number(n & 0xffn)); n >>= 8n; }
+    const text = new TextDecoder().decode(new Uint8Array(bytes.filter(b => b !== 0))).trim();
+    return /^[\x20-\x7e]{1,16}$/.test(text) ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 // --- Casberi's own calls -----------------------------------------------------------
 const own = {
   async account() {
@@ -120,8 +134,23 @@ const own = {
         const names = new Set((artifact?.functions ?? []).map(f => f.name));
         if (!names.has('balance_of_private')) continue;
         const token = await Contract.at(address, artifact, wallet);
+        // Its decimals and symbol from its own functions, whichever spelling it
+        // uses; unknown stays null (the app then shows no amount, never a guess).
+        const view = async candidates => {
+          for (const fn of candidates.filter(n => names.has(n))) {
+            try {
+              const { result } = await token.methods[fn]().simulate({ from: me });
+              return result;
+            } catch {}
+          }
+          return null;
+        };
+        const decimalsRaw = await view(['decimals', 'public_get_decimals', 'private_get_decimals']);
+        const symbolRaw = await view(['symbol', 'public_get_symbol', 'private_get_symbol']);
         out.push({
           kind: 'token', address: address.toString(), name: artifact.name,
+          symbol: fieldText(symbolRaw),
+          decimals: decimalsRaw == null ? null : Number(BigInt((decimalsRaw.value ?? decimalsRaw).toString())),
           private: await read(token, 'balance_of_private'),
           public: names.has('balance_of_public') ? await read(token, 'balance_of_public') : null,
         });

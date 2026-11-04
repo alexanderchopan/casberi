@@ -446,6 +446,8 @@ extension FeedScreen {
             // order the money moves (prd §1695, amends §1674's "under Private").
             walletLentRows
             walletPrivateRows
+            // Your Aztec account's holdings, after 0xBow's (prd §1700 item 4).
+            walletAztecRows
             if positions > 0 {
                 walletDoor(.positions)
                 ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in
