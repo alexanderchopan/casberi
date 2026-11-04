@@ -129,7 +129,7 @@ final class PrivateMove {
         case .deposit:
             guard let usdcBalance, let usdcMinimum, let balance, let reserve,
                   (Decimal(string: balance) ?? 0) >= (Decimal(string: reserve) ?? 1) else { return [] }
-            return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: PrivateMoney.usdcLadder, minimum: usdcMinimum)
+            return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: usdcLadder, minimum: usdcMinimum)
         case .send:
             guard let usdcFee else { return [] }
             return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC"),
@@ -149,7 +149,12 @@ final class PrivateMove {
     /// The least USDC step ppUSDC takes, on Ethereum, once its minimum is read.
     var leastUSDC: String? {
         guard onEthereum, mode == .deposit, let usdcMinimum else { return nil }
-        return PrivateMoney.leastMoveIn(ladder: PrivateMoney.usdcLadder, decimals: 6, minimum: usdcMinimum)?.step
+        return PrivateMoney.leastMoveIn(ladder: usdcLadder, decimals: 6, minimum: usdcMinimum)?.step
+    }
+
+    /// USDC's steps moving in: from ppUSDC's minimum, to the cent (prd §1694).
+    private var usdcLadder: [String] {
+        PrivateMoney.ladder(PrivateMoney.usdcLadder, from: usdcMinimum ?? "0", decimals: 6, places: 2)
     }
 
     /// The ETH kept back for the network fee, rounded up.

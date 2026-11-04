@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1835 of 1907 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1836 of 1908 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -1950,7 +1950,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's… (part superseded by §1688)
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu… (amended by §1675)
-- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572)
+- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet…
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1647)
@@ -2083,7 +2083,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1690 — Round-ups are set aside as you go: every send puts its change in Round-ups (Aave on Base), and at $10 the next send m…
 - §1691 — The cycle turns where a landing is SEEN: the Feed's cover disc and Newest's app icon
 - §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f…
-- §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee
+- §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (amended by §1694)
+- §1694 — Move to private's USDC starts at the pool's minimum, to the cent
 
 ## Dead rulings → what replaced them (generated)
 

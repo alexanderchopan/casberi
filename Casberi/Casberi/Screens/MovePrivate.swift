@@ -326,7 +326,7 @@ struct MovePrivateSentence<Head: View>: View {
         }
     }
 
-    /// "At least 0.005 ETH or 20 USDC moves in, plus 0.0044 ETH kept for
+    /// "At least 0.005 ETH or 10.05 USDC moves in, plus 0.0044 ETH kept for
     /// the network fee." Nil until the read has the figures.
     private var fundsLine: String? {
         guard let eth = move.leastETH, let fee = move.feeKept else { return nil }

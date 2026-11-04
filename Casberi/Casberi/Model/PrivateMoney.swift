@@ -372,6 +372,22 @@ enum PrivateMoney {
         return nil
     }
 
+    /// **THE LADDER STARTS AT THE POOL'S MINIMUM (prd §1694).** Steps under
+    /// `minimum` (base units) are dropped, and the minimum itself, rounded
+    /// UP to `places` ("10.05" for ppUSDC's ~$10.05), leads: the least Move offers is what 0xBow takes, never the
+    /// next round step over it. A plain decimal (`baseUnits` reads it), never
+    /// a localised one. Unchanged with no minimum.
+    static func ladder(_ ladder: [String], from minimum: String, decimals: Int, places: Int) -> [String] {
+        guard let floor = Decimal(string: minimum), floor > 0 else { return ladder }
+        var whole = floor / pow10(decimals), up = Decimal()
+        NSDecimalRound(&up, &whole, places, .up)
+        let first = NSDecimalNumber(decimal: up).stringValue
+        let over = ladder.filter { step in
+            baseUnits(step, decimals: decimals).flatMap { Decimal(string: $0) }.map { $0 > floor } ?? false
+        }
+        return [first] + over
+    }
+
     /// A figure's number rounded UP to `places`: what an account must hold
     /// is never understated by rounding.
     static func numberUp(_ amount: String, decimals: Int, places: Int = 4) -> String? {

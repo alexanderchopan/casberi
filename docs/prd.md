@@ -70846,3 +70846,14 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 **Guard.** `private-money-selftest.sh`: the least ETH step over the minimum plus the reserve, $20 over a $10.05 minimum, nil where no step covers it, a balance of exactly the least offered its step and a wei under offered nothing, the fee rounded up.
 
 **Mac half (§1402).** The same sentence and line; nothing here is phone-only.
+
+## §1694 — Move to private's USDC starts at the pool's minimum, to the cent (amends §1693 item 2, §1567's USDC ladder) (user, 2026-11-04: "i thought it was 10$ like our roundups are", "isn't that what they require?", then "yes!" to starting the steps at the minimum) — BUILT, not compiled here (no toolchain in the session); NOTHING signed or sent
+
+1. **The first USDC step is ppUSDC's minimum, rounded up to the cent** (`PrivateMoney.ladder(_:from:decimals:places:)`): "10.05" at today's rate, then the round steps over it (20, 50, …). Before, the ladder stepped 10 → 20 and $10 sat under the ~$10.05 floor, so the least offered was $20 while round-ups moved at ~$10.05. Now both move from the same floor.
+2. **Rounded UP, a plain decimal.** The minimum is `FreshAddress.minimumBudget` (shares at today's rate, rounded up, with the router's headroom), so the cent above it clears the pool; the step is `NSDecimalNumber.stringValue`, never a localised figure, because `baseUnits` reads it. No minimum read: the ladder as it was.
+3. **The Fund line follows** (§1693): "At least 0.005 ETH or 10.05 USDC moves in, plus … ETH kept for the network fee."
+4. **ETH is unchanged.** The pool states its minimum in shares (0.004 ppETH); whether exactly 0.004 ETH clears it is unmeasured, so ETH keeps 0.005 as its least step until a fork says otherwise.
+
+**Guard.** `private-money-selftest.sh`: the ladder from a $10.046461 minimum leads "10.05" then "20"; $10.05 held offers $10.05 and a unit under offers nothing; the Fund line's least is $10.05; a minimum on a step is not repeated; no minimum leaves the ladder alone; a minimum a unit over a cent rounds up; the sentence's USDC ladder is the one built from the minimum.
+
+**Mac half (§1402).** The same sentence; nothing here is phone-only.

@@ -264,7 +264,8 @@ use "$FRESHV" 'arrived; needs a little private ETH to move' "the line no longer 
 # USDC in Move's sentence; balance to balance; round-ups riding a Face ID
 # operation, simulated whole before signing; the watch in every build; the
 # restoring line.
-use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: PrivateMoney.usdcLadder, minimum: usdcMinimum)' "USDC's amounts do not start at the pool's minimum"
+use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: usdcLadder, minimum: usdcMinimum)' "USDC's amounts do not start at the pool's minimum"
+use "$MOVE" 'PrivateMoney.ladder(PrivateMoney.usdcLadder, from: usdcMinimum ?? "0", decimals: 6, places: 2)' "USDC's first step is a round number over the pool's minimum, not the minimum (prd §1694)"
 use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)' "a private send on Ethereum ignores the token or the recipient's private account"
 use "$ETH" 'let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)' "balance to balance is not a transfer inside the pool"
 use "$ETH" 'return PrivateMoney.hasViewingKey(answer)' "a recipient's private account is not read off the keystore"
@@ -735,7 +736,16 @@ check(F.tokenGas(ethHeld: "27643633810000", maxFee: "95972657")?.shortfall == "1
 // What moving in takes (the "Fund" sentence's line): the step choices() first offers, plus the reserve.
 check(P.leastMoveIn(ladder: P.mainnetLadder, decimals: 18, minimum: "4000000000000000", reserve: "4400000000000000")! == (step: "0.005", total: "9400000000000000"),
       "the least ETH move in is the first step over the pool's minimum, plus the gas kept")
-check(P.leastMoveIn(ladder: P.usdcLadder, decimals: 6, minimum: "10046461")?.step == "20", "ppUSDC's minimum over $10 makes $20 the least")
+check(P.leastMoveIn(ladder: P.usdcLadder, decimals: 6, minimum: "10046461")?.step == "20", "the round ladder alone skips $10 under a $10.05 minimum")
+// The ladder starts at the pool's minimum, to the cent (prd §1694).
+let fromMin = P.ladder(P.usdcLadder, from: "10046461", decimals: 6, places: 2)
+check(fromMin.first == "10.05" && fromMin.dropFirst().first == "20", "USDC starts at the minimum rounded up to the cent, then the round steps")
+check(P.choices(balance: "10050000", reserve: "0", decimals: 6, ladder: fromMin, minimum: "10046461") == ["10.05"], "$10.05 held moves $10.05")
+check(P.choices(balance: "10049999", reserve: "0", decimals: 6, ladder: fromMin, minimum: "10046461").isEmpty, "a unit under the rounded minimum offers nothing")
+check(P.leastMoveIn(ladder: fromMin, decimals: 6, minimum: "10046461")?.step == "10.05", "the Fund line names $10.05")
+check(P.ladder(P.usdcLadder, from: "10000000", decimals: 6, places: 2) == ["10"] + P.usdcLadder.dropFirst(), "a minimum that is a step is not repeated")
+check(P.ladder(P.usdcLadder, from: "0", decimals: 6, places: 2) == P.usdcLadder, "no minimum read: the ladder as it is")
+check(P.ladder(P.usdcLadder, from: "10000001", decimals: 6, places: 2).first == "10.01", "a minimum a unit over a cent rounds up, never down")
 check(P.leastMoveIn(ladder: P.usdcLadder, decimals: 6, minimum: "9000000000") == nil, "no step covers the minimum: nothing claimed")
 check(P.choices(balance: "9400000000000000", reserve: "4400000000000000", ladder: P.mainnetLadder, minimum: "4000000000000000") == ["0.005"],
       "holding exactly the least offers its step")
