@@ -103,3 +103,20 @@ ask waits for the first sheet to go) and shows the session's nine emoji in a
 banner to compare with the site's. `-autoApprove YES` says yes 2.5 s after a
 sheet appears, for unattended runs. Not yet read: public steps a private call
 starts on its own (the sheet does not claim to know them).
+
+## Round six: the account lives in iCloud Keychain
+
+`App/AztecRoot.swift` keeps ONE 32-byte root as a synchronizable Keychain item
+(prd §1562's model: AfterFirstUnlock, never ThisDeviceOnly). The engine asks for
+it (`engineNeedsRoot`) and derives the account's secret and Schnorr signing key
+from it (SHA-512 of root ‖ label, reduced into each field). A synchronizable item
+needs an app identifier and a keychain access group: `App/Spike.entitlements`
+goes in the binary's `__entitlements` section (as Xcode does for the simulator);
+signing ad hoc WITH them makes the simulator refuse to launch the app, and with
+none the write fails `-34018`.
+
+Proved on the simulator: send privately (750,000 left), uninstall (the engine's
+OPFS store, its notes and its account list gone), reinstall, open a balance page
+(`ios.html?auto=balance&token=…`): the root came back (`made: false`), the same
+account, and the PXE found the 750,000 again in 2.3 s. Not proved: iCloud
+carrying the root to ANOTHER device (needs a build signed on a real team).

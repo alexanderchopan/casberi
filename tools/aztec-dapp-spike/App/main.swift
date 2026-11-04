@@ -69,7 +69,7 @@ final class Shell: NSObject, WKScriptMessageHandler, ObservableObject {
         page.isInspectable = true
         super.init()
 
-        for name in ["engineLog", "engineToTab", "engineEmoji", "engineApprove", "engineConnect"] { engineController.add(self, name: name) }
+        for name in ["engineLog", "engineToTab", "engineEmoji", "engineApprove", "engineConnect", "engineNeedsRoot"] { engineController.add(self, name: name) }
         pageController.add(self, contentWorld: relayWorld, name: "casberiRelay")
         pageController.add(self, contentWorld: .page, name: "casberi") // the test page's own result line
 
@@ -118,6 +118,11 @@ final class Shell: NSObject, WKScriptMessageHandler, ObservableObject {
                 next = Ask(id: "\(obj["id"] as? Int ?? 0)", kind: .send, host: host, calls: calls, fee: obj["fee"] as? String ?? "")
             }
             enqueue(next)
+        case "engineNeedsRoot":
+            // The engine derives the account from the root; only the engine view sees it.
+            guard let root = AztecRoot.ensure() else { return }
+            log("{\"event\":\"root\",\"detail\":{\"made\":\(root.made)}}")
+            engine.evaluateJavaScript("casberiEngine.setRoot(\(jsString(root.hex)))")
         case "engineEmoji":
             log("{\"event\":\"nativeEmoji\",\"detail\":\(body)}")
             if let data = body.data(using: .utf8),
