@@ -112,6 +112,8 @@ enum SimpleFINLogos {
     /// The demo's one bank connection (`DemoSeedAll`'s SimpleFIN rows,
     /// `WalletCash.demoHeld`).
     static let demoConnID = "demo"
+    /// Chase Mobile's App Store icon, bundled once (prd §1700).
+    static let demoBankMark = "brand-chase"
 
     /// Smaller than this draws as a smear at a row's size.
     static let minimumSide = 32
@@ -140,10 +142,11 @@ enum SimpleFINLogos {
     /// The bank's icon, or nil. Reads a small file once, then memory; call it
     /// from a `.task`, never a body.
     static func image(connID: String) -> UIImage? {
-        // The demo's bank is drawn and bundled (it reaches nothing, §483):
-        // its connection wears that mark, as a real one wears its site's.
+        // The demo's bank is Chase, its mark bundled (the demo reaches
+        // nothing, §483; prd §1700): its connection wears Chase's own icon,
+        // as a real one wears the icon off its bank's site.
         if DemoMode.isActive, connID == demoConnID {
-            return UIImage.demoSample(for: DemoSeedAll.bankMark)
+            return UIImage(named: demoBankMark)
         }
         lock.lock(); defer { lock.unlock() }
         if let held = memory[connID] { return held }

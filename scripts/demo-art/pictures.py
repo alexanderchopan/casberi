@@ -258,10 +258,6 @@ for slug, name in (("tidepool", "Tidepool"), ("lantern", "Lantern"), ("kitebox",
                    ("mossline", "Mossline"), ("pebble-arcade", "Pebble Arcade"), ("sundial", "Sundial")):
     pic(f"privy-{slug}", "mark", (180, 180), f"App icon for the made-up app {name}: a rounded square in its colours, one motif, no words", scale=1)
 
-# ── SimpleFIN: the demo's bank (WalletCash.demoHeld, SimpleFINLogos) ────────
-# A made-up bank, so its mark is drawn, never a real bank's logo (prd §1338).
-pic("bank-harborline", "mark", (180, 180), "Touch icon for the made-up bank Harborline: a bank portico in white on navy, no words", scale=1)
-
 # ── Telegram: the demo's channels (DemoSeedAll.telegram) ──────────────────
 # Made-up channels, so their avatars are drawn marks, never a real channel's.
 for slug, name in (("crimpchalk", "Crimp & Chalk"), ("tram28notes", "Tram 28 Notes"), ("quietbuilds", "Quiet Builds")):

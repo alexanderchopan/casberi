@@ -70916,3 +70916,15 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 5. **The mark** is their heart with ETH in it (`brand-ethbeat`, drawn from their site icon), on the old tile's near-black; the hue is the heart's `#ff3776`.
 
 **Mac half (§1402).** The same seat and mark; nothing here is phone-only.
+
+## §1700 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows your private money and Plasma One its card under Holdings (amends §1338's "the demo's apps wear marks" for this one bank; §1590's Private gate on the 0xBow pick; §1618 item 2's Holdings on a pick) (user, 2026-11-04, on the nightly's 44 "Holdings says nothing held" pages: "the apps w/ holdings issues should have seeded data for the demo", "no app pages should be empty", "for SimpleFin, it should show a banks logo not SimpleFin, so like Chase or something", then, shown a made-up bank, Chase with its real logo; 0xBow's private notes and Plasma One's card under Holdings; "Show something" for the rest, proposed first) — BUILT and compiled; NOT seen on the simulator here
+
+1. **SimpleFIN holds its bank's money in the demo.** `WalletCash.demoHeld` carries the demo bank's checking and savings under the holder SimpleFIN's own read uses (`cash:simplefin:<conn>:<account>`), so its pick's Holdings and box are lit through the real path (§1618 item 7's shape). The card (Sapphire) is owed, never held, and is not there.
+2. **The demo bank is Chase, with Chase's mark.** §1338 made the demo's apps up so no logo was drawn on a real product; the user rules the bank real here. The mark is Chase Mobile's App Store icon, fetched once from the iTunes lookup and bundled (`brand-chase`), never hot-linked; `SimpleFINLogos` hands it to `BankMark` for the demo's connection, as a real bank wears the icon off its own site.
+3. **0xBow Privacy Pools, picked, lists your private money under Holdings** — the same Private section All shows (`walletPrivateRows`, its §1590 gate opened for this pick), the box maps it by token, and Holdings no longer dims. It is the pool that holds it; the money is already in the Wallet's number once, and nothing new counts it.
+4. **Plasma One, picked, states its card balance under Holdings** ("Card balance", the read its head already makes; the demo's card holds $412.30, read an hour ago), and the box maps it. It is NEVER added to the Wallet's number: the card contract may be a watched address whose tokens the portfolio already reads. `wallet-total-audit.py` fails any read of it in `WalletIngest`, `WalletPortfolio` or `WalletCash`, with three mutations.
+5. **The probe counts both** (`appPage| … held=`), through `walletSeatOwnHeld`, so the sweep (§1622) judges what Holdings shows.
+
+**Not built, proposed:** what the other picks' Holdings would show, from what each app already reads — in the session's report, for a ruling.
+
+**Mac half (§1402).** The same views on Catalyst; nothing here is phone-only.

@@ -85,8 +85,14 @@ extension FeedScreen {
         // Splits' team accounts, Privy's apps) maps what it read, never
         // "Nothing held" over it.
         case .holdings where selectedSeat != nil && walletScopeIsEmpty(.holdings)
-                             && !walletSeatHeld(visible).isEmpty:
-            walletSeatHeldMap(walletSeatHeld(visible), apps: !walletAppRows(visible).isEmpty)
+                             && !(walletSeatHeld(visible) + walletSeatOwnHeld()).isEmpty:
+            if walletSeatHeld(visible).isEmpty {
+                // What only the app itself reads (prd §1700): 0xBow's
+                // private tokens, Plasma One's card.
+                walletSeatHeldMap(walletSeatOwnHeld(), apps: false, noun: walletSeatOwnNoun)
+            } else {
+                walletSeatHeldMap(walletSeatHeld(visible), apps: !walletAppRows(visible).isEmpty)
+            }
         // **THE EMPTY STATE IS IN THE SLOT (prd §611).** A tile onto a page
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
@@ -541,7 +547,7 @@ extension FeedScreen {
         }
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
-        if walletScopeIsEmpty(.holdings),
+        if walletScopeIsEmpty(.holdings), walletSeatOwnHeld().isEmpty,
            !visible.live.contains(where: { MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }) {
             out.insert(.holdings)
         }
@@ -948,13 +954,57 @@ extension FeedScreen {
         }
     }
 
+    /// **WHAT AN APP HOLDS THAT NO ROW CARRIES (prd §1700).** 0xBow Privacy
+    /// Pools' private money, one tile per token, as Holdings' Private section
+    /// reads it; Plasma One's card balance, as its head reads it. On that
+    /// app's pick only, and never added to anything: the private money is
+    /// already in the Wallet's number once (`PrivateMoneyStore.walletHolding`)
+    /// and the card's is never in it (`wallet-total-audit.py` rule 7).
+    func walletSeatOwnHeld() -> [HoldingsTreemap.Holding] {
+        switch selectedSeat?.source {
+        case PrivacyPoolsBridge.sourceName?:
+            let store = PrivateMoneyStore.shared
+            var bySymbol: [(symbol: String, usd: Double, figure: String)] = []
+            for row in store.rows where row.kind == .held {
+                let usd = PrivateMoney.rowUSD(row, prices: store.shownPrices) ?? 0
+                if let i = bySymbol.firstIndex(where: { $0.symbol == row.symbol }) {
+                    bySymbol[i].usd += usd
+                } else {
+                    bySymbol.append((row.symbol, usd,
+                                     PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)))
+                }
+            }
+            return bySymbol.map { .init(id: $0.symbol, usd: $0.usd, route: nil,
+                                        display: $0.usd > 0 ? nil : $0.figure) }
+        case PlasmaOneCard.source?:
+            guard let card = walletPlasmaOneCard else { return [] }
+            return [.init(id: String(localized: "Card"), usd: card.amount, route: nil)]
+        default:
+            return []
+        }
+    }
+
+    /// The Plasma One card's balance as its last read left it (prd §1700).
+    var walletPlasmaOneCard: (amount: Double, at: Date)? {
+        PlasmaOneCard.balance(watched: Set(WalletStore.shared.addresses.map { $0.address.lowercased() }))
+    }
+
+    /// What `walletSeatOwnHeld`'s map counts: tokens, or the card.
+    var walletSeatOwnNoun: (Int) -> String {
+        if selectedSeat?.source == PlasmaOneCard.source {
+            return { $0 == 1 ? String(localized: "card") : String(localized: "cards") }
+        }
+        return { $0 == 1 ? String(localized: "token") : String(localized: "tokens") }
+    }
+
     /// The map of `walletSeatHeld`: sized by what each read, one size each
     /// when none read a figure (a count, as a devnet's, prd §949).
-    func walletSeatHeldMap(_ held: [HoldingsTreemap.Holding], apps: Bool) -> some View {
+    func walletSeatHeldMap(_ held: [HoldingsTreemap.Holding], apps: Bool,
+                           noun: ((Int) -> String)? = nil) -> some View {
         let priced = held.contains { $0.usd > 0 }
         let sized = priced ? held.filter { $0.usd > 0 } : held.map { .init(id: $0.id, usd: 1, route: nil, display: $0.display) }
-        let noun = apps ? (held.count == 1 ? String(localized: "app") : String(localized: "apps"))
-            : (held.count == 1 ? String(localized: "account") : String(localized: "accounts"))
+        let noun = noun?(held.count) ?? (apps ? (held.count == 1 ? String(localized: "app") : String(localized: "apps"))
+            : (held.count == 1 ? String(localized: "account") : String(localized: "accounts")))
         return HoldingsTreemap(total: String(held.count), caption: noun,
                                holdings: sized, showsShares: priced)
     }

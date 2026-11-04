@@ -105,6 +105,7 @@ FILES = {
     "WalletStore": ROOT / "Casberi/Casberi/Model/WalletStore.swift",
     "BridgeRefresh": ROOT / "Casberi/Casberi/Model/BridgeRefresh.swift",
     "RootShell": ROOT / "Casberi/Casberi/Shell/RootShell.swift",
+    "WalletCash": ROOT / "Casberi/Casberi/Model/WalletCash.swift",
 }
 
 # Chains whose Alchemy Portfolio answer carries balances and NO prices —
@@ -404,6 +405,19 @@ def audit(texts: dict) -> list:
                    "draw at once (prd §1593)")
     if "read.portfolio.asOf == nil" not in sb:
         bad.append("a last-known reading can overwrite the kept live one (prd §1593)")
+
+    # §1700 — Plasma One's card balance stands in Holdings on its pick and is
+    # NEVER counted: the card contract may itself be a watched address whose
+    # tokens the portfolio already reads, so adding the card's read would
+    # count the same dollars twice. Nothing that builds the Wallet's number
+    # may read it.
+    for name in ("WalletIngest", "WalletPortfolio", "WalletCash"):
+        if re.search(r"PlasmaOneCard\.(balance|storedBalances)\(", code[name]):
+            bad.append(f"{name} reads Plasma One's card balance — the card's money may "
+                       "already be in the total through its watched contract (prd §1700)")
+    own = body(code["FeedScreen"], "func walletSeatOwnHeld(")
+    if "case PlasmaOneCard.source" not in own or "walletPlasmaOneCard" not in code["FeedScreen"]:
+        bad.append("Plasma One's card balance no longer stands in its Holdings (prd §1700)")
     return bad
 
 
@@ -532,6 +546,14 @@ def self_test() -> int:
          lambda t: t.replace("reserveUSD >= DexPrices.reserveFloor\n                && ", "")),
         ("native coins lose the cent floor", "WalletIngest",
          lambda t: t.replace("(c.trashFiltered || c.contract == nil) ? unwatchedFloor", "c.trashFiltered ? unwatchedFloor")),
+        ("Plasma One's card joins the cash total", "WalletCash",
+         lambda t: t.replace("        return out\n    }\n",
+                             "        _ = PlasmaOneCard.balance(watched: [])\n        return out\n    }\n", 1)),
+        ("Plasma One's card joins the portfolio read", "WalletIngest",
+         lambda t: t.replace("let pools = await DexPrices.prices(for: dexAsk)",
+                             "_ = PlasmaOneCard.balance(watched: [])\n        let pools = await DexPrices.prices(for: dexAsk)", 1)),
+        ("Plasma One's card leaves its Holdings", "FeedScreen",
+         lambda t: t.replace("case PlasmaOneCard.source?:", "case \"none\"?:", 1)),
         ("the flat $1.99 floor comes back", "WalletIngest",
          lambda t: t.replace("let floor = (c.trashFiltered || c.contract == nil) ? unwatchedFloor : holdingFloor",
                              "let floor = holdingFloor").replace("usd >= floor", "usd >= holdingFloor")),

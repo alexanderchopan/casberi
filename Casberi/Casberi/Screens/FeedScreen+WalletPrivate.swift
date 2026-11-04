@@ -23,8 +23,11 @@ extension FeedScreen {
         let store = PrivateMoneyStore.shared
         let rows = store.rows
         // Yours and All only (prd §1590): private money is your Casberi
-        // account's, never a followed wallet's.
-        if selectedSeat == nil, !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true,
+        // account's, never a followed wallet's — and 0xBow Privacy Pools'
+        // on its pick, the pool that holds it (prd §1700).
+        let poolsPick = selectedSeat?.source == PrivacyPoolsBridge.sourceName
+        if selectedSeat == nil || poolsPick, !walletOnFollowing,
+           poolsPick || selectedWallet.map(YourAccountDemo.isYours) ?? true,
            PrivateMove.available || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
