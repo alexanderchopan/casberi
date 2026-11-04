@@ -1181,6 +1181,34 @@
         }
       }
     },
+    "%@ %@ or %@ USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ o %3$@ USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ または %3$@ USDC"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ 또는 %3$@ USDC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ 或 %3$@ USDC"
+          }
+        }
+      }
+    },
     "%@ %@ to %@" : {
       "localizations" : {
         "en" : {
@@ -6102,6 +6130,34 @@
         }
       }
     },
+    "%@ hasn't moved to Aztec's new network yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ todavía no se ha pasado a la nueva red de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ はまだ Aztec の新しいネットワークに移行していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) 아직 Aztec의 새 네트워크로 옮겨지지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 尚未迁移到 Aztec 的新网络"
+          }
+        }
+      }
+    },
     "%@ imported" : {
       "localizations" : {
         "es" : {
@@ -9240,6 +9296,34 @@
         }
       }
     },
+    "%@ of %@ on Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de %2$@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave 上の %2$@ のうち %1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave의 %2$@ 중 %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave 上 %2$@ 中的 %1$@"
+          }
+        }
+      }
+    },
     "%@ of %@ shown · step counts cover all" : {
       "localizations" : {
         "en" : {
@@ -9372,6 +9456,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已使用 %@，共 %@ — 整理暂停至下月。提问仍可使用。"
+          }
+        }
+      }
+    },
+    "%@ of Round-ups moved to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de Redondeos pasaron a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立て %@ をプライベート残高に移しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기 %@이(가) 비공개 잔액으로 옮겨졌습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入中的 %@ 已转入你的私密余额"
           }
         }
       }
@@ -11450,6 +11562,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "向上取整 %1$@ · 累计 %2$@ 用于 %3$@"
+          }
+        }
+      }
+    },
+    "%@ rounded up, to Round-ups with your next send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ redondeados, a Redondeos con tu próximo envío"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を切り上げ、次の送金で端数の積み立てへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 올림, 다음 송금 때 잔돈 모으기로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "凑整 %@，随下次发送转入零钱买入"
           }
         }
       }
@@ -34263,6 +34403,34 @@
         }
       }
     },
+    "+%@ to Round-ups · %@ of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+%1$@ a Redondeos · %2$@ de %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立てに +%1$@ · %3$@ のうち %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기에 +%1$@ · %3$@ 중 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+%1$@ 转入零钱买入 · %3$@ 中的 %2$@"
+          }
+        }
+      }
+    },
     "+%lld" : {
       "localizations" : {
         "es" : {
@@ -56602,6 +56770,34 @@
         }
       }
     },
+    "At least %@ moves in, plus %@ %@ kept for the network fee." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Entran al menos %1$@, más %2$@ %3$@ reservados para la comisión de red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "少なくとも %1$@ が入り、さらにネットワーク手数料として %2$@ %3$@ を残します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최소 %1$@이(가) 들어가고, 네트워크 수수료로 %2$@ %3$@을(를) 남겨 둡니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "至少转入 %1$@，另留 %2$@ %3$@ 作为网络费用。"
+          }
+        }
+      }
+    },
     "Attach" : {
       "localizations" : {
         "es" : {
@@ -70650,6 +70846,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接你的签名者钱包，因此未发送任何内容"
+          }
+        }
+      }
+    },
+    "Could not read Round-ups on Base" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudieron leer los Redondeos en Base"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base の端数の積み立てを読み取れませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base의 잔돈 모으기를 읽을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 Base 上的零钱买入"
           }
         }
       }
@@ -111747,6 +111971,34 @@
         }
       }
     },
+    "Move Round-ups to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasar Redondeos a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立てをプライベート残高に移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기를 비공개 잔액으로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将零钱买入转入你的私密余额"
+          }
+        }
+      }
+    },
     "Move down" : {
       "localizations" : {
         "es" : {
@@ -112275,6 +112527,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一天内涨跌 %@"
+          }
+        }
+      }
+    },
+    "Moves %@ of Round-ups to your private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasa %@ de Redondeos a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立て %@ をプライベート残高に移します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기 %@을(를) 비공개 잔액으로 옮깁니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将零钱买入中的 %@ 转入你的私密余额"
           }
         }
       }
@@ -130154,6 +130434,34 @@
         }
       }
     },
+    "On Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave 上"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 上"
+          }
+        }
+      }
+    },
     "On automatically — both doors land as they happen." : {
       "localizations" : {
         "es" : {
@@ -130716,6 +131024,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你订阅的列表"
+          }
+        }
+      }
+    },
+    "On · $%lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado · $%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オン · $%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "켬 · $%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "开 · $%lld"
           }
         }
       }
@@ -156782,6 +157118,62 @@
         }
       }
     },
+    "Round up your sends" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondea tus envíos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金を切り上げる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "송금을 올림하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将你的发送凑整"
+          }
+        }
+      }
+    },
+    "Round up your sends. The change goes to Round-ups and earns interest. At %@, it moves to your private balance, where it keeps earning." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondea tus envíos. El cambio va a Redondeos y genera intereses. Al llegar a %@, pasa a tu saldo privado, donde sigue generando."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金を切り上げます。端数は端数の積み立てに入り、利息がつきます。%@ に達するとプライベート残高に移り、そこでも利息がつき続けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "송금을 올림합니다. 잔돈은 잔돈 모으기로 가서 이자가 붙습니다. %@에 도달하면 비공개 잔액으로 옮겨지고, 그곳에서도 계속 이자가 붙습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将你的发送凑整。零钱转入零钱买入并赚取利息。达到 %@ 时，会转入你的私密余额，并在那里继续赚取利息。"
+          }
+        }
+      }
+    },
     "Round-up" : {
       "localizations" : {
         "es" : {
@@ -156862,6 +157254,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "零钱买入"
+          }
+        }
+      }
+    },
+    "Round-ups %@ of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeos %1$@ de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立て %2$@ のうち %1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기 %2$@ 중 %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入 %2$@ 中的 %1$@"
+          }
+        }
+      }
+    },
+    "Round-ups moves with your next send on Base" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los Redondeos se mueven con tu próximo envío en Base"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立ては Base での次の送金で移ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기는 Base에서 다음 송금 때 옮겨집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入将随你在 Base 上的下次发送转移"
           }
         }
       }
@@ -157002,6 +157450,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "凑整，%@"
+          }
+        }
+      }
+    },
+    "Round-ups." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立て。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入。"
           }
         }
       }
@@ -163606,6 +164082,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "设置金额"
+          }
+        }
+      }
+    },
+    "Set aside" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apartado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り置き"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "따로 모음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已留存"
+          }
+        }
+      }
+    },
+    "Set aside · private at %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apartado · privado al llegar a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り置き · %@ で非公開に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "따로 모음 · %@에 비공개로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已留存 · 达到 %@ 转为私密"
           }
         }
       }
@@ -170475,6 +171007,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "消费"
+          }
+        }
+      }
+    },
+    "Spend $3.40 and 60¢ goes to Round-ups." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gasta $3.40 y 60¢ van a Redondeos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40 使うと 60¢ が端数の積み立てに入ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$3.40를 쓰면 60¢가 잔돈 모으기로 갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "花 $3.40，60¢ 就会转入零钱买入。"
           }
         }
       }
@@ -188844,6 +189404,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发给 %lld 人"
+          }
+        }
+      }
+    },
+    "To Round-ups" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Redondeos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立てへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入零钱买入"
           }
         }
       }
@@ -215602,6 +216190,34 @@
         }
       }
     },
+    "Your round-ups wait in %@ until your next send sets them aside" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus redondeos esperan en %@ hasta que tu próximo envío los aparte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数は次の送金で取り置かれるまで %@ で待機します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 다음 송금으로 따로 모일 때까지 %@에서 기다립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的零钱在 %@ 中等待，直到下次发送将其留存"
+          }
+        }
+      }
+    },
     "Your scheduled meetings, before they happen. Nothing here books, moves, or cancels anything." : {
       "localizations" : {
         "es" : {
@@ -225526,6 +226142,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "安装账户代码"
+          }
+        }
+      }
+    },
+    "into" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "→"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "→"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入"
           }
         }
       }
@@ -240277,6 +240921,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "zk.money"
+          }
+        }
+      }
+    },
+    "zk.money takes DAI, USDC or USDT on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money acepta DAI, USDC o USDT en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money は Ethereum 上の DAI、USDC、USDT を受け付けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money는 Ethereum의 DAI, USDC, USDT를 받습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 接受 Ethereum 上的 DAI、USDC 或 USDT"
+          }
+        }
+      }
+    },
+    "zk.money takes under $5,000 at a time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money acepta menos de $5,000 por vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money は1回あたり $5,000 未満まで受け付けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money는 한 번에 $5,000 미만만 받습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 每次接受低于 $5,000 的金额"
+          }
+        }
+      }
+    },
+    "zk.money's $0.35 fee would take all of it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La comisión de $0.35 de zk.money se lo llevaría todo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money の $0.35 の手数料ですべてなくなります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money의 $0.35 수수료가 전부를 가져갑니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 的 $0.35 费用会把它全部扣掉"
+          }
+        }
+      }
+    },
+    "zk.money's resolver didn't answer. Try again in a minute." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El resolver de zk.money no respondió. Inténtalo de nuevo en un minuto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money のリゾルバーが応答しませんでした。1分後にもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money의 리졸버가 응답하지 않았습니다. 1분 후에 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 的解析器没有响应。请一分钟后重试。"
           }
         }
       }
