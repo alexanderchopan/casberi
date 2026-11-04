@@ -34,14 +34,32 @@ final class EngineServer: @unchecked Sendable {
     }
 
     private func read(_ connection: NWConnection, buffer: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] data, _, complete, error in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 4 << 20) { [weak self] data, _, complete, error in
             guard let self else { return }
             var buffer = buffer
             if let data { buffer.append(data) }
             if let end = buffer.range(of: Data("\r\n\r\n".utf8)) {
                 let head = String(decoding: buffer[buffer.startIndex..<end.lowerBound], as: UTF8.self)
-                let first = head.components(separatedBy: "\r\n").first?.split(separator: " ") ?? []
+                let lines = head.components(separatedBy: "\r\n")
+                let first = lines.first?.split(separator: " ") ?? []
+                let method = first.first.map(String.init) ?? "GET"
                 let path = first.count >= 2 ? String(first[1].split(separator: "?").first ?? "/") : "/"
+                var length = 0
+                for line in lines.dropFirst() where line.lowercased().hasPrefix("content-length:") {
+                    length = Int(line.split(separator: ":")[1].trimmingCharacters(in: .whitespaces)) ?? 0
+                }
+                guard buffer.distance(from: end.upperBound, to: buffer.endIndex) >= length else {
+                    return self.read(connection, buffer: buffer) // the body is still arriving
+                }
+                if method == "POST", path == "/bb" {
+                    // A prover command from the engine page → Aztec's native prover → its reply.
+                    let body = Data(buffer[end.upperBound..<buffer.index(end.upperBound, offsetBy: length)])
+                    Prover.shared.call(body) { reply in
+                        connection.send(content: Self.response(200, reply, type: "application/octet-stream"),
+                                        completion: .contentProcessed { _ in connection.cancel() })
+                    }
+                    return
+                }
                 connection.send(content: self.file(path), completion: .contentProcessed { _ in connection.cancel() })
             } else if complete || error != nil {
                 connection.cancel()

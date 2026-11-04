@@ -69,3 +69,25 @@ WebAssembly; the phone spike's native prover made one in 2.1 s on an iPhone.
 Traps: never log an aztec.js `Contract` (it holds the wallet proxy); Aztec's
 loggers bind `console` at import, so the bridge that forwards them
 (`engine-web/src/console-bridge.js`) is imported first.
+
+## Round four: Aztec's native prover
+
+`engine-web/src/native-backend.js` replaces bb.js 6's `bb_backends/browser/index.js`
+(`vite.config.js`): in the app, every prover command goes to `POST /bb` on the
+engine's own origin, where `App/Prover.swift` hands it to Aztec's official v6 iOS
+library (`App/vendor/`, `gh release download v6.0.0 -R AztecProtocol/aztec-packages
+-p 'barretenberg-static-arm64-ios*'`, not committed) on a 64 MB-stack thread.
+`App/deflate_shim.c` gives it libdeflate's gzip calls over zlib. Outside the app,
+or with `?prover=wasm`, bb.js's WebAssembly prover runs.
+
+Same simulator, same flow:
+
+| step | WebAssembly | native |
+|---|---|---|
+| deploy token: proof / total | 16.3 / 26.4 s | 11.2 / 21.9 s |
+| mint privately | 11.4 / 20.0 s | 9.2 / 18.5 s |
+| send privately | 14.2 / 26.4 s | 7.3 / 20.0 s |
+
+Inside a native proof, `bbapi` itself spends ~6–7 s (ChonkProve 2.9–4.1 s); the
+rest is the commands' round trips between the web view and the app. The rest of
+each total is simulation, witness generation and waiting for the block.
