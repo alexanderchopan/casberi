@@ -256,7 +256,7 @@ enum L2beatStage: String, Codable, Sendable, CaseIterable {
 		case .stage2:
 			return String(localized: "No training wheels — users are protected by proofs alone.")
 		case .notApplicable:
-			return String(localized: "L2BEAT does not place this chain on the stage ladder.")
+			return String(localized: "ETHBEAT does not place this chain on the stage ladder.")
 		}
 	}
 
@@ -405,7 +405,7 @@ enum L2beatHost {
 	/// here has no contract behind it, which is why `scripts/live-integrations.sh` asserts
 	/// the three fields the whole room rests on — `projects`, `stage` and `risks[].sentiment`
 	/// — every night. A rename empties the room silently otherwise.
-	static let site = "l2beat.com"
+	static let site = "ethbeat.org"
 	/// Their config repo, for the milestones. Their default branch is `main`.
 	static let rawContent = "raw.githubusercontent.com"
 	static let repo = "l2beat/l2beat"

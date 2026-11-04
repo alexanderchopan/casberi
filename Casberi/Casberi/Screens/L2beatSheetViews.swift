@@ -106,7 +106,7 @@ struct L2beatMilestoneHead: View {
 				// something that happened, sometimes years ago, and the ladder has moved
 				// since. Printing today's rung beside a 2022 event without that word would
 				// read as the rung it had then.
-				DSSpecRow(label: Text(String(localized: "L2BEAT stage today")),
+				DSSpecRow(label: Text(String(localized: "ETHBEAT stage today")),
 						  value: Text(stage.label),
 						  weight: .semibold, lineLimit: nil)
 			}
@@ -156,7 +156,7 @@ struct L2beatMilestoneHead: View {
 	private func stamp(_ facts: L2beatMilestoneFacts?) -> some View {
 		// `L2beatCopy.day` rather than a formatter of this file's own: the risk card lists
 		// these same milestones under "On record" and two formatters spell one day two ways.
-		Text(String(localized: "Recorded \(L2beatCopy.day(thing.capturedAt)) · From L2BEAT, an open registry of layer-2 risk"))
+		Text(String(localized: "Recorded \(L2beatCopy.day(thing.capturedAt)) · From ETHBEAT, an open registry of layer-2 risk"))
 			.dsText(.label12)
 			.foregroundStyle(DS.textTertiary)
 			.fixedSize(horizontal: false, vertical: true)
@@ -183,10 +183,10 @@ struct L2beatRevisionHead: View {
 			if !inFrame {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(revision.isStageMove
-					? String(localized: "L2BEAT moved this chain's stage")
-					: String(localized: "L2BEAT revised its assessment"))
+					? String(localized: "ETHBEAT moved this chain's stage")
+					: String(localized: "ETHBEAT revised its assessment"))
 					.dsText(.label12)
-					.foregroundStyle(DS.brandHue(for: "l2beat") ?? DS.brandInk)
+					.foregroundStyle(DS.brandHue(for: "ethbeat") ?? DS.brandInk)
 				Text(headline)
 					.dsText(.heading40)
 					.foregroundStyle(DS.textPrimary)
@@ -229,8 +229,8 @@ struct L2beatRevisionHead: View {
 			// to cite — and dating their change to the day our sweep ran would be a claim
 			// about them we cannot support.
 			Text(revision.day.map {
-				String(localized: "Noticed \($0) · L2BEAT's reading, not ours")
-			} ?? String(localized: "L2BEAT's own reading, not ours"))
+				String(localized: "Noticed \($0) · ETHBEAT's reading, not ours")
+			} ?? String(localized: "ETHBEAT's own reading, not ours"))
 				.dsText(.label12)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)
@@ -241,8 +241,8 @@ struct L2beatRevisionHead: View {
 	/// What the box says it was (prd §1191).
 	var label: String {
 		revision.isStageMove
-			? String(localized: "L2BEAT moved this chain's stage")
-			: String(localized: "L2BEAT revised its assessment")
+			? String(localized: "ETHBEAT moved this chain's stage")
+			: String(localized: "ETHBEAT revised its assessment")
 	}
 
 	var headline: String {

@@ -240,6 +240,9 @@ enum Corpus {
         // alone read as the word, beside Privacy Pools and the Privacy page.
         // Its key, seat id and ref namespace stay `privacy`.
         "Privacy": Rename(current: "Privacy.com"),
+        // L2BEAT renamed itself ETHBEAT (2026-11-04, prd §1699). Its seat id,
+        // ref namespace and defaults stay `l2beat`.
+        "L2BEAT": Rename(current: "ETHBEAT"),
     ]
 
     /// A renamed seat: what it answers to now, and — when the rename moved the

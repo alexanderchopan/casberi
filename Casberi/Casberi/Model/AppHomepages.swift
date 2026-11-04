@@ -41,7 +41,7 @@ enum AppHomepages {
         "Gemini": "gemini.google.com",
         "Safe": "safe.global",
         "ether.fi": "ether.fi",
-        "L2BEAT": "l2beat.com",
+        "ETHBEAT": "ethbeat.org",
         "Bitrefill": "bitrefill.com",
         "Privacy.com": "privacy.com",
         "Venice": "venice.ai",

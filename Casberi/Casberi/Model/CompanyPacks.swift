@@ -87,7 +87,7 @@ enum CompanyPacks {
             "ETH Validators": coin("Ethereum", "ETH", "eth-ethereum"),
             "Gemini Exchange": ("Gemini", .stock("GEMI")),
             "Kraken": own("Kraken"),
-            "L2BEAT": own("L2BEAT"),
+            "ETHBEAT": own("ETHBEAT"),
             "MetaMask Card": own("Consensys"),
             "Plasma One": coin("Plasma", "XPL", "xpl-plasma"),
             "NerdWallet": ("NerdWallet", .stock("NRDS")),

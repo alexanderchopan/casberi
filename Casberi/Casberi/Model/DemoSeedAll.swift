@@ -1441,7 +1441,7 @@ enum DemoSeedAll {
             guard let project = L2beatDirectory.project(id) else { return nil }
             var tags = ["Watchlist", project.layer.label]
             if let stage = project.stage, stage != .notApplicable { tags.append(stage.label) }
-            return row(.link, project.name, source: "L2BEAT",
+            return row(.link, project.name, source: "ETHBEAT",
                        ref: L2beatWatch.chainRef(id),
                        days: 0.0, hour: 9,
                        content: project.pageURL?.absoluteString ?? "",
@@ -1467,7 +1467,7 @@ enum DemoSeedAll {
             let daysAgo = max(Date.now.timeIntervalSince(milestone.date) / 86_400, 0)
             out.append(
                 row(.link, L2beatIngest.milestoneTitle(milestone, project: project),
-                    source: "L2BEAT", ref: milestone.ref,
+                    source: "ETHBEAT", ref: milestone.ref,
                     days: daysAgo, hour: 13,
                     content: milestone.url ?? project?.pageURL?.absoluteString ?? "",
                     tags: tags) { thing in
@@ -1490,7 +1490,7 @@ enum DemoSeedAll {
             out.append(
                 row(.link, L2beatIngest.revisionTitle(
                         project: base, change: .stage(before: .stage0, after: stage)),
-                    source: "L2BEAT",
+                    source: "ETHBEAT",
                     ref: "\(L2beatIdentity.revisionPrefix)base:\(L2beatSheet.stageSubject):\(L2beatSheet.token(for: stage)):\(day)",
                     days: 2.0, hour: 10,
                     content: base.pageURL?.absoluteString ?? "",
@@ -5647,7 +5647,7 @@ enum DemoSeedAll {
         ("Logos", "1 account", "Reads a public testnet account, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
         ("ENS", "3 names followed", "Reads when a followed name expires, keyless."),
-        ("L2BEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),
+        ("ETHBEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),
         ("Sentry", "Synced 20m ago", "Reads what broke."),
         ("Vercel", "Synced 12m ago", "Reads what deployed."),
         ("PagerDuty", "Synced 1h ago", "Reads what paged you."),

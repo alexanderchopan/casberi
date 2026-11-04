@@ -67,7 +67,7 @@ struct L2beatDirectoryScreen: View {
 		let projects: [L2beatProject]
 
 		struct Head {
-			/// Nil covers BOTH "L2BEAT says Not applicable" and a rung word this build does
+			/// Nil covers BOTH "ETHBEAT says Not applicable" and a rung word this build does
 			/// not know: neither is a place on the ladder, both sort last already, and
 			/// splitting them would put a heading over a band of one unrecognised string.
 			let stage: L2beatStage?
@@ -193,7 +193,7 @@ struct L2beatDirectoryScreen: View {
 		DSEmptyState(
 			headline: Text(elsewhere > 0
 				? String(localized: "Nothing under \(layer.label).")
-				: String(localized: "L2BEAT doesn't cover that one.")),
+				: String(localized: "ETHBEAT doesn't cover that one.")),
 			words: Text(elsewhere == 0
 				? String(localized: "They assess \(L2beatDirectory.projects.count) chains so far.")
 				: elsewhere == 1
@@ -225,7 +225,7 @@ struct L2beatDirectoryScreen: View {
 			// lived only inside a card — one chain at a time, on a screen whose whole job is
 			// comparing them.
 			Text(head.stage?.meaning
-				?? String(localized: "L2BEAT doesn't place these chains on its stage ladder."))
+				?? String(localized: "ETHBEAT doesn't place these chains on its stage ladder."))
 				.dsText(.subhead12)
 				.foregroundStyle(DS.textSecondary)
 				.fixedSize(horizontal: false, vertical: true)

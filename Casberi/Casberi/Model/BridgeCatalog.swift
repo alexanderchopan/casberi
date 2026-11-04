@@ -352,7 +352,7 @@ enum BridgeCatalog {
         // in order to compare things before committing; with that category
         // deleted, the chains your money sits on are a lens on money you hold.
         // Still no standalone chip: it is a venue in the Wallet folder.
-        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Reading", connectable: true,
+        Offer(name: "ETHBEAT", tagline: "How safe the chains you use really are", group: "Reading", connectable: true,
               needsSetup: true, added: day(2026, 8, 21)),
         // OPENSEA IS RETIRED (user ruling 2026-09-06, §638's second
         // amendment: "opensea should not have its own category or exist").
@@ -1080,7 +1080,7 @@ enum BridgeSetupMode {
     static let noAccountSeats: Set<String> = ["Wallet", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
-        "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS",
+        "npm", "PyPI", "Walletbeat", "ETHBEAT", "ENS",
         "ETH Validators", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence",

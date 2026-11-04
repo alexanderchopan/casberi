@@ -96,11 +96,11 @@ guard 'L2beatRoom.ranked(items)' "$SRC" \
 guard 'ranked.prefix(rowCap)' "$SRC" \
   "the room head no longer honours its row cap"
 guard 'case .l2beat(let room)' "$FEED" \
-  "the L2BEAT head is no longer rendered from the sourceHead chain"
+  "the ETHBEAT head is no longer rendered from the sourceHead chain"
 guard 'case L2beatRoomSource.source:' "$FEED" \
-  "FeedScreen no longer composes the L2BEAT head"
-guard 'case "L2BEAT":              self = .l2beat' "$FEED" \
-  "the L2BEAT source no longer maps to its own room shape — it would fall back to plain bands"
+  "FeedScreen no longer composes the ETHBEAT head"
+guard 'case "ETHBEAT":              self = .l2beat' "$FEED" \
+  "the ETHBEAT source no longer maps to its own room shape — it would fall back to plain bands"
 guard 'L2beatChainRow(thing: thing)' "$FEED" \
   "a followed chain no longer draws its assessment row"
 guard 'L2beatNewsRow(thing: thing, watchedChains: l2beatWatchedIDs)' "$FEED" \
@@ -112,7 +112,7 @@ guard 'L2beatWatch.chainID(from: $0)' "$FEED" \
 # The rule §419 had to enforce by refusal and this one satisfies by citation: L2BEAT
 # publishes a stage, so we show theirs. Nothing may compute one.
 if grep -qiE 'func +score|var +score|riskScore|overallScore|safetyScore' "$TMP/rating.nc" "$TMP/room.nc"; then
-  echo "✗ something computes a score — L2BEAT publishes a stage and this app publishes nothing"
+  echo "✗ something computes a score — ETHBEAT publishes a stage and this app publishes nothing"
   exit 1
 fi
 # The directory must never offer a "safest" sort.
@@ -168,7 +168,7 @@ guard 'L2beatCopy.day(thing.capturedAt)' "$TMP/cardscreen.nc" \
 guard 'L2beatIncidentAge.mark(latest: $0, withinDays: L2beatRoomSource.recencyDays)' "$TMP/dirscreen.nc" \
   "the directory's incident marker lost its date, or grew a recency window of its own (§311)"
 guard 'project.lead.shortLabel' "$TMP/dirscreen.nc" \
-  "the directory row no longer names WHICH question L2BEAT leads with"
+  "the directory row no longer names WHICH question ETHBEAT leads with"
 if grep -qF 'L2beatCopy.stripShort' "$TMP/dirscreen.nc"; then
   echo "✗ the directory row prints the tally again — it says in words what the strip says in colour"
   exit 1
@@ -258,23 +258,23 @@ fi
 
 # ---- A row must not fetch --------------------------------------------------------------------
 if grep -qE 'FetchDescriptor|modelContext' "$ROWS"; then
-  echo "✗ an L2BEAT row fetches — the follow list is handed in precisely so it cannot"
+  echo "✗ an ETHBEAT row fetches — the follow list is handed in precisely so it cannot"
   exit 1
 fi
 
 # ---- The sheet's three anatomies ---------------------------------------------------------------
 guard 'l2beatHead(l2beatShape)' "$SHEETVIEW" \
-  "the thing sheet no longer draws the L2BEAT anatomies — all three fall back to a link"
+  "the thing sheet no longer draws the ETHBEAT anatomies — all three fall back to a link"
 guard '&& walletbeatShape == nil && l2beatShape == nil' "$SHEETVIEW" \
-  "the generic content block draws UNDER an L2BEAT head — the row's URL printed twice"
+  "the generic content block draws UNDER an ETHBEAT head — the row's URL printed twice"
 guard 'L2beatMilestoneHead(thing: thing, inFrame: true)' "$SHEETVIEW" \
   "a milestone's sheet lost its own head"
 
 # ---- Reach --------------------------------------------------------------------------------------
-guard 'Endpoint(service: "L2BEAT"' "$REACH" \
-  "L2BEAT's hosts are undeclared — the privacy screen would be quietly wrong (§205)"
-guard '"l2beat.com", "raw.githubusercontent.com"' "$REACH" \
-  "L2BEAT's declared hosts no longer match what the bridge reads"
+guard 'Endpoint(service: "ETHBEAT"' "$REACH" \
+  "ETHBEAT's hosts are undeclared — the privacy screen would be quietly wrong (§205)"
+guard '"ethbeat.org", "raw.githubusercontent.com"' "$REACH" \
+  "ETHBEAT's declared hosts no longer match what the bridge reads"
 
 # ---- No notification, and that is a DECISION ------------------------------------------------------
 # §428: L2BEAT's milestone schema carries NO severity and NO status, so the recorded
@@ -283,7 +283,7 @@ guard '"l2beat.com", "raw.githubusercontent.com"' "$REACH" \
 # patch note; grading them ourselves would be the §83 fake status. The row still arrives and
 # the room head still ranks it first. Revisit the day L2BEAT publishes a severity.
 if grep -qiE 'l2beat' "$NOTIFY"; then
-  echo "✗ L2BEAT reached NotifySweep — see the no-severity ruling in prd §428 before adding one"
+  echo "✗ ETHBEAT reached NotifySweep — see the no-severity ruling in prd §428 before adding one"
   exit 1
 fi
 
@@ -304,7 +304,7 @@ fi
 # The demo's findings must be DERIVED, never written: a fabricated risk finding attributed
 # to a real chain is the §83 failure inside the one feature built to stop it.
 guard 'if case .finding(let risk) = project.lead' "$TMP/demo.nc" \
-  "the demo hand-writes a chain's finding instead of deriving it from L2BEAT's own reading"
+  "the demo hand-writes a chain's finding instead of deriving it from ETHBEAT's own reading"
 
 echo "  ✓ all drift guards hold"
 echo ""
@@ -372,7 +372,7 @@ let honeypot = risk(.exitWindow, "Not applicable", .neutral, "Deposits are donat
                     second: L2beatRiskNote(value: "One address can withdraw all funds.",
                                            sentiment: .bad, explanation: nil))
 check("a WORSE nested reading is what the lead sees", honeypot.worstSentiment == .bad)
-check("the strip still shows L2BEAT's headline call", honeypot.sentiment == .neutral)
+check("the strip still shows ETHBEAT's headline call", honeypot.sentiment == .neutral)
 check("a nested block with no sentence falls back to its value",
       honeypot.worstExplanation == "One address can withdraw all funds.")
 
@@ -422,9 +422,9 @@ let outOfOrder = project(risks: [
     risk(.sequencerFailure, "No mechanism", .bad),
 ])
 if case .finding(let hit) = outOfOrder.lead {
-    check("the lead is the first BAD in L2BEAT's axis order", hit.axis == .sequencerFailure)
+    check("the lead is the first BAD in ETHBEAT's axis order", hit.axis == .sequencerFailure)
 } else {
-    check("the lead is the first BAD in L2BEAT's axis order", false)
+    check("the lead is the first BAD in ETHBEAT's axis order", false)
 }
 
 // A warning leads only when nothing is flagged.
@@ -503,7 +503,7 @@ check("there is exactly one per cell", shortNames.count == L2beatRiskAxis.allCas
 // A "short" label that is the full one teaches nothing a 62-point column can render.
 check("each is no longer than the label it shortens",
       L2beatRiskAxis.allCases.allSatisfy { $0.shortLabel.count <= $0.label.count })
-check("the key is in L2BEAT's own axis order",
+check("the key is in ETHBEAT's own axis order",
       L2beatRiskAxis.allCases.map(\.rawValue)
         == ["sequencerFailure", "stateValidation", "dataAvailability", "exitWindow",
             "proposerFailure"])
@@ -554,11 +554,11 @@ let shuffled = project(risks: [
 check("orderedRisks uses OUR axis order, not the payload's",
       shuffled.orderedRisks.map(\.axis) == [.sequencerFailure, .exitWindow, .proposerFailure])
 check("a missing axis is skipped, never invented", shuffled.orderedRisks.count == 3)
-check("flagged counts only what L2BEAT flags", shuffled.flagged == 1)
+check("flagged counts only what ETHBEAT flags", shuffled.flagged == 1)
 check("risk(_:) finds by axis", shuffled.risk(.exitWindow)?.value == "None")
 check("the page URL is built from the SLUG",
       project(id: "optimism", slug: "op-mainnet").pageURL?.absoluteString
-        == "https://l2beat.com/scaling/projects/op-mainnet")
+        == "https://ethbeat.org/scaling/projects/op-mainnet")
 
 print("")
 print("Parsing the summary")
@@ -726,18 +726,18 @@ print("")
 print("The sheet's ref grammar")
 
 check("a chain ref is the chain anatomy",
-      L2beatSheet.shape(.init(source: "L2BEAT", sourceRef: "l2beat:chain:base")) == .chain)
+      L2beatSheet.shape(.init(source: "ETHBEAT", sourceRef: "l2beat:chain:base")) == .chain)
 check("a news ref is the milestone anatomy",
-      L2beatSheet.shape(.init(source: "L2BEAT", sourceRef: "l2beat:news:base:2025-01-01:x")) == .milestone)
+      L2beatSheet.shape(.init(source: "ETHBEAT", sourceRef: "l2beat:news:base:2025-01-01:x")) == .milestone)
 check("a rev ref is the revision anatomy",
-      L2beatSheet.shape(.init(source: "L2BEAT", sourceRef: "l2beat:rev:base:exitWindow:bad:2026-01-01")) == .revision)
+      L2beatSheet.shape(.init(source: "ETHBEAT", sourceRef: "l2beat:rev:base:exitWindow:bad:2026-01-01")) == .revision)
 check("another source draws nothing here",
       L2beatSheet.shape(.init(source: "Walletbeat", sourceRef: "l2beat:chain:base")) == nil)
 check("an import receipt keeps the plain sheet",
-      L2beatSheet.shape(.init(source: "L2BEAT", sourceRef: "l2beat:chain:base",
+      L2beatSheet.shape(.init(source: "ETHBEAT", sourceRef: "l2beat:chain:base",
                               isImportReceipt: true)) == nil)
 check("an unknown namespace draws nothing",
-      L2beatSheet.shape(.init(source: "L2BEAT", sourceRef: "l2beat:other:x")) == nil)
+      L2beatSheet.shape(.init(source: "ETHBEAT", sourceRef: "l2beat:other:x")) == nil)
 
 let riskRev = L2beatSheet.revision(fromRef: "l2beat:rev:zksync2:exitWindow:bad:2026-08-21")
 check("a risk revision reads its project", riskRev?.projectID == "zksync2")
@@ -800,8 +800,8 @@ let flagged = room([item("Base", risks: [risk(.exitWindow, "None", .bad)])])
 check("the headline names the top chain and its axis",
       L2beatRoom.headline(flagged).contains("Base")
       && L2beatRoom.headline(flagged).lowercased().contains("exit window"))
-check("the headline attributes the finding to L2BEAT",
-      L2beatRoom.headline(flagged).contains("L2BEAT"))
+check("the headline attributes the finding to ETHBEAT",
+      L2beatRoom.headline(flagged).contains("ETHBEAT"))
 let withIncident = room([item("Base", risks: clean, recent: 1)])
 check("a recent incident is the headline", L2beatRoom.headline(withIncident).contains("incident"))
 let reviewed = room([item("Base", review: true, risks: clean)])
@@ -835,7 +835,7 @@ check("bestRung ignores the unstaged",
             item("B", stage: .stage1, risks: clean)]).bestRung == 1)
 
 // The row's own sub-line: L2BEAT's sentence verbatim where there is one.
-check("the lead line quotes L2BEAT's sentence",
+check("the lead line quotes ETHBEAT's sentence",
       L2beatRoom.leadLine(item("A", risks: [risk(.exitWindow, "None", .bad, "no window")]))
         == "no window")
 check("an unread row says so rather than claiming nothing was found",
@@ -1079,7 +1079,7 @@ mutate "the ranking must be total" room \
   'return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending' \
   'return false'
 mutate "a clean chain must not be called safe" room \
-  'return String(localized: "L2BEAT flags nothing on \(top.name)")' \
+  'return String(localized: "ETHBEAT flags nothing on \(top.name)")' \
   'return String(localized: "\(top.name) is safe")'
 mutate "the note must count how many passed Stage 0" room \
   'return String(localized: "\(above) of \(onLadder.count) have passed Stage 0; the rest are still Stage 0.")' \

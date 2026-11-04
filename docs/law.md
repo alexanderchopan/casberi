@@ -111,7 +111,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 ### 8. Catalogue (Apps)
 - Library is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library (Contacts and Calendar open their pages, §1612); one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
-- The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564).
+- The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564). L2BEAT is "ETHBEAT", host ethbeat.org (§1699).
 - Markets is deleted (§1529): its tile, seat, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions. A watchlist came back as a Wallet Home door (§1632), not as Markets.
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
 
@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1840 of 1912 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1841 of 1913 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681)
@@ -2089,6 +2089,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1696 — On All, an app's money is Apps', never Tokens': every Holdings section is separate (resolves §1695's open question)
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
+- §1699 — L2BEAT is ETHBEAT
 
 ## Dead rulings → what replaced them (generated)
 
