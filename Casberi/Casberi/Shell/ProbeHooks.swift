@@ -4179,6 +4179,8 @@ enum ProbeHooks {
         Hook(key: "aztecEngineProbe") { raw, _ in AztecEngineProbe.run(raw) },
         // `-aztecBrowser <url>` — an Aztec app in Casberi's browser (prd §1700 step 3).
         Hook(key: "aztecBrowser") { raw, _ in AztecBrowserProbe.open(raw) },
+        // `-aztecBrowserEthereum <url>` — a page with your account as its Ethereum provider (prd §1700e).
+        Hook(key: "aztecBrowserEthereum") { raw, _ in AztecBrowserProbe.open(raw, ethereum: true) },
         // `-privateMoneySample YES|mainnet|none|clear` — sample private notes
         // (approved, waiting; `mainnet`: ppETH and ppUSDC on Ethereum, worth
         // and rate read live, prd §1563) beside the phone's own, no funds

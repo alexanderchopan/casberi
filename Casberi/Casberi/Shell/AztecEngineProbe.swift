@@ -46,9 +46,11 @@ import UIKit
 /// (prd §1700 step 3), over everything, with a Close button; DEBUG's door
 /// until Library and the account's page carry the real ones. `-autoApprove
 /// YES` is not honoured here: every ask waits for a hand.
+/// `-aztecBrowserEthereum <url>` opens the page with your account as its
+/// Ethereum provider instead (Human Passport's door, prd §1700e).
 enum AztecBrowserProbe {
     @MainActor
-    static func open(_ raw: String) {
+    static func open(_ raw: String, ethereum: Bool = false) {
         guard let url = URL(string: raw), url.scheme == "https" || url.host == "localhost" || url.host == "127.0.0.1" else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -57,7 +59,7 @@ enum AztecBrowserProbe {
             var top = root
             while let next = top.presentedViewController { top = next }
             let host = UIHostingController(rootView: NavigationStack {
-                AztecBrowserView(url: url).toolbar {
+                AztecBrowserView(url: url, aztec: !ethereum, ethereum: ethereum).toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Close") { top.presentedViewController?.dismiss(animated: true) }
                     }

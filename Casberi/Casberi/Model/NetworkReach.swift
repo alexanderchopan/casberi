@@ -354,6 +354,15 @@ enum NetworkReach {
                  hosts: ["shield.human.tech"],
                  credentialed: false,
                  throughTor: true),
+        // Human Passport (prd §1700e): the page where your account earns the
+        // score Shield asks for, opened in Casberi's browser with your account
+        // as its Ethereum provider. The page is theirs; Casberi signs only
+        // what you approve there and sends nothing.
+        Endpoint(service: "Human Passport",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "When you open Human Passport from Move, loads its own page so your account can earn the score Shield asks for. The page sees your account's address once you connect it, and each message you sign there; Casberi sends nothing from it.",
+                 hosts: ["app.passport.xyz"],
+                 credentialed: false),
         Endpoint(service: "Aztec proving parameters",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Downloads, once, the public parameters Aztec's prover needs to make a proof on this iPhone, from Aztec's own servers. Public files; the request names no one.",

@@ -26,6 +26,9 @@ struct MoveAztecGasSentence<Head: View>: View {
     /// An exit Aztec's proof has reached Ethereum with, ready to finish.
     @State private var ready: AztecAccountStore.ShieldExit?
     @State private var finished = false
+    @State private var passport = false
+    /// Human Passport's app, where your account earns the score Shield asks for.
+    private var passportApp: URL { URL(string: "https://app.passport.xyz")! }
     @State private var amount = "25"
     @State private var stage: Stage = .ready
     @State private var standing: ShieldBridge.Eligibility?
@@ -111,6 +114,12 @@ struct MoveAztecGasSentence<Head: View>: View {
                     .dsText(.subhead12)
                     .foregroundStyle(lineInk)
                     .padding(.top, DS.Space.s3)
+                if carry != .gas, ready == nil, stage == .ready, let standing, !standing.eligible, !standing.sanctioned {
+                    // The score is earned on Human Passport's own page, with
+                    // this account connected there as itself (no ID).
+                    DSDoorRow(icon: "person.badge.shield.checkmark", label: "Raise your score on Human Passport") { passport = true }
+                        .padding(.top, DS.Space.s2)
+                }
                 HStack(spacing: DS.Space.s1) {
                     ProtocolInlineMark(mark: "aztec")
                     Text(carry == .gas ? "Powered by Aztec" : "Powered by Shield").dsText(.subhead12).foregroundStyle(DS.textSecondary)
@@ -124,6 +133,12 @@ struct MoveAztecGasSentence<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .sheet(isPresented: $passport, onDismiss: {
+            Task { if let account = YourAccountKey.address { standing = await ShieldBridge.eligibility(account) } }
+        }) {
+            AztecBrowserView(url: passportApp, aztec: false, ethereum: true)
+                .presentationDragIndicator(.visible)
+        }
         .task {
             // Where your account stands with Shield: public, read once.
             if let account = YourAccountKey.address, !DemoMode.isActive {

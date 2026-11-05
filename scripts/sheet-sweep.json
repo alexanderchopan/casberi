@@ -1622,6 +1622,14 @@
     "Screens/AztecBrowser.swift:model.ask#send"
    ],
    "why": "an Aztec app's asks (prd §1700 item 6): each is raised only by a live app page in Casberi's browser asking your Aztec account to connect, confirm the emoji or approve a transaction; the demo opens no app and the sweep cannot be one (seen on the simulator 2026-11-04 with `-aztecBrowser`)"
+  },
+  {
+   "covers": [
+    "Screens/AztecBrowser.swift:model.ask#ethConnect",
+    "Screens/AztecBrowser.swift:model.ask#ethSign",
+    "Screens/MoveAztecGas.swift:passport"
+   ],
+   "why": "your account on Human Passport's page (prd §1700e): the page opens only from Move's Shield line when Shield finds the account's score short, which the demo never asks, and its two asks are raised only by that live page asking to connect or sign; the demo refuses every account request there (seen on the simulator 2026-11-04 with `-aztecBrowserEthereum`)"
   }
  ]
 }

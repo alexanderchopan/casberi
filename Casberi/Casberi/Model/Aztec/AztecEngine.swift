@@ -207,6 +207,8 @@ final class AztecEngine: NSObject {
             webView?.callAsyncJavaScript("casberiEngine.confirmEmoji(s, match)", arguments: ["s": sessionId, "match": yes], in: nil, in: .page) { _ in }
         case .send(let id, _, _, _):
             webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, yes)", arguments: ["id": id, "yes": yes], in: nil, in: .page) { _ in }
+        case .ethConnect, .ethSign:
+            break // the browser answers its own Ethereum asks
         }
     }
 

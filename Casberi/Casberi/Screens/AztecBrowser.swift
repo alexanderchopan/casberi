@@ -8,13 +8,18 @@ import WebKit
 /// the wallet, and this view names the page's origin itself — the page cannot
 /// claim one. Every connect, the emoji check and every transaction ask here,
 /// one sheet at a time (item 6). Proved first in `tools/aztec-dapp-spike`.
+/// Opened with `ethereum`, the page also gets your account as an Ethereum
+/// provider (`BrowserEthereum`): connect, then each message signed, asked
+/// here the same way.
 @MainActor
-final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandler, WKNavigationDelegate {
+final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
 
     enum Request: Identifiable, Equatable {
         case connect(requestId: String, host: String)
         case emoji(sessionId: String, host: String, emoji: String)
         case send(id: Int, host: String, calls: [Call], fee: String)
+        case ethConnect(id: String, host: String)
+        case ethSign(id: String, host: String, text: String)
 
         struct Call: Equatable { let name: String; let to: String; let isPublic: Bool }
 
@@ -23,6 +28,8 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             case .connect(let r, _): "connect-\(r)"
             case .emoji(let s, _, _): "emoji-\(s)"
             case .send(let i, _, _, _): "send-\(i)"
+            case .ethConnect(let i, _): "eth-connect-\(i)"
+            case .ethSign(let i, _, _): "eth-sign-\(i)"
             }
         }
     }
@@ -32,19 +39,32 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
 
     let start: URL
     let page: WKWebView
+    let aztec: Bool
+    let ethereum: Bool
+    /// The Ethereum provider's connection, for this page's host only.
+    private var ethConnectedHost: String?
+    private var ethAnswers: [String: CheckedContinuation<Bool, Never>] = [:]
     @Published var ask: Request?
     @Published var host: String
     @Published var failed: String?
     private var queue: [Request] = []
 
-    init(url: URL) {
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false) {
         start = url
+        self.aztec = aztec
+        self.ethereum = ethereum
         host = url.host(percentEncoded: false) ?? ""
         let relay = (Bundle.main.url(forResource: "AztecEngine", withExtension: nil)?
             .appendingPathComponent("relay.js")).flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
         let controller = WKUserContentController()
-        controller.addUserScript(WKUserScript(source: relay, injectionTime: .atDocumentStart,
-                                              forMainFrameOnly: true, in: Self.relayWorld))
+        if aztec {
+            controller.addUserScript(WKUserScript(source: relay, injectionTime: .atDocumentStart,
+                                                  forMainFrameOnly: true, in: Self.relayWorld))
+        }
+        if ethereum {
+            controller.addUserScript(WKUserScript(source: BrowserEthereum.script, injectionTime: .atDocumentStart,
+                                                  forMainFrameOnly: true, in: .page))
+        }
         let config = WKWebViewConfiguration()
         config.userContentController = controller
         // The app's site keeps its own storage, apart from the engine's origin.
@@ -54,12 +74,14 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         page.isInspectable = true
         #endif
         super.init()
-        controller.add(self, contentWorld: Self.relayWorld, name: "casberiRelay")
+        if aztec { controller.add(self, contentWorld: Self.relayWorld, name: "casberiRelay") }
+        if ethereum { controller.addScriptMessageHandler(self, contentWorld: .page, name: "casberiEthereum") }
         page.navigationDelegate = self
     }
 
     /// Starts the engine first, so the relay's first message has somewhere to go.
     func open() async {
+        guard aztec else { page.load(URLRequest(url: start)); return }
         do {
             try await AztecEngine.shared.start()
             AztecEngine.shared.browser = self
@@ -72,6 +94,83 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     func close() {
         if AztecEngine.shared.browser === self { AztecEngine.shared.browser = nil }
         page.configuration.userContentController.removeAllScriptMessageHandlers()
+        for (_, answer) in ethAnswers { answer.resume(returning: false) }
+        ethAnswers.removeAll()
+    }
+
+    // MARK: - Your account, as an Ethereum provider
+
+    func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
+        guard message.name == "casberiEthereum", ethereum, message.frameInfo.isMainFrame,
+              let body = message.body as? [String: Any], let method = body["method"] as? String else {
+            replyHandler(BrowserEthereum.Reply.unsupported.body, nil); return
+        }
+        // The page's host is this view's reading, never the page's word; a
+        // connection is for the host it was given to.
+        let here = page.url?.host(percentEncoded: false) ?? host
+        guard let account = YourAccountKey.address, !DemoMode.isActive else {
+            // No account to offer (or the demo): the page learns there is
+            // none, and anything it asks of one is refused.
+            NSLog("browserEthereum| %@ | refused: %@", method, DemoMode.isActive ? "demo" : "no account")
+            let reply: BrowserEthereum.Reply = switch method {
+            case "eth_accounts": .result("[]")
+            case "eth_chainId": .result("\"0x1\"")
+            default: .error(code: 4100, message: "There is no account here.")
+            }
+            replyHandler(reply.body, nil); return
+        }
+        let need = BrowserEthereum.need(method: method, paramsJSON: body["params"] as? String ?? "[]",
+                                        account: account, connected: ethConnectedHost == here)
+        Task { @MainActor in
+            let reply = await self.answer(need, host: here, account: account)
+            if case .error(let code, _) = reply { NSLog("browserEthereum| %@ | error %d", method, code) }
+            replyHandler(reply.body, nil)
+        }
+    }
+
+    private func answer(_ need: BrowserEthereum.Need, host: String, account: String) async -> BrowserEthereum.Reply {
+        switch need {
+        case .answer(let reply):
+            return reply
+        case .connect:
+            guard await ask(.ethConnect(id: UUID().uuidString, host: host)) else { return .rejected }
+            ethConnectedHost = host
+            return .result("[\"\(account)\"]")
+        case .signText(let text):
+            guard await ask(.ethSign(id: UUID().uuidString, host: host, text: text)) else { return .rejected }
+            do {
+                let sig = try await YourAccountMessage.signText(text, on: YourAccountOp.ethereum, account: account,
+                                                                reason: String(localized: "Sign for \(host)"))
+                return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
+            } catch {
+                return .error(code: 4001, message: error.localizedDescription)
+            }
+        case .signTyped(let json, let summary):
+            guard await ask(.ethSign(id: UUID().uuidString, host: host, text: summary)),
+                  let typed = try? JSONSerialization.jsonObject(with: Data(json.utf8)) else { return .rejected }
+            do {
+                let sig = try await YourAccountMessage.signTypedData(typed, on: YourAccountOp.ethereum, account: account,
+                                                                     reason: String(localized: "Sign for \(host)"))
+                return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
+            } catch {
+                return .error(code: 4001, message: error.localizedDescription)
+            }
+        case .read(let method, let params):
+            guard let value = try? await YourAccountChain.rpc(YourAccountOp.ethereum, method, params),
+                  let data = try? JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed) else {
+                return .error(code: -32603, message: "Ethereum did not answer.")
+            }
+            return .result(String(data: data, encoding: .utf8))
+        }
+    }
+
+    /// Raises an ask and waits for the person's answer.
+    private func ask(_ request: Request) async -> Bool {
+        await withCheckedContinuation { answer in
+            ethAnswers[request.id] = answer
+            enqueue(request)
+        }
     }
 
     // MARK: - The relay
@@ -110,7 +209,11 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             do { try await PrivateRootKey.unlock(reason: String(localized: "Approve this Aztec transaction")) } catch { return }
         }
         queue.removeAll { $0.id == ask.id }
-        AztecEngine.shared.answer(ask, yes: yes)
+        if let waiting = ethAnswers.removeValue(forKey: ask.id) {
+            waiting.resume(returning: yes)
+        } else {
+            AztecEngine.shared.answer(ask, yes: yes)
+        }
         if self.ask?.id == ask.id { self.ask = nil }
     }
 }
@@ -119,7 +222,9 @@ struct AztecBrowserView: View {
     @StateObject private var model: AztecBrowserModel
     @Environment(\.dismiss) private var dismiss
 
-    init(url: URL) { _model = StateObject(wrappedValue: AztecBrowserModel(url: url)) }
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false) {
+        _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -177,6 +282,19 @@ struct AztecAskSheet: View {
                     }
                 }
                 Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            case .ethConnect(_, let host):
+                Text("Connect \(host) to your account?").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                Text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+            case .ethSign(_, let host, let text):
+                Text("\(host) asks your account to sign").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                ScrollView {
+                    Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 180)
+                Text("Signing proves this is your account. It moves nothing.")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
             }
             Spacer(minLength: 0)
             HStack(spacing: DS.Space.s3) {
@@ -194,9 +312,9 @@ struct AztecAskSheet: View {
     }
 
     private var acceptWord: LocalizedStringKey {
-        switch ask { case .connect: "Connect"; case .emoji: "They match"; case .send: "Approve" }
+        switch ask { case .connect, .ethConnect: "Connect"; case .emoji: "They match"; case .send: "Approve"; case .ethSign: "Sign" }
     }
     private var declineWord: LocalizedStringKey {
-        switch ask { case .connect: "Decline"; case .emoji: "They don't"; case .send: "Decline" }
+        switch ask { case .connect, .send, .ethConnect, .ethSign: "Decline"; case .emoji: "They don't" }
     }
 }

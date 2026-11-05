@@ -21,13 +21,19 @@
 #     bridge instead of its minter proxy (the burn reverts after proving), or a
 #     content hash under another selector (the exit can never be finished);
 #   • any request to Proof of Clean Hands (ID) — Passport only, §1700e item 1.
+#
+#   Casberi/Casberi/Model/Aztec/BrowserEthereum.swift — your account as an
+#   Ethereum provider on Human Passport's page: a page that could send, sign
+#   for another chain or account, read accounts before connecting, or get a
+#   hash signed dressed as a message.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 WIRE="Casberi/Casberi/Model/Aztec/ShieldWire.swift"
+PROVIDER="Casberi/Casberi/Model/Aztec/BrowserEthereum.swift"
 APP="Casberi/Casberi/Model/Aztec/ShieldBridge.swift"
 ENGINE="tools/aztec-engine/src/main.js"
-for f in "$WIRE" "$APP" "$ENGINE"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
+for f in "$WIRE" "$PROVIDER" "$APP" "$ENGINE"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
 
 # ── The app half, read ──────────────────────────────────────────────────
 grep -q 'shield.human.tech' Casberi/Casberi/Model/NetworkReach.swift \
@@ -97,6 +103,43 @@ EOF
 xcrun swiftc -Onone -o "$TMP/run" "$WIRE" "$TMP/main.swift" 2>"$TMP/err" || { cat "$TMP/err"; echo "✗ the wire did not compile"; exit 1; }
 "$TMP/run" || exit 1
 
+# ── The provider, run ──────────────────────────────────────────────────
+mkdir -p "$TMP/prov.d"; cat > "$TMP/prov.d/main.swift" <<'EOF'
+import Foundation
+var failed = 0
+func check(_ ok: Bool, _ what: String) { if !ok { failed += 1; print("✗ provider: \(what)") } }
+let me = "0x1111111111111111111111111111111111111111"
+let other = "0x2222222222222222222222222222222222222222"
+func need(_ m: String, _ p: [Any], _ c: Bool = true) -> BrowserEthereum.Need {
+    let json = String(data: try! JSONSerialization.data(withJSONObject: p), encoding: .utf8)!
+    return BrowserEthereum.need(method: m, paramsJSON: json, account: me, connected: c)
+}
+func signs(_ n: BrowserEthereum.Need) -> Bool {
+    switch n { case .signText, .signTyped: true; default: false }
+}
+check(need("eth_accounts", [], false) == .answer(.result("[]")), "accounts read before connecting")
+check(need("eth_requestAccounts", [], false) == .connect, "a connect not asked")
+check(need("eth_sendTransaction", [[:]]) == .answer(.unsupported), "a page can send")
+check(need("eth_sign", [me, "0x" + String(repeating: "ab", count: 32)]) == .answer(.unsupported), "raw eth_sign answered")
+check(need("wallet_switchEthereumChain", [["chainId": "0x2105"]]) != .answer(.result(nil)), "another chain accepted")
+check(need("personal_sign", ["0x68656c6c6f", me]) == .signText("hello"), "a hex message not read as its text")
+check(need("personal_sign", [me, "0x68656c6c6f"]) == .signText("hello"), "params the other way round")
+check(need("personal_sign", ["0x68656c6c6f", other]) == .answer(.wrongAccount), "signed for another account")
+check(!signs(need("personal_sign", ["0x00ff10aa", me])), "bytes that are not text signed")
+check(!signs(need("personal_sign", ["0x68656c6c6f", me], false)), "signed before connecting")
+check(!signs(need("eth_signTypedData_v4", [me, "{\"domain\":{\"chainId\":8453},\"primaryType\":\"X\"}"])), "typed data for Base signed")
+check(signs(need("eth_signTypedData_v4", [me, "{\"domain\":{\"chainId\":1,\"name\":\"P\"},\"primaryType\":\"X\"}"])), "typed data for Ethereum refused")
+check(!signs(need("eth_signTypedData_v4", [other, "{\"domain\":{\"chainId\":1},\"primaryType\":\"X\"}"])), "typed data for another account")
+check(need("eth_call", [[:], "latest"]) == .read(method: "eth_call", params: []), "a read not passed through")
+check(need("eth_chainId", []) == .answer(.result("\"0x1\"")), "chain is not Ethereum")
+exit(failed == 0 ? 0 : 1)
+EOF
+xcrun swiftc -Onone -o "$TMP/prov" "$PROVIDER" "$TMP/prov.d/main.swift" 2>"$TMP/perr" || { cat "$TMP/perr"; echo "✗ the provider did not compile"; exit 1; }
+"$TMP/prov" || exit 1
+if grep -n "eth_sendTransaction\|eth_sendRawTransaction\|wallet_sendCalls" "$PROVIDER" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
+  echo "✗ the provider names a sending method: it signs messages only (prd §1700e)"; exit 1
+fi
+
 # ── Mutations: the checks above catch what they claim ───────────────────
 mutate() { # label, perl expression
   sed -e '' "$WIRE" > "$TMP/wire.swift"
@@ -112,4 +155,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, 5 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 mutations caught)"
