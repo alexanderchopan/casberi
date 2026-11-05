@@ -70962,3 +70962,9 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 1. **Into Aztec**: Move's "Send 50 USDC to your Aztec account" (or picking Aztec as the network) is your Safe depositing into the bridge's Ethereum portal — Shield's contracts (human.tech) for USDC and WETH on V6 today, measured 2026-11-04 — and your Aztec account claiming it on Aztec, privately or publicly; one sentence, the Safe's send with Face ID, then the claim proved on the phone.
 2. **Out of Aztec**: Move with Aztec selected, "Send 25 USDC on Aztec to 0x… on Ethereum", is the bridge's exit; inside Aztec, "to …a91c" is a private transfer.
 3. **No Shield page, in Library or anywhere**: Shield is plumbing, named only where Casberi names a protocol that carried a move (§1685, "Powered by …"). Library's Aztec apps are the ecosystem's other apps; which ones it lists is still to be ruled.
+
+## §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amends §1700 item 5 and §1700b item 3) (user, 2026-11-04: "its weird for them to be in library b/c again we don't have a uniswap app why would we have one for nemi olla or xochi you know?", then "ok" to links) — RULED
+
+1. **No list of Aztec apps, in Library or on the account's page.** Each app earns its way in as the plumbing behind a verb, judged one at a time on §1538's bar (open, ready, no secret on its servers): a private exchange behind Swap on Aztec, pooled staking behind Stake, private orders behind Swap's "when"; Shield's bridge is already Move's (§1700b).
+2. **A link to an Aztec app** — pasted, shared, in a note — opens in Casberi's browser (`AztecBrowser`), so the app finds your wallet; you came with the link, Casberi vouches for nothing. Every connect, the emoji check and every transaction still ask (§1700 item 6).
+3. Until the link door is built the browser is DEBUG's alone, and it does not ship unreachable (§1435).
