@@ -193,7 +193,9 @@ extension FeedScreen {
         let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks().count : 0
         // A limit order waiting for its price (prd §1673 item 7).
         let orders = walletShowsPrivate ? YourAccountOrders.open.count : 0
-        return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders
+        // Money on its way out of Aztec, to finish on Ethereum (prd §1700e).
+        let exits = walletShowsPrivate ? AztecAccountStore.shared.pendingExits.count : 0
+        return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders + exits
     }
 
     /// The asks Needs you can value (prd §1669): a private deposit waiting
@@ -211,7 +213,14 @@ extension FeedScreen {
                               figure: BalancePrivacy.shared.amount(YourAccountOp.spoken(order.sellUnits, decimals: order.sellDecimals), unit: order.sellSymbol),
                               usd: nil, since: order.placedAt, refused: false)
         }
-        return orders + store.asks().map { ask in
+        // An exit out of Aztec holds its amount until it is finished (prd §1700e).
+        let aztec = AztecAccountStore.shared
+        let exits = aztec.pendingExits.map { exit in
+            NeedsYouHeld.Part(id: exit.id, label: String(localized: "On its way out of Aztec"),
+                              figure: BalancePrivacy.shared.amount(AztecAccountStore.figure(exit), unit: exit.symbol),
+                              usd: aztec.usd(exit), since: exit.at, refused: false)
+        }
+        return orders + exits + store.asks().map { ask in
             let note = ask.note
             let worth = PrivateMoney.worth(note, rates: store.rates)
             let units = Double(worth.amount).map { $0 / pow(10, Double(worth.decimals)) }
@@ -775,6 +784,7 @@ extension FeedScreen {
         if walletShowsPrivate { WalletPrivateAsks() }
         // A limit order waiting for its price (prd §1673 item 7).
         if walletShowsPrivate { WalletOrderAsks() }
+        if walletShowsPrivate { WalletAztecExitAsks() }
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }
             // The monthly check (prd §1515): one row when it is due.

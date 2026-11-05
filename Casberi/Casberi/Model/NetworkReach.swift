@@ -358,6 +358,15 @@ enum NetworkReach {
         // score Shield asks for, opened in Casberi's browser with your account
         // as its Ethereum provider. The page is theirs; Casberi signs only
         // what you approve there and sends nothing.
+        // Aztec's apps (prd §1700c): a link to one, opened from a thing's
+        // sheet, loads that app's own page in Casberi's browser, where it can
+        // ask your Aztec account to connect. The list is `AztecApps.hosts`.
+        Endpoint(service: "Aztec apps",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "When you open a link to an Aztec app (Nemi, Olla, Xochi, RavenHouse, RollingChat, Private Inference, Dark Forest), loads that app's own page in Casberi's browser. It sees your Aztec account's address only once you connect it there, and every transaction asks you first.",
+                 hosts: ["nemi.fi", "olla.finance", "xochi.fi", "app.ravenhouse.xyz", "rolling.chat",
+                         "privateinference.gg", "dfaztec-s1.dfarchon.xyz"],
+                 credentialed: false),
         Endpoint(service: "Human Passport",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "When you open Human Passport from Move, loads its own page so your account can earn the score Shield asks for. The page sees your account's address once you connect it, and each message you sign there; Casberi sends nothing from it.",

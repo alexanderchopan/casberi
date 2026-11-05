@@ -205,6 +205,24 @@ final class AztecAccountStore {
         save()
     }
 
+    /// Exits not yet withdrawn on Ethereum (Needs you's rows; none in the demo).
+    var pendingExits: [ShieldExit] {
+        DemoMode.isActive ? [] : (snapshot.exits ?? []).filter { !$0.withdrawn }
+    }
+
+    /// "25 USDC": an exit's amount in its token.
+    static func figure(_ exit: ShieldExit) -> String {
+        let decimals = exit.symbol == "USDC" ? 6 : 18
+        return PrivateMoney.figure(exit.amountUnits, decimals: decimals, symbol: exit.symbol)
+    }
+
+    /// An exit's worth in dollars at the last read price, or nil.
+    func usd(_ exit: ShieldExit) -> Double? {
+        guard let price = prices[exit.symbol.lowercased()],
+              let units = Decimal(string: exit.amountUnits) else { return nil }
+        return NSDecimalNumber(decimal: units / pow(10, exit.symbol == "USDC" ? 6 : 18)).doubleValue * price
+    }
+
     func addExit(_ exit: ShieldExit) {
         snapshot.exits = (snapshot.exits ?? []) + [exit]
         save()

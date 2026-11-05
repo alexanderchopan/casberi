@@ -53,7 +53,9 @@ struct ThingSheetView: View {
     var inlineRest: Bool = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
+    @Environment(\.openURL) private var systemOpenURL
+    /// An Aztec app's link, open in Casberi's browser (prd §1700c item 2).
+    @State private var aztecApp: AztecAppLink?
     @Environment(ShellChrome.self) private var chrome
     /// For the Track tray a repeating charge raises (prd §1181); optional, since a
     /// Catalyst sheet may not carry it (§872), and then Track is not offered.
@@ -1312,6 +1314,10 @@ struct ThingSheetView: View {
         .onChange(of: openedLock != nil) { _, _ in if pagedNote, inPane { publishNoteKeys() } }
         .onDisappear { if pagedNote, inPane { chrome.clearPaneVerbs(owner: thing.id.uuidString) } }
         .sheet(isPresented: $paneNoteSharing) { ShareTray(thing: thing) }
+        .sheet(item: $aztecApp) { link in
+            AztecBrowserView(url: link.url)
+                .presentationDragIndicator(.visible)
+        }
         .background {
             if pagedNote, inPane { Color.clear.task(id: thing.id) { await ShareCardWarm.warm(thing) } }
         }
@@ -5206,6 +5212,17 @@ struct ThingSheetView: View {
             return regex.firstMatch(in: text, options: [],
                                     range: NSRange(text.startIndex..., in: text)) != nil
         }.prefix(6))
+    }
+
+    /// Every link this sheet opens: an Aztec app's in Casberi's browser,
+    /// where it finds your Aztec account (prd §1700c item 2); any other as
+    /// the system opens it.
+    private func openURL(_ url: URL) {
+        if AztecApps.opens(url), AztecProver.isAvailable, !DemoMode.isActive {
+            aztecApp = AztecAppLink(url: url)
+        } else {
+            systemOpenURL(url)
+        }
     }
 
     // MARK: - Verb execution
