@@ -3350,6 +3350,34 @@
         }
       }
     },
+    "%@ asks your account to sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ pide a tu cuenta que firme"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ があなたのアカウントに署名を求めています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 내 계정에 서명을 요청합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 请求你的账户签名"
+          }
+        }
+      }
+    },
     "%@ assets" : {
       "localizations" : {
         "es" : {
@@ -10226,6 +10254,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 支出"
+          }
+        }
+      }
+    },
+    "%@ out of Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ fuera de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec から %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Aztec 转出 %@"
           }
         }
       }
@@ -68488,6 +68544,34 @@
         }
       }
     },
+    "Connect %@ to your account?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Conectar %@ a tu cuenta?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ をあなたのアカウントに接続しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) 내 계정에 연결할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 连接到你的账户？"
+          }
+        }
+      }
+    },
     "Connect %@?" : {
       "localizations" : {
         "es" : {
@@ -90357,6 +90441,34 @@
         }
       }
     },
+    "Finishing…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Finalizando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完了処理中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마무리하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在完成…"
+          }
+        }
+      }
+    },
     "First" : {
       "localizations" : {
         "es" : {
@@ -102384,6 +102496,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它能看到你的 Aztec 账户地址。发送任何内容前，Casberi 都会先征求你的同意。"
+          }
+        }
+      }
+    },
+    "It sees your account's address. Casberi asks before every signature and sends nothing from this page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ve la dirección de tu cuenta. Casberi pregunta antes de cada firma y no envía nada desde esta página."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントのアドレスが見えます。Casberi は署名のたびに確認し、このページから何も送信しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 주소를 볼 수 있습니다. Casberi는 서명할 때마다 묻고, 이 페이지에서는 아무것도 보내지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它能看到你账户的地址。Casberi 在每次签名前都会询问，且不会从此页面发送任何内容。"
           }
         }
       }
@@ -131812,6 +131952,62 @@
         }
       }
     },
+    "On its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전송 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转账中"
+          }
+        }
+      }
+    },
+    "On its way out of Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saliendo de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec から送金中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 나가는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在从 Aztec 转出"
+          }
+        }
+      }
+    },
     "On its way since %@." : {
       "localizations" : {
         "es" : {
@@ -147199,6 +147395,34 @@
         }
       }
     },
+    "Raise your score on Human Passport" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sube tu puntuación en Human Passport"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Human Passport でスコアを上げる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Human Passport에서 점수 올리기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Human Passport 上提高你的分数"
+          }
+        }
+      }
+    },
     "Ran" : {
       "localizations" : {
         "es" : {
@@ -151619,6 +151843,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "就绪"
+          }
+        }
+      }
+    },
+    "Ready on Ethereum · " : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en Ethereum · "
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum で準備完了 · "
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 준비됨 · "
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 Ethereum 上就绪 · "
           }
         }
       }
@@ -169180,6 +169432,34 @@
         }
       }
     },
+    "Sign for %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmar para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のために署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为 %@ 签名"
+          }
+        }
+      }
+    },
     "Sign in" : {
       "localizations" : {
         "es" : {
@@ -171334,6 +171614,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "签名在你的 Safe App 中完成 — 从不在这里。"
+          }
+        }
+      }
+    },
+    "Signing proves this is your account. It moves nothing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmar demuestra que esta es tu cuenta. No mueve nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名は、これがあなたのアカウントであることを証明します。何も移動しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명은 이것이 내 계정임을 증명합니다. 아무것도 옮기지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名可证明这是你的账户，不会转移任何资金。"
           }
         }
       }
@@ -208511,6 +208819,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "提取中 · 自 %@ 起"
+          }
+        }
+      }
+    },
+    "Withdraws it to your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo retira a tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントに引き出します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로 출금합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提取到你的账户"
           }
         }
       }
