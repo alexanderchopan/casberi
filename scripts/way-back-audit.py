@@ -45,6 +45,9 @@ ALLOWED = {
     # The exported private key exists nowhere else while it is shown (prd
     # §1493): "I saved it" and "Remove the key" are the way out.
     "MoveExportKey.swift": "I saved it · Remove the key",
+    # An Aztec app's ask (connect, the emoji check, a transaction) is
+    # answered, never swiped away unanswered (prd §1700 item 6).
+    "AztecBrowser.swift": "Decline / They don't · Connect / They match / Approve",
 }
 
 COVER = re.compile(r"\.fullScreenCover\s*\(")

@@ -3393,7 +3393,7 @@ struct MoveSentence: View {
             // no check; never in the demo, and only with an account here.
             if YourAccountKey.address != nil, !DemoMode.isActive,
                q.isEmpty || String(localized: "Your Aztec account").lowercased().contains(q) {
-                listRow(String(localized: "Your Aztec account"), sub: String(localized: "Gas · Aztec"), symbol: "fuelpump") {
+                listRow(String(localized: "Your Aztec account"), sub: String(localized: "Aztec · privately"), symbol: "lock.fill") {
                     withAnimation(DS.Motion.standard) { open = nil; aztecGas = true }
                     DSHaptic.selection()
                 }

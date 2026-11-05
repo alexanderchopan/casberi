@@ -171,7 +171,7 @@ final class AztecEngine: NSObject {
                 return
             }
             let calls = (body["calls"] as? [[String: Any]] ?? []).map {
-                AztecBrowserModel.Ask.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
+                AztecBrowserModel.Request.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
                                            isPublic: ($0["type"] as? String) == "public")
             }
             browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls,
@@ -195,7 +195,7 @@ final class AztecEngine: NSObject {
     }
 
     /// The person's answer to an ask.
-    func answer(_ ask: AztecBrowserModel.Ask, yes: Bool) {
+    func answer(_ ask: AztecBrowserModel.Request, yes: Bool) {
         switch ask {
         case .connect(let requestId, _):
             webView?.callAsyncJavaScript("casberiEngine.answerConnect(r, yes)", arguments: ["r": requestId, "yes": yes], in: nil, in: .page) { _ in }

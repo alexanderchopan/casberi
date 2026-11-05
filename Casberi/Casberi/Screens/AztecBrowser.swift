@@ -11,7 +11,7 @@ import WebKit
 @MainActor
 final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandler, WKNavigationDelegate {
 
-    enum Ask: Identifiable, Equatable {
+    enum Request: Identifiable, Equatable {
         case connect(requestId: String, host: String)
         case emoji(sessionId: String, host: String, emoji: String)
         case send(id: Int, host: String, calls: [Call], fee: String)
@@ -32,10 +32,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
 
     let start: URL
     let page: WKWebView
-    @Published var ask: Ask?
+    @Published var ask: Request?
     @Published var host: String
     @Published var failed: String?
-    private var queue: [Ask] = []
+    private var queue: [Request] = []
 
     init(url: URL) {
         start = url
@@ -95,7 +95,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
 
     // MARK: - Asking
 
-    func enqueue(_ next: Ask) {
+    func enqueue(_ next: Request) {
         if ask == nil { ask = next } else { queue.append(next) }
     }
 
@@ -105,7 +105,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         ask = queue.removeFirst()
     }
 
-    func answer(_ ask: Ask, yes: Bool) async {
+    func answer(_ ask: Request, yes: Bool) async {
         if case .send = ask, yes {
             do { try await PrivateRootKey.unlock(reason: String(localized: "Approve this Aztec transaction")) } catch { return }
         }
@@ -146,7 +146,7 @@ private struct AztecPage: UIViewRepresentable {
 
 /// One ask: connect, the emoji check, or a transaction. Two choices each.
 struct AztecAskSheet: View {
-    let ask: AztecBrowserModel.Ask
+    let ask: AztecBrowserModel.Request
     let answer: (Bool) -> Void
 
     var body: some View {
@@ -158,7 +158,7 @@ struct AztecAskSheet: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
             case .emoji(_, let host, let emoji):
                 Text("Check the site shows").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                Text(verbatim: emoji).font(.system(size: 34)).frame(maxWidth: .infinity)
+                Text(verbatim: emoji).dsText(.heading34).frame(maxWidth: .infinity)
                 Text("If \(host) shows the same nine, nothing sits between you.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
             case .send(_, let host, let calls, let fee):
@@ -187,7 +187,9 @@ struct AztecAskSheet: View {
             }
         }
         .padding(DS.Space.s6)
-        .presentationDetents([.medium])
+        .dsSizedSheet(420)
+        // An app's ask is answered, never swiped away unanswered: the two
+        // buttons are the way out (way-back-audit ALLOWED).
         .interactiveDismissDisabled()
     }
 

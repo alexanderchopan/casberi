@@ -345,6 +345,15 @@ enum NetworkReach {
                  hosts: ["aztec-mainnet.drpc.org"],
                  credentialed: false,
                  throughTor: true),
+        // Shield (prd §1700d, §1700e): the bridge Move uses into and out of
+        // Aztec. Its own site's API: where your Safe stands (public), the
+        // sign-in your Safe signs, and its signed limit for one move.
+        Endpoint(service: "Shield bridge",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "When you move money into or out of your Aztec account, asks Shield (human.tech) whether your account can, signs in to it with your account, and asks for its signed limit for that move. Shield sees your account's address and the amount; it never sees a key.",
+                 hosts: ["shield.human.tech"],
+                 credentialed: false,
+                 throughTor: true),
         Endpoint(service: "Aztec proving parameters",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Downloads, once, the public parameters Aztec's prover needs to make a proof on this iPhone, from Aztec's own servers. Public files; the request names no one.",

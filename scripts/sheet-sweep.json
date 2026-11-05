@@ -1614,6 +1614,14 @@
     "Screens/WalletHistoryScreen.swift:sheetThing"
    ],
    "why": "the history opens from Activity's \"Older transactions\", drawn only when the fetch filled (prd §1587); the demo's Activity never fills it (measured 2026-10-31)"
+  },
+  {
+   "covers": [
+    "Screens/AztecBrowser.swift:model.ask#connect",
+    "Screens/AztecBrowser.swift:model.ask#emoji",
+    "Screens/AztecBrowser.swift:model.ask#send"
+   ],
+   "why": "an Aztec app's asks (prd §1700 item 6): each is raised only by a live app page in Casberi's browser asking your Aztec account to connect, confirm the emoji or approve a transaction; the demo opens no app and the sweep cannot be one (seen on the simulator 2026-11-04 with `-aztecBrowser`)"
   }
  ]
 }

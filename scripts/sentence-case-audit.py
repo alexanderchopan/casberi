@@ -223,6 +223,10 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Your Aztec account (prd §1700): AZTEC is the network's token, spelled as
+    # its contract's symbol; Shield is human.tech's bridge, and Human Passport
+    # its proof-of-personhood score (passport.xyz), both their own names.
+    "AZTEC", "Shield", "Human", "Passport",
     # Nymis, the privacy scanner whose reading Threats shows (prd §1701).
     "Nymis",
     # Move, the tab (prd §1422): the verb word's VoiceOver label names the

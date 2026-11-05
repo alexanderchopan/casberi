@@ -137,8 +137,11 @@ async function registerShield(wallet) {
 
 // A deposit's claim secret: the root, a label and the deposit's nonce.
 async function depositSecret(nonce) {
+  return derivedSecret(`feejuice/${nonce}`);
+}
+async function derivedSecret(label) {
   if (!rootBytes) await getWallet();
-  const input = new Uint8Array([...rootBytes, ...new TextEncoder().encode(`casberi/aztec/v1/feejuice/${nonce}`)]);
+  const input = new Uint8Array([...rootBytes, ...new TextEncoder().encode(`casberi/aztec/v1/${label}`)]);
   return Fr.fromBufferReduce(Buffer.from(await crypto.subtle.digest('SHA-512', input)));
 }
 
@@ -237,6 +240,31 @@ const own = {
     const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
     const { receipt } = await fj.methods.check_balance(0n).send({ from: me, fee: { paymentMethod }, wait: { waitForStatus: 'proposed', timeout: 1800 } });
     log('feeJuiceClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+  },
+  // SHIELD INTO AZTEC (prd §1700e): the deposit's claim secret, derived from
+  // the root and a nonce like gas's, and the claim on Aztec once the bridge's
+  // message is there; its fee is the account's own Fee Juice.
+  async shieldPlan(nonce) {
+    await getWallet();
+    const secret = await derivedSecret(`shield/${nonce}`);
+    return { to: accountAddress, secretHash: (await computeSecretHash(secret)).toString() };
+  },
+  async messageReady(messageHash) {
+    const wallet = await getWallet();
+    return { ready: await isL1ToL2MessageReady(wallet.aztecNode, Fr.fromString(messageHash)) };
+  },
+  async shieldClaim(symbol, amount, nonce, leafIndex) {
+    const wallet = await getWallet();
+    await registerShield(wallet);
+    const asset = SHIELD.assets.find(a => a.symbol === symbol);
+    if (!asset) throw new Error(`no ${symbol} on Aztec`);
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const bridge = await Contract.at(AztecAddress.fromStringUnsafe(asset.bridge), shieldBridge, wallet);
+    const { receipt } = await bridge.methods
+      .claim_private(me, BigInt(amount), await derivedSecret(`shield/${nonce}`), BigInt(leafIndex))
+      .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
+    log('shieldClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
     return { tx: receipt.txHash.toString(), status: String(receipt.status) };
   },
   // A private send inside Aztec (prd §1700e): Shield's token, account to

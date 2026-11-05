@@ -64,6 +64,22 @@ final class AztecAccountStore {
         var id: UInt64 { nonce }
     }
 
+    /// One Shield deposit (prd §1700e): USDC or WETH from the Safe through
+    /// Shield's portal, waiting for Aztec, then claimed privately. Its secret
+    /// is derived from the root and `nonce`, never stored.
+    struct ShieldDeposit: Codable, Equatable, Identifiable {
+        let nonce: UInt64
+        let symbol: String
+        /// What arrives, after Shield's fee, in the token's base units.
+        let amountUnits: String
+        let transaction: String
+        let messageHash: String
+        let leafIndex: String
+        var claimed: Bool
+        let at: Date
+        var id: UInt64 { nonce }
+    }
+
     struct Snapshot: Codable, Equatable {
         var used = false
         var address: String?
@@ -71,6 +87,7 @@ final class AztecAccountStore {
         var readAt: Date?
         /// Optional so a reading saved before gas existed still decodes.
         var gas: [GasDeposit]?
+        var shield: [ShieldDeposit]?
     }
 
     private(set) var snapshot: Snapshot
@@ -114,6 +131,18 @@ final class AztecAccountStore {
     func addGas(_ deposit: GasDeposit) {
         snapshot.gas = (snapshot.gas ?? []) + [deposit]
         snapshot.used = true
+        save()
+    }
+
+    func addShield(_ deposit: ShieldDeposit) {
+        snapshot.shield = (snapshot.shield ?? []) + [deposit]
+        snapshot.used = true
+        save()
+    }
+
+    func markShieldClaimed(_ nonce: UInt64) {
+        guard let i = snapshot.shield?.firstIndex(where: { $0.nonce == nonce }) else { return }
+        snapshot.shield?[i].claimed = true
         save()
     }
 
