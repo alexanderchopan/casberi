@@ -152,7 +152,7 @@ struct MoveAztecSendSentence<Head: View>: View {
             DSHaptic.success()
             await AztecAccountStore.shared.refresh()
         } catch {
-            stage = .failed(error.localizedDescription)
+            stage = .failed(AztecEngine.words(error))
             try? await Task.sleep(for: .seconds(3))
             if case .failed = stage { stage = .ready }
         }

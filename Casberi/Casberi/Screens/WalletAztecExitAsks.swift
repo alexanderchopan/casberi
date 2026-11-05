@@ -80,7 +80,7 @@ struct WalletAztecExitAsks: View {
                 chrome.refreshRooms()
             } catch {
                 DSHaptic.failure()
-                chrome.flash(error.localizedDescription)
+                chrome.flash(AztecEngine.words(error))
             }
         }
     }

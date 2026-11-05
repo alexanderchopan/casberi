@@ -60,15 +60,82 @@ enum YourAccountMessage {
             throw Failure(message: "The message could not be wrapped")
         }
         let (r, s) = try await signer.sign(digest, reason)
-        guard let signature = envelope(r: r, s: s, owner: signer.owner),
-              let check = isValidSignatureCalldata(hash: hash, signature: signature) else {
+        // **BOTH KEYS WHERE THE ACCOUNT ASKS FOR BOTH (prd §1700e, user: "cosigner
+        // is good b/c that's what user has chosen to be on").** At threshold 2
+        // one key's signature is refused by the account itself (seen on the
+        // phone, Human Passport's sign-in, 2026-11-04), so the Signer signs the
+        // same SafeMessage, asked through its wallet as a send asks it.
+        var signature: [UInt8]
+        if try await Chain.threshold(net, account) >= 2 {
+            guard let coSigner = await Chain.defaultCoSigner(net, account) else {
+                throw Failure(message: String(localized: "Your account needs your Signer too, and none is set on \(net.name)"))
+            }
+            guard let typed = safeMessageTypedData(hash: hash, chainId: net.chainId, account: account),
+                  let messageHash = SafeMessageEncoder.safeMessageHash(chainId: net.chainId, safe: account, message: hash),
+                  YourAccountSignerProof.digest(typed) == messageHash else {
+                throw Failure(message: "The message could not be wrapped")
+            }
+            let ecdsa = try await coSigner.sign(messageHash, typed)
+            // `bothSignatures` is a SafeOp's: its 12 bytes of time bounds are
+            // the 4337 module's and no part of an ERC-1271 signature.
+            guard let both = YourAccountOp.bothSignatures(r: r, s: s, owner: signer.owner, signer: coSigner.owner, ecdsa: ecdsa) else {
+                throw Failure(message: "The signature could not be written")
+            }
+            signature = Array(both.dropFirst(12))
+        } else {
+            guard let one = envelope(r: r, s: s, owner: signer.owner) else {
+                throw Failure(message: "The signature could not be written")
+            }
+            signature = one
+        }
+        // **THROUGH THE 7579 ADAPTER, A VALIDATOR FIRST (prd §1700e).** Once the
+        // adapter is the account's fallback handler (the spend limit, §1447
+        // item 11) its `isValidSignature` reads the first 20 bytes as a
+        // validator module; zero is none, and the rest goes to Safe's own
+        // `checkSignatures` over the same SafeMessage (Safe7579.sol, read
+        // 2026-11-04). Without them every signature was read 20 bytes off:
+        // GS026 on the phone, Human Passport's sign-in.
+        if try await Chain.knownEntry(net, account) == .adapter {
+            signature = [UInt8](repeating: 0, count: 20) + signature
+        }
+        guard let check = isValidSignatureCalldata(hash: hash, signature: signature) else {
             throw Failure(message: "The signature could not be written")
         }
-        let answer = try await Chain.ethCall(net, to: account, data: check)
+        let answer: String
+        do {
+            answer = try await Chain.ethCall(net, to: account, data: check)
+        } catch {
+            // What the account refused, for replaying it off the phone: the
+            // hash and the signature are public, and this one is void.
+            NSLog("yourAccountMessage| refused | %@ | chain %d | hash %@ | sig %@", AztecEngine.words(error), net.chainId,
+                  hash.map { String(format: "%02x", $0) }.joined(), signature.map { String(format: "%02x", $0) }.joined())
+            throw error
+        }
         guard SafeWebAuthn.isMagic(answer) else {
             throw Failure(message: String(localized: "Your account on \(net.name) did not accept its own signature, so nothing was signed"))
         }
         return signature
+    }
+
+    /// The SafeMessage the Signer's wallet signs for `hash` (Safe's
+    /// CompatibilityFallbackHandler: `SafeMessage(bytes message)` with the
+    /// 32-byte hash as the message, under the Safe's domain), as
+    /// `eth_signTypedData_v4` takes it. Its digest is the SafeMessage hash
+    /// the passkey signs too; `sign` checks the two agree before asking.
+    static func safeMessageTypedData(hash: [UInt8], chainId: Int, account: String) -> String? {
+        guard hash.count == 32 else { return nil }
+        func field(_ name: String, _ type: String) -> [String: String] { ["name": name, "type": type] }
+        let typed: [String: Any] = [
+            "types": [
+                "EIP712Domain": [field("chainId", "uint256"), field("verifyingContract", "address")],
+                "SafeMessage": [field("message", "bytes")],
+            ],
+            "primaryType": "SafeMessage",
+            "domain": ["chainId": chainId, "verifyingContract": account],
+            "message": ["message": "0x" + hash.map { String(format: "%02x", $0) }.joined()],
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: typed, options: [.sortedKeys]) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     /// A personal message (EIP-191), signed as above.

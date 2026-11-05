@@ -144,7 +144,9 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
                                                                 reason: String(localized: "Sign for \(host)"))
                 return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
             } catch {
-                return .error(code: 4001, message: error.localizedDescription)
+                let why = AztecEngine.words(error)
+                NSLog("browserEthereum| sign failed | %@", why)
+                return .error(code: 4001, message: why)
             }
         case .signTyped(let json, let summary):
             guard await ask(.ethSign(id: UUID().uuidString, host: host, text: summary)),
@@ -154,8 +156,13 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
                                                                      reason: String(localized: "Sign for \(host)"))
                 return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
             } catch {
-                return .error(code: 4001, message: error.localizedDescription)
+                let why = AztecEngine.words(error)
+                NSLog("browserEthereum| sign failed | %@", why)
+                return .error(code: 4001, message: why)
             }
+        case .disconnect:
+            ethConnectedHost = nil
+            return .result(nil)
         case .read(let method, let params):
             guard let value = try? await YourAccountChain.rpc(YourAccountOp.ethereum, method, params),
                   let data = try? JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed) else {

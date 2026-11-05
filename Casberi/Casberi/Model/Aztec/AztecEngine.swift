@@ -48,6 +48,15 @@ final class AztecEngine: NSObject {
     private var calls: [Int: CheckedContinuation<Any?, Error>] = [:]
     private var nextCall = 0
 
+    /// An error in words a person can read: the Safe's failures carry
+    /// theirs in `message` (they are not `LocalizedError`), every other in
+    /// its description. Without it a Safe's refusal read "The operation
+    /// couldn't be completed (YourAccountChain.Failure error 1)" (seen on
+    /// the phone, 2026-11-04).
+    nonisolated static func words(_ error: Error) -> String {
+        (error as? YourAccountChain.Failure)?.message ?? error.localizedDescription
+    }
+
     struct Failure: LocalizedError {
         let message: String
         var errorDescription: String? { message }

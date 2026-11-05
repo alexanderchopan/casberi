@@ -65,6 +65,8 @@ enum BrowserEthereum {
         case signTyped(json: String, summary: String)
         /// A read on Ethereum, passed through.
         case read(method: String, params: [Any])
+        /// The page lets go of your account.
+        case disconnect
 
         static func == (a: Need, b: Need) -> Bool {
             switch (a, b) {
@@ -73,6 +75,7 @@ enum BrowserEthereum {
             case (.signText(let x), .signText(let y)): x == y
             case (.signTyped(let x, _), .signTyped(let y, _)): x == y
             case (.read(let x, _), .read(let y, _)): x == y
+            case (.disconnect, .disconnect): true
             default: false
             }
         }
@@ -118,6 +121,8 @@ enum BrowserEthereum {
         case "wallet_switchEthereumChain":
             let chain = ((params.first as? [String: Any])?["chainId"] as? String)?.lowercased()
             return chain == "0x1" ? .answer(.result(nil)) : .answer(.error(code: 4902, message: "Casberi's account here is on Ethereum only."))
+        case "wallet_revokePermissions":
+            return .disconnect
         case "wallet_requestPermissions", "wallet_getPermissions":
             return connected ? .answer(.result("[{\"parentCapability\":\"eth_accounts\"}]")) : .connect
         case "personal_sign":

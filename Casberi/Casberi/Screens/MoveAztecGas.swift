@@ -265,7 +265,7 @@ struct MoveAztecGasSentence<Head: View>: View {
             stage = .sent
             DSHaptic.success()
         } catch {
-            stage = .failed(error.localizedDescription)
+            stage = .failed(AztecEngine.words(error))
             try? await Task.sleep(for: .seconds(3))
             if case .failed = stage { stage = .ready }
         }
