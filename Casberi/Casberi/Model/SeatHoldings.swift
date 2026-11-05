@@ -15,6 +15,8 @@ import Foundation
 /// - **ether.fi** — each Cash account's collateral and what it can still
 ///   borrow. The collateral sits in the safe you watch, already in the
 ///   Wallet's number, so this is NEVER counted.
+/// - **Rocket Money** — the accounts it tracks, each with its balance, a
+///   card's or loan's as owed words (§1704, UNMEASURED). Never counted.
 /// - **Peer** — what a seller has in Peer's escrow (`remainingDeposits` +
 ///   `outstandingIntentAmount`). It left the wallet, so it is in no total
 ///   — and it is not added to one here either (§1703 item 5).
@@ -161,6 +163,57 @@ enum SeatHoldings {
     }
 
     static let dollarStables: Set<String> = ["USDC", "USDT", "USDBC", "DAI", "MUSD", "AUSDC", "AMUSD"]
+
+    // MARK: - Rocket Money: the accounts it tracks (UNMEASURED, prd §780b)
+
+    /// One account Rocket Money tracks, as its accounts read hands it over.
+    /// UNMEASURED (prd §780b): the operation that carries them is whichever
+    /// the live page was seen to send (`RocketMoneyIngest.accountOperations`),
+    /// and its field names are conventions `LooseJSON` tries, never observed.
+    struct RocketAccount: Equatable, Sendable {
+        let name: String
+        let institution: String?
+        let balance: Double?
+        /// The account's type in Rocket Money's words ("credit", "loan",
+        /// "depository"…), lower-cased; nil when none was read.
+        let kind: String?
+        var closed: Bool = false
+    }
+
+    /// A balance on a credit card or a loan is OWED, never held (§1078), so
+    /// it is stated in words and sized as nothing.
+    static func rocketOwes(_ kind: String?) -> Bool {
+        guard let kind else { return false }
+        return ["credit", "loan", "mortgage", "liability"].contains { kind.contains($0) }
+    }
+
+    /// The accounts Rocket Money tracks, open ones only, named "Bank ·
+    /// account" (the bank once), largest held first, then what is owed A–Z.
+    /// These banks may already reach the Wallet through SimpleFIN or Apple
+    /// Wallet, so nothing here is EVER counted (`wallet-total-audit.py`,
+    /// prd §1704).
+    static func rocketMoney(_ accounts: [RocketAccount]) -> [Item] {
+        accounts.filter { !$0.closed }.map { account in
+            let name: String
+            if let bank = account.institution?.trimmingCharacters(in: .whitespaces), !bank.isEmpty,
+               !account.name.localizedCaseInsensitiveContains(bank) {
+                name = "\(bank) · \(account.name)"
+            } else {
+                name = account.name
+            }
+            guard let balance = account.balance else {
+                return Item(name: name, usd: 0, figure: String(localized: "No balance read"))
+            }
+            if rocketOwes(account.kind) {
+                let owed = abs(balance).formatted(.currency(code: "USD"))
+                return Item(name: name, usd: 0, figure: String(localized: "\(owed) owed"))
+            }
+            return Item(name: name, usd: max(0, balance), figure: nil)
+        }
+        .sorted { a, b in
+            a.usd != b.usd ? a.usd > b.usd : a.name.localizedStandardCompare(b.name) == .orderedAscending
+        }
+    }
 
     // MARK: - MetaMask Card: what the card can draw
 

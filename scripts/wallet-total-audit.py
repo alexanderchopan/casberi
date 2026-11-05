@@ -421,7 +421,8 @@ def audit(texts: dict) -> list:
 
     # §1703 — every other app's own holdings (MetaMask Card's "Can spend",
     # Privacy.com's limits, ether.fi's Cash accounts, Peer's escrow, ENS's
-    # names, CardPointers' cards) stand in Holdings on the pick and NEVER in
+    # names, CardPointers' cards, and §1704's Rocket Money accounts, whose
+    # banks may already be in through SimpleFIN) stand in Holdings on the pick and NEVER in
     # the Wallet's number: a card's wallet and a Cash safe are already in it,
     # a limit and a name are no money, and escrow is in no total by rule.
     for name in ("WalletIngest", "WalletPortfolio", "WalletCash"):
@@ -429,7 +430,8 @@ def audit(texts: dict) -> list:
             bad.append(f"{name} reads an app's own holdings (SeatHoldings) — they stand in "
                        "Holdings on its pick and are never counted (prd §1703)")
     for seat in ("MetaMaskCardBridge.source", "WalletCards.privacySource", "EtherFiCash.source",
-                 "PeerBridge.sourceName", "ENSWatch.source", "CardPointersIngest.source"):
+                 "PeerBridge.sourceName", "ENSWatch.source", "CardPointersIngest.source",
+                 "RocketMoneyLive.source"):
         if f"case {seat}" not in own:
             bad.append(f"{seat}'s holdings no longer stand in its Holdings (prd §1703)")
     return bad

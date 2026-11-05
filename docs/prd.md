@@ -71009,3 +71009,15 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 1. **Money into and out of Aztec is Shield's, on the Passport rail only**: a Human Passport score (linking accounts at passport.xyz, no document), up to Shield's $1,000 cumulative per wallet. Casberi never offers Proof of Clean Hands (government ID and a face scan); above the Passport limit it says so and stops.
 2. **Gas is always open**: AZTEC through Aztec's own Fee Juice portal, no check.
 3. Whether a Safe can hold a Passport score and receive Shield's signed limit is measured before anything is built on it.
+
+
+## §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or loan's as owed; never counted (amends §1703's "Rocket Money keeps dimming", §780b's "never a balance" for this read only) (user, 2026-11-04, of Railgun and Rocket Money's empty Holdings: "important and like errors") — BUILT, UNMEASURED
+
+1. **What it shows.** On Rocket Money's pick, Holdings lists each account it tracks, open ones only, named "Bank · account" with the bank said once (`SeatHoldings.rocketMoney`): a deposit or investment account's balance in dollars, a credit card's or a loan's as "$N owed" (§1078: owed is never held), and an account with no balance read says "No balance read". The box maps the held ones; the noun is accounts.
+2. **Where it comes from, and what is not known (§780b).** The seat learns its reads from the live page (§780b, §781), so the accounts read is whichever of `AccountsPage`, `Accounts`, `LinkedAccounts`, `NetWorthQuery`, `Dashboard`, or any other captured operation named for accounts or net worth, the page was seen to send, and the first whose records read as accounts (a name plus a balance or an account type) is kept (`RocketMoneyIngest.readAccounts`, `account`). No account has been read live: the operation names and field names are conventions, and the code says UNMEASURED. A pass that reads none keeps the last; a sign-out forgets it.
+3. **Reads only.** The read replays only operations `RocketMoneyOperations.isRead` passes, the same refusal every Rocket Money read has; nothing is written.
+4. **Never counted.** The same banks may already reach the Wallet through SimpleFIN or Apple Wallet, so these balances stand on the pick only. `wallet-total-audit.py` fails `SeatHoldings` reaching `WalletIngest`, `WalletPortfolio` or `WalletCash`, and fails Rocket Money's case leaving `walletSeatItems`.
+5. **The demo** tracks the demo person's Chase checking, savings and Sapphire and their Amex Gold (§1702, §1703, §1026), so its pick reads full on every tile.
+6. **Guards.** `seat-holdings-selftest.sh`: the composition (held first, the bank once, a card owed, a closed account left out, no balance said), three mutations, and drift guards for the read, its keep, its read-only check and its UNMEASURED line.
+
+**Mac half (§1402).** The same Holdings on Catalyst; nothing here is phone-only.

@@ -117768,6 +117768,34 @@
         }
       }
     },
+    "No balance read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se leyó el saldo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高を読み取れていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액을 읽지 못함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未读取到余额"
+          }
+        }
+      }
+    },
     "No balance yet" : {
       "localizations" : {
         "es" : {

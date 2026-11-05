@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1850 of 1922 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1851 of 1923 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1112,7 +1112,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §779 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only"
 - §780 — Two finance seats, and the three that were refused for cause
 - §780a — Rocket Money, staged the same way, and its read-only guarantee is TWO refusals rather than a sentence
-- §780b — Acorns and Rocket Money are REAL SEATS, and a seat that ships ahead of its evidence has to say so on its own page
+- §780b — Acorns and Rocket Money are REAL SEATS, and a seat that ships ahead of its evidence has to say so on its own page (amended by §1704)
 - §780c — All three finance seats sit on the Wallet shelf, the app count is a rounded claim, and a seat never asks you to do it… (amended by §1049; part superseded by §1564)
 - §780d — NerdWallet stays news-only, and the reason is a choice, not a missing product
 - §781 — Rocket Money's sign-in never opened on a phone, because the site walls every screen 450px wide or narrower
@@ -2098,7 +2098,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
-- §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P…
+- §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704)
+- §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…
 
 ## Dead rulings → what replaced them (generated)
 

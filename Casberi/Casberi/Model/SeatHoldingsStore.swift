@@ -12,6 +12,7 @@ enum SeatHoldingsStore {
         case etherFi = "seatHeld.etherfi.v1"
         case peer = "seatHeld.peer.v1"
         case metaMask = "seatHeld.metamask.v1"
+        case rocketMoney = "seatHeld.rocketmoney.v1"
     }
 
     static func items(_ seat: Seat) -> [SeatHoldings.Item] {
@@ -50,6 +51,16 @@ enum SeatHoldingsStore {
                                           collateralUSD: 4_148.11, remainingUSD: 398.10)])
         case .peer:
             return SeatHoldings.peer([(id: "4127", symbol: "USDC", amount: 500)])
+        case .rocketMoney:
+            // The demo person's bank is Chase (prd §1702) and CardPointers
+            // tracks their Sapphire and Amex Gold (prd §1703): Rocket Money
+            // tracks the same accounts (§1026: one person's life).
+            return SeatHoldings.rocketMoney([
+                .init(name: "Total Checking", institution: "Chase", balance: 4_812.37, kind: "depository"),
+                .init(name: "Savings", institution: "Chase", balance: 12_640.00, kind: "depository"),
+                .init(name: "Sapphire Preferred", institution: "Chase", balance: 384.60, kind: "credit"),
+                .init(name: "Gold Card", institution: "American Express", balance: 218.40, kind: "credit"),
+            ])
         case .metaMask:
             return SeatHoldings.metaMask(SeatHoldings.canSpend([(allowance: 1_000, balance: 1_250.40),
                                                                 (allowance: 250, balance: 86.20)]))

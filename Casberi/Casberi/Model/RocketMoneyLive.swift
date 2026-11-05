@@ -61,6 +61,7 @@ enum RocketMoneyAuth {
         TokenVault.delete(bearerKey)
         TokenVault.delete(cookieKey)
         RocketMoneyOperations.forget()
+        SeatHoldingsStore.forget(.rocketMoney)
     }
 }
 
@@ -78,7 +79,8 @@ enum RocketMoneyOperations {
     /// these freely and a hard filter would silently record nothing.
     static let wanted = ["AuthenticationCheck", "Viewer", "Subscriptions",
                          "RecurringPage", "RecurringUpcomingPage",
-                         "TransactionsPage", "NetWorthQuery", "Dashboard"]
+                         "TransactionsPage", "NetWorthQuery", "Dashboard",
+                         "AccountsPage"]
 
     /// Operation name → query text. Queries only; see `isRead`.
     static var catalogue: [String: String] {
@@ -437,9 +439,77 @@ enum RocketMoneyIngest {
             }
         }
 
+        await readAccounts(catalogue)
+
         SpotlightIndex.index(indexed.filter(\.isLive))
         if reading.landed > 0 || touched { context.saveHonestly() }
         lastReading = reading
         return reading.landed
+    }
+
+    // MARK: - The accounts it tracks (prd §1704)
+
+    /// **WHAT ROCKET MONEY HOLDS FOR ITS PICK: THE ACCOUNTS IT TRACKS
+    /// (prd §1704, user: Holdings on every Wallet pick is "important").**
+    /// UNMEASURED (prd §780b): no account here has been read live. The read
+    /// is whichever of these operations the page was seen to send — the
+    /// conventional names first, then any captured operation named for
+    /// accounts or net worth — and the first whose records read as accounts
+    /// wins. Kept only when something read, so a pass that found none keeps
+    /// the last. NEVER counted in the Wallet's total: the same banks may
+    /// already reach it through SimpleFIN or Apple Wallet (`SeatHoldings`).
+    static let accountOperations = ["AccountsPage", "Accounts", "LinkedAccounts",
+                                    "NetWorthQuery", "Dashboard"]
+
+    static func accountReads(_ catalogue: [String: String]) -> [String] {
+        let named = accountOperations.filter { catalogue[$0] != nil }
+        let rest = catalogue.keys.filter { name in
+            !accountOperations.contains(name)
+                && (name.localizedCaseInsensitiveContains("account")
+                    || name.localizedCaseInsensitiveContains("networth"))
+        }.sorted()
+        return named + rest
+    }
+
+    @MainActor
+    private static func readAccounts(_ catalogue: [String: String]) async {
+        for name in accountReads(catalogue) {
+            guard let query = catalogue[name], RocketMoneyOperations.isRead(query) else { continue }
+            var headers: [String: String] = [:]
+            if let cookies = RocketMoneyAuth.cookieHeader { headers["Cookie"] = cookies }
+            let (json, _) = await IngestSupport.postJSONStatus(
+                RocketMoneyLive.endpoint,
+                auth: RocketMoneyAuth.bearer.map { "Bearer \($0)" },
+                body: ["operationName": name, "query": query],
+                headers: headers,
+                service: "Rocket Money")
+            let accounts = LooseJSON.records(in: json).compactMap(account)
+            guard !accounts.isEmpty else { continue }
+            SeatHoldingsStore.keep(SeatHoldings.rocketMoney(accounts), .rocketMoney)
+            return
+        }
+    }
+
+    /// One record as an account, or nil: it must have a name and either a
+    /// balance or an account type, so a subscription or a merchant in the
+    /// same page is never taken for an account.
+    static func account(_ record: [String: Any]) -> SeatHoldings.RocketAccount? {
+        guard let name = LooseJSON.name(in: record) else { return nil }
+        let kind = ["accountType", "type", "subType", "subtype", "kind"].lazy
+            .compactMap { record[$0] as? String }.first?.lowercased()
+        let balance = ["currentBalance", "balance", "availableBalance"].lazy
+            .compactMap { key -> Double? in
+                if let n = record[key] as? Double { return n }
+                if let n = record[key] as? Int { return Double(n) }
+                if let s = record[key] as? String { return Double(s) }
+                if let nested = record[key] as? [String: Any] { return LooseJSON.amount(in: nested) }
+                return nil
+            }.first
+        guard balance != nil || kind != nil else { return nil }
+        let institution = (record["institutionName"] as? String)
+            ?? ((record["institution"] as? [String: Any]).flatMap { LooseJSON.name(in: $0) })
+        let closed = (record["isClosed"] as? Bool) ?? (record["closed"] as? Bool)
+            ?? ((record["status"] as? String)?.lowercased() == "closed")
+        return .init(name: name, institution: institution, balance: balance, kind: kind, closed: closed)
     }
 }

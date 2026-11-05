@@ -986,7 +986,8 @@ extension FeedScreen {
     /// The app picked's own holdings, as its read left them (prd §1702,
     /// §1703; `SeatHoldings`): Plasma One's card, ENS's names, CardPointers'
     /// cards, MetaMask Card's "Can spend", Privacy.com's limits, ether.fi's
-    /// Cash accounts, Peer's escrow. Empty for every other app.
+    /// Cash accounts, Peer's escrow, Rocket Money's accounts (§1704). Empty
+    /// for every other app.
     func walletSeatItems(_ things: [Thing]) -> [SeatHoldings.Item] {
         guard let source = selectedSeat?.source else { return [] }
         switch source {
@@ -1005,6 +1006,7 @@ extension FeedScreen {
         case WalletCards.privacySource:   return SeatHoldingsStore.items(.privacy)
         case EtherFiCash.source:          return SeatHoldingsStore.items(.etherFi)
         case PeerBridge.sourceName:       return SeatHoldingsStore.items(.peer)
+        case RocketMoneyLive.source:      return SeatHoldingsStore.items(.rocketMoney)
         default:                          return []
         }
     }
@@ -1021,7 +1023,7 @@ extension FeedScreen {
             return { $0 == 1 ? String(localized: "card") : String(localized: "cards") }
         case ENSWatch.source?:
             return { $0 == 1 ? String(localized: "name") : String(localized: "names") }
-        case EtherFiCash.source?:
+        case EtherFiCash.source?, RocketMoneyLive.source?:
             return { $0 == 1 ? String(localized: "account") : String(localized: "accounts") }
         case PeerBridge.sourceName?:
             return { $0 == 1 ? String(localized: "deposit") : String(localized: "deposits") }

@@ -30,7 +30,7 @@ fail() { echo "✗ seat-holdings-selftest: $1"; exit 1 }
 # ── Drift guards: the use, not the declaration ──────────────────────────────
 W="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 for seat in MetaMaskCardBridge.source WalletCards.privacySource EtherFiCash.source \
-            PeerBridge.sourceName ENSWatch.source CardPointersIngest.source; do
+            PeerBridge.sourceName ENSWatch.source CardPointersIngest.source RocketMoneyLive.source; do
   grep -qF "case $seat" "$W" || fail "$seat no longer stands in its pick's Holdings"
 done
 grep -qF 'walletSeatOwnHeld(visible).isEmpty ? "empty" : "full"' Casberi/Casberi/Screens/FeedScreen+AppPageProbe.swift \
@@ -46,12 +46,19 @@ grep -qF 'await readEscrowed(addresses:' Casberi/Casberi/Model/PeerBridge.swift 
   || fail "Peer's sync no longer reads its escrow"
 grep -qF 'SeatHoldingsStore.keep(SeatHoldings.etherFi(' Casberi/Casberi/Model/EtherFiCash.swift \
   || fail "ether.fi's book no longer keeps its Cash accounts"
+grep -qF 'await readAccounts(catalogue)' Casberi/Casberi/Model/RocketMoneyLive.swift \
+  || fail "Rocket Money's pass no longer reads the accounts it tracks"
+grep -qF 'SeatHoldingsStore.keep(SeatHoldings.rocketMoney(accounts), .rocketMoney)' Casberi/Casberi/Model/RocketMoneyLive.swift \
+  || fail "Rocket Money's accounts read no longer keeps what it read"
+# Its accounts read replays only reads: the same refusal as every other.
+grep -qF 'guard let query = catalogue[name], RocketMoneyOperations.isRead(query) else { continue }' \
+  Casberi/Casberi/Model/RocketMoneyLive.swift || fail "Rocket Money's accounts read no longer refuses a mutation"
 # A Privacy.com read stays a GET: no card is ever made, closed or funded here.
 grep -nE 'POST|httpMethod' Casberi/Casberi/Model/PrivacyBridge.swift | grep -vE '^\s*[0-9]+:\s*///' \
   && fail "PrivacyBridge.swift writes"
 # Every new read says what it has not measured (prd §780b).
 for f in Casberi/Casberi/Model/PrivacyBridge.swift Casberi/Casberi/Model/PeerBridge.swift \
-         Casberi/Casberi/Model/MetaMaskCardBridge.swift; do
+         Casberi/Casberi/Model/MetaMaskCardBridge.swift Casberi/Casberi/Model/RocketMoneyLive.swift; do
   grep -q 'UNMEASURED (prd §780b)' "$f" || fail "$f's new read does not say it is UNMEASURED"
 done
 echo "  ok   drift guards"
@@ -123,8 +130,25 @@ check(peer.count == 2, "an empty deposit is not listed")
 check(peer.first?.usd == 500 && peer.first?.name == "Deposit #7", "a USDC deposit is dollars")
 check(peer.last?.usd == 0 && peer.last?.figure == "0.25 WETH", "an unpriced token is stated as itself: \(peer.last?.figure ?? "")")
 
+// Rocket Money: the accounts it tracks; a card's balance is owed, never held.
+let rm = S.rocketMoney([
+    .init(name: "Savings", institution: "Chase", balance: 12_640, kind: "depository"),
+    .init(name: "Chase Total Checking", institution: "Chase", balance: 4_812.37, kind: "depository"),
+    .init(name: "Sapphire", institution: "Chase", balance: 384.60, kind: "credit"),
+    .init(name: "Mortgage", institution: "Rocket", balance: -250_000, kind: "loan"),
+    .init(name: "Old account", institution: "Chase", balance: 10, kind: "depository", closed: true),
+    .init(name: "Brokerage", institution: nil, balance: nil, kind: "investment"),
+])
+check(rm.map(\.name) == ["Chase · Savings", "Chase Total Checking", "Brokerage", "Chase · Sapphire", "Rocket · Mortgage"],
+      "Rocket Money lists the open accounts, held first, the bank once: \(rm.map(\.name))")
+check(rm.first { $0.name == "Chase · Sapphire" }?.usd == 0
+      && rm.first { $0.name == "Chase · Sapphire" }?.figure == "$384.60 owed", "a card's balance is owed, never held")
+check(rm.first { $0.name == "Rocket · Mortgage" }?.figure == "$250,000.00 owed", "a loan reads owed whatever its sign")
+check(rm.first { $0.name == "Brokerage" }?.figure == "No balance read", "an account with no balance says so")
+check(rm.first { $0.name == "Chase · Savings" }?.usd == 12_640, "a deposit account holds its balance")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer")
+print("  ok   ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$TAIL" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -158,4 +182,11 @@ mutate "escrow counts only what is free" \
 mutate "an unpriced token stated as dollars" \
   's/let usd = dollarStables\.contains\(symbol\.uppercased\(\)\) \? deposit\.amount : 0/let usd = deposit.amount/'
 
-echo "✓ seat holdings: ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer — 7 mutations"
+mutate "a card's balance counted as held" \
+  's/if rocketOwes\(account\.kind\) \{/if false {/'
+mutate "a closed Rocket Money account listed" \
+  's/accounts\.filter \{ !\$0\.closed \}/accounts.filter { _ in true }/'
+mutate "the bank named twice" \
+  's/!account\.name\.localizedCaseInsensitiveContains\(bank\)/true/'
+
+echo "✓ seat holdings: ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money — 10 mutations"
