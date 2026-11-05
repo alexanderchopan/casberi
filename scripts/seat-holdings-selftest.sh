@@ -16,6 +16,8 @@
 #     less (the usual case: allowances are often unlimited)
 #   · Peer's escrow counting only what is free, not what a buyer has locked
 #   · a token with no dollar price stated as dollars
+#   · Railgun's doors netted into something that reads as a private balance,
+#     an arrival counted as a shield, or a row with no read amount guessed
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on failure.
 set -euo pipefail
@@ -30,7 +32,7 @@ fail() { echo "✗ seat-holdings-selftest: $1"; exit 1 }
 # ── Drift guards: the use, not the declaration ──────────────────────────────
 W="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 for seat in MetaMaskCardBridge.source WalletCards.privacySource EtherFiCash.source \
-            PeerBridge.sourceName ENSWatch.source CardPointersIngest.source RocketMoneyLive.source; do
+            PeerBridge.sourceName ENSWatch.source CardPointersIngest.source RocketMoneyLive.source RailgunBridge.sourceName; do
   grep -qF "case $seat" "$W" || fail "$seat no longer stands in its pick's Holdings"
 done
 grep -qF 'walletSeatOwnHeld(visible).isEmpty ? "empty" : "full"' Casberi/Casberi/Screens/FeedScreen+AppPageProbe.swift \
@@ -147,8 +149,25 @@ check(rm.first { $0.name == "Rocket · Mortgage" }?.figure == "$250,000.00 owed"
 check(rm.first { $0.name == "Brokerage" }?.figure == "No balance read", "an account with no balance says so")
 check(rm.first { $0.name == "Chase · Savings" }?.usd == 12_640, "a deposit account holds its balance")
 
+// Railgun: shielded and received per token, side by side, never netted or priced.
+let rg = S.railgun([
+    (ref: "railgun:shield:0xa:1", symbol: "ETH", amount: 0.4, live: true),
+    (ref: "railgun:shield:0xb:2", symbol: "ETH", amount: 0.1, live: true),
+    (ref: "railgun:unshield:0xc:3", symbol: "ETH", amount: 0.15, live: true),
+    (ref: "railgun:shield:0xd:4", symbol: "DAI", amount: 500, live: true),
+    (ref: "railgun:unshield:0xe:5", symbol: "USDC", amount: 20, live: true),
+    (ref: "railgun:shield:0xf:6", symbol: nil, amount: 3, live: true),
+    (ref: "railgun:shield:0x10:7", symbol: "WBTC", amount: nil, live: true),
+    (ref: "railgun:shield:0x11:8", symbol: "ETH", amount: 9, live: false),
+])
+check(rg.map(\.name) == ["DAI", "ETH", "USDC"], "Railgun lists each token it saw, A–Z, none unread: \(rg.map(\.name))")
+check(rg.first { $0.name == "ETH" }?.figure == "0.5 shielded · 0.15 received", "Railgun states both doors, never a net: \(rg.map(\.figure))")
+check(rg.first { $0.name == "USDC" }?.figure == "20 received", "an arrival alone is received, not shielded")
+check(rg.allSatisfy { $0.usd == 0 }, "Railgun's doors are never priced as money held")
+
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money")
+print("  ok   ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money, Railgun")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$TAIL" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -189,4 +208,11 @@ mutate "a closed Rocket Money account listed" \
 mutate "the bank named twice" \
   's/!account\.name\.localizedCaseInsensitiveContains\(bank\)/true/'
 
-echo "✓ seat holdings: ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money — 10 mutations"
+mutate "Railgun's arrivals counted as shields" \
+  's/if ref\.hasPrefix\("railgun:shield:"\)/if ref.hasPrefix("railgun:")/'
+mutate "Railgun's doors netted into a balance" \
+  's/received\[symbol, default: 0\] \+= amount/shielded[symbol, default: 0] -= amount/'
+mutate "a dead Railgun row counted" \
+  's/for row in rows where row\.live \{\n            guard let ref = row\.ref, let symbol = row\.symbol/for row in rows {\n            guard let ref = row.ref, let symbol = row.symbol/'
+
+echo "✓ seat holdings: ENS, CardPointers, Privacy.com, MetaMask Card, ether.fi, Peer, Rocket Money, Railgun — 13 mutations"

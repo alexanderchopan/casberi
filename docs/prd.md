@@ -71021,3 +71021,13 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 6. **Guards.** `seat-holdings-selftest.sh`: the composition (held first, the bank once, a card owed, a closed account left out, no balance said), three mutations, and drift guards for the read, its keep, its read-only check and its UNMEASURED line.
 
 **Mac half (§1402).** The same Holdings on Catalyst; nothing here is phone-only.
+## §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance (amends §1703 item 9, keeps §268) (user, 2026-11-04: of the picks still empty, "1, 2, 4, 5 are important and like errors", of every Wallet app pick showing something in Holdings) — BUILT
+
+1. **What the pick shows.** Railgun's Wallet pick lists one row per token from the rows the seat already landed (`SeatHoldings.railgun`): "0.5 shielded · 0.15 received" — what your watched wallets put in through Railgun's public shield door, and what reached them through its unshield door. The map counts "tokens shielded". No new read, no new host.
+2. **Never a balance.** The two figures stand side by side and are never netted, priced or summed: a difference would read as the private balance, and it is not one — about half of all shields come through Railgun's relayer and are not attributable (§268), and an arrival may be someone else's payment, never named. The private balance stays unbuilt (`RailgunBridge`'s "NOT BUILT": every note trial-decrypted with a viewing key, a viewing key this app does not hold).
+3. **Never counted.** Rows are the seat's own; `wallet-total-audit.py` §1703's rule now also fails if Railgun's branch leaves its pick (one more mutation), and nothing here reaches `WalletIngest`, `WalletPortfolio` or `WalletCash`.
+4. **The demo** already lands three Railgun moves with `priceValue`/`priceCurrency`, so its pick reads `held=full` with no new seed.
+5. **Not built, assessed.** A real private balance means 0xBow's pattern (§1540): Railgun's TypeScript engine in a hidden web view, the person's viewing key imported, every `Transact` commitment since deployment scanned and trial-decrypted (merkle sync from Railgun's own POI/quick-sync nodes, a new host family), then kept current. Weeks of work, a key the app would hold, and a new "what this app reaches" entry — a ruling of its own, not this one.
+6. `seat-holdings-selftest.sh` holds the composition: three new mutations (an arrival counted as a shield, the doors netted, a dead row counted).
+
+**Mac half (§1402).** The same view on Catalyst; nothing here is phone-only.

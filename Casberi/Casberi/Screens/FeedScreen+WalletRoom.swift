@@ -986,8 +986,8 @@ extension FeedScreen {
     /// The app picked's own holdings, as its read left them (prd §1702,
     /// §1703; `SeatHoldings`): Plasma One's card, ENS's names, CardPointers'
     /// cards, MetaMask Card's "Can spend", Privacy.com's limits, ether.fi's
-    /// Cash accounts, Peer's escrow, Rocket Money's accounts (§1704). Empty
-    /// for every other app.
+    /// Cash accounts, Peer's escrow, Rocket Money's accounts (§1704), Railgun's
+    /// doors (§1705). Empty for every other app.
     func walletSeatItems(_ things: [Thing]) -> [SeatHoldings.Item] {
         guard let source = selectedSeat?.source else { return [] }
         switch source {
@@ -1007,6 +1007,11 @@ extension FeedScreen {
         case EtherFiCash.source:          return SeatHoldingsStore.items(.etherFi)
         case PeerBridge.sourceName:       return SeatHoldingsStore.items(.peer)
         case RocketMoneyLive.source:      return SeatHoldingsStore.items(.rocketMoney)
+        case RailgunBridge.sourceName:
+            // The public doors only, per token (prd §1705): never the pool's
+            // private balance, which this app does not read.
+            return SeatHoldings.railgun(things.filter { $0.source == source }
+                .map { (ref: $0.sourceRef, symbol: $0.priceCurrency, amount: $0.priceValue, live: $0.isLive) })
         default:                          return []
         }
     }
@@ -1029,6 +1034,8 @@ extension FeedScreen {
             return { $0 == 1 ? String(localized: "deposit") : String(localized: "deposits") }
         case MetaMaskCardBridge.source?:
             return { $0 == 1 ? String(localized: "card") : String(localized: "cards") }
+        case RailgunBridge.sourceName?:
+            return { $0 == 1 ? String(localized: "token shielded") : String(localized: "tokens shielded") }
         default:
             return { $0 == 1 ? String(localized: "token") : String(localized: "tokens") }
         }

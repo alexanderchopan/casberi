@@ -20,6 +20,9 @@ import Foundation
 /// - **Peer** — what a seller has in Peer's escrow (`remainingDeposits` +
 ///   `outstandingIntentAmount`). It left the wallet, so it is in no total
 ///   — and it is not added to one here either (§1703 item 5).
+/// - **Railgun** — what you shielded in and what reached you from the pool,
+///   per token, from the rows the seat landed; never the private balance,
+///   never netted or priced (§1705).
 ///
 /// Every reading is the app's own, kept as its read left it
 /// (`UserDefaults`, JSON); the demo holds its own (§483: it reads nothing).
@@ -213,6 +216,41 @@ enum SeatHoldings {
         .sorted { a, b in
             a.usd != b.usd ? a.usd > b.usd : a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
+    }
+
+    // MARK: - Railgun: what you moved through its public doors (prd §1705)
+
+    /// Railgun's private balance is never read (`RailgunBridge`'s "NOT
+    /// BUILT"): it needs every note trial-decrypted with a viewing key. What
+    /// the seat DOES read are the two public doors, so its pick shows those,
+    /// per token: what your watched wallets shielded in and what reached them
+    /// from the pool. Two figures side by side and NEVER netted, priced or
+    /// summed: a difference would read as a balance it is not (half of all
+    /// shields come through Railgun's relayer and are not attributable, and
+    /// an arrival may be someone else's payment, §268).
+    static func railgun(_ rows: [(ref: String?, symbol: String?, amount: Double?, live: Bool)]) -> [Item] {
+        var shielded: [String: Double] = [:]
+        var received: [String: Double] = [:]
+        for row in rows where row.live {
+            guard let ref = row.ref, let symbol = row.symbol, !symbol.isEmpty,
+                  let amount = row.amount, amount > 0 else { continue }
+            if ref.hasPrefix("railgun:shield:") {
+                shielded[symbol, default: 0] += amount
+            } else if ref.hasPrefix("railgun:unshield:") {
+                received[symbol, default: 0] += amount
+            }
+        }
+        let symbols = Set(shielded.keys).union(received.keys)
+        return symbols.sorted { $0.localizedStandardCompare($1) == .orderedAscending }.map { symbol in
+            let words = [shielded[symbol].map { String(localized: "\(quantity($0)) shielded") },
+                         received[symbol].map { String(localized: "\(quantity($0)) received") }]
+                .compactMap { $0 }.joined(separator: " · ")
+            return Item(name: symbol, usd: 0, figure: words)
+        }
+    }
+
+    private static func quantity(_ amount: Double) -> String {
+        amount.formatted(.number.precision(.fractionLength(0...4)))
     }
 
     // MARK: - MetaMask Card: what the card can draw

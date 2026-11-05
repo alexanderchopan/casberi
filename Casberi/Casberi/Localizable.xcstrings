@@ -238838,6 +238838,34 @@
         }
       }
     },
+    "token shielded" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "token protegido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シールドしたトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실드한 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已屏蔽的代币"
+          }
+        }
+      }
+    },
     "token you watch" : {
       "localizations" : {
         "es" : {
@@ -238890,6 +238918,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "种代币"
+          }
+        }
+      }
+    },
+    "tokens shielded" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tokens protegidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シールドしたトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실드한 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已屏蔽的代币"
           }
         }
       }
