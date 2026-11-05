@@ -108,6 +108,9 @@ final class JourneyTests: XCTestCase {
         let w = Walk("subscription", launch: Walk.demo, test: self)
         // Day's header + (prd §1343): Library's Subscriptions count is
         // deleted (§1612).
+        // The Feed's section tiles (prd §1328) take you to Day's section,
+        // whose header carries the + (`SectionAddControl`).
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Day, "), "Day tile")
         w.tap(w.visible(.button, "label == %@", "Add to Day"), "Day plus")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Track a subscription"), "Track a subscription")
         w.tap(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
