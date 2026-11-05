@@ -7,8 +7,9 @@ import SwiftUI
 ///     line saying private or public on Aztec with Aztec's mark (§1685). Two
 ///     private places on purpose, never merged (§1700 item 4).
 ///   - Your account, beside the Safe: the Aztec account and its address's tail.
-/// Amounts only: no dollar figure and nothing in the totals until a price is
-/// read for what Aztec holds (a later step), so nothing here claims a worth.
+/// Shield's USDC and WETH in dollars, counted once in the Wallet's total as
+/// one Aztec block (`AztecAccountStore.walletHolding`); Fee Juice, and any
+/// token without a price, as an amount only.
 extension FeedScreen {
 
     /// How long a reading stands before showing the place reads again.
@@ -31,16 +32,20 @@ extension FeedScreen {
                         aztecRow(title: holding.name,
                                  line: (holding.privateUnits.flatMap { Decimal(string: $0) } ?? 0) > 0
                                      ? String(localized: "Private on Aztec") : String(localized: "Public on Aztec"),
-                                 figure: mask ?? Self.aztecFigure(holding),
+                                 figure: mask ?? store.usd(holding).map(WalletValue.money) ?? Self.aztecFigure(holding),
                                  mark: holding.name, tone: DS.textPrimary)
                     }
                 }
             }
             .task(id: store.shown.address) {
+                _ = await store.walletHolding() // the rows' prices (the demo's are its own)
                 // Never in the demo: its account is sample data, no engine runs.
                 guard !DemoMode.isActive else { return }
                 let stale = store.snapshot.readAt.map { Date().timeIntervalSince($0) > Self.aztecReadInterval } ?? true
-                if stale, AztecProver.isAvailable { await store.refresh() }
+                if stale, AztecProver.isAvailable {
+                    await store.refresh()
+                    _ = await store.walletHolding()
+                }
             }
         }
     }

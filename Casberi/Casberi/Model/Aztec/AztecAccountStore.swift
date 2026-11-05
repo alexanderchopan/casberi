@@ -138,6 +138,47 @@ final class AztecAccountStore {
         ],
         readAt: nil)
 
+    // MARK: - Worth (prd §1700e)
+
+    /// The tokens on Aztec that have a dollar price: Shield's USDC and WETH,
+    /// by their contract (pinned, `ShieldBridge`), each the coin it carries.
+    /// Never by symbol: any app can register a token that calls itself USDC.
+    /// Fee Juice has none on purpose: it pays Aztec's gas and can go nowhere
+    /// else, so it is not money you could spend.
+    static let priced: [String: String] = [
+        "0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38": "usdc",
+        "0x2a36cedc4f7fa6bd9fbb77ab799737f30d12cd86ffa9d9d63737d51a6e7247fe": "weth",
+    ]
+    /// The block's name in the Wallet's box and its holder.
+    static let walletSymbol = "Aztec"
+    static let holderID = "aztec"
+
+    /// USD per coin, by the coin's mainnet symbol, from the last read.
+    private(set) var prices: [String: Double] = [:]
+
+    /// A holding's worth in dollars, or nil when it has no price.
+    func usd(_ holding: Holding) -> Double? {
+        guard holding.kind == .token, let coin = Self.priced[holding.address.lowercased()],
+              let price = prices[coin], let amount = holding.amount else { return nil }
+        return NSDecimalNumber(decimal: amount).doubleValue * price
+    }
+
+    /// **AZTEC COUNTS IN THE WALLET** as private money does
+    /// (`PrivateMoneyStore.walletHolding`): one block named Aztec, its priced
+    /// tokens in dollars, counted once, on All and Yours. Its own place, never
+    /// folded into 0xBow's Private (§1700 item 4).
+    func walletHolding() async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
+        guard isShown else { return [] }
+        let coins = shown.holdings.filter(\.isHeld).compactMap { Self.priced[$0.address.lowercased()] }
+        guard !coins.isEmpty else { return [] }
+        let found = await MainnetPrices.prices(for: coins)
+        if found != prices { prices = found }
+        let total = shown.holdings.compactMap(usd).reduce(0, +)
+        NSLog("aztecEngine| worth | $%.2f | %d prices", total, found.count)
+        return total > 0 ? [(symbol: Self.walletSymbol, usd: total, holderID: Self.holderID,
+                             label: String(localized: "Aztec"))] : []
+    }
+
     /// The account was used: an app connected, money moved to it, something arrived.
     func markUsed(address: String) {
         guard !snapshot.used || snapshot.address != address else { return }

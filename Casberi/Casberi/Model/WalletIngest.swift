@@ -2335,7 +2335,9 @@ enum WalletIngest {
         // account's, so Yours counts it as All does (prd §1590, user:
         // "shouldn't my private balance number be part of my Yours?").
         let yours = address.map(YourAccountDemo.isYours) ?? false
-        let privately = combined || yours ? await PrivateMoneyStore.shared.walletHolding() : []
+        // Your Aztec account counts the same way, its own block (prd §1700e).
+        let privately = combined || yours
+            ? (await PrivateMoneyStore.shared.walletHolding()) + (await AztecAccountStore.shared.walletHolding()) : []
         // What your account has lent on Aave, Round-ups included (prd §1695):
         // counted where Private is, the same way, so Tokens, Lent and Private
         // add up to this number. Zerion leaves the aTokens out and

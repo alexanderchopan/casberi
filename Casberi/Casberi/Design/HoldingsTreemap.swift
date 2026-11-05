@@ -323,6 +323,14 @@ struct HoldingsTreemap: View {
                             .frame(width: mark * 0.8, height: mark * 0.8)
                             .frame(width: mark, height: mark, alignment: .leading)
                             .accessibilityHidden(true)
+                    } else if tile.id == AztecAccountStore.walletSymbol, let image = BrandMark.image(for: "aztec") {
+                        // Your Aztec account wears Aztec's mark (prd §1700e).
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: mark, height: mark, alignment: .leading)
+                            .clipShape(RoundedRectangle(cornerRadius: mark * 0.22, style: .continuous))
+                            .accessibilityHidden(true)
                     } else if tile.id == WalletPortfolio.lentSymbol {
                         // Lent wears its head's glyph (prd §1698).
                         Image(systemName: "percent")

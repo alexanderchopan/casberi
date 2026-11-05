@@ -1774,6 +1774,10 @@ extension FeedScreen {
                                 walletOpenLend(.lend)
                             } else if symbol == PrivateMoney.walletSymbol {
                                 walletOpenPrivate(.deposit)
+                            } else if symbol == AztecAccountStore.walletSymbol {
+                                // Aztec's tile opens Holdings, where its rows are.
+                                DSHaptic.selection()
+                                chrome.walletSection = .holdings
                             } else if let symbol,
                                let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
                                 walletOpenToken(position)

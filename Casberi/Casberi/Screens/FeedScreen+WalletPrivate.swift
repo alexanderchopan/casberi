@@ -31,7 +31,11 @@ extension FeedScreen {
            PrivateMove.available || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
-                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices))
+                // Your Aztec account's rows stand under this head on All and
+                // Yours (`walletAztecRows`), so its figure adds them (prd §1700e).
+                let aztec = selectedSeat == nil && AztecAccountStore.shared.isShown
+                    ? AztecAccountStore.shared.shown.holdings.compactMap(AztecAccountStore.shared.usd).reduce(0, +) : 0
+                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, plus: aztec))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
@@ -157,10 +161,10 @@ extension FeedScreen {
 
     /// The section's total: the private dollars, as the box counts them; with
     /// none to count (test money, §949), one token's quantity, else nothing.
-    private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double]) -> String? {
+    private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double], plus aztec: Double = 0) -> String? {
         let held = rows.filter { $0.kind == .held }
         let usd = held.compactMap { PrivateMoney.rowUSD($0, prices: prices) }
-        if !usd.isEmpty { return WalletValue.money(usd.reduce(0, +)) }
+        if !usd.isEmpty || aztec > 0 { return WalletValue.money(usd.reduce(0, +) + aztec) }
         guard held.count == 1, let only = held.first else { return nil }
         return PrivateMoney.figure(only.amount, decimals: only.decimals, symbol: only.symbol)
     }
