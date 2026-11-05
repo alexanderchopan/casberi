@@ -22,6 +22,9 @@ import { getCanonicalFeeJuice } from '@aztec-labs/protocol-contracts/fee-juice/l
 import { computeSecretHash } from '@aztec-labs/aztec.js/crypto';
 import { FeeJuicePaymentMethodWithClaim } from '@aztec-labs/aztec.js/fee';
 import { isL1ToL2MessageReady } from '@aztec-labs/aztec.js/messaging';
+import { loadContractArtifact } from '@aztec-labs/aztec.js/abi';
+import shieldTokenJSON from '../shield/token.json';
+import shieldBridgeJSON from '../shield/bridge.json';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 
@@ -99,6 +102,39 @@ function fieldText(raw) {
   }
 }
 
+// SHIELD (prd §1700d): the bridge Move uses. Its interfaces come from its own
+// web app (fetch-shield.mjs, pinned to mainnet's classes); here each contract
+// is registered only when the node runs the pinned class at that address.
+const SHIELD = {
+  tokenClass: '0x2ff0939914ff64bd3f7979926dbe8cf3332bc2fee55928bf3cc9ca802568ea9f',
+  bridgeClass: '0x28fe903cd306bbc46fd908cc03989601c32368c4694b508499f18516062fefd3',
+  assets: [
+    { symbol: 'USDC', decimals: 6, token: '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38',
+      bridge: '0x023aafff7595c5698625486a010e385144a4a960d268df8ccb205f9134afd775', portal: '0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c' },
+    { symbol: 'WETH', decimals: 18, token: '0x2a36cedc4f7fa6bd9fbb77ab799737f30d12cd86ffa9d9d63737d51a6e7247fe',
+      bridge: '0x267a10e5463760e88f487a719bd38f09c46ec87260c51b0affc88fd9ff1d9ef4', portal: '0x477a911f76c44a5d3e5e692c59945263f61426c4' },
+  ],
+};
+const shieldToken = loadContractArtifact(shieldTokenJSON);
+const shieldBridge = loadContractArtifact(shieldBridgeJSON);
+let shieldRegistered = null;
+async function registerShield(wallet) {
+  shieldRegistered ??= (async () => {
+    for (const asset of SHIELD.assets) {
+      for (const [address, artifact, pin] of [[asset.token, shieldToken, SHIELD.tokenClass], [asset.bridge, shieldBridge, SHIELD.bridgeClass]]) {
+        const at = AztecAddress.fromStringUnsafe(address);
+        if ((await wallet.getContractMetadata(at)).instance) continue;
+        const instance = await wallet.aztecNode.getContract(at);
+        const cls = (instance?.currentContractClassId ?? instance?.originalContractClassId)?.toString();
+        if (cls !== pin) { log('shieldRefused', { address, cls }); continue; } // a different contract: never called
+        await wallet.registerContract(instance, artifact);
+      }
+    }
+  })();
+  shieldRegistered.catch(() => (shieldRegistered = null));
+  return shieldRegistered;
+}
+
 // A deposit's claim secret: the root, a label and the deposit's nonce.
 async function depositSecret(nonce) {
   if (!rootBytes) await getWallet();
@@ -119,6 +155,7 @@ const own = {
   // privately and publicly. Nothing is hard-coded but Fee Juice.
   async holdings() {
     const wallet = await getWallet();
+    await registerShield(wallet).catch(e => log('shieldSkipped', { error: String(e?.message ?? e).slice(0, 160) }));
     const me = AztecAddress.fromStringUnsafe(accountAddress);
     const out = [];
     const read = async (contract, fn) => {
@@ -157,11 +194,12 @@ const own = {
           }
           return null;
         };
-        const decimalsRaw = await view(['decimals', 'public_get_decimals', 'private_get_decimals']);
-        const symbolRaw = await view(['symbol', 'public_get_symbol', 'private_get_symbol']);
+        const known = SHIELD.assets.find(a => AztecAddress.fromStringUnsafe(a.token).equals(address));
+        const decimalsRaw = known ? known.decimals : await view(['decimals', 'public_get_decimals', 'private_get_decimals']);
+        const symbolRaw = known ? null : await view(['symbol', 'public_get_symbol', 'private_get_symbol']);
         out.push({
           kind: 'token', address: address.toString(), name: artifact.name,
-          symbol: fieldText(symbolRaw),
+          symbol: known ? known.symbol : fieldText(symbolRaw),
           decimals: decimalsRaw == null ? null : Number(BigInt((decimalsRaw.value ?? decimalsRaw).toString())),
           private: await read(token, 'balance_of_private'),
           public: names.has('balance_of_public') ? await read(token, 'balance_of_public') : null,
@@ -199,6 +237,21 @@ const own = {
     const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
     const { receipt } = await fj.methods.check_balance(0n).send({ from: me, fee: { paymentMethod }, wait: { waitForStatus: 'proposed', timeout: 1800 } });
     log('feeJuiceClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+  },
+  // A private send inside Aztec (prd §1700e): Shield's token, account to
+  // account, no one's permission; the app has asked Face ID before calling.
+  async sendPrivately(symbol, to, units) {
+    const wallet = await getWallet();
+    await registerShield(wallet);
+    const asset = SHIELD.assets.find(a => a.symbol === symbol);
+    if (!asset) throw new Error(`no ${symbol} on Aztec`);
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
+    const { receipt } = await token.methods
+      .transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n)
+      .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
+    log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status });
     return { tx: receipt.txHash.toString(), status: String(receipt.status) };
   },
   async chain() {

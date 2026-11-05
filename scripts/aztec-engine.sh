@@ -17,7 +17,7 @@ ENGINE=Casberi/AztecEngine
 SRC=tools/aztec-engine
 
 stamp() { # what the engine build is made from
-  { cat $SRC/package-lock.json $SRC/vite.config.js $SRC/index.html; cat $SRC/src/*.js; } | shasum -a 256 | cut -c1-16
+  { cat $SRC/package-lock.json $SRC/vite.config.js $SRC/index.html; cat $SRC/src/*.js; cat $SRC/shield/*.json 2>/dev/null; } | shasum -a 256 | cut -c1-16
 }
 
 ensure_prover() {
@@ -36,6 +36,10 @@ ensure_prover() {
 }
 
 ensure_engine() {
+  # Shield's Aztec interfaces, fetched from its own site and pinned to the
+  # classes mainnet runs (prd §1700d); kept once fetched.
+  [[ -d $SRC/node_modules ]] || (cd $SRC && npm ci --no-audit --no-fund >/dev/null)
+  (cd $SRC && node fetch-shield.mjs) || { print -u2 "aztec-engine: Shield's interfaces could not be fetched and pinned"; exit 1; }
   local want; want=$(stamp)
   [[ -f $ENGINE/index.html && "$(cat $ENGINE/.stamp 2>/dev/null)" == $want ]] && return
   print -u2 "aztec-engine: building the engine page"
