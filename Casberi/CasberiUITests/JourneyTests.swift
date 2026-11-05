@@ -260,7 +260,13 @@ final class JourneyTests: XCTestCase {
             w.tap(w.el(.button, "label == %@", "Search"), "band Search")
             w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
             w.type(name, "type the name")
-            w.tap(w.visible(.any, "label BEGINSWITH %@", "\(name),"), "its row")
+            // The tray's top hit is a button named for the app alone, wearing
+            // the Return key's glyph (a category chip can share the name, so
+            // the glyph tells them apart); an older row carried ", <detail>".
+            let hit = w.app.buttons.matching(NSPredicate(format: "label == %@", name))
+                .containing(.image, identifier: "return").firstMatch
+            w.tap(hit.waitForExistence(timeout: 8) ? hit
+                  : w.visible(.any, "label BEGINSWITH %@", "\(name),"), "its row")
             let (ask, opened) = w.firstAsk()
             w.record(catalog: name, ask: ask, opened: opened)
         }
