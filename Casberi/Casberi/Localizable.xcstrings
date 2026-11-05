@@ -57387,6 +57387,34 @@
         }
       }
     },
+    "Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 账户"
+          }
+        }
+      }
+    },
     "Aztec proposal %lld is open for votes until %@" : {
       "localizations" : {
         "es" : {
@@ -75584,6 +75612,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法保存已读取的内容。"
+          }
+        }
+      }
+    },
+    "Couldn't scan" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo analizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャンできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔할 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法扫描"
+          }
+        }
+      }
+    },
+    "Couldn't scan again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo volver a analizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再スキャンできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다시 스캔할 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法再次扫描"
           }
         }
       }
@@ -125180,6 +125264,34 @@
         }
       }
     },
+    "Nothing gives it away" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada lo delata"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手がかりになるものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "드러내는 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有任何暴露"
+          }
+        }
+      }
+    },
     "Nothing has been swapped. CoW stops filling it once the cancel lands." : {
       "localizations" : {
         "es" : {
@@ -129836,6 +129948,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Nutri-Score 在 A 至 E 中为 %@"
+          }
+        }
+      }
+    },
+    "Nymis couldn't read all of this address's activity, so some links may be missing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis no pudo leer toda la actividad de esta dirección, así que pueden faltar algunos vínculos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis はこのアドレスのアクティビティをすべて読み取れなかったため、一部のつながりが欠けている可能性があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis가 이 주소의 활동을 모두 읽지 못해 일부 연결이 빠졌을 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis 无法读取此地址的全部活动，因此可能缺少部分关联。"
+          }
+        }
+      }
+    },
+    "Nymis's reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La lectura de Nymis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis の分析"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis의 분석"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis 的解读"
           }
         }
       }
@@ -144624,6 +144792,34 @@
         }
       }
     },
+    "Private on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privado en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 上で非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上私密"
+          }
+        }
+      }
+    },
     "Private — nothing routes through us" : {
       "localizations" : {
         "es" : {
@@ -145354,6 +145550,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "公开赔率 — 并非在此下注。"
+          }
+        }
+      }
+    },
+    "Public on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Público en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 上で公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上公开"
           }
         }
       }
@@ -146439,6 +146663,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 小时前读取"
+          }
+        }
+      }
+    },
+    "Read by Nymis %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leído por Nymis %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis が %@ に読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis가 %@에 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Nymis 于 %@ 读取"
           }
         }
       }
@@ -160246,6 +160498,34 @@
         }
       }
     },
+    "Scan" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Analizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "扫描"
+          }
+        }
+      }
+    },
     "Scan a barcode" : {
       "localizations" : {
         "es" : {
@@ -160298,6 +160578,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "扫描文稿"
+          }
+        }
+      }
+    },
+    "Scan again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volver a analizar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再スキャン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다시 스캔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "再次扫描"
           }
         }
       }
@@ -160522,6 +160830,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已扫描"
+          }
+        }
+      }
+    },
+    "Scanning sends the address to Nymis." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Analizar envía la dirección a Nymis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャンするとアドレスが Nymis に送信されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔하면 주소가 Nymis로 전송됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "扫描会将地址发送给 Nymis。"
           }
         }
       }
@@ -172917,6 +173253,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "开始、续订、取消和恢复"
+          }
+        }
+      }
+    },
+    "Starting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "開始中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시작 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在开始"
           }
         }
       }
@@ -211685,6 +212049,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 @icloud.com 收件箱，可查找"
+          }
+        }
+      }
+    },
+    "Your Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの Aztec アカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 Aztec 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Aztec 账户"
           }
         }
       }
