@@ -1740,6 +1740,8 @@ extension FeedScreen {
                     GenRender(id: "root", els: blockStream.els)
                         // The day's heat map (prd §1090): each tile's move.
                         .environment(\.holdingsDayMoves, walletHoldingMoves)
+                        // SimpleFIN picked: its cash wears the bank's mark (prd §1702).
+                        .environment(\.holdingsPickIsBank, selectedSeat?.source == SimpleFINShape.source)
                         // A tapped holdings cell opens its token's chart
                         // (2026-07-14): the thing sheet when watched, the quick
                         // sheet when it's just held; a routeless native-coin

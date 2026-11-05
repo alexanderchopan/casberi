@@ -142,6 +142,9 @@ extension EnvironmentValues {
     /// §1090). Empty everywhere but the Wallet's Holdings box, where a fresh
     /// read turns the grey blocks into the day's heat map.
     @Entry var holdingsDayMoves: [String: Double] = [:]
+    /// True on the Wallet's SimpleFIN pick (prd §1702): a currency tile is
+    /// that bank's cash and wears the bank's mark (`PickBankMark`).
+    @Entry var holdingsPickIsBank: Bool = false
 }
 
 struct HoldingsTreemap: View {
@@ -169,6 +172,7 @@ struct HoldingsTreemap: View {
     @State private var litShare: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.holdingsDayMoves) private var dayMoves
+    @Environment(\.holdingsPickIsBank) private var pickIsBank
 
     static let gap: CGFloat = 4
     static let minSide: CGFloat = 44
@@ -339,6 +343,11 @@ struct HoldingsTreemap: View {
                             }
                         }
                         .accessibilityHidden(true)
+                    } else if pickIsBank, Locale.commonISOCurrencyCodes.contains(tile.id) {
+                        // SimpleFIN picked (prd §1702): its cash is the
+                        // bank's, so the dollars wear the bank's mark.
+                        PickBankMark(currency: tile.id, size: mark)
+                            .accessibilityHidden(true)
                     } else {
                         AssetMark(name: tile.id, size: mark)
                     }
@@ -407,5 +416,40 @@ struct HoldingsTreemap: View {
             ? Text("\(isOther ? String(localized: "Other") : spoken), \(HoldingsTreemapLayout.percent(tile.share))")
             : Text(isOther ? String(localized: "Other") : spoken)))
         .accessibilityAddTraits(isLit ? .isSelected : [])
+    }
+}
+
+/// The bank behind a currency tile on SimpleFIN's pick (prd §1702): the one
+/// connection holding that currency, resolved in a `.task` (the standing is a
+/// defaults read, never a body's); two banks in one currency, or none, keep
+/// the currency's own mark.
+struct PickBankMark: View {
+    let currency: String
+    let size: CGFloat
+    @State private var bank: String?
+    @State private var resolved = false
+
+    var body: some View {
+        Group {
+            if let bank {
+                BankMark(connID: bank, size: size)
+            } else if resolved {
+                AssetMark(name: currency, size: size)
+            } else {
+                Color.clear.frame(width: size, height: size)
+            }
+        }
+        .task(id: currency) {
+            bank = Self.bank(holding: currency)
+            resolved = true
+        }
+    }
+
+    static func bank(holding currency: String) -> String? {
+        if DemoMode.isActive { return SimpleFINLogos.demoConnID }
+        let conns = Set(SimpleFINState.standing.accounts.compactMap { account in
+            account.currency == currency && (account.balance ?? 0) > 0 ? account.connID : nil
+        })
+        return conns.count == 1 ? conns.first : nil
     }
 }
