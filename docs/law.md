@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1846 of 1918 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1847 of 1919 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1921,7 +1921,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1535 — The Wallet page's box follows a scope switch (amends §1403)
 - §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590)
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
-- §1538 — Private money is CROPS: a private pocket on Aztec, our own open-source account, the engine on the phone, no gatekeeper
+- §1538 — Private money is CROPS: a private pocket on Aztec, our own open-source account, the engine on the phone, no gatekeeper (amended by §1700d)
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675)
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
@@ -2092,8 +2092,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1699 — L2BEAT is ETHBEAT
 - §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
-- §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c)
+- §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link
+- §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 
 ## Dead rulings → what replaced them (generated)

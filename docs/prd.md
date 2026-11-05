@@ -70968,3 +70968,10 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 1. **No list of Aztec apps, in Library or on the account's page.** Each app earns its way in as the plumbing behind a verb, judged one at a time on §1538's bar (open, ready, no secret on its servers): a private exchange behind Swap on Aztec, pooled staking behind Stake, private orders behind Swap's "when"; Shield's bridge is already Move's (§1700b).
 2. **A link to an Aztec app** — pasted, shared, in a note — opens in Casberi's browser (`AztecBrowser`), so the app finds your wallet; you came with the link, Casberi vouches for nothing. Every connect, the emoji check and every transaction still ask (§1700 item 6).
 3. Until the link door is built the browser is DEBUG's alone, and it does not ship unreachable (§1435).
+
+## §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amends §1538 item 1's "no gatekeeper" and §1700b item 1 for this bridge only) (user, 2026-11-04, told Shield's Ethereum portals are unverified and its Aztec contracts unpublished: "we will still use shield bc that is what everyone is using") — RULED
+
+1. **Shield's bridge carries USDC and WETH into and out of Aztec for Move**, though its Ethereum portals are not verified (Etherscan, Sourcify, Blockscout, 2026-11-04) and its Aztec bridge and token contracts are published nowhere but its own web app. An exception made knowingly; it reaches no other protocol.
+2. **What Casberi checks instead of trusting**: the contracts Move calls are pinned (each address, and on Aztec each contract's class id read from the node must equal the class computed from the interface Casberi carries — a different class is refused, never called); every Ethereum leg goes through your Safe's send with its simulation and Face ID; every Aztec leg is proved on the phone after the approval sheet.
+3. **Aztec's own Fee Juice portal stays open** and is used for gas.
+4. Asking human.tech to verify the portals and publish the Aztec contracts stays worth doing; once they do, item 1's exception closes.
