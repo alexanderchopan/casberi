@@ -1,14 +1,17 @@
 import SwiftUI
 
-/// **WHAT NYMIS READ (prd §1701, §1701a).** The subscription sheet's anatomy:
-/// the app's art centred over the account's name, then one card, "Nymis's
-/// reading": each finding's title over Nymis's explanation, Identity first,
-/// then Financial and Behavioral, then the coverage line and Scan again. No
-/// score, no grade, no points (user, 2026-11-04).
+/// **WHAT NYMIS READ (prd §1701, §1701a, §1701b).** The subscription sheet's
+/// anatomy: the app's art centred over the account's name, then one card,
+/// "Nymis's reading": Nymis's summary in their words with the facts under it
+/// as label/value rows (the scan's page, §1701b), or, when the page could
+/// not be read, each finding's title over Nymis's explanation; then the
+/// coverage line, Scan again, and See more on Nymis at the foot. No score,
+/// no grade, no points (user, 2026-11-04).
 struct NymisReadingSheet: View {
     let address: String
     let name: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     private var reading: NymisScan.Reading? { NymisScans.shared.reading(address) }
 
@@ -35,24 +38,23 @@ struct NymisReadingSheet: View {
             .padding(.top, DS.Space.s4)
 
             SheetCard(name: String(localized: "Nymis's reading")) {
-                if reading.findings.isEmpty {
-                    // Nymis: an empty list does not prove no exposure.
-                    Text("Nymis found nothing that gives this address away, which doesn't prove nothing does.")
+                if let summary = reading.summary {
+                    Text(verbatim: summary)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, DS.Space.s2)
-                }
-                ForEach(reading.findings, id: \.self) { finding in
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        Text(verbatim: finding.title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        if !finding.explanation.isEmpty {
-                            Text(verbatim: finding.explanation).dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .padding(.bottom, DS.Space.s3)
+                    ForEach(reading.facts ?? [], id: \.self) { fact in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            Text(verbatim: fact.label).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(verbatim: fact.value).dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .multilineTextAlignment(.trailing)
                         }
+                        .padding(.vertical, DS.Space.s2)
+                        .accessibilityElement(children: .combine)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, DS.Space.s2)
-                    .accessibilityElement(children: .combine)
+                } else {
+                    findings(reading)
                 }
                 if reading.partial {
                     Text("Nymis couldn't read all of this address's activity, so some links may be missing.")
@@ -67,8 +69,35 @@ struct NymisReadingSheet: View {
                     NymisScans.shared.scan(address)
                     dismiss()
                 }
+                if let id = reading.scanID, let url = NymisScan.reportURL(scanID: id) {
+                    DSDoorRow(icon: "safari", title: Text("See more on Nymis")) { openURL(url) }
+                }
             }
         }
         .padding(DS.Space.s4)
+    }
+
+    /// The API's findings, when the scan's page could not be read.
+    @ViewBuilder
+    private func findings(_ reading: NymisScan.Reading) -> some View {
+        if reading.findings.isEmpty {
+            // Nymis: an empty list does not prove no exposure.
+            Text("Nymis found nothing that gives this address away, which doesn't prove nothing does.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, DS.Space.s2)
+        }
+        ForEach(reading.findings, id: \.self) { finding in
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: finding.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                if !finding.explanation.isEmpty {
+                    Text(verbatim: finding.explanation).dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, DS.Space.s2)
+            .accessibilityElement(children: .combine)
+        }
     }
 }

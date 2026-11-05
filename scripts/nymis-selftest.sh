@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Casberi Nymis self-test (prd §1701, §1701a) — the SHIPPED pure logic behind
+# Casberi Nymis self-test (prd §1701, §1701a, §1701b) — the SHIPPED pure logic behind
 # Wallet › Threats' Privacy rows, compiled WHOLE and unmodified:
 #
 #   Casberi/Casberi/Model/NymisScan.swift
@@ -19,6 +19,10 @@
 #   · a score, a grade or points drawn anywhere (user: "NOT have their score")
 #   · a scan started by anything but the Scan control or its probe
 #   · the scan token written to disk or a log
+#   · the scan page's summary and facts (§1701b) lost to a split push, a `$$`
+#     escape, or a page that changed shape read as a made-up reading
+#
+# The page checks run off scripts/fixtures/nymis-report.html, a MADE-UP page.
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on failure.
 set -euo pipefail
@@ -44,10 +48,18 @@ fi
 if grep -nE '\["(score|grade)"\]' "$SHAPE"; then
   echo "✗ the reading reads Nymis's score or grade"; exit 1
 fi
-# No page, no web view: the API is the one door (§1701a).
-if grep -nE 'WKWebView|WebKit|/analyze/|scan-progress' "$SHAPE" "$SCANS"; then
-  echo "✗ the scraped page's door is back"; exit 1
+# No web view, and nothing starts a scan through Nymis's page: the API runs
+# every scan (§1701a). The finished scan's page is READ once for its summary
+# and facts (§1701b), by scan id, through the same funnel.
+if grep -nE 'WKWebView|WebKit|/analyze/' "$SHAPE" "$SCANS"; then
+  echo "✗ a web view or the page's scan door is back"; exit 1
 fi
+# The address reaches a URL in one place only: the cached result's scan id.
+if [[ $(grep -cF '/api/scan-progress/legacy/' "$SHAPE") != 1 ]] || grep -nF 'scan-progress' "$SCANS"; then
+  echo "✗ the address reaches a Nymis URL somewhere other than progressURL"; exit 1
+fi
+grep -qF 'if let scanID, let read = await page(scanID, onto: reading) { return read }' "$SCANS" \
+  || { echo "✗ the page is not read by the API's scan id first"; exit 1; }
 # Every read goes through the receipts funnel, and the host is disclosed.
 if grep -nE 'URLSession|dataTask' "$SCANS"; then
   echo "✗ NymisScans reads past IngestSupport, where the receipts never see it"; exit 1
@@ -160,10 +172,43 @@ if case .read(let r) = answer(200, #"{"status":"completed","completeness":{"auth
 } else { check(false, "a reply with no findings reads") }
 check(answer(200, full, address: "0x000000000000000000000000000000000000b0b0") == .failed,
       "a reply for another address is refused")
+
+// The finished scan's page (§1701b).
+let html = try! String(contentsOfFile: CommandLine.arguments[1], encoding: .utf8)
+let page = NymisScan.page(fromReportHTML: html)
+check(page != nil, "a page split across two pushes reads whole")
+if let page {
+    check(page.summary.hasPrefix("$This address") && !page.summary.hasPrefix("$$"), "a `$$` escape reads as one dollar sign")
+    let f = page.facts.map { "\($0.label)=\($0.value)" }
+    check(f == ["Related addresses=4, 1 named", "Exchanges=Coinbase, Kraken", "Identity=X, ENS",
+                "Signs for=3 Safes", "Active=Mar 2022 to Nov 2026"], "the facts, in order: \(f)")
+    check(page.partial, "a coverage warning marks the page partial")
+    if case .read(let r) = answer(200, full) {
+        let both = r.adding(page, scanID: "bf59181c-42ea-4886-b8e4-bb6c09913c03")
+        check(NymisScan.rowLine(both) == "Related addresses, exchanges, identity, Safe signing",
+              "the row line is the page's, most first, unknown categories left out: \(NymisScan.rowLine(both) ?? "nil")")
+        check(both.partial && both.findings.count == 3 && both.scanID != nil, "the page joins the API's reading, partial wins")
+    }
+}
+check(NymisScan.page(fromReportHTML: "<html>NYMIS</html>") == nil, "a page with no payload reads nil")
+check(NymisScan.page(fromReportHTML: html.replacingOccurrences(of: "walletSummary", with: "walletSum")) == nil,
+      "a page with no summary reads nil, never a reading without Nymis's words")
+check(NymisScan.reportURL(scanID: "../api") == nil, "a scan id that is not a UUID is refused")
+check(NymisScan.reportURL(scanID: "BF59181C-42EA-4886-B8E4-BB6C09913C03")?.absoluteString
+      == "https://nymis.io/scan/bf59181c-42ea-4886-b8e4-bb6c09913c03", "the page URL is the scan id, lowercased")
+check(NymisScan.progressURL("vitalik.eth") == nil && NymisScan.progressURL("0x2f60/../../admin") == nil,
+      "a name or a path never reaches the progress URL")
+check(NymisScan.completedScanID(fromProgress: Data(#"{"status":"completed","scanId":"bf59181c-42ea-4886-b8e4-bb6c09913c03"}"#.utf8)) != nil,
+      "a completed scan hands its id")
+check(NymisScan.completedScanID(fromProgress: Data(#"{"status":"running","scanId":"bf59181c-42ea-4886-b8e4-bb6c09913c03"}"#.utf8)) == nil
+      && NymisScan.completedScanID(fromProgress: Data(#"{"status":"completed","scanId":"../x"}"#.utf8)) == nil,
+      "a running scan, or an id that is not a UUID, hands none")
+check(NymisScan.activeSpan(first: "Apr 25, 2021", last: "Apr 30, 2021") == "Apr 2021", "one month when they meet")
+check(NymisScan.activeSpan(first: "soon", last: "Nov 4, 2026") == nil, "an unreadable date drops the row")
 exit(failures == 0 ? 0 : 1)
 SWIFT
 xcrun swiftc -O "$SHAPE" "$WORK/main.swift" -o "$WORK/nymis" 2>&1 | grep -v "^$" || true
 [[ -x "$WORK/nymis" ]] || { echo "✗ NymisScan.swift did not compile on its own"; exit 1; }
 echo "Nymis self-test"
-"$WORK/nymis"
+"$WORK/nymis" scripts/fixtures/nymis-report.html
 echo "✓ Nymis self-test passed"

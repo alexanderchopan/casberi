@@ -71086,3 +71086,16 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 5. **Disclosure.** Nymis sends the address to blockchain providers and, for names, to third-party search services. The row's footnote says so ("Scanning sends the address to Nymis, which looks it up with blockchain providers and search services."), and so does `NetworkReach`. The tap is still the consent.
 6. **Readings move to `nymis.readings.v2`.** v1 held the scraped shape and is removed at launch; a reading from 3.0.23 is gone and Scan reads it again.
 7. **Unmeasured.** The reply shapes are Nymis's written contract; no reply has been seen. `nymis-selftest.sh` drives made-up replies in that shape. First check on a device: `-nymisScan <0x…>` and the `nymis|` log.
+
+## §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the facts, and See more opens it (amends §1701a items 3 and 4; restores §1701 item 4's sheet) (user, 2026-11-05, shown the API's findings for their own address: "how is that the reading? is that how it looked the day before? i really like how we listed all the socials and stuff", "it said farcaster, listed coinbase, etc", then "yes that is what we want, and at bottom of the page, a link to see more or something") — RULED, BUILT, MEASURED
+
+**Why.** The Privacy Score API carries no summary and no lists: its evidence is opaque references (`{"type":"label","ref":"10f9…"}`), and each explanation stops at 240 characters, mid-word ("…do not prove a KYC rela"). Measured on accountless.eth the same afternoon: the API named Coinbase only in its top reasons, and Farcaster, Wei, MoonPay, the Safe and the deployed contracts nowhere. The scan's own page, fetched with a plain GET, still carries the whole `sidebar` §1701 read.
+
+1. **The API still runs every scan** (§1701a items 1 and 2 stand): the address in the body, the idempotency key, the token in memory, one scan at a time, a 429's time.
+2. **Once a scan reads, its page is fetched once**, `nymis.io/scan/<scanId>`, and §1701's parse reads the sidebar: Nymis's summary in their words, the row's line ("Related addresses, exchanges, identity, Safe signing"), and the facts as label/value rows (Related addresses, Exchanges, Identity, Signs for, Contracts deployed, Active). The scan id is the API's; a cached result hands none, and only then is the finished scan's id asked by address (`/api/scan-progress/legacy/<address>`), the one URL that carries the address (`nymis-selftest.sh` holds it to one). No web view, and nothing starts a scan through the page.
+3. **A page that cannot be read leaves the API's reading standing**: the findings, each title over Nymis's explanation. Nothing is made up.
+4. **See more on Nymis** is the sheet's last row, under Scan again: it opens the scan's page. Drawn only when the reading has a scan id.
+5. **Still no score** (§1701): the API's score and grade, and the page's, are read by nothing.
+6. **Measured 2026-11-05** on the simulator: accountless.eth read end to end through the app (the API's cached result, the id by address, the page), the sheet drawing the summary and six facts, See more opening the scan's page.
+
+**Mac half (§1402).** The same sheet; See more opens the browser.
