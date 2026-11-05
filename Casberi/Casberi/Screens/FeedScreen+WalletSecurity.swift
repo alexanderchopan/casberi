@@ -71,9 +71,9 @@ extension FeedScreen {
         if let account = YourAccountDemo.shownAddress,
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
             walletCard(String(localized: "Your account"), glyph: ScopeTileGlyph.move, anchor: SecurityAnchor.account.id) {
-                // The Aztec account beside the Safe, once used (prd §1700a):
-                // first, before the Safe's keys.
-                walletAztecAccountRow
+                // The Safe and the Aztec account, once Aztec is used (prd
+                // §1700a): first, before the Safe's keys.
+                walletAccountList(safe: account)
                 MoveSecurity(account: account)
                     .walletStackRow()
                     // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).

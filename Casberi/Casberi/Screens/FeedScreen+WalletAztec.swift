@@ -87,27 +87,44 @@ extension FeedScreen {
         .walletListRow()
     }
 
-    /// Your account's second account (§1700a item 1): the Aztec account beside
-    /// the Safe, once used, its address's tail on the right.
+    /// Your account's accounts (§1700a item 1): once the Aztec account has
+    /// been used, the card lists both — the Safe, then Aztec — by their own
+    /// names, the line under each saying how it works and its address's tail
+    /// ("Public · …c8e01", "Private · …2b3c"; user, 2026-11-04: "do as you
+    /// recommend"). Not "Public/Private account": 0xBow's private balance is a
+    /// third private place, and Aztec can hold public balances too. Before
+    /// Aztec is used the box above already names the Safe, so no list is drawn.
     @ViewBuilder
-    var walletAztecAccountRow: some View {
+    func walletAccountList(safe: String) -> some View {
         let store = AztecAccountStore.shared
-        if store.isShown, let address = store.shown.address {
-            HStack(spacing: DSRoomChassis.headGap) {
-                ProtocolInlineMark(mark: "aztec")
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
-                Text("Aztec account")
+        if store.isShown, let aztec = store.shown.address {
+            accountListRow(mark: "safe", title: String(localized: "Safe"),
+                           line: String(localized: "Public · \(AddressTail.short(safe))"))
+            accountListRow(mark: "aztec", title: String(localized: "Aztec"),
+                           line: String(localized: "Private · \(AddressTail.short(aztec))"))
+        }
+    }
+
+    /// The Holdings row's anatomy: the mark, the name over its line.
+    private func accountListRow(mark: String, title: String, line: String) -> some View {
+        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+            ProtocolInlineMark(mark: mark)
+                .frame(width: DSRoomChassis.headGlyph)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
-                Spacer(minLength: DS.Space.s2)
-                Text(verbatim: AddressTail.short(address))
-                    .dsText(.body17)
+                    .lineLimit(1)
+                Text(verbatim: line)
+                    .dsText(.subhead12)
                     .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
             }
-            .walletRowPitch()
-            .accessibilityElement(children: .combine)
-            .walletStackRow()
+            Spacer(minLength: 0)
         }
+        .walletRowPitch()
+        .accessibilityElement(children: .combine)
+        .walletStackRow()
     }
 }
