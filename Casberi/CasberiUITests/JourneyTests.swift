@@ -44,7 +44,8 @@ final class JourneyTests: XCTestCase {
         w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Day"), "Day folder")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Calendar"), "Calendar")
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
+        // The phone is the only way in, so the page asks iOS as it lands
+        // (prd §1706): no "Your phone's calendars" tap.
         w.allow("Full Access", "iOS calendar ask")
         // Connected once the first box clears: any one way in done clears it
         // all, and the box shows the counts (prd §1314).
@@ -71,10 +72,12 @@ final class JourneyTests: XCTestCase {
     /// note page with its title focused; Done keeps it.
     @MainActor func testNote() {
         let w = Walk("note", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Notes, "), "Notes tile")
+        // Notes is a section of the home Feed (prd §1347): scroll to it, as
+        // a person would, rather than take the tile that scrolls there.
+        w.scrollUntil(w.el(.button, "label == %@", "Add to Notes"), "Notes section")
         // Tap, never hold: a hold of 0.45s records a voice note instead.
         // The section's + menu (prd §1348): New note, Voice note, All notes.
-        w.tap(w.el(.button, "label == %@", "Add to Notes"), "Notes plus")
+        w.tap(w.visible(.button, "label == %@", "Add to Notes"), "Notes plus")
         w.tap(w.el(.button, "label == %@", "New note"), "New note")
         w.see(w.el(.textField, "label == %@ OR placeholderValue == %@", "Title", "Title"), "note page")
         w.type("Buy film", "type title")   // the title is focused on open
@@ -110,10 +113,12 @@ final class JourneyTests: XCTestCase {
         // deleted (§1612).
         // The Feed's section tiles (prd §1328) take you to Day's section,
         // whose header carries the + (`SectionAddControl`).
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Day, "), "Day tile")
+        // Day is a section of the home Feed with no page (prd §1344): scroll
+        // to its +, as a person would.
+        w.scrollUntil(w.el(.button, "label == %@", "Add to Day"), "Day section")
         w.tap(w.visible(.button, "label == %@", "Add to Day"), "Day plus")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Track a subscription"), "Track a subscription")
-        w.tap(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
+        w.focus(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
         w.type("Hulu\n", "type Hulu, Return")
         w.focus(w.el(.textField, "placeholderValue == %@", "0"), "price field")
         w.type("15.99", "type price")
@@ -172,9 +177,11 @@ final class JourneyTests: XCTestCase {
         let w = Walk("maillist", launch: Walk.demo, test: self)
         // Life's header + (prd §1300; Life holds Mail, §1231): Library's
         // Mail lists count is deleted (§1612).
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Life, "), "Life tile")
-        w.tap(w.visible(.button, "label == %@", "Add to Life"), "Life plus")
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Gmail"), "Gmail, a sender")
+        // Track a mailing list stands in Day's + on the home Feed, beside
+        // Track a subscription (prd §1706).
+        w.scrollUntil(w.el(.button, "label == %@", "Add to Day"), "Day section")
+        w.tap(w.visible(.button, "label == %@", "Add to Day"), "Day plus")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Track a mailing list"), "Track a mailing list")
         // The demo's loudest sender with no list header.
         w.tap(w.el(.staticText, "label == %@", "Uma Patel"), "a sender who writes")
         w.see(w.el(.any, "label BEGINSWITH %@", "Tracking "), "sender tracked")
@@ -642,6 +649,23 @@ final class JourneyTests: XCTestCase {
 
         /// Swipes a step may take to reach its target before it is broken.
         static let maxScrolls = 6
+
+        /// A lazily drawn list holds no element for a section below the fold,
+        /// so a tap cannot scroll to it: swipe up until it exists, as a
+        /// person scrolls, each swipe counted (never a tap).
+        func scrollUntil(_ e: XCUIElement, _ what: String) {
+            guard broken == nil else { return }
+            var n = 0
+            while !e.waitForExistence(timeout: n == 0 ? 3 : 1), n < Self.maxScrolls {
+                app.swipeUp(velocity: .slow)
+                scrolls += 1
+                n += 1
+            }
+            // A Feed still settling after launch can redraw the section
+            // away under the next query: let it settle, and look again.
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            if !e.waitForExistence(timeout: 3) { fail(what, "not found") }
+        }
 
         func hittable(_ e: XCUIElement, within s: TimeInterval) -> Bool {
             let p = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: e)
