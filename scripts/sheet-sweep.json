@@ -1202,7 +1202,7 @@
      "tap": "button:^ETH"
     }
    ],
-   "anchor": "button:=Networks"
+   "anchor": "text:=Networks"
   },
   {
    "id": "wallet-follow",
@@ -1344,7 +1344,7 @@
      "tap": "button:^Round-ups"
     }
    ],
-   "anchor": "text:=Your spare change is saved privately in dollars, and earns interest."
+   "anchor": "text:=Spend $3.40 and 60¢ goes to Round-ups."
   },
   {
    "id": "your-account-co-signer",
