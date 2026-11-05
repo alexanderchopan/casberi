@@ -140,6 +140,7 @@ extension FeedScreen {
         case .reminder:     return "checklist"
         case .email:        return "envelope"
         case .subscription: return ScopeTileGlyph.subscriptions
+        case .mailingList:  return ScopeTileGlyph.newsletters
         }
     }
 }

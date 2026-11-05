@@ -66,6 +66,11 @@ extension FeedScreen {
             // Day says when a plan renews (prd §1327 item 3), so it tracks
             // one too: by hand, it needs nothing connected.
             case .subscription: return true
+            // The tray reads the connected mailboxes, every one, so it needs
+            // one and asks nothing about which (prd §1706). Any connected
+            // mailbox, wherever it lives (Mail is Life's, §1231), as Life's
+            // own Gmail row asks.
+            case .mailingList: return !connectedSeatNames.isDisjoint(with: ["Gmail", "iCloud Mail"])
             }
         }
     }
@@ -88,12 +93,17 @@ extension FeedScreen {
             feedSheet = .subscriptionAdd
             return
         }
+        // Track a mailing list is Life's own tray (prd §1115, §1706).
+        if make == .mailingList {
+            feedSheet = .mailSubscriptionAdd
+            return
+        }
         let url: URL? = {
             switch make {
             case .event:        return URL(string: "calshow://")
             case .reminder:     return URL(string: "x-apple-reminderkit://")
             case .email:        return dayCompose
-            case .subscription: return nil
+            case .subscription, .mailingList: return nil
             }
         }()
         if let url { openExternal(url) }

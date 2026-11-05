@@ -193245,6 +193245,34 @@
         }
       }
     },
+    "Track a mailing list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir una lista de correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メーリングリストを追跡"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일링 리스트 추적"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "跟踪邮件列表"
+          }
+        }
+      }
+    },
     "Track a subscription" : {
       "localizations" : {
         "es" : {
