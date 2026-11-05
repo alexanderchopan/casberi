@@ -170,6 +170,8 @@ const own = {
 let asks = 0;
 const waiting = new Map();
 const connecting = new Set();
+// Sessions whose emoji the person has not confirmed: their calls, waiting.
+const held = new Map();
 
 // What the sheet says about a transaction, read from the request itself: each
 // call's function and contract, private or public, and who pays the fee. (A
@@ -226,10 +228,26 @@ const background = new BackgroundConnectionHandler(
       native('engineConnect', { requestId: discovery.requestId, origin: discovery.origin, appId: discovery.appId });
     },
     onSessionEstablished: session => {
-      native('engineEmoji', { sessionId: session.sessionId ?? session.requestId, emoji: hashToEmoji(session.verificationHash), origin: session.origin });
+      const id = session.sessionId ?? session.requestId;
+      held.set(id, []);
+      native('engineEmoji', { sessionId: id, emoji: hashToEmoji(session.verificationHash), origin: session.origin });
     },
     onSessionTerminated: requestId => log('terminated', { requestId }),
     onWalletMessage: async (session, message) => {
+      // The emoji check holds every call of the site's until the person says
+      // the two grids match (prd §1700 item 6, C1; Nulo's verification hold).
+      const id = session.sessionId ?? session.requestId;
+      if (held.has(id)) {
+        held.get(id).push(() => answerApp(session, message));
+        return;
+      }
+      await answerApp(session, message);
+    },
+  },
+);
+background.initialize();
+
+async function answerApp(session, message) {
       const { messageId, type, args } = message;
       const started = ms();
       let result;
@@ -241,10 +259,7 @@ const background = new BackgroundConnectionHandler(
       }
       log(error ? 'refused' : 'answered', { type, origin: session.origin, took: ms() - started });
       await background.sendResponse(session.sessionId ?? session.requestId, { messageId, result, error, walletId: WALLET.walletId });
-    },
-  },
-);
-background.initialize();
+}
 
 // --- the shell's door ------------------------------------------------------------
 window.casberiEngine = {
@@ -267,6 +282,16 @@ window.casberiEngine = {
     if (!connecting.delete(requestId)) return;
     if (yes) background.approveDiscovery(requestId);
     else background.rejectDiscovery(requestId);
+  },
+  // The person compared the two grids: they match (calls run) or not (the
+  // session ends and its waiting calls with it).
+  confirmEmoji(sessionId, match) {
+    const waiting = held.get(sessionId);
+    if (!waiting) return;
+    held.delete(sessionId);
+    log('emojiAnswer', { match });
+    if (match) for (const run of waiting) run();
+    else background.terminateSession(sessionId);
   },
   answerApproval(id, yes) {
     waiting.get(id)?.(yes);

@@ -37,3 +37,36 @@ enum AztecEngineProbe {
     }
 }
 #endif
+
+#if DEBUG
+import SwiftUI
+import UIKit
+
+/// `-aztecBrowser <url>` — open an Aztec app in Casberi's browser at mount
+/// (prd §1700 step 3), over everything, with a Close button; DEBUG's door
+/// until Library and the account's page carry the real ones. `-autoApprove
+/// YES` is not honoured here: every ask waits for a hand.
+enum AztecBrowserProbe {
+    @MainActor
+    static func open(_ raw: String) {
+        guard let url = URL(string: raw), url.scheme == "https" || url.host == "localhost" || url.host == "127.0.0.1" else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            guard let root = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                .flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController else { return }
+            var top = root
+            while let next = top.presentedViewController { top = next }
+            let host = UIHostingController(rootView: NavigationStack {
+                AztecBrowserView(url: url).toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { top.presentedViewController?.dismiss(animated: true) }
+                    }
+                }
+            })
+            host.modalPresentationStyle = .fullScreen
+            top.present(host, animated: true)
+            NSLog("aztecEngine| probe | browser | %@", url.host ?? raw)
+        }
+    }
+}
+#endif

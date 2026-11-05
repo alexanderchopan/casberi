@@ -37,6 +37,10 @@ final class AztecEngine: NSObject {
         return nil
     }
 
+    /// The Aztec app open in Casberi's browser, if any: where the relay's
+    /// answers and the person's asks go (one browser at a time).
+    weak var browser: AztecBrowserModel?
+
     private var server: AztecEngineServer?
     private var webView: WKWebView?
     private var isReady = false
@@ -150,10 +154,59 @@ final class AztecEngine: NSObject {
                 ?? (body["detail"]).flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed]) }
                     .map { String(decoding: $0, as: UTF8.self) } ?? ""
             NSLog("aztecEngine| %@ | %@", event, String(detail.prefix(600)))
+        case "engineToTab":
+            guard let inner = body["message"], let data = try? JSONSerialization.data(withJSONObject: inner) else { return }
+            browser?.deliver(String(decoding: data, as: UTF8.self))
+        case "engineConnect":
+            guard let browser, let requestId = body["requestId"] as? String else { return }
+            browser.enqueue(.connect(requestId: requestId, host: Self.host(body["origin"])))
+        case "engineEmoji":
+            guard let browser, let sessionId = body["sessionId"] as? String, let emoji = body["emoji"] as? String else { return }
+            browser.enqueue(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji))
+        case "engineApprove":
+            guard let id = body["id"] as? Int else { return }
+            guard let browser else {
+                // No browser to ask in: a transaction nobody can see is declined.
+                webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, false)", arguments: ["id": id], in: nil, in: .page) { _ in }
+                return
+            }
+            let calls = (body["calls"] as? [[String: Any]] ?? []).map {
+                AztecBrowserModel.Ask.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
+                                           isPublic: ($0["type"] as? String) == "public")
+            }
+            browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls,
+                                  fee: body["fee"] as? String ?? ""))
         default:
-            // The app-facing half (engineToTab, engineConnect, engineApprove,
-            // engineEmoji) is the browser's, wired with it (prd §1700 step 3).
-            NSLog("aztecEngine| %@ | not wired yet", name)
+            break
+        }
+    }
+
+    private static func host(_ origin: Any?) -> String {
+        (origin as? String).flatMap { URL(string: $0)?.host(percentEncoded: false) } ?? String(localized: "This site")
+    }
+
+    // MARK: - Apps' door
+
+    /// A message from an app page's relay, with the tab and the page's URL as
+    /// the browser read them.
+    func fromPage(_ json: String, tabID: Int, url: String) {
+        webView?.callAsyncJavaScript("casberiEngine.fromContent(json, tabId, url)",
+                                     arguments: ["json": json, "tabId": tabID, "url": url], in: nil, in: .page) { _ in }
+    }
+
+    /// The person's answer to an ask.
+    func answer(_ ask: AztecBrowserModel.Ask, yes: Bool) {
+        switch ask {
+        case .connect(let requestId, _):
+            webView?.callAsyncJavaScript("casberiEngine.answerConnect(r, yes)", arguments: ["r": requestId, "yes": yes], in: nil, in: .page) { _ in }
+            if yes {
+                // A connect is a use (prd §1700a item 2): the row appears.
+                Task { if let address = try? await accountAddress() { AztecAccountStore.shared.markUsed(address: address) } }
+            }
+        case .emoji(let sessionId, _, _):
+            webView?.callAsyncJavaScript("casberiEngine.confirmEmoji(s, match)", arguments: ["s": sessionId, "match": yes], in: nil, in: .page) { _ in }
+        case .send(let id, _, _, _):
+            webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, yes)", arguments: ["id": id, "yes": yes], in: nil, in: .page) { _ in }
         }
     }
 

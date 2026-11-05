@@ -4177,6 +4177,8 @@ enum ProbeHooks {
         // (prd §1700), headless; logs `aztecEngine| probe |` lines
         // (`Shell/AztecEngineProbe.swift`).
         Hook(key: "aztecEngineProbe") { raw, _ in AztecEngineProbe.run(raw) },
+        // `-aztecBrowser <url>` — an Aztec app in Casberi's browser (prd §1700 step 3).
+        Hook(key: "aztecBrowser") { raw, _ in AztecBrowserProbe.open(raw) },
         // `-privateMoneySample YES|mainnet|none|clear` — sample private notes
         // (approved, waiting; `mainnet`: ppETH and ppUSDC on Ethereum, worth
         // and rate read live, prd §1563) beside the phone's own, no funds

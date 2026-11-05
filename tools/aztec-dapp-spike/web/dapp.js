@@ -24,7 +24,7 @@ window.runDapp = async function runDapp() {
   const discovery = WalletManager.configure({ extensions: { enabled: true } }).getAvailableWallets({
     chainInfo,
     appId: 'casberi-spike-dapp',
-    timeout: 5000,
+    timeout: 60000,
   });
   for await (const provider of discovery.wallets) {
     say('discovered', { id: provider.id, name: provider.name, type: provider.type });
@@ -74,7 +74,7 @@ import { createAztecNodeClient } from '@aztec-labs/stdlib/interfaces/client';
 window.runSend = async function runSend() {
   const chainInfo = { chainId: new Fr(11155111n), version: new Fr(679261766n) };
   const discovery = WalletManager.configure({ extensions: { enabled: true } }).getAvailableWallets({
-    chainInfo, appId: 'casberi-spike-send', timeout: 5000,
+    chainInfo, appId: 'casberi-spike-send', timeout: 60000,
   });
   for await (const provider of discovery.wallets) {
     discovery.cancel();
@@ -130,7 +130,7 @@ window.runSend = async function runSend() {
 window.runBalance = async function runBalance(tokenAddress) {
   const chainInfo = { chainId: new Fr(11155111n), version: new Fr(679261766n) };
   const discovery = WalletManager.configure({ extensions: { enabled: true } }).getAvailableWallets({
-    chainInfo, appId: 'casberi-spike-balance', timeout: 5000,
+    chainInfo, appId: 'casberi-spike-balance', timeout: 60000,
   });
   for await (const provider of discovery.wallets) {
     discovery.cancel();
