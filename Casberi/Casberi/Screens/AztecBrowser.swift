@@ -263,72 +263,99 @@ private struct AztecPage: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
-/// One ask: connect, the emoji check, or a transaction. Two choices each.
+/// One ask: connect, the emoji check, or a transaction. Two choices each:
+/// the yes is the act's tile (`DSActVerb`), the no a door row under it, the
+/// `SafeAskSheet` shape, on ink like every other ask the wallet raises.
 struct AztecAskSheet: View {
     let ask: AztecBrowserModel.Request
     let answer: (Bool) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            switch ask {
-            case .connect(_, let host):
-                Text("Connect \(host)?").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                Text("It sees your Aztec account's address. Casberi asks you before anything it sends.")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-            case .emoji(_, let host, let emoji):
-                Text("Check the site shows").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                Text(verbatim: emoji).dsText(.heading34).frame(maxWidth: .infinity)
-                Text("If \(host) shows the same nine, nothing sits between you.")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-            case .send(_, let host, let calls, let fee):
-                Text("\(host) wants to send").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                ForEach(Array(calls.enumerated()), id: \.offset) { _, call in
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                        Image(systemName: call.isPublic ? "eye" : "lock.fill")
-                            .foregroundStyle(call.isPublic ? DS.attention : DS.textSecondary)
-                            .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: call.name.replacingOccurrences(of: "_", with: " "))
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Text(verbatim: "\(call.isPublic ? String(localized: "Public") : String(localized: "Private")) · \(call.to)")
-                                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        }
-                    }
-                }
-                Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-            case .ethConnect(_, let host):
-                Text("Connect \(host) to your account?").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                Text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-            case .ethSign(_, let host, let text):
-                Text("\(host) asks your account to sign").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                ScrollView {
-                    Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: 180)
-                Text("Signing proves this is your account. It moves nothing.")
-                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        DSTray(title: title, height: height, ink: true) {
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                content
+                DSActVerb(title: acceptWord, glyph: acceptGlyph) { answer(true) }
+                DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
             }
-            Spacer(minLength: 0)
-            HStack(spacing: DS.Space.s3) {
-                Button(declineWord) { answer(false) }
-                    .buttonStyle(.bordered).controlSize(.large).frame(maxWidth: .infinity)
-                Button(acceptWord) { answer(true) }
-                    .buttonStyle(.borderedProminent).controlSize(.large).frame(maxWidth: .infinity)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(DS.Space.s6)
-        .dsSizedSheet(420)
         // An app's ask is answered, never swiped away unanswered: the two
-        // buttons are the way out (way-back-audit ALLOWED).
+        // verbs are the way out (way-back-audit ALLOWED).
         .interactiveDismissDisabled()
     }
 
-    private var acceptWord: LocalizedStringKey {
-        switch ask { case .connect, .ethConnect: "Connect"; case .emoji: "They match"; case .send: "Approve"; case .ethSign: "Sign" }
+    @ViewBuilder private var content: some View {
+        switch ask {
+        case .connect:
+            DSProse.text("It sees your Aztec account's address. Casberi asks you before anything it sends.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        case .emoji(_, _, let emoji):
+            // The nine in one row, the way they are read: left to right.
+            Text(verbatim: emoji)
+                .dsText(.heading34)
+                .lineLimit(1).minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        case .send(_, _, let calls, let fee):
+            ForEach(Array(calls.enumerated()), id: \.offset) { _, call in
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                    Image(systemName: call.isPublic ? "eye" : "lock.fill")
+                        .foregroundStyle(call.isPublic ? DS.attention : DS.textSecondary)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: call.name.replacingOccurrences(of: "_", with: " "))
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Text(verbatim: "\(call.isPublic ? String(localized: "Public") : String(localized: "Private")) · \(call.to)")
+                            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    }
+                }
+            }
+            Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        case .ethConnect:
+            DSProse.text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        case .ethSign(_, _, let text):
+            ScrollView {
+                Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 180)
+            Text("Signing proves this is your account. It moves nothing.")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        }
     }
-    private var declineWord: LocalizedStringKey {
-        switch ask { case .connect, .send, .ethConnect, .ethSign: "Decline"; case .emoji: "They don't" }
+
+    private var title: String {
+        switch ask {
+        case .connect(_, let host): String(localized: "Connect \(host)?")
+        case .emoji: String(localized: "Check the site shows")
+        case .send(_, let host, _, _): String(localized: "\(host) wants to send")
+        case .ethConnect(_, let host): String(localized: "Connect \(host) to your account?")
+        case .ethSign(_, let host, _): String(localized: "\(host) asks your account to sign")
+        }
+    }
+
+    private var height: CGFloat {
+        switch ask { case .connect, .ethConnect: 400; case .emoji: 360; case .send, .ethSign: 520 }
+    }
+
+    private var acceptWord: String {
+        switch ask {
+        case .connect, .ethConnect: String(localized: "Connect")
+        case .emoji: String(localized: "They match")
+        case .send: String(localized: "Approve")
+        case .ethSign: String(localized: "Sign")
+        }
+    }
+    private var acceptGlyph: String {
+        switch ask {
+        case .connect, .ethConnect: "link"
+        case .emoji: "checkmark"
+        case .send, .ethSign: "faceid"
+        }
+    }
+    private var declineWord: String {
+        switch ask { case .emoji: String(localized: "They don't"); default: String(localized: "Decline") }
     }
 }
