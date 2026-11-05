@@ -63,10 +63,10 @@ struct MoveSentence: View {
     /// Either draws `MovePrivateSentence` under these verbs, over the
     /// account's sentence, which stays as it was. Never remembered on.
     @State private var privateMode: PrivateMove.Mode?
-    /// Gas for your Aztec account: its own sentence (prd §1700e).
-    @State private var aztecGas = false
-    /// A private send on Aztec to this address: its own sentence (prd §1700e).
-    @State private var aztecSendTo: String?
+    /// Your private balance on Aztec, in (`.deposit`) or from (`.send`): its
+    /// own sentence, as 0xBow's is (prd §1700f items 11–14).
+    @State private var aztecMode: AztecMove.Mode?
+    @State private var aztecMove = AztecMove()
     @State private var privateMove = PrivateMove()
 
     /// **RECEIVE, PRIVATELY (prd §1560): a fresh address.** Receive's Private
@@ -78,6 +78,14 @@ struct MoveSentence: View {
         privateMove.mode = mode
         privateMove.recipient = mode == .send ? resolved?.address : nil
         withAnimation(DS.Motion.standard) { open = nil; privateMode = mode }
+        DSHaptic.selection()
+    }
+
+    /// Into your private balance on Aztec, or from it to `recipient`.
+    private func goAztec(_ mode: AztecMove.Mode, recipient: String? = nil) {
+        aztecMove.mode = mode
+        aztecMove.recipient = mode == .send ? recipient : nil
+        withAnimation(DS.Motion.standard) { open = nil; aztecMode = mode }
         DSHaptic.selection()
     }
 
@@ -973,7 +981,7 @@ struct MoveSentence: View {
         // The verbs open on the account page over any verb's own sentence
         // (Lend, Send privately, a fresh Receive), so every verb word opens
         // the one list (prd §1681).
-        let ownSentence = (privateMode != nil || freshReceive || aztecGas || aztecSendTo != nil || verb == .lend) && open != .verb
+        let ownSentence = (privateMode != nil || freshReceive || aztecMode != nil || verb == .lend) && open != .verb
         ZStack {
             accountPage
                 .opacity(ownSentence ? 0 : 1)
@@ -989,15 +997,13 @@ struct MoveSentence: View {
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
-            if let aztecSendTo, privateMode == nil, open != .verb {
-                MoveAztecSendSentence(to: aztecSendTo, inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { self.aztecSendTo = nil }
-                }) { verbWord(title(.send)) }
-                .transition(.opacity)
-            }
-            if aztecGas, privateMode == nil, open != .verb {
-                MoveAztecGasSentence(inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { aztecGas = false }
+            if aztecMode != nil, privateMode == nil, open != .verb {
+                MoveAztecPrivateSentence(move: aztecMove, inTray: inTray, leave: { why in
+                    withAnimation(DS.Motion.standard) {
+                        aztecMode = nil
+                        open = why == .pickRecipient ? .to : .network
+                        if why == .pickRecipient { search = "" }
+                    }
                 }) { verbWord(title(.send)) }
                 .transition(.opacity)
             }
@@ -1005,15 +1011,17 @@ struct MoveSentence: View {
                 MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
                         privateMode = nil
-                        if why == .pickRecipient { open = .to; search = "" }
+                        // Its recipient opens Send's recipients; its "from"
+                        // opens Send's networks (prd §1700f item 11).
+                        open = why == .pickRecipient ? .to : .network
+                        if why == .pickRecipient { search = "" }
                     }
                 }) { verbWord(title(.send)) }
                 .transition(.opacity)
             }
         }
         .animation(DS.Motion.standard, value: privateMode)
-        .animation(DS.Motion.standard, value: aztecGas)
-        .animation(DS.Motion.standard, value: aztecSendTo)
+        .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: freshReceive)
         .animation(DS.Motion.standard, value: verb)
     }
@@ -1287,12 +1295,8 @@ struct MoveSentence: View {
             // Round-ups (prd §1452): the change, then what the whole send
             // comes to with it (user: "needs to be clear that the 5$ is
             // the total tx").
-            // The Private switch (prd §1554): off, always, on arrival.
-            if verb == .send, receipt == nil, PrivateMove.available, !paysZkMoney {
-                MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))
-                    .padding(.top, DS.Space.s4)
-                    .disabled(stage != nil)
-            }
+            // No Private switch in Send (prd §1700f item 11): the network list
+            // is where the money is, the two private balances among it.
             // Receive's Private switch (prd §1560): off on arrival; on, a
             // fresh address. Your own account's Receive only, never a
             // route from another network or the arrival's sentence.
@@ -2243,10 +2247,9 @@ struct MoveSentence: View {
     private func pickVerb(_ v: Verb) {
         withAnimation(DS.Motion.standard) {
             open = nil
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecGas || aztecSendTo != nil else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecMode != nil else { return }
             privateMode = nil
-            aztecGas = false
-            aztecSendTo = nil
+            aztecMode = nil
             freshReceive = false
             verb = v
             receipt = nil
@@ -3381,21 +3384,18 @@ struct MoveSentence: View {
                     goPrivate(.deposit)
                 }
             }
-            // An Aztec address typed: a private send on Aztec (prd §1700e).
-            if AztecAddressText.isAztec(to), !DemoMode.isActive {
-                listRow(AddressTail.short(to.trimmingCharacters(in: .whitespaces)), sub: String(localized: "Aztec account · privately"), symbol: "lock.fill") {
-                    let address = to.trimmingCharacters(in: .whitespaces).lowercased()
-                    withAnimation(DS.Motion.standard) { open = nil; aztecSendTo = address }
-                    DSHaptic.selection()
+            // Your private balance on Aztec, named as 0xBow's is (prd §1700f
+            // item 12): your Safe moves money in through Shield.
+            if YourAccountKey.address != nil, AztecProver.isAvailable,
+               q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
+                listRow(String(localized: "Your private balance"), sub: String(localized: "Aztec"), symbol: "eye.slash") {
+                    goAztec(.deposit)
                 }
             }
-            // Your Aztec account takes gas from your Safe (prd §1700e): open,
-            // no check; never in the demo, and only with an account here.
-            if YourAccountKey.address != nil, !DemoMode.isActive,
-               q.isEmpty || String(localized: "Your Aztec account").lowercased().contains(q) {
-                listRow(String(localized: "Your Aztec account"), sub: String(localized: "Aztec · privately"), symbol: "lock.fill") {
-                    withAnimation(DS.Motion.standard) { open = nil; aztecGas = true }
-                    DSHaptic.selection()
+            // An Aztec address typed: a private send from Aztec (prd §1700f item 14).
+            if AztecAddressText.isAztec(to), AztecProver.isAvailable {
+                listRow(AddressTail.short(to.trimmingCharacters(in: .whitespaces)), sub: String(localized: "Aztec · Private"), symbol: "eye.slash") {
+                    goAztec(.send, recipient: to.trimmingCharacters(in: .whitespaces).lowercased())
                 }
             }
             if let above, q.isEmpty {
@@ -3550,6 +3550,26 @@ struct MoveSentence: View {
                         trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
                         picked: networkPicked && n == network) {
                     pick { switchNetwork(n) }
+                }
+            }
+            // **WHERE THE MONEY IS, THE PRIVATE PLACES AMONG IT (prd §1700f
+            // item 11).** No switch: Send's network says where the money is,
+            // and your two private balances are two of those places.
+            if verb == .send {
+                if PrivateMove.available {
+                    let pools = PrivateMoneyStore.shared
+                    let held = pools.rows.filter { $0.kind == .held }
+                        .compactMap { PrivateMoney.rowUSD($0, prices: pools.shownPrices) }.reduce(0, +)
+                    listRow(String(localized: "Ethereum · Private"), trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {
+                        goPrivate(.send)
+                    }
+                }
+                if AztecProver.isAvailable, YourAccountKey.address != nil {
+                    let aztec = AztecAccountStore.shared
+                    let held = aztec.isShown ? aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
+                    listRow(String(localized: "Aztec · Private"), trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {
+                        goAztec(.send, recipient: resolved?.address)
+                    }
                 }
             }
         }

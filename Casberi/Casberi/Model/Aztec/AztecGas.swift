@@ -19,10 +19,24 @@ enum AztecGas {
         var errorDescription: String? { message }
     }
 
-    /// Sends `units` AZTEC from your Safe to your Aztec account as gas.
+    /// The least gas a first move brings along: Aztec takes a transaction only
+    /// from an account that can cover its most (some 15 AZTEC, measured
+    /// 2026-11-04), and a claim pays from what it claims.
+    static let rideAlong = "30000000000000000000" // 30 AZTEC
+    /// Below this the account is short of gas for one more transaction.
+    static let enough = Decimal(string: "15000000000000000000")!
+
+    /// A gas deposit, written and not yet sent: its two calls, and what the
+    /// claim will need once it lands.
+    struct Plan {
+        let nonce: UInt64
+        let units: String
+        let calls: [(to: String, data: String, value: String)]
+    }
+
+    /// The two calls that send `units` AZTEC to your Aztec account as gas.
     @MainActor
-    static func send(units: String, stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> AztecAccountStore.GasDeposit {
-        // The demo moves nothing (prd §217, §1475).
+    static func plan(units: String) async throws -> Plan {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let amount = SafeABI.word(uint256: units) else { throw Failure(message: String(localized: "This amount could not be written")) }
         let nonce = UInt64.random(in: 1...UInt64.max)
@@ -34,20 +48,43 @@ enum AztecGas {
         let amountHex = hex(amount)
         let approve = "0x095ea7b3" + pad(portal) + amountHex
         let deposit = "0x284b5dc6" + toWord + amountHex + hashWord
+        return Plan(nonce: nonce, units: units, calls: [(to: token, data: approve, value: "0"), (to: portal, data: deposit, value: "0")])
+    }
+
+    /// Keeps a planned deposit that landed in `transaction`, from its receipt.
+    @MainActor @discardableResult
+    static func record(_ plan: Plan, transaction: String, receipt: [String: Any]) -> AztecAccountStore.GasDeposit? {
+        guard let message = message(in: receipt) else { return nil }
+        let kept = AztecAccountStore.GasDeposit(nonce: plan.nonce, amountUnits: plan.units, transaction: transaction,
+                                                messageHash: message.key, leafIndex: message.index, claimed: false, at: .now)
+        AztecAccountStore.shared.addGas(kept)
+        return kept
+    }
+
+    /// Whether your Aztec account needs gas before its next move: short of
+    /// `enough`, and none on its way.
+    @MainActor
+    static var needed: Bool {
+        let store = AztecAccountStore.shared
+        if (store.snapshot.gas ?? []).contains(where: { !$0.claimed }) { return false }
+        let have = store.snapshot.holdings.first { $0.kind == .feeJuice }?.publicUnits.flatMap { Decimal(string: $0) } ?? 0
+        return have < enough
+    }
+
+    /// Sends `units` AZTEC from your Safe to your Aztec account as gas.
+    @MainActor
+    static func send(units: String, stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> AztecAccountStore.GasDeposit {
+        let planned = try await plan(units: units)
         let sent = try await YourAccountChain.privateCalls(
-            [(to: token, data: approve, value: "0"), (to: portal, data: deposit, value: "0")],
-            on: YourAccountOp.ethereum, reason: String(localized: "Move AZTEC to your Aztec account for gas"), stage: stage)
+            planned.calls, on: YourAccountOp.ethereum, reason: String(localized: "Move AZTEC to your Aztec account for gas"), stage: stage)
         guard case .landed(let transaction?, _) = sent.outcome else {
             throw Failure(message: String(localized: "Sent; Aztec will see it once Ethereum shows it"))
         }
         guard let receipt = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_getTransactionReceipt", [transaction]) as? [String: Any],
-              let message = message(in: receipt) else {
+              let kept = record(planned, transaction: transaction, receipt: receipt) else {
             throw Failure(message: String(localized: "Sent, but its message to Aztec could not be read yet"))
         }
-        let deposit_ = AztecAccountStore.GasDeposit(nonce: nonce, amountUnits: units, transaction: transaction,
-                                                    messageHash: message.key, leafIndex: message.index, claimed: false, at: .now)
-        AztecAccountStore.shared.addGas(deposit_)
-        return deposit_
+        return kept
     }
 
     /// Claims every deposit Aztec has carried; one that is not there yet waits.

@@ -212,8 +212,15 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     }
 
     func answer(_ ask: Request, yes: Bool) async {
-        if case .send = ask, yes {
-            do { try await PrivateRootKey.unlock(reason: String(localized: "Approve this Aztec transaction")) } catch { return }
+        if case .send(_, let host, let calls, _) = ask, yes {
+            do {
+                try await PrivateRootKey.unlock(reason: String(localized: "Approve this Aztec transaction"))
+                // The co-signer approves an app's transaction too (prd §1700f item 4).
+                try await AztecCoSign.approve(String(localized: "\(host): \(calls.map(\.name).joined(separator: ", "))"))
+            } catch {
+                failed = AztecEngine.words(error)
+                return
+            }
         }
         queue.removeAll { $0.id == ask.id }
         if let waiting = ethAnswers.removeValue(forKey: ask.id) {

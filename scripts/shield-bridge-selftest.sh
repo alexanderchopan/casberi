@@ -17,7 +17,8 @@
 #   • a withdraw whose path offset is off — the portal reverts, and the money
 #     waits on Ethereum while the app says it can be finished;
 #   • a leaf id off by the tree's depth — a finished exit offered again forever;
-#   • an exit that pays someone other than your own account, an authwit for the
+#   • an exit that pays another address than its sentence names, one the
+#     co-signer never approved, an authwit for the
 #     bridge instead of its minter proxy (the burn reverts after proving), or a
 #     content hash under another selector (the exit can never be finished);
 #   • any request to Proof of Clean Hands (ID) — Passport only, §1700e item 1.
@@ -41,9 +42,11 @@ grep -q 'shield.human.tech' Casberi/Casberi/Model/NetworkReach.swift \
 if grep -n 'attestation/poch\|cleanHands"\]\s*=' "$APP" "$WIRE" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
   echo "✗ Shield's Proof of Clean Hands (government ID) is asked for: Passport only (prd §1700e)"; exit 1
 fi
-grep -q 'ShieldBridge.exit\|static func exit' "$APP" \
-  && grep -q '"shieldExit", \[asset.symbol, units, account, text\]' "$APP" \
-  || { echo "✗ an exit no longer pays your own account (the Safe that signed in)"; exit 1; }
+grep -q '"shieldExit", \[asset.symbol, units, recipient, text\]' "$APP" \
+  && grep -q 'recipient: recipient, transaction: transaction' "$APP" \
+  || { echo "✗ an exit no longer pays exactly the address in its sentence, or keeps another"; exit 1; }
+grep -q 'try await AztecCoSign.approve(' "$APP" \
+  || { echo "✗ an exit no longer asks the co-signer first (prd §1700f item 4)"; exit 1; }
 grep -q "caller: AztecAddress.fromStringUnsafe(asset.proxy), call: burn" "$ENGINE" \
   || { echo "✗ the exit's authwit no longer names the bridge's minter proxy: the burn reverts after proving"; exit 1; }
 grep -q "Buffer.from('69328dec', 'hex')" "$ENGINE" \

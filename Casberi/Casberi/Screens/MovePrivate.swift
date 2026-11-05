@@ -67,11 +67,8 @@ struct MovePrivateSentence<Head: View>: View {
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
-                if move.mode == .send, !isDone {
-                    MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave(.switchOff) } }))
-                        .padding(.top, DS.Space.s4)
-                        .disabled(move.acting)
-                }
+                // No switch (prd §1700f item 11): "from your private balance"
+                // opens Send's networks to send from somewhere else.
                 Group {
                     if let open, move.stage == .ready || open == .recipient {
                         choices(open)
@@ -213,8 +210,10 @@ struct MovePrivateSentence<Head: View>: View {
                 .accessibilityHint(Text("Picks how much"))
             }
             if move.mode == .send {
-                MovePhrase(String(localized: "your private balance"), glue: String(localized: "from"),
-                           ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
+                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
+                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                action: { if move.stage == .ready { leave(.switchOff) } },
+                                hint: Text("Picks where it comes from"))
             }
             if move.mode == .deposit {
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
@@ -473,7 +472,9 @@ struct MovePrivateSentence<Head: View>: View {
                     Task { await move.read() }
                     DSHaptic.selection()
                 } label: {
-                    Text("Check again").dsText(.heading24).foregroundStyle(DS.textPrimary).frame(minHeight: 48)
+                    // Fits beside the act, never cut (prd §1700f item 13).
+                    Text("Check again").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).fixedSize().frame(minHeight: 48)
                 }
                 .buttonStyle(RowPress())
                 Spacer(minLength: DS.Space.s3)

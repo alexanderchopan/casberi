@@ -90,7 +90,8 @@ extension ShieldBridge {
     /// deposit — through `privateCalls` (simulated, Face ID). The claim on Aztec
     /// follows in `settle()` once Aztec has the message.
     @MainActor
-    static func deposit(_ asset: Asset, units: String, stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> AztecAccountStore.ShieldDeposit {
+    static func deposit(_ asset: Asset, units: String, gas: AztecGas.Plan? = nil,
+                        stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> AztecAccountStore.ShieldDeposit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
@@ -109,8 +110,10 @@ extension ShieldBridge {
             throw Failure(message: String(localized: "This move could not be written"))
         }
         let approve = "0x095ea7b3" + (word(hex: asset.portal) ?? "") + amount
+        // Gas rides along in the same operation when the account needs it
+        // (prd §1700f item 13): one Face ID.
         let sent = try await YourAccountChain.privateCalls(
-            [(to: asset.ethToken, data: approve, value: "0"), (to: asset.portal, data: deposit, value: "0")],
+            (gas?.calls ?? []) + [(to: asset.ethToken, data: approve, value: "0"), (to: asset.portal, data: deposit, value: "0")],
             on: YourAccountOp.ethereum, reason: String(localized: "Move \(asset.symbol) into your Aztec account"), stage: stage)
         guard case .landed(let transaction?, _) = sent.outcome else {
             throw Failure(message: String(localized: "Sent; Aztec will see it once Ethereum shows it"))
@@ -119,6 +122,7 @@ extension ShieldBridge {
               let message = message(in: receipt, portal: asset.portal) else {
             throw Failure(message: String(localized: "Sent, but its message to Aztec could not be read yet"))
         }
+        if let gas { AztecGas.record(gas, transaction: transaction, receipt: receipt) }
         let pending = AztecAccountStore.ShieldDeposit(nonce: nonce, symbol: asset.symbol, amountUnits: message.amount,
                                                       transaction: transaction, messageHash: message.key,
                                                       leafIndex: message.index, claimed: false, at: .now)
@@ -152,7 +156,7 @@ extension ShieldBridge {
     /// a message for Shield's portal. `finish` withdraws it on Ethereum once
     /// Aztec's proof is there.
     @MainActor
-    static func exit(_ asset: Asset, units: String) async throws -> AztecAccountStore.ShieldExit {
+    static func exit(_ asset: Asset, units: String, to recipient: String) async throws -> AztecAccountStore.ShieldExit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
@@ -172,12 +176,18 @@ extension ShieldBridge {
         guard let json = try? JSONSerialization.data(withJSONObject: passport), let text = String(data: json, encoding: .utf8) else {
             throw Failure(message: String(localized: "This move could not be written"))
         }
-        try await PrivateRootKey.unlock(reason: String(localized: "Move \(asset.symbol) out of your Aztec account"))
-        guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, account, text]) as? [String: Any],
+        // Any Ethereum address may be paid (prd §1700f item 14); the portal
+        // pays exactly this one.
+        guard recipient.count == 42, recipient.lowercased().hasPrefix("0x"), recipient.dropFirst(2).allSatisfy(\.isHexDigit) else {
+            throw Failure(message: String(localized: "That isn't an Ethereum address"))
+        }
+        try await PrivateRootKey.unlock(reason: String(localized: "Send \(asset.symbol) out of your private balance on Aztec"))
+        try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: asset.decimals, symbol: asset.symbol)) from Aztec to \(recipient)"))
+        guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, recipient, text]) as? [String: Any],
               let transaction = out["tx"] as? String, let message = out["message"] as? String else {
             throw Failure(message: String(localized: "Aztec did not take this move"))
         }
-        let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: account, transaction: transaction,
+        let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: recipient, transaction: transaction,
                                                 message: message, outbox: out["outbox"] as? String, withdrawal: nil, at: .now)
         AztecAccountStore.shared.addExit(exit)
         await AztecAccountStore.shared.refresh()
