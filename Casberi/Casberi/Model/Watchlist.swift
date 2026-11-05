@@ -12,14 +12,28 @@ final class Watchlist {
 
     static let storeKey = "wallet.watchlist.v1"
 
-    private(set) var tokens: [WatchedToken]
+    /// What the screens show and change: the demo's list in the demo (prd
+    /// §1618: demo data on every tab, never the person's own; user,
+    /// 2026-11-04: "the demo doesn't currently have a token watched … have it
+    /// watch eth"), else this phone's.
+    var tokens: [WatchedToken] {
+        get { DemoMode.isActive ? demoTokens : own }
+        set { if DemoMode.isActive { demoTokens = newValue } else { own = newValue } }
+    }
+
+    /// The person's own list, persisted.
+    private var own: [WatchedToken]
+    /// The demo's list: ETH to start, changed by the demo's taps, never saved.
+    private var demoTokens: [WatchedToken] = Watchlist.demoStart
+
+    static let demoStart = [WatchedToken(id: "coingecko:ethereum", symbol: "ETH", name: "Ethereum")]
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.storeKey),
            let decoded = try? JSONDecoder().decode([WatchedToken].self, from: data) {
-            tokens = decoded
+            own = decoded
         } else {
-            tokens = []
+            own = []
         }
     }
 
@@ -48,12 +62,12 @@ final class Watchlist {
     }
 
     func clear() {
-        tokens = []
+        own = []
         DefaultsWrite.remove(Self.storeKey)
     }
 
     private func persist() {
-        guard let data = try? JSONEncoder().encode(tokens) else { return }
+        guard !DemoMode.isActive, let data = try? JSONEncoder().encode(own) else { return }
         DefaultsWrite.set(data, forKey: Self.storeKey)
     }
 }
