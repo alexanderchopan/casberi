@@ -340,6 +340,16 @@ const own = {
     return { epoch: String(w.epochNumber), checkpoints: String(w.numCheckpointsInEpoch), leaf: String(w.leafIndex),
              path: w.siblingPath.toBufferArray().map(b => '0x' + b.toString('hex')) };
   },
+  // REVEAL KEY (prd §1700f item 6): what another Aztec wallet needs to open
+  // this same account — its secret key, its Schnorr signing key, the salt and
+  // the account's kind. Casberi's own call only (never an app's); the app has
+  // asked Face ID and the co-signer before calling.
+  async exportKeys() {
+    await getWallet();
+    const { secret, signingKey } = await accountKeys();
+    return { address: accountAddress, secretKey: secret.toString(), signingKey: signingKey.toString(),
+             salt: Fr.ZERO.toString(), kind: 'schnorr-initializerless' };
+  },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
     return { chainId: c.chainId.toBigInt().toString(), version: c.version.toBigInt().toString() };

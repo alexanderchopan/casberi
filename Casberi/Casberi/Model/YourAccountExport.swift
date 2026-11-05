@@ -19,10 +19,12 @@ import P256K
 enum YourAccountExport {
     typealias Network = YourAccountOp.Network
 
-    /// Where an exported key goes: every network but Robinhood, which Safe's
-    /// own app is not known to open — a key there would own something no
-    /// other wallet reaches.
-    static func eligible(_ net: Network) -> Bool { net.chainId != YourAccountOp.robinhood.chainId }
+    /// Where an exported key goes: every network the account is on,
+    /// Robinhood included (prd §1700f item 6, user: "yes ofc"). Safe's app may
+    /// not open Robinhood, but an owner key and the co-signer reach the Safe
+    /// there with any tool; left off, Robinhood's money answered to Casberi
+    /// alone.
+    static func eligible(_ net: Network) -> Bool { true }
 
     /// The key, held for the one page that shows it.
     struct Key: Equatable {

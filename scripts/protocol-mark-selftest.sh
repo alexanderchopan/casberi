@@ -130,8 +130,8 @@ guard "Lend's credit wears the mark through Move's one door" "$LEND" 'MoveSenten
 guard "Move's mark door falls back to the rule" \
   "Casberi/Casberi/Screens/MoveSentence.swift" 'ProtocolMark\.mark\(forVenue: service\)'
 guard "a Lent row's line wears Aave's mark" "$LENT" 'ProtocolInlineMark\(mark: "aave"\)'
-guard "a held private row's line wears Privacy Pools'" "$HELD" \
-  'if row\.kind == \.held \{ ProtocolInlineMark\(mark: "privacy-pools"\) \}'
+guard "a held private row's mark matches its words: Aave's on Aave, else Privacy Pools' (prd §1700f item 9)" "$HELD" \
+  'ProtocolInlineMark\(mark: PrivateMoneyStore\.shared\.earnsOnAave\(row\) \? "aave" : "privacy-pools"\)'
 guard_absent "the rule never reads a title (§363)" "$MARK" '\.title'
 
 if (( fail )); then echo "protocol-mark self-test: FAILED"; exit 1; fi

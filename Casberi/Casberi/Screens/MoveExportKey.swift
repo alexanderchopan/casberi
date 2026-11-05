@@ -24,8 +24,25 @@ struct MoveExportKey: View {
         case intro
         case creating
         case shown(YourAccountExport.Key, on: [String], failed: [String])
+        /// The Aztec account's keys, shown once (prd §1700f item 6).
+        case aztecShown(AztecKeys)
         case refused(String)
     }
+
+    /// What another Aztec wallet needs to open the same account.
+    struct AztecKeys: Equatable {
+        let secretKey: String
+        let signingKey: String
+        let salt: String
+        /// The words a copy carries, labelled, one per line.
+        var text: String { "Secret key: \(secretKey)\nSigning key: \(signingKey)\nSalt: \(salt)\nAccount: Schnorr" }
+    }
+
+    /// Which account's key the page reveals (prd §1700f item 6).
+    enum Which { case safe, aztec }
+    @State private var which: Which = .safe
+    @State private var choosing = false
+    private var hasAztec: Bool { AztecAccountStore.shared.isShown && AztecProver.isAvailable }
     @State private var stage: Stage
     @State private var revealed = false
     @State private var asQR = false
@@ -43,15 +60,19 @@ struct MoveExportKey: View {
         _stage = State(initialValue: stage)
     }
 
-    private var shown: Bool { if case .shown = stage { true } else { false } }
+    private var shown: Bool {
+        switch stage { case .shown, .aztecShown: true; default: false }
+    }
 
     var body: some View {
-        DSTray(title: shown ? String(localized: "Your private key") : String(localized: "Private key"),
+        DSTray(title: shown ? String(localized: "Your private key")
+               : hasAztec ? String(localized: "Private keys") : String(localized: "Private key"),
                height: 640, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 switch stage {
                 case .intro, .creating, .refused: intro
                 case let .shown(key, on, failed): reveal(key, on: on, failed: failed)
+                case let .aztecShown(keys): revealAztec(keys)
                 }
             }
         }
@@ -62,7 +83,10 @@ struct MoveExportKey: View {
         // The key exists nowhere else: a swipe must not lose it. "I saved it"
         // and "Remove the key" are the way out (way-back-audit's ALLOWED).
         .onChange(of: stage, initial: true) { _, now in
-            if case .shown = now { holdOpen(true) } else { holdOpen(now == .creating) }
+            switch now {
+            case .shown, .aztecShown: holdOpen(true)
+            default: holdOpen(now == .creating)
+            }
         }
         .onDisappear { onClose() }
     }
@@ -71,20 +95,57 @@ struct MoveExportKey: View {
 
     @ViewBuilder private var intro: some View {
         MoveFlow {
-            MoveWord(String(localized: "A key that"))
-            MoveWord(String(localized: "opens this account"), ink: DS.pickInk)
+            MoveWord(String(localized: "A key that opens"))
+            // The account the key opens: tapped, Safe or Aztec (prd §1700f
+            // item 6); with no Aztec account it is the Safe's and says so.
+            Button {
+                guard hasAztec, stage == .intro else { return }
+                withAnimation(DS.Motion.standard) { choosing.toggle() }
+                DSHaptic.selection()
+            } label: {
+                MoveWord(which == .aztec ? String(localized: "your Aztec account") : String(localized: "your Safe"), ink: DS.pickInk)
+            }
+            .buttonStyle(RowPress())
+            .accessibilityHint(hasAztec ? Text("Picks which account") : Text(""))
             MoveWord(String(localized: "in another wallet."))
         }
-        Text("**Whoever has it has your money.** You'll see it once.")
-            .dsText(.body17).foregroundStyle(DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-        Text(verbatim: networks.map(\.name).formatted(.list(type: .and)))
-            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        if choosing {
+            VStack(alignment: .leading, spacing: 0) {
+                accountChoice(.safe, String(localized: "Safe"), networks.map(\.name).formatted(.list(type: .and)), mark: "safe")
+                accountChoice(.aztec, String(localized: "Aztec"), String(localized: "Private"), mark: "aztec")
+            }
+            .transition(.opacity)
+        } else {
+            Text("You'll see it once.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+            Text(verbatim: which == .aztec ? String(localized: "Aztec") : networks.map(\.name).formatted(.list(type: .and)))
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        }
         if case let .refused(words) = stage {
             Text(verbatim: words)
                 .dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func accountChoice(_ pick: Which, _ title: String, _ line: String, mark: String) -> some View {
+        Button {
+            withAnimation(DS.Motion.standard) { which = pick; choosing = false }
+            DSHaptic.selection()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ProtocolInlineMark(mark: mark).frame(width: DSRoomChassis.headGlyph)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                }
+                Spacer(minLength: 0)
+                if which == pick { Image(systemName: "checkmark").dsGlyph(.body).foregroundStyle(DS.pickInk) }
+            }
+            .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
     }
 
     // MARK: - Shown once
@@ -113,6 +174,45 @@ struct MoveExportKey: View {
         }
         step(1, String(localized: "Import it into any wallet"), String(localized: "As a private key. It shows empty; that's expected."))
         step(2, String(localized: "Open app.safe.global with that wallet"), String(localized: "Your account and your money are there."))
+    }
+
+    /// The Aztec account's keys, once: held to show, copied together.
+    @ViewBuilder private func revealAztec(_ keys: AztecKeys) -> some View {
+        Text("Aztec").dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        ZStack {
+            Text(verbatim: keys.text)
+                .font(.system(.footnote, design: .monospaced).weight(.medium))
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .blur(radius: revealed ? 0 : 12)
+                .accessibilityHidden(!revealed)
+            if !revealed {
+                VStack(spacing: DS.Space.s1) {
+                    Image(systemName: "eye").dsGlyph(.title).foregroundStyle(DS.textPrimary)
+                    Text("Hold to show").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    Text("Nobody nearby?").dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 140)
+        .padding(DS.Space.s4)
+        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
+        .contentShape(Rectangle())
+        .onLongPressGesture(minimumDuration: 60, maximumDistance: 60, perform: {}, onPressingChanged: { pressing in
+            withAnimation(DS.Motion.standard) { revealed = pressing }
+        })
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Your Aztec keys, hidden"))
+        .accessibilityAction(named: Text("Show")) { withAnimation(DS.Motion.standard) { revealed.toggle() } }
+        tile(copied ? "checkmark" : "doc.on.doc", copied ? String(localized: "Copied") : String(localized: "Copy")) {
+            DSPasteboard.copySensitive(keys.text)
+            withAnimation(DS.Motion.standard) { copied = true }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation(DS.Motion.standard) { copied = false }
+            }
+        }
+        step(1, String(localized: "Import it into an Aztec wallet"), String(localized: "As a Schnorr account: the secret key, the signing key, salt 0."))
     }
 
     /// Blurred until held: the key is on screen only while a finger is.
@@ -185,7 +285,10 @@ struct MoveExportKey: View {
 
     private var foot: some View {
         HStack(alignment: .firstTextBaseline) {
-            if case let .shown(key, on, _) = stage {
+            if case .aztecShown = stage {
+                Spacer(minLength: DS.Space.s3)
+                verb(String(localized: "I saved it"), enabled: true) { close() }
+            } else if case let .shown(key, on, _) = stage {
                 Button { remove(key, from: on) } label: {
                     Text(removing ? String(localized: "Removing…") : String(localized: "Remove the key"))
                         .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
@@ -196,8 +299,10 @@ struct MoveExportKey: View {
                 verb(String(localized: "I saved it"), enabled: !removing) { close() }
             } else {
                 Spacer(minLength: DS.Space.s3)
-                verb(stage == .creating ? String(localized: "Creating…") : String(localized: "Create the key"),
-                     enabled: stage != .creating && !networks.isEmpty) { create() }
+                verb(stage == .creating ? String(localized: "Revealing…") : String(localized: "Reveal key"),
+                     enabled: stage != .creating && (which == .aztec || !networks.isEmpty)) {
+                    if which == .aztec { revealAztecKeys() } else { create() }
+                }
             }
         }
         .padding(.horizontal, DSRoomChassis.leadInset - DS.Space.s4)
@@ -218,6 +323,26 @@ struct MoveExportKey: View {
     }
 
     // MARK: - Acting
+
+    /// Face ID and the co-signer, then the engine hands the keys over once.
+    private func revealAztecKeys() {
+        withAnimation(DS.Motion.standard) { stage = .creating }
+        Task {
+            do {
+                try await PrivateRootKey.unlock(reason: String(localized: "Reveal your Aztec account's key"))
+                try await AztecCoSign.approve(String(localized: "Reveal your Aztec account's private key"))
+                guard let out = try await AztecEngine.shared.call("exportKeys") as? [String: Any],
+                      let secret = out["secretKey"] as? String, let signing = out["signingKey"] as? String else {
+                    throw AztecCoSign.Failure(message: String(localized: "Your Aztec account did not answer"))
+                }
+                withAnimation(DS.Motion.standard) {
+                    stage = .aztecShown(AztecKeys(secretKey: secret, signingKey: signing, salt: out["salt"] as? String ?? "0x0"))
+                }
+            } catch {
+                withAnimation(DS.Motion.standard) { stage = .refused(AztecEngine.words(error)) }
+            }
+        }
+    }
 
     private func create() {
         guard stage != .creating else { return }

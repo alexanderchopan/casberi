@@ -117,12 +117,16 @@ MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
 HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 use "$SENT" 'listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {' "your private balance is no longer a recipient"
-use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goPrivate(.send) } }))' "the Private switch is not off on arrival under Send"
-awk '/MovePrivateSwitch\(isOn: Binding\(get: \{ false \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .send, receipt == nil, PrivateMove.available, !paysZkMoney {' \
-    || { echo "✗ the Private switch stands somewhere other than Send, or where the sender cannot move"; exit 1; }
+# No Private switch in Send (prd §1700f item 11): sending from your private
+# balance is its network, "Ethereum · Private", in Send's network list.
+use "$SENT" 'listRow(String(localized: "Ethereum · Private"), trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {' "sending from your private balance is no longer a network in Send's list (prd §1700f item 11)"
+! grep -q 'goPrivate(.send) } }))' "$SENT" \
+    || { echo "✗ a Private switch came back to Send (prd §1700f item 11)"; exit 1; }
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
 ! grep -q 'PrivateMove.available ? \[nil\]' "$SENT" || { echo "✗ Private is in the verbs row"; exit 1; }
-use "$MPRIV" 'if move.mode == .send, !isDone {' "the switch shows on a deposit, or is gone from a private send"
+# No switch in the private sentence either (prd §1700f item 11): "from your
+# private balance" opens Send's networks.
+use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
 use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \

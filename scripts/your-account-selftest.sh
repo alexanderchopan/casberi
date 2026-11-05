@@ -326,12 +326,14 @@ grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overri
 grep -q 'static let networks: \[Network\] = \[base, ethereum, robinhood\]$' "$OP" || { echo "✗ YourAccountOp.networks is not Base, Ethereum and Robinhood Chain in every build (prd §1441a, §1454)"; exit 1; }
 grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
 
-# The exported private key (prd §1493): never on Robinhood, never read as a
+# The exported private key (prd §1493, §1700f item 6): on every network, never read as a
 # Signer, its address noted before it goes on, never shown before it landed,
 # and its bytes kept nowhere.
 EXPORT=Casberi/Casberi/Model/YourAccountExport.swift
 EXPORTPAGE=Casberi/Casberi/Screens/MoveExportKey.swift
-grep -q 'net.chainId != YourAccountOp.robinhood.chainId' "$EXPORT" || { echo "✗ an exported key may go on Robinhood, which Safe's app is not known to open (prd §1493)"; exit 1; }
+# Every network now, Robinhood included (prd §1700f item 6): left off, the
+# money there answered to Casberi alone.
+grep -q 'static func eligible(_ net: Network) -> Bool { true }' "$EXPORT" || { echo "✗ an exported key no longer goes on every network: Robinhood's money would answer to Casberi alone (prd §1700f item 6)"; exit 1; }
 grep -q '&& !YourAccountExport.isExported(owner, for: account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ YourAccountChain.signers reads an exported key as a Signer — a send would ask it to co-sign (prd §1493)"; exit 1; }
 grep -q 'if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ Security draws an exported key as the Signer (prd §1493)"; exit 1; }
 grep -qE 'SecItemAdd|kSecValueData' "$EXPORT" "$EXPORTPAGE" && { echo "✗ the exported key's bytes are written somewhere (prd §1493: shown once, kept nowhere)"; exit 1; }
@@ -498,7 +500,8 @@ FIG=Casberi/Casberi/Screens/FeedScreen+WalletPages.swift
 grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1496)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
 # The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1496).
-grep -q 'Every send and swap needs approval in' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the co-signer row no longer says what required means (prd §1570)"; exit 1; }
+# The co-signer row is its name, address and switch (prd §1700f item 7: "it's just on or off").
+! grep -q 'Every send and swap needs approval in' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the co-signer row grew its line back (prd §1700f item 7)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
 # The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink, grey when nothing does (prd §1618).
 grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: needs > 0 ? DS.pickInk : DS.textSecondary' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1496)"; exit 1; }
