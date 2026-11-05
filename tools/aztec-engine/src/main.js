@@ -19,6 +19,9 @@ import { WalletSchema } from '@aztec-labs/aztec.js/wallet';
 import { Contract } from '@aztec-labs/aztec.js/contracts';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { getCanonicalFeeJuice } from '@aztec-labs/protocol-contracts/fee-juice/lazy';
+import { computeSecretHash } from '@aztec-labs/aztec.js/crypto';
+import { FeeJuicePaymentMethodWithClaim } from '@aztec-labs/aztec.js/fee';
+import { isL1ToL2MessageReady } from '@aztec-labs/aztec.js/messaging';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 
@@ -44,11 +47,13 @@ function log(event, detail) {
 // model): SHA-512 of the root and a label, reduced into each field. The root
 // reaches this page only; nothing here stores it.
 let rootResolve;
+let rootBytes = null;
 const rootPromise = new Promise(r => (rootResolve = r));
 async function accountKeys() {
   native('engineNeedsRoot', {});
   const hex = await rootPromise;
   const root = Uint8Array.from(hex.match(/../g).map(h => parseInt(h, 16)));
+  rootBytes = root;
   const derive = async label => {
     const input = new Uint8Array([...root, ...new TextEncoder().encode(label)]);
     return Buffer.from(await crypto.subtle.digest('SHA-512', input));
@@ -92,6 +97,13 @@ function fieldText(raw) {
   } catch {
     return null;
   }
+}
+
+// A deposit's claim secret: the root, a label and the deposit's nonce.
+async function depositSecret(nonce) {
+  if (!rootBytes) await getWallet();
+  const input = new Uint8Array([...rootBytes, ...new TextEncoder().encode(`casberi/aztec/v1/feejuice/${nonce}`)]);
+  return Fr.fromBufferReduce(Buffer.from(await crypto.subtle.digest('SHA-512', input)));
 }
 
 // --- Casberi's own calls -----------------------------------------------------------
@@ -159,6 +171,35 @@ const own = {
       }
     }
     return out;
+  },
+  // GAS (prd §1700e item 2): your Safe deposits AZTEC into Aztec's own Fee
+  // Juice portal for this account; the claim's secret is derived from the
+  // root and the deposit's nonce, so a new phone can still claim it.
+  async feeJuicePlan(nonce) {
+    await getWallet();
+    const secret = await depositSecret(nonce);
+    return { to: accountAddress, secretHash: (await computeSecretHash(secret)).toString() };
+  },
+  // Whether Aztec has the deposit's message yet (minutes after it lands).
+  async feeJuiceReady(messageHash) {
+    const wallet = await getWallet();
+    return { ready: await isL1ToL2MessageReady(wallet.aztecNode, Fr.fromString(messageHash)) };
+  },
+  // Claims it: a transaction whose own fee is paid from what it claims.
+  async feeJuiceClaim(nonce, amount, leafIndex) {
+    const wallet = await getWallet();
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const feeJuice = await getCanonicalFeeJuice();
+    if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
+      await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
+    }
+    const paymentMethod = new FeeJuicePaymentMethodWithClaim(me, {
+      claimAmount: BigInt(amount), claimSecret: await depositSecret(nonce), messageLeafIndex: BigInt(leafIndex),
+    });
+    const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+    const { receipt } = await fj.methods.check_balance(0n).send({ from: me, fee: { paymentMethod }, wait: { waitForStatus: 'proposed', timeout: 1800 } });
+    log('feeJuiceClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
   },
   async chain() {
     const c = await (await getWallet()).getChainInfo();

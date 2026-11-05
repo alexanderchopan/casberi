@@ -63,6 +63,8 @@ struct MoveSentence: View {
     /// Either draws `MovePrivateSentence` under these verbs, over the
     /// account's sentence, which stays as it was. Never remembered on.
     @State private var privateMode: PrivateMove.Mode?
+    /// Gas for your Aztec account: its own sentence (prd §1700e).
+    @State private var aztecGas = false
     @State private var privateMove = PrivateMove()
 
     /// **RECEIVE, PRIVATELY (prd §1560): a fresh address.** Receive's Private
@@ -969,7 +971,7 @@ struct MoveSentence: View {
         // The verbs open on the account page over any verb's own sentence
         // (Lend, Send privately, a fresh Receive), so every verb word opens
         // the one list (prd §1681).
-        let ownSentence = (privateMode != nil || freshReceive || verb == .lend) && open != .verb
+        let ownSentence = (privateMode != nil || freshReceive || aztecGas || verb == .lend) && open != .verb
         ZStack {
             accountPage
                 .opacity(ownSentence ? 0 : 1)
@@ -985,6 +987,12 @@ struct MoveSentence: View {
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
+            if aztecGas, privateMode == nil, open != .verb {
+                MoveAztecGasSentence(inTray: inTray, leave: {
+                    withAnimation(DS.Motion.standard) { aztecGas = false }
+                }) { verbWord(title(.send)) }
+                .transition(.opacity)
+            }
             if privateMode != nil, open != .verb {
                 MovePrivateSentence(move: privateMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
@@ -996,6 +1004,7 @@ struct MoveSentence: View {
             }
         }
         .animation(DS.Motion.standard, value: privateMode)
+        .animation(DS.Motion.standard, value: aztecGas)
         .animation(DS.Motion.standard, value: freshReceive)
         .animation(DS.Motion.standard, value: verb)
     }
@@ -2225,8 +2234,9 @@ struct MoveSentence: View {
     private func pickVerb(_ v: Verb) {
         withAnimation(DS.Motion.standard) {
             open = nil
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecGas else { return }
             privateMode = nil
+            aztecGas = false
             freshReceive = false
             verb = v
             receipt = nil
@@ -3359,6 +3369,15 @@ struct MoveSentence: View {
             if PrivateMove.available, q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
                 listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {
                     goPrivate(.deposit)
+                }
+            }
+            // Your Aztec account takes gas from your Safe (prd §1700e): open,
+            // no check; never in the demo, and only with an account here.
+            if YourAccountKey.address != nil, !DemoMode.isActive,
+               q.isEmpty || String(localized: "Your Aztec account").lowercased().contains(q) {
+                listRow(String(localized: "Your Aztec account"), sub: String(localized: "Gas · Aztec"), symbol: "fuelpump") {
+                    withAnimation(DS.Motion.standard) { open = nil; aztecGas = true }
+                    DSHaptic.selection()
                 }
             }
             if let above, q.isEmpty {

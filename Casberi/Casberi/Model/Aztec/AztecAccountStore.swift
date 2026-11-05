@@ -48,11 +48,29 @@ final class AztecAccountStore {
         }
     }
 
+    /// One gas deposit (prd §1700e item 2): the Safe's AZTEC into Aztec's
+    /// Fee Juice portal, waiting for Aztec to carry it, then claimed. Its
+    /// claim secret is derived from the root and `nonce`, never stored.
+    struct GasDeposit: Codable, Equatable, Identifiable {
+        let nonce: UInt64
+        /// AZTEC base units (18 decimals), as text.
+        let amountUnits: String
+        let transaction: String
+        /// The message Aztec carries (the portal event's `key`) and its place.
+        let messageHash: String
+        let leafIndex: String
+        var claimed: Bool
+        let at: Date
+        var id: UInt64 { nonce }
+    }
+
     struct Snapshot: Codable, Equatable {
         var used = false
         var address: String?
         var holdings: [Holding] = []
         var readAt: Date?
+        /// Optional so a reading saved before gas existed still decodes.
+        var gas: [GasDeposit]?
     }
 
     private(set) var snapshot: Snapshot
@@ -90,6 +108,18 @@ final class AztecAccountStore {
         guard !snapshot.used || snapshot.address != address else { return }
         snapshot.used = true
         snapshot.address = address
+        save()
+    }
+
+    func addGas(_ deposit: GasDeposit) {
+        snapshot.gas = (snapshot.gas ?? []) + [deposit]
+        snapshot.used = true
+        save()
+    }
+
+    func markGasClaimed(_ nonce: UInt64) {
+        guard let i = snapshot.gas?.firstIndex(where: { $0.nonce == nonce }) else { return }
+        snapshot.gas?[i].claimed = true
         save()
     }
 
