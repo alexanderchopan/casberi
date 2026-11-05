@@ -977,12 +977,17 @@ struct MoveSecurity: View {
             return reading ? String(localized: "Reading…") : String(localized: "Couldn't read \(names(unread))")
         }
         if standings.isEmpty { return String(localized: "Reading…") }
-        return live.isEmpty ? String(localized: "None yet") : names(live)
+        // Your private account's network counts too (prd §1700h): your
+        // account lives on Aztec as well as on your Safe's networks.
+        let aztec = AztecAccountStore.shared.isShown
+        if live.isEmpty { return aztec ? String(localized: "Aztec") : String(localized: "None yet") }
+        return aztec ? String(localized: "\(names(live)) and Aztec") : names(live)
     }
 
     private var networksShort: String? {
         if !unread.isEmpty { return unread.count > 1 && !reading ? String(localized: "Couldn't read \(unread.count) networks") : nil }
-        return live.count > 1 ? String(localized: "\(live.count) networks") : nil
+        let count = live.count + (AztecAccountStore.shared.isShown ? 1 : 0)
+        return count > 1 ? String(localized: "\(count) networks") : nil
     }
 
     private var outsideVerb: String? {

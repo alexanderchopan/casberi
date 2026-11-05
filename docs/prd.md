@@ -71070,3 +71070,7 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 1. **Three names, each saying what it is**: your public account (the Safe, on Base, Ethereum and Robinhood), your private balance (Privacy Pools, on Ethereum), your private account (Aztec, on Aztec). A balance lives inside your account; Aztec is an account of its own, with its own address and apps.
 2. **Send says so**: the recipient is "Your private account · Aztec", the sentence "Send 2 USDC to your private account on Aztec." and "from your private account on Aztec"; 0xBow's stays "Your private balance".
 3. **Where it lives is the distinction** (user: "aztec is on aztec, not on ethereum. it can send to ethereum sure, but it is on aztec").
+
+## §1700h — Networks counts Aztec (amends §1700f item 3's "Networks · 3 stays") (user, 2026-11-05, on Your account: "it still says 3 networks") — RULED, BUILT
+
+Once the private account exists, Keys' Networks row counts Aztec with your Safe's networks ("4 networks"; "Base, Ethereum, Robinhood and Aztec"): your account lives on all four.

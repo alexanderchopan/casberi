@@ -18,6 +18,23 @@ appInfo reads `One app for your things`; the subtitle rides the app, so it chang
 The iOS description's opening line below carries the same line; the Mac description's opening is owed the same edit
 when it is next rewritten.
 
+## iOS 3.0.23 — private accounts with Aztec, privacy scanning with Nymis (build 943; user, 2026-11-05)
+
+**What's New** (user: "just say private accounts with aztec and privacy scanning w/ nymis"):
+
+Features
+• Private accounts with Aztec
+• Privacy scanning with Nymis
+
+**Promotional text (150 max)**: New: a private account on Aztec for private apps and payments, beside your public account and private balance. Plus privacy scanning with Nymis.
+
+**Description**: 3.0.19's, with "Send and receive privately." replaced by the three parts (prd §1700g):
+
+> Three ways to hold it.
+> A public account (Safe) on Base, Ethereum and Robinhood. A private balance (Privacy Pools) on Ethereum, to send, receive, save and earn privately. And a private account (Aztec) on Aztec, for private apps and payments, every transaction proved on your iPhone.
+
+and "Catch threats before they cost you." gains: "Scan any account's privacy with Nymis."
+
 ## iOS 3.0.19 — the wallet story, APPLIED 2026-10-30 (build 904, WAITING_FOR_REVIEW; user: "love it")
 
 Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/casberi-deck/cards/appstore9.py`, `~/Downloads/App Store 10 iPhone`): the inbox, then the wallet, all together or one at a time. Markets is gone (§1529), gift cards are Spend (§1599), Buy is a card on Stripe's page (§1599, §1608), swaps are no longer credited to Relay (§1542, §1555), private money is 0xBow on Ethereum (§1563), round-ups save with your sends in dollars (§1578), the co-signer is a switch for every send and swap (§1570). The opening carries "soon, a rewards card for your subscriptions" (user, 2026-10-30). Apply with the screenshots when the next build ships from the session that made them; the iPad set and the Mac description are not redone (user: "we can ignore ipad for now").

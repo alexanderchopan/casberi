@@ -2834,6 +2834,34 @@
         }
       }
     },
+    "%@ and Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ y Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@とAztec"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 및 Aztec"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@和 Aztec"
+          }
+        }
+      }
+    },
     "%@ and another" : {
       "localizations" : {
         "es" : {
@@ -164629,6 +164657,30 @@
             "state" : "new",
             "value" : "Send %1$@ from Aztec to %2$@"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar %1$@ desde Aztec a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@をAztecから%2$@に送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@을(를) Aztec에서 %2$@(으)로 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Aztec 将 %1$@ 发送到 %2$@"
+          }
         }
       }
     },
@@ -164638,6 +164690,30 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Send %1$@ on Aztec to %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar %1$@ en Aztec a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec上の%1$@を%2$@に送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 %1$@을(를) %2$@(으)로 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上将 %1$@ 发送到 %2$@"
           }
         }
       }
