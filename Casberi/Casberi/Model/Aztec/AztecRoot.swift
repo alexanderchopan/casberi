@@ -21,14 +21,26 @@ enum AztecRoot {
         ]
     }
 
+    /// Whether the root is on this device (iCloud Keychain may not have
+    /// brought it yet). Reads presence only, never the bytes.
+    static var exists: Bool {
+        var read = query
+        read[kSecReturnAttributes as String] = true
+        return SecItemCopyMatching(read as CFDictionary, nil) == errSecSuccess
+    }
+
     /// The root, made the first time it is asked for. `made` says which.
-    static func ensure() -> (bytes: Data, made: Bool)? {
+    /// `create: false` never makes one: an account already used here must
+    /// find ITS root, never start a new, empty account over it (prd §1700f
+    /// item 5).
+    static func ensure(create: Bool = true) -> (bytes: Data, made: Bool)? {
         var read = query
         read[kSecReturnData as String] = true
         var out: CFTypeRef?
         if SecItemCopyMatching(read as CFDictionary, &out) == errSecSuccess, let data = out as? Data, data.count == 32 {
             return (data, false)
         }
+        guard create else { return nil }
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return nil }
         var add = query

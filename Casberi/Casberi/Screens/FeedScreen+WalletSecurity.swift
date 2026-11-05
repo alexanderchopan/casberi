@@ -74,7 +74,7 @@ extension FeedScreen {
                 // The Safe and the Aztec account, once Aztec is used (prd
                 // §1700a): first, before the Safe's keys.
                 walletAccountList(safe: account)
-                MoveSecurity(account: account)
+                MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
                     .walletStackRow()
                     // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                     .task(id: chrome.walletScrollRequest) {

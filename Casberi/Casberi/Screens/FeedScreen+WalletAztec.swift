@@ -137,15 +137,25 @@ extension FeedScreen {
     func walletAccountList(safe: String) -> some View {
         let store = AztecAccountStore.shared
         if store.isShown, let aztec = store.shown.address {
+            // Each row picks the address Your Account's header shows (prd
+            // §1700f item 2): the lit one is the one showing.
             accountListRow(mark: "safe", title: String(localized: "Safe"),
-                           line: String(localized: "Public · \(AddressTail.short(safe))"))
+                           line: String(localized: "Public · \(AddressTail.short(safe))"),
+                           lit: !chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = false }
             accountListRow(mark: "aztec", title: String(localized: "Aztec"),
-                           line: String(localized: "Private · \(AddressTail.short(aztec))"))
+                           line: String(localized: "Private · \(AddressTail.short(aztec))"),
+                           lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
         }
     }
 
-    /// The Holdings row's anatomy: the mark, the name over its line.
-    private func accountListRow(mark: String, title: String, line: String) -> some View {
+    /// The Holdings row's anatomy: the mark, the name over its line; the lit
+    /// row's name in the primary ink, the other's secondary.
+    private func accountListRow(mark: String, title: String, line: String, lit: Bool,
+                                pick: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { pick() }
+        } label: {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             ProtocolInlineMark(mark: mark)
                 .frame(width: DSRoomChassis.headGlyph)
@@ -153,7 +163,7 @@ extension FeedScreen {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title)
                     .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
+                    .foregroundStyle(lit ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
                 Text(verbatim: line)
                     .dsText(.subhead12)
@@ -162,8 +172,13 @@ extension FeedScreen {
             }
             Spacer(minLength: 0)
         }
+        .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
         .walletRowPitch()
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(lit ? .isSelected : [])
+        .accessibilityHint(Text("Shows its address above"))
         .walletStackRow()
     }
 }

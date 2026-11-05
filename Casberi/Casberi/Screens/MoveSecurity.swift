@@ -13,6 +13,8 @@ import SwiftUI
 /// Sign and Revoke are not drawn until they work (§83).
 struct MoveSecurity: View {
     let account: String
+    /// Raises the savings goal's tray; nil where there is none to raise.
+    var openGoal: (() -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     typealias Op = YourAccountOp
@@ -80,7 +82,10 @@ struct MoveSecurity: View {
             VStack(alignment: .leading, spacing: 0) {
             row(title: String(localized: "Signs from"), value: deviceValue,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
-            row(title: String(localized: "Recovery key"), value: recoveryValue.text, tone: recoveryValue.tone,
+            // Plural once the Aztec account exists: both keys live in iCloud
+            // Keychain (prd §1700f item 5).
+            row(title: AztecAccountStore.shared.isShown ? String(localized: "Recovery keys") : String(localized: "Recovery key"),
+                value: recoveryValue.text, tone: recoveryValue.tone,
                 verb: recoveryVerb.map { ($0, setUp) })
             if coSignerSwitchable {
                 coSignerSwitchRow
@@ -103,7 +108,8 @@ struct MoveSecurity: View {
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
-            row(title: String(localized: "Private key"), value: exportValue,
+            row(title: AztecAccountStore.shared.isShown ? String(localized: "Private keys") : String(localized: "Private key"),
+                value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
             // Only when private money is on this phone alone (prd §1562).
             if privateBackup != .fine {
@@ -116,6 +122,8 @@ struct MoveSecurity: View {
                 .padding(.top, DS.Space.s3)
             VStack(alignment: .leading, spacing: 0) {
                 roundUpsRow
+                // Beside Round-ups, which feed it (prd §1700f item 10).
+                if let openGoal { savingsGoalRow(openGoal) }
             }
             .padding(.leading, Self.rowIndent)
             // Said once, under the keys, only on a device that cannot open
@@ -272,6 +280,26 @@ struct MoveSecurity: View {
     /// opens the one glass menu — the switch, $1 or $5, and what it buys,
     /// the tokens with their marks (prd §1452, §1496). The sentence under it
     /// says the one thing the word cannot: when the change is spent.
+    /// The savings goal (prd §1667, moved here by §1700f item 10): what both
+    /// private balances hold against it, or Set. Its tray says the rest.
+    private func savingsGoalRow(_ open: @escaping () -> Void) -> some View {
+        let goal = SavingsGoalStore.shared.shown
+        let saved = SavingsGoal.savedNow()
+        let word = goal.map { BalancePrivacy.shared.withheld ? SavingsGoal.percent(saved: saved, goal: $0)
+            : String(localized: "\(WalletValue.money(saved)) of \(WalletValue.money($0.dollars))") } ?? String(localized: "Set")
+        return Button { DSHaptic.selection(); open() } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text("Savings goal").dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.pickInk).lineLimit(1).frame(minHeight: 44)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .walletRowPitch()
+        .accessibilityLabel(Text("Savings goal, \(word)"))
+    }
+
     @ViewBuilder private var roundUpsRow: some View {
         Button {
             roundUpsTray = true
@@ -490,6 +518,11 @@ struct MoveSecurity: View {
     /// can still put it (Finish stands beside); nothing beside Set up.
     private var recoveryValue: (text: String?, tone: Color) {
         if let unsettled { return (unsettled, DS.textSecondary) }
+        // The Aztec account's key rides iCloud Keychain too (prd §1700f
+        // item 5): used here and not on this device, it is not recoverable here.
+        if AztecAccountStore.shared.snapshot.used, !DemoMode.isActive, !AztecRoot.exists {
+            return (String(localized: "Aztec key not on this iPhone"), DS.attentionInk)
+        }
         let on = standings.filter { $0.recovery == .added }
         if !recoveryTargets.isEmpty, !on.isEmpty {
             return (String(localized: "Not yet on \(names(recoveryTargets))"), DS.attentionInk)
@@ -734,12 +767,8 @@ struct MoveSecurity: View {
             .disabled(coSignerWalking || working != nil)
         }
         .walletRowPitch()
-        if coSignerRequired {
-            Text("Every send and swap needs approval in \(who).")
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, DS.Space.s2)
-        }
+        // The row is its name, address and switch (prd §1700f item 7: "it's
+        // just on or off"); the line under it is gone.
     }
 
     /// The networks the switch changes: on, those not yet required; off,

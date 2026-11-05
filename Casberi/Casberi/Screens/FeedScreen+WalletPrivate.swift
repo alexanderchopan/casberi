@@ -62,7 +62,8 @@ extension FeedScreen {
                     }
                 // One line while a new phone rebuilds it (prd §1567): never
                 // a spinner page, gone when done.
-                walletSavingsGoal(rows, mask: mask, prices: store.shownPrices)
+                // The savings goal moved to Your account › Spending (prd
+                // §1700f item 10): Holdings lists what you hold.
                 if store.restoring {
                     Text("Restoring your private balance")
                         .dsText(.subhead12)
@@ -77,87 +78,6 @@ extension FeedScreen {
                 }
             }
         }
-    }
-
-    /// **THE GOAL (prd §1667).** Under the head: "$140 of $500" over what a
-    /// week takes to the day (or what is left, or Reached), the percent
-    /// trailing; with no goal, one quiet row that sets one. Either opens the
-    /// tray. Hide balances keeps the percent and hides the dollars.
-    @ViewBuilder
-    private func walletSavingsGoal(_ rows: [PrivateMoney.Row], mask: String?, prices: [String: Double]) -> some View {
-        let saved = rows.filter { $0.kind == .held }.compactMap { PrivateMoney.rowUSD($0, prices: prices) }.reduce(0, +)
-        if let goal = SavingsGoalStore.shared.shown {
-            let title = mask == nil
-                ? String(localized: "\(WalletValue.money(saved)) of \(WalletValue.money(goal.dollars))")
-                : String(localized: "Savings goal")
-            let line: String = switch SavingsGoal.line(saved: saved, goal: goal, now: .now) {
-            case .reached: String(localized: "Reached")
-            case .weekly(let weekly, let by):
-                mask == nil ? String(localized: "\(WalletValue.money(weekly)) a week to reach it by \(by.formatted(.dateTime.month(.abbreviated).day()))")
-                    : String(localized: "By \(by.formatted(.dateTime.month(.abbreviated).day()))")
-            case .overdue(let left, let was):
-                mask == nil ? String(localized: "\(WalletValue.money(left)) to go · was due \(was.formatted(.dateTime.month(.abbreviated).day()))")
-                    : String(localized: "Was due \(was.formatted(.dateTime.month(.abbreviated).day()))")
-            case .left(let left):
-                mask == nil ? String(localized: "\(WalletValue.money(left)) to go") : String(localized: "To go")
-            }
-            let percent = SavingsGoal.percent(saved: saved, goal: goal)
-            Button { walletOpenGoal() } label: {
-                HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                    Image(systemName: "target")
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(saved >= goal.dollars ? DS.confirm : DS.textSecondary)
-                        .frame(width: DSRoomChassis.headGlyph)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: title)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        Text(verbatim: line)
-                            .dsText(.subhead12)
-                            .foregroundStyle(saved >= goal.dollars ? DS.confirmInk : DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: DS.Space.s2)
-                    walletRowFigure(percent)
-                }
-                .walletRowPitch()
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .dsHover()
-            .accessibilityElement(children: .ignore)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityLabel(Text(verbatim: [title, line, percent].joined(separator: ". ")))
-            .accessibilityHint(Text("Changes your savings goal"))
-            .walletListRow()
-        } else if !rows.isEmpty || PrivateMove.available {
-            Button { walletOpenGoal() } label: {
-                HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                    Image(systemName: "target")
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(width: DSRoomChassis.headGlyph)
-                        .accessibilityHidden(true)
-                    Text("Set a savings goal")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                }
-                .walletRowPitch()
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .dsHover()
-            .walletListRow()
-        }
-    }
-
-    private func walletOpenGoal() {
-        DSHaptic.selection()
-        feedSheet = .savingsGoal
     }
 
     /// The section's total: the private dollars, as the box counts them; with
@@ -243,11 +163,14 @@ extension FeedScreen {
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
-                    // Private money is held by Privacy Pools, its mark before
-                    // the line once it is held (prd §1685); a waiting or
+                    // The mark matches the line's words (prd §1700f item 9):
+                    // Aave's where it says "on Aave", as Lent's do; else
+                    // Privacy Pools', which holds it (§1685). A waiting or
                     // refused deposit keeps its state word alone.
                     HStack(spacing: DS.Space.s1) {
-                        if row.kind == .held { ProtocolInlineMark(mark: "privacy-pools") }
+                        if row.kind == .held {
+                            ProtocolInlineMark(mark: PrivateMoneyStore.shared.earnsOnAave(row) ? "aave" : "privacy-pools")
+                        }
                         Text(verbatim: state)
                             .dsText(.subhead12)
                             .foregroundStyle(stateInk)

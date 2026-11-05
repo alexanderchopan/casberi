@@ -219,8 +219,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// the address; "All" is "" and an app (`seat:`, prd §1048b) is not an
     /// address, so neither has one to copy.
     private var accountLine: some View {
+        // Your own account's addresses (the Safe and Aztec) live in its
+        // Account header (prd §1700f item 8); a followed wallet keeps its row.
         if let showing = accounts.first(where: { $0.isShowing(scope) }),
-           !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
+           !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id), !YourAccountDemo.isYours(showing.id) {
             // Said as what it copies (user: "copy icon but user would never
             // know it is for a wallet address"): a bare glyph read as nothing.
             DSCopyRow(value: showing.id, label: "Copy address \(WalletStore.shortAddress(showing.id))")

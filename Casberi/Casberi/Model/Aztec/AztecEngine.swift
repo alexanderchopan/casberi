@@ -146,7 +146,9 @@ final class AztecEngine: NSObject {
             for waiter in readyWaiters { waiter.resume() }
             readyWaiters = []
         case "engineNeedsRoot":
-            guard let root = AztecRoot.ensure() else {
+            // An account used on this phone finds its own root or nothing: a
+            // new root would be a different, empty Aztec account.
+            guard let root = AztecRoot.ensure(create: !AztecAccountStore.shared.snapshot.used) else {
                 NSLog("aztecEngine| root | unavailable")
                 return
             }

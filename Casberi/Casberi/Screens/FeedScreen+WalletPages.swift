@@ -1020,13 +1020,18 @@ struct WalletYourAccountFigure: View {
     @State private var copied = false
 
     var body: some View {
-        if let address {
+        // The account picked under Your account (prd §1700f item 2): the
+        // Aztec account's address when its row is lit, else the Safe's.
+        let aztec = chrome.yourAccountShowsAztec ? AztecAccountStore.shared.shown.address : nil
+        if let address = aztec ?? address {
             VStack(spacing: DS.Space.s1) {
-                WalletFace(address: address, size: DS.Face.sheet, circular: true)
-                Text(verbatim: WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
+                WalletFace(address: self.address ?? address, size: DS.Face.sheet, circular: true)
+                Text(verbatim: aztec != nil ? String(localized: "You on Aztec")
+                     : WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
                     .dsText(.heading24).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .padding(.top, DS.Space.s1)
+                    .contentTransition(.opacity)
                 Button { copy(address) } label: { AddressGroupsGrid(address: address) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text(verbatim: address))

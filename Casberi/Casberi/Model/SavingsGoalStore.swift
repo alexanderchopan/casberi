@@ -46,3 +46,19 @@ final class SavingsGoalStore {
         }
     }
 }
+
+extension SavingsGoal {
+    /// What the goal counts now (prd §1700f item 10): both private balances,
+    /// 0xBow's approved notes and your Aztec account's private tokens, in
+    /// dollars at the last prices read.
+    @MainActor
+    static func savedNow() -> Double {
+        let pools = PrivateMoneyStore.shared
+        let held = pools.rows.filter { $0.kind == .held }
+            .compactMap { PrivateMoney.rowUSD($0, prices: pools.shownPrices) }.reduce(0, +)
+        let aztec = AztecAccountStore.shared
+        let onAztec = aztec.isShown
+            ? aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
+        return held + onAztec
+    }
+}

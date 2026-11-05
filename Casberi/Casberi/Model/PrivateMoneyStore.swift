@@ -97,6 +97,11 @@ final class PrivateMoneyStore {
     /// A held private row's line, as a lent row's: "3.8% on Aave ·
     /// Ethereum" where its token earns ("On Aave · Ethereum" before the rate
     /// is read), else the network alone (prd §1690).
+    /// Whether a held row earns on Aave (its line then names Aave).
+    func earnsOnAave(_ row: PrivateMoney.Row) -> Bool {
+        row.kind == .held && PrivacyNetwork.forChain(row.chainId)?.yield.contains(where: { $0.symbol == row.symbol }) == true
+    }
+
     func heldLine(_ row: PrivateMoney.Row) -> String {
         let network = PrivateMoney.network(row.chainId)
         guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
