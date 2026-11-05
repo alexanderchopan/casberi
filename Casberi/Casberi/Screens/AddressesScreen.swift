@@ -1128,7 +1128,15 @@ struct ContactSheet: View {
         if inSheetStack {
             stackContent
         } else {
+            #if targetEnvironment(macCatalyst)
             NavigationStack { stackContent }
+            #else
+            // Risen on its own it is a sheet, so a thing pushed from it (a
+            // transfer with this person) draws the seat's back door at its
+            // foot (prd §1304, §767); a bare stack left that step with none.
+            NavigationStack { stackContent }
+                .environment(\.dsInSheet, true)
+            #endif
         }
     }
 
