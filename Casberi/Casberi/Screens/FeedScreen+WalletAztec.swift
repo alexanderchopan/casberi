@@ -15,48 +15,82 @@ extension FeedScreen {
     /// How long a reading stands before showing the place reads again.
     static let aztecReadInterval: TimeInterval = 5 * 60
 
+    /// Whether the Aztec account's rows stand here: Yours and All only, as
+    /// private money (prd §1590): the account is yours.
+    var walletShowsAztec: Bool {
+        AztecAccountStore.shared.isShown && selectedSeat == nil && !walletOnFollowing
+            && (selectedWallet.map(YourAccountDemo.isYours) ?? true)
+    }
+
+    /// **PRIVATE ON AZTEC, UNDER PRIVATE (prd §1700 item 4).** Only what the
+    /// account holds privately; what it holds in the open stands under Tokens
+    /// (`walletAztecPublicRows`; user, 2026-11-04: "Fee Juice has to move to
+    /// tokens i would think because it is public").
     @ViewBuilder
     var walletAztecRows: some View {
-        let store = AztecAccountStore.shared
-        // Yours and All only, as private money (prd §1590): the account is yours.
-        if store.isShown, selectedSeat == nil, !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true {
-            let held = store.shown.holdings.filter(\.isHeld)
+        if walletShowsAztec {
+            let store = AztecAccountStore.shared
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            Group {
-                if held.isEmpty {
-                    aztecRow(title: String(localized: "Your Aztec account"),
-                             line: store.shown.address.map { AddressTail.short($0) } ?? "",
-                             figure: String(localized: "Nothing yet"), mark: nil, tone: DS.textSecondary)
-                } else {
-                    ForEach(held) { holding in
-                        aztecRow(title: holding.name,
-                                 line: (holding.privateUnits.flatMap { Decimal(string: $0) } ?? 0) > 0
-                                     ? String(localized: "Private on Aztec") : String(localized: "Public on Aztec"),
-                                 figure: mask ?? store.usd(holding).map(WalletValue.money) ?? Self.aztecFigure(holding),
-                                 mark: holding.name, tone: DS.textPrimary)
-                    }
-                }
+            ForEach(store.privateHeld) { holding in
+                aztecRow(title: holding.name, line: String(localized: "Private on Aztec"),
+                         figure: mask ?? store.usd(holding, units: holding.privateUnits).map(WalletValue.money)
+                             ?? Self.aztecFigure(holding, units: holding.privateUnits),
+                         mark: holding.name, tone: DS.textPrimary)
             }
-            .task(id: store.shown.address) {
-                _ = await store.walletHolding() // the rows' prices (the demo's are its own)
-                // Never in the demo: its account is sample data, no engine runs.
-                guard !DemoMode.isActive else { return }
-                let stale = store.snapshot.readAt.map { Date().timeIntervalSince($0) > Self.aztecReadInterval } ?? true
-                if stale, AztecProver.isAvailable {
-                    await store.refresh()
-                    _ = await store.walletHolding()
-                }
+            .background { aztecReading }
+        }
+    }
+
+    /// **PUBLIC ON AZTEC, UNDER TOKENS.** Fee Juice first: AZTEC made gas,
+    /// public on Aztec by design, wearing AZTEC's mark ("it should be the
+    /// Aztec token"), its amount alone and never in dollars or the total —
+    /// it can be spent only on fees and goes nowhere else (user: "ok" to
+    /// that). Then any token held in the open, in dollars where priced.
+    @ViewBuilder
+    var walletAztecPublicRows: some View {
+        if walletShowsAztec {
+            let store = AztecAccountStore.shared
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            ForEach(store.publicHeld) { holding in
+                let gas = holding.kind == .feeJuice
+                aztecRow(title: holding.name,
+                         line: gas ? String(localized: "Gas on Aztec") : String(localized: "Public on Aztec"),
+                         figure: mask ?? (gas ? nil : store.usd(holding, units: holding.publicUnits).map(WalletValue.money))
+                             ?? Self.aztecFigure(holding, units: holding.publicUnits),
+                         // Grey, as every Tokens row's figure is.
+                         mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary)
+            }
+            .background { aztecReading }
+        }
+    }
+
+    /// The account read again when its last reading is old (never in the
+    /// demo, whose account is sample data), and the rows' prices.
+    private var aztecReading: some View {
+        let store = AztecAccountStore.shared
+        return Color.clear.task(id: store.shown.address) {
+            _ = await store.walletHolding() // the demo's prices are its own
+            guard !DemoMode.isActive else { return }
+            let stale = store.snapshot.readAt.map { Date().timeIntervalSince($0) > Self.aztecReadInterval } ?? true
+            if stale, AztecProver.isAvailable {
+                await store.refresh()
+                _ = await store.walletHolding()
             }
         }
     }
 
-    /// The amount, or the token's name alone when its decimals are unknown —
-    /// never a guessed number.
-    static func aztecFigure(_ holding: AztecAccountStore.Holding) -> String {
+    /// The amount alone, at most two places (the row's title already names
+    /// the token; user, 2026-11-04: "it shouldn't say it where the balance of
+    /// it is. i also don't like all the decimals"): "28.54". Less than a
+    /// hundredth keeps the places it needs to show something ("0.0042").
+    /// The token's name alone when its decimals are unknown, never a guess.
+    static func aztecFigure(_ holding: AztecAccountStore.Holding, units: String?) -> String {
         guard let decimals = holding.decimals else { return holding.name }
-        let units = [holding.privateUnits, holding.publicUnits]
-            .compactMap { $0.flatMap { Decimal(string: $0) } }.reduce(0, +)
-        return PrivateMoney.figure("\(units)", decimals: decimals, symbol: holding.name)
+        let amount = (units.flatMap { Decimal(string: $0) } ?? 0) / pow(10, decimals)
+        if amount > 0, amount < Decimal(string: "0.01")! {
+            return amount.formatted(.number.precision(.significantDigits(1...2)))
+        }
+        return amount.formatted(.number.precision(.fractionLength(0...2)))
     }
 
     /// Holdings' row anatomy (`walletPrivateRow`), with no act: nothing opens
@@ -76,7 +110,7 @@ extension FeedScreen {
                 HStack(spacing: DS.Space.s1) {
                     // The holder's mark before the line (§1685), unless the
                     // row's lead is already Aztec's own mark.
-                    if mark != nil { ProtocolInlineMark(mark: "aztec") }
+                    if let mark, mark.lowercased() != "aztec" { ProtocolInlineMark(mark: "aztec") }
                     Text(verbatim: line)
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)

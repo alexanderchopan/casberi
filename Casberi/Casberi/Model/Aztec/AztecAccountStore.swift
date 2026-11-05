@@ -158,9 +158,30 @@ final class AztecAccountStore {
 
     /// A holding's worth in dollars, or nil when it has no price.
     func usd(_ holding: Holding) -> Double? {
+        guard let amount = holding.amount else { return nil }
+        return usd(holding, amount: amount)
+    }
+
+    /// The worth of one side of a holding (its private or its public part).
+    func usd(_ holding: Holding, units: String?) -> Double? {
+        guard let decimals = holding.decimals, let units = units.flatMap({ Decimal(string: $0) }), units > 0 else { return nil }
+        return usd(holding, amount: units / pow(10, decimals))
+    }
+
+    private func usd(_ holding: Holding, amount: Decimal) -> Double? {
         guard holding.kind == .token, let coin = Self.priced[holding.address.lowercased()],
-              let price = prices[coin], let amount = holding.amount else { return nil }
+              let price = prices[coin] else { return nil }
         return NSDecimalNumber(decimal: amount).doubleValue * price
+    }
+
+    /// What is private on Aztec, and what is public there (Fee Juice is
+    /// always public: Aztec keeps gas balances in the open, by design).
+    var privateHeld: [Holding] {
+        shown.holdings.filter { h in h.kind == .token && (h.privateUnits.flatMap { Decimal(string: $0) } ?? 0) > 0 }
+    }
+    var publicHeld: [Holding] {
+        shown.holdings.filter { h in (h.publicUnits.flatMap { Decimal(string: $0) } ?? 0) > 0 }
+            .sorted { a, _ in a.kind == .feeJuice }
     }
 
     /// **AZTEC COUNTS IN THE WALLET** as private money does
@@ -241,8 +262,14 @@ final class AztecAccountStore {
     }
 
     /// Reads the engine's holdings and keeps them; a failed read keeps the last.
+    /// One read at a time: Holdings' Private and Tokens both ask.
+    private var reading = false
+
     @discardableResult
     func refresh() async -> Bool {
+        guard !reading else { return false }
+        reading = true
+        defer { reading = false }
         do {
             let address = try await AztecEngine.shared.accountAddress()
             guard let rows = try await AztecEngine.shared.call("holdings") as? [[String: Any]] else { return false }

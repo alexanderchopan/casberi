@@ -446,6 +446,9 @@ extension FeedScreen {
                 walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)), mask: mask) { token in
                     walletOpenToken(token)
                 }
+                // What your Aztec account holds in the open: its gas, first
+                // (prd §1700e). Never in the figure above.
+                walletAztecPublicRows
                 if tokens.count > Self.holdingsPreviewCount || anyHidden {
                     DSMoreRow(title: Text("See all \(tokens.count) tokens")) { feedSheet = .walletTokens }
                         .walletListRow()

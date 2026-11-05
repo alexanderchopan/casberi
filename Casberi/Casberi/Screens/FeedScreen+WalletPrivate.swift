@@ -33,8 +33,9 @@ extension FeedScreen {
             Group {
                 // Your Aztec account's rows stand under this head on All and
                 // Yours (`walletAztecRows`), so its figure adds them (prd §1700e).
-                let aztec = selectedSeat == nil && AztecAccountStore.shared.isShown
-                    ? AztecAccountStore.shared.shown.holdings.compactMap(AztecAccountStore.shared.usd).reduce(0, +) : 0
+                let aztecStore = AztecAccountStore.shared
+                let aztec = selectedSeat == nil && aztecStore.isShown
+                    ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
                 walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, plus: aztec))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
