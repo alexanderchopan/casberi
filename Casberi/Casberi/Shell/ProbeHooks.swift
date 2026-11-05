@@ -4809,8 +4809,9 @@ enum ProbeHooks {
                 NSLog("[Casberi] nymis| sample | %@", NymisScan.key(address))
             }
         },
-        // `-nymisScan <0x…>` — the Scan control's own path, headless: loads
-        // Nymis's page, follows the scan, logs `nymis| <address> | read|failed`.
+        // `-nymisScan <0x…>` — the Scan control's own path, headless: asks
+        // Nymis's API, follows the scan, logs `nymis| <address> | read|failed`
+        // (or `nymis| busy | until …`). The scan token is never logged.
         Hook(key: "nymisScan") { address, _ in
             Task { @MainActor in NymisScans.shared.scan(address) }
         },

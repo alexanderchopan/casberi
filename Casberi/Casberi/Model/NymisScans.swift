@@ -1,58 +1,77 @@
 import Foundation
 import Observation
-import UIKit
-import WebKit
 
-/// **THE SCANS AND WHAT THEY READ (prd §1701).** `NymisScan` is the shape;
-/// this is the clock and the shelf: a tap starts a scan, a short poll follows
-/// it while the app is open, and the reading is kept on this phone (Nymis's
-/// report expires in 30 minutes). Device-only, never synced: what a scan
-/// says about an address is the person's to keep.
+/// **THE SCANS AND WHAT THEY READ (prd §1701, §1701a).** `NymisScan` is the
+/// shape; this is the clock and the shelf: a tap asks Nymis's API for a scan,
+/// a poll follows it while the app is open, and the reading is kept on this
+/// phone (Nymis keeps a result 30 minutes). Device-only, never synced: what a
+/// scan says about an address is the person's to keep.
+///
+/// One scan at a time: Nymis runs one public scan at once, so a second tap
+/// waits for the first rather than earning a refusal. A refusal (429) says
+/// when to try again, and the row says that time.
+///
+/// The scan token lives in memory only, never on disk or in a log. A scan a
+/// past launch started is picked up by asking again with the SAME
+/// idempotency key, which Nymis answers with the same scan for 30 minutes.
 ///
 /// Nothing here starts a scan on its own. `scan(_:)` is called from the
 /// Scan control and the `-nymisScan` probe, nowhere else
 /// (`nymis-selftest.sh` holds that).
 @MainActor @Observable
-final class NymisScans: NSObject {
+final class NymisScans {
     static let shared = NymisScans()
 
     enum State: Equatable {
         case none
-        /// Started; Nymis's stage in words once it says one.
-        case scanning(String?)
+        /// Asked for; `waiting` while another scan runs first.
+        case scanning(waiting: Bool)
         case done(NymisScan.Reading)
+        /// Nymis said to wait until this time; the reading before, if any,
+        /// still stands.
+        case busy(Date, NymisScan.Reading?)
         /// The last scan failed; the reading before it, if any, still stands.
         case failed(NymisScan.Reading?)
     }
 
     private(set) var readings: [String: NymisScan.Reading] = [:]
-    /// Address key → when the scan was asked for, and Nymis's stage words.
+    /// Address key → the scan asked for.
     private(set) var running: [String: Running] = [:]
     private(set) var failed: Set<String> = []
+    /// Nymis's limits are its own, for every address: past a 429 nothing is
+    /// asked before this time.
+    private(set) var busyUntil: Date?
+    /// The addresses whose tap met that refusal.
+    private(set) var busy: Set<String> = []
 
     struct Running: Codable, Equatable {
         let started: Date
-        var stage: String?
+        /// One UUIDv4 per scan the person asked for, reused for every retry.
+        let idempotencyKey: String
+        var scanID: String?
     }
 
-    @ObservationIgnored private var pages: [String: WKWebView] = [:]
+    /// Address key → scan token. Memory only (Nymis: keep it out of logs,
+    /// crash reports and analytics).
+    @ObservationIgnored private var tokens: [String: String] = [:]
     @ObservationIgnored private var poll: Task<Void, Never>?
 
-    static let readingsKey = "nymis.readings.v1"
-    static let runningKey = "nymis.running.v1"
-    /// Nymis says 1–3 minutes; a busy address measured 4½. Past this a scan
-    /// that never finished is called failed rather than polled forever.
+    static let readingsKey = "nymis.readings.v2"
+    /// v1 held the scraped page's shape (§1701 item 5), which no longer decodes.
+    static let retiredKeys = ["nymis.readings.v1", "nymis.running.v1"]
+    static let runningKey = "nymis.running.v2"
+    /// Past this a scan that never finished is called failed rather than
+    /// polled forever; under Nymis's 30-minute reuse window, so asking again
+    /// with the same key always reattaches.
     static let giveUp: TimeInterval = 15 * 60
-    /// A scan asked for that Nymis has not registered yet (status null).
-    static let registerWindow: TimeInterval = 90
-    static let pollEvery: Duration = .seconds(8)
-    /// How long Nymis serves a finished report (their word: 30 minutes),
-    /// less a margin.
-    static let reportLife: TimeInterval = 25 * 60
+    /// Nymis: poll every 10–15 seconds.
+    static let pollEvery: Duration = .seconds(12)
 
-    private override init() {
-        super.init()
+    private init() {
         let defaults = UserDefaults.standard
+        for key in Self.retiredKeys where defaults.object(forKey: key) != nil {
+            DefaultsWrite.remove(key)
+        }
         if let data = defaults.data(forKey: Self.readingsKey),
            let saved = try? JSONDecoder().decode([String: NymisScan.Reading].self, from: data) {
             readings = saved
@@ -65,7 +84,8 @@ final class NymisScans: NSObject {
 
     func state(_ address: String) -> State {
         let key = NymisScan.key(address)
-        if let run = running[key] { return .scanning(run.stage) }
+        if running[key] != nil { return .scanning(waiting: isWaiting(key)) }
+        if busy.contains(key), let until = busyUntil, until > .now { return .busy(until, readings[key]) }
         if failed.contains(key) { return .failed(readings[key]) }
         if let reading = readings[key] { return .done(reading) }
         return .none
@@ -73,54 +93,20 @@ final class NymisScans: NSObject {
 
     func reading(_ address: String) -> NymisScan.Reading? { readings[NymisScan.key(address)] }
 
-    /// The Scan control: load Nymis's page the way a visitor's browser does,
-    /// which starts the scan, then follow it.
+    /// The Scan control: ask Nymis for a scan of this address and follow it.
     func scan(_ address: String) {
-        guard let url = NymisScan.analyzeURL(address) else { return }
+        guard NymisScan.isEVMAddress(address) else { return }
         let key = NymisScan.key(address)
         guard running[key] == nil else { return }
         failed.remove(key)
-        running[key] = Running(started: .now, stage: nil)
-        saveRunning()
-        let config = WKWebViewConfiguration()
-        // Nothing the page sets is kept: no cookies, no storage.
-        config.websiteDataStore = .nonPersistent()
-        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 844), configuration: config)
-        view.isHidden = true
-        pages[key] = view
-        NetworkLedger.shared.record(url)
-        Task {
-            // Only nymis.io loads: the page's third-party scripts (its
-            // analytics, measured: cloud.umami.is) are blocked, so no
-            // undisclosed host ever sees the address in the page's URL.
-            if let rules = await Self.firstPartyOnly() {
-                config.userContentController.add(rules)
-            }
-            guard pages[key] === view else { return }
-            // WebKit throttles a view in no window (§1700's measurement), so
-            // the page rides the app's window, hidden, while it works.
-            Self.attachToWindow(view)
-            view.load(URLRequest(url: url))
+        if let until = busyUntil, until > .now {
+            busy.insert(key)
+            return
         }
+        busy.remove(key)
+        running[key] = Running(started: .now, idempotencyKey: UUID().uuidString.lowercased())
+        saveRunning()
         follow()
-    }
-
-    @ObservationIgnored private static var rules: WKContentRuleList?
-
-    private static func firstPartyOnly() async -> WKContentRuleList? {
-        if let rules { return rules }
-        let json = #"[{"trigger":{"url-filter":".*","load-type":["third-party"]},"action":{"type":"block"}}]"#
-        let compiled = try? await WKContentRuleListStore.default()
-            .compileContentRuleList(forIdentifier: "nymis.firstPartyOnly", encodedContentRuleList: json)
-        rules = compiled
-        return compiled
-    }
-
-    private static func attachToWindow(_ view: WKWebView) {
-        guard view.window == nil else { return }
-        let windows = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
-        (windows.first { $0.isKeyWindow } ?? windows.first)?.addSubview(view)
     }
 
     /// Picks up scans a past launch started, when Threats is on screen.
@@ -132,65 +118,91 @@ final class NymisScans: NSObject {
         let key = NymisScan.key(address)
         readings[key] = nil
         failed.remove(key)
+        busy.remove(key)
         saveReadings()
+    }
+
+    /// The scan that goes next: the one Nymis is running, else the oldest
+    /// asked for.
+    private var current: String? {
+        running.first { $0.value.scanID != nil }?.key
+            ?? running.min { $0.value.started < $1.value.started }?.key
+    }
+
+    private func isWaiting(_ key: String) -> Bool {
+        guard let current else { return false }
+        return current != key
     }
 
     private func follow() {
         guard poll == nil else { return }
         poll = Task { [weak self] in
             while let self, !self.running.isEmpty, !Task.isCancelled {
-                await self.round()
-                try? await Task.sleep(for: Self.pollEvery)
+                // A scan just asked for is polled after Nymis's interval; one
+                // that just ended lets the next one in line ask at once.
+                if let wait = await self.round() { try? await Task.sleep(for: wait) }
             }
             self?.poll = nil
         }
     }
 
-    private func round() async {
-        for (key, run) in running {
-            guard let url = NymisScan.progressURL(key),
-                  let json = await IngestSupport.getJSON(url),
-                  let progress = NymisScan.progress(json: json) else {
-                if Date.now.timeIntervalSince(run.started) > Self.giveUp { finish(key, nil) }
-                continue
-            }
-            switch progress.status {
-            case .running:
-                // The page has done its one job once Nymis is running.
-                dropPage(key)
-                let words = NymisScan.stageWords(progress.stage)
-                if running[key]?.stage != words { running[key]?.stage = words; saveRunning() }
-                if Date.now.timeIntervalSince(run.started) > Self.giveUp { finish(key, nil) }
-            case .completed:
-                // A completed scan from before this tap is the last one, not
-                // this one: wait for ours to register.
-                // A recent one is still served whole (Nymis keeps a report 30
-                // minutes, and opening the page then starts nothing new), so
-                // it is read rather than waited out.
-                if let done = progress.completedAt, done < run.started.addingTimeInterval(-5),
-                   Date.now.timeIntervalSince(done) > Self.reportLife {
-                    if Date.now.timeIntervalSince(run.started) > Self.registerWindow { finish(key, nil) }
-                    continue
-                }
-                dropPage(key)
-                guard let id = progress.scanID, let report = NymisScan.reportURL(scanID: id),
-                      let html = await IngestSupport.getText(report) else { finish(key, nil); continue }
-                let when = progress.completedAt ?? .now
-                let reading = await Task.detached(priority: .utility) {
-                    NymisScan.reading(fromReportHTML: html, address: key, scannedAt: when)
-                }.value
-                finish(key, reading)
-            case .failed:
-                finish(key, nil)
-            case .none:
-                if Date.now.timeIntervalSince(run.started) > Self.registerWindow { finish(key, nil) }
-            }
+    /// One request for the current scan; how long to wait before the next.
+    private func round() async -> Duration? {
+        guard let key = current, let run = running[key] else { return nil }
+        if Date.now.timeIntervalSince(run.started) > Self.giveUp {
+            finish(key, nil)
+            return nil
+        }
+        let polling = run.scanID != nil && tokens[key] != nil
+        let request: URLRequest?
+        if let id = run.scanID, let token = tokens[key] {
+            request = NymisScan.pollRequest(scanID: id, token: token)
+        } else {
+            // First ask, or a scan a past launch started (its token was never
+            // kept): the same key reattaches to the same scan.
+            request = NymisScan.createRequest(address: key, idempotencyKey: run.idempotencyKey)
+        }
+        guard let request else { finish(key, nil); return nil }
+        let reply = await IngestSupport.sendRequest(request)
+        let answer = NymisScan.answer(status: reply?.1.statusCode ?? 0,
+                                      retryAfter: reply?.1.value(forHTTPHeaderField: "Retry-After"),
+                                      body: reply?.0, address: key, now: .now)
+        guard running[key] != nil else { return nil }
+        switch answer {
+        case .processing(let id, let token):
+            // A create reply must hand both, or there is nothing to poll.
+            if !polling, id == nil || token == nil { finish(key, nil); return nil }
+            if let token { tokens[key] = token }
+            if let id, running[key]?.scanID != id { running[key]?.scanID = id; saveRunning() }
+            return Self.pollEvery
+        case .read(let reading):
+            finish(key, reading)
+            return nil
+        case .busy(let until) where polling:
+            // A scan Nymis is already running is not dropped for a poll
+            // limit: the next poll waits until Nymis says.
+            return .seconds(max(until.timeIntervalSinceNow, 1))
+        case .busy(let until):
+            busyUntil = until
+            // Every scan in line meets the same limit.
+            for waiting in running.keys { busy.insert(waiting); tokens[waiting] = nil }
+            running.removeAll()
+            saveRunning()
+            #if DEBUG
+            NSLog("nymis| busy | until %@", until.formatted(.iso8601))
+            #endif
+            return nil
+        case .retry:
+            return Self.pollEvery
+        case .failed:
+            finish(key, nil)
+            return nil
         }
     }
 
     private func finish(_ key: String, _ reading: NymisScan.Reading?) {
-        dropPage(key)
         running[key] = nil
+        tokens[key] = nil
         saveRunning()
         if let reading {
             readings[key] = reading
@@ -204,12 +216,6 @@ final class NymisScans: NSObject {
         NSLog("nymis| %@ | %@ | %@", key, reading == nil ? "failed" : "read",
               reading.flatMap(NymisScan.rowLine) ?? "-")
         #endif
-    }
-
-    private func dropPage(_ key: String) {
-        guard let view = pages.removeValue(forKey: key) else { return }
-        view.stopLoading()
-        view.removeFromSuperview()
     }
 
     private func saveReadings() {
@@ -229,12 +235,22 @@ final class NymisScans: NSObject {
         let key = NymisScan.key(address)
         readings[key] = NymisScan.Reading(
             address: key,
-            summary: "This address is publicly linked to @quillmark, with identity profiles across X/Twitter and ENS. Inbound activity from Coinbase creates a KYC-adjacent attribution point. Two strongly related addresses show sustained activity across several months.",
-            gives: ["related addresses", "exchanges", "identity"],
-            findings: [.init(label: "Related addresses", value: "4, 1 named"),
-                       .init(label: "Exchanges", value: "Coinbase"),
-                       .init(label: "Identity", value: "X, ENS"),
-                       .init(label: "Active", value: "Mar 2022 to Nov 2026")],
+            groups: [
+                .init(name: "Identity", findings: [
+                    .init(id: "sample-ens", title: "Linked to an ENS name", severity: "high",
+                          explanation: "The address resolves to quillmark.eth, which names a public profile on X."),
+                ]),
+                .init(name: "Financial", findings: [
+                    .init(id: "sample-cex", title: "Funded from Coinbase", severity: "medium",
+                          explanation: "Inbound transfers from Coinbase tie the address to an account that passed identity checks."),
+                    .init(id: "sample-related", title: "Related addresses", severity: "medium",
+                          explanation: "Two addresses send to and receive from this one on a repeating pattern."),
+                ]),
+                .init(name: "Behavioral", findings: [
+                    .init(id: "sample-hours", title: "Active at the same hours", severity: "low",
+                          explanation: "Most transactions land between 8 and 11 in the evening, Central European time."),
+                ]),
+            ],
             partial: true, scannedAt: .now.addingTimeInterval(-3600))
         saveReadings()
     }

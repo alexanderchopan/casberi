@@ -126518,6 +126518,34 @@
         }
       }
     },
+    "Nothing found" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se encontró nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "何も見つかりませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "찾은 항목 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未发现任何内容"
+          }
+        }
+      }
+    },
     "Nothing from %@ today — the first quiet day since %@." : {
       "localizations" : {
         "en" : {
@@ -126576,34 +126604,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这条链上还没有来自此地址的任何内容。"
-          }
-        }
-      }
-    },
-    "Nothing gives it away" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nada lo delata"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "手がかりになるものはありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "드러내는 것이 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "没有任何暴露"
           }
         }
       }
@@ -131320,6 +131320,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Nymis 无法读取此地址的全部活动，因此可能缺少部分关联。"
+          }
+        }
+      }
+    },
+    "Nymis found nothing that gives this address away, which doesn't prove nothing does." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis no encontró nada que delate esta dirección, lo que no demuestra que no haya nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis はこのアドレスを特定する手がかりを見つけませんでしたが、何もないことの証明にはなりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis가 이 주소를 드러내는 것을 찾지 못했지만, 아무것도 없다는 증거는 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis 没有发现会暴露此地址的内容，但这不能证明没有。"
+          }
+        }
+      }
+    },
+    "Nymis is busy until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis está ocupado hasta las %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis は %@ まで混み合っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis가 %@까지 바쁩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis 繁忙，请于 %@ 后再试"
           }
         }
       }
@@ -162822,30 +162878,58 @@
         }
       }
     },
-    "Scanning sends the address to Nymis." : {
+    "Scanning" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Analizar envía la dirección a Nymis."
+            "value" : "Analizando"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "スキャンするとアドレスが Nymis に送信されます。"
+            "value" : "スキャン中"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "스캔하면 주소가 Nymis로 전송됩니다."
+            "value" : "스캔 중"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "扫描会将地址发送给 Nymis。"
+            "value" : "正在扫描"
+          }
+        }
+      }
+    },
+    "Scanning sends the address to Nymis, which looks it up with blockchain providers and search services." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Analizar envía la dirección a Nymis, que la consulta con proveedores de blockchain y servicios de búsqueda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャンするとアドレスが Nymis に送信され、Nymis はブロックチェーンのプロバイダと検索サービスで照会します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔하면 주소가 Nymis로 전송되며, Nymis는 블록체인 제공업체와 검색 서비스로 이를 조회합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "扫描会将地址发送给 Nymis，Nymis 会通过区块链服务商和搜索服务查询它。"
           }
         }
       }
@@ -175981,34 +176065,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "开始、续订、取消和恢复"
-          }
-        }
-      }
-    },
-    "Starting" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Iniciando"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "開始中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "시작 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在开始"
           }
         }
       }
@@ -199717,6 +199773,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待区块 · 剩余 %@"
+          }
+        }
+      }
+    },
+    "Waiting for another scan" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a otro análisis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のスキャンを待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 스캔을 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待另一次扫描"
           }
         }
       }
@@ -242710,6 +242794,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "明天"
+          }
+        }
+      }
+    },
+    "tomorrow, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "mañana, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "明日 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내일 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "明天 %@"
           }
         }
       }
