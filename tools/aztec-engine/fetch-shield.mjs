@@ -20,6 +20,7 @@ const ORIGIN = 'https://shield.human.tech';
 export const PINS = {
   bridge: { module: '40417', class: '0x28fe903cd306bbc46fd908cc03989601c32368c4694b508499f18516062fefd3' },
   token: { module: '52811', class: '0x2ff0939914ff64bd3f7979926dbe8cf3332bc2fee55928bf3cc9ca802568ea9f' },
+  proxy: { module: '68897', class: '0x18fa95a66c31125278bf4d07166e30fff3ad7e12b232710bf7e376f36f2d4b8a' },
 };
 
 const force = process.argv.includes('--force');

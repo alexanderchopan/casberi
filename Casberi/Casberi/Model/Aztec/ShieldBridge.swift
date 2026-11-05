@@ -1,60 +1,9 @@
 import Foundation
 
-/// **SHIELD, THE BRIDGE MOVE USES INTO AND OUT OF AZTEC (prd §1700b, §1700d,
-/// §1700e).** Read from Shield's own web app, 2026-11-04 (its API is the site's
-/// own `/api/…`):
-///   - `GET /api/attestation/l1-eligibility?address=` — public: eligible or not,
-///     by which method, sanctioned, the Passport score and its threshold (20).
-///   - `GET /api/auth/nonce`, then a Sign-In-With-Ethereum message from the
-///     Safe (ERC-1271, `YourAccountMessage`) to `POST /api/auth/authenticate` →
-///     a session token.
-///   - `POST /api/attestation/passport` — Shield's signed limit for one move
-///     (`L1_TO_L2`: an Ethereum signature for the portal's deposit; `L2_TO_L1`:
-///     an Aztec one for the bridge's exit). Casberi asks only for the Passport
-///     method, never Proof of Clean Hands (government ID, §1700e item 1).
-/// The deposit is `depositToAztecPrivate(amount, secretHash, cleanHands, passport)`
-/// with `cleanHands` blank, as Shield's own client sends it.
-enum ShieldBridge {
-    static let base = "https://shield.human.tech"
-    /// `NetworkReach` service name.
-    static let service = "Shield bridge"
-
-    struct Asset: Equatable {
-        let symbol: String
-        let decimals: Int
-        /// The token on Ethereum, Shield's portal for it, its bridge on Aztec.
-        let ethToken: String
-        let portal: String
-        let bridge: String
-    }
-
-    static let assets = [
-        Asset(symbol: "USDC", decimals: 6, ethToken: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-              portal: "0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c",
-              bridge: "0x023aafff7595c5698625486a010e385144a4a960d268df8ccb205f9134afd775"),
-        Asset(symbol: "WETH", decimals: 18, ethToken: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-              portal: "0x477a911f76c44a5d3e5e692c59945263f61426c4",
-              bridge: "0x267a10e5463760e88f487a719bd38f09c46ec87260c51b0affc88fd9ff1d9ef4"),
-    ]
-
-    /// `DepositToAztecPrivate(uint256 amount, uint256 fee, bytes32 secretHash, bytes32 key, uint256 index)`
-    static let depositTopic = "0xec915cbb614f4e8d4e71c5f18aa49dbb6e41d25ab75f44560c28ea05916168c3"
-
-    struct Failure: LocalizedError {
-        let message: String
-        var errorDescription: String? { message }
-    }
-
+/// Shield's app half (prd §1700d, §1700e): its API, the Safe's sign-in, the
+/// moves in and out. What it writes and reads is `ShieldWire.swift`.
+extension ShieldBridge {
     // MARK: - Where you stand (public, no sign-in)
-
-    struct Eligibility: Equatable {
-        let eligible: Bool
-        let sanctioned: Bool
-        let score: Double
-        let threshold: Double
-        let maxUSD: Double
-        let reason: String?
-    }
 
     static func eligibility(_ address: String) async -> Eligibility? {
         let url = "\(base)/api/attestation/l1-eligibility?address=\(address)"
@@ -98,38 +47,7 @@ enum ShieldBridge {
         return token
     }
 
-    /// EIP-4361, as the `siwe` library Shield uses writes it.
-    static func siwe(account: String, aztec: String, nonce: String, now: Date) -> String {
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return """
-        shield.human.tech wants you to sign in with your Ethereum account:
-        \(account)
-
-        Sign in to Aztec Bridge to manage your cross-chain operations.
-
-        URI: \(base)
-        Version: 1
-        Chain ID: 1
-        Nonce: \(nonce)
-        Issued At: \(iso.string(from: now))
-        Expiration Time: \(iso.string(from: now.addingTimeInterval(300)))
-        Resources:
-        - \(base)/aztec/address/\(aztec.lowercased())
-        """
-    }
-
     // MARK: - Shield's signed limit
-
-    struct Limit: Equatable {
-        let maxAmount: String
-        let nonce: String
-        let deadline: String
-        /// Hex: an Ethereum signature (deposit) or an Aztec one (exit).
-        let signature: String
-    }
-
-    enum Direction: String { case intoAztec = "L1_TO_L2", outOfAztec = "L2_TO_L1" }
 
     @MainActor
     static func limit(_ direction: Direction, asset: Asset, units: String, account: String, aztec: String) async throws -> Limit {
@@ -138,17 +56,21 @@ enum ShieldBridge {
         if direction == .intoAztec {
             body["amount"] = units; body["tokenSymbol"] = asset.symbol; body["tokenDecimals"] = asset.decimals
         } else {
+            // Shield's client sends only the direction and the two addresses.
             body["bridgeAddress"] = asset.bridge
         }
         let (json, status) = await IngestSupport.requestJSON("\(base)/api/attestation/passport", method: "POST", body: body,
                                                             headers: ["Authorization": "Bearer \(token)"], service: service)
-        guard status == 200, let o = json as? [String: Any],
-              let signature = (direction == .intoAztec ? o["l1Signature"] : o["l2Signature"]) as? String else {
+        let o = json as? [String: Any]
+        let l1 = o?["l1Signature"] as? String
+        let l2 = (o?["l2Signature"] as? [Any])?.compactMap { ($0 as? NSNumber)?.intValue }
+        guard status == 200, let o, direction == .intoAztec ? l1 != nil : (l2?.count == 64 && l2!.allSatisfy { (0...255).contains($0) }) else {
             if status == 401 { session = nil }
             let why = ((json as? [String: Any])?["message"] as? String) ?? ((json as? [String: Any])?["error"] as? String)
             throw Failure(message: why ?? String(localized: "Shield did not give a limit for this move"))
         }
-        return Limit(maxAmount: string(o["maxAmount"]), nonce: string(o["nonce"]), deadline: string(o["deadline"]), signature: signature)
+        return Limit(maxAmount: string(o["maxAmount"]), nonce: string(o["nonce"]), deadline: string(o["deadline"]),
+                     signature: l1 ?? "", aztecSignature: l2)
     }
 
     private static func string(_ any: Any?) -> String {
@@ -157,58 +79,6 @@ enum ShieldBridge {
         return "0"
     }
 
-    // MARK: - The deposit's calldata
-
-    /// `depositToAztecPrivate(uint256, bytes32, (uint256,uint256,uint256,bytes), (uint256,uint256,uint256,bytes))`
-    /// with `cleanHands` blank and `passport` Shield's limit.
-    static func depositCalldata(units: String, secretHash: String, limit: Limit) -> String? {
-        guard let amount = word(decimal: units), let hash = word(hex: secretHash),
-              let max = word(decimal: limit.maxAmount), let nonce = word(decimal: limit.nonce),
-              let deadline = word(decimal: limit.deadline), let sig = bytes(hex: limit.signature) else { return nil }
-        let zero = String(repeating: "0", count: 64)
-        func tuple(_ a: String, _ b: String, _ c: String, _ data: [UInt8]) -> String {
-            let padded = data + [UInt8](repeating: 0, count: (32 - data.count % 32) % 32)
-            return a + b + c + word(int: 4 * 32) + word(int: data.count) + padded.map { String(format: "%02x", $0) }.joined()
-        }
-        let cleanHands = tuple(zero, zero, zero, [])
-        let passport = tuple(max, nonce, deadline, sig)
-        let head = 4 * 32
-        return "0x62470a10" + amount + hash + word(int: head) + word(int: head + cleanHands.count / 2) + cleanHands + passport
-    }
-
-    /// The portal's event in a receipt: (amount after fee, key, leaf index) as text.
-    static func message(in receipt: [String: Any], portal: String) -> (amount: String, key: String, index: String)? {
-        for log in receipt["logs"] as? [[String: Any]] ?? [] {
-            guard (log["address"] as? String)?.lowercased() == portal.lowercased(),
-                  (log["topics"] as? [String])?.first?.lowercased() == depositTopic,
-                  let data = log["data"] as? String, data.count == 2 + 64 * 5 else { continue }
-            let words = stride(from: 2, to: data.count, by: 64).map { i -> String in
-                let a = data.index(data.startIndex, offsetBy: i)
-                return String(data[a..<data.index(a, offsetBy: 64)])
-            }
-            guard let amount = decimal(hex: words[0]), let index = decimal(hex: words[4]) else { return nil }
-            return (amount, "0x" + words[3], index)
-        }
-        return nil
-    }
-
-    // MARK: - Words
-
-    static func word(int: Int) -> String { String(format: "%064lx", int) }
-    static func word(hex: String) -> String? {
-        let body = hex.lowercased().hasPrefix("0x") ? String(hex.dropFirst(2)) : hex
-        guard body.count <= 64, body.allSatisfy(\.isHexDigit) else { return nil }
-        return String(repeating: "0", count: 64 - body.count) + body
-    }
-    static func word(decimal: String) -> String? {
-        SafeABI.word(uint256: decimal).map { $0.map { String(format: "%02x", $0) }.joined() }
-    }
-    static func bytes(hex: String) -> [UInt8]? { SafeABI.hexBytes(hex) }
-    static func decimal(hex: String) -> String? {
-        var value = Decimal(0)
-        for c in hex.lowercased() { guard let d = c.hexDigitValue else { return nil }; value = value * 16 + Decimal(d) }
-        return NSDecimalNumber(decimal: value).stringValue
-    }
 }
 
 // MARK: - Into Aztec
@@ -271,4 +141,100 @@ extension ShieldBridge {
             }
         }
     }
+}
+
+// MARK: - Out of Aztec
+
+extension ShieldBridge {
+    /// Moves `units` of `asset` out of your Aztec account to your Safe: Shield's
+    /// signed limit for this Aztec account (signing in with the Safe), then the
+    /// bridge's exit, proved on this iPhone, which burns the tokens and leaves
+    /// a message for Shield's portal. `finish` withdraws it on Ethereum once
+    /// Aztec's proof is there.
+    @MainActor
+    static func exit(_ asset: Asset, units: String) async throws -> AztecAccountStore.ShieldExit {
+        guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
+        guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
+        guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
+        guard standing.eligible else {
+            throw Failure(message: standing.sanctioned
+                ? String(localized: "Shield will not move money for this account")
+                : String(localized: "Shield needs a Human Passport score of \(Int(standing.threshold)); yours is \(Int(standing.score))"))
+        }
+        let aztec = try await AztecEngine.shared.accountAddress()
+        let limit = try await limit(.outOfAztec, asset: asset, units: units, account: account, aztec: aztec)
+        guard let max = Decimal(string: limit.maxAmount), let want = Decimal(string: units), want <= max else {
+            let most = Decimal(string: limit.maxAmount).map { PrivateMoney.figure(NSDecimalNumber(decimal: $0).stringValue, decimals: asset.decimals, symbol: asset.symbol) }
+            throw Failure(message: most.map { String(localized: "Shield allows up to \($0) at a time") } ?? String(localized: "Shield did not give a limit for this move"))
+        }
+        let passport: [String: Any] = ["maxAmount": limit.maxAmount, "nonce": limit.nonce, "deadline": limit.deadline,
+                                       "signature": limit.aztecSignature ?? []]
+        guard let json = try? JSONSerialization.data(withJSONObject: passport), let text = String(data: json, encoding: .utf8) else {
+            throw Failure(message: String(localized: "This move could not be written"))
+        }
+        try await PrivateRootKey.unlock(reason: String(localized: "Move \(asset.symbol) out of your Aztec account"))
+        guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, account, text]) as? [String: Any],
+              let transaction = out["tx"] as? String, let message = out["message"] as? String else {
+            throw Failure(message: String(localized: "Aztec did not take this move"))
+        }
+        let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: account, transaction: transaction,
+                                                message: message, outbox: out["outbox"] as? String, withdrawal: nil, at: .now)
+        AztecAccountStore.shared.addExit(exit)
+        await AztecAccountStore.shared.refresh()
+        return exit
+    }
+
+    /// Where an exit stands on Ethereum.
+    enum ExitState: Equatable {
+        /// Aztec's proof of its epoch is not on Ethereum yet.
+        case waiting
+        /// Ready: the portal's withdraw calldata.
+        case ready(calldata: String)
+        /// Someone already withdrew it (to the same recipient: nothing else can).
+        case done
+    }
+
+    @MainActor
+    static func state(of exit: AztecAccountStore.ShieldExit) async -> ExitState {
+        guard let w = try? await AztecEngine.shared.call("exitWitness", [exit.transaction, exit.message]) as? [String: Any],
+              let epoch = w["epoch"] as? String, let checkpoints = w["checkpoints"] as? String,
+              let leaf = w["leaf"] as? String, let path = w["path"] as? [String] else { return .waiting }
+        if let outbox = exit.outbox {
+            // Proven on Ethereum yet? (Aztec's node can know the witness first.)
+            guard let e = word(decimal: epoch), let n = word(decimal: checkpoints),
+                  let root = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_call",
+                                                             [["to": outbox, "data": rootDataSelector + e + n], "latest"]) as? String,
+                  let rootWord = word(hex: root), rootWord != String(repeating: "0", count: 64) else { return .waiting }
+            // Already withdrawn? The outbox keys a message by 2^depth + its index.
+            if let leafID = leafID(leaf: leaf, depth: path.count), let id = word(decimal: leafID),
+               let used = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_call",
+                                                          [["to": outbox, "data": consumedSelector + e + id], "latest"]) as? String,
+               decimal(hex: String(used.dropFirst(2))) == "1" {
+                return .done
+            }
+        }
+        guard let data = withdrawCalldata(recipient: exit.recipient, units: exit.amountUnits, epoch: epoch,
+                                          checkpoints: checkpoints, leaf: leaf, path: path) else { return .waiting }
+        return .ready(calldata: data)
+    }
+
+    /// Withdraws one ready exit on Ethereum from your Safe (simulated, Face ID).
+    @MainActor
+    static func finish(_ exit: AztecAccountStore.ShieldExit, stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws {
+        guard let asset = assets.first(where: { $0.symbol == exit.symbol }) else { return }
+        switch await state(of: exit) {
+        case .waiting:
+            throw Failure(message: String(localized: "Aztec's proof is not on Ethereum yet"))
+        case .done:
+            AztecAccountStore.shared.markExitWithdrawn(exit.transaction, withdrawal: "consumed")
+        case .ready(let calldata):
+            let sent = try await YourAccountChain.privateCalls(
+                [(to: asset.portal, data: calldata, value: "0")], on: YourAccountOp.ethereum,
+                reason: String(localized: "Finish moving \(asset.symbol) out of Aztec"), stage: stage)
+            if case .landed(let transaction, _) = sent.outcome {
+                AztecAccountStore.shared.markExitWithdrawn(exit.transaction, withdrawal: transaction ?? "landed")
+            }
+        }
+    }
+
 }

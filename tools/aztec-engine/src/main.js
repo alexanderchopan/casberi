@@ -25,6 +25,11 @@ import { isL1ToL2MessageReady } from '@aztec-labs/aztec.js/messaging';
 import { loadContractArtifact } from '@aztec-labs/aztec.js/abi';
 import shieldTokenJSON from '../shield/token.json';
 import shieldBridgeJSON from '../shield/bridge.json';
+import shieldProxyJSON from '../shield/proxy.json';
+import { EthAddress } from '@aztec-labs/aztec.js/addresses';
+import { TxHash } from '@aztec-labs/aztec.js/tx';
+import { computeL2ToL1MessageHash } from '@aztec-labs/stdlib/hash';
+import { sha256ToField } from '@aztec-labs/foundation/crypto/sha256';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 
@@ -108,20 +113,25 @@ function fieldText(raw) {
 const SHIELD = {
   tokenClass: '0x2ff0939914ff64bd3f7979926dbe8cf3332bc2fee55928bf3cc9ca802568ea9f',
   bridgeClass: '0x28fe903cd306bbc46fd908cc03989601c32368c4694b508499f18516062fefd3',
+  // The minter proxy the bridge burns through on the way out (exit_to_l1_private).
+  proxyClass: '0x18fa95a66c31125278bf4d07166e30fff3ad7e12b232710bf7e376f36f2d4b8a',
   assets: [
     { symbol: 'USDC', decimals: 6, token: '0x30112e52178143b74cf6037d047bbba924f4b0db8aab587a340aacfc6ecb4f38',
-      bridge: '0x023aafff7595c5698625486a010e385144a4a960d268df8ccb205f9134afd775', portal: '0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c' },
+      bridge: '0x023aafff7595c5698625486a010e385144a4a960d268df8ccb205f9134afd775',
+      proxy: '0x05fcce110ae9d190e0808596af79ffb21031a3eaf854cf5c74bac3437e86a5fd', portal: '0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c' },
     { symbol: 'WETH', decimals: 18, token: '0x2a36cedc4f7fa6bd9fbb77ab799737f30d12cd86ffa9d9d63737d51a6e7247fe',
-      bridge: '0x267a10e5463760e88f487a719bd38f09c46ec87260c51b0affc88fd9ff1d9ef4', portal: '0x477a911f76c44a5d3e5e692c59945263f61426c4' },
+      bridge: '0x267a10e5463760e88f487a719bd38f09c46ec87260c51b0affc88fd9ff1d9ef4',
+      proxy: '0x1a90eeb03bbfff70d97e1290376c550fa911c4b0ecbb0a8483516f66f7d05bf3', portal: '0x477a911f76c44a5d3e5e692c59945263f61426c4' },
   ],
 };
 const shieldToken = loadContractArtifact(shieldTokenJSON);
 const shieldBridge = loadContractArtifact(shieldBridgeJSON);
+const shieldProxy = loadContractArtifact(shieldProxyJSON);
 let shieldRegistered = null;
 async function registerShield(wallet) {
   shieldRegistered ??= (async () => {
     for (const asset of SHIELD.assets) {
-      for (const [address, artifact, pin] of [[asset.token, shieldToken, SHIELD.tokenClass], [asset.bridge, shieldBridge, SHIELD.bridgeClass]]) {
+      for (const [address, artifact, pin] of [[asset.token, shieldToken, SHIELD.tokenClass], [asset.bridge, shieldBridge, SHIELD.bridgeClass], [asset.proxy, shieldProxy, SHIELD.proxyClass]]) {
         const at = AztecAddress.fromStringUnsafe(address);
         if ((await wallet.getContractMetadata(at)).instance) continue;
         const instance = await wallet.aztecNode.getContract(at);
@@ -281,6 +291,54 @@ const own = {
       .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
     log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status });
     return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+  },
+  // SHIELD OUT OF AZTEC (prd §1700b, §1700d): read from Shield's own client.
+  // The bridge checks Shield's signed Passport limit (an Aztec signature over
+  // this account), sends a message to the portal on Ethereum and burns the
+  // tokens through its minter proxy, which this account authorises for
+  // exactly this burn. Anyone may finish it on Ethereum (caller_on_l1 zero);
+  // the money goes to `recipient` only.
+  async shieldExit(symbol, units, recipient, passportJSON) {
+    const wallet = await getWallet();
+    await registerShield(wallet);
+    const asset = SHIELD.assets.find(a => a.symbol === symbol);
+    if (!asset) throw new Error(`no ${symbol} on Aztec`);
+    const p = JSON.parse(passportJSON);
+    if (!Array.isArray(p.signature) || p.signature.length !== 64) throw new Error('Shield gave no Aztec signature');
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const amount = BigInt(units);
+    const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
+    const bridge = await Contract.at(AztecAddress.fromStringUnsafe(asset.bridge), shieldBridge, wallet);
+    const nonce = Fr.random();
+    const burn = await token.methods.burn_private(me, amount, nonce).getFunctionCall();
+    const witness = await wallet.createAuthWit(me, { caller: AztecAddress.fromStringUnsafe(asset.proxy), call: burn });
+    const to = EthAddress.fromString(recipient);
+    const exit = bridge.methods.exit_to_l1_private(
+      to, amount, EthAddress.ZERO, nonce,
+      { nonce: 0n, signature: Array(64).fill(0) },
+      { max_amount: BigInt(p.maxAmount), nonce: BigInt(p.nonce), deadline: BigInt(p.deadline), signature: p.signature },
+    ).with({ authWitnesses: [witness] });
+    const { receipt } = await exit.send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
+    const info = await wallet.aztecNode.getNodeInfo();
+    // The message the portal will consume: sha256 of withdraw(address,uint256,address)'s
+    // selector, the recipient, the amount and caller_on_l1 (zero).
+    const content = sha256ToField([Buffer.from('69328dec', 'hex'), to.toBuffer32(), new Fr(amount).toBuffer(), EthAddress.ZERO.toBuffer32()]);
+    const message = computeL2ToL1MessageHash({
+      l2Sender: AztecAddress.fromStringUnsafe(asset.bridge), l1Recipient: EthAddress.fromString(asset.portal), content,
+      rollupVersion: new Fr(BigInt(info.rollupVersion)), chainId: new Fr(BigInt(info.l1ChainId)),
+    });
+    log('shieldExited', { tx: receipt.txHash.toString(), status: receipt.status });
+    return { tx: receipt.txHash.toString(), block: String(receipt.blockNumber ?? ''), message: message.toString(),
+             outbox: info.l1ContractAddresses?.outboxAddress?.toString() ?? null };
+  },
+  // Once the epoch holding the exit is proven on Ethereum: where its message
+  // sits in the outbox, for the portal's withdraw. Null until then.
+  async exitWitness(txHash, message) {
+    const wallet = await getWallet();
+    const w = await wallet.aztecNode.getL2ToL1MembershipWitness(TxHash.fromString(txHash), Fr.fromString(message)).catch(() => undefined);
+    if (!w) return null;
+    return { epoch: String(w.epochNumber), checkpoints: String(w.numCheckpointsInEpoch), leaf: String(w.leafIndex),
+             path: w.siblingPath.toBufferArray().map(b => '0x' + b.toString('hex')) };
   },
   async chain() {
     const c = await (await getWallet()).getChainInfo();

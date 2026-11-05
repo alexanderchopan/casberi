@@ -80,6 +80,23 @@ final class AztecAccountStore {
         var id: UInt64 { nonce }
     }
 
+    /// One move out through Shield (prd §1700b): burnt on Aztec with a
+    /// message to Shield's portal, then withdrawn on Ethereum to `recipient`
+    /// once Aztec's epoch is proven there (an hour or more).
+    struct ShieldExit: Codable, Equatable, Identifiable {
+        let symbol: String
+        let amountUnits: String
+        let recipient: String
+        /// The Aztec transaction and the L2-to-L1 message it sent.
+        let transaction: String
+        let message: String
+        let outbox: String?
+        var withdrawal: String?
+        let at: Date
+        var id: String { transaction }
+        var withdrawn: Bool { withdrawal != nil }
+    }
+
     struct Snapshot: Codable, Equatable {
         var used = false
         var address: String?
@@ -88,6 +105,7 @@ final class AztecAccountStore {
         /// Optional so a reading saved before gas existed still decodes.
         var gas: [GasDeposit]?
         var shield: [ShieldDeposit]?
+        var exits: [ShieldExit]?
     }
 
     private(set) var snapshot: Snapshot
@@ -143,6 +161,17 @@ final class AztecAccountStore {
     func markShieldClaimed(_ nonce: UInt64) {
         guard let i = snapshot.shield?.firstIndex(where: { $0.nonce == nonce }) else { return }
         snapshot.shield?[i].claimed = true
+        save()
+    }
+
+    func addExit(_ exit: ShieldExit) {
+        snapshot.exits = (snapshot.exits ?? []) + [exit]
+        save()
+    }
+
+    func markExitWithdrawn(_ transaction: String, withdrawal: String) {
+        guard let i = snapshot.exits?.firstIndex(where: { $0.transaction == transaction }) else { return }
+        snapshot.exits?[i].withdrawal = withdrawal
         save()
     }
 

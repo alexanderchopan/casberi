@@ -2539,6 +2539,10 @@ harness "zk.money pure-logic self-test" "zkmoney self-test" "scripts/zkmoney-sel
 # refuses anything not on an Aztec testnet, so a mainnet request or a blind hash never
 # reaches Face ID.
 harness "Aztec staking self-test" "aztec staking self-test" "scripts/aztec-stake-selftest.sh" "the Aztec staking self-test failed — run scripts/aztec-stake-selftest.sh"
+# Shield, the bridge into and out of your Aztec account (prd §1700d, §1700e): the portal's
+# deposit and withdraw bytes against viem, the outbox's leaf id, the deposit's event, the
+# exit's proxy authwit and content selector, and Passport only (never Clean Hands' ID).
+harness "Shield bridge self-test" "shield bridge self-test" "scripts/shield-bridge-selftest.sh" "the Shield bridge self-test failed — run scripts/shield-bridge-selftest.sh"
 # zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
 # as yours, an expired one read as open, a router's leg titled as a pool move.
 harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh" "the zFi + Tacit self-test failed — run scripts/zfi-selftest.sh"
