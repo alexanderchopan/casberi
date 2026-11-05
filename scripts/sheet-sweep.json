@@ -316,7 +316,7 @@
    "anchor": "text:=Log in to Acorns",
    "swipe": false,
    "control": "button:=Done",
-   "afterControl": "button:=Acorns settings"
+   "afterControl": "button:^Sign in"
   },
   {
    "id": "rocket-login",
