@@ -63,13 +63,20 @@ for whoever changes the code.
 ## Moving money in and out (Shield, §1700d)
 
 - Shield's Ethereum portals are unverified and its Aztec contracts published only
-  in its web app: a knowing exception. What Casberi checks instead: every address
+  in its web app: a knowing exception. human.tech closed the source in 2026 and
+  says it may reopen it at a stable Aztec release (their reply, 2026-11-05); the
+  addresses Casberi pins match their live `6.0.0_2026-11-02` deployment (checked
+  that day). What Casberi checks instead: every address
   is pinned; on Aztec each contract's class id read from the node must equal the
   class computed from the interface Casberi carries (`fetch-shield.mjs`: bridge,
   token, minter proxy), else it is refused; every Ethereum leg is a Safe operation
   with its simulation and Face ID (and the co-signer); every Aztec leg is proved on
   the phone after the ask.
-- Shield gates both directions with a human.tech signature: Casberi asks for the
+- Shield gates both directions with a human.tech signature, public mode too: under
+  $1,000 a Human Passport score of 20 on the signed-in Ethereum address, above it
+  Proof of Clean Hands. Their verify panel (`id.human.tech`, an iframe) offers only
+  those two; zkEmail and zkPassport are stamps toward the score.
+- The human.tech signature: Casberi asks for the
   Passport method only, never Proof of Clean Hands (government ID). The Safe signs
   Shield's and Human Passport's sign-ins with ERC-1271 (`YourAccountMessage`): a
   20-byte zero validator through the 7579 adapter, both keys at threshold 2.
