@@ -155,7 +155,9 @@ final class SheetSweepTests: XCTestCase {
                 // The keyboard covers the dock and the seat's Back (prd §865),
                 // so a person lowers it first: its return key, as they would.
                 lowerKeyboard(w)
-                let c = Self.element(w, control)
+                // The one a person can reach: a sheet's step draws its own
+                // Back over the covered dock's (prd §1304), same label.
+                let c = Self.element(w, control, hittable: true)
                 if c.waitForExistence(timeout: 6), w.hittable(c, within: 3) {
                     // By coordinate: an element tap that loses its hit test
                     // between the check and the tap ends the whole sweep.
