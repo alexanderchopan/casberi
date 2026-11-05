@@ -41,6 +41,10 @@ ensure_engine() {
   print -u2 "aztec-engine: building the engine page"
   [[ -d $SRC/node_modules ]] || (cd $SRC && npm ci --no-audit --no-fund >/dev/null)
   (cd $SRC && npx vite build >/dev/null)
+  # The page relay: Aztec's content-script half, one classic script the app
+  # adds to an Aztec app's page in an isolated world (AztecBrowser).
+  (cd $SRC && node_modules/.bin/esbuild src/relay.js --bundle --format=iife --target=safari17 \
+     --outfile=../../$ENGINE/relay.js --log-level=warning)
   print $want > $ENGINE/.stamp
 }
 
