@@ -122,7 +122,7 @@ ENTRIES = [
   # Calendar is Day's since prd §1347: its subscribe door is Day's section +.
   dict(id="day-calendar-link", covers=[FS+"calendarSubscribe"], launch=[D, "-openRoom", "Day"], steps=section("Day", "Calendar"), anchor=GRAB, afterSwipe="button:=Add to Day"),
   # The Feed's Reorder tile (prd §1345).
-  dict(id="feed-reorder", covers=[FS+"feedOrder"], launch=[D], steps=[{"wait": 2}, {"tap": "button:^Reorder,"}], anchor="text:=Feed order"),
+  dict(id="feed-reorder", covers=[FS+"feedOrder"], launch=[D], steps=[{"wait": 2}, {"swipeLeftOn": "button:^Day, "}, {"tap": "button:^Reorder,"}], anchor="text:=Feed order"),
   dict(id="person-by-link", covers=[RS+"deepLinkPerson"], launch=[D, "-deeplink", "casberi://person/Bluesky/uma"], steps=[{"wait": 3}], anchor=GRAB, afterSwipe=SEARCH),
   # Find's pivot page: since prd §1326 a thing's From card no longer opens it; the band's Search does.
   dict(id="pivot", covers=[RS+"chrome.pivot"], launch=[D], steps=PIVOT, anchor=GRAB, afterSwipe=SEARCH),

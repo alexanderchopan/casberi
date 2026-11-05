@@ -660,6 +660,9 @@
      "wait": 2
     },
     {
+     "swipeLeftOn": "button:^Day, "
+    },
+    {
      "tap": "button:^Reorder,"
     }
    ],

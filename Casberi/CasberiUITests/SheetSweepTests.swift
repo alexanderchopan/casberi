@@ -229,6 +229,11 @@ final class SheetSweepTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(s))
         } else if let n = step["swipeUp"] as? Int {
             for _ in 0..<n { w.app.swipeUp(velocity: .slow) }
+        } else if let s = step["swipeLeftOn"] as? String {
+            // A horizontal row (the Feed's section tiles, prd §1328) keeps its
+            // last tiles off screen: swipe the row itself, never the page.
+            let e = Self.element(w, s)
+            if e.waitForExistence(timeout: 6) { e.swipeLeft(velocity: .slow) }
         } else if let n = step["swipeDown"] as? Int {
             // Back to the top: a Feed left scrolled by the sheet before puts
             // its tiles under the Demo pill, where XCUITest cannot hit them.
