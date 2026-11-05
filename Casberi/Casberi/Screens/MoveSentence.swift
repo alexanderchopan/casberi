@@ -3247,7 +3247,9 @@ struct MoveSentence: View {
                 .layoutPriority(1)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
+                    // One line, always: a long name shrinks instead.
                     Text(verbatim: trailing).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                        .lineLimit(1).fixedSize()
                 }
             }
             .frame(minHeight: Self.listRowHeight)
@@ -3386,7 +3388,7 @@ struct MoveSentence: View {
             }
             // Your private balance on Aztec, named as 0xBow's is (prd §1700f
             // item 12): your Safe moves money in through Shield.
-            if YourAccountKey.address != nil, AztecProver.isAvailable,
+            if YourAccountKey.address != nil || DemoMode.isActive, AztecProver.isAvailable,
                q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
                 listRow(String(localized: "Your private balance"), sub: String(localized: "Aztec"), symbol: "eye.slash") {
                     goAztec(.deposit)
@@ -3564,12 +3566,14 @@ struct MoveSentence: View {
                         goPrivate(.send)
                     }
                 }
-                if AztecProver.isAvailable, YourAccountKey.address != nil {
+                if AztecProver.isAvailable, YourAccountKey.address != nil || DemoMode.isActive {
                     let aztec = AztecAccountStore.shared
+                    let _ = aztec.prices // read, so the row redraws once they land
                     let held = aztec.isShown ? aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
                     listRow(String(localized: "Aztec · Private"), trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {
                         goAztec(.send, recipient: resolved?.address)
                     }
+                    .task { _ = await aztec.walletHolding() } // its prices
                 }
             }
         }

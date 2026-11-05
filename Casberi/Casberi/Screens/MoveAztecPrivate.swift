@@ -536,7 +536,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var credit: some View {
         HStack(spacing: DS.Space.s1) {
-            Text(move.mode == .send && move.toAztec ? "Powered by Aztec" : "Powered by Shield")
+            // Shield carries money in and out; a send that stays on Aztec is Aztec's alone.
+            Text(move.mode == .send && !move.toEthereum ? "Powered by Aztec" : "Powered by Shield")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
             ProtocolInlineMark(mark: "aztec").accessibilityHidden(true)
         }
