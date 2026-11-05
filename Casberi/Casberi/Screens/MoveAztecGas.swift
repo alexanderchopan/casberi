@@ -29,7 +29,7 @@ struct MoveAztecGasSentence<Head: View>: View {
     @State private var passport = false
     /// Human Passport's app, where your account earns the score Shield asks for.
     private var passportApp: URL { URL(string: "https://app.passport.xyz")! }
-    @State private var amount = "25"
+    @State private var amount = "2"
     @State private var stage: Stage = .ready
     @State private var standing: ShieldBridge.Eligibility?
     private var store: AztecAccountStore { .shared }
@@ -53,7 +53,11 @@ struct MoveAztecGasSentence<Head: View>: View {
         return want <= have
     }
     private var amounts: [String] {
-        switch carry { case .usdc: ["10", "25", "50"]; case .weth: ["0.005", "0.01", "0.025"]; case .gas: ["5", "10", "25"] }
+        // Measured 2026-11-04: an Aztec transaction costs 2.5 to 5 AZTEC
+        // (about $0.04 to $0.07 at $0.015), but Aztec takes one only from an
+        // account that can cover its most (some 15 AZTEC), and a gas claim
+        // pays from what it claims: 30 is the least that works.
+        switch carry { case .usdc: ["1", "2", "10"]; case .weth: ["0.0005", "0.001", "0.005"]; case .gas: ["30", "50", "100"] }
     }
     private var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == carry.rawValue } }
     /// Shield's way needs its eligibility; gas never does.
