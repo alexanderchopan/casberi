@@ -70956,3 +70956,9 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 6. **Nothing scans on its own**: the Scan row, Scan again and the `-nymisScan` probe only (`nymis-selftest.sh`). `nymis.io` is in `NetworkReach` as reached only on a tap.
 
 **Mac half (§1402).** The same section and sheet; WebKit runs the page on Catalyst as on the phone.
+
+## §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uniswap are (amends §1700 item 5's apps and Order step 4) (user, 2026-11-04, of listing Shield in Library: "i don't think we need a shield page, it's just how we move. it is like we don't have an across or uniswap page … it also would be part of move if selecting aztec") — RULED
+
+1. **Into Aztec**: Move's "Send 50 USDC to your Aztec account" (or picking Aztec as the network) is your Safe depositing into the bridge's Ethereum portal — Shield's contracts (human.tech) for USDC and WETH on V6 today, measured 2026-11-04 — and your Aztec account claiming it on Aztec, privately or publicly; one sentence, the Safe's send with Face ID, then the claim proved on the phone.
+2. **Out of Aztec**: Move with Aztec selected, "Send 25 USDC on Aztec to 0x… on Ethereum", is the bridge's exit; inside Aztec, "to …a91c" is a private transfer.
+3. **No Shield page, in Library or anywhere**: Shield is plumbing, named only where Casberi names a protocol that carried a move (§1685, "Powered by …"). Library's Aztec apps are the ecosystem's other apps; which ones it lists is still to be ruled.
