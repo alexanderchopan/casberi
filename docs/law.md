@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1854 of 1926 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1855 of 1927 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1497,7 +1497,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
-- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134, §1136, §1160)
+- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134, §1136, §1160, §1707)
 - §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121, §1126, §1136)
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
@@ -2103,6 +2103,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…
 - §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance
 - §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list…
+- §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is
 
 ## Dead rulings → what replaced them (generated)
 

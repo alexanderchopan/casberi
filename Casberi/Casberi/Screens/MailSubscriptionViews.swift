@@ -276,7 +276,9 @@ struct MailSubscriptionAddTray: View {
         let listed = searching ? Self.matching(reading.items, query: query) : []
         // The find tray's shape (`DSTraySearchField`): the rows, and the
         // field at the bottom on glass.
-        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large], scrollsItself: true) {
+        // Named for what it tracks, as Day's row that opens it is (prd §1707);
+        // the verb is still Track (§1117).
+        DSTray(title: String(localized: "Track a mailing list"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if !listed.isEmpty {

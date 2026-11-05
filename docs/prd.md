@@ -71057,3 +71057,10 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 12. **Send's recipients name both private places alike**: "Your private balance · Ethereum" and "Your private balance · Aztec" (user: "shouldn't it just be your private balance, ethereum, and your private balance aztec?"). In and out of Aztec are Sends as 0xBow's are; Aztec stays out of Swap.
 13. **Aztec's private-balance screen mirrors 0xBow's three states**: ready ("Send 2 USDC to your private balance on Aztec.", one line naming Shield's fee and time, gas riding along when the account needs it), not enough in the Safe ("Fund …ca8d on Ethereum first."), Shield says no ("Shield needs a Human Passport score of 20 first."). No chips, no Passport door. "Check again" fits its foot on both screens.
 14. **From Aztec · Private, the address decides**: an Aztec address is a private send inside Aztec; an Ethereum address, anyone's (user: "if so then yes it should be for yours or anyone's"), is out through Shield, finished from your Needs you.
+
+## §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is (amends §1117's tray title; keeps its one verb) (user, 2026-11-04, asked whether the tray titled "Track a subscription" under Day's new "Track a mailing list" row should match: "ok do it") — RULED, BUILT
+
+1. **Life's mail tray (`MailSubscriptionViews`) is titled "Track a mailing list".** Day's + lists "Track a subscription" and "Track a mailing list" (§1706); both opened trays titled "Track a subscription", so the second read as a wrong tap.
+2. **§1117's verb stands:** Track, never Add. Only the noun names what this tray tracks; mailing lists still stand on Life's Subscriptions tile, §1117's one tile with two measures.
+
+**Mac half (§1402).** The same tray title on Catalyst.
