@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1852 of 1924 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1853 of 1925 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2101,6 +2101,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704, §1705)
 - §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…
 - §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance
+- §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list…
 
 ## Dead rulings → what replaced them (generated)
 

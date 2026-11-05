@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import EventKit
 
 /// **YOUR CALENDARS ARE THE CALENDAR APP'S PAGE (user, 2026-10-30, of where
 /// Library's Calendars count goes once the box is deleted: "Calendar app's
@@ -65,7 +66,10 @@ struct CalendarsPage: View {
         .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
                      ? DSTitleBack(word: String(localized: "Library"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .task { await read() }
+        .task {
+            await read()
+            askIfOnlyWay()
+        }
         // One sheet at a time (prd §1238): inside a sheet it pushes.
         .sheet(isPresented: Binding(get: { subscribing && route.sheet == nil },
                                     set: { subscribing = $0 })) {
@@ -86,6 +90,18 @@ struct CalendarsPage: View {
         if CalendarSubscriptionStore.shared.calendars.contains(where: { $0.lastRead == nil }) {
             await CalendarSubscriptionIngest.refresh(context: context)
         }
+    }
+
+    /// **THE PHONE IS THE ONLY WAY IN, SO THE PAGE ASKS (prd §1706, user:
+    /// "yes do it").** Opening Calendar with nothing read yet — not
+    /// connected, nothing subscribed by link, iOS never asked — means the
+    /// phone's calendars: the system's ask rises as the page lands, the
+    /// "Your phone's calendars" tap it would have taken. Once iOS has
+    /// answered (yes or no), or a link is there, the page stays a page.
+    private func askIfOnlyWay() {
+        guard !connected, CalendarSubscriptionStore.shared.calendars.isEmpty,
+              EKEventStore.authorizationStatus(for: .event) == .notDetermined else { return }
+        connectCalendar()
     }
 
     /// The system's ask, here: Calendar has no page of its own to open.

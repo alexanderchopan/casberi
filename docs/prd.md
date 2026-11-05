@@ -71031,3 +71031,12 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 6. `seat-holdings-selftest.sh` holds the composition: three new mutations (an arrival counted as a shield, the doors netted, a dead row counted).
 
 **Mac half (§1402).** The same view on Catalyst; nothing here is phone-only.
+
+## §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list joins Day's +, and the walks take the home Feed's + (user, 2026-11-04, over the nightly's tap-target table: of calendar "yes do it"; of track subscription "it already is there in the plus on home screen. that's 3. so leave it"; of follow mailing list "we could add a 'track mail list'"; of new note "it's already there. go to notes on home feed, tap new note"; of stop tracking "leave it") — RULED, BUILT
+
+1. **Calendar asks as it lands (`CalendarsPage.askIfOnlyWay`).** Opening Calendar with nothing read yet — Calendar not connected, nothing subscribed by link, iOS never asked (`EKEventStore.authorizationStatus == .notDetermined`) — raises the system's ask as the page lands: the "Your phone's calendars" tap it would have taken. Once iOS has answered, yes or no, or a link is there, the page stays a page with both ways in; a refusal is never asked again by opening it.
+2. **Track a mailing list stands in Day's + (`DayMake.mailingList`)**, under Track a subscription, opening Life's tray of who writes you (`MailSubscriptionAddTray`, §1115, §1117). The tray reads every connected mailbox, so it asks nothing about which; the row shows when a mail account is connected, as Email does.
+3. **The walks follow the home Feed (`JourneyTests`).** Day and Notes are sections of the Feed (§1344, §1347): the subscription, mailing-list and note journeys scroll to the section's + (a scroll, never a tap) instead of taking the tile that scrolls there; a field the tray focuses itself is not counted (`focus`).
+4. Stop tracking stays as it is (five taps), by the user's word.
+
+**Mac half (§1402).** The same + rows and the same page on Catalyst.
