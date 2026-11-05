@@ -28,6 +28,12 @@ final class AztecEngine: NSObject {
     /// The `NetworkReach` service a page request belongs to, or nil when the
     /// engine is not declared to reach its host (it is then refused).
     nonisolated static func service(for url: URL) -> String? {
+        // Your own Aztec node: its address is yours (http on a home network
+        // too), asked directly, never through Tor (§1509 item 5).
+        if let own = OwnNodeStore.aztecNode.flatMap(URL.init(string:)),
+           url.host?.lowercased() == own.host?.lowercased(), url.port == own.port, url.scheme == own.scheme {
+            return OwnNodeStore.service
+        }
         guard url.scheme == "https", url.user == nil, url.password == nil,
               url.port == nil || url.port == 443, let host = url.host?.lowercased() else { return nil }
         for name in [service, parametersService] {
@@ -86,7 +92,10 @@ final class AztecEngine: NSObject {
             view.isHidden = true
             webView = view
             attachToWindow(view)
-            view.load(URLRequest(url: URL(string: AztecEngineServer.origin + "/")!))
+            // Your own Aztec node, when you set one (prd §1700f item 3).
+            var page = URLComponents(string: AztecEngineServer.origin + "/")!
+            if let own = OwnNodeStore.aztecNode { page.queryItems = [URLQueryItem(name: "node", value: own)] }
+            view.load(URLRequest(url: page.url!))
         }
         try await withCheckedThrowingContinuation { readyWaiters.append($0) }
     }

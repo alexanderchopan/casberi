@@ -36,6 +36,26 @@ enum OwnNodeStore {
         return (OwnNode.verdict(expected: chainId, chainId: await chain, block: await block), url)
     }
 
+    /// **AZTEC, ONE MORE NETWORK (prd §1700f item 3).** Kept under the
+    /// rollup's version, Aztec mainnet's identity as a chain id is Ethereum's.
+    static let aztecKey = 2_070_860_440
+    static var aztecNode: String? { settings.address(for: aztecKey) }
+
+    /// An Aztec node's two answers: its rollup version (mainnet's, or
+    /// refused) and its newest block.
+    static func checkAztec(_ text: String) async -> (verdict: OwnNode.Verdict, url: String?) {
+        guard let url = OwnNode.normalized(text) else { return (.notAnAddress, nil) }
+        let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "node_getNodeInfo", "params": []]
+        let (json, _) = await IngestSupport.postJSONBody(url, body: body, service: service)
+        guard let info = (json as? [String: Any])?["result"] as? [String: Any] else { return (.noAnswer, url) }
+        let version = (info["rollupVersion"] as? NSNumber)?.intValue ?? Int(info["rollupVersion"] as? String ?? "") ?? 0
+        guard version == aztecKey else { return (.wrongChain(version), url) }
+        let blockBody: [String: Any] = ["jsonrpc": "2.0", "id": 2, "method": "node_getBlockNumber", "params": []]
+        let (blockJSON, _) = await IngestSupport.postJSONBody(url, body: blockBody, service: service)
+        let block = ((blockJSON as? [String: Any])?["result"] as? NSNumber)?.intValue
+        return (block.map { .answers(chainId: aztecKey, block: $0) } ?? .noAnswer, url)
+    }
+
     private static func ask(_ url: String, _ method: String) async -> String? {
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": method, "params": []]
         let (json, _) = await IngestSupport.postJSONBody(url, body: body, service: service)

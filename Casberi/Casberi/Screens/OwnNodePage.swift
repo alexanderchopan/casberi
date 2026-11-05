@@ -53,11 +53,33 @@ final class OwnNodeModel {
     }
 
     /// Back to Casberi's list for this network.
-    func useList(_ net: YourAccountOp.Network) {
-        settings.nodes[String(net.chainId)] = nil
-        typed[net.chainId] = nil
-        verdicts[net.chainId] = nil
+    func useList(_ net: YourAccountOp.Network) { useList(key: net.chainId) }
+
+    func useList(key: Int) {
+        settings.nodes[String(key)] = nil
+        typed[key] = nil
+        verdicts[key] = nil
         if !demo { OwnNodeStore.save(settings) }
+    }
+
+    /// Aztec's node (prd §1700f item 3): checked for Aztec mainnet first. The
+    /// engine reads it from its next start.
+    func checkAztec() async {
+        let key = OwnNodeStore.aztecKey
+        let text = typed[key] ?? ""
+        guard !checking.contains(key) else { return }
+        if demo {
+            verdicts[key] = OwnNode.normalized(text) == nil ? .notAnAddress : .answers(chainId: key, block: 84_102)
+            return
+        }
+        checking.insert(key)
+        defer { checking.remove(key) }
+        let (verdict, url) = await OwnNodeStore.checkAztec(text)
+        verdicts[key] = verdict
+        if case .answers = verdict, let url {
+            settings.nodes[String(key)] = url
+            OwnNodeStore.save(settings)
+        }
     }
 }
 
@@ -89,17 +111,29 @@ struct OwnNodeRows: View {
                 ForEach(YourAccountOp.networks) { net in
                     network(net).walletListRow()
                 }
+                // Your Aztec account reads Aztec (prd §1700f item 3).
+                if AztecAccountStore.shared.isShown {
+                    block(name: String(localized: "Aztec"), key: OwnNodeStore.aztecKey,
+                          check: { await model.checkAztec() }, useList: { model.useList(key: OwnNodeStore.aztecKey) })
+                        .walletListRow()
+                }
             }
             DSFootnote("Your node sees your address. Tor doesn't hide it from your own node.")
                 .walletListRow()
         }
     }
 
-    @ViewBuilder private func network(_ net: YourAccountOp.Network) -> some View {
+    private func network(_ net: YourAccountOp.Network) -> some View {
+        block(name: net.name, key: net.chainId, check: { await model.check(net) }, useList: { model.useList(net) })
+    }
+
+    /// One network's block: its name, the address, what the check said.
+    @ViewBuilder private func block(name: String, key: Int, check: @escaping () async -> Void,
+                                    useList: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(verbatim: net.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textPrimary)
             TextField(String(localized: "Casberi's list"),
-                      text: Binding(get: { model.typed[net.chainId] ?? "" }, set: { model.typed[net.chainId] = $0 }))
+                      text: Binding(get: { model.typed[key] ?? "" }, set: { model.typed[key] = $0 }))
                 .dsText(.mono17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.pickInk)
@@ -107,15 +141,15 @@ struct OwnNodeRows: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.done)
-                .onSubmit { Task { await model.check(net) } }
+                .onSubmit { Task { await check() } }
                 .frame(minHeight: 44)
-            if model.checking.contains(net.chainId) {
+            if model.checking.contains(key) {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
                     Text("Asking it").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-            } else if let v = model.verdicts[net.chainId] {
-                let said = OwnNode.words(v, network: net.name, expected: net.chainId)
+            } else if let v = model.verdicts[key] {
+                let said = OwnNode.words(v, network: name, expected: key)
                 HStack(alignment: .firstTextBaseline) {
                     Text(said.ok ? "Answers" : "Not used").dsText(.body17).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
@@ -123,13 +157,13 @@ struct OwnNodeRows: View {
                         .multilineTextAlignment(.trailing)
                 }
             }
-            if !(model.typed[net.chainId] ?? "").isEmpty {
+            if !(model.typed[key] ?? "").isEmpty {
                 HStack(spacing: DS.Space.s6) {
-                    Button { Task { await model.check(net) } } label: {
+                    Button { Task { await check() } } label: {
                         Text("Check").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
-                    Button { model.useList(net) } label: {
+                    Button { useList() } label: {
                         Text("Use Casberi's list").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
