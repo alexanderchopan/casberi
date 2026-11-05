@@ -1785,6 +1785,12 @@ harness "SimpleFIN self-test" "SimpleFIN self-test" "scripts/simplefin-selftest.
 # pushes read as half, an unknown progress word read as done, a typed name
 # reaching Nymis's URL, a score drawn, a scan started by anything but a tap.
 harness "Nymis self-test" "Nymis self-test" "scripts/nymis-selftest.sh" "the Nymis self-test failed — run scripts/nymis-selftest.sh"
+# What an app picked holds under Holdings (prd §1703): ENS's names, the
+# cards CardPointers tracks, Privacy.com's limits, MetaMask Card's "Can
+# spend", ether.fi's Cash accounts and Peer's escrow — an unregistered name,
+# a closed card, an allowance taken for a balance or an unpriced token
+# stated as dollars each read as a good-looking page.
+harness "Seat holdings self-test" "seat holdings" "scripts/seat-holdings-selftest.sh" "the seat-holdings self-test failed — run scripts/seat-holdings-selftest.sh"
 # Bankr's key, made in the app (prd §800) — the request asks for Agent API
 # and read-only and nothing else, a key that comes back wider is never
 # stored (an ABSENT flag included), and the sign-in's jar never outlives the

@@ -31,6 +31,16 @@ enum WalletCash {
         Held(currency: "BTC", amount: 0.00214, holderID: holderPrefix + "lightning", label: "Lightning"),
         Held(currency: "USD", amount: 86.50, holderID: holderPrefix + "applewallet:Apple Cash", label: "Apple Cash"),
         Held(currency: "USD", amount: 2_410.18, holderID: holderPrefix + "applewallet:Savings", label: "Savings"),
+        // SimpleFIN's two bank accounts (prd §1663), under the holder its
+        // own read puts them, beside the demo's rows from the same bank
+        // (Chase, prd §1702; connection "demo"). Its Sapphire is a card: a
+        // card's balance is owed, never held, so it is not here.
+        Held(currency: "USD", amount: 4_812.37,
+             holderID: SimpleFINShape.holderID(conn: "demo", account: "checking"),
+             label: "Chase · Total Checking"),
+        Held(currency: "USD", amount: 12_640.00,
+             holderID: SimpleFINShape.holderID(conn: "demo", account: "savings"),
+             label: "Chase · Savings"),
     ]
 
     /// The demo's bitcoin price, beside `demoRates`' fiat (it reaches nothing, §483).

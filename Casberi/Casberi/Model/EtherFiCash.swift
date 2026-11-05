@@ -223,6 +223,14 @@ enum EtherFiCash {
             guard let account = await fetchAccount(safe: address) else { continue }
             book.accounts.append(account)
         }
+        // Its pick's Holdings (prd §1703): each account's collateral and what
+        // it can still borrow. The collateral sits in the safe you watch,
+        // already in the Wallet's number, so this is never counted.
+        if reached {
+            SeatHoldingsStore.keep(SeatHoldings.etherFi(book.accounts.map {
+                (safe: $0.safe, collateralUSD: $0.collateralUSD, remainingUSD: $0.remainingUSD)
+            }), .etherFi)
+        }
         return reached ? book : nil
     }
 

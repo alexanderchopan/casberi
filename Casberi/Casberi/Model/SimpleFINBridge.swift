@@ -109,6 +109,12 @@ enum SimpleFINLogos {
     /// on screen trades SimpleFIN's for the bank's.
     static let arrived = Notification.Name("SimpleFINLogos.arrived")
 
+    /// The demo's one bank connection (`DemoSeedAll`'s SimpleFIN rows,
+    /// `WalletCash.demoHeld`).
+    static let demoConnID = "demo"
+    /// Chase Mobile's App Store icon, bundled once (prd §1702).
+    static let demoBankMark = "brand-chase"
+
     /// Smaller than this draws as a smear at a row's size.
     static let minimumSide = 32
     /// A bank whose site had none is asked again after this.
@@ -136,6 +142,12 @@ enum SimpleFINLogos {
     /// The bank's icon, or nil. Reads a small file once, then memory; call it
     /// from a `.task`, never a body.
     static func image(connID: String) -> UIImage? {
+        // The demo's bank is Chase, its mark bundled (the demo reaches
+        // nothing, §483; prd §1702): its connection wears Chase's own icon,
+        // as a real one wears the icon off its bank's site.
+        if DemoMode.isActive, connID == demoConnID {
+            return UIImage(named: demoBankMark)
+        }
         lock.lock(); defer { lock.unlock() }
         if let held = memory[connID] { return held }
         guard let url = file(connID), let data = try? Data(contentsOf: url),

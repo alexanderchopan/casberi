@@ -3818,8 +3818,10 @@ enum DemoSeedAll {
         // SimpleFIN (prd §1663). A bank's rows as the seat lands them: shops
         // carry Purchase or Refund (Spending reads those), a paycheck is a
         // Deposit, a card payment off checking carries neither, so Spending
-        // never counts the card twice. "demo" is the bank, which has no
-        // icon, so the rows wear SimpleFIN's mark.
+        // never counts the card twice. The bank is Chase (prd §1702), its
+        // connection id "demo", and it wears Chase's own mark (`bankMark`,
+        // its App Store icon, bundled), as a real bank wears the icon off
+        // its own site — never SimpleFIN's.
         let bank: [(String, String, Double, [String], String, String, Double)] = [
             ("Blue Bottle · $6.50", "Blue Bottle", 6.50, ["Purchase"], "sent", "Chase · Sapphire", 0.3),
             ("Whole Foods · $84.20", "Whole Foods", 84.20, ["Purchase"], "sent", "Chase · Sapphire", 1.4),

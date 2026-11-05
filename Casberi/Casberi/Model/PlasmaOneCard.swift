@@ -178,6 +178,9 @@ enum PlasmaOneCard {
 
     // MARK: - The card's balance
 
+    /// The demo card's balance, in USDT0's dollars (prd §1702).
+    static let demoBalance = 412.30
+
     /// What sits in the card contract — the money the card can still spend —
     /// read with one `balanceOf` per card per pass. Keyed by CARD, so watching
     /// both the account and the card contract counts it once.
@@ -191,6 +194,9 @@ enum PlasmaOneCard {
     /// The watched cards' balance, summed, with the oldest reading's time —
     /// nil when no watched wallet has a card read yet.
     static func balance(watched: Set<String>) -> (amount: Double, at: Date)? {
+        // The demo's card holds what its settled days spent from (prd §1702),
+        // read an hour ago; the demo reads no chain (§483).
+        if DemoMode.isActive { return (demoBalance, Date().addingTimeInterval(-3_600)) }
         let defaults = UserDefaults.standard
         let cards = Set(watched.compactMap { defaults.string(forKey: cardKey($0)) })
         let balances = storedBalances()

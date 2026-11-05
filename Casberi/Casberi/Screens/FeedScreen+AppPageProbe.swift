@@ -39,7 +39,8 @@ extension FeedScreen {
             // An app's page reports what it holds on every tile: an exchange
             // lands no rows, so its holdings are its content (the sweep's rule).
             if shown == .holdings || selectedSeat != nil {
-                held = walletScopeIsEmpty(.holdings) && walletSeatHeld(visible).isEmpty ? "empty" : "full"
+                held = walletScopeIsEmpty(.holdings) && walletSeatHeld(visible).isEmpty
+                    && walletSeatOwnHeld(visible).isEmpty ? "empty" : "full"
             }
         }
         return "\(source) | pick=\(pick) | tile=\(tile) | rows=\(visible.live.count) | held=\(held)"

@@ -480,7 +480,8 @@ extension FeedScreen {
                     let apps = walletAppRows(all)
                     let accounts = walletAccountRows(all)
                     if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
-                       walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty {
+                       walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty,
+                       walletSeatOwnHeld(all).isEmpty {
                         walletSkeletonRowsSection
                     }
                     walletHoldingsDoors(all: all)

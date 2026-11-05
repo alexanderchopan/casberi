@@ -234,6 +234,9 @@ KNOWN_PROPER: set[str] = {
     # Apple Cash, Apple's own product (`WalletCash`, prd §1048): the Wallet
     # total names it as Apple does, as "Apple Wallet" is named.
     "Cash",
+    # Chase Total Checking, Chase's own name for the account (the demo's
+    # SimpleFIN bank, prd §1702), as SimpleFIN's `accountLabel` names it.
+    "Checking",
     # Safes, the plural of Safe (the multisig wallet): "Your Safes" heads the
     # Safe accounts you hold, a product's name, as "Safe" is.
     "Safes",

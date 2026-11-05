@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1847 of 1919 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1849 of 1921 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1724,7 +1724,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1335 — Day's Coming up carries what the app computes: renewals with their price, card payments, and Track a subscription (bu…
 - §1336 — A room's row of tiles speaks at the page's volume
 - §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167) (amended by §1480)
-- §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under…
+- §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under… (amended by §1702)
 - §1339 — Fileverse reopens for read AND write, and the measured read goes through the documents portal's own key, not the Deve…
 - §1340 — Day: Needs you is one card with a section per place, only what waits on you; the calendar is a dot a day, and a day o… (amended by §1344)
 - §1341 — Every money row in the Wallet opens the receipt; a balance is a holding, never a transaction (amends §1232's Transact…
@@ -2096,6 +2096,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
+- §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
+- §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P…
 
 ## Dead rulings → what replaced them (generated)
 
