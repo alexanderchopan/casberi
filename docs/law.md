@@ -247,12 +247,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1853 of 1925 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1854 of 1926 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677)
-- §5 — How it works today — Bob (amended by §1208c, §1680)
+- §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
 - §6 — How it works today — Alice (amended by §1113, §1568)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
@@ -1876,7 +1876,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
 - §1492 — One account with nothing on Home says so (amends §1491) (amended by §1615)
-- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
+- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f)
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570, §1661)
@@ -1937,7 +1937,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
 - §1552 — A Wallet row leads with who you dealt with, when they have a face
 - §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
-- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698)
+- §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698, §1700f)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
@@ -2051,7 +2051,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1664 — On the Mac, Search opens the rooms tray, as the phone's does
 - §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks
 - §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
-- §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us…
+- §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us… (amended by §1700f)
 - §1668 — Spend asks Face ID only when you press Show gift cards: Bitrefill's pass is asked for by a row in the merchant list,…
 - §1669 — Needs you's box states what the asks hold up, not how many: "Held up", the money, since when, one bar split by ask an…
 - §1670 — A token's row opens that token: its sheet takes Holdings' sum apart into Networks and Accounts; the Tokens door and a…
@@ -2075,7 +2075,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1682 — A swap that moves the price says so: "Moves the price 6.4%" in the attention ink under the exchange's credit, from 1%…
 - §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 item…
 - §1684 — Act where you look: a held token's sheet sends and swaps it, and a signature row in Needs you opens the transaction i…
-- §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car…
+- §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car… (amended by §1700f)
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
 - §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
 - §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565'…
@@ -2090,12 +2090,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
-- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c)
+- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
-- §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d)
+- §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
 - §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704, §1705)
