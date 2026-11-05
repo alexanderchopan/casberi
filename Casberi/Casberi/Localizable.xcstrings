@@ -5748,6 +5748,34 @@
         }
       }
     },
+    "%@ from Aztec is ready on Ethereum. Finish takes it to your account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de Aztec está listo en Ethereum. Finalizar lo lleva a tu cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec からの %@ は Ethereum で準備ができました。「完了」でアカウントに移します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 보낸 %@이(가) Ethereum에 준비되었습니다. 완료하면 계정으로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自 Aztec 的 %@ 已在 Ethereum 上就绪。点按“完成”即可转入你的账户。"
+          }
+        }
+      }
+    },
     "%@ from here" : {
       "localizations" : {
         "es" : {
@@ -14134,6 +14162,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 个钱包"
+          }
+        }
+      }
+    },
+    "%@ wants to send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ quiere enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が送信しようとしています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 보내려고 합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 想要发送"
           }
         }
       }
@@ -45362,6 +45418,34 @@
         }
       }
     },
+    "AZTEC for gas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "AZTEC para gas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス用の AZTEC"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스용 AZTEC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用作 Gas 的 AZTEC"
+          }
+        }
+      }
+    },
     "Aave" : {
       "localizations" : {
         "es" : {
@@ -54774,6 +54858,34 @@
         }
       }
     },
+    "Approve this Aztec transaction" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aprueba esta transacción de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Aztec トランザクションを承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Aztec 거래 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "批准此 Aztec 交易"
+          }
+        }
+      }
+    },
     "Approve this recovery" : {
       "localizations" : {
         "es" : {
@@ -55466,6 +55578,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已到达 %@"
+          }
+        }
+      }
+    },
+    "Arrives private in 5 to 15 minutes. Shield keeps 0.5%%; up to $%lld in all." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega en privado en 5 a 15 minutos. Shield cobra el 0,5%%; hasta $%lld en total."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5〜15分で非公開で届きます。Shield の手数料は0.5%%、合計で最大 $%lld です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5~15분 후 비공개로 도착합니다. Shield 수수료 0.5%%, 총 최대 $%lld."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5 到 15 分钟内私密到账。Shield 收取 0.5%%，总计最多 $%lld。"
           }
         }
       }
@@ -56596,6 +56736,34 @@
         }
       }
     },
+    "Asking Shield where your account stands…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Consultando a Shield el estado de tu cuenta…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの状況を Shield に確認中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에 계정 상태를 확인하는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在向 Shield 查询你的账户状态…"
+          }
+        }
+      }
+    },
     "Asking it" : {
       "localizations" : {
         "es" : {
@@ -57387,6 +57555,34 @@
         }
       }
     },
+    "Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec"
+          }
+        }
+      }
+    },
     "Aztec account" : {
       "localizations" : {
         "es" : {
@@ -57411,6 +57607,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Aztec 账户"
+          }
+        }
+      }
+    },
+    "Aztec account · privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de Aztec · en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウント · 非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정 · 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 账户 · 私密"
+          }
+        }
+      }
+    },
+    "Aztec did not take this move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec no aceptó este movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec はこの移動を受け付けませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 이 이동을 받지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 未接受此次转移"
           }
         }
       }
@@ -57495,6 +57747,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Aztec 将于 %@ 起升级：请先把资金从 zk.money 取出"
+          }
+        }
+      }
+    },
+    "Aztec · privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec · en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec · 非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec · 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec · 私密"
+          }
+        }
+      }
+    },
+    "Aztec's proof is not on Ethereum yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La prueba de Aztec aún no está en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec の証明はまだ Ethereum に届いていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 증명이 아직 Ethereum에 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 的证明尚未到达 Ethereum"
           }
         }
       }
@@ -65230,6 +65538,34 @@
         }
       }
     },
+    "Check the site shows" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprueba que el sitio muestra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サイトに次が表示されているか確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사이트에 다음이 표시되는지 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请确认网站显示"
+          }
+        }
+      }
+    },
     "Check whether this one is set to renew before the date passes." : {
       "localizations" : {
         "es" : {
@@ -68148,6 +68484,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "连接"
+          }
+        }
+      }
+    },
+    "Connect %@?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Conectar %@?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に接続しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 연결하시겠습니까?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要连接 %@ 吗？"
           }
         }
       }
@@ -89909,6 +90273,34 @@
         }
       }
     },
+    "Finish moving %@ out of Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Termina de sacar %@ de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の Aztec からの移動を完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 %@ 옮기기 완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完成从 Aztec 转出 %@"
+          }
+        }
+      }
+    },
     "Finish on %@" : {
       "localizations" : {
         "es" : {
@@ -89933,6 +90325,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %@ 上完成"
+          }
+        }
+      }
+    },
+    "Finished: it is in your account on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo: ya está en tu cuenta en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完了：Ethereum のアカウントに入りました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "완료: Ethereum 계정에 들어왔습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已完成：已转入你在 Ethereum 上的账户。"
           }
         }
       }
@@ -95480,6 +95900,34 @@
         }
       }
     },
+    "Gas pays for what your Aztec account does. It cannot be sent to anyone." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El gas paga lo que hace tu cuenta de Aztec. No se puede enviar a nadie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガスは Aztec アカウントの操作に使われます。誰かに送ることはできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스는 Aztec 계정의 작업 비용입니다. 다른 사람에게 보낼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas 用于支付你的 Aztec 账户的操作费用，不能发送给任何人。"
+          }
+        }
+      }
+    },
     "Gas: %@. Opens gas alerts." : {
       "localizations" : {
         "es" : {
@@ -98802,6 +99250,34 @@
         }
       }
     },
+    "If %@ shows the same nine, nothing sits between you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si %@ muestra los mismos nueve, no hay nada entre tú y el sitio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に同じ9つが表示されていれば、間に何も介在していません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 같은 9개가 표시되면 중간에 끼어든 것이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果 %@ 显示相同的九个，说明你们之间没有任何中间方。"
+          }
+        }
+      }
+    },
     "If any frame fails, none of them send." : {
       "localizations" : {
         "es" : {
@@ -100981,6 +101457,34 @@
         }
       }
     },
+    "Into Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入 Aztec"
+          }
+        }
+      }
+    },
     "Invalid binary" : {
       "localizations" : {
         "es" : {
@@ -101852,6 +102356,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它会附在今后的每笔转账上。留空即可清除。"
+          }
+        }
+      }
+    },
+    "It sees your Aztec account's address. Casberi asks you before anything it sends." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ve tu dirección de cuenta de Aztec. Casberi te pregunta antes de enviar cualquier cosa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントのアドレスが共有されます。送信の前には必ず Casberi が確認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정 주소를 볼 수 있습니다. 무엇이든 보내기 전에 Casberi가 먼저 묻습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它能看到你的 Aztec 账户地址。发送任何内容前，Casberi 都会先征求你的同意。"
           }
         }
       }
@@ -112307,6 +112839,62 @@
         }
       }
     },
+    "Move %@ into your Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mueve %@ a tu cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を Aztec アカウントに移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) Aztec 계정으로 이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 转入你的 Aztec 账户"
+          }
+        }
+      }
+    },
+    "Move %@ out of your Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saca %@ de tu cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を Aztec アカウントから移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) Aztec 계정에서 이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 从你的 Aztec 账户转出"
+          }
+        }
+      }
+    },
     "Move %@ to private" : {
       "localizations" : {
         "es" : {
@@ -112331,6 +112919,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将 %@ 转为私密"
+          }
+        }
+      }
+    },
+    "Move AZTEC to your Aztec account for gas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mueve AZTEC a tu cuenta de Aztec para gas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス用に AZTEC を Aztec アカウントに移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스용 AZTEC를 Aztec 계정으로 이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 AZTEC 转入你的 Aztec 账户用作 Gas"
           }
         }
       }
@@ -122288,6 +122904,34 @@
         }
       }
     },
+    "Not enough" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Insuficiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不足しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "부족함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "余额不足"
+          }
+        }
+      }
+    },
     "Not enough %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -122592,6 +123236,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Open Food Facts 中未找到。"
+          }
+        }
+      }
+    },
+    "Not in the demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No en la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモでは利用できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모에서는 사용할 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "演示中不可用"
           }
         }
       }
@@ -131196,6 +131868,62 @@
         }
       }
     },
+    "On its way: Aztec carries it in minutes, then it is yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino: Aztec lo lleva en minutos y luego es tuyo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動中：数分で Aztec に届き、あなたのものになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동 중: 몇 분 안에 Aztec이 전달하면 내 것이 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在途中：Aztec 几分钟内送达，之后即归你所有。"
+          }
+        }
+      }
+    },
+    "On its way: Aztec's proof reaches Ethereum in an hour or so, then Finish here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino: la prueba de Aztec llega a Ethereum en una hora más o menos; luego finaliza aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動中：Aztec の証明は1時間ほどで Ethereum に届きます。その後ここで完了してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동 중: Aztec 증명이 약 1시간 후 Ethereum에 도달하면 여기서 완료하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在途中：Aztec 的证明约一小时后到达 Ethereum，届时在此完成。"
+          }
+        }
+      }
+    },
     "On record" : {
       "localizations" : {
         "es" : {
@@ -136864,6 +137592,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转出"
+          }
+        }
+      }
+    },
+    "Out of Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fuera de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转出 Aztec"
           }
         }
       }
@@ -143610,6 +144366,34 @@
         }
       }
     },
+    "Powered by Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tecnología de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Powered by Aztec"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Powered by Aztec"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Aztec 提供支持"
+          }
+        }
+      }
+    },
     "Powered by Bitrefill" : {
       "localizations" : {
         "es" : {
@@ -143690,6 +144474,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "由 Relay 提供支持"
+          }
+        }
+      }
+    },
+    "Powered by Shield" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tecnología de Shield"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Powered by Shield"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Powered by Shield"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Shield 提供支持"
           }
         }
       }
@@ -144848,6 +145660,34 @@
         }
       }
     },
+    "Private · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privado · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密 · %@"
+          }
+        }
+      }
+    },
     "Private — nothing routes through us" : {
       "localizations" : {
         "es" : {
@@ -145470,6 +146310,34 @@
         }
       }
     },
+    "Proving on this iPhone…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Generando la prueba en este iPhone…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この iPhone で証明を生成中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에서 증명 생성 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在此 iPhone 上生成证明…"
+          }
+        }
+      }
+    },
     "Proving…" : {
       "localizations" : {
         "es" : {
@@ -145662,6 +146530,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅限公开帖子 — 绝不需要密码。"
+          }
+        }
+      }
+    },
+    "Public · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Público · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公开 · %@"
           }
         }
       }
@@ -162998,6 +163894,34 @@
         }
       }
     },
+    "Send privately on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar en privado en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec で非公開で送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 비공개로 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上私密发送"
+          }
+        }
+      }
+    },
     "Send test ETH" : {
       "localizations" : {
         "es" : {
@@ -163884,6 +164808,62 @@
         }
       }
     },
+    "Sent out of Aztec. In an hour or so Aztec's proof reaches Ethereum; finish it here then." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado fuera de Aztec. En una hora más o menos la prueba de Aztec llega a Ethereum; finalízalo aquí entonces."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec から送信しました。1時間ほどで Aztec の証明が Ethereum に届くので、その後ここで完了してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 보냈습니다. 약 1시간 후 Aztec 증명이 Ethereum에 도달하면 여기서 완료하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已从 Aztec 转出。约一小时后 Aztec 的证明会到达 Ethereum，届时在此完成。"
+          }
+        }
+      }
+    },
+    "Sent privately." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado en privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で送信しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 보냈습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已私密发送。"
+          }
+        }
+      }
+    },
     "Sent to" : {
       "localizations" : {
         "es" : {
@@ -164114,6 +165094,34 @@
         }
       }
     },
+    "Sent, but its message to Aztec could not be read yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado, pero aún no se pudo leer su mensaje a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信しましたが、Aztec へのメッセージをまだ読み取れません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냈지만 Aztec으로 보낸 메시지를 아직 읽을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送，但暂时无法读取其发往 Aztec 的消息"
+          }
+        }
+      }
+    },
     "Sent, not yet seen" : {
       "localizations" : {
         "es" : {
@@ -164138,6 +165146,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已发送，尚未看到"
+          }
+        }
+      }
+    },
+    "Sent. Aztec carries it in minutes; Holdings shows it when it lands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado. Aztec lo lleva en minutos; Posiciones lo muestra cuando llegue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信しました。数分で Aztec に届き、届くと「保有資産」に表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냈습니다. 몇 분 안에 Aztec이 전달하며, 도착하면 보유 자산에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送。Aztec 几分钟内送达，到账后会显示在“持仓”中。"
+          }
+        }
+      }
+    },
+    "Sent; Aztec will see it once Ethereum shows it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado; Aztec lo verá en cuanto Ethereum lo muestre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信しました。Ethereum に反映されると Aztec でも確認できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보냈습니다. Ethereum에 표시되면 Aztec에서도 확인됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送；Ethereum 上显示后 Aztec 即可看到"
           }
         }
       }
@@ -166166,6 +167230,342 @@
         }
       }
     },
+    "Shield allows up to %@ at a time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield permite hasta %@ cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield では1回につき最大 %@ まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 한 번에 최대 %@까지 허용합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 每次最多允许 %@"
+          }
+        }
+      }
+    },
+    "Shield did not accept your account's signature" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no aceptó la firma de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はアカウントの署名を受け付けませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에서 계정 서명을 받지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 未接受你账户的签名"
+          }
+        }
+      }
+    },
+    "Shield did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield から応答がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 未响应"
+          }
+        }
+      }
+    },
+    "Shield did not give a limit for this move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no indicó un límite para este movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はこの移動の上限を示しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에서 이 이동의 한도를 알려 주지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 未给出此次转移的限额"
+          }
+        }
+      }
+    },
+    "Shield needs a Human Passport score of %lld for this account (no ID); it has %lld." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield necesita una puntuación de Human Passport de %lld para esta cuenta (sin identificación); tiene %lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウント（本人確認なし）には Human Passport スコア %lld が必要です。現在は %lld です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield를 이용하려면 이 계정(신분증 없음)에 Human Passport 점수 %lld이(가) 필요합니다. 현재 %lld입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 要求此账户（无身份证件）的 Human Passport 分数达到 %lld；当前为 %lld。"
+          }
+        }
+      }
+    },
+    "Shield needs a Human Passport score of %lld for this account (no ID); it has %lld. Up to $%lld." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield necesita una puntuación de Human Passport de %lld para esta cuenta (sin identificación); tiene %lld. Hasta $%lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウント（本人確認なし）には Human Passport スコア %lld が必要です。現在は %lld です。最大 $%lld。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield를 이용하려면 이 계정(신분증 없음)에 Human Passport 점수 %lld이(가) 필요합니다. 현재 %lld입니다. 최대 $%lld."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 要求此账户（无身份证件）的 Human Passport 分数达到 %lld；当前为 %lld。最多 $%lld。"
+          }
+        }
+      }
+    },
+    "Shield needs a Human Passport score of %lld; yours is %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield necesita una puntuación de Human Passport de %lld; la tuya es %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield には Human Passport スコア %lld が必要です。あなたのスコアは %lld です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에는 Human Passport 점수 %lld이(가) 필요합니다. 내 점수는 %lld입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 要求 Human Passport 分数达到 %lld；你的分数为 %lld"
+          }
+        }
+      }
+    },
+    "Shield refused the sign-in: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield rechazó el inicio de sesión: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield がサインインを拒否しました：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에서 로그인을 거부했습니다: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 拒绝了登录：%@"
+          }
+        }
+      }
+    },
+    "Shield will not move money for this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no moverá dinero para esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はこのアカウントの資金を移動しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 이 계정의 자금을 옮기지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 不会为此账户转移资金"
+          }
+        }
+      }
+    },
+    "Shield will not move money for this account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no moverá dinero para esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はこのアカウントの資金を移動しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 이 계정의 자금을 옮기지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 不会为此账户转移资金。"
+          }
+        }
+      }
+    },
+    "Shield will not take money from this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no aceptará dinero de esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はこのアカウントからの資金を受け付けません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 이 계정에서 자금을 받지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 不会接收此账户的资金"
+          }
+        }
+      }
+    },
+    "Shield will not take money from this account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no aceptará dinero de esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield はこのアカウントからの資金を受け付けません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 이 계정에서 자금을 받지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 不会接收此账户的资金。"
+          }
+        }
+      }
+    },
     "Shielded" : {
       "localizations" : {
         "es" : {
@@ -168141,6 +169541,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "登录 Privy"
+          }
+        }
+      }
+    },
+    "Sign in to Shield with your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en Shield con tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントで Shield にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로 Shield에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用你的账户登录 Shield"
           }
         }
       }
@@ -182135,6 +183563,34 @@
         }
       }
     },
+    "The demo moves nothing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La demo no mueve nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモでは何も移動しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모에서는 아무것도 옮기지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "演示不会转移任何资金"
+          }
+        }
+      }
+    },
     "The entry after this one, %@" : {
       "localizations" : {
         "es" : {
@@ -185958,6 +187414,62 @@
         }
       }
     },
+    "They don't" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No coinciden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일치하지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不一致"
+          }
+        }
+      }
+    },
+    "They match" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Coinciden"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일치함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致"
+          }
+        }
+      }
+    },
     "They paid the gas on %@ transactions here." : {
       "localizations" : {
         "es" : {
@@ -186850,6 +188362,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此代理"
+          }
+        }
+      }
+    },
+    "This amount could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar esta cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この金額を作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 금액을 작성할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法生成此金额"
           }
         }
       }
@@ -187952,6 +189492,34 @@
         }
       }
     },
+    "This move could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar este movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この移動を作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 이동을 작성할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法生成此次转移"
+          }
+        }
+      }
+    },
     "This node doesn't report mining." : {
       "localizations" : {
         "es" : {
@@ -189012,6 +190580,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此次发送会失败：%@ 拒绝了它。"
+          }
+        }
+      }
+    },
+    "This site" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este sitio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このサイト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 사이트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此网站"
           }
         }
       }
@@ -206471,6 +208067,34 @@
         }
       }
     },
+    "Who, what and how much stay private. About 20 seconds to prove on this iPhone." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quién, qué y cuánto quedan en privado. Unos 20 segundos para generar la prueba en este iPhone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "誰が、何を、いくら送ったかは非公開のままです。この iPhone での証明に約20秒かかります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "누가, 무엇을, 얼마나 보냈는지는 비공개로 유지됩니다. 이 iPhone에서 증명하는 데 약 20초 걸립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收款人、资产和金额均保持私密。在此 iPhone 上生成证明约需 20 秒。"
+          }
+        }
+      }
+    },
     "Whose money" : {
       "localizations" : {
         "es" : {
@@ -209313,6 +210937,62 @@
         }
       }
     },
+    "You have %@ privately on Aztec." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tienes %@ en privado en Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec に非公開で %@ あります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에 비공개로 %@이(가) 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 Aztec 上私密持有 %@。"
+          }
+        }
+      }
+    },
+    "You have %@ privately. About 20 seconds to prove here, then an hour or so until you can finish." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tienes %@ en privado. Unos 20 segundos para generar la prueba aquí y luego una hora más o menos hasta que puedas finalizar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で %@ あります。ここでの証明に約20秒、その後完了できるまで1時間ほどかかります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 %@이(가) 있습니다. 여기서 증명하는 데 약 20초, 이후 완료할 수 있을 때까지 약 1시간 걸립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你私密持有 %@。在此生成证明约需 20 秒，之后约一小时即可完成。"
+          }
+        }
+      }
+    },
     "You have %lld tag — tap one to open it." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -212105,6 +213785,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 Aztec 账户"
+          }
+        }
+      }
+    },
+    "Your Aztec account holds no %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Aztec no tiene %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントに %@ はありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정에 %@이(가) 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Aztec 账户中没有 %@。"
+          }
+        }
+      }
+    },
+    "Your Aztec account is not ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Aztec no está lista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントの準備ができていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정이 준비되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Aztec 账户尚未就绪"
           }
         }
       }
@@ -220949,6 +222685,34 @@
         }
       }
     },
+    "an amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "금액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一笔金额"
+          }
+        }
+      }
+    },
     "an approval for %@" : {
       "localizations" : {
         "es" : {
@@ -225147,6 +226911,34 @@
         }
       }
     },
+    "for gas." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "para gas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "をガス用に。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스용으로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用作 Gas。"
+          }
+        }
+      }
+    },
     "for moves" : {
       "localizations" : {
         "es" : {
@@ -225367,6 +227159,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自播放列表"
+          }
+        }
+      }
+    },
+    "from your Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "de tu cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的 Aztec 账户"
           }
         }
       }
@@ -231351,6 +233171,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %lld 条帖子上"
+          }
+        }
+      }
+    },
+    "on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上"
           }
         }
       }
@@ -238778,6 +240626,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下一个 $%lld"
+          }
+        }
+      }
+    },
+    "to your Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a tu cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到你的 Aztec 账户"
+          }
+        }
+      }
+    },
+    "to your account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a tu cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントへ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到你的账户。"
           }
         }
       }
