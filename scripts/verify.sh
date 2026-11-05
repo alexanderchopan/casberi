@@ -1020,6 +1020,15 @@ python3 -I "$ROOT/scripts/uniswap-v4-pools.py" --self-test >/dev/null \
   || fail "the Uniswap v4 pool measurer's self-test failed — run scripts/uniswap-v4-pools.py --self-test"
 print -P "%F{green}✓ uniswap v4 pool list self-test%f"
 
+# The v4 swap fixtures' RECORDER (prd §1680): re-quotes and re-simulates
+# `fixtures/direct-swap/uniswap-v4-<network>.json` when the pool list moves.
+# Recording needs the network; its self-test (payloads, quote and status
+# decoding, one failed call writes nothing) is offline and runs here.
+step "Direct-swap recorder self-test"
+python3 -I "$ROOT/scripts/direct-swap-record.py" --self-test >/dev/null \
+  || fail "the direct-swap recorder's self-test failed — run scripts/direct-swap-record.py --self-test"
+print -P "%F{green}✓ direct-swap recorder self-test%f"
+
 step "L2BEAT snapshot generator self-test"
 python3 "$ROOT/scripts/l2beat-snapshot.py" --self-test >/dev/null \
   || fail "the L2BEAT snapshot generator's self-test failed — run scripts/l2beat-snapshot.py --self-test"

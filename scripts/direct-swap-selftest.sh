@@ -372,7 +372,7 @@ for (file, book, other) in [("uniswap-v4-base.json", S.base, 4663), ("uniswap-v4
 check(S.robinhood.venues[2].hopSlippage && !S.base.venues[5].hopSlippage && !S.ethereum.venues[1].hopSlippage,
       "the newer encoding is not Robinhood's router's alone")
 // A measured key is asked for its own pair, never another's.
-let rh4 = S.robinhood.venues[2], usdg = "0x5fc5360d0400a0fd4f2af552add042d716f1d168", pons = "0x8ca4ce3546a620bd0f540297fbd41c8552d6defb"
+let rh4 = S.robinhood.venues[2], usdg = "0x5fc5360d0400a0fd4f2af552add042d716f1d168", pons = "0xd445ef19561cdf6269c11e0de3facf6b5935dc60"
 check(rh4.asks(4, usdg, pons) && rh4.asks(4, pons, usdg) && !rh4.asks(4, usdg, S.robinhood.weth) && !rh4.asks(7, usdg, pons)
       && rh4.asks(6, S.robinhood.weth, usdg) && rh4.asks(1, usdg, pons) && !rh4.asks(99, usdg, pons),
       "a measured key is asked for another pair, a standard key not for every pair, or a step past the list")

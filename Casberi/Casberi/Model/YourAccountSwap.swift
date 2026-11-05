@@ -353,6 +353,10 @@ enum YourAccountSwap {
     ]
 
     static let robinhoodV4Pools = v4Standard + [
+        // PONS moved to a new token (0xd445…); its zero-fee pool with USDG
+        // takes the old one's place, so every later step keeps its index.
+        V4Pool(fee: 0, tickSpacing: 1,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xd445ef19561cdf6269c11e0de3facf6b5935dc60"]),  // PONS / USDG
         V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x987e330f00b79864a07fe81dfac344d0078abcc0",
                pair: [native, "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // ETH / USDG
         V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0x06a889870c8f83640d6816319f72e2aa579b6080",
@@ -383,8 +387,6 @@ enum YourAccountSwap {
                pair: [native, "0xd167df6670106e9292177144beb70d9a376b6010"]),  // HPHONE / ETH
         V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0xa0e8fbff13e24af2b5e61a72800e08a161bde080",
                pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // SPY / USDG
-        V4Pool(fee: 0, tickSpacing: 1,
-               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xd445ef19561cdf6269c11e0de3facf6b5935dc60"]),  // PONS / USDG, $63,832,504
         V4Pool(fee: 1, tickSpacing: 1,
                pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xf289e29aac29f039cc51041763c477c7f5a2b504"]),  // Anthropic / USDG, $10,252,579
         V4Pool(fee: 500, tickSpacing: 5,
