@@ -71003,3 +71003,9 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 9. **Not built:** Rocket Money (its read is bills, "Never a balance": a balance read means learning its accounts query from the live page, §780b's walk, then measuring it) and Railgun (its private balance is deliberately unbuilt: it means scanning the pool's notes with the viewing key). Their Holdings keep dimming.
 
 **Mac half (§1402).** The same views on Catalyst; nothing here is phone-only.
+
+## §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amends §1700d item 5) (user, 2026-11-04: "i don't want to be sending our user to somewhere they need to show an ID"; told an Aztec account without Shield is thin today, "i don't want to hold it back i want to keep going") — RULED
+
+1. **Money into and out of Aztec is Shield's, on the Passport rail only**: a Human Passport score (linking accounts at passport.xyz, no document), up to Shield's $1,000 cumulative per wallet. Casberi never offers Proof of Clean Hands (government ID and a face scan); above the Passport limit it says so and stops.
+2. **Gas is always open**: AZTEC through Aztec's own Fee Juice portal, no check.
+3. Whether a Safe can hold a Passport score and receive Shield's signed limit is measured before anything is built on it.

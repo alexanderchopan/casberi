@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1849 of 1921 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1850 of 1922 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2094,7 +2094,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link
-- §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses
+- §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
+- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P…
