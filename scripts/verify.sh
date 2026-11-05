@@ -3713,7 +3713,7 @@ else
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"
 
-    l2beatHead        "L2BEAT"
+    l2beatHead        "ETHBEAT"
   )
   # ONE LAUNCH, not one per room (PERF, 2026-09-05). This asked about ~28 rooms
   # with a terminate + launch + poll each, ~3.4s apiece — a minute and a half of
