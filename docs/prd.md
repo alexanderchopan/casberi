@@ -71064,3 +71064,9 @@ Canvas: "Limit order in the sentence" (https://claude.ai/artifact/Ue4esLCJxBsTYw
 2. **§1117's verb stands:** Track, never Add. Only the noun names what this tray tracks; mailing lists still stand on Life's Subscriptions tile, §1117's one tile with two measures.
 
 **Mac half (§1402).** The same tray title on Catalyst.
+
+## §1700g — Aztec is your private account; 0xBow is your private balance (amends §1700f item 12) (user, 2026-11-04, settling how to say what the three are: "aztec is a private account. so you have public account, private balance, private account for safe, pp, aztec", then "Yes, rename it") — RULED, BUILT
+
+1. **Three names, each saying what it is**: your public account (the Safe, on Base, Ethereum and Robinhood), your private balance (Privacy Pools, on Ethereum), your private account (Aztec, on Aztec). A balance lives inside your account; Aztec is an account of its own, with its own address and apps.
+2. **Send says so**: the recipient is "Your private account · Aztec", the sentence "Send 2 USDC to your private account on Aztec." and "from your private account on Aztec"; 0xBow's stays "Your private balance".
+3. **Where it lives is the distinction** (user: "aztec is on aztec, not on ethereum. it can send to ethereum sure, but it is on aztec").

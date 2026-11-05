@@ -3386,11 +3386,11 @@ struct MoveSentence: View {
                     goPrivate(.deposit)
                 }
             }
-            // Your private balance on Aztec, named as 0xBow's is (prd §1700f
-            // item 12): your Safe moves money in through Shield.
+            // Your private account on Aztec (prd §1700g): your Safe moves
+            // money in through Shield. A balance is 0xBow's; Aztec is an account.
             if YourAccountKey.address != nil || DemoMode.isActive, AztecProver.isAvailable,
-               q.isEmpty || String(localized: "Your private balance").lowercased().contains(q) {
-                listRow(String(localized: "Your private balance"), sub: String(localized: "Aztec"), symbol: "eye.slash") {
+               q.isEmpty || String(localized: "Your private account").lowercased().contains(q) {
+                listRow(String(localized: "Your private account"), sub: String(localized: "Aztec"), symbol: "eye.slash") {
                     goAztec(.deposit)
                 }
             }

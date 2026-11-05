@@ -5,15 +5,15 @@ import Observation
 /// same sentence 0xBow's private balance has (`MovePrivateSentence`), for
 /// your Aztec account:
 ///
-/// - **In** (`.deposit`): picked as "Your private balance · Aztec" among
-///   Send's recipients. "Send 2 USDC to your private balance on Aztec." Your
+/// - **In** (`.deposit`): picked as "Your private account · Aztec" among
+///   Send's recipients. "Send 2 USDC to your private account on Aztec." Your
 ///   Safe deposits through Shield (USDC or WETH), gas riding along in the
 ///   same operation when the account needs it; the claim on Aztec follows.
 ///   Or it says what stands in the way: "Fund …ca8d on Ethereum first.", or
 ///   "Shield needs a Human Passport score of 20 first." with Human Passport in
 ///   the foot (the only door a Casberi Safe has to a score).
 /// - **From** (`.send`): picked as "Aztec · Private" in Send's networks.
-///   "Send 2 USDC from your private balance on Aztec to …4f38." An Aztec
+///   "Send 2 USDC from your private account on Aztec to …4f38." An Aztec
 ///   address is a private send inside Aztec; an Ethereum address, anyone's,
 ///   is out through Shield, finished from Needs you. Either asks the
 ///   co-signer first (`AztecCoSign`).
@@ -283,7 +283,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .nothingPrivate:
             MovePhrase(String(localized: "Nothing private to send on Aztec yet."), ink: DS.textSecondary)
         case .needsGas:
-            MovePhrase(String(localized: "Your private balance on Aztec needs gas first."), ink: DS.textPrimary)
+            MovePhrase(String(localized: "Your private account on Aztec needs gas first."), ink: DS.textPrimary)
         default:
             if !isDone { head() }
             MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
@@ -295,13 +295,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .accessibilityLabel(Text("Amount, \(figure)"))
             }
             if move.mode == .deposit {
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
+                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
                                 ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
                 MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
             } else {
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance on Aztec"),
+                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private account on Aztec"),
                                 ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
