@@ -279,6 +279,16 @@ enum YourAccountSwap {
                pair: ["0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // syrupUSDT / USDT 0.08%
         V4Pool(fee: 800, tickSpacing: 5,
                pair: ["0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // syrupUSDC / USDC 0.08%
+        V4Pool(fee: 5, tickSpacing: 1,
+               pair: ["0x8292bb45bf1ee4d140127049757c2e0ff06317ed", "0xdc035d45d973e3ec169d2276ddab16f1e407384f"]),  // RLUSD / USDS, $17,070,909
+        V4Pool(fee: 8, tickSpacing: 1,
+               pair: ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xdac17f958d2ee523a2206206994597c13d831ec7"]),  // USDC / USDT, $3,206,296
+        V4Pool(fee: 50, tickSpacing: 1,
+               pair: ["0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"]),  // cbBTC / WBTC 0.005%, $4,070,375
+        V4Pool(fee: 2500, tickSpacing: 50,
+               pair: ["0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"]),  // WBTC / wstETH 0.25%, $2,606,497
+        V4Pool(fee: 2500, tickSpacing: 25,
+               pair: ["0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // apyUSD / USDC 0.25%, $1,118,722
     ]
 
     /// **Robinhood Chain.** Uniswap v3 from Uniswap's deployments page ("v3
@@ -338,11 +348,11 @@ enum YourAccountSwap {
                pair: ["0x5be75e3b0aff5d1a042a5363ae36acb1d6d755ea", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"]),  // AXIS / USDC 0.01%
         V4Pool(fee: 4900, tickSpacing: 98,
                pair: ["0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "0x9d0e8f5b25384c7310cb8c6ae32c8fbeb645d083"]),  // DRV / USDC 0.49%
+        V4Pool(fee: 2500, tickSpacing: 25,
+               pair: ["0xcfa300b2c19102837132a23955eada7c16725790", "0xe8bddee33596c04338c7d9c0f4f9c635928330ab"]),  // Reboot / VIRTUAL 0.25%, $44,173,756
     ]
 
     static let robinhoodV4Pools = v4Standard + [
-        V4Pool(fee: 0, tickSpacing: 1,
-               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0x8ca4ce3546a620bd0f540297fbd41c8552d6defb"]),  // PONS / USDG
         V4Pool(fee: 8388608, tickSpacing: 1, hooks: "0x987e330f00b79864a07fe81dfac344d0078abcc0",
                pair: [native, "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // ETH / USDG
         V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0x06a889870c8f83640d6816319f72e2aa579b6080",
@@ -373,6 +383,16 @@ enum YourAccountSwap {
                pair: [native, "0xd167df6670106e9292177144beb70d9a376b6010"]),  // HPHONE / ETH
         V4Pool(fee: 8388608, tickSpacing: 10, hooks: "0xa0e8fbff13e24af2b5e61a72800e08a161bde080",
                pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // SPY / USDG
+        V4Pool(fee: 0, tickSpacing: 1,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xd445ef19561cdf6269c11e0de3facf6b5935dc60"]),  // PONS / USDG, $63,832,504
+        V4Pool(fee: 1, tickSpacing: 1,
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xf289e29aac29f039cc51041763c477c7f5a2b504"]),  // Anthropic / USDG, $10,252,579
+        V4Pool(fee: 500, tickSpacing: 5,
+               pair: ["0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "0x12f190a9f9d7d37a250758b26824b97ce941bf54"]),  // AMZN / SPY 0.05%, $545,403
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0x08e52564bad99e05a694b4809f397edca417a080",
+               pair: ["0x39dbed3a2bd333467115de45665cc57f813c4571", "0x5fc5360d0400a0fd4f2af552add042d716f1d168"]),  // PONS / USDG, $634,351
+        V4Pool(fee: 8388608, tickSpacing: 60, hooks: "0xc15b155a3094934171a15625d1a80aba267b6080",
+               pair: ["0x5fc5360d0400a0fd4f2af552add042d716f1d168", "0xad25ac6c84d497db898fa1e8387bf6af3532a1c4"]),  // BABA / USDG, $1,075,965
     ]
 
     static let books: [Book] = [base, ethereum, robinhood]
