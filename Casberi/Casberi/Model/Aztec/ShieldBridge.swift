@@ -181,7 +181,7 @@ extension ShieldBridge {
         guard recipient.count == 42, recipient.lowercased().hasPrefix("0x"), recipient.dropFirst(2).allSatisfy(\.isHexDigit) else {
             throw Failure(message: String(localized: "That isn't an Ethereum address"))
         }
-        try await PrivateRootKey.unlock(reason: String(localized: "Send \(asset.symbol) out of your private balance on Aztec"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Send \(asset.symbol) out of your private account on Aztec"))
         try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: asset.decimals, symbol: asset.symbol)) from Aztec to \(recipient)"))
         guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, recipient, text]) as? [String: Any],
               let transaction = out["tx"] as? String, let message = out["message"] as? String else {
