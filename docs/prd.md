@@ -71214,3 +71214,20 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
 
 **Not seen:** a real sign-in through a co-signer's wallet (the simulator has none), RollingChat's funding connect asking again, the Signer sheet over the browser's sheet.
+
+## §1701d — Nymis's facts come back from its API: the label/value rows §1701 ruled, read from `facts`, the selected related addresses listed under their row, and Nymis's polling cadence and budget (amends §1701c items 1 and 6; restores §1701 item 4's facts) (user, 2026-11-06, handed Nymis's integration guide for release d216e66, "including structured facts", after asking Nymis to return the page's facts as fields) — BUILT; compiled NOWHERE yet (the build session had no Swift toolchain), NOT measured (the build session's network refused nymis.io)
+
+**Why.** §1701c dropped the fact rows because the API had no field for them, and Nymis was asked for them. Nymis shipped them the same day as an optional, deterministic `facts` object on completed and incomplete results, and changed its guidance on polling.
+
+1. **The rows, from `facts`**, in §1701's order: Related addresses ("2, 1 named", the report's selected set, at most five, never a network total), Exchanges and payments (`kycServices`, each name once; renamed from "Exchanges" because Nymis lists payment services such as MoonPay there and defines it as exchange or payment-service interactions), Identity (`publicIdentity`'s platforms, each once, Twitter spelled X), Signs for (Safes on the primary chain), Contracts deployed, Active (first to last observed month, read in UTC). An empty list or a null or zero count draws no row: Nymis's "no evidence surfaced" is not proof of none.
+2. **The selected related addresses stand under their row**, one each: the name Nymis gives, else the address's tail (`AddressTail.short`); on the right where it has a profile and the transfers Nymis saw between the two ("Polymarket · 21 transfers"), each part only when Nymis gave it. Confidence, relation and source are not drawn.
+3. **The row's line is `privacyContributors`** ("Related addresses, exchanges, Safe signing"), in Casberi's order because Nymis's list is unranked; an unknown key is left out. Absent (an incomplete scan), the line is the findings' groups as before.
+4. **The sheet** (§1701c item 3 stands): the summaries, then the facts with their addresses, and the findings only while there is no summary. "Nymis found nothing" only with no finding and no fact.
+5. **Polling is Nymis's**: every 30 s for a scan's first five minutes, then every 60 s; at most 30 requests per scan, retries included, and nothing past 25 minutes from the tap (`NymisScan.pollInterval`, `requestBudget`, `maxAge`). The summaries' 5 s × 30 s window stands. A 404 ends the scan and never starts another.
+6. **Still memory-only for the scan token**: Nymis's guide keeps it in the Keychain so a relaunch resumes the poll; Casberi reattaches after a relaunch by asking again with the same idempotency key, which Nymis honours for 30 minutes. A Keychain-backed resume is a separate change.
+
+**Checks.** `nymis-selftest.sh`: the rows in order with a service and a platform named once and a null count drawing nothing; only the Related row carries its addresses; a record that is not an address dropped, one with nulls inventing nothing; the categories in Casberi's order with an unknown key left out; empty lists and zero counts drawing no row; one month when the dates meet, read in UTC; a scored reply carrying its facts at once and a later summary poll keeping them; 30 s then 60 s; 30 requests and 25 minutes; every request counted; no poll faster than 30 s; related addresses shortened through `AddressTail`.
+
+**Mac half (§1402).** The same rows and sheet.
+
+**Not compiled, not measured:** written in a Linux session with no Swift toolchain and no route to nymis.io.

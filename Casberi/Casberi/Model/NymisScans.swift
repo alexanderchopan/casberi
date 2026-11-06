@@ -49,6 +49,9 @@ final class NymisScans {
         /// One UUIDv4 per scan the person asked for, reused for every retry.
         let idempotencyKey: String
         var scanID: String?
+        /// Requests spent on this scan, retries included (Nymis's budget is
+        /// 30). Optional so a scan saved before §1701d still decodes.
+        var requests: Int?
     }
 
     /// Address key → scan token. Memory only (Nymis: keep it out of logs,
@@ -64,10 +67,8 @@ final class NymisScans {
     static let runningKey = "nymis.running.v2"
     /// Past this a scan that never finished is called failed rather than
     /// polled forever; under Nymis's 30-minute reuse window, so asking again
-    /// with the same key always reattaches.
-    static let giveUp: TimeInterval = 15 * 60
-    /// Nymis: poll every 10–15 seconds.
-    static let pollEvery: Duration = .seconds(12)
+    /// with the same key always reattaches (Nymis: 25 minutes, §1701d).
+    static let giveUp: TimeInterval = NymisScan.maxAge
     /// Nymis: while summaries are pending, every 5 seconds for at most 30.
     static let summaryEvery: Duration = .seconds(5)
     static let summaryPolls = 6
@@ -156,10 +157,15 @@ final class NymisScans {
     /// One request for the current scan; how long to wait before the next.
     private func round() async -> Duration? {
         guard let key = current, let run = running[key] else { return nil }
-        if Date.now.timeIntervalSince(run.started) > Self.giveUp {
+        if Date.now.timeIntervalSince(run.started) > Self.giveUp
+            || (run.requests ?? 0) >= NymisScan.requestBudget {
             finish(key, nil)
             return nil
         }
+        // Every request counts against the scan's budget, a retry included.
+        running[key]?.requests = (run.requests ?? 0) + 1
+        saveRunning()
+        let next = Duration.seconds(NymisScan.pollInterval(age: Date.now.timeIntervalSince(run.started)))
         let polling = run.scanID != nil && tokens[key] != nil
         let request: URLRequest?
         if let id = run.scanID, let token = tokens[key] {
@@ -181,7 +187,7 @@ final class NymisScans {
             if !polling, id == nil || token == nil { finish(key, nil); return nil }
             if let token { tokens[key] = token }
             if let id, running[key]?.scanID != id { running[key]?.scanID = id; saveRunning() }
-            return Self.pollEvery
+            return next
         case .read(var reading, let summaryPending):
             if reading.scanID == nil { reading.scanID = run.scanID }
             // The findings stand at once; Nymis's summaries follow on the
@@ -208,7 +214,7 @@ final class NymisScans {
             #endif
             return nil
         case .retry:
-            return Self.pollEvery
+            return next
         case .failed:
             finish(key, nil)
             return nil
@@ -309,7 +315,16 @@ final class NymisScans {
             partial: false, scannedAt: .now.addingTimeInterval(-3600),
             overview: "This address is publicly linked to quillmark.eth, with a profile on X. Two related addresses send to and receive from it on a repeating pattern.",
             financial: "Inbound transfers from Coinbase create a KYC-adjacent attribution point.",
-            scanID: "11111111-1111-4111-8111-111111111111")
+            scanID: "11111111-1111-4111-8111-111111111111",
+            gives: ["related addresses", "exchanges", "identity"],
+            facts: [.init(label: "Related addresses", value: "2, 1 named", kind: "related"),
+                    .init(label: "Exchanges and payments", value: "Coinbase, MoonPay"),
+                    .init(label: "Identity", value: "X, ENS"),
+                    .init(label: "Active", value: "Mar 2023 to Nov 2026")],
+            related: [.init(address: "0x0000000000000000000000000000000000000b0b", name: "quill",
+                            platform: "Polymarket", transfers: 21),
+                      .init(address: "0x0000000000000000000000000000000000000c0c", name: nil,
+                            platform: nil, transfers: 4)])
         saveReadings()
     }
     #endif

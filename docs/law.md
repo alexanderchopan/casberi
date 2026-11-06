@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1867 of 1939 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1868 of 1940 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2107,6 +2107,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)
 - §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the f…
 - §1701c — Nymis is read through its Partner API in public client mode only: the API's two summaries and its findings, never its…
+- §1701d — Nymis's facts come back from its API: the label/value rows §1701 ruled, read from `facts`, the selected related addre…
 - §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704, §1705)
 - §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…

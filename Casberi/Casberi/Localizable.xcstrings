@@ -87483,6 +87483,34 @@
         }
       }
     },
+    "Exchanges and payments" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exchanges y pagos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所と決済"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소 및 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易所与支付"
+          }
+        }
+      }
+    },
     "Exchanges and banks" : {
       "localizations" : {
         "es" : {

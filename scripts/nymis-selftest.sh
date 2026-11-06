@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Casberi Nymis self-test (prd §1701, §1701a, §1701c) — the SHIPPED pure logic behind
+# Casberi Nymis self-test (prd §1701, §1701a, §1701c, §1701d) — the SHIPPED pure logic behind
 # Wallet › Threats' Privacy rows, compiled WHOLE and unmodified:
 #
 #   Casberi/Casberi/Model/NymisScan.swift
@@ -26,6 +26,12 @@
 #   · Nymis's web report or a legacy/internal endpoint fetched (§1701c,
 #     Nymis: "Do not scrape web reports or call legacy/internal endpoints")
 #   · a client IP header set (Nymis's proxy supplies it)
+#   · Nymis's facts (§1701d) lost or invented: an empty list or a null count
+#     drawn as a row, a related address that is not one, a service named
+#     twice, an activity date shifted a month by the time zone, a category
+#     key shown as a code, a facts row drawn from an unranked list's order
+#   · the poll drifting off Nymis's cadence (30 s, then 60 s past five
+#     minutes) or past its budget (30 requests, 25 minutes)
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on failure.
 set -euo pipefail
@@ -79,6 +85,18 @@ grep -qF 'static let summaryEvery: Duration = .seconds(5)' "$SCANS" \
   || { echo "✗ the summary poll is not every 5 s for at most 30 s"; exit 1; }
 grep -qF 'followSummaries(key, scanID: id, token: token, scannedAt: reading.scannedAt)' "$SCANS" \
   || { echo "✗ a pending summary is not followed on the same scan"; exit 1; }
+# Every request counts against the scan's budget, and the wait is Nymis's.
+grep -qF '|| (run.requests ?? 0) >= NymisScan.requestBudget {' "$SCANS" \
+  && grep -qF 'running[key]?.requests = (run.requests ?? 0) + 1' "$SCANS" \
+  || { echo "✗ a scan's requests are not counted against Nymis's budget"; exit 1; }
+grep -qF 'static let giveUp: TimeInterval = NymisScan.maxAge' "$SCANS" \
+  || { echo "✗ a scan is given up on at a time other than Nymis's 25 minutes"; exit 1; }
+if grep -nE 'pollEvery|\.seconds\(1[0-5]\)' "$SCANS"; then
+  echo "✗ a running scan is polled faster than Nymis's 30 s"; exit 1
+fi
+# The related addresses stand under their row, shortened through AddressTail.
+grep -qF 'AddressTail.short(peer.address)' "$SHEET" \
+  || { echo "✗ a related address is not shortened through AddressTail"; exit 1; }
 # Every read goes through the receipts funnel, and the host is disclosed.
 if grep -nE 'URLSession|dataTask' "$SCANS"; then
   echo "✗ NymisScans reads past IngestSupport, where the receipts never see it"; exit 1
@@ -241,6 +259,63 @@ if case .read(let r, let pending) = answer(200, novel) {
 check(NymisScan.reportURL(scanID: "../api") == nil, "a scan id that is not a UUID is refused")
 check(NymisScan.reportURL(scanID: "BF59181C-42EA-4886-B8E4-BB6C09913C03")?.absoluteString
       == "https://nymis.io/scan/bf59181c-42ea-4886-b8e4-bb6c09913c03", "the report URL is the scan id, lowercased")
+
+// Facts (§1701d).
+let factsJSON = #"""
+{"kycServices":[{"name":"MoonPay","kinds":["paymentInfrastructure"]},{"name":" Coinbase ","kinds":["exchange"]},{"name":"MoonPay","kinds":["exchange"]},{"kinds":[]}],
+ "publicIdentity":[{"platform":"Farcaster","identifier":"alice"},{"platform":"twitter","identifier":"a"},{"platform":"X/Twitter","identifier":"b"}],
+ "relatedAddresses":{"scope":"reportSelected","selectionLimit":5,"selectedCount":2,"namedSelectedCount":1,"recordsTruncated":false,
+   "records":[{"address":"0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC","name":"alice","profilePlatform":"polymarket","transactionCount":21,"confidence":"high","source":"selected-linkage"},
+              {"address":"0x00000000000000000000000000000000000000dd","name":null,"profilePlatform":null,"transactionCount":null,"confidence":null,"source":"selected-linkage"},
+              {"address":"alice.eth","name":"not an address","source":"x"}]},
+ "safeSigner":{"count":3,"lookupIncomplete":false},
+ "contractsDeployed":{"count":null},
+ "activity":{"firstObservedAt":"2021-04-01T00:00:00.000Z","lastObservedAt":"2026-11-01T00:00:00Z"},
+ "privacyContributors":["safeSigner","mysteryNew","kycServices","relatedWallets"]}
+"""#
+let en = Locale(identifier: "en_US_POSIX")
+let parsedFacts = (try? JSONSerialization.jsonObject(with: Data(factsJSON.utf8))).flatMap { NymisScan.facts($0, locale: en) }
+check(parsedFacts != nil, "a facts object reads")
+if let f = parsedFacts {
+    let rows = f.facts.map { "\($0.label)=\($0.value)" }
+    check(rows == ["Related addresses=2, 1 named", "Exchanges and payments=MoonPay, Coinbase", "Identity=Farcaster, X",
+                   "Signs for=3 Safes", "Active=Apr 2021 to Nov 2026"],
+          "the rows, in order, a service and a platform once, a null count no row: \(rows)")
+    check(f.facts.first?.kind == "related" && f.facts.dropFirst().allSatisfy { $0.kind == nil },
+          "only the Related addresses row carries its addresses")
+    check(f.related.count == 2, "a record that is not an address is dropped")
+    check(f.related.first == NymisScan.Related(address: "0xcccccccccccccccccccccccccccccccccccccccc", name: "alice",
+                                               platform: "Polymarket", transfers: 21),
+          "a related address: lowercased, named, its platform spelled, its transfers")
+    check(f.related.last?.name == nil && f.related.last?.platform == nil && f.related.last?.transfers == nil,
+          "a record with nulls keeps its address and invents nothing")
+    check(f.gives == ["related addresses", "exchanges", "Safe signing"],
+          "the categories in Casberi's order, an unknown key left out: \(f.gives ?? [])")
+}
+let emptyFacts = #"""
+{"kycServices":[],"publicIdentity":[],"relatedAddresses":{"selectedCount":0,"namedSelectedCount":0,"records":[]},
+ "safeSigner":{"count":null,"lookupIncomplete":null},"contractsDeployed":{"count":0},"activity":{"firstObservedAt":null,"lastObservedAt":null}}
+"""#
+if let f = (try? JSONSerialization.jsonObject(with: Data(emptyFacts.utf8))).flatMap({ NymisScan.facts($0, locale: en) }) {
+    check(f.facts.isEmpty && f.related.isEmpty && f.gives == nil, "empty lists and null or zero counts draw no row, no line")
+} else { check(false, "an empty facts object still reads") }
+check(NymisScan.facts(nil) == nil && NymisScan.facts("x") == nil, "no facts object is none")
+check(NymisScan.activeSpan(first: "2026-11-01T00:00:00Z", last: "2026-11-30T23:59:59.999Z", locale: en) == "Nov 2026",
+      "one month when they meet, read in UTC")
+check(NymisScan.activeSpan(first: "soon", last: "2026-11-01T00:00:00Z", locale: en) == nil, "an unreadable date draws no row")
+let withFacts = full.replacingOccurrences(of: #""summaryStatus":"pending""#, with: #""summaryStatus":"pending","facts":\#(factsJSON)"#)
+if case .read(let r, _) = answer(200, withFacts) {
+    check(r.facts?.count == 5 && r.related?.count == 2, "a scored reply carries its facts at once")
+    check(NymisScan.rowLine(r) == "Related addresses, exchanges, Safe signing", "the row line is the categories': \(NymisScan.rowLine(r) ?? "nil")")
+    let later = NymisScan.Reading(address: aliceKey, groups: [], partial: false, scannedAt: now, overview: "Words.")
+    let merged = r.adding(summariesOf: later)
+    check(merged.facts == r.facts && merged.overview == "Words.", "a later poll's summaries keep the facts")
+} else { check(false, "a reply with facts reads") }
+
+// Nymis's cadence and budget.
+check(NymisScan.pollInterval(age: 0) == 30 && NymisScan.pollInterval(age: 299) == 30, "30 s for the first five minutes")
+check(NymisScan.pollInterval(age: 300) == 60 && NymisScan.pollInterval(age: 1200) == 60, "then 60 s")
+check(NymisScan.requestBudget == 30 && NymisScan.maxAge == 25 * 60, "30 requests, 25 minutes")
 
 // A reading stored before §1701c still decodes, facts and all.
 let stored = #"""

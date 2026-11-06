@@ -13,12 +13,17 @@ import Foundation
 ///    cached result, read at once. A retry with the same key and address
 ///    reattaches to the same scan for 30 minutes.
 /// 2. `GET /api/v1/privacy-score/status/<scanId>` with the token in the
-///    `x-scan-token` HEADER, every 10–15 s, until `completed`, `incomplete`
+///    `x-scan-token` HEADER, every 30 s, then 60 s past five minutes (§1701d), until `completed`, `incomplete`
 ///    or `failed`.
 /// 3. Nymis's summaries come on the same poll (their client-mode contract,
 ///    2026-11-06; §1701c): once scored, `summaryStatus` is `pending`, then
 ///    `ready` with `summaries.overview` and `summaries.financial`, or
 ///    `unavailable`. Polled every 5 s for at most 30 s after scoring.
+/// 4. The finished reply carries `facts` (Nymis release d216e66, §1701d):
+///    exchanges and payment services, public identity, the report's selected
+///    related addresses (at most five), Safes signed for, contracts deployed,
+///    the observed activity span, and the unranked categories that gave the
+///    address away. Deterministic, never AI text, and not exhaustive.
 ///
 /// That is all Casberi reads. Nymis's web reports and its legacy and
 /// internal endpoints are never called (§1701c, Nymis: "Do not scrape web
@@ -122,6 +127,18 @@ enum NymisScan {
         }
     }
 
+    /// How long to wait before polling a running scan again (Nymis, §1701d):
+    /// every 30 s for its first five minutes, then every 60 s. A heavy
+    /// wallet can take several minutes.
+    static func pollInterval(age: TimeInterval) -> TimeInterval {
+        age < 5 * 60 ? 30 : 60
+    }
+
+    /// Nymis's per-scan budget: 30 requests in all, retries included, and
+    /// nothing past 25 minutes from the first ask (its token lasts about 30).
+    static let requestBudget = 30
+    static let maxAge: TimeInterval = 25 * 60
+
     /// `Retry-After` in seconds or as an HTTP date; a minute when it is
     /// missing or unreadable, never less than ten seconds, never more than a
     /// day (Nymis's quotas reset at midnight UTC).
@@ -162,11 +179,25 @@ enum NymisScan {
         let findings: [Finding]
     }
 
-    /// A fact the scan's page listed (§1701b). Read by nothing since §1701c;
-    /// kept so a reading stored before then still draws as it did.
+    /// One label/value row of Nymis's facts (§1701d; the scan page's,
+    /// §1701b, on a reading stored before §1701c).
     struct Fact: Codable, Equatable, Hashable, Sendable {
         let label: String
         let value: String
+        /// "related" on the Related addresses row: the selected addresses
+        /// are drawn under it.
+        var kind: String? = nil
+    }
+
+    /// One of the report's selected related addresses (§1701d). Drawn by the
+    /// sheet, which shortens the address.
+    struct Related: Codable, Equatable, Hashable, Sendable {
+        let address: String
+        let name: String?
+        /// "Polymarket", in Casberi's spelling of the platform.
+        let platform: String?
+        /// Observed transfers between the two, when Nymis can count them.
+        let transfers: Int?
     }
 
     struct Reading: Codable, Equatable, Sendable {
@@ -187,11 +218,16 @@ enum NymisScan {
         var reason: String? = nil
         /// The scan Nymis files the report under: See more opens it.
         var scanID: String? = nil
-        /// The scan page's summary, line and facts (§1701b), on a reading
-        /// stored before §1701c. Nothing writes them now.
+        /// The scan page's summary (§1701b), on a reading stored before
+        /// §1701c. Nothing writes it now.
         var summary: String? = nil
+        /// What gave the address away, in the row's words (§1701d's
+        /// `privacyContributors`; §1701b's page before it). Nil when Nymis
+        /// named none, as on an incomplete scan.
         var gives: [String]? = nil
+        /// Nymis's facts as label/value rows (§1701d), empty ones left out.
         var facts: [Fact]? = nil
+        var related: [Related]? = nil
 
         var findings: [Finding] { groups.flatMap(\.findings) }
 
@@ -200,6 +236,11 @@ enum NymisScan {
             var r = self
             r.overview = later.overview
             r.financial = later.financial
+            if r.facts == nil, later.facts != nil {
+                r.facts = later.facts
+                r.related = later.related
+                r.gives = later.gives
+            }
             return r
         }
     }
@@ -228,13 +269,133 @@ enum NymisScan {
         let summaries = json["summaryStatus"] as? String == "ready"
             ? json["summaries"] as? [String: Any] : nil
         let reason = (json["reason"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let read = facts(json["facts"])
         return Reading(address: key(address), groups: groups,
                        partial: status == "incomplete",
                        scannedAt: scannedAt,
                        overview: summaryText(summaries?["overview"]),
                        financial: summaryText(summaries?["financial"]),
                        reason: reason.flatMap { $0.contains(" ") ? $0 : nil },
-                       scanID: (json["scanId"] as? String).flatMap { UUID(uuidString: $0) != nil ? $0.lowercased() : nil })
+                       scanID: (json["scanId"] as? String).flatMap { UUID(uuidString: $0) != nil ? $0.lowercased() : nil },
+                       gives: read?.gives,
+                       facts: read?.facts,
+                       related: read?.related)
+    }
+
+    // MARK: - Facts (§1701d)
+
+    struct FactsRead: Equatable {
+        let facts: [Fact]
+        let related: [Related]
+        let gives: [String]?
+    }
+
+    /// Nymis's `facts`, as the rows §1701 ruled: Related addresses, Exchanges
+    /// and payments, Identity, Signs for, Contracts deployed, Active. An empty
+    /// list or a null count draws no row: no evidence surfaced is not proof
+    /// of none. Nil when the reply carries no facts object.
+    static func facts(_ any: Any?, locale: Locale = .current) -> FactsRead? {
+        guard let f = any as? [String: Any] else { return nil }
+        var rows: [Fact] = []
+
+        let set = f["relatedAddresses"] as? [String: Any] ?? [:]
+        let related = (set["records"] as? [Any] ?? []).compactMap(relatedRecord)
+        let selected = (set["selectedCount"] as? NSNumber)?.intValue ?? related.count
+        if selected > 0 {
+            let named = (set["namedSelectedCount"] as? NSNumber)?.intValue ?? 0
+            rows.append(Fact(label: String(localized: "Related addresses"),
+                             value: named > 0 ? String(localized: "\(selected), \(named) named") : "\(selected)",
+                             kind: "related"))
+        }
+        var services: [String] = []
+        for any in f["kycServices"] as? [Any] ?? [] {
+            guard let name = trimmed((any as? [String: Any])?["name"]), !services.contains(name) else { continue }
+            services.append(name)
+        }
+        if !services.isEmpty {
+            rows.append(Fact(label: String(localized: "Exchanges and payments"), value: services.joined(separator: ", ")))
+        }
+        var platforms: [String] = []
+        for any in f["publicIdentity"] as? [Any] ?? [] {
+            guard let raw = trimmed((any as? [String: Any])?["platform"]) else { continue }
+            let platform = platformName(raw)
+            if !platforms.contains(platform) { platforms.append(platform) }
+        }
+        if !platforms.isEmpty {
+            rows.append(Fact(label: String(localized: "Identity"), value: platforms.joined(separator: ", ")))
+        }
+        if let safes = ((f["safeSigner"] as? [String: Any])?["count"] as? NSNumber)?.intValue, safes > 0 {
+            rows.append(Fact(label: String(localized: "Signs for"),
+                             value: safes == 1 ? String(localized: "1 Safe") : String(localized: "\(safes) Safes")))
+        }
+        if let deployed = ((f["contractsDeployed"] as? [String: Any])?["count"] as? NSNumber)?.intValue, deployed > 0 {
+            rows.append(Fact(label: String(localized: "Contracts deployed"), value: "\(deployed)"))
+        }
+        let activity = f["activity"] as? [String: Any] ?? [:]
+        if let span = activeSpan(first: activity["firstObservedAt"] as? String,
+                                 last: activity["lastObservedAt"] as? String, locale: locale) {
+            rows.append(Fact(label: String(localized: "Active"), value: span))
+        }
+        // Unranked (Nymis), so the row's words keep Casberi's order; a key
+        // Casberi has no words for is left out rather than shown as a code.
+        let keys = Set((f["privacyContributors"] as? [Any] ?? []).compactMap { $0 as? String })
+        let gives = categoryOrder.filter(keys.contains).compactMap { categoryWords[$0] }
+        return FactsRead(facts: rows, related: related, gives: gives.isEmpty ? nil : gives)
+    }
+
+    /// One selected related address, or nil without a 0x address.
+    static func relatedRecord(_ any: Any) -> Related? {
+        guard let r = any as? [String: Any], let address = trimmed(r["address"]),
+              isEVMAddress(address) else { return nil }
+        let count = (r["transactionCount"] as? NSNumber)?.intValue
+        return Related(address: key(address), name: trimmed(r["name"]),
+                       platform: trimmed(r["profilePlatform"]).map(platformName),
+                       transfers: count.flatMap { $0 > 0 ? $0 : nil })
+    }
+
+    /// Nymis's platform word in Casberi's spelling.
+    static func platformName(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "twitter", "x", "x/twitter": return "X"
+        case "ens": return "ENS"
+        case "github": return "GitHub"
+        case "": return raw
+        default: return raw.prefix(1).uppercased() + raw.dropFirst()
+        }
+    }
+
+    static func trimmed(_ any: Any?) -> String? {
+        guard let s = (any as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
+        return s
+    }
+
+    /// The row's words for Nymis's category keys, in the order the row says
+    /// them.
+    static let categoryOrder = ["relatedWallets", "kycServices", "publicIdentity", "safeSigner"]
+    static let categoryWords: [String: String] = [
+        "relatedWallets": String(localized: "related addresses"),
+        "kycServices": String(localized: "exchanges"),
+        "publicIdentity": String(localized: "identity"),
+        "safeSigner": String(localized: "Safe signing"),
+    ]
+
+    /// "Apr 2021 to Nov 2026" from Nymis's ISO 8601 times, read in UTC;
+    /// one month when they meet; nil when either is missing or unreadable.
+    static func activeSpan(first: String?, last: String?, locale: Locale = .current) -> String? {
+        func date(_ s: String?) -> Date? {
+            guard let s else { return nil }
+            let plain = ISO8601DateFormatter()
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return fractional.date(from: s) ?? plain.date(from: s)
+        }
+        guard let a = date(first), let b = date(last) else { return nil }
+        let f = DateFormatter()
+        f.locale = locale
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.setLocalizedDateFormatFromTemplate("MMMyyyy")
+        let from = f.string(from: a), to = f.string(from: b)
+        return from == to ? from : String(localized: "\(from) to \(to)")
     }
 
     /// One summary's `text`, trimmed; nil when empty or not Nymis's shape.
@@ -260,9 +421,10 @@ enum NymisScan {
         ["critical": 0, "high": 1, "medium": 2, "moderate": 2, "low": 3, "info": 4, "informational": 4][s] ?? 5
     }
 
-    /// The row's line: Nymis's groups with findings, most first ("Identity,
-    /// financial"), or a stored page reading's line (§1701b). Nil when Nymis
-    /// found nothing.
+    /// The row's line: what gave the address away ("Related addresses,
+    /// exchanges, identity"; §1701d, or a stored page reading's, §1701b),
+    /// else Nymis's groups with findings, most first ("Identity,
+    /// financial"). Nil when Nymis found nothing.
     static func rowLine(_ reading: Reading) -> String? {
         if let gives = reading.gives, let first = gives.first {
             let head = first.prefix(1).uppercased() + first.dropFirst()
