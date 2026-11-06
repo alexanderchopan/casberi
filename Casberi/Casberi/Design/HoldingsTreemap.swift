@@ -37,13 +37,21 @@ enum HoldingsTreemapLayout {
     static func layout(_ shares: [(id: String, share: Double)], in rect: CGRect,
                        gap: CGFloat, minSide: CGFloat) -> [Tile] {
         guard rect.width > 0, rect.height > 0 else { return [] }
-        var kept = shares.filter { $0.id != otherID && $0.share >= foldShare }
+        // **ONE TILE PER ID.** Two holdings under one id (two Privy apps of
+        // one name, a row synced twice) are one tile, their shares added; the
+        // map is keyed by id, and a repeated key trapped the whole Wallet.
+        var merged: [(id: String, share: Double)] = []
+        var at: [String: Int] = [:]
+        for s in shares where s.id != otherID {
+            if let i = at[s.id] { merged[i].share += s.share } else { at[s.id] = merged.count; merged.append(s) }
+        }
+        var kept = merged.filter { $0.share >= foldShare }
             .sorted { $0.share > $1.share }
         var other = 1 - kept.reduce(0) { $0 + $1.share }
         // A tile's LABEL is its true share; only the drawn area of "Other"
         // may be raised to the tap floor, so the label never follows it.
         func labelled(_ tiles: [Tile]) -> [Tile] {
-            let truth = Dictionary(uniqueKeysWithValues: kept.map { ($0.id, $0.share) })
+            let truth = Dictionary(kept.map { ($0.id, $0.share) }, uniquingKeysWith: { a, _ in a })
             return tiles.map { Tile(id: $0.id, share: truth[$0.id] ?? other, rect: $0.rect) }
         }
         // Fold until every drawn tile clears the tap floor.

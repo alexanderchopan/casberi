@@ -957,12 +957,23 @@ extension FeedScreen {
     func walletSeatHeld(_ things: [Thing]) -> [HoldingsTreemap.Holding] {
         let store = PrivyHomeStore.shared
         let rows = Self.things(walletAppRows(things)) + Self.things(walletAccountRows(things))
-        return rows.filter(\.isLive).map { thing in
+        // A tile's id is its name, and the map is keyed by id: one row per
+        // ref (a row synced twice is one app), and a name two apps share
+        // takes a number ("Mint 2"), so neither tile hides the other.
+        var refs = Set<String>()
+        var names: [String: Int] = [:]
+        var out: [HoldingsTreemap.Holding] = []
+        for thing in rows where thing.isLive {
             let ref = thing.sourceRef ?? ""
+            guard refs.insert(ref.isEmpty ? thing.id.uuidString : ref).inserted else { continue }
+            let name = TitleSeam.split(thing.title).name
+            let seen = (names[name] ?? 0) + 1
+            names[name] = seen
             let usd = thing.priceValue ?? store.usd(ref) ?? 0
-            return HoldingsTreemap.Holding(id: TitleSeam.split(thing.title).name, usd: usd, route: nil,
-                                           display: usd > 0 ? nil : thing.content.isEmpty ? nil : thing.content)
+            out.append(HoldingsTreemap.Holding(id: seen == 1 ? name : "\(name) \(seen)", usd: usd, route: nil,
+                                               display: usd > 0 ? nil : thing.content.isEmpty ? nil : thing.content))
         }
+        return out
     }
 
     /// **WHAT AN APP HOLDS THAT NO ROW CARRIES (prd §1702, §1703).** 0xBow
