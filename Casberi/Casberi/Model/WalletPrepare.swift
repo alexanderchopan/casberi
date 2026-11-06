@@ -81,8 +81,8 @@ enum WalletPrepare {
     }
 
     @MainActor
-    static func check(for thing: Thing) async -> Check? {
-        if case .ok(let check) = await outcome(for: thing) { return check }
+    static func check(for thing: Thing, quoteFee: Bool = true) async -> Check? {
+        if case .ok(let check) = await outcome(for: thing, quoteFee: quoteFee) { return check }
         return nil
     }
 
@@ -93,33 +93,41 @@ enum WalletPrepare {
         case fail(String)
     }
 
-    /// MainActor like `WalletApprovals.sync` — the model reads stay on main;
-    /// only the RPC awaits hop off.
-    @MainActor
-    static func outcome(for thing: Thing) async -> Outcome {
-        // Build 256: a detached Task runs LATER than it was created, so this
-        // row can already be deleted by the time this line does (prd §297).
-        guard thing.isLive else { return .fail("That thing is no longer here.") }
-        // sourceRef: "wallet:approval:<network>:<txHash>:<logIndex>" or
-        // "wallet:permit2:<network>:<txHash>:<logIndex>".
-        guard applies(to: thing),
-              let parts = thing.sourceRef?.split(separator: ":"), parts.count == 5,
-              let logIndex = Int(parts[4]),
-              let owner = thing.walletAddress?.lowercased(),
-              let spender = thing.counterpartyAddress?.lowercased(),
-              ENS.isHexAddress(owner), ENS.isHexAddress(spender)
-        else { return .fail("not an approval thing") }
-        let network = String(parts[2]), txHash = String(parts[3])
-        let viaPermit2 = parts[1] == "permit2"
-        guard let chainId = WalletApprovals.chainId(forNetwork: network)
-        else { return .fail("unknown chain \(network)") }
-        // The person's chain toggle holds here too — a chain switched off in
-        // the Wallet screen spends no prepare reads either. The sheet just
-        // shows no card; the thing's Revoke.cash content link still works.
-        guard WalletChainStore.activeNetworkIDs().contains(network)
-        else { return .fail("chain switched off") }
-        let revokeURL = WalletApprovals.revokeURL(address: owner, chainId: chainId)
+    /// The two steps that fail because a host did not answer, not because
+    /// the grant is gone: a caller holding an earlier answer stands on it
+    /// (prd §825's rule, applied to grants).
+    static let receiptUnreadable = "receipt unreadable"
+    static let stateUnreadable = "state unreadable"
+    static func couldNotLook(_ step: String) -> Bool {
+        step == receiptUnreadable || step == stateUnreadable
+    }
 
+    /// **A GRANT'S LOG IS READ ONCE, EVER (2026-11-06, user: "threats and
+    /// permissions always take a while to load and sometimes don't on wallet
+    /// home").** The token contract and the mechanism are facts of one
+    /// (network, transaction, log) and never change, yet every Home re-read
+    /// the receipt over Tor (1–3s a read) before the allowance it was there
+    /// for. Kept as "<contract>|<1 forAll, 0 not>" by the thing's sourceRef,
+    /// and only after the log was checked against the thing's own owner and
+    /// spender. The live allowance is still read every time (§216).
+    private static let logFactsKey = "wallet.prepare.logFacts.v1"
+    @MainActor private static var logFacts: [String: String] =
+        (UserDefaults.standard.dictionary(forKey: logFactsKey) as? [String: String]) ?? [:]
+
+    private enum LogRead {
+        case facts(contract: String, forAll: Bool)
+        case fail(String)
+    }
+
+    @MainActor
+    private static func logRead(ref: String, network: String, txHash: String, logIndex: Int,
+                                owner: String, spender: String, viaPermit2: Bool) async -> LogRead {
+        if let kept = logFacts[ref] {
+            let parts = kept.split(separator: "|")
+            if parts.count == 2, ENS.isHexAddress(String(parts[0])) {
+                return .facts(contract: String(parts[0]), forAll: parts[1] == "1")
+            }
+        }
         // The event's log, refetched — the token contract lives only there
         // (and for a Permit2 grant, the log itself lives at Permit2's address,
         // not the token's).
@@ -133,7 +141,7 @@ enum WalletPrepare {
                   return WalletIngest.hexToInt(hex) == logIndex
               }),
               let topics = log["topics"] as? [String]
-        else { return .fail("receipt unreadable") }
+        else { return .fail(receiptUnreadable) }
 
         // The log must be THIS wallet's grant — a drifted index would
         // otherwise dress a stranger's approval in this thing's words. The
@@ -158,6 +166,67 @@ enum WalletPrepare {
             contract = logContract
             forAll = topics[0].lowercased() == WalletApprovals.forAllTopic
         }
+        logFacts[ref] = "\(contract)|\(forAll ? 1 : 0)"
+        UserDefaults.standard.set(logFacts, forKey: logFactsKey)
+        return .facts(contract: contract, forAll: forAll)
+    }
+
+    /// The three fields a check reads off an approval thing, taken on the
+    /// main actor: a `Thing` cannot cross a task boundary, this can, so
+    /// `WalletApprovals.activeApprovals` checks grants side by side.
+    struct Grant: Sendable {
+        let ref: String
+        let owner: String
+        let spender: String
+        init(_ thing: Thing) {
+            ref = thing.sourceRef ?? ""
+            owner = thing.walletAddress ?? ""
+            spender = thing.counterpartyAddress ?? ""
+        }
+    }
+
+    /// MainActor like `WalletApprovals.sync` — the model reads stay on main;
+    /// only the RPC awaits hop off.
+    /// `quoteFee: false` skips the revoke's fee (two more reads): a count
+    /// needs whether a grant stands, not what taking it back costs.
+    @MainActor
+    static func outcome(for thing: Thing, quoteFee: Bool = true) async -> Outcome {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return .fail("That thing is no longer here.") }
+        guard applies(to: thing) else { return .fail("not an approval thing") }
+        return await outcome(for: Grant(thing), quoteFee: quoteFee)
+    }
+
+    @MainActor
+    static func outcome(for grant: Grant, quoteFee: Bool = true) async -> Outcome {
+        // sourceRef: "wallet:approval:<network>:<txHash>:<logIndex>" or
+        // "wallet:permit2:<network>:<txHash>:<logIndex>".
+        let parts = grant.ref.split(separator: ":")
+        let owner = grant.owner.lowercased(), spender = grant.spender.lowercased()
+        guard parts.count == 5, parts[1] == "approval" || parts[1] == "permit2",
+              let logIndex = Int(parts[4]),
+              ENS.isHexAddress(owner), ENS.isHexAddress(spender)
+        else { return .fail("not an approval thing") }
+        let network = String(parts[2]), txHash = String(parts[3])
+        let viaPermit2 = parts[1] == "permit2"
+        guard let chainId = WalletApprovals.chainId(forNetwork: network)
+        else { return .fail("unknown chain \(network)") }
+        // The person's chain toggle holds here too — a chain switched off in
+        // the Wallet screen spends no prepare reads either. The sheet just
+        // shows no card; the thing's Revoke.cash content link still works.
+        guard WalletChainStore.activeNetworkIDs().contains(network)
+        else { return .fail("chain switched off") }
+        let revokeURL = WalletApprovals.revokeURL(address: owner, chainId: chainId)
+
+        let contract: String
+        let forAll: Bool
+        switch await logRead(ref: grant.ref, network: network, txHash: txHash,
+                             logIndex: logIndex, owner: owner, spender: spender,
+                             viaPermit2: viaPermit2) {
+        case .facts(let c, let f): contract = c; forAll = f
+        case .fail(let step): return .fail(step)
+        }
 
         // The grant's live state: allowance(owner, spender) on the token,
         // isApprovedForAll(owner, operator) on the collection, or Permit2's
@@ -178,7 +247,7 @@ enum WalletPrepare {
               // (tightened in review 2026-07-20 — a truncated reply short of
               // all three shouldn't parse its first word as a real answer).
               stateHex.count >= (viaPermit2 ? 2 + 64 * 3 : 66)
-        else { return .fail("state unreadable") }
+        else { return .fail(stateUnreadable) }
         // Permit2's `allowance` returns THREE packed words (amount,
         // expiration, nonce) — only the first says whether the grant is
         // live, so reading the whole reply as one number would be wrong
@@ -218,18 +287,20 @@ enum WalletPrepare {
         // The fee — estimateGas doubles as a dry run (a reverting revoke
         // fails the estimate), so a quoted fee also means "would succeed".
         // The two reads are independent — one round-trip's wait, not two.
-        async let gasRead = WalletApprovals.rpcRead(
-            network: network, method: "eth_estimateGas",
-            params: [["from": owner, "to": toContract, "data": calldata]])
-        async let priceRead = WalletApprovals.rpcRead(
-            network: network, method: "eth_gasPrice", params: [])
         var feeLine: String?
-        if let gasHex = await gasRead as? String,
-           let priceHex = await priceRead as? String {
-            let fee = WalletIngest.hexToDouble(gasHex)
-                * WalletIngest.hexToDouble(priceHex) / 1e18
-            if fee > 0, let symbol = WalletIngest.nativeSymbol(forNetwork: network) {
-                feeLine = "~\(WalletIngest.format(fee)) \(symbol)"
+        if quoteFee {
+            async let gasRead = WalletApprovals.rpcRead(
+                network: network, method: "eth_estimateGas",
+                params: [["from": owner, "to": toContract, "data": calldata]])
+            async let priceRead = WalletApprovals.rpcRead(
+                network: network, method: "eth_gasPrice", params: [])
+            if let gasHex = await gasRead as? String,
+               let priceHex = await priceRead as? String {
+                let fee = WalletIngest.hexToDouble(gasHex)
+                    * WalletIngest.hexToDouble(priceHex) / 1e18
+                if fee > 0, let symbol = WalletIngest.nativeSymbol(forNetwork: network) {
+                    feeLine = "~\(WalletIngest.format(fee)) \(symbol)"
+                }
             }
         }
         return .ok(Check(active: true, forAll: forAll, allowanceRaw: allowanceRaw,

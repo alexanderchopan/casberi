@@ -179,13 +179,18 @@ enum WalletApprovals {
     /// which never expires on its own record — only a fresh read says
     /// whether it's still true.
     ///
-    /// Sequential, not concurrent: `WalletPrepare.check` is `@MainActor`, and
-    /// `Thing` isn't `Sendable`, so a `TaskGroup` closure can't capture one
-    /// across a task boundary without a real refactor. A live-checked warning
-    /// list is a handful of `eth_call`s at most in practice (this app has
-    /// never approved anything itself) — not worth the risk for a read that
-    /// already rides the same foreground-refresh cadence as the DeFi/Safe/
-    /// delegation reads beside it.
+    /// **SIX AT ONCE, AND A HOST THAT DID NOT ANSWER IS NOT A REVOKE
+    /// (2026-11-06, user: "threats and permissions always take a while to load
+    /// and sometimes don't on wallet home").** This loop ran one grant at a
+    /// time, a receipt and an `eth_call` each, over Tor at 1–3s a read: every
+    /// Approval event a wallet ever emitted (the grant, its revoke, the grant
+    /// again) in series, and Home's Permissions and Threats waited on the
+    /// last. Now each thing hands its three fields to `WalletPrepare.Grant`
+    /// on main and the checks run `checkWidth` at a time; the receipt is kept
+    /// after its first read (`WalletPrepare.logRead`) and the fee is not
+    /// quoted for a count. A check that could not look stands on what this
+    /// session last read for that grant (`lastChecks`, §825's rule), so one
+    /// stalled circuit no longer empties Permissions.
     @MainActor
     /// Returns each still-active grant WITH the check that proved it active
     /// (2026-08-03) — the live allowance, the token contract and the chain.
@@ -200,17 +205,54 @@ enum WalletApprovals {
             WalletPrepare.applies(to: thing)
                 && hexAddresses.contains { WalletWatch.sameAddress($0, thing.walletAddress ?? "") }
         }
+        let grants = candidates.map(WalletPrepare.Grant.init)
+        let outcomes = await withTaskGroup(of: (Int, WalletPrepare.Outcome).self,
+                                           returning: [Int: WalletPrepare.Outcome].self) { group in
+            var next = 0
+            var out: [Int: WalletPrepare.Outcome] = [:]
+            while next < min(checkWidth, grants.count) {
+                let i = next, grant = grants[i]
+                group.addTask { @MainActor in (i, await WalletPrepare.outcome(for: grant, quoteFee: false)) }
+                next += 1
+            }
+            for await (i, outcome) in group {
+                out[i] = outcome
+                guard next < grants.count else { continue }
+                let j = next, grant = grants[j]
+                group.addTask { @MainActor in (j, await WalletPrepare.outcome(for: grant, quoteFee: false)) }
+                next += 1
+            }
+            return out
+        }
         var active: [(thing: Thing, check: WalletPrepare.Check)] = []
-        for thing in candidates {
-            // Corollary 6: `check` awaits, so a Thing this loop deleted
-            // out from under us must not be read on the next turn.
+        for (i, thing) in candidates.enumerated() {
+            // Corollary 6: the checks awaited, so a Thing deleted out from
+            // under them must not be read now.
             guard thing.isLive else { continue }
-            if let check = await WalletPrepare.check(for: thing), check.active {
-                active.append((thing, check))
+            let ref = grants[i].ref
+            switch outcomes[i] {
+            case .ok(let check)?:
+                lastChecks[ref] = check
+                if check.active { active.append((thing, check)) }
+            case .fail(let step)?:
+                if WalletPrepare.couldNotLook(step), let kept = lastChecks[ref], kept.active {
+                    active.append((thing, kept))
+                }
+            case nil:
+                break
             }
         }
         return newestPerGrant(active)
     }
+
+    /// How many grants are checked at once: a wallet's reads share one Tor
+    /// circuit, and six small `eth_call`s ride it side by side.
+    static let checkWidth = 6
+
+    /// Each grant's last answer this session, by sourceRef, for a pass whose
+    /// host did not answer. Memory only: a grant's live state is not kept
+    /// across launches (§216).
+    @MainActor private static var lastChecks: [String: WalletPrepare.Check] = [:]
 
     /// **ONE GRANT, ONE ROW (prd §1442l).** Every `Approval` event lands as
     /// its own thing — the grant, a revoke (an approval of 0), the grant
