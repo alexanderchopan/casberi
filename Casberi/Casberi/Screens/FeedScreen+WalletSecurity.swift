@@ -244,8 +244,18 @@ extension FeedScreen {
                                                       acting: walletLive.acting)
         return WalletPermissions.actingHolders(holders).map {
             PermissionsPack.Acting(key: $0.key, name: $0.name,
-                                   module: $0.power == .movesWithoutSignature)
+                                   module: $0.power == .movesWithoutSignature,
+                                   accounts: $0.accounts)
         }
+    }
+
+    /// What each wallet in scope holds, for Permissions' disc (prd §1710):
+    /// the shown portfolio's holders, places left out.
+    var walletPermissionsHeld: [String: Double] {
+        guard let positions = portfolioShown?.positions else { return [:] }
+        return PermissionsPack.heldByAccount(
+            positions.flatMap { p in p.holders.map { (holder: $0.address, usd: $0.usd) } },
+            isVenue: WalletPortfolio.isVenue)
     }
 
     func walletOpenPermission(_ piece: PermissionsPack.Piece) {

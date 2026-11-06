@@ -949,11 +949,13 @@ extension FeedScreen {
             let n = walletNeedsCount(upcoming: upcoming)
             let parts = walletNeedsHeldParts
             WalletNeedsHeldFigure(reading: NeedsYouHeld.read(parts, others: n - parts.count), count: n)
-        // **ONE CIRCLE PER APP, SIZED BY WHAT IT REACHES (prd §1654)**, and
-        // one per delegate or module the Delegations list holds (§1677).
+        // **YOUR BALANCE, REACHED (prd §1710)**: the disc is what the
+        // wallets hold, the delegates and modules the Delegations list holds
+        // (§1677) reach their accounts', the grants sit inside at their dollars.
         case .permissions:
             WalletPermissionsFigure(grants: walletLive.exposure.all,
                                     acting: walletPermissionsActing,
+                                    held: walletPermissionsHeld,
                                     asOf: walletLive.asOf) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:

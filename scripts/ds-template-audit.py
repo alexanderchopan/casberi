@@ -155,7 +155,7 @@ EXEMPT_TINT = {
     "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
     "Screens/WalletSpendingFigure.swift": (1, "Spending's running line, a chart (prd §1480 item 14)"),
     "Screens/WalletThreatsFigure.swift": (1, "Threats' weekly bars, a chart (prd §1633)"),
-    "Screens/WalletPermissionsFigure.swift": (1, "Permissions' pack, a chart: a capped app's fill (prd §1656)"),
+    "Screens/WalletPermissionsFigure.swift": (1, "Permissions' disc, a chart: a capped grant's fill (prd §1656, §1710)"),
     "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),
 }
 

@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// **PERMISSIONS' BOX IS A PACK (prd §1654, retiring §1633's lead and strip).**
 /// One circle per app that can move your tokens, its area the dollars it can
@@ -25,7 +26,16 @@ import Foundation
 ///    the contract (never the name), unpriced, filled as no limit — both reach
 ///    everything of yours — and sorted first among the unpriced.
 ///
-/// Foundation-only, so `permissions-box-selftest.sh` compiles it as shipped.
+/// 5. **The box is your balance, reached (prd §1710, retiring §1654's pack of
+///    apps).** One disc is what the scope's own wallets hold (`held`, venues
+///    out: an approval or a delegate reaches a wallet, never Kraken). A
+///    delegate or module reaches its accounts' holdings; when that is every
+///    held dollar the whole disc is amber with the balance on it. An app's
+///    grants are circles inside it at their dollars (`inside`), so the grey
+///    left over is what nothing can move.
+///
+/// Foundation-only (and `CirclePack`), so `permissions-box-selftest.sh`
+/// compiles it as shipped.
 enum PermissionsPack {
     typealias Grant = WalletApprovalExposure.Grant
 
@@ -40,6 +50,8 @@ enum PermissionsPack {
         let name: String
         /// A Safe module; false for a delegate.
         let module: Bool
+        /// Which of your wallets it acts for (`WalletPermissions.Holder.accounts`).
+        var accounts: [String] = []
     }
 
     struct Piece: Equatable, Identifiable {
@@ -66,7 +78,11 @@ enum PermissionsPack {
         var priced: Bool { usd > 0 }
     }
 
-    static func pieces(_ grants: [Grant], acting: [Acting] = [], cap: Int = cap) -> [Piece] {
+    /// `held`: what each of your wallets holds, keyed lowercased
+    /// (`heldByAccount`). A delegate's or module's dollars are its accounts'
+    /// (§1710); with no reading they are none, and it sorts as unpriced.
+    static func pieces(_ grants: [Grant], acting: [Acting] = [], held: [String: Double] = [:],
+                       cap: Int = cap) -> [Piece] {
         var order: [String] = []
         var groups: [String: [Grant]] = [:]
         for g in grants {
@@ -87,7 +103,7 @@ enum PermissionsPack {
         let actors = acting.filter { keys.insert($0.key).inserted }.map { a in
             Piece(id: "acting:\(a.key)", name: a.name,
                   symbols: [a.module ? String(localized: "Safe module") : String(localized: "Delegate")],
-                  usd: 0, unlimited: true, forAll: false, grantIDs: [], apps: 1,
+                  usd: reach(of: [a], held: held), unlimited: true, forAll: false, grantIDs: [], apps: 1,
                   actingKey: a.key, module: a.module)
         }
         let apps = (granted + actors).sorted(by: before)
@@ -102,16 +118,114 @@ enum PermissionsPack {
     private static func before(_ a: Piece, _ b: Piece) -> Bool {
         if a.priced != b.priced { return a.priced }
         if a.priced, a.usd != b.usd { return a.usd > b.usd }
+        if a.priced, a.isActing != b.isActing { return a.isActing }
         if a.isActing != b.isActing { return a.isActing }
         if a.unlimited != b.unlimited { return a.unlimited }
         if a.forAll != b.forAll { return a.forAll }
         return a.name.localizedStandardCompare(b.name) == .orderedAscending
     }
 
-    /// The dollars in reach, or nil when nothing is priced: a $0 would read as
-    /// nothing at stake (`WalletPermissions.totalUSD`'s rule).
+    /// The dollars the apps' grants reach, or nil when nothing is priced: a
+    /// $0 would read as nothing at stake (`WalletPermissions.totalUSD`'s
+    /// rule). A delegate's dollars are its accounts' and are the disc's to
+    /// state (`Disc.reach`), never added here: two on one wallet would count
+    /// it twice.
     static func total(_ pieces: [Piece]) -> Double? {
-        let sum = pieces.map(\.usd).reduce(0, +)
+        let sum = pieces.filter { !$0.isActing }.map(\.usd).reduce(0, +)
         return sum > 0 ? sum : nil
+    }
+
+    // MARK: - The disc (prd §1710)
+
+    /// What each wallet holds, keyed lowercased, from the portfolio's holders
+    /// with every place left out (`WalletPortfolio.isVenue`): an exchange, the
+    /// validators, cash, Privy, Private and what you lent are out of an
+    /// approval's reach.
+    static func heldByAccount(_ positions: [(holder: String, usd: Double)],
+                              isVenue: (String) -> Bool) -> [String: Double] {
+        var out: [String: Double] = [:]
+        for p in positions where p.usd > 0 && !isVenue(p.holder) {
+            out[p.holder.lowercased(), default: 0] += p.usd
+        }
+        return out
+    }
+
+    /// What the delegates and modules reach between them: each account's
+    /// holdings once, however many act for it.
+    static func reach(of acting: [Acting], held: [String: Double]) -> Double {
+        let accounts = Set(acting.flatMap { $0.accounts.map { $0.lowercased() } })
+        return accounts.compactMap { held[$0] }.reduce(0, +)
+    }
+
+    /// The box's one disc.
+    struct Disc: Equatable {
+        /// What the scope's wallets hold; 0 when there is no reading.
+        let held: Double
+        /// What the delegates and modules reach.
+        let acting: Double
+        /// What the apps' grants reach. Summed per grant: a grant carries no
+        /// wallet, so one on a delegated wallet is not netted out — `reach`
+        /// caps at `held` rather than state more than you have.
+        let granted: Double
+        /// Something acts for you with no reading of what it reaches.
+        let actingUnread: Bool
+
+        /// Every held dollar is in a delegate's or module's reach — or one
+        /// acts and nothing says what you hold: then it reaches everything.
+        var whole: Bool {
+            (held > 0 && acting >= held - 0.005) || (held <= 0 && actingUnread)
+        }
+
+        /// The dollars in reach, never more than you hold; nil when none is
+        /// priced.
+        var reach: Double? {
+            let sum = whole ? held : acting + granted
+            let capped = held > 0 ? min(sum, held) : sum
+            return capped > 0 ? capped : nil
+        }
+
+        /// What the disc's area stands for: the balance, or the reach when
+        /// there is no balance read (or the grants' sum outruns it).
+        var scale: Double { max(held, acting + granted) }
+    }
+
+    static func disc(_ pieces: [Piece], acting: [Acting], held: [String: Double]) -> Disc {
+        let h = held.values.reduce(0, +)
+        return Disc(held: h,
+                    acting: reach(of: acting, held: held),
+                    granted: pieces.filter { !$0.isActing && !$0.isMore }.map(\.usd).reduce(0, +),
+                    actingUnread: !acting.isEmpty && reach(of: acting, held: held) <= 0)
+    }
+
+    /// The circles drawn inside the disc: every priced piece but the whole
+    /// disc's own delegates, in the pieces' order.
+    static func inner(_ pieces: [Piece], disc: Disc) -> [Piece] {
+        pieces.filter { $0.priced && !(disc.whole && $0.isActing) }
+    }
+
+    /// Circles for `usd` inside a disc `diameter` across whose area is
+    /// `scale` dollars: each circle's area its share of the disc's, the pack
+    /// centred in the disc's inscribed square. True area while the pack fits
+    /// there; when it cannot (shares adding up near the whole disc), the
+    /// pack shrinks together, ratios kept. In the disc's own coordinates.
+    static func inside(_ usd: [Double], scale: Double, diameter: CGFloat,
+                       gap: CGFloat = 4) -> [CirclePack.Circle] {
+        guard !usd.isEmpty, diameter > 0, scale > 0 else { return [] }
+        let side = diameter / CGFloat(2).squareRoot()
+        let packed = CirclePack.layout(shares: usd, in: CGSize(width: side, height: side),
+                                       gap: gap, floor: 0)
+        // The pack fills its square; a circle's true radius is the disc's
+        // times √share. Every circle carries the same ratio (no floor), so
+        // the largest names it.
+        let largest = usd.indices.max { usd[$0] < usd[$1] } ?? 0
+        let truth = diameter / 2 * CGFloat((max(usd[largest], 0) / scale).squareRoot())
+        let s = packed[largest].radius > 0 ? min(1, truth / packed[largest].radius) : 1
+        let mid = side / 2
+        let o = (diameter - side) / 2
+        return packed.map { c in
+            CirclePack.Circle(center: CGPoint(x: o + mid + (c.center.x - mid) * s,
+                                              y: o + mid + (c.center.y - mid) * s),
+                              radius: c.radius * s)
+        }
     }
 }

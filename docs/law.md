@@ -149,7 +149,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats (§1480; Markets deleted, §1529).
-- Permissions' box is a pack: one circle per app, its area the dollars it reaches, and one per delegate or Safe module, filled amber when it has no limit and the charts' tint when capped, its dollars leading inside; eight, then one grey "N more"; under it "No limit" and "Capped" and the total; a tap opens the grant or the delegate, or the list in full. Delegations and Approvals list every grant under it; empty after the last revoke, it draws the pack's skeleton with "No permissions" on it, over today's revokes (§1654, §1656, §1677). Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
+- Permissions' box is your balance, reached: one disc is what the wallets hold (places out), amber whole with the balance on it when a delegate or module reaches all of it, the apps' grants inside it at their dollars, amber with no limit and the charts' tint capped; beside it the dollars in reach and who, five then "N more"; under it No limit, Capped, Out of reach; a tap opens the grant or the delegate. Delegations and Approvals list every grant under it; empty after the last revoke, it draws the pack's skeleton with "No permissions" on it, over today's revokes (§1677, §1709, §1710). A reading kept from an earlier launch says "as of" under the key (§1709). Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
 - The watchlist is yours, apart from Following (§1632): one Home door like Permissions, on All and Yours only, trailing the day's biggest mover in its ink ("WLD −2.3%"), never an average, else the count; empty, it is the verb Watch a token. It pushes `Wallet · Watchlist` (the verb row, then each token: price trailing, the day's change on the line); Watch a token is a token-only search tray; a token's page is its chart, You hold, Coin or Network, Stop watching (no Swap yet). Watch is the verb for tokens, Follow for wallets and feeds, Track for subscriptions (§1632 amends §1120). Prices are keyless (DeFiLlama, CoinGecko's search), read on screen at most once per ten minutes, never through Zerion.
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry and refuse a follow (§1273, §1384). It reads both Aztec V5 and V6 deployments (§1692).
@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1862 of 1934 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1863 of 1935 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2038,9 +2038,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1651 — A short post is set large, a reply stands under what it answers, a follow is the person, a chat's tiles come after it…
 - §1652 — A watched token's page draws its price chart whatever it was watched by: a contract DeFiLlama has no window for is ch…
 - §1653 — A presented reading sheet stands on its own ground, one step off the page in dark, so the gap iOS 26 leaves under a f…
-- §1654 — Permissions' box is a pack: one circle per app, its area the dollars it reaches, ringed in amber when it has no limit… (amended by §1677)
+- §1654 — Permissions' box is a pack: one circle per app, its area the dollars it reaches, ringed in amber when it has no limit… (amended by §1677, §1710)
 - §1655 — A money sheet stands on its face's colour, read as the mark's main hue, not its average; a sheet that asks for a sign…
-- §1656 — Permissions' circles are filled by their limit: amber for no limit, the charts' tint for capped; the figure leads ins… (amended by §1677)
+- §1656 — Permissions' circles are filled by their limit: amber for no limit, the charts' tint for capped; the figure leads ins… (amended by §1677, §1710)
 - §1657 — A presented reading sheet is black again, and opens at full height so it reaches the screen's edge (retires §1653's #…
 - §1658 — A money sheet stands on its face's colour only when the face is a picture (narrows §1655)
 - §1659 — A seller app's sale opens the money receipt
@@ -2065,7 +2065,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows… (amended by §1695)
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
-- §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission…
+- §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission… (amended by §1710)
 - §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell… (amended by §1680)
 - §1679 — Move is one size, heading34: the verbs, the sentence, its choices and the foot (amended by §1681)
 - §1680 — Swap asks Uniswap v4 on Base and Robinhood too, and every pool key that holds money: the standard four for every pair…
@@ -2111,6 +2111,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is
 - §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i…
 - §1709 — Permissions and Threats stand on Wallet Home at once: Threats from the phone, Permissions from its last reading, stam…
+- §1710 — Permissions' box is your balance, reached: one disc is what the wallets hold, a delegate or module that reaches all o…
 
 ## Dead rulings → what replaced them (generated)
 
