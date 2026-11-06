@@ -71163,3 +71163,19 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** None: the browser's Aztec door needs the prover, which the Mac does not have.
 
 **Not compiled:** written in a Linux session with no Swift toolchain; the engine's JavaScript ran in the self-test, the Swift was not built. **Not seen:** the simulator, the phone, a live Aztec app.
+
+## §1700k — An Ethereum app on Aztec's list finds your account and may send from it: one call at a time, said in words, run first, then Face ID and the Signer when both keys are needed (amends §1700e's "never sends" for Apps on Aztec's browser only, §1700i item 2) (user, 2026-11-06, of Olla's Connect a Wallet on the phone — MetaMask, WalletConnect, Trust Wallet, Ledger, no Casberi; asked whether the browser's Ethereum account should show only, show and send, or stay out: "Show and send") — RULED, BUILT, NOT COMPILED, NOT SEEN
+
+**The report.** Olla, on Aztec's own list, listed no Casberi. Olla stakes the AZTEC token on Ethereum: it asks for an Ethereum wallet (its picker is wagmi's), not an Aztec one, and Apps on Aztec's browser offered only your Aztec account. §1700j could not help it.
+
+1. **Apps on Aztec's browser offers your account on Ethereum** (`BrowserEthereum`, announced by EIP-6963 as Casberi and as `window.ethereum`) beside your Aztec account: the directory door and a saved Aztec app's link (`sends: true`, the only two doors, guarded in `shield-bridge-selftest.sh`). Human Passport's page is unchanged: it signs messages and sends nothing.
+2. **One call per `eth_sendTransaction`**, only once the page is connected, from your account, on Ethereum, to a named address. A contract creation, another chain, another account, a raw transaction (`eth_sendRawTransaction`) and a batch (`wallet_sendCalls`) are refused.
+3. **The sheet says what it does**: a token approval read here, "Lets ...4444 spend your AZTEC" over its limit ("No limit" when the top byte is set); any other call through `ClearSign` with the token named off its own contract; one neither can read says "A call to ...abcd" and, in amber, "Casberi cannot read what this call does". ETH it pays is its own line.
+4. **Approve runs the call against the real state as the account first** (`eth_simulateV1`, as Lend's calls run); a call that would fail, or a node that will not simulate, signs nothing. Then Face ID; an account that needs both keys (threshold 2, the spend limit's) asks its Signer through the Signer sheet, as a swap does, and one with no Signer sends nothing (`YourAccountChain.appCalls`).
+5. **The page gets the transaction's hash** once it lands. Sent but not seen, or landed with no hash named, it gets an error that says so, and the Wallet shows it.
+
+**Checks.** `shield-bridge-selftest.sh`: a page that may not send cannot, and with sending on a send before connecting, from another account, a contract creation, a send on Base, data that is not hex, a recipient that is not an address, a raw transaction and a batch are refused; one ETH reads as 10^18 wei; uint256's max reads exactly; an approval's limit and no limit read; a transfer is not an approval. The two doors are the only ones that send, and an app's call still runs first. Four provider mutations each fail it.
+
+**Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
+
+**Not compiled:** written in a Linux session with no Swift toolchain; neither the app nor `shield-bridge-selftest.sh` was built or run. **Not seen:** whether Olla's picker lists Casberi (wagmi lists an EIP-6963 wallet; its phone layout may show only "Browser Wallet"), a real stake, the Signer sheet over the browser's sheet.

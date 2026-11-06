@@ -310,7 +310,9 @@ extension FeedScreen {
         case .walletFollow:
             WalletFollowSheet(landsOnClose: true)
         case .aztecApps:
-            AztecBrowserView(url: AztecApps.directory)
+            // An app on Aztec's list may be on Ethereum (Olla): your account
+            // is offered there too, and may send (prd §1700k).
+            AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
                 .presentationDragIndicator(.visible)
         case .watchToken:
             WatchTokenSheet(held: walletHeldTokens)

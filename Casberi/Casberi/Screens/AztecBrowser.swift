@@ -10,7 +10,9 @@ import WebKit
 /// one sheet at a time (item 6). Proved first in `tools/aztec-dapp-spike`.
 /// Opened with `ethereum`, the page also gets your account as an Ethereum
 /// provider (`BrowserEthereum`): connect, then each message signed, asked
-/// here the same way.
+/// here the same way. With `sends` (Apps on Aztec, prd §1700k) a page may
+/// also send a transaction on Ethereum: the sheet says what it does, then
+/// Face ID and, when the account needs both keys, the Signer.
 @MainActor
 final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
 
@@ -20,6 +22,9 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         case send(id: Int, host: String, calls: [Call], fee: String)
         case ethConnect(id: String, host: String)
         case ethSign(id: String, host: String, text: String)
+        /// An app's transaction on Ethereum, in words: what it does, its
+        /// lines, and whether Casberi could read it at all.
+        case ethSend(id: String, host: String, says: String, lines: [String], unread: Bool)
 
         struct Call: Equatable { let name: String; let to: String; let isPublic: Bool }
 
@@ -30,6 +35,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             case .send(let i, _, _, _): "send-\(i)"
             case .ethConnect(let i, _): "eth-connect-\(i)"
             case .ethSign(let i, _, _): "eth-sign-\(i)"
+            case .ethSend(let i, _, _, _, _): "eth-send-\(i)"
             }
         }
     }
@@ -41,18 +47,23 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     let page: WKWebView
     let aztec: Bool
     let ethereum: Bool
+    /// Whether this page may send a transaction from your account (prd §1700k).
+    let sends: Bool
     /// The Ethereum provider's connection, for this page's host only.
     private var ethConnectedHost: String?
     private var ethAnswers: [String: CheckedContinuation<Bool, Never>] = [:]
     @Published var ask: Request?
     @Published var host: String
     @Published var failed: String?
+    /// An app's transaction on its way, said under the page.
+    @Published var sending: String?
     private var queue: [Request] = []
 
-    init(url: URL, aztec: Bool = true, ethereum: Bool = false) {
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
         start = url
         self.aztec = aztec
         self.ethereum = ethereum
+        self.sends = ethereum && sends
         host = url.host(percentEncoded: false) ?? ""
         let relay = (Bundle.main.url(forResource: "AztecEngine", withExtension: nil)?
             .appendingPathComponent("relay.js")).flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
@@ -124,7 +135,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             replyHandler(reply.body, nil); return
         }
         let need = BrowserEthereum.need(method: method, paramsJSON: body["params"] as? String ?? "[]",
-                                        account: account, connected: ethConnectedHost == here)
+                                        account: account, connected: ethConnectedHost == here, sends: sends)
         Task { @MainActor in
             let reply = await self.answer(need, host: here, account: account)
             if case .error(let code, _) = reply { NSLog("browserEthereum| %@ | error %d", method, code) }
@@ -166,6 +177,35 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         case .disconnect:
             ethConnectedHost = nil
             return .result(nil)
+        case .send(let to, let data, let value):
+            let said = await reading(to: to, data: data, value: value, account: account)
+            guard await ask(.ethSend(id: UUID().uuidString, host: host, says: said.says, lines: said.lines,
+                                     unread: said.unread)) else { return .rejected }
+            failed = nil
+            sending = String(localized: "Sending on Ethereum…")
+            defer { sending = nil }
+            do {
+                let sent = try await YourAccountChain.appCalls(
+                    [(to: to, data: data, value: value)], on: YourAccountOp.ethereum,
+                    reason: String(localized: "Send for \(host)"),
+                    signer: { SignerRequestSheet.coSigner(owner: $0, chainId: YourAccountOp.ethereum.chainId) }) { _ in }
+                switch sent.outcome {
+                case .landed(let tx?, _):
+                    NSLog("browserEthereum| sent | %@", tx)
+                    return .result("\"\(tx)\"")
+                case .landed(nil, _):
+                    return .error(code: -32603, message: "Sent. Ethereum has not said which transaction carried it; Casberi's Wallet shows it.")
+                case .pending:
+                    return .error(code: -32603, message: "Sent, and not seen on Ethereum yet. Casberi's Wallet shows it once it lands.")
+                case .dryRun:
+                    return .rejected
+                }
+            } catch {
+                let why = AztecEngine.words(error)
+                NSLog("browserEthereum| send failed | %@", why)
+                failed = why
+                return .error(code: 4001, message: why)
+            }
         case .read(let method, let params):
             guard let value = try? await YourAccountChain.rpc(YourAccountOp.ethereum, method, params),
                   let data = try? JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed) else {
@@ -173,6 +213,46 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             }
             return .result(String(data: data, encoding: .utf8))
         }
+    }
+
+    /// What an app's transaction does, in words (prd §1700k): a token
+    /// approval read here, any other call through clear signing
+    /// (`ClearSign`, the Ethereum Foundation's registry), tokens named off
+    /// their own contracts; a call neither can read says so.
+    private func reading(to: String, data: String, value: String, account: String)
+        async -> (says: String, lines: [String], unread: Bool) {
+        let net = YourAccountOp.ethereum
+        var lines: [String] = []
+        if value != "0" {
+            lines.append(String(localized: "Pays \(YourAccountOp.spoken(value, decimals: 18)) ETH"))
+        }
+        if let a = BrowserEthereum.approval(data) {
+            let token = await YourAccountTokens.lookUp(to, on: net)?.token
+            let name = token?.symbol ?? AddressTail.short(to)
+            let amount = a.unlimited ? String(localized: "No limit")
+                : token.map { "\(YourAccountOp.display(a.amount, decimals: $0.decimals)) \($0.symbol)" }
+                    ?? String(localized: "\(a.amount) base units")
+            return (String(localized: "Lets \(AddressTail.short(a.spender)) spend your \(name)"), [amount] + lines, false)
+        }
+        guard let bytes = SafeABI.hexBytes(data) else {
+            return (String(localized: "A call to \(AddressTail.short(to))"), lines, true)
+        }
+        if bytes.isEmpty {
+            return (String(localized: "Sends to \(AddressTail.short(to))"), lines, false)
+        }
+        await ClearSign.warm()
+        var facts: [String: (symbol: String?, decimals: Int?)] = [:]
+        for asked in ClearSign.tokensAsked(chainId: net.chainId, to: to, data: bytes, value: value, from: account) {
+            if let token = await YourAccountTokens.lookUp(asked, on: net)?.token {
+                facts[asked.lowercased()] = (token.symbol, token.decimals)
+            }
+        }
+        var style = ClearSign.Style.casberi(facts: facts)
+        style.sender = String(localized: "your account")
+        if let r = ClearSign.describe(chainId: net.chainId, to: to, data: bytes, value: value, from: account, style: style) {
+            return (r.headline, r.lines.map { "\($0.label): \($0.value)" } + lines, false)
+        }
+        return (String(localized: "A call to \(AddressTail.short(to))"), lines, true)
     }
 
     /// Raises an ask and waits for the person's answer.
@@ -244,13 +324,16 @@ struct AztecBrowserView: View {
     @StateObject private var model: AztecBrowserModel
     @Environment(\.dismiss) private var dismiss
 
-    init(url: URL, aztec: Bool = true, ethereum: Bool = false) {
-        _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum))
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
+        _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends))
     }
 
     var body: some View {
         VStack(spacing: 0) {
             AztecPage(view: model.page)
+            if let sending = model.sending {
+                Text(verbatim: sending).dsText(.subhead12).foregroundStyle(DS.textSecondary).padding()
+            }
             if let failed = model.failed {
                 Text(verbatim: failed).dsText(.subhead12).foregroundStyle(DS.destructiveInk).padding()
             }
@@ -260,7 +343,7 @@ struct AztecBrowserView: View {
         .task { await model.open() }
         .onDisappear { model.close() }
         .sheet(item: $model.ask, onDismiss: { model.sheetGone() }) { ask in
-            AztecAskSheet(ask: ask) { yes in Task { await model.answer(ask, yes: yes) } }
+            AztecAskSheet(ask: ask, sends: model.sends) { yes in Task { await model.answer(ask, yes: yes) } }
         }
     }
 }
@@ -276,6 +359,8 @@ private struct AztecPage: UIViewRepresentable {
 /// `SafeAskSheet` shape, on ink like every other ask the wallet raises.
 struct AztecAskSheet: View {
     let ask: AztecBrowserModel.Request
+    /// Whether this page may send from your account, so Connect says so.
+    var sends = false
     let answer: (Bool) -> Void
 
     var body: some View {
@@ -320,9 +405,31 @@ struct AztecAskSheet: View {
             }
             Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
         case .ethConnect:
-            DSProse.text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
-                .dsText(.body17).foregroundStyle(DS.textSecondary)
+            if sends {
+                DSProse.text("It sees your account's address. Casberi asks before every signature and every send.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                DSProse.text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        case .ethSend(_, _, let says, let lines, let unread):
+            Text(verbatim: says).dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if unread {
+                Text("Casberi cannot read what this call does. It runs on Ethereum first, and nothing is signed if it would fail.")
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("It runs on Ethereum first, and nothing is signed if it would fail.")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .ethSign(_, _, let text):
             ScrollView {
                 Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -341,18 +448,19 @@ struct AztecAskSheet: View {
         case .send(_, let host, _, _): String(localized: "\(host) wants to send")
         case .ethConnect(_, let host): String(localized: "Connect \(host) to your account?")
         case .ethSign(_, let host, _): String(localized: "\(host) asks your account to sign")
+        case .ethSend(_, let host, _, _, _): String(localized: "\(host) wants to send")
         }
     }
 
     private var height: CGFloat {
-        switch ask { case .connect, .ethConnect: 400; case .emoji: 360; case .send, .ethSign: 520 }
+        switch ask { case .connect, .ethConnect: 400; case .emoji: 360; case .send, .ethSign, .ethSend: 520 }
     }
 
     private var acceptWord: String {
         switch ask {
         case .connect, .ethConnect: String(localized: "Connect")
         case .emoji: String(localized: "They match")
-        case .send: String(localized: "Approve")
+        case .send, .ethSend: String(localized: "Approve")
         case .ethSign: String(localized: "Sign")
         }
     }
@@ -360,7 +468,7 @@ struct AztecAskSheet: View {
         switch ask {
         case .connect, .ethConnect: "link"
         case .emoji: "checkmark"
-        case .send, .ethSign: "faceid"
+        case .send, .ethSign, .ethSend: "faceid"
         }
     }
     private var declineWord: String {

@@ -1315,7 +1315,7 @@ struct ThingSheetView: View {
         .onDisappear { if pagedNote, inPane { chrome.clearPaneVerbs(owner: thing.id.uuidString) } }
         .sheet(isPresented: $paneNoteSharing) { ShareTray(thing: thing) }
         .sheet(item: $aztecApp) { link in
-            AztecBrowserView(url: link.url)
+            AztecBrowserView(url: link.url, ethereum: true, sends: true)
                 .presentationDragIndicator(.visible)
         }
         .background {

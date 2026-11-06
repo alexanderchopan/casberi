@@ -3,10 +3,13 @@ import Foundation
 /// **YOUR ACCOUNT, IN CASBERI'S BROWSER (prd §1700e).** An Ethereum provider
 /// (EIP-1193, announced by EIP-6963 as "Casberi") added to a page Casberi
 /// opened for you — first Human Passport, where your Safe earns the score
-/// Shield asks for. It connects only when you say so, signs only messages
+/// Shield asks for. It connects only when you say so, signs messages
 /// (personal_sign, typed data) with your account's ERC-1271 signature, each
-/// one asked first, and never sends a transaction. Reads go to Ethereum
-/// through the Wallet's own node, from a short list.
+/// one asked first, and reads go to Ethereum through the Wallet's own node,
+/// from a short list. In Apps on Aztec's browser it also SENDS (prd §1700k):
+/// one call on Ethereum per `eth_sendTransaction`, said on a sheet in words
+/// (`ClearSign`, an approval read here), run against the real state, then
+/// Face ID and, when the account needs both keys, the Signer.
 enum BrowserEthereum {
     /// The provider, added at document start to the page's own world (a
     /// page's wallet library reads `window.ethereum` and EIP-6963 there). It
@@ -67,6 +70,9 @@ enum BrowserEthereum {
         case read(method: String, params: [Any])
         /// The page lets go of your account.
         case disconnect
+        /// Send one call on Ethereum from your account (prd §1700k): `to`, the
+        /// calldata as hex, the value in decimal wei.
+        case send(to: String, data: String, value: String)
 
         static func == (a: Need, b: Need) -> Bool {
             switch (a, b) {
@@ -76,6 +82,7 @@ enum BrowserEthereum {
             case (.signTyped(let x, _), .signTyped(let y, _)): x == y
             case (.read(let x, _), .read(let y, _)): x == y
             case (.disconnect, .disconnect): true
+            case (.send(let a, let b, let c), .send(let x, let y, let z)): a == x && b == y && c == z
             default: false
             }
         }
@@ -97,7 +104,7 @@ enum BrowserEthereum {
         }
 
         static let rejected = Reply.error(code: 4001, message: "You declined in Casberi.")
-        static let unsupported = Reply.error(code: 4200, message: "Casberi signs messages here; it does not send from this page.")
+        static let unsupported = Reply.error(code: 4200, message: "Casberi does not do this on this page.")
         static let wrongAccount = Reply.error(code: 4100, message: "That is not the account Casberi connected.")
     }
 
@@ -108,8 +115,10 @@ enum BrowserEthereum {
         "eth_maxPriorityFeePerGas", "eth_feeHistory", "eth_estimateGas", "eth_getStorageAt",
     ]
 
-    /// Reads one request: its method and its params (JSON text, as the page sent them).
-    static func need(method: String, paramsJSON: String, account: String, connected: Bool) -> Need {
+    /// Reads one request: its method and its params (JSON text, as the page
+    /// sent them). `sends` is whether this page may send at all (Apps on
+    /// Aztec's browser); elsewhere a send is refused as before.
+    static func need(method: String, paramsJSON: String, account: String, connected: Bool, sends: Bool = false) -> Need {
         let params = (try? JSONSerialization.jsonObject(with: Data(paramsJSON.utf8))) as? [Any] ?? []
         let mine = { (x: Any?) in (x as? String)?.lowercased() == account.lowercased() }
         switch method {
@@ -147,10 +156,86 @@ enum BrowserEthereum {
             let name = (o["domain"] as? [String: Any])?["name"] as? String
             let kind = o["primaryType"] as? String ?? "data"
             return .signTyped(json: json, summary: [name, kind].compactMap { $0 }.joined(separator: " · "))
+        case "eth_sendTransaction":
+            guard sends else { return .answer(.unsupported) }
+            guard connected else { return .answer(.error(code: 4100, message: "Connect first.")) }
+            guard let tx = params.first as? [String: Any] else { return .answer(.unsupported) }
+            return transaction(tx, account: account)
         default:
             if reads.contains(method) { return .read(method: method, params: params) }
             return .answer(.unsupported)
         }
+    }
+
+    /// One `eth_sendTransaction` object as a send, or the refusal it earns:
+    /// from your account or unnamed, to an address (a contract creation is
+    /// refused), on Ethereum, the value a hex quantity, the data hex.
+    static func transaction(_ tx: [String: Any], account: String) -> Need {
+        if let from = tx["from"] as? String, from.lowercased() != account.lowercased() { return .answer(.wrongAccount) }
+        if let chain = tx["chainId"].map({ "\($0)".lowercased() }), chain != "0x1", chain != "1" {
+            return .answer(.error(code: 4901, message: "Casberi's account here is on Ethereum only."))
+        }
+        guard let to = tx["to"] as? String, isAddress(to) else {
+            return .answer(.error(code: 4200, message: "Casberi does not make contracts from this page."))
+        }
+        let data = (tx["data"] as? String) ?? (tx["input"] as? String) ?? "0x"
+        guard data.lowercased().hasPrefix("0x"), data.count % 2 == 0, data.dropFirst(2).allSatisfy(\.isHexDigit) else {
+            return .answer(.error(code: -32602, message: "That call's data is not hex."))
+        }
+        let value: String
+        if let raw = tx["value"] as? String {
+            guard let v = decimal(hexQuantity: raw) else { return .answer(.error(code: -32602, message: "That value is not a quantity.")) }
+            value = v
+        } else {
+            value = "0"
+        }
+        return .send(to: to, data: data.lowercased(), value: value)
+    }
+
+    static func isAddress(_ s: String) -> Bool {
+        s.count == 42 && s.lowercased().hasPrefix("0x") && s.dropFirst(2).allSatisfy(\.isHexDigit)
+    }
+
+    /// A JSON-RPC quantity ("0x…") as decimal digits; nil when it is not one.
+    static func decimal(hexQuantity raw: String) -> String? {
+        let lower = raw.lowercased()
+        guard lower.hasPrefix("0x"), lower.count > 2, lower.count <= 66, lower.dropFirst(2).allSatisfy(\.isHexDigit) else { return nil }
+        // Long division of the hex digits by ten, so 256-bit values stay exact.
+        var digits = lower.dropFirst(2).map { Int(String($0), radix: 16)! }
+        var out = ""
+        while !(digits.isEmpty || digits.allSatisfy { $0 == 0 }) {
+            var rest = 0
+            var next: [Int] = []
+            for d in digits {
+                let n = rest * 16 + d
+                let q = n / 10
+                rest = n % 10
+                if !next.isEmpty || q != 0 { next.append(q) }
+            }
+            out = String(rest) + out
+            digits = next
+        }
+        return out.isEmpty ? "0" : out
+    }
+
+    /// An ERC-20 `approve(address,uint256)`: the spender, the amount in base
+    /// units, and whether it is no limit (the top byte set: the max uint256
+    /// apps send, or near it). nil for any other call.
+    struct Approval: Equatable {
+        let spender: String
+        let amount: String
+        let unlimited: Bool
+    }
+
+    static func approval(_ data: String) -> Approval? {
+        let hex = data.lowercased()
+        guard hex.hasPrefix("0x095ea7b3"), hex.count == 2 + 8 + 128 else { return nil }
+        let words = hex.dropFirst(10)
+        let spenderWord = words.prefix(64), amountWord = words.suffix(64)
+        guard spenderWord.prefix(24).allSatisfy({ $0 == "0" }),
+              let amount = decimal(hexQuantity: "0x" + amountWord) else { return nil }
+        return Approval(spender: "0x" + spenderWord.suffix(40), amount: amount,
+                        unlimited: amountWord.prefix(2) == "ff")
     }
 
     /// A personal_sign message as text: hex is decoded when it is UTF-8,

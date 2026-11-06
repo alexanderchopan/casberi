@@ -26,7 +26,10 @@
 #   Casberi/Casberi/Model/Aztec/BrowserEthereum.swift — your account as an
 #   Ethereum provider on Human Passport's page: a page that could send, sign
 #   for another chain or account, read accounts before connecting, or get a
-#   hash signed dressed as a message.
+#   hash signed dressed as a message. In Apps on Aztec's browser it sends
+#   (prd §1700k): only there, only connected, only from your account on
+#   Ethereum to a named address, the value read exactly, an approval read
+#   with its limit, and never a raw transaction or a batch.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -113,9 +116,9 @@ var failed = 0
 func check(_ ok: Bool, _ what: String) { if !ok { failed += 1; print("✗ provider: \(what)") } }
 let me = "0x1111111111111111111111111111111111111111"
 let other = "0x2222222222222222222222222222222222222222"
-func need(_ m: String, _ p: [Any], _ c: Bool = true) -> BrowserEthereum.Need {
+func need(_ m: String, _ p: [Any], _ c: Bool = true, sends: Bool = false) -> BrowserEthereum.Need {
     let json = String(data: try! JSONSerialization.data(withJSONObject: p), encoding: .utf8)!
-    return BrowserEthereum.need(method: m, paramsJSON: json, account: me, connected: c)
+    return BrowserEthereum.need(method: m, paramsJSON: json, account: me, connected: c, sends: sends)
 }
 func signs(_ n: BrowserEthereum.Need) -> Bool {
     switch n { case .signText, .signTyped: true; default: false }
@@ -135,13 +138,61 @@ check(signs(need("eth_signTypedData_v4", [me, "{\"domain\":{\"chainId\":1,\"name
 check(!signs(need("eth_signTypedData_v4", [other, "{\"domain\":{\"chainId\":1},\"primaryType\":\"X\"}"])), "typed data for another account")
 check(need("eth_call", [[:], "latest"]) == .read(method: "eth_call", params: []), "a read not passed through")
 check(need("eth_chainId", []) == .answer(.result("\"0x1\"")), "chain is not Ethereum")
+
+// Sending (prd §1700k): Apps on Aztec's browser only.
+let olla = "0x3333333333333333333333333333333333333333"
+func sends(_ tx: [String: Any], _ c: Bool = true) -> BrowserEthereum.Need { need("eth_sendTransaction", [tx], c, sends: true) }
+func isSend(_ n: BrowserEthereum.Need) -> Bool { if case .send = n { true } else { false } }
+check(!isSend(need("eth_sendTransaction", [["to": olla, "data": "0x"]])), "a page that may not send sends")
+check(!isSend(sends(["to": olla, "data": "0x"], false)), "a send before connecting")
+check(!isSend(sends(["from": other, "to": olla, "data": "0x"])), "a send from another account")
+check(!isSend(sends(["data": "0x6080"])), "a contract made from a page")
+check(!isSend(sends(["to": olla, "data": "0x", "chainId": "0x2105"])), "a send on Base")
+check(!isSend(sends(["to": olla, "data": "0xzz"])), "data that is not hex sent")
+check(!isSend(sends(["to": "0x12", "data": "0x"])), "a send to something that is not an address")
+check(sends(["from": me.uppercased().replacingOccurrences(of: "0X", with: "0x"), "to": olla, "data": "0xABCD", "value": "0xde0b6b3a7640000"])
+      == .send(to: olla, data: "0xabcd", value: "1000000000000000000"), "one ETH not read as 10^18 wei")
+check(sends(["to": olla, "input": "0x01"]) == .send(to: olla, data: "0x01", value: "0"), "`input` not read as the data")
+check(!isSend(need("eth_sendRawTransaction", ["0x02"], sends: true)), "a raw transaction sent")
+check(!isSend(need("wallet_sendCalls", [[:]], sends: true)), "a batch sent")
+check(BrowserEthereum.decimal(hexQuantity: "0x" + String(repeating: "f", count: 64))
+      == "115792089237316195423570985008687907853269984665640564039457584007913129639935", "uint256 max not exact")
+check(BrowserEthereum.decimal(hexQuantity: "0x0") == "0", "zero")
+let spender = "4444444444444444444444444444444444444444"
+let capped = BrowserEthereum.approval("0x095ea7b3" + String(repeating: "0", count: 24) + spender
+                                      + String(repeating: "0", count: 56) + "05f5e100")
+check(capped == BrowserEthereum.Approval(spender: "0x" + spender, amount: "100000000", unlimited: false), "a 100 USDC approval misread")
+let noLimit = BrowserEthereum.approval("0x095ea7b3" + String(repeating: "0", count: 24) + spender + String(repeating: "f", count: 64))
+check(noLimit?.unlimited == true, "an approval with no limit read as limited")
+check(BrowserEthereum.approval("0xa9059cbb" + String(repeating: "0", count: 128)) == nil, "a transfer read as an approval")
 exit(failed == 0 ? 0 : 1)
 EOF
 xcrun swiftc -Onone -o "$TMP/prov" "$PROVIDER" "$TMP/prov.d/main.swift" 2>"$TMP/perr" || { cat "$TMP/perr"; echo "✗ the provider did not compile"; exit 1; }
 "$TMP/prov" || exit 1
-if grep -n "eth_sendTransaction\|eth_sendRawTransaction\|wallet_sendCalls" "$PROVIDER" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
-  echo "✗ the provider names a sending method: it signs messages only (prd §1700e)"; exit 1
+if grep -n "eth_sendRawTransaction\|wallet_sendCalls" "$PROVIDER" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
+  echo "✗ the provider names a raw or batch send: one call per eth_sendTransaction only (prd §1700k)"; exit 1
 fi
+# Sending is on where Apps on Aztec opens a page, and nowhere else (prd §1700k).
+DOORS=$(grep -rln "sends: true" Casberi/Casberi --include=*.swift | sort | tr '\n' ' ')
+[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/ThingSheetView.swift " ]] \
+  || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
+grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
+  || { echo "✗ Apps on Aztec's door no longer offers your account to an Ethereum app"; exit 1; }
+grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
+  || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
+# The provider's own mutations: each must fail the run.
+pmutate() { # label, perl expression
+  sed -e '' "$PROVIDER" > "$TMP/prov.swift"
+  perl -0pi -e "$2" "$TMP/prov.swift"
+  cmp -s "$PROVIDER" "$TMP/prov.swift" && { echo "✗ mutation '$1' changed nothing (its anchor drifted)"; exit 1; }
+  if xcrun swiftc -Onone -o "$TMP/pmut" "$TMP/prov.swift" "$TMP/prov.d/main.swift" 2>/dev/null && "$TMP/pmut" >/dev/null; then
+    echo "✗ mutation survived: $1"; exit 1
+  fi
+}
+pmutate "any page sends" 's/guard sends else \{ return \.answer\(\.unsupported\) \}//'
+pmutate "send from any account" 's/from\.lowercased\(\) != account\.lowercased\(\)/false/'
+pmutate "value divided wrong" 's/let q = n \/ 10/let q = n \/ 16/'
+pmutate "every approval unlimited" 's/unlimited: amountWord\.prefix\(2\) == "ff"/unlimited: true/'
 
 # ── Mutations: the checks above catch what they claim ───────────────────
 mutate() { # label, perl expression
@@ -158,4 +209,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 4 mutations caught)"

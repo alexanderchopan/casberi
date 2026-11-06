@@ -363,16 +363,17 @@ enum NetworkReach {
         // ask your Aztec account to connect. The list is `AztecApps.hosts`.
         Endpoint(service: "Aztec apps",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "When you open a link to an Aztec app (Nemi, Olla, Xochi, RavenHouse, RollingChat, Private Inference, Dark Forest), loads that app's own page in Casberi's browser. It sees your Aztec account's address only once you connect it there, and every transaction asks you first.",
+                 purpose: "When you open a link to an Aztec app (Nemi, Olla, Xochi, RavenHouse, RollingChat, Private Inference, Dark Forest), loads that app's own page in Casberi's browser. It sees your Aztec account's address, or your account's on Ethereum, only once you connect it there, and every transaction asks you first.",
                  hosts: ["nemi.fi", "olla.finance", "xochi.fi", "app.ravenhouse.xyz", "rolling.chat",
                          "privateinference.gg", "dfaztec-s1.dfarchon.xyz"],
                  credentialed: false),
         // Apps on Aztec (prd §1700i): Home's door opens Aztec's own
         // directory in Casberi's browser; the app a card leads to loads its
-        // own page there, as a saved link's does.
+        // own page there, as a saved link's does. An app on Ethereum (Olla)
+        // finds your account there too and may ask to send (prd §1700k).
         Endpoint(service: "Aztec's app directory",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "When you open Apps on Aztec from the Wallet's Home, loads Aztec's own list of apps in Casberi's browser. An app you open from it loads its own page there, and sees your Aztec account's address only once you connect it.",
+                 purpose: "When you open Apps on Aztec from the Wallet's Home, loads Aztec's own list of apps in Casberi's browser. An app you open from it loads its own page there, and sees your Aztec account's address, or your account's on Ethereum, only once you connect it; every transaction asks you first.",
                  hosts: ["aztec.network"],
                  credentialed: false),
         Endpoint(service: "Human Passport",

@@ -2062,6 +2062,7 @@ enum YourAccountChain {
     /// unless every call succeeds — a node that will not simulate signs
     /// nothing either. `value` is decimal wei.
     static func privateCalls(_ list: [(to: String, data: String, value: String)], on net: Network, reason: String,
+                             coSigner: CoSigner? = nil,
                              stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
@@ -2088,7 +2089,7 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
-                                        rotateTo: nextKey, payments: [], signer: device,
+                                        rotateTo: nextKey, payments: [], signer: device, coSigner: coSigner,
                                         reason: reason, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
@@ -2100,6 +2101,28 @@ enum YourAccountChain {
     static func lendCalls(_ list: [(to: String, data: String, value: String)], on net: Network, reason: String,
                           stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         try await privateCalls(list, on: net, reason: reason, stage: stage)
+    }
+
+    /// **AN APP'S TRANSACTION TAKES THE SAME PATH (prd §1700k):** a call an
+    /// app in Apps on Aztec's browser asked for, after its sheet said what it
+    /// does. Run against the real state as the account, then Face ID; a call
+    /// that fails, or a node that will not simulate, signs nothing. An
+    /// account that needs both keys (threshold 2, the spend limit's) asks
+    /// its Signer too, as every swap does; one with no Signer sends nothing.
+    static func appCalls(_ list: [(to: String, data: String, value: String)], on net: Network, reason: String,
+                         signer: @escaping @MainActor (String) -> CoSigner,
+                         stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        var coSigner: CoSigner?
+        if try await knownDeployed(net, account), try await knownThreshold(net, account) >= 2 {
+            guard let owner = try await knownSigners(net, account).first else {
+                throw Failure(message: String(localized: "Add a signer first: this account sends with both keys"))
+            }
+            coSigner = await signer(owner)
+        }
+        return try await privateCalls(list, on: net, reason: reason, coSigner: coSigner, stage: stage)
     }
 
     // MARK: - One operation, end to end
