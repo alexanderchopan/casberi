@@ -1634,6 +1634,12 @@
     "Screens/ThingSheetView.swift:aztecApp"
    ],
    "why": "your account on Human Passport's page (prd §1700e): the page opens only from Move's Shield line when Shield finds the account's score short, which the demo never asks, and its two asks are raised only by that live page asking to connect or sign; the demo refuses every account request there (seen on the simulator 2026-11-04 with `-aztecBrowserEthereum`); and an Aztec app's link opened from a thing's sheet (prd §1700c), which the demo never routes and holds no such link"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#aztecApps"
+   ],
+   "why": "Apps on Aztec (prd §1700i): the Wallet Home door stands only with an Aztec account on an iPhone and never in the demo (`AztecApps.doorShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` the link door opens (seen with `-aztecBrowser`)"
   }
  ]
 }

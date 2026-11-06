@@ -33,17 +33,30 @@ extension FeedScreen {
     func walletDoor(_ section: WalletSection, name: String? = nil, figure: String? = nil,
                     figureTone: Color = DS.textPrimary, word: String? = nil,
                     wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
+        walletDoorRow(glyph: section.glyph, name: name ?? section.label, figure: figure,
+                      figureTone: figureTone, word: word, wordTone: wordTone) {
+            if let act { act() } else { chrome.walletSection = section }
+        }
+        // Where back from this door's page lands (prd §1587).
+        .id(Self.walletDoorAnchor(section))
+    }
+
+    /// A door's row with no page of its own: Apps on Aztec (prd §1700i)
+    /// leaves the Wallet for Aztec's directory, so it has no section.
+    func walletDoorRow(glyph: String, name: String, figure: String? = nil,
+                       figureTone: Color = DS.textPrimary, word: String? = nil,
+                       wordTone: Color = DS.textSecondary, act: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
-            if let act { act() } else { chrome.walletSection = section }
+            act()
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                Image(systemName: section.glyph)
+                Image(systemName: glyph)
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                Text(verbatim: name ?? section.label)
+                Text(verbatim: name)
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)
                     .lineLimit(1)
@@ -72,11 +85,9 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
-        .accessibilityLabel(Text(verbatim: [name ?? section.label, figure ?? word]
+        .accessibilityLabel(Text(verbatim: [name, figure ?? word]
             .compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
-        // Where back from this door's page lands (prd §1587).
-        .id(Self.walletDoorAnchor(section))
     }
 
     static func walletDoorAnchor(_ section: WalletSection) -> String { "wallet.door.\(section.rawValue)" }
@@ -302,6 +313,17 @@ extension FeedScreen {
                     walletDoor(.threats, figure: "\(unseen)", figureTone: DS.destructiveInk)
                 } else {
                     walletDoor(.threats, word: String(localized: "All seen"))
+                }
+            }
+            // **APPS ON AZTEC (prd §1700i, user: "wallet home it is").** Last
+            // of the doors, once you have an Aztec account, on All or with
+            // your account picked: Aztec's own directory in Casberi's browser,
+            // where a card's app finds your Aztec account. Aztec keeps the
+            // list; Casberi lists nothing of its own (§1700c). Never on the
+            // Mac (no prover) or in the demo.
+            if onAll || yoursPicked, AztecApps.doorShown {
+                walletDoorRow(glyph: AztecApps.doorGlyph, name: String(localized: "Apps on Aztec")) {
+                    feedSheet = .aztecApps
                 }
             }
             // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"

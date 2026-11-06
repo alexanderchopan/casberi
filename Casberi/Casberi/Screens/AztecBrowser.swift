@@ -70,6 +70,9 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         // The app's site keeps its own storage, apart from the engine's origin.
         config.websiteDataStore = .default()
         page = WKWebView(frame: .zero, configuration: config)
+        // A swipe from the edge goes back a page and forward again: Home's
+        // door opens a directory you walk through (prd §1700i).
+        page.allowsBackForwardNavigationGestures = true
         #if DEBUG
         page.isInspectable = true
         #endif

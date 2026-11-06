@@ -71111,3 +71111,12 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 5. **One source.** `design/app-icon/tentacle.py`'s `ICON` and `icon_arm()` write the three PNGs; the explorations are in `design/app-icon/explore/`.
 
 **Mac half (§1402).** The icon set is shared, so the Mac's icon changes with it.
+
+## §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amends §1700c item 1, §1480 item 2's doors) (user, 2026-11-05, asked how anyone reaches an Aztec app: "how literally would someone be able to use the apps b/c we have them in our aztec reel and we have that emoji matching ui", then of Home or Your account "wallet home it is", and "Build it") — RULED, BUILT
+
+1. **Apps on Aztec is Home's last door**, after Threats, once you have an Aztec account, on All or with your account picked. No count, no word: it leaves the Wallet. Its glyph is a globe (`AztecApps.doorGlyph`), a row through `walletDoorRow`, which has no section because it has no page.
+2. **It opens Aztec's directory, not ours**: `https://aztec.network/apps#directory` in `AztecBrowserView`, straight at the list. A card opens Aztec's page for the app (`/projects/<app>`), whose Open link opens the app's own site in the same browser (measured 2026-11-05: same tab, no `target`). The relay is a document-start script on every page the browser loads, so the app finds your Aztec account there; every connect, the emoji check and every transaction still ask (§1700 item 6).
+3. **§1700c item 1 now reads**: no list of Aztec apps of Casberi's own; one door to Aztec's. Aztec keeps the list; Casberi vouches for nothing on it. `AztecApps.hosts` still says only which saved links open in Casberi.
+4. **Never on the Mac** (no prover) **or in the demo** (`AztecApps.doorShown`). `aztec.network` is declared in `NetworkReach` ("Aztec's app directory").
+
+**Mac half (§1402).** None: the door needs the prover, which the Mac does not have.
