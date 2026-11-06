@@ -1166,19 +1166,13 @@
      "tap": "button:=Wallet"
     },
     {
-     "tap": "button:^Holdings"
+     "tap": "button:=Account"
     },
     {
-     "maybe": "button:=All"
-    },
-    {
-     "swipeUp": 2
-    },
-    {
-     "tap": "button:~of $500"
+     "tap": "button:^Savings goal"
     }
    ],
-   "anchor": "text:=Savings goal"
+   "anchor": "switch:=By a date"
   },
   {
    "id": "wallet-token",
