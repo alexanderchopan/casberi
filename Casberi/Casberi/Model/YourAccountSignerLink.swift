@@ -103,18 +103,39 @@ enum YourAccountSignerLink {
     /// of its own that asks for that one method and is let go once answered,
     /// so the Signer's kept session (Safe approvals only) is never widened.
     /// The answer must recover to `signer` over `digest`, or nothing goes
-    /// back to the page.
+    /// back to the page. Once the wallet has connected, the request goes and
+    /// `sent` gets the wallet's own door, so the wallet is opened onto it, and
+    /// each `resend` asks the same question again (as a send does, prd §1605,
+    /// §1609): a wallet left in the background misses a request.
     static func signForApp(method appMethod: String, params: [String], digest: [UInt8], signer: String,
-                           timeout: Duration = wait, show: @MainActor (URL) -> Void) async throws -> [UInt8] {
+                           timeout: Duration = wait, resend: SignerSignal? = nil,
+                           sent: @MainActor (URL?) -> Void = { _ in },
+                           show: @MainActor (URL) -> Void) async throws -> [UInt8] {
         guard ["personal_sign", "eth_signTypedData_v4"].contains(appMethod), digest.count == 32 else { throw Failure.unavailable }
         let chainId = YourAccountOp.ethereum.chainId
         let pairing = try await connect(signer: signer, chainIds: [chainId], method: appMethod, timeout: timeout, show: show)
         defer { close(pairing) }
         guard let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
-        let request = try Request(topic: pairing.topic, method: appMethod, params: AnyCodable(params), chainId: chain)
-        async let answer = answer(to: Asked(request.id), topic: pairing.topic, timeout: timeout)
+        func make() throws -> Request {
+            try Request(topic: pairing.topic, method: appMethod, params: AnyCodable(params), chainId: chain)
+        }
+        let request = try make()
+        let ids = Asked(request.id)
+        let resends = resend?.stream()
+        async let answer = answer(to: ids, topic: pairing.topic, timeout: timeout)
+        let again = Task {
+            guard let resends else { return }
+            for await _ in resends {
+                guard let next = try? make() else { continue }
+                ids.add(next.id)
+                try? await Sign.instance.request(params: next)
+                trace("asked \(appMethod) again for an app")
+            }
+        }
+        defer { again.cancel() }
         do { try await Sign.instance.request(params: request) } catch { throw Failure.gone }
         trace("asked \(appMethod) for an app")
+        await sent(door(of: pairing.topic))
         switch await answer {
         case .answered(.response(let value)):
             guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }

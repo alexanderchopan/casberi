@@ -203,6 +203,12 @@ grep -q 'connect(signer: signer, chainIds: \[chainId\], method: appMethod' Casbe
   || { echo "✗ an app's sign-in rides the Signer's kept session (prd §1700l)"; exit 1; }
 grep -q 'EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer)' Casberi/Casberi/Model/YourAccountSignerLink.swift \
   || { echo "✗ an app's sign-in is passed on without recovering to the co-signer (prd §1700l)"; exit 1; }
+# Connected, the request goes and the wallet is opened onto it, with Ask
+# again: a wallet left in the background misses it (prd §1700l item 6).
+grep -q 'await sent(door(of: pairing.topic))' Casberi/Casberi/Model/YourAccountSignerLink.swift \
+  || { echo "✗ an app's sign-in never opens the wallet onto its request (prd §1700l item 6)"; exit 1; }
+grep -q 'resend: ask.resends,' Casberi/Casberi/Screens/AztecBrowser.swift && grep -q 'sent: { ask.ask(kept: \$0) }' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ the browser's co-signer sign-in has no Ask again or wallet door (prd §1700l item 6)"; exit 1; }
 # The provider's own mutations: each must fail the run.
 pmutate() { # label, perl expression
   sed -e '' "$PROVIDER" > "$TMP/prov.swift"

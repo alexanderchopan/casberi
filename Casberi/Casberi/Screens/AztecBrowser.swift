@@ -60,6 +60,9 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     @Published private(set) var coSigner: String?
     /// The connect sheet's answer was "Use your co-signer instead".
     private var choseCoSigner = false
+    /// Your co-signer signed for this page since it connected as your
+    /// co-signer; until then, a connect again leads with the co-signer.
+    private var coSignerSigned = false
     /// When your account last signed for this page: a connect soon after
     /// is a sign-in the app turned down (prd §1700l).
     private var accountSignedAt: Date?
@@ -163,7 +166,12 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         // Connected as your co-signer, the page knows the co-signer's address,
         // never sends, and is asked again when it connects again (prd §1700l).
         var connected = ethConnectedHost == here, mayEnd = sends
-        if ethCoSigner != nil { (connected, mayEnd) = BrowserEthereum.asCoSigner(method: method, connected: connected) }
+        if ethCoSigner != nil {
+            (connected, mayEnd) = BrowserEthereum.asCoSigner(method: method, connected: connected)
+            // Connecting again before the co-signer's sign-in finished is the
+            // same sign-in tried again: it leads with the co-signer.
+            if !connected, ethConnectedHost == here, !coSignerSigned { reconnecting = true }
+        }
         // Your account signed and the page connects again: it turned the
         // sign-in down, so Connect is asked again, co-signer first.
         if ethCoSigner == nil, connected,
@@ -191,6 +199,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             ethCoSigner = choseCoSigner ? coSigner : nil
             reconnecting = false
             accountSignedAt = nil
+            coSignerSigned = false
             return .result("[\"\(ethCoSigner ?? account)\"]")
         case .signText(let text):
             guard await ask(.ethSign(id: UUID().uuidString, host: host, text: text)) else { return .rejected }
@@ -277,8 +286,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         do {
             let sig = try await SignerRequestSheet.asking(signer: signer) { ask in
                 try await YourAccountSignerLink.signForApp(method: method, params: params, digest: digest,
-                                                          signer: signer, show: { ask.pair($0) })
+                                                          signer: signer, resend: ask.resends,
+                                                          sent: { ask.ask(kept: $0) }, show: { ask.pair($0) })
             }
+            coSignerSigned = true
             NSLog("browserEthereum| co-signer signed %@", method)
             return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
         } catch is CancellationError {
