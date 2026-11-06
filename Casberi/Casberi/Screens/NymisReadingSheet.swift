@@ -3,8 +3,8 @@ import SwiftUI
 /// **WHAT NYMIS READ (prd §1701, §1701a, §1701c).** The subscription sheet's
 /// anatomy: the app's art centred over the account's name, then one card,
 /// "Nymis's reading": Nymis's two summaries in their words (what gives the
-/// address away, then its money trail), and each finding's title over
-/// Nymis's explanation; then the incomplete line, Scan again, and See more
+/// address away, then its money trail), or, until Nymis has written them,
+/// each finding's title over Nymis's explanation; then the incomplete line, Scan again, and See more
 /// on Nymis at the foot. A reading stored before §1701c keeps the page's
 /// summary and label/value facts (§1701b). No score, no grade, no points
 /// (user, 2026-11-04).
@@ -46,7 +46,8 @@ struct NymisReadingSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.bottom, DS.Space.s3)
                     }
-                    findings(reading, saysNone: false)
+                    // The summaries say what the findings say: the findings
+                    // stand only while there is no summary (user, 2026-11-06).
                 } else if let summary = reading.summary {
                     // A reading of the scan's page, stored before §1701c.
                     Text(verbatim: summary)
@@ -64,7 +65,7 @@ struct NymisReadingSheet: View {
                         .accessibilityElement(children: .combine)
                     }
                 } else {
-                    findings(reading, saysNone: true)
+                    findings(reading)
                 }
                 if reading.partial {
                     // Only when Nymis said incomplete (§1701c), in its words
@@ -95,11 +96,11 @@ struct NymisReadingSheet: View {
         .padding(DS.Space.s4)
     }
 
-    /// Nymis's findings, each title over its explanation. With no summary
-    /// and no findings, the sheet says so (`saysNone`).
+    /// Nymis's findings, each title over its explanation, while there is no
+    /// summary. With none at all, the sheet says so.
     @ViewBuilder
-    private func findings(_ reading: NymisScan.Reading, saysNone: Bool) -> some View {
-        if saysNone, reading.findings.isEmpty {
+    private func findings(_ reading: NymisScan.Reading) -> some View {
+        if reading.findings.isEmpty {
             // Nymis: an empty list does not prove no exposure.
             Text("Nymis found nothing that gives this address away, which doesn't prove nothing does.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)

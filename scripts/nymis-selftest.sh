@@ -61,6 +61,9 @@ if grep -nF 'reportURL' "$SCANS"; then
   echo "✗ the scan code builds the report's URL: only the sheet opens it"; exit 1
 fi
 grep -qF 'openURL(url)' "$SHEET" || { echo "✗ See more no longer opens the report for the person"; exit 1; }
+# The findings stand only while there is no summary (§1701c item 3).
+[[ $(grep -cE '^\s*findings\(reading\)$' "$SHEET") == 1 ]] \
+  || { echo "✗ the findings are drawn beside Nymis's summaries"; exit 1; }
 if grep -rnF 'nymis.io/api' Casberi/Casberi | grep -vF "$SHAPE" | grep -vE ':\s*///|NetworkReach'; then
   echo "✗ a Nymis endpoint is built outside NymisScan.swift"; exit 1
 fi
