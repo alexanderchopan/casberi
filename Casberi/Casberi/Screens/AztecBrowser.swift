@@ -70,7 +70,15 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     /// with your co-signer.
     @Published private(set) var reconnecting = false
     private var ethAnswers: [String: CheckedContinuation<Bool, Never>] = [:]
-    @Published var ask: Request?
+    @Published var ask: Request? {
+        didSet { if ask != nil { askSheetUp = true } }
+    }
+    /// An ask sheet is on screen or still leaving it. The Signer sheet is
+    /// raised over whatever is on top, so it waits for this one to go: raised
+    /// while it slides away, it went with it and nothing showed (build 951,
+    /// prd §1700l item 7).
+    private var askSheetUp = false
+    private var askSheetGoneWaiters: [CheckedContinuation<Void, Never>] = []
     @Published var host: String
     @Published var failed: String?
     /// An app's transaction on its way, said under the page.
@@ -248,6 +256,9 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             failed = nil
             sending = String(localized: "Sending on Ethereum…")
             defer { sending = nil }
+            // The Signer sheet may be raised for this send: not over the ask
+            // sheet while it leaves (prd §1700l item 7).
+            await untilAskSheetGone()
             do {
                 let sent = try await YourAccountChain.appCalls(
                     [(to: to, data: data, value: value)], on: YourAccountOp.ethereum,
@@ -282,7 +293,27 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     /// A signature from your co-signer's own wallet (prd §1700l), over a
     /// pairing that asks for this one method and is let go once answered;
     /// the Signer sheet shows the link, as it does for a send.
+    /// Returns once the answered ask sheet has left the screen (its
+    /// `onDismiss`), or after two seconds whatever happened.
+    private func untilAskSheetGone() async {
+        guard askSheetUp, ask == nil else { return }
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            askSheetGoneWaiters.append(done)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                self?.releaseAskSheetWaiters()
+            }
+        }
+    }
+
+    private func releaseAskSheetWaiters() {
+        let waiting = askSheetGoneWaiters
+        askSheetGoneWaiters = []
+        waiting.forEach { $0.resume() }
+    }
+
     private func coSign(_ method: String, params: [String], digest: [UInt8], signer: String) async -> BrowserEthereum.Reply {
+        await untilAskSheetGone()
         do {
             let sig = try await SignerRequestSheet.asking(signer: signer) { ask in
                 try await YourAccountSignerLink.signForApp(method: method, params: params, digest: digest,
@@ -379,6 +410,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
 
     /// The sheet has gone; the next ask, if any.
     func sheetGone() {
+        if ask == nil { askSheetUp = false; releaseAskSheetWaiters() }
         guard ask == nil, !queue.isEmpty else { return }
         ask = queue.removeFirst()
     }
@@ -556,11 +588,13 @@ struct AztecAskSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .ethSign(_, _, let text):
+            // The whole message on the sheet (user: "i shouldn't have to
+            // scroll in this message"); a longer one than fits still scrolls.
             ScrollView {
                 Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxHeight: 180)
+            .scrollBounceBehavior(.basedOnSize)
             Text(asCoSigner ? "Your co-signer's wallet signs it. It moves nothing."
                             : "Signing proves this is your account. It moves nothing.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
@@ -581,7 +615,7 @@ struct AztecAskSheet: View {
     }
 
     private var height: CGFloat {
-        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .send, .ethSign, .ethSend: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: 720; case .send, .ethSend: 520 }
     }
 
     private var acceptWord: String {

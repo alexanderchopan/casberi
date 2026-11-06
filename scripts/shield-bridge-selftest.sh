@@ -209,6 +209,10 @@ grep -q 'await sent(door(of: pairing.topic))' Casberi/Casberi/Model/YourAccountS
   || { echo "✗ an app's sign-in never opens the wallet onto its request (prd §1700l item 6)"; exit 1; }
 grep -q 'resend: ask.resends,' Casberi/Casberi/Screens/AztecBrowser.swift && grep -q 'sent: { ask.ask(kept: \$0) }' Casberi/Casberi/Screens/AztecBrowser.swift \
   || { echo "✗ the browser's co-signer sign-in has no Ask again or wallet door (prd §1700l item 6)"; exit 1; }
+# The Signer sheet waits for the ask sheet to leave: raised while it slid
+# away, it went with it and nothing showed (build 951, prd §1700l item 7).
+[[ $(grep -c 'await untilAskSheetGone()' Casberi/Casberi/Screens/AztecBrowser.swift) -ge 2 ]] \
+  || { echo "✗ the Signer sheet is raised over a leaving ask sheet (prd §1700l item 7)"; exit 1; }
 # The provider's own mutations: each must fail the run.
 pmutate() { # label, perl expression
   sed -e '' "$PROVIDER" > "$TMP/prov.swift"
