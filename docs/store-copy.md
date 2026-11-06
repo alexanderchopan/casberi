@@ -37,7 +37,7 @@ and "Catch threats before they cost you." gains: "Scan any account's privacy wit
 
 ## iOS 3.0.19 — the wallet story, APPLIED 2026-10-30 (build 904, WAITING_FOR_REVIEW; user: "love it")
 
-Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/casberi-deck/cards/appstore9.py`, `~/Downloads/App Store 10 iPhone`): the inbox, then the wallet, all together or one at a time. Markets is gone (§1529), gift cards are Spend (§1599), Buy is a card on Stripe's page (§1599, §1608), swaps are no longer credited to Relay (§1542, §1555), private money is 0xBow on Ethereum (§1563), round-ups save with your sends in dollars (§1578), the co-signer is a switch for every send and swap (§1570). The opening carries "soon, a rewards card for your subscriptions" (user, 2026-10-30). Apply with the screenshots when the next build ships from the session that made them; the iPad set and the Mac description are not redone (user: "we can ignore ipad for now").
+Rewritten to match the website reel and the ten-shot iPhone set (`~/Documents/casberi-deck/cards/appstore9.py`, `~/Downloads/App Store 10 iPhone`): the inbox, then the wallet, all together or one at a time. Markets is gone (§1529), gift cards are Spend (§1599), Buy is a card on Stripe's page (§1599, §1608), swaps are no longer credited to Relay (§1542, §1555), private money is 0xBow on Ethereum (§1563), round-ups save with your sends in dollars (§1578), the co-signer is a switch for every send and swap (§1570). The opening carried "soon, a rewards card for your subscriptions" (user, 2026-10-30) until 2026-11-05, when it was dropped here and on the website: the card is not funded, and a description promising a feature the app lacks is what App Review flags (guideline 2.3). Apply with the screenshots when the next build ships from the session that made them; the iPad set and the Mac description are not redone (user: "we can ignore ipad for now").
 
 **Subtitle (21):** `An inbox and a wallet` — rides the app, so it changes with the next submitted version.
 
@@ -51,7 +51,7 @@ New: buy crypto with a card, swap anything, and round up your spare change into 
 
 ### iOS description — the wallet story
 
-Your life and money are scattered across apps. Casberi gives you an inbox and a wallet for all your accounts, and soon, a rewards card for your subscriptions. Keep up with your feeds and finances on your iPhone, iPad and Mac, privately and with no server.
+Your life and money are scattered across apps. Casberi gives you an inbox and a wallet for all your accounts. Keep up with your feeds and finances on your iPhone, iPad and Mac, privately and with no server.
 
 An inbox for all your apps.
 More than 100 apps, sorted into the categories you live in: social, work, reading, media, mail, calendar and more. See them all together in one feed, or one app at a time. Apple's apps connect with one tap; other services with a read-only key.
