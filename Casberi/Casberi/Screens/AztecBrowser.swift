@@ -226,6 +226,11 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             }
         }
         queue.removeAll { $0.id == ask.id }
+        // A declined connect ends the session: its emoji check is not asked
+        // (the session's id is the connect's request id, prd §1700j).
+        if case .connect(let session, _) = ask, !yes {
+            queue.removeAll { if case .emoji(session, _, _) = $0 { true } else { false } }
+        }
         if let waiting = ethAnswers.removeValue(forKey: ask.id) {
             waiting.resume(returning: yes)
         } else {

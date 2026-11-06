@@ -91,6 +91,11 @@ for whoever changes the code.
   content world the page cannot reach; the shell names the page's origin, never
   the page. Every connect, the emoji check (Aztec's own `hashToEmoji`) and every
   transaction ask, then the co-signer.
+- Discovery is answered unasked (prd §1700j): the page learns Casberi's name, id
+  and icon, which it knows already by being in Casberi's browser, and no address.
+  Connect and the emoji check are asked when the person picks Casberi in the app,
+  and every call of the app's waits until both are yes
+  (`tools/aztec-engine/src/connect-gate.js`, `aztec-connect-selftest.sh`).
 - The Ethereum provider (`BrowserEthereum`, Human Passport's door) connects on an
   ask, signs only messages (personal_sign, Ethereum typed data), never sends.
 

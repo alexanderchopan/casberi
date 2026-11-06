@@ -13,6 +13,7 @@ import './net-shim.js';
 import './console-bridge.js';
 import { BackgroundConnectionHandler } from '@aztec-labs/wallet-sdk/extension/handlers';
 import { hashToEmoji } from '@aztec-labs/wallet-sdk/crypto';
+import { connectGate } from './connect-gate.js';
 import { BrowserEmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { Fr, GrumpkinScalar } from '@aztec-labs/aztec.js/fields';
 import { WalletSchema } from '@aztec-labs/aztec.js/wallet';
@@ -359,9 +360,6 @@ const own = {
 // --- apps' calls --------------------------------------------------------------------
 let asks = 0;
 const waiting = new Map();
-const connecting = new Set();
-// Sessions whose emoji the person has not confirmed: their calls, waiting.
-const held = new Map();
 
 // What the sheet says about a transaction, read from the request itself: each
 // call's function and contract, private or public, and who pays the fee. (A
@@ -404,6 +402,9 @@ async function callForApp(method, args, origin) {
 }
 
 let contentListener = null;
+// Discovery is answered at once; Connect and the emoji check are asked when
+// the person picks Casberi in the app, and hold its calls (connect-gate.js).
+let gate = null;
 const background = new BackgroundConnectionHandler(
   { ...WALLET, walletIcon: 'https://casberi.app/favicon.ico' },
   {
@@ -414,27 +415,34 @@ const background = new BackgroundConnectionHandler(
   },
   {
     onPendingDiscovery: discovery => {
-      connecting.add(discovery.requestId);
-      native('engineConnect', { requestId: discovery.requestId, origin: discovery.origin, appId: discovery.appId });
+      log('discovered', { origin: discovery.origin, appId: discovery.appId });
+      gate.discovered(discovery.requestId);
     },
     onSessionEstablished: session => {
       const id = session.sessionId ?? session.requestId;
-      held.set(id, []);
-      native('engineEmoji', { sessionId: id, emoji: hashToEmoji(session.verificationHash), origin: session.origin });
+      gate.established(id, session.origin, hashToEmoji(session.verificationHash));
     },
-    onSessionTerminated: requestId => log('terminated', { requestId }),
+    onSessionTerminated: requestId => {
+      gate.terminated(requestId);
+      log('terminated', { requestId });
+    },
     onWalletMessage: async (session, message) => {
-      // The emoji check holds every call of the site's until the person says
-      // the two grids match (prd §1700 item 6, C1; Nulo's verification hold).
       const id = session.sessionId ?? session.requestId;
-      if (held.has(id)) {
-        held.get(id).push(() => answerApp(session, message));
-        return;
+      if (!gate.message(id, () => answerApp(session, message))) {
+        await background.sendResponse(id, {
+          messageId: message.messageId, error: { message: 'Not connected to Casberi' }, walletId: WALLET.walletId,
+        });
       }
-      await answerApp(session, message);
     },
   },
 );
+gate = connectGate({
+  approveDiscovery: requestId => background.approveDiscovery(requestId),
+  terminateSession: sessionId => background.terminateSession(sessionId),
+  askConnect: (requestId, origin) => native('engineConnect', { requestId, origin }),
+  askEmoji: (sessionId, origin, emoji) => native('engineEmoji', { sessionId, emoji, origin }),
+  log,
+});
 background.initialize();
 
 async function answerApp(session, message) {
@@ -468,20 +476,14 @@ window.casberiEngine = {
   fromContent(json, tabId, url) {
     contentListener?.(JSON.parse(json), { tab: { id: tabId, url } });
   },
+  // The person's answer to Connect (the session's id is the discovery's).
   answerConnect(requestId, yes) {
-    if (!connecting.delete(requestId)) return;
-    if (yes) background.approveDiscovery(requestId);
-    else background.rejectDiscovery(requestId);
+    gate.answerConnect(requestId, yes);
   },
-  // The person compared the two grids: they match (calls run) or not (the
-  // session ends and its waiting calls with it).
+  // The person compared the two grids: they match, or the session ends and
+  // its waiting calls with it.
   confirmEmoji(sessionId, match) {
-    const waiting = held.get(sessionId);
-    if (!waiting) return;
-    held.delete(sessionId);
-    log('emojiAnswer', { match });
-    if (match) for (const run of waiting) run();
-    else background.terminateSession(sessionId);
+    gate.confirmEmoji(sessionId, match);
   },
   answerApproval(id, yes) {
     waiting.get(id)?.(yes);

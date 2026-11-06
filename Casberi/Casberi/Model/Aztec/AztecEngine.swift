@@ -178,10 +178,21 @@ final class AztecEngine: NSObject {
             guard let inner = body["message"], let data = try? JSONSerialization.data(withJSONObject: inner) else { return }
             browser?.deliver(String(decoding: data, as: UTF8.self))
         case "engineConnect":
-            guard let browser, let requestId = body["requestId"] as? String else { return }
+            // Asked when the person picks Casberi in the app, never on the
+            // app's discovery, which the engine answers at once (prd §1700j).
+            guard let requestId = body["requestId"] as? String else { return }
+            guard let browser else {
+                // No browser to ask in: a connect nobody can see is declined.
+                answer(.connect(requestId: requestId, host: ""), yes: false)
+                return
+            }
             browser.enqueue(.connect(requestId: requestId, host: Self.host(body["origin"])))
         case "engineEmoji":
-            guard let browser, let sessionId = body["sessionId"] as? String, let emoji = body["emoji"] as? String else { return }
+            guard let sessionId = body["sessionId"] as? String, let emoji = body["emoji"] as? String else { return }
+            guard let browser else {
+                answer(.emoji(sessionId: sessionId, host: "", emoji: emoji), yes: false)
+                return
+            }
             browser.enqueue(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji))
         case "engineApprove":
             guard let id = body["id"] as? Int else { return }

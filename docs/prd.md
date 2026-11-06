@@ -71146,3 +71146,20 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** The same figure in the Wallet pane, at the Mac's point scale.
 
 **Not compiled:** written in a Linux session with no Swift toolchain; neither the app nor the self-test was built. **Not seen:** the simulator, the Mac.
+
+## §1700j — An Aztec app finds Casberi at once; Connect and the emoji check are asked when you pick Casberi in the app, and hold every call until both are yes (amends §1700 item 6's order, §1700i item 2's "finds your Aztec account") (user, 2026-11-06: "the apps on aztec feature doesn't show casberi as a wallet and so user can't connect") — BUILT, NOT COMPILED, NOT SEEN
+
+**The report.** An app opened from Apps on Aztec listed no wallet, so there was nothing to connect.
+
+**Why.** An Aztec app finds wallets by broadcasting Aztec's discovery and listing what answers inside its own window: Dark Forest Aztec waits 5 s (`DEFAULT_WALLET_DISCOVERY_TIMEOUT_MS`, read from its source 2026-11-06), the SDK's default is 60 s. The engine answered only after the person tapped Connect on a sheet, so the answer reached a page that had stopped listening, and the app said it found no wallet. A browser extension hides until approved so that sites cannot fingerprint which extensions you have. In Casberi's browser the one wallet is always Casberi, so hiding hid nothing. Nulo, the reference extension, approves a remembered site at once for the same reason.
+
+1. **Discovery is answered at once.** The answer carries Casberi's name, id and icon, never an address (`tools/aztec-engine/src/connect-gate.js`, `discovered`).
+2. **The asks come when you pick Casberi in the app.** When the secure channel opens: Connect, then the emoji check, one sheet at a time as before. A call from the app (accounts, reads, transactions) waits until both are yes. A no to either ends the session, and a declined Connect drops its queued emoji check (`AztecBrowserModel.answer`).
+3. **No browser to ask in is a no** (`AztecEngine`, `engineConnect` and `engineEmoji`), as a transaction already was.
+4. **Unchanged:** every transaction still asks (§1700 item 6), with the co-signer (§1700f item 4).
+
+**Checks.** `aztec-connect-selftest.sh` runs Aztec's own wallet-sdk on both sides: the app's `WalletManager` with a 5 s window, the relay's and the engine's handlers over a JSON hop, and the gate. It checks that the app finds Casberi with nobody touching a sheet, that nothing is asked while the app only looks, that the channel opens inside the SDK's 2 s, that Connect then the emoji check are asked, that the first call waits for both yeses, and that a declined Connect gives the app nothing. Four mutations each fail it: discovery waiting on Connect (the reported bug, reproduced as "found nothing in 5007 ms"), calls skipping the gate, calls run before the yeses, and a no to Connect ignored.
+
+**Mac half (§1402).** None: the browser's Aztec door needs the prover, which the Mac does not have.
+
+**Not compiled:** written in a Linux session with no Swift toolchain; the engine's JavaScript ran in the self-test, the Swift was not built. **Not seen:** the simulator, the phone, a live Aztec app.

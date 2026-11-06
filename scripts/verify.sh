@@ -2552,6 +2552,9 @@ harness "Aztec staking self-test" "aztec staking self-test" "scripts/aztec-stake
 # deposit and withdraw bytes against viem, the outbox's leaf id, the deposit's event, the
 # exit's proxy authwit and content selector, and Passport only (never Clean Hands' ID).
 harness "Shield bridge self-test" "shield bridge self-test" "scripts/shield-bridge-selftest.sh" "the Shield bridge self-test failed — run scripts/shield-bridge-selftest.sh"
+# An Aztec app in Casberi's browser finds Casberi (prd §1700j): Aztec's own wallet-sdk on both
+# sides, a 5 s discovery window, and no call answered before Connect and the emoji check.
+harness "Aztec connect self-test" "aztec connect self-test" "scripts/aztec-connect-selftest.sh" "the Aztec connect self-test failed — run scripts/aztec-connect-selftest.sh"
 # zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
 # as yours, an expired one read as open, a router's leg titled as a pool move.
 harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh" "the zFi + Tacit self-test failed — run scripts/zfi-selftest.sh"
