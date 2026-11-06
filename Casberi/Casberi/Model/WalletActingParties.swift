@@ -96,8 +96,8 @@ enum WalletActingParties {
     }
 
     /// What can act as one watched address.
-    struct Party: Equatable, Identifiable {
-        enum Kind: Equatable {
+    struct Party: Equatable, Identifiable, Codable {
+        enum Kind: Equatable, Codable {
             /// A Safe module — moves funds with no signature at all.
             case safeModule(safe: String)
             /// The EOA's EIP-7702 delegate — the code the address runs.
@@ -135,7 +135,7 @@ enum WalletActingParties {
     }
 
     /// One watched address and everything that can act as it.
-    struct Account: Equatable, Identifiable {
+    struct Account: Equatable, Identifiable, Codable {
         let address: String
         /// `vendor.account.1.0.0` for an ERC-7579 account; nil for an EOA or
         /// an account that doesn't answer.

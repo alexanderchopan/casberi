@@ -52,10 +52,10 @@ import Foundation
 /// SHIPPED by `scripts/wallet-viz-selftest.sh` and fed cases whose answers are
 /// known. The reading half lives in `WalletApprovalExposureSource.swift`,
 /// exactly as `WalletRiskScale` and `WalletRiskScaleSource` are split.
-struct WalletApprovalExposure: Equatable, Sendable {
+struct WalletApprovalExposure: Equatable, Sendable, Codable {
 
     /// One live grant, as the card states it.
-    struct Grant: Equatable, Sendable, Identifiable {
+    struct Grant: Equatable, Sendable, Identifiable, Codable {
         /// The approval thing this came from — the door to its prepare card.
         let thingID: UUID
         /// "Uniswap", or the short hex when nothing can name it. Never

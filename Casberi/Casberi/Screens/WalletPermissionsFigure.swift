@@ -18,6 +18,9 @@ import SwiftUI
 struct WalletPermissionsFigure: View {
     let grants: [WalletApprovalExposure.Grant]
     var acting: [PermissionsPack.Acting] = []
+    /// When these grants were read, while they stand on an earlier launch's
+    /// reading (prd §1709); nil once the live read lands.
+    var asOf: Date? = nil
     let open: (PermissionsPack.Piece) -> Void
 
     var body: some View {
@@ -41,6 +44,13 @@ struct WalletPermissionsFigure: View {
                     if let piece = pieces.first(where: { $0.id == item.id }) { open(piece) }
                 })
                 legend(pieces, money: money)
+                if let asOf {
+                    // The balance's own phrase and ink (prd §825, §1593): a
+                    // kept reading is never presented as current (§83).
+                    Text("as of \(AccountPageShape.ago(asOf))")
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }

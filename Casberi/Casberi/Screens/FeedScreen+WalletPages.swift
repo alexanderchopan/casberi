@@ -953,7 +953,8 @@ extension FeedScreen {
         // one per delegate or module the Delegations list holds (§1677).
         case .permissions:
             WalletPermissionsFigure(grants: walletLive.exposure.all,
-                                    acting: walletPermissionsActing) { walletOpenPermission($0) }
+                                    acting: walletPermissionsActing,
+                                    asOf: walletLive.asOf) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
             let things = walletThreatThings

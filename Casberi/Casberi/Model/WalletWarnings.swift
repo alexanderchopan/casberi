@@ -221,9 +221,14 @@ struct WalletLiveState: Equatable {
     /// probe, so a Safe module that can move funds with no signature was
     /// invisible in the app that exists to point at exactly that.
     var acting: [WalletActingParties.Account] = []
+    /// When Permissions was read, set only while the state stands on a
+    /// reading kept from an earlier launch (`WalletWatch.lastReading`); the
+    /// box says "as of" it, as the balance does (prd §1593, §825).
+    var asOf: Date? = nil
 
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
-        a.warnings == b.warnings
+        a.asOf == b.asOf
+            && a.warnings == b.warnings
             && a.flagged.map(\.id) == b.flagged.map(\.id)
             && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
             && a.exposure == b.exposure
@@ -497,26 +502,76 @@ enum WalletWatch {
         return next
     }
 
-    /// **THE LAST READING, AT ONCE (prd §1593, for Permissions and Threats).**
-    /// Each scope's last full reading this session, over the wallets it was
+    /// **THE LAST READING, AT ONCE (prd §1593, for Permissions and Threats;
+    /// prd §1709).** Each scope's last full reading, over the wallets it was
     /// read for: Home draws it the moment it stands, and the live read
-    /// replaces it. Memory only — a grant's state is not kept across launches
-    /// (§216) — and every thing in it is checked live before it is drawn.
+    /// replaces it. This session's is held whole in memory; across launches
+    /// Permissions' half is kept on disk (the grants and who acts for you,
+    /// never the DeFi books or warnings) and drawn stamped with when it was
+    /// read (`WalletLiveState.asOf`), as the balance is. Every thing in it is
+    /// checked live before it is drawn.
     @MainActor private static var lastReadings: [String: (wallets: String, state: WalletLiveState)] = [:]
+
+    private struct KeptPermissions: Codable {
+        let wallets: String
+        let at: Date
+        let exposure: WalletApprovalExposure
+        let acting: [WalletActingParties.Account]
+    }
+    static let keptPermissionsKey = "wallet.permissionsReading.v1"
+    @MainActor private static var keptMemo: [String: KeptPermissions]?
+
+    @MainActor
+    private static func keptPermissions() -> [String: KeptPermissions] {
+        if let keptMemo { return keptMemo }
+        let read = UserDefaults.standard.data(forKey: keptPermissionsKey)
+            .flatMap { try? JSONDecoder().decode([String: KeptPermissions].self, from: $0) } ?? [:]
+        keptMemo = read
+        return read
+    }
 
     @MainActor
     private static func remember(_ state: WalletLiveState, scopeTo scope: String?) {
         let wallets = WalletLastReading.signature(WalletStore.shared.addresses.map(\.address))
-        lastReadings[WalletLastReading.slot(scope)] = (wallets, state)
+        let slot = WalletLastReading.slot(scope)
+        lastReadings[slot] = (wallets, state)
+        var kept = keptPermissions()
+        kept[slot] = KeptPermissions(wallets: wallets, at: Date(), exposure: state.exposure, acting: state.acting)
+        // The scopes kept, newest first, as the balance keeps them.
+        if kept.count > WalletLastReading.keep {
+            for gone in kept.sorted(by: { $0.value.at > $1.value.at }).dropFirst(WalletLastReading.keep).map(\.key) {
+                kept[gone] = nil
+            }
+        }
+        keptMemo = kept
+        if let data = try? JSONEncoder().encode(kept) { DefaultsWrite.set(data, forKey: keptPermissionsKey) }
     }
 
     @MainActor
     static func lastReading(scopeTo scope: String?, context: ModelContext) -> WalletLiveState? {
         let wallets = WalletLastReading.signature(WalletStore.shared.addresses.map(\.address))
-        guard !DemoMode.isActive, let kept = lastReadings[WalletLastReading.slot(scope)],
-              kept.wallets == wallets else { return nil }
-        var state = kept.state
-        state.activeApprovals = state.activeApprovals.live
+        let slot = WalletLastReading.slot(scope)
+        guard !DemoMode.isActive else { return nil }
+        var state: WalletLiveState
+        if let held = lastReadings[slot], held.wallets == wallets {
+            state = held.state
+            state.activeApprovals = state.activeApprovals.live
+        } else if let kept = keptPermissions()[slot], kept.wallets == wallets {
+            state = WalletLiveState()
+            state.exposure = kept.exposure
+            state.acting = kept.acting
+            state.asOf = kept.at
+            // The grants' own things, for Revoke and the rows: whichever
+            // still stand. A filter in Swift, as `activeApprovals` reads them.
+            let ids = Set(kept.exposure.all.map(\.thingID))
+            if !ids.isEmpty {
+                state.activeApprovals = ((try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Wallet" }))) ?? []).live
+                    .filter { ids.contains($0.id) }
+            }
+        } else {
+            return nil
+        }
         let approvals = Set(state.activeApprovals.map(\.id))
         state.exposure.priced.removeAll { !approvals.contains($0.thingID) }
         state.exposure.unpriced.removeAll { !approvals.contains($0.thingID) }
