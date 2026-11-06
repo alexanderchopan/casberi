@@ -112,12 +112,38 @@ enum BrowserEthereum {
 
     /// **Connected as your co-signer (prd §1700l).** The page knows the
     /// co-signer's address and its signatures come from the co-signer's own
-    /// wallet, for an app that takes only a plain key's signature. It never
-    /// sends (the money is your account's, and a send would go from there),
-    /// and a page asking to connect again is asked again, so the wallet it
-    /// pays from can be your account.
-    static func asCoSigner(method: String, connected: Bool) -> (connected: Bool, sends: Bool) {
-        (connected && !["eth_requestAccounts", "wallet_requestPermissions"].contains(method), false)
+    /// wallet, for an app that takes only a plain key's signature. Where the
+    /// page may send at all, its send goes to the co-signer's wallet too and
+    /// pays from the co-signer, never your account (prd §1700l item 9). A page
+    /// asking to connect again is asked again.
+    static func asCoSigner(method: String, connected: Bool, sends: Bool) -> (connected: Bool, sends: Bool) {
+        (connected && !["eth_requestAccounts", "wallet_requestPermissions"].contains(method), sends)
+    }
+
+    /// A decimal amount of wei as a hex quantity ("0x0" for zero), as a
+    /// wallet's `eth_sendTransaction` takes it; nil for anything not digits.
+    static func hexQuantity(decimal raw: String) -> String? {
+        guard !raw.isEmpty, raw.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        var digits = raw.compactMap { $0.wholeNumberValue }
+        var hex: [Character] = []
+        let alphabet = Array("0123456789abcdef")
+        while !(digits.isEmpty || digits.allSatisfy { $0 == 0 }) {
+            var next: [Int] = [], rest = 0
+            for d in digits {
+                let cur = rest * 10 + d
+                let q = cur / 16
+                rest = cur % 16
+                if !next.isEmpty || q != 0 { next.append(q) }
+            }
+            hex.append(alphabet[rest])
+            digits = next
+        }
+        return "0x" + (hex.isEmpty ? "0" : String(hex.reversed()))
+    }
+
+    /// A transaction hash as a wallet answers one.
+    static func isTransactionHash(_ s: String) -> Bool {
+        s.count == 66 && s.hasPrefix("0x") && s.dropFirst(2).allSatisfy(\.isHexDigit)
     }
 
     /// **A sign-in your account gave and the app turned down (prd §1700l).**

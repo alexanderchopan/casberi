@@ -168,11 +168,18 @@ check(BrowserEthereum.approval("0xa9059cbb" + String(repeating: "0", count: 128)
 
 // Connected as your co-signer (prd §1700l): it never sends, a page that
 // connects again is asked again, and anything else keeps the connection.
-check(BrowserEthereum.asCoSigner(method: "eth_sendTransaction", connected: true).sends == false, "the co-signer's connection sends")
-check(BrowserEthereum.asCoSigner(method: "eth_requestAccounts", connected: true).connected == false, "connecting again is not asked again")
-check(BrowserEthereum.asCoSigner(method: "wallet_requestPermissions", connected: true).connected == false, "permissions again are not asked again")
-check(BrowserEthereum.asCoSigner(method: "personal_sign", connected: true).connected == true, "the co-signer's sign-in loses its connection")
-check(BrowserEthereum.asCoSigner(method: "eth_accounts", connected: false).connected == false, "connected without connecting")
+check(BrowserEthereum.asCoSigner(method: "eth_sendTransaction", connected: true, sends: false).sends == false, "the co-signer sends where the page may not")
+check(BrowserEthereum.asCoSigner(method: "eth_sendTransaction", connected: true, sends: true).sends == true, "the co-signer cannot pay where the page may send")
+check(BrowserEthereum.hexQuantity(decimal: "1000000000000000000") == "0xde0b6b3a7640000", "one ETH not 0xde0b6b3a7640000")
+check(BrowserEthereum.hexQuantity(decimal: "0") == "0x0", "zero not 0x0")
+let maxWei = "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+check(BrowserEthereum.hexQuantity(decimal: maxWei).flatMap { BrowserEthereum.decimal(hexQuantity: $0) } == maxWei, "uint256 max does not survive decimal to hex and back")
+check(BrowserEthereum.hexQuantity(decimal: "12a") == nil && BrowserEthereum.hexQuantity(decimal: "") == nil, "a value that is not digits sent")
+check(BrowserEthereum.isTransactionHash("0x" + String(repeating: "ab", count: 32)) && !BrowserEthereum.isTransactionHash("0x1234"), "a transaction hash misread")
+check(BrowserEthereum.asCoSigner(method: "eth_requestAccounts", connected: true, sends: true).connected == false, "connecting again is not asked again")
+check(BrowserEthereum.asCoSigner(method: "wallet_requestPermissions", connected: true, sends: true).connected == false, "permissions again are not asked again")
+check(BrowserEthereum.asCoSigner(method: "personal_sign", connected: true, sends: true).connected == true, "the co-signer's sign-in loses its connection")
+check(BrowserEthereum.asCoSigner(method: "eth_accounts", connected: false, sends: true).connected == false, "connected without connecting")
 // A sign-in your account gave, then a connect within five minutes: the app
 // turned it down, so Connect is asked again, co-signer first.
 let signed = Date(timeIntervalSince1970: 1_000_000)
@@ -203,6 +210,12 @@ grep -q 'connect(signer: signer, chainIds: \[chainId\], method: appMethod' Casbe
   || { echo "✗ an app's sign-in rides the Signer's kept session (prd §1700l)"; exit 1; }
 grep -q 'EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer)' Casberi/Casberi/Model/YourAccountSignerLink.swift \
   || { echo "✗ an app's sign-in is passed on without recovering to the co-signer (prd §1700l)"; exit 1; }
+# An app's send by the co-signer runs on Ethereum from the co-signer first,
+# goes to its wallet from its own address only (prd §1700l item 9).
+grep -q '"eth_estimateGas", \[tx\]' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ the co-signer's send asks its wallet without running first (prd §1700l item 9)"; exit 1; }
+grep -q 'guard tx\["from"\]?.caseInsensitiveCompare(signer) == .orderedSame' Casberi/Casberi/Model/YourAccountSignerLink.swift \
+  || { echo "✗ the co-signer's wallet is asked to send from another address (prd §1700l item 9)"; exit 1; }
 # Connected, the request goes and the wallet is opened onto it, with Ask
 # again: a wallet left in the background misses it (prd §1700l item 6).
 grep -q 'await sent(door(of: pairing.topic))' Casberi/Casberi/Model/YourAccountSignerLink.swift \
@@ -226,7 +239,8 @@ pmutate "any page sends" 's/guard sends else \{ return \.answer\(\.unsupported\)
 pmutate "send from any account" 's/from\.lowercased\(\) != account\.lowercased\(\)/false/'
 pmutate "value divided wrong" 's/let q = n \/ 10/let q = n \/ 16/'
 pmutate "every approval unlimited" 's/unlimited: amountWord\.prefix\(2\) == "ff"/unlimited: true/'
-pmutate "the co-signer sends" 's/\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\), false\)/["eth_requestAccounts", "wallet_requestPermissions"].contains(method), true)/'
+pmutate "the co-signer sends anywhere" 's/\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\), sends\)/["eth_requestAccounts", "wallet_requestPermissions"].contains(method), true)/'
+pmutate "a wei value read as hex wrong" 's/let q = cur \/ 16/let q = cur \/ 10/'
 pmutate "a retry never asked again" 's/return since >= 0 && since < retryWindow/return false/'
 pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
 
@@ -245,4 +259,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 7 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 8 mutations caught)"

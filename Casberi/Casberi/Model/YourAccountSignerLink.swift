@@ -112,12 +112,43 @@ enum YourAccountSignerLink {
                            sent: @MainActor (URL?) -> Void = { _ in },
                            show: @MainActor (URL) -> Void) async throws -> [UInt8] {
         guard ["personal_sign", "eth_signTypedData_v4"].contains(appMethod), digest.count == 32 else { throw Failure.unavailable }
+        let value = try await askForApp(method: appMethod, params: AnyCodable(params), signer: signer, timeout: timeout,
+                                        resend: resend, sent: sent, show: show)
+        guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }
+        let signature = try normalized(hex)
+        guard EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer) == .orderedSame else {
+            throw Failure.notProven
+        }
+        return signature
+    }
+
+    /// **An app's send, by your co-signer (prd §1700l item 9).** One
+    /// `eth_sendTransaction` on Ethereum from the co-signer's address, over a
+    /// pairing of its own as a sign-in's; the wallet shows the amount and
+    /// sends it, and the answer must be a transaction hash.
+    static func sendForApp(tx: [String: String], signer: String, timeout: Duration = .seconds(300),
+                           resend: SignerSignal? = nil, sent: @MainActor (URL?) -> Void = { _ in },
+                           show: @MainActor (URL) -> Void) async throws -> String {
+        guard tx["from"]?.caseInsensitiveCompare(signer) == .orderedSame, tx["to"] != nil else { throw Failure.unavailable }
+        let value = try await askForApp(method: "eth_sendTransaction", params: AnyCodable([tx]), signer: signer,
+                                        timeout: timeout, resend: resend, sent: sent, show: show)
+        guard let hash = try? value.get(String.self), BrowserEthereum.isTransactionHash(hash.lowercased()) else {
+            throw Failure.malformedSignature
+        }
+        return hash.lowercased()
+    }
+
+    /// One request of an app's on Ethereum, asked of the co-signer's wallet
+    /// over a fresh pairing for that one method, let go once answered.
+    private static func askForApp(method appMethod: String, params: AnyCodable, signer: String, timeout: Duration,
+                                  resend: SignerSignal?, sent: @MainActor (URL?) -> Void,
+                                  show: @MainActor (URL) -> Void) async throws -> AnyCodable {
         let chainId = YourAccountOp.ethereum.chainId
         let pairing = try await connect(signer: signer, chainIds: [chainId], method: appMethod, timeout: timeout, show: show)
         defer { close(pairing) }
         guard let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
         func make() throws -> Request {
-            try Request(topic: pairing.topic, method: appMethod, params: AnyCodable(params), chainId: chain)
+            try Request(topic: pairing.topic, method: appMethod, params: params, chainId: chain)
         }
         let request = try make()
         let ids = Asked(request.id)
@@ -137,13 +168,7 @@ enum YourAccountSignerLink {
         trace("asked \(appMethod) for an app")
         await sent(door(of: pairing.topic))
         switch await answer {
-        case .answered(.response(let value)):
-            guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }
-            let signature = try normalized(hex)
-            guard EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer) == .orderedSame else {
-                throw Failure.notProven
-            }
-            return signature
+        case .answered(.response(let value)): return value
         case .answered(.error(let error)): throw Failure.refused(error.message)
         case .gone: throw Failure.gone
         case .switched: throw Failure.switched

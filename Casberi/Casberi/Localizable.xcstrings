@@ -14334,6 +14334,34 @@
         }
       }
     },
+    "%@ wants your co-signer to send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ quiere que tu cofirmante envíe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が共同署名者に送信を求めています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 공동 서명자의 전송을 요청합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 请你的共同签名人发送"
+          }
+        }
+      }
+    },
     "%@ was registered — it expires %@" : {
       "localizations" : {
         "en" : {
@@ -64446,6 +64474,34 @@
         }
       }
     },
+    "Casberi cannot read what this call does. Your co-signer's wallet sends it; it runs on Ethereum first, and nothing is sent if it would fail." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no puede leer qué hace esta llamada. La envía la billetera de tu cofirmante; primero se ejecuta en Ethereum y no se envía nada si fallaría."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi はこの呼び出しの内容を読み取れません。共同署名者のウォレットが送信します。まず Ethereum 上で実行し、失敗する場合は何も送信しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi는 이 호출이 무엇을 하는지 읽을 수 없습니다. 공동 서명자의 지갑이 보내며, 먼저 이더리움에서 실행해 보고 실패하면 아무것도 보내지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法读取此调用的作用。由你的共同签名人的钱包发送；会先在以太坊上运行，如会失败则不发送任何内容。"
+          }
+        }
+      }
+    },
     "Casberi couldn't read %lld of them — check them in your Safe app before signing." : {
       "localizations" : {
         "es" : {
@@ -87483,34 +87539,6 @@
         }
       }
     },
-    "Exchanges and payments" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Exchanges y pagos"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "取引所と決済"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "거래소 및 결제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "交易所与支付"
-          }
-        }
-      }
-    },
     "Exchanges and banks" : {
       "localizations" : {
         "es" : {
@@ -87535,6 +87563,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "交易所和银行"
+          }
+        }
+      }
+    },
+    "Exchanges and payments" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exchanges y pagos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所と決済"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소 및 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易所与支付"
           }
         }
       }
@@ -192842,6 +192898,34 @@
         }
       }
     },
+    "This would fail on Ethereum from your co-signer (%@), so nothing was sent. It may not hold enough ETH." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto fallaría en Ethereum desde tu cofirmante (%@), así que no se envió nada. Puede que no tenga suficiente ETH."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者（%@）からでは Ethereum 上で失敗するため、何も送信されませんでした。ETH が足りない可能性があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자(%@)에서 이더리움 실행이 실패하므로 아무것도 보내지 않았습니다. ETH가 부족할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的共同签名人（%@）在以太坊上执行会失败，因此未发送任何内容。可能 ETH 不足。"
+          }
+        }
+      }
+    },
     "This year" : {
       "localizations" : {
         "es" : {
@@ -200535,6 +200619,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待你的批准…"
+          }
+        }
+      }
+    },
+    "Waiting for your co-signer…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a tu cofirmante…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を待っています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자를 기다리는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待你的共同签名人…"
           }
         }
       }
@@ -218261,6 +218373,34 @@
         }
       }
     },
+    "Your co-signer did not send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante no envió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者は送信しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 보내지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人未发送"
+          }
+        }
+      }
+    },
     "Your co-signer did not sign" : {
       "localizations" : {
         "es" : {
@@ -218285,6 +218425,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人未签名"
+          }
+        }
+      }
+    },
+    "Your co-signer's wallet sends it. It runs on Ethereum first, and nothing is sent if it would fail." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La envía la billetera de tu cofirmante. Primero se ejecuta en Ethereum y no se envía nada si fallaría."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者のウォレットが送信します。まず Ethereum 上で実行し、失敗する場合は何も送信しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자의 지갑이 보냅니다. 먼저 이더리움에서 실행해 보고 실패하면 아무것도 보내지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由你的共同签名人的钱包发送。会先在以太坊上运行，如会失败则不发送任何内容。"
           }
         }
       }
