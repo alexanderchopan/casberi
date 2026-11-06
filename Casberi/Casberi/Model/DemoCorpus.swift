@@ -135,11 +135,28 @@ enum DemoCorpus {
             let ref = thing.sourceRef ?? ""
             guard ref.isEmpty else { return fixtureRefs.contains(ref) }
             return fixtures.contains("\(thing.source)\u{0}\(thing.title)")
+                || retiredTitles.contains(thing.title)
         }
         for thing in mine { context.delete(thing) }
         context.saveHonestly()
         return mine.count
     }
+
+    /// Titles this table carried once and no longer does. Matching against
+    /// `things()` cannot see them, so an install that seeded an older table
+    /// kept every copy: a phone measured 2026-11-05 still held a dozen
+    /// "Voice note: …" rows after `-demoCorpusClear` removed 219 (they were
+    /// retitled by prd §900). Matched by title alone, still only on rows with
+    /// no `sourceRef`, because the source names have moved too (`Voice` is
+    /// `You` since §972). Append a title here whenever one leaves the table.
+    static let retiredTitles: Set<String> = [
+        "Book recommendation", "Bought BONK", "Deploy casberi-api to production",
+        "Deploy run failed — 2 tests red", "Deploy the staging build",
+        "Design system tokens", "Invoice parsing skill", "Nightly backup finished",
+        "Parse March invoices", "Standing desk options", "Swap 0.3 ETH → USDC?",
+        "Voice note: idea for the weekend", "Voice note: new PR on deadlift",
+        "Workout plan — week 2", "invoice-report.pdf",
+    ]
 
     private static func things() -> [Thing] {
         [
