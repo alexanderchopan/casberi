@@ -1790,9 +1790,10 @@ harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the 
 # token off), one transaction id in two accounts landed once, and a transfer
 # off checking counted as spending.
 harness "SimpleFIN self-test" "SimpleFIN self-test" "scripts/simplefin-selftest.sh" "the SimpleFIN self-test failed — run scripts/simplefin-selftest.sh"
-# Nymis (prd §1701, §1701a) — Threats' Privacy rows: an address or scan token
-# in a URL, an unknown status read as done, a 429 read as failure, another
-# address's reply filed here, a score drawn, a scan started by anything but a tap.
+# Nymis (prd §1701, §1701a, §1701c) — Threats' Privacy rows: an address or scan
+# token in a URL, an unknown status read as done, a 429 read as failure, another
+# address's reply filed here, a score drawn, a scan started by anything but a
+# tap, Nymis's summaries lost, or its web report or a legacy endpoint fetched.
 harness "Nymis self-test" "Nymis self-test" "scripts/nymis-selftest.sh" "the Nymis self-test failed — run scripts/nymis-selftest.sh"
 # What an app picked holds under Holdings (prd §1703): ENS's names, the
 # cards CardPointers tracks, Privacy.com's limits, MetaMask Card's "Can

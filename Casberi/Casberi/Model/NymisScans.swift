@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// **THE SCANS AND WHAT THEY READ (prd §1701, §1701a).** `NymisScan` is the
+/// **THE SCANS AND WHAT THEY READ (prd §1701, §1701a, §1701c).** `NymisScan` is the
 /// shape; this is the clock and the shelf: a tap asks Nymis's API for a scan,
 /// a poll follows it while the app is open, and the reading is kept on this
 /// phone (Nymis keeps a result 30 minutes). Device-only, never synced: what a
@@ -55,6 +55,8 @@ final class NymisScans {
     /// crash reports and analytics).
     @ObservationIgnored private var tokens: [String: String] = [:]
     @ObservationIgnored private var poll: Task<Void, Never>?
+    /// Address key → the poll waiting on Nymis's summaries (§1701c).
+    @ObservationIgnored private var summaryFollow: [String: Task<Void, Never>] = [:]
 
     static let readingsKey = "nymis.readings.v2"
     /// v1 held the scraped page's shape (§1701 item 5), which no longer decodes.
@@ -66,6 +68,9 @@ final class NymisScans {
     static let giveUp: TimeInterval = 15 * 60
     /// Nymis: poll every 10–15 seconds.
     static let pollEvery: Duration = .seconds(12)
+    /// Nymis: while summaries are pending, every 5 seconds for at most 30.
+    static let summaryEvery: Duration = .seconds(5)
+    static let summaryPolls = 6
 
     private init() {
         let defaults = UserDefaults.standard
@@ -116,6 +121,8 @@ final class NymisScans {
 
     func forget(_ address: String) {
         let key = NymisScan.key(address)
+        summaryFollow[key]?.cancel()
+        summaryFollow[key] = nil
         readings[key] = nil
         failed.remove(key)
         busy.remove(key)
@@ -175,10 +182,16 @@ final class NymisScans {
             if let token { tokens[key] = token }
             if let id, running[key]?.scanID != id { running[key]?.scanID = id; saveRunning() }
             return Self.pollEvery
-        case .read(let reading):
-            let full = await withPage(reading, key: key, scanID: running[key]?.scanID)
-            guard running[key] != nil else { return nil }
-            finish(key, full)
+        case .read(var reading, let summaryPending):
+            if reading.scanID == nil { reading.scanID = run.scanID }
+            // The findings stand at once; Nymis's summaries follow on the
+            // same scan's poll (§1701c). A cached reply hands no token, so
+            // whatever summaries it carried are all there are.
+            let token = tokens[key]
+            finish(key, reading)
+            if summaryPending, let id = reading.scanID, let token {
+                followSummaries(key, scanID: id, token: token, scannedAt: reading.scannedAt)
+            }
             return nil
         case .busy(let until) where polling:
             // A scan Nymis is already running is not dropped for a poll
@@ -202,29 +215,44 @@ final class NymisScans {
         }
     }
 
-    /// The reading with its scan's page (prd §1701b): Nymis's summary and
-    /// facts. The scan id the API handed, or for a cached result (no id) the
-    /// finished scan's id by address. Any miss leaves the API's reading as
-    /// it is; the page is parsed off the main actor (it is ~170 KB).
-    private func withPage(_ reading: NymisScan.Reading, key: String, scanID: String?) async -> NymisScan.Reading {
-        if let scanID, let read = await page(scanID, onto: reading) { return read }
-        guard let url = NymisScan.progressURL(key),
-              let reply = await IngestSupport.sendRequest(URLRequest(url: url)),
-              reply.1.statusCode == 200,
-              let id = NymisScan.completedScanID(fromProgress: reply.0), id != scanID,
-              let read = await page(id, onto: reading) else { return reading }
-        return read
-    }
-
-    private func page(_ scanID: String, onto reading: NymisScan.Reading) async -> NymisScan.Reading? {
-        guard let url = NymisScan.reportURL(scanID: scanID),
-              let reply = await IngestSupport.sendRequest(URLRequest(url: url)),
-              reply.1.statusCode == 200 else { return nil }
-        let body = reply.0
-        let page = await Task.detached(priority: .utility) {
-            String(data: body, encoding: .utf8).flatMap(NymisScan.page(fromReportHTML:))
-        }.value
-        return page.map { reading.adding($0, scanID: scanID) }
+    /// Nymis writes its summaries after scoring (§1701c): the same scan is
+    /// polled every 5 s for at most 30 s, stopping at `ready` or
+    /// `unavailable`. Read-only, and never asks for another scan. The token
+    /// stays in this task's memory.
+    private func followSummaries(_ key: String, scanID: String, token: String, scannedAt: Date) {
+        summaryFollow[key]?.cancel()
+        summaryFollow[key] = Task { [weak self] in
+            for _ in 0..<Self.summaryPolls {
+                try? await Task.sleep(for: Self.summaryEvery)
+                guard let self, !Task.isCancelled,
+                      self.readings[key]?.scannedAt == scannedAt,
+                      let request = NymisScan.pollRequest(scanID: scanID, token: token) else { return }
+                let reply = await IngestSupport.sendRequest(request)
+                let answer = NymisScan.answer(status: reply?.1.statusCode ?? 0,
+                                              retryAfter: reply?.1.value(forHTTPHeaderField: "Retry-After"),
+                                              body: reply?.0, address: key, now: .now)
+                switch answer {
+                case .read(let later, let pending):
+                    if pending { continue }
+                    // A new scan of the address in the meantime wins.
+                    guard let now = self.readings[key], now.scannedAt == scannedAt else { return }
+                    self.readings[key] = now.adding(summariesOf: later)
+                    self.saveReadings()
+                    #if DEBUG
+                    NSLog("nymis| %@ | summaries | %@", key,
+                          later.overview == nil && later.financial == nil ? "unavailable" : "ready")
+                    #endif
+                    self.summaryFollow[key] = nil
+                    return
+                case .retry, .processing:
+                    continue
+                case .busy, .failed:
+                    self.summaryFollow[key] = nil
+                    return
+                }
+            }
+            self?.summaryFollow[key] = nil
+        }
     }
 
     private func finish(_ key: String, _ reading: NymisScan.Reading?) {
@@ -278,13 +306,10 @@ final class NymisScans {
                           explanation: "Most transactions land between 8 and 11 in the evening, Central European time."),
                 ]),
             ],
-            partial: true, scannedAt: .now.addingTimeInterval(-3600),
-            summary: "This address is publicly linked to quillmark.eth, with a profile on X. Inbound transfers from Coinbase create a KYC-adjacent attribution point, and two related addresses send to and receive from it on a repeating pattern.",
-            gives: ["related addresses", "exchanges", "identity"],
-            facts: [.init(label: "Related addresses", value: "2"),
-                    .init(label: "Exchanges", value: "Coinbase"),
-                    .init(label: "Identity", value: "X, ENS"),
-                    .init(label: "Active", value: "Mar 2023 to Nov 2026")])
+            partial: false, scannedAt: .now.addingTimeInterval(-3600),
+            overview: "This address is publicly linked to quillmark.eth, with a profile on X. Two related addresses send to and receive from it on a repeating pattern.",
+            financial: "Inbound transfers from Coinbase create a KYC-adjacent attribution point.",
+            scanID: "11111111-1111-4111-8111-111111111111")
         saveReadings()
     }
     #endif

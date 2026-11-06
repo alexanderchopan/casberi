@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// **WHAT NYMIS READ (prd §1701, §1701a, §1701b).** The subscription sheet's
+/// **WHAT NYMIS READ (prd §1701, §1701a, §1701c).** The subscription sheet's
 /// anatomy: the app's art centred over the account's name, then one card,
-/// "Nymis's reading": Nymis's summary in their words with the facts under it
-/// as label/value rows (the scan's page, §1701b), or, when the page could
-/// not be read, each finding's title over Nymis's explanation; then the
-/// coverage line, Scan again, and See more on Nymis at the foot. No score,
-/// no grade, no points (user, 2026-11-04).
+/// "Nymis's reading": Nymis's two summaries in their words (what gives the
+/// address away, then its money trail), and each finding's title over
+/// Nymis's explanation; then the incomplete line, Scan again, and See more
+/// on Nymis at the foot. A reading stored before §1701c keeps the page's
+/// summary and label/value facts (§1701b). No score, no grade, no points
+/// (user, 2026-11-04).
 struct NymisReadingSheet: View {
     let address: String
     let name: String
@@ -38,7 +39,16 @@ struct NymisReadingSheet: View {
             .padding(.top, DS.Space.s4)
 
             SheetCard(name: String(localized: "Nymis's reading")) {
-                if let summary = reading.summary {
+                if reading.overview != nil || reading.financial != nil {
+                    ForEach([reading.overview, reading.financial].compactMap { $0 }, id: \.self) { text in
+                        Text(verbatim: text)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, DS.Space.s3)
+                    }
+                    findings(reading, saysNone: false)
+                } else if let summary = reading.summary {
+                    // A reading of the scan's page, stored before §1701c.
                     Text(verbatim: summary)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -54,13 +64,21 @@ struct NymisReadingSheet: View {
                         .accessibilityElement(children: .combine)
                     }
                 } else {
-                    findings(reading)
+                    findings(reading, saysNone: true)
                 }
                 if reading.partial {
-                    Text("Nymis couldn't read all of this address's activity, so some links may be missing.")
-                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
+                    // Only when Nymis said incomplete (§1701c), in its words
+                    // when it gave a sentence.
+                    Group {
+                        if let reason = reading.reason {
+                            Text(verbatim: reason)
+                        } else {
+                            Text("Nymis couldn't read all of this address's activity, so some links may be missing.")
+                        }
+                    }
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
                 }
             }
 
@@ -77,10 +95,11 @@ struct NymisReadingSheet: View {
         .padding(DS.Space.s4)
     }
 
-    /// The API's findings, when the scan's page could not be read.
+    /// Nymis's findings, each title over its explanation. With no summary
+    /// and no findings, the sheet says so (`saysNone`).
     @ViewBuilder
-    private func findings(_ reading: NymisScan.Reading) -> some View {
-        if reading.findings.isEmpty {
+    private func findings(_ reading: NymisScan.Reading, saysNone: Bool) -> some View {
+        if saysNone, reading.findings.isEmpty {
             // Nymis: an empty list does not prove no exposure.
             Text("Nymis found nothing that gives this address away, which doesn't prove nothing does.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
