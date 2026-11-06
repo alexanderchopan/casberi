@@ -34149,6 +34149,40 @@
         }
       }
     },
+    "%lld, %lld named" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld, %2$lld named"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld, %2$lld con nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld件、うち%2$lld件に名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld개, 이름 있는 %2$lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld 个，其中 %2$lld 个有名称"
+          }
+        }
+      }
+    },
     "%lld/%lld" : {
       "localizations" : {
         "en" : {
@@ -70679,6 +70713,34 @@
         }
       }
     },
+    "Contracts deployed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Contratos desplegados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デプロイしたコントラクト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "배포한 컨트랙트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "部署的合约"
+          }
+        }
+      }
+    },
     "Conversation" : {
       "localizations" : {
         "es" : {
@@ -87281,6 +87343,34 @@
         }
       }
     },
+    "Exchanges" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exchanges"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易所"
+          }
+        }
+      }
+    },
     "Exchanges and banks" : {
       "localizations" : {
         "es" : {
@@ -99750,6 +99840,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每次你打开时我都会准备好。"
+          }
+        }
+      }
+    },
+    "Identity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Identidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイデンティティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "신원"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "身份"
           }
         }
       }
@@ -154430,6 +154548,34 @@
         }
       }
     },
+    "Related addresses" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Direcciones relacionadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "関連アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "관련 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关联地址"
+          }
+        }
+      }
+    },
     "Relaunched %@ days ago" : {
       "localizations" : {
         "es" : {
@@ -160820,6 +160966,34 @@
         }
       }
     },
+    "Safe signing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "firma en Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeの署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 签名"
+          }
+        }
+      }
+    },
     "Safe's free read limit is used up — last checked %@" : {
       "localizations" : {
         "es" : {
@@ -164416,6 +164590,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在订阅流中查看"
+          }
+        }
+      }
+    },
+    "See more on Nymis" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ver más en Nymis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymisで詳しく見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nymis에서 더 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Nymis 上查看更多"
           }
         }
       }
@@ -172746,6 +172948,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Face ID 后签名。它永远不会执行。"
+          }
+        }
+      }
+    },
+    "Signs for" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma para"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 대상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名对象"
           }
         }
       }
@@ -228155,6 +228385,34 @@
         }
       }
     },
+    "exchanges" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "exchanges"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交易所"
+          }
+        }
+      }
+    },
     "expired" : {
       "localizations" : {
         "es" : {
@@ -229923,6 +230181,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone"
+          }
+        }
+      }
+    },
+    "identity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "identidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイデンティティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "신원"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "身份"
           }
         }
       }
@@ -238553,6 +238839,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "拒绝"
+          }
+        }
+      }
+    },
+    "related addresses" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "direcciones relacionadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "関連アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "관련 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关联地址"
           }
         }
       }
