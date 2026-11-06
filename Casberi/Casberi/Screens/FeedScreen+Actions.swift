@@ -296,6 +296,19 @@ extension FeedScreen {
         let scope = selectedWallet
         let pending = Set(SafeBridge.pendingSnapshot().map(\.ref))
         if pending != walletSafePending { walletSafePending = pending }
+        // **PERMISSIONS AND THREATS AT ONCE (2026-11-06, user: "threats and
+        // permissions always take a while to load and sometimes don't on
+        // wallet home").** Nothing drawn, or another scope's state drawn
+        // (which stood here until the new scope's read landed): this scope's
+        // last reading this session, or its threats alone (a model fetch),
+        // before the chain reads below. The live answer replaces it.
+        let slot = WalletLastReading.slot(scope)
+        if walletLiveFor != slot || walletLive == WalletLiveState() {
+            var quick = WalletWatch.quickState(scopeTo: scope, context: modelContext)
+            quick.dropJustRevoked()
+            if quick != walletLive { walletLive = quick }
+            walletLiveFor = slot
+        }
         Task { @MainActor in
             var state = await WalletWatch.liveState(scopeTo: scope, context: modelContext)
             state.dropJustRevoked()

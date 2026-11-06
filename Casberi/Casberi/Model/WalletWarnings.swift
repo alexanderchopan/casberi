@@ -356,7 +356,12 @@ enum WalletWatch {
             resolved.append(hex)
             owner[hex.lowercased()] = target
         }
-        guard !resolved.isEmpty else { return WalletLiveState() }
+        // A name that did not resolve is a host that did not answer, not an
+        // empty wallet: stand on this scope's last reading, its threats read
+        // fresh (2026-11-06; this emptied Threats, which needs no network).
+        guard !resolved.isEmpty else {
+            return lastReading(scopeTo: scope, context: context) ?? withFlags(WalletLiveState(), scopeTo: scope, context: context)
+        }
 
         async let defi = WalletDeFi.positions(addresses: resolved)
         async let morphoBook = MorphoDeFi.book(addresses: resolved)
@@ -398,24 +403,10 @@ enum WalletWatch {
         let delegations = await delegs
         let activeApprovals = await approvalsRead
 
-        // The flagged transfers — a plain model fetch, no network. The
-        // predicate asks only that a flag EXISTS: `securityFlag` holds a
-        // comma-joined set now (poisoning and a spoofed symbol can both be
-        // true of one transfer), so an equality test would miss any thing
-        // wearing more than one. Which flag is which is decided in Swift,
-        // below, over a list that is a handful of rows at most.
-        let flagged = (try? context.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" && $0.securityFlag != nil }
-        ))) ?? []
-        // Scoped the same way the rows are, so a wallet-scoped feed never
-        // warns about another wallet's flagged transfer.
-        let inScope = scope == nil ? flagged : flagged.filter { t in
-            guard let a = t.walletAddress else { return false }
-            return targets.contains { sameAddress($0, a) }
-        }
-        let poisoningCount = inScope.filter { $0.hasSecurityFlag("poisoning") }.count
-        let symbolCount = inScope.filter { $0.hasSecurityFlag("symbol") }.count
-        let fakeTransferCount = inScope.filter { $0.hasSecurityFlag("spam") }.count
+        let flags = flagged(scopeTo: scope, context: context)
+        let poisoningCount = flags.poisoning
+        let symbolCount = flags.symbol
+        let fakeTransferCount = flags.spam
 
         // Same belt-and-suspenders as `warnings()`'s own dedup: these two
         // also feed a `ForEach` (one row per `Thing`) directly, so a
@@ -426,10 +417,7 @@ enum WalletWatch {
         // Priced from the checks just read — no second pass over the chain
         // (2026-08-03, prd §292).
         let exposure = await WalletApprovalExposure.from(checked: dedupedChecked)
-        var seenFlaggedIDs = Set<Thing.ID>()
-        let dedupedFlagged = inScope.filter { seenFlaggedIDs.insert($0.id).inserted }
-
-        return WalletLiveState(
+        let state = WalletLiveState(
             positions: positions,
             morpho: morpho,
             uniswap: uniswap,
@@ -447,10 +435,100 @@ enum WalletWatch {
                                fakeTransferCount: fakeTransferCount,
                                approvalCount: dedupedApprovals.count,
                                owner: owner),
-            flagged: dedupedFlagged,
+            flagged: flags.things,
             activeApprovals: dedupedApprovals,
             exposure: exposure,
             acting: await actingRead)
+        remember(state, scopeTo: scope)
+        return state
+    }
+
+    /// **THREATS NEED NO NETWORK (2026-11-06, user: "threats and permissions
+    /// always take a while to load and sometimes don't on wallet home").**
+    /// The flagged transfers are a model fetch, and Home waited on every
+    /// chain read in `liveState` to draw them. `FeedScreen.loadWalletLive`
+    /// paints these at once, then the full reading.
+    ///
+    /// The predicate asks only that a flag EXISTS: `securityFlag` holds a
+    /// comma-joined set (poisoning and a spoofed symbol can both be true of
+    /// one transfer), so an equality test would miss any thing wearing more
+    /// than one. Which flag is which is decided in Swift, over a handful of
+    /// rows. Scoped the same way the rows are, so a wallet-scoped feed never
+    /// warns about another wallet's flagged transfer.
+    @MainActor
+    static func flagged(scopeTo scope: String?, context: ModelContext)
+        -> (things: [Thing], poisoning: Int, symbol: Int, spam: Int) {
+        let all = ((try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" && $0.securityFlag != nil }
+        ))) ?? []).live
+        let targets = scope.map { s in WalletStore.shared.addresses.map(\.address).filter { sameAddress($0, s) } }
+        let inScope = targets.map { targets in
+            all.filter { t in
+                guard let a = t.walletAddress else { return false }
+                return targets.contains { sameAddress($0, a) }
+            }
+        } ?? all
+        // These feed a `ForEach` (one row per `Thing`) directly, so a
+        // duplicate `id` traps a view; de-duped here as `warnings()` is.
+        var seen = Set<Thing.ID>()
+        let things = inScope.filter { seen.insert($0.id).inserted }
+        return (things,
+                things.filter { $0.hasSecurityFlag("poisoning") }.count,
+                things.filter { $0.hasSecurityFlag("symbol") }.count,
+                things.filter { $0.hasSecurityFlag("spam") }.count)
+    }
+
+    /// `state` with its threats read fresh: the flagged things, and the three
+    /// warnings they raise in the place `warnings()` gives them (critical
+    /// first, the fake transfers leading the notices).
+    @MainActor
+    static func withFlags(_ state: WalletLiveState, scopeTo scope: String?,
+                          context: ModelContext) -> WalletLiveState {
+        let flags = flagged(scopeTo: scope, context: context)
+        let fresh = warnings(positions: [], safePending: [:], delegations: [],
+                             poisoningCount: flags.poisoning, spoofedSymbolCount: flags.symbol,
+                             fakeTransferCount: flags.spam)
+        let flagKinds: Set<WalletWarning.Kind> = [.poisoning, .spoofedSymbol, .fakeTransfer]
+        let kept = state.warnings.filter { !flagKinds.contains($0.kind) }
+        var next = state
+        next.flagged = flags.things
+        next.warnings = kept.filter { $0.severity == .critical } + fresh.filter { $0.severity == .critical }
+            + fresh.filter { $0.severity != .critical } + kept.filter { $0.severity != .critical }
+        return next
+    }
+
+    /// **THE LAST READING, AT ONCE (prd §1593, for Permissions and Threats).**
+    /// Each scope's last full reading this session, over the wallets it was
+    /// read for: Home draws it the moment it stands, and the live read
+    /// replaces it. Memory only — a grant's state is not kept across launches
+    /// (§216) — and every thing in it is checked live before it is drawn.
+    @MainActor private static var lastReadings: [String: (wallets: String, state: WalletLiveState)] = [:]
+
+    @MainActor
+    private static func remember(_ state: WalletLiveState, scopeTo scope: String?) {
+        let wallets = WalletLastReading.signature(WalletStore.shared.addresses.map(\.address))
+        lastReadings[WalletLastReading.slot(scope)] = (wallets, state)
+    }
+
+    @MainActor
+    static func lastReading(scopeTo scope: String?, context: ModelContext) -> WalletLiveState? {
+        let wallets = WalletLastReading.signature(WalletStore.shared.addresses.map(\.address))
+        guard !DemoMode.isActive, let kept = lastReadings[WalletLastReading.slot(scope)],
+              kept.wallets == wallets else { return nil }
+        var state = kept.state
+        state.activeApprovals = state.activeApprovals.live
+        let approvals = Set(state.activeApprovals.map(\.id))
+        state.exposure.priced.removeAll { !approvals.contains($0.thingID) }
+        state.exposure.unpriced.removeAll { !approvals.contains($0.thingID) }
+        return withFlags(state, scopeTo: scope, context: context)
+    }
+
+    /// What Home draws before the live read lands: the last reading, or the
+    /// threats alone.
+    @MainActor
+    static func quickState(scopeTo scope: String?, context: ModelContext) -> WalletLiveState {
+        lastReading(scopeTo: scope, context: context)
+            ?? withFlags(WalletLiveState(), scopeTo: scope, context: context)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58

@@ -632,6 +632,10 @@ struct FeedScreen: View {
     /// landed thing: re-read each time this feed comes forward or its scope
     /// changes, exactly as the manage screen used to hold it.
     @State var walletLive = WalletLiveState()
+    /// The scope `walletLive` was drawn for (`WalletLastReading.slot`), so a
+    /// scope change paints that scope's last reading at once and a repeat
+    /// read of the same scope leaves what is drawn standing (2026-11-06).
+    @State var walletLiveFor = ""
     /// Whether the scoped wallet holds any NFT collection at all (prd §387) —
     /// what decides between the shelf's invitation line and nothing. Owned by
     /// the room, filled by `loadWalletLive`; see there for why not by the card.
