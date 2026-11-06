@@ -81,8 +81,16 @@ else
 fi
 
 echo "▶ Staging a local copy (iCloud xattrs break codesign)"
+# The Aztec engine page and prover (prd §1700) are gitignored build output
+# that xcb.sh's `ensure` makes in the CHECKOUT, and xcb.sh runs after this
+# copy. Make them first, or a clean worktree stages neither and the archive
+# fails on CpResource AztecEngine (paid twice, last at build 948).
+"$SRC/../scripts/aztec-engine.sh" ensure
 rm -rf "$WORK"; mkdir -p "$WORK"
 rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
+for need in AztecEngine/index.html AztecEngine/relay.js vendor/aztec/ios/libbb-external.a; do
+  [ -f "$WORK/project/$need" ] || { echo "✗ staged copy lacks $need — run scripts/aztec-engine.sh ensure"; exit 1; }
+done
 # The project references the vendored curve library as ../Vendor/swift-secp256k1
 # (prd §738), which sits beside the .xcodeproj folder rather than inside it, so
 # it is staged beside project/ too. Without it the archive fails to resolve
