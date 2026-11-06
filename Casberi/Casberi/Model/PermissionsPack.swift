@@ -205,26 +205,35 @@ enum PermissionsPack {
 
     /// Circles for `usd` inside a disc `diameter` across whose area is
     /// `scale` dollars: each circle's area its share of the disc's, the pack
-    /// centred in the disc's inscribed square. True area while the pack fits
-    /// there; when it cannot (shares adding up near the whole disc), the
-    /// pack shrinks together, ratios kept. In the disc's own coordinates.
+    /// centred on the disc. True area whenever the pack fits the disc at that
+    /// size; when it cannot (shares adding up near the whole disc), the pack
+    /// shrinks together, ratios kept. In the disc's own coordinates.
+    ///
+    /// The pack is laid out once for its arrangement and then scaled to the
+    /// truth, up or down: §1710's first cut capped the scale at the pack's
+    /// fit in the disc's inscribed square, so a $3,200 grant on a $12,480
+    /// disc drew at 45pt of a true 50.6 (`permissions-box-selftest.sh`).
     static func inside(_ usd: [Double], scale: Double, diameter: CGFloat,
                        gap: CGFloat = 4) -> [CirclePack.Circle] {
         guard !usd.isEmpty, diameter > 0, scale > 0 else { return [] }
-        let side = diameter / CGFloat(2).squareRoot()
-        let packed = CirclePack.layout(shares: usd, in: CGSize(width: side, height: side),
+        let packed = CirclePack.layout(shares: usd, in: CGSize(width: diameter, height: diameter),
                                        gap: gap, floor: 0)
-        // The pack fills its square; a circle's true radius is the disc's
-        // times √share. Every circle carries the same ratio (no floor), so
-        // the largest names it.
+        guard !packed.isEmpty else { return [] }
+        // A circle's true radius is the disc's times √share. Every circle
+        // carries the same ratio (no floor), so the largest names it.
         let largest = usd.indices.max { usd[$0] < usd[$1] } ?? 0
         let truth = diameter / 2 * CGFloat((max(usd[largest], 0) / scale).squareRoot())
-        let s = packed[largest].radius > 0 ? min(1, truth / packed[largest].radius) : 1
-        let mid = side / 2
-        let o = (diameter - side) / 2
+        var s = packed[largest].radius > 0 ? truth / packed[largest].radius : 1
+        // The cluster's own middle (its bounds'), and how far it reaches from
+        // there at that size; past the disc's edge, everything shrinks together.
+        let cx = (packed.map { $0.center.x - $0.radius }.min()! + packed.map { $0.center.x + $0.radius }.max()!) / 2
+        let cy = (packed.map { $0.center.y - $0.radius }.min()! + packed.map { $0.center.y + $0.radius }.max()!) / 2
+        let reach = packed.map { hypot($0.center.x - cx, $0.center.y - cy) + $0.radius }.max()! * s
+        if reach > diameter / 2 { s *= diameter / 2 / reach }
+        let mid = diameter / 2
         return packed.map { c in
-            CirclePack.Circle(center: CGPoint(x: o + mid + (c.center.x - mid) * s,
-                                              y: o + mid + (c.center.y - mid) * s),
+            CirclePack.Circle(center: CGPoint(x: mid + (c.center.x - cx) * s,
+                                              y: mid + (c.center.y - cy) * s),
                               radius: c.radius * s)
         }
     }
