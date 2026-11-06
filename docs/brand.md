@@ -51,8 +51,16 @@ should ever make "just a small server" sound reasonable.
 
 One octopus arm, curled into a lowercase c, leaning −9°. Pink on black, its
 suckers punched through in the ground colour. It replaced the leaning octopus
-(below, now the illustration) as the app icon, the in-app mark and the
-wordmark's c.
+(below, now the illustration) as the in-app mark and the wordmark's c, and was
+the app icon until 2026-11-05.
+
+**The app icon is its own drawing since 2026-11-05 (prd §1708): a cursive C.**
+On the home screen the c read as a worm: an even body, a round end that read as
+a head, spots for suckers. The icon's arm is a cursive C whose exit stroke runs
+off the tile's right side, the join into an "a" you never see; its other end
+narrows to a fine tip that spirals in, and its suckers are rings that shrink
+toward the tip. `tentacle.py`'s `ICON` and `icon_arm()` are its geometry; the
+mark below is unchanged.
 
 Why one arm: the octopus's arms are the thesis (each senses on its own, one
 animal), and one arm says it with a letter the name already starts with. It is
@@ -161,8 +169,9 @@ Three 1024 PNGs, all opaque, in `AppIcon.appiconset`:
 - `casberi-octopus-1024-tinted.png` — white arm, black ground
 
 The filenames keep "octopus" so the asset catalog and pbxproj did not change
-with the art. `tentacle.py` writes all three (the arm's box is 60% of the
-tile, centred); `scripts/app-icon-audit.py` holds light to a copy of dark.
+with the art. `tentacle.py` writes all three from `icon_arm()`, the cursive C
+at 1.3× about the tile's centre with its join leaving the right side (prd
+§1708); `scripts/app-icon-audit.py` holds light to a copy of dark.
 
 The set is `"platform": "ios"` and **Catalyst inherits it**, so Mac and iOS share
 one artwork. Consequence worth knowing: changing it changes both, so a Mac build

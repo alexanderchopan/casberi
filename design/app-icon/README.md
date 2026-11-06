@@ -1,7 +1,9 @@
 # Handoff: Casberi App Icon
 
 ## Overview
-**Since 2026-11-01 (prd §1638) the icon is one octopus arm curled into a lowercase c**, leaning −9°, in Apple Music's pink (`#FA2D48`, prd §1252) on a plain ground, its suckers punched through in the ground colour. The geometry, and every file it writes, is `tentacle.py`; `docs/brand.md` section 2 has the construction rules. `Design/CasberiMark.swift` is a line-for-line port of it.
+**Since 2026-11-05 (prd §1708) the app icon is a cursive C**: the arm's exit stroke runs off the tile's right side (the join into an "a" off the edge), its tip spirals in, its suckers are rings shrinking toward the tip. It is `tentacle.py`'s `icon_arm()`; the in-app mark and the wordmark's c keep the arm below.
+
+**From 2026-11-01 (prd §1638) the mark is one octopus arm curled into a lowercase c**, leaning −9°, in Apple Music's pink (`#FA2D48`, prd §1252) on a plain ground, its suckers punched through in the ground colour. The geometry, and every file it writes, is `tentacle.py`; `docs/brand.md` section 2 has the construction rules. `Design/CasberiMark.swift` is a line-for-line port of it.
 
 **Everything below this section describes the OCTOPUS** — the five-armed leaning creature that was the mark until 2026-11-01 and is now the website's illustration. Its sources are kept as `casberi-octopus.svg` and `casberi-octopus-small.svg`; `casberi-mark.svg` and `casberi-mark-small.svg` are the arm now.
 

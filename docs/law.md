@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1859 of 1931 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1860 of 1932 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2022,7 +2022,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1635 — A chat's sheet keeps when each message was sent: a day and time over a new day or a pause, one sender's run joined, "…
 - §1636 — A post's sheet reads like the post: the person on one line, the words, the pictures at their own shape, the quote, ho…
 - §1637 — A Telegram channel post's sheet: the channel's real @handle, "Forwarded from" over a forward's words, its views as th…
-- §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t… (amended by §1639)
+- §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t… (amended by §1639, §1708)
 - §1639 — The app icon is the black tile in every appearance: the default (light) icon is the dark art, byte for byte
 - §1640 — Day is the week: the Feed's Day section draws this week with its faces over the next thing; Search stands apart from…
 - §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed…
@@ -2108,6 +2108,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance
 - §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list…
 - §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is
+- §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i…
 
 ## Dead rulings → what replaced them (generated)
 

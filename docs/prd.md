@@ -71099,3 +71099,15 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 6. **Measured 2026-11-05** on the simulator: accountless.eth read end to end through the app (the API's cached result, the id by address, the page), the sheet drawing the summary and six facts, See more opening the scan's page.
 
 **Mac half (§1402).** The same sheet; See more opens the browser.
+
+## §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, its suckers are rings (amends §1638 for the icon only; the in-app mark and the wordmark's c keep the arm) (user, 2026-11-05: "i think the new logo is good but i'm not sure i'm sold on it", "it kinda looks like a worm", of the variants "i liked it when the arm went off the page", "like you say at close up they blur w/ double rings", "it doesn't have to go so high tho running off the corner right", "i think of it like a cursive C … connecting to cursive A for casberi but a is off the screen … that's what it should evoke", then "you pick the best one and lets use it") — RULED, BUILT
+
+**Why.** §1638's c reads as a worm on the home screen: an even, blunt body whose rounded upper end reads as a head, solid spots for suckers, and two ends that just stop. Tapering it the other way made a tadpole (the fat end became the head). What removed the head was letting the thick end leave the tile.
+
+1. **The icon is a cursive C.** The arm comes up from the tile's right side as a cursive C's exit stroke would leave toward the next letter, sweeps round, and narrows to a fine tip that spirals in at the top. The C ends at its foot, where the stroke already heads right, so the join rises off the tile with no S-bend and no cut end inside the tile.
+2. **Suckers are rings, one row**, on the inside of the curl, shrinking toward the tip (r 3.0 → 0.9). Paired rows were tried and blurred to speckle at 60px.
+3. **Same pink, same black tile, same −9° lean** (§1252, §1639). Light is still a copy of dark; tinted is white on black (`app-icon-audit.py`).
+4. **The icon only.** `CasberiMark` (Library's tab, the account rows), `casberi-mark*.svg` and the wordmark's c keep §1638's arm: the run-off works only inside a tile. Whether the in-app mark follows is a separate ruling.
+5. **One source.** `design/app-icon/tentacle.py`'s `ICON` and `icon_arm()` write the three PNGs; the explorations are in `design/app-icon/explore/`.
+
+**Mac half (§1402).** The icon set is shared, so the Mac's icon changes with it.
