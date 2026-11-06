@@ -33,6 +33,7 @@ import { computeL2ToL1MessageHash } from '@aztec-labs/stdlib/hash';
 import { sha256ToField } from '@aztec-labs/foundation/crypto/sha256';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
+import { WALLET_ICON } from './icon.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -406,7 +407,7 @@ let contentListener = null;
 // the person picks Casberi in the app, and hold its calls (connect-gate.js).
 let gate = null;
 const background = new BackgroundConnectionHandler(
-  { ...WALLET, walletIcon: 'https://casberi.app/favicon.ico' },
+  { ...WALLET, walletIcon: WALLET_ICON },
   {
     sendToTab: (tabId, message) => native('engineToTab', { tabId, message }),
     addContentListener: handler => {
