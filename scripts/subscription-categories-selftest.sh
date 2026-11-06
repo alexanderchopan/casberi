@@ -133,6 +133,13 @@ check(SubscriptionCategories.signature([item("Claude", 20)])
           != SubscriptionCategories.signature([item("Claude", 20), item("Linear", 10)]),
       "a different set clears it")
 
+// Two holdings under one id (two Privy apps of one name) are one tile, their
+// shares added: the layout keyed a dictionary by id and trapped the Wallet.
+let dup = HoldingsTreemapLayout.layout([(id: "Mint", share: 0.3), (id: "Mint", share: 0.3), (id: "Zora", share: 0.4)],
+                                       in: rect, gap: 4, minSide: 44)
+check(dup.map(\.id).sorted() == ["Mint", "Zora"], "a repeated id draws one tile")
+check(dup.first { $0.id == "Mint" }.map { abs($0.share - 0.6) < 0.001 } ?? false, "its share is both added")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   fallback, fold merge, monthly only, the two-tile floor, the filter")
 SWIFT
