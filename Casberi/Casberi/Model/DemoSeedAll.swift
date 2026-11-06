@@ -2672,7 +2672,10 @@ enum DemoSeedAll {
         out += gmail.enumerated().map { i, m in
             row(.mail, m.0, source: "Gmail", ref: "demo:gmail:\(i)", days: m.2, hour: 9,
                 content: "Thanks — see the thread for the details.") { t in
-                t.authorHandle = m.1
+                // As the real ingest lands it (`MailBridge`): the display name
+                // on `authorHandle`, the mailbox on `authorEmail`.
+                t.authorHandle = MailSubscriptions.senderName(m.1) ?? m.1
+                t.authorEmail = MailSubscriptions.address(nil, sender: m.1)
                 if let file = gmailAttached[i] { t.facts = [ThingFact(MailIngest.attachedLabel, file).encoded] }
             }
         }
@@ -2732,7 +2735,8 @@ enum DemoSeedAll {
         out += icloud.enumerated().map { i, m in
             row(.mail, m.0, source: "iCloud Mail", ref: "demo:icloud:\(i)", days: m.2, hour: 11,
                 content: "Opened on this device.") { t in
-                t.authorHandle = m.1
+                t.authorHandle = MailSubscriptions.senderName(m.1) ?? m.1
+                t.authorEmail = MailSubscriptions.address(nil, sender: m.1)
                 if let file = icloudAttached[i] { t.facts = [ThingFact(MailIngest.attachedLabel, file).encoded] }
             }
         }
