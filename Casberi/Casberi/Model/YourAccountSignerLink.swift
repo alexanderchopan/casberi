@@ -97,6 +97,39 @@ enum YourAccountSignerLink {
         }
     }
 
+    /// **An app's sign-in, by your co-signer (prd §1700l).** For a page in
+    /// Apps on Aztec's browser that takes only a plain key's signature: one
+    /// `personal_sign` or `eth_signTypedData_v4` on Ethereum, over a pairing
+    /// of its own that asks for that one method and is let go once answered,
+    /// so the Signer's kept session (Safe approvals only) is never widened.
+    /// The answer must recover to `signer` over `digest`, or nothing goes
+    /// back to the page.
+    static func signForApp(method appMethod: String, params: [String], digest: [UInt8], signer: String,
+                           timeout: Duration = wait, show: @MainActor (URL) -> Void) async throws -> [UInt8] {
+        guard ["personal_sign", "eth_signTypedData_v4"].contains(appMethod), digest.count == 32 else { throw Failure.unavailable }
+        let chainId = YourAccountOp.ethereum.chainId
+        let pairing = try await connect(signer: signer, chainIds: [chainId], method: appMethod, timeout: timeout, show: show)
+        defer { close(pairing) }
+        guard let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
+        let request = try Request(topic: pairing.topic, method: appMethod, params: AnyCodable(params), chainId: chain)
+        async let answer = answer(to: Asked(request.id), topic: pairing.topic, timeout: timeout)
+        do { try await Sign.instance.request(params: request) } catch { throw Failure.gone }
+        trace("asked \(appMethod) for an app")
+        switch await answer {
+        case .answered(.response(let value)):
+            guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }
+            let signature = try normalized(hex)
+            guard EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer) == .orderedSame else {
+                throw Failure.notProven
+            }
+            return signature
+        case .answered(.error(let error)): throw Failure.refused(error.message)
+        case .gone: throw Failure.gone
+        case .switched: throw Failure.switched
+        case .none: throw Failure.timedOut
+        }
+    }
+
     /// What a failed ask means for its session (prd §1644), or nil for an
     /// answer (a refusal, a malformed signature) that leaves it as it is.
     /// A cancelled ask is the person's, whatever the request threw.

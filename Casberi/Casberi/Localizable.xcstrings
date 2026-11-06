@@ -3406,6 +3406,34 @@
         }
       }
     },
+    "%@ asks your co-signer to sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ pide que tu cofirmante firme"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が共同署名者に署名を求めています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 공동 서명자의 서명을 요청합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 请你的共同签名人签名"
+          }
+        }
+      }
+    },
     "%@ assets" : {
       "localizations" : {
         "es" : {
@@ -4690,6 +4718,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 已断开连接"
+          }
+        }
+      }
+    },
+    "%@ doesn't accept Aztec accounts or Safes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no acepta cuentas de Aztec ni Safes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は Aztec アカウントや Safe に対応していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) Aztec 계정이나 Safe를 지원하지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 不支持 Aztec 账户或 Safe"
           }
         }
       }
@@ -69475,6 +69531,34 @@
         }
       }
     },
+    "Connect your account anyway" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar tu cuenta de todos modos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それでもアカウントを接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그래도 계정 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍然连接你的账户"
+          }
+        }
+      }
+    },
     "Connect your apps" : {
       "localizations" : {
         "en" : {
@@ -102922,6 +103006,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在整个应用中都以此命名。留空则移除名称。"
+          }
+        }
+      }
+    },
+    "It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (%@)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Necesita iniciar sesión con una billetera de Ethereum fuera de Casberi. Inicia sesión con tu cofirmante (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi の外にある Ethereum ウォレットでのサインインが必要です。共同署名者（%@）でサインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 외부의 이더리움 지갑으로 로그인해야 합니다. 공동 서명자(%@)로 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它需要使用 Casberi 之外的以太坊钱包登录。请使用你的共同签名人（%@）登录。"
           }
         }
       }
@@ -183053,6 +183165,34 @@
         }
       }
     },
+    "That wallet is not your co-signer, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa billetera no es tu cofirmante, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットは共同署名者ではないため、何も署名されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑은 공동 서명자가 아니므로 아무것도 서명되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包不是你的共同签名人，因此未签署任何内容"
+          }
+        }
+      }
+    },
     "That was sample data. Now with your own things." : {
       "localizations" : {
         "es" : {
@@ -198513,6 +198653,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Bitrefill 使用你的账户"
+          }
+        }
+      }
+    },
+    "Use your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用你的共同签名人"
+          }
+        }
+      }
+    },
+    "Use your co-signer instead (%@)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar tu cofirmante (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を使う（%@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 사용 (%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "改用你的共同签名人（%@）"
           }
         }
       }
@@ -218033,6 +218229,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要你的联合签名者批准，但尚未设置"
+          }
+        }
+      }
+    },
+    "Your co-signer did not sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante no firmó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者は署名しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人未签名"
+          }
+        }
+      }
+    },
+    "Your co-signer's wallet signs it. It moves nothing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo firma la billetera de tu cofirmante. No mueve nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者のウォレットが署名します。何も移動しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자의 지갑이 서명합니다. 아무것도 이동하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由你的共同签名人的钱包签名。不会转移任何资产。"
           }
         }
       }

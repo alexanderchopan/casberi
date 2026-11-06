@@ -165,6 +165,22 @@ check(capped == BrowserEthereum.Approval(spender: "0x" + spender, amount: "10000
 let noLimit = BrowserEthereum.approval("0x095ea7b3" + String(repeating: "0", count: 24) + spender + String(repeating: "f", count: 64))
 check(noLimit?.unlimited == true, "an approval with no limit read as limited")
 check(BrowserEthereum.approval("0xa9059cbb" + String(repeating: "0", count: 128)) == nil, "a transfer read as an approval")
+
+// Connected as your co-signer (prd §1700l): it never sends, a page that
+// connects again is asked again, and anything else keeps the connection.
+check(BrowserEthereum.asCoSigner(method: "eth_sendTransaction", connected: true).sends == false, "the co-signer's connection sends")
+check(BrowserEthereum.asCoSigner(method: "eth_requestAccounts", connected: true).connected == false, "connecting again is not asked again")
+check(BrowserEthereum.asCoSigner(method: "wallet_requestPermissions", connected: true).connected == false, "permissions again are not asked again")
+check(BrowserEthereum.asCoSigner(method: "personal_sign", connected: true).connected == true, "the co-signer's sign-in loses its connection")
+check(BrowserEthereum.asCoSigner(method: "eth_accounts", connected: false).connected == false, "connected without connecting")
+// A sign-in your account gave, then a connect within five minutes: the app
+// turned it down, so Connect is asked again, co-signer first.
+let signed = Date(timeIntervalSince1970: 1_000_000)
+check(BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: signed, now: signed.addingTimeInterval(20), hasCoSigner: true), "a retry after a sign-in not asked again")
+check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: signed, now: signed.addingTimeInterval(20), hasCoSigner: false), "asked again with no co-signer to offer")
+check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: signed, now: signed.addingTimeInterval(400), hasCoSigner: true), "asked again long after the sign-in")
+check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: nil, now: signed, hasCoSigner: true), "asked again with no sign-in")
+check(!BrowserEthereum.asksAgainAfterSign(method: "eth_accounts", signedAt: signed, now: signed.addingTimeInterval(20), hasCoSigner: true), "a read of accounts asked again")
 exit(failed == 0 ? 0 : 1)
 EOF
 xcrun swiftc -Onone -o "$TMP/prov" "$PROVIDER" "$TMP/prov.d/main.swift" 2>"$TMP/perr" || { cat "$TMP/perr"; echo "✗ the provider did not compile"; exit 1; }
@@ -173,13 +189,20 @@ if grep -n "eth_sendRawTransaction\|wallet_sendCalls" "$PROVIDER" | grep -v '^\s
   echo "✗ the provider names a raw or batch send: one call per eth_sendTransaction only (prd §1700k)"; exit 1
 fi
 # Sending is on where Apps on Aztec opens a page, and nowhere else (prd §1700k).
-DOORS=$(grep -rln "sends: true" Casberi/Casberi --include=*.swift | sort | tr '\n' ' ')
-[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/ThingSheetView.swift " ]] \
+DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr '\n' ' ')
+# ProbeHooks is DEBUG's door (`-aztecAppEthereum`, prd §1700l), compiled out of every shipped build.
+[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
 grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
   || { echo "✗ Apps on Aztec's door no longer offers your account to an Ethereum app"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
+# The co-signer's sign-in has its own one-method pairing, never the kept
+# Signer session (Safe approvals only), and is checked against the key.
+grep -q 'connect(signer: signer, chainIds: \[chainId\], method: appMethod' Casberi/Casberi/Model/YourAccountSignerLink.swift \
+  || { echo "✗ an app's sign-in rides the Signer's kept session (prd §1700l)"; exit 1; }
+grep -q 'EcRecover.address(digest: digest, signature: signature)?.caseInsensitiveCompare(signer)' Casberi/Casberi/Model/YourAccountSignerLink.swift \
+  || { echo "✗ an app's sign-in is passed on without recovering to the co-signer (prd §1700l)"; exit 1; }
 # The provider's own mutations: each must fail the run.
 pmutate() { # label, perl expression
   sed -e '' "$PROVIDER" > "$TMP/prov.swift"
@@ -193,6 +216,9 @@ pmutate "any page sends" 's/guard sends else \{ return \.answer\(\.unsupported\)
 pmutate "send from any account" 's/from\.lowercased\(\) != account\.lowercased\(\)/false/'
 pmutate "value divided wrong" 's/let q = n \/ 10/let q = n \/ 16/'
 pmutate "every approval unlimited" 's/unlimited: amountWord\.prefix\(2\) == "ff"/unlimited: true/'
+pmutate "the co-signer sends" 's/\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\), false\)/["eth_requestAccounts", "wallet_requestPermissions"].contains(method), true)/'
+pmutate "a retry never asked again" 's/return since >= 0 && since < retryWindow/return false/'
+pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
 
 # ── Mutations: the checks above catch what they claim ───────────────────
 mutate() { # label, perl expression
@@ -209,4 +235,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 4 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 7 mutations caught)"

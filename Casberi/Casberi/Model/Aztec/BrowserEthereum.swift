@@ -108,6 +108,28 @@ enum BrowserEthereum {
         static let wrongAccount = Reply.error(code: 4100, message: "That is not the account Casberi connected.")
     }
 
+    /// **Connected as your co-signer (prd §1700l).** The page knows the
+    /// co-signer's address and its signatures come from the co-signer's own
+    /// wallet, for an app that takes only a plain key's signature. It never
+    /// sends (the money is your account's, and a send would go from there),
+    /// and a page asking to connect again is asked again, so the wallet it
+    /// pays from can be your account.
+    static func asCoSigner(method: String, connected: Bool) -> (connected: Bool, sends: Bool) {
+        (connected && !["eth_requestAccounts", "wallet_requestPermissions"].contains(method), false)
+    }
+
+    /// **A sign-in your account gave and the app turned down (prd §1700l).**
+    /// No app says so to its wallet; what Casberi sees is the retry: a page
+    /// your account signed for asks to connect again within this window.
+    /// Then Connect is asked again, leading with your co-signer.
+    static let retryWindow: TimeInterval = 300
+
+    static func asksAgainAfterSign(method: String, signedAt: Date?, now: Date, hasCoSigner: Bool) -> Bool {
+        guard hasCoSigner, let signedAt, ["eth_requestAccounts", "wallet_requestPermissions"].contains(method) else { return false }
+        let since = now.timeIntervalSince(signedAt)
+        return since >= 0 && since < retryWindow
+    }
+
     /// The reads a page may pass through to Ethereum: answers, never writes.
     static let reads: Set<String> = [
         "eth_blockNumber", "eth_call", "eth_getCode", "eth_getBalance", "eth_getTransactionCount",

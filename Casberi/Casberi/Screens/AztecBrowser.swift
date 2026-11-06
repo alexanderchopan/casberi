@@ -51,6 +51,21 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     let sends: Bool
     /// The Ethereum provider's connection, for this page's host only.
     private var ethConnectedHost: String?
+    /// The page is connected as your co-signer, not your account (prd
+    /// §1700l): the co-signer's address, for an app that takes only a plain
+    /// key's signature. Nil while connected as your account.
+    @Published private(set) var ethCoSigner: String?
+    /// Your account's co-signer on Ethereum, read when the page opens: the
+    /// connect sheet offers it in a quiet line, and only when there is one.
+    @Published private(set) var coSigner: String?
+    /// The connect sheet's answer was "Use your co-signer instead".
+    private var choseCoSigner = false
+    /// When your account last signed for this page: a connect soon after
+    /// is a sign-in the app turned down (prd §1700l).
+    private var accountSignedAt: Date?
+    /// This Connect follows a sign-in the app turned down, so it leads
+    /// with your co-signer.
+    @Published private(set) var reconnecting = false
     private var ethAnswers: [String: CheckedContinuation<Bool, Never>] = [:]
     @Published var ask: Request?
     @Published var host: String
@@ -95,6 +110,17 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
 
     /// Starts the engine first, so the relay's first message has somewhere to go.
     func open() async {
+        if ethereum, sends, let account = YourAccountKey.address, !DemoMode.isActive {
+            #if DEBUG
+            // `-coSignerSample <0x…>`: a co-signer for the simulator, which has none (prd §1700l).
+            if let sample = UserDefaults.standard.string(forKey: "coSignerSample") { coSigner = sample }
+            // `-connectRetrySample YES`: the first Connect is the retry after a turned-down sign-in.
+            if UserDefaults.standard.bool(forKey: "connectRetrySample") { reconnecting = true }
+            #endif
+            if coSigner == nil {
+                Task { coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first }
+            }
+        }
         guard aztec else { page.load(URLRequest(url: start)); return }
         do {
             try await AztecEngine.shared.start()
@@ -134,8 +160,19 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             }
             replyHandler(reply.body, nil); return
         }
+        // Connected as your co-signer, the page knows the co-signer's address,
+        // never sends, and is asked again when it connects again (prd §1700l).
+        var connected = ethConnectedHost == here, mayEnd = sends
+        if ethCoSigner != nil { (connected, mayEnd) = BrowserEthereum.asCoSigner(method: method, connected: connected) }
+        // Your account signed and the page connects again: it turned the
+        // sign-in down, so Connect is asked again, co-signer first.
+        if ethCoSigner == nil, connected,
+           BrowserEthereum.asksAgainAfterSign(method: method, signedAt: accountSignedAt, now: Date(), hasCoSigner: coSigner != nil) {
+            connected = false
+            reconnecting = true
+        }
         let need = BrowserEthereum.need(method: method, paramsJSON: body["params"] as? String ?? "[]",
-                                        account: account, connected: ethConnectedHost == here, sends: sends)
+                                        account: ethCoSigner ?? account, connected: connected, sends: mayEnd)
         Task { @MainActor in
             let reply = await self.answer(need, host: here, account: account)
             if case .error(let code, _) = reply { NSLog("browserEthereum| %@ | error %d", method, code) }
@@ -148,14 +185,23 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         case .answer(let reply):
             return reply
         case .connect:
+            choseCoSigner = false
             guard await ask(.ethConnect(id: UUID().uuidString, host: host)) else { return .rejected }
             ethConnectedHost = host
-            return .result("[\"\(account)\"]")
+            ethCoSigner = choseCoSigner ? coSigner : nil
+            reconnecting = false
+            accountSignedAt = nil
+            return .result("[\"\(ethCoSigner ?? account)\"]")
         case .signText(let text):
             guard await ask(.ethSign(id: UUID().uuidString, host: host, text: text)) else { return .rejected }
+            if let co = ethCoSigner {
+                let hex = "0x" + Array(text.utf8).map { String(format: "%02x", $0) }.joined()
+                return await coSign("personal_sign", params: [hex, co], digest: EIP191.hash(text: text), signer: co)
+            }
             do {
                 let sig = try await YourAccountMessage.signText(text, on: YourAccountOp.ethereum, account: account,
                                                                 reason: String(localized: "Sign for \(host)"))
+                accountSignedAt = Date()
                 return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
             } catch {
                 let why = AztecEngine.words(error)
@@ -165,9 +211,16 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         case .signTyped(let json, let summary):
             guard await ask(.ethSign(id: UUID().uuidString, host: host, text: summary)),
                   let typed = try? JSONSerialization.jsonObject(with: Data(json.utf8)) else { return .rejected }
+            if let co = ethCoSigner {
+                guard let td = EIP712.parse(typed), let digest = EIP712.digest(td) else {
+                    return .error(code: 4001, message: "The typed data could not be read.")
+                }
+                return await coSign("eth_signTypedData_v4", params: [co, json], digest: digest, signer: co)
+            }
             do {
                 let sig = try await YourAccountMessage.signTypedData(typed, on: YourAccountOp.ethereum, account: account,
                                                                      reason: String(localized: "Sign for \(host)"))
+                accountSignedAt = Date()
                 return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
             } catch {
                 let why = AztecEngine.words(error)
@@ -176,6 +229,8 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             }
         case .disconnect:
             ethConnectedHost = nil
+            ethCoSigner = nil
+            accountSignedAt = nil
             return .result(nil)
         case .send(let to, let data, let value):
             let said = await reading(to: to, data: data, value: value, account: account)
@@ -212,6 +267,29 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
                 return .error(code: -32603, message: "Ethereum did not answer.")
             }
             return .result(String(data: data, encoding: .utf8))
+        }
+    }
+
+    /// A signature from your co-signer's own wallet (prd §1700l), over a
+    /// pairing that asks for this one method and is let go once answered;
+    /// the Signer sheet shows the link, as it does for a send.
+    private func coSign(_ method: String, params: [String], digest: [UInt8], signer: String) async -> BrowserEthereum.Reply {
+        do {
+            let sig = try await SignerRequestSheet.asking(signer: signer) { ask in
+                try await YourAccountSignerLink.signForApp(method: method, params: params, digest: digest,
+                                                          signer: signer, show: { ask.pair($0) })
+            }
+            NSLog("browserEthereum| co-signer signed %@", method)
+            return .result("\"0x\(sig.map { String(format: "%02x", $0) }.joined())\"")
+        } catch is CancellationError {
+            return .rejected
+        } catch {
+            let why = (error as? YourAccountSignerLink.Failure) == .notProven
+                ? String(localized: "That wallet is not your co-signer, so nothing was signed")
+                : String(localized: "Your co-signer did not sign")
+            NSLog("browserEthereum| co-signer sign failed | %@", String(describing: error))
+            failed = why
+            return .error(code: 4001, message: why)
         }
     }
 
@@ -294,6 +372,13 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         ask = queue.removeFirst()
     }
 
+    /// The connect sheet's quiet line: connect as your co-signer (prd §1700l).
+    func connectAsCoSigner(_ ask: Request) async {
+        guard case .ethConnect = ask, coSigner != nil else { return }
+        choseCoSigner = true
+        await answer(ask, yes: true)
+    }
+
     func answer(_ ask: Request, yes: Bool) async {
         if case .send(_, let host, let calls, _) = ask, yes {
             do {
@@ -343,7 +428,8 @@ struct AztecBrowserView: View {
         .task { await model.open() }
         .onDisappear { model.close() }
         .sheet(item: $model.ask, onDismiss: { model.sheetGone() }) { ask in
-            AztecAskSheet(ask: ask, sends: model.sends) { yes in Task { await model.answer(ask, yes: yes) } }
+            AztecAskSheet(ask: ask, sends: model.sends, coSigner: model.coSigner, asCoSigner: model.ethCoSigner != nil, reconnecting: model.reconnecting,
+                          useCoSigner: { Task { await model.connectAsCoSigner(ask) } }) { yes in Task { await model.answer(ask, yes: yes) } }
         }
     }
 }
@@ -361,14 +447,38 @@ struct AztecAskSheet: View {
     let ask: AztecBrowserModel.Request
     /// Whether this page may send from your account, so Connect says so.
     var sends = false
+    /// Your co-signer, offered on Connect in a quiet line (prd §1700l).
+    var coSigner: String? = nil
+    /// The page is connected as your co-signer, so it signs there.
+    var asCoSigner = false
+    /// Connect again after a sign-in the app turned down: the co-signer leads.
+    var reconnecting = false
+    var useCoSigner: () -> Void = {}
+
+    private var leadsWithCoSigner: Bool {
+        if case .ethConnect = ask { return reconnecting && coSigner != nil }
+        return false
+    }
     let answer: (Bool) -> Void
 
     var body: some View {
         DSTray(title: title, height: height, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 content
-                DSActVerb(title: acceptWord, glyph: acceptGlyph) { answer(true) }
-                DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
+                if leadsWithCoSigner {
+                    // The app turned your account's sign-in down (prd §1700l).
+                    DSActVerb(title: String(localized: "Use your co-signer"), glyph: "person.badge.key") { useCoSigner() }
+                    DSDoorRow(icon: "link", title: Text("Connect your account anyway")) { answer(true) }
+                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
+                } else {
+                    DSActVerb(title: acceptWord, glyph: acceptGlyph) { answer(true) }
+                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
+                }
+                // For an app that takes only a plain key's signature (prd §1700l).
+                if case .ethConnect = ask, !leadsWithCoSigner, let coSigner {
+                    DSDoorRow(icon: "person.badge.key",
+                              title: Text("Use your co-signer instead (\(AddressTail.short(coSigner)))")) { useCoSigner() }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -404,6 +514,10 @@ struct AztecAskSheet: View {
                 }
             }
             Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        case .ethConnect where leadsWithCoSigner:
+            DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (\(AddressTail.short(coSigner ?? ""))).")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         case .ethConnect:
             if sends {
                 DSProse.text("It sees your account's address. Casberi asks before every signature and every send.")
@@ -436,7 +550,8 @@ struct AztecAskSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 180)
-            Text("Signing proves this is your account. It moves nothing.")
+            Text(asCoSigner ? "Your co-signer's wallet signs it. It moves nothing."
+                            : "Signing proves this is your account. It moves nothing.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
     }
@@ -446,14 +561,16 @@ struct AztecAskSheet: View {
         case .connect(_, let host): String(localized: "Connect \(host)?")
         case .emoji: String(localized: "Check the site shows")
         case .send(_, let host, _, _): String(localized: "\(host) wants to send")
-        case .ethConnect(_, let host): String(localized: "Connect \(host) to your account?")
-        case .ethSign(_, let host, _): String(localized: "\(host) asks your account to sign")
+        case .ethConnect(_, let host): leadsWithCoSigner ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
+                                                         : String(localized: "Connect \(host) to your account?")
+        case .ethSign(_, let host, _): asCoSigner ? String(localized: "\(host) asks your co-signer to sign")
+                                                  : String(localized: "\(host) asks your account to sign")
         case .ethSend(_, let host, _, _, _): String(localized: "\(host) wants to send")
         }
     }
 
     private var height: CGFloat {
-        switch ask { case .connect, .ethConnect: 400; case .emoji: 360; case .send, .ethSign, .ethSend: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .send, .ethSign, .ethSend: 520 }
     }
 
     private var acceptWord: String {
@@ -468,6 +585,7 @@ struct AztecAskSheet: View {
         switch ask {
         case .connect, .ethConnect: "link"
         case .emoji: "checkmark"
+        case .ethSign where asCoSigner: "signature"
         case .send, .ethSign, .ethSend: "faceid"
         }
     }

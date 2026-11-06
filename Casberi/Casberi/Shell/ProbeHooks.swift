@@ -4181,6 +4181,8 @@ enum ProbeHooks {
         Hook(key: "aztecBrowser") { raw, _ in AztecBrowserProbe.open(raw) },
         // `-aztecBrowserEthereum <url>` — a page with your account as its Ethereum provider (prd §1700e).
         Hook(key: "aztecBrowserEthereum") { raw, _ in AztecBrowserProbe.open(raw, ethereum: true) },
+        // `-aztecAppEthereum <url>` — as Apps on Aztec opens it, sending on (prd §1700k, §1700l).
+        Hook(key: "aztecAppEthereum") { raw, _ in AztecBrowserProbe.open(raw, ethereum: true, sends: true) },
         // `-privateMoneySample YES|mainnet|none|clear` — sample private notes
         // (approved, waiting; `mainnet`: ppETH and ppUSDC on Ethereum, worth
         // and rate read live, prd §1563) beside the phone's own, no funds

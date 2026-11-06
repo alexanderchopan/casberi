@@ -106,6 +106,11 @@ for whoever changes the code.
   call does"); the call runs against the real state first and nothing is signed
   if it would fail; then Face ID, and the Signer when the account needs both
   keys (`YourAccountChain.appCalls`).
+- There, Connect has a quiet line for an app that takes only a plain key's
+  signature (prd §1700l): "Use your co-signer instead". The page then knows the
+  co-signer's address; its message signatures come from the co-signer's own
+  wallet over a fresh one-method pairing (never the Signer's kept session), are
+  checked to recover to the co-signer, and that connection never sends.
 
 ## Proven, and not yet
 

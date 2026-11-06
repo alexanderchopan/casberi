@@ -48,9 +48,14 @@ import UIKit
 /// YES` is not honoured here: every ask waits for a hand.
 /// `-aztecBrowserEthereum <url>` opens the page with your account as its
 /// Ethereum provider instead (Human Passport's door, prd §1700e).
+/// `-aztecAppEthereum <url>` opens it as Apps on Aztec does, sending on
+/// (prd §1700k); `-coSignerSample <0x…>` stands in for your co-signer there,
+/// so Connect's quiet line shows on the simulator (prd §1700l);
+/// `-connectRetrySample YES` makes the first Connect the retry after a
+/// sign-in the app turned down, co-signer first.
 enum AztecBrowserProbe {
     @MainActor
-    static func open(_ raw: String, ethereum: Bool = false) {
+    static func open(_ raw: String, ethereum: Bool = false, sends: Bool = false) {
         guard let url = URL(string: raw), url.scheme == "https" || url.host == "localhost" || url.host == "127.0.0.1" else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -59,7 +64,7 @@ enum AztecBrowserProbe {
             var top = root
             while let next = top.presentedViewController { top = next }
             let host = UIHostingController(rootView: NavigationStack {
-                AztecBrowserView(url: url, aztec: !ethereum, ethereum: ethereum).toolbar {
+                AztecBrowserView(url: url, aztec: !ethereum, ethereum: ethereum, sends: sends).toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Close") { top.presentedViewController?.dismiss(animated: true) }
                     }
