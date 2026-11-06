@@ -185,8 +185,14 @@ extension FeedScreen {
                     // **THE BOX IS BACK ON HOME (prd §760, reversing §757's
                     // drop).** Every room's lead is held to this height now, and
                     // Home is where it was taken from, so Home keeps it.
+                    // The demo's own account is Yours but is never watched
+                    // (prd §1671), so no slot names it and the chrome hands
+                    // the crown All's; it stands in that slot as Following
+                    // does, or the box drew nothing on a fresh demo.
+                    let crownScope = walletOnFollowing || YourAccountDemo.isDemo(chrome.walletScope ?? "")
+                        ? nil : chrome.walletScope
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        if slot.isShowing(walletOnFollowing ? nil : chrome.walletScope) {
+                        if slot.isShowing(crownScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
                             // Safe and 0xBow Privacy Pools are your account's

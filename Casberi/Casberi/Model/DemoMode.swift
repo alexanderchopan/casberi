@@ -384,16 +384,19 @@ enum DemoMode {
         // shared accessor so the format can't drift between the two call
         // sites (2026-08-07: was a duplicated string literal in three
         // places before this).
-        let key = WalletStore.historyKey(DemoSeedAll.demoWallet)
-        if shiftDays > 0, let data = ScratchDefaults.standard.data(forKey: key),
-           let samples = try? JSONDecoder().decode([WalletStore.ValueSample].self, from: data) {
-            let shifted = samples.map { sample in
-                WalletStore.ValueSample(
-                    at: calendar.date(byAdding: .day, value: shiftDays, to: sample.at) ?? sample.at,
-                    usd: sample.usd, holdings: sample.holdings)
-            }
-            if let reencoded = try? JSONEncoder().encode(shifted) {
-                ScratchDefaults.standard.set(reencoded, forKey: key)
+        // The demo account's own line (Home's box on Yours) moves with it.
+        for address in [DemoSeedAll.demoWallet, YourAccountDemo.address] {
+            let key = WalletStore.historyKey(address)
+            if shiftDays > 0, let data = ScratchDefaults.standard.data(forKey: key),
+               let samples = try? JSONDecoder().decode([WalletStore.ValueSample].self, from: data) {
+                let shifted = samples.map { sample in
+                    WalletStore.ValueSample(
+                        at: calendar.date(byAdding: .day, value: shiftDays, to: sample.at) ?? sample.at,
+                        usd: sample.usd, holdings: sample.holdings)
+                }
+                if let reencoded = try? JSONEncoder().encode(shifted) {
+                    ScratchDefaults.standard.set(reencoded, forKey: key)
+                }
             }
         }
 

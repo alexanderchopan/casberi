@@ -15,7 +15,9 @@ extension FeedScreen {
         }
         if RoomAccounts.isSeat(chrome.walletScope) { return [] }
         if walletOnFollowing { return evm.filter { !Self.isYourAccount($0.id) } }
-        if let one = selectedWallet {
+        // The demo's own account is Yours but never watched (prd §1671), so
+        // no slot names it: it stands on All, as Home's box does.
+        if let one = selectedWallet, !YourAccountDemo.isDemo(one) {
             return evm.filter { NymisScan.key($0.id) == NymisScan.key(one) }
         }
         return evm.filter { Self.isYourAccount($0.id) } + evm.filter { !Self.isYourAccount($0.id) }

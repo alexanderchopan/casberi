@@ -202,7 +202,7 @@ struct AvatarDoor: View {
     }
 }
 
-/// **YOU: YOUR PHOTO, OR THE OCTOPUS (user, 2026-09-26: "should we make the
+/// **YOU: YOUR PHOTO, OR THE APP ICON (user, 2026-09-26: "should we make the
 /// fab default to be the octopus logo until someone changes the avatar so
 /// it's not the empty contacts glyph?").** The face opens the rooms tray
 /// (§930), not a profile, so the empty contact glyph said the wrong thing and
@@ -218,8 +218,14 @@ struct YouFace: View {
                 .frame(width: size, height: size)
                 .clipShape(Circle())
         } else {
-            CasberiMark(size: size)
+            // The app icon itself, as the home screen shows it (prd §1708
+            // item 6, user: "the 'library' default icon should be the new app
+            // icon too"): `tentacle.py` writes it from the icon's drawing.
+            Image("casberi-app-icon")
+                .resizable().interpolation(.high)
                 .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
+                .accessibilityLabel(Text(verbatim: "Casberi"))
         }
     }
 }

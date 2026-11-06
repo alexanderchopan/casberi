@@ -5252,6 +5252,24 @@ enum DemoSeedAll {
                 UserDefaults.standard.set(data, forKey: key)
             }
         }
+        // The demo's own account, which the Wallet opens on (Yours, prd §1526)
+        // and never watches (§1671): its line too, at its own size, or Home's
+        // box drew a figure with no line under it.
+        let yoursKey = WalletStore.historyKey(YourAccountDemo.address)
+        let yoursExisting = UserDefaults.standard.data(forKey: yoursKey)
+            .flatMap { try? JSONDecoder().decode([WalletStore.ValueSample].self, from: $0) }
+        if (yoursExisting?.count ?? 0) < 3 {
+            let samples = curve.enumerated().map { i, raw in
+                let usd = raw * 0.09
+                return WalletStore.ValueSample(
+                    at: newest.addingTimeInterval(Double(i - (curve.count - 1)) * 4 * 3600),
+                    usd: usd,
+                    holdings: ["ETH": usd * 0.38, "USDC": usd * 0.33, "USDG": usd * 0.29])
+            }
+            if let data = try? JSONEncoder().encode(samples) {
+                UserDefaults.standard.set(data, forKey: yoursKey)
+            }
+        }
 
         // 2 · PostHog — the busiest watched metric's seven-day curve. `seeded`
         // is true because these are a READING, not a first sight: a metric

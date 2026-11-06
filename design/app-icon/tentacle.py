@@ -271,7 +271,16 @@ def main():
         dst.write(src.read())
     Image.composite(Image.new("RGB", a.size, (255, 255, 255)), black, a).save(
         os.path.join(ICONSET, "casberi-octopus-1024-tinted.png"))
-    print("wrote the three SVGs and the three icons")
+    # The app icon as an in-app image: the default face where you have not set
+    # a photo (Library's tab, the tray's You row; prd §1708 item 6), so the app
+    # wears its own icon, not the c.
+    face = os.path.join(HERE, '..', '..', 'Casberi', 'Casberi', 'Assets.xcassets', 'casberi-app-icon.imageset')
+    os.makedirs(face, exist_ok=True)
+    Image.open(dark).convert("RGB").resize((256, 256), Image.LANCZOS).save(os.path.join(face, "icon.png"))
+    with open(os.path.join(face, "Contents.json"), "w") as f:
+        f.write('{\n  "images" : [\n    {\n      "filename" : "icon.png",\n      "idiom" : "universal"\n    }\n  ],\n'
+                '  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n')
+    print("wrote the three SVGs, the three icons and the in-app icon")
 
 
 if __name__ == "__main__":
