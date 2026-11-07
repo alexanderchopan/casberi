@@ -69,6 +69,78 @@ enum BrowserEthereum {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/\(majorVersion).0 Safari/605.1.15"
     }
 
+    /// **A sign-in, read (prd §1700o).** A Sign-In with Ethereum message
+    /// (EIP-4361): the site it names, the account, the app's own sentence,
+    /// the chain, when it stops working, and the other sites it reaches. The
+    /// sheet says these and keeps the whole text one tap away; nonce, version
+    /// and issue time are for the site's server, not for you.
+    struct SignIn: Equatable {
+        let domain: String
+        let address: String
+        let statement: String?
+        let uri: String?
+        let chainId: String?
+        let expires: String?
+        let resources: [String]
+
+        /// The site the message names, without scheme or port.
+        var site: String {
+            var d = domain.lowercased()
+            if let r = d.range(of: "://") { d = String(d[r.upperBound...]) }
+            if let colon = d.firstIndex(of: ":") { d = String(d[..<colon]) }
+            return d
+        }
+
+        /// Whether the page asking is the site the message names (its URI
+        /// too, when there is one): a mismatch is a sign-in for someone else.
+        func isFor(host: String) -> Bool {
+            let h = host.lowercased()
+            guard site == h else { return false }
+            guard let uri, let u = URL(string: uri), let uh = u.host(percentEncoded: false)?.lowercased() else { return true }
+            return uh == h
+        }
+
+        /// The hosts of the resources, once each, in order.
+        var resourceHosts: [String] {
+            var seen: [String] = []
+            for r in resources {
+                let h = URL(string: r)?.host(percentEncoded: false)?.lowercased() ?? r
+                if !seen.contains(h) { seen.append(h) }
+            }
+            return seen
+        }
+    }
+
+    static func signIn(_ text: String) -> SignIn? {
+        let lines = text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        let head = " wants you to sign in with your Ethereum account:"
+        guard lines.count >= 2, lines[0].hasSuffix(head) else { return nil }
+        let domain = String(lines[0].dropLast(head.count))
+        let address = lines[1].trimmingCharacters(in: .whitespaces)
+        guard !domain.isEmpty, !domain.contains(" "), isAddress(address) else { return nil }
+        // The statement is the text between the blank lines after the
+        // address and the first field.
+        var i = 2, statement: [String] = []
+        while i < lines.count, lines[i].isEmpty { i += 1 }
+        while i < lines.count, !lines[i].hasPrefix("URI: ") {
+            statement.append(lines[i]); i += 1
+        }
+        var fields: [String: String] = [:], resources: [String] = []
+        var inResources = false
+        for line in lines[min(i, lines.count)...] {
+            if inResources, line.hasPrefix("- ") { resources.append(String(line.dropFirst(2))); continue }
+            inResources = false
+            if line == "Resources:" { inResources = true; continue }
+            guard let colon = line.range(of: ": ") else { continue }
+            fields[String(line[..<colon.lowerBound])] = String(line[colon.upperBound...])
+        }
+        guard fields["URI"] != nil, fields["Version"] != nil, fields["Nonce"] != nil else { return nil }
+        let said = statement.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return SignIn(domain: domain, address: address, statement: said.isEmpty ? nil : said,
+                      uri: fields["URI"], chainId: fields["Chain ID"], expires: fields["Expiration Time"],
+                      resources: resources)
+    }
+
     /// What a request needs from the person, if anything.
     enum Need: Equatable {
         /// Answered from what the app knows (chain, accounts, a refusal).

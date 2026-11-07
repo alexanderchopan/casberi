@@ -31,6 +31,8 @@
 #   Ethereum to a named address, the value read exactly, an approval read
 #   with its limit, and never a raw transaction or a batch. That browser says
 #   it is a Mac (prd §1700n), so RainbowKit's phone picker does not drop Casberi.
+#   A sign-in (EIP-4361) is read into words only for the page's own site
+#   (prd §1700o).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -195,6 +197,37 @@ check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedA
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: signed, now: signed.addingTimeInterval(400), hasCoSigner: true), "asked again long after the sign-in")
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: nil, now: signed, hasCoSigner: true), "asked again with no sign-in")
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_accounts", signedAt: signed, now: signed.addingTimeInterval(20), hasCoSigner: true), "a read of accounts asked again")
+// A sign-in, read (prd §1700o): Private Inference's own message, 2026-11-07.
+let siwe = """
+privateinference.gg wants you to sign in with your Ethereum account:
+0x1111111111111111111111111111111111111111
+
+By signing, you are proving you own this wallet and logging in. This does not initiate a transaction or cost any fees.
+
+URI: https://privateinference.gg
+Version: 1
+Chain ID: 1
+Nonce: f81269978ee92638ef58cd06eb50a0662ab6d40c314b37a6e7dd8d78036ba01f
+Issued At: 2026-11-07T19:04:37.804Z
+Resources:
+- https://privy.io
+"""
+let si = BrowserEthereum.signIn(siwe)
+check(si?.site == "privateinference.gg" && si?.address == me, "a sign-in's site or account misread")
+check(si?.statement == "By signing, you are proving you own this wallet and logging in. This does not initiate a transaction or cost any fees.", "a sign-in's sentence misread")
+check(si?.chainId == "1" && si?.expires == nil && si?.resourceHosts == ["privy.io"], "a sign-in's chain, expiry or resources misread")
+check(si?.isFor(host: "privateinference.gg") == true, "a sign-in for its own page read as another site's")
+check(si?.isFor(host: "privateinference.gg.evil.xyz") == false, "a sign-in for another site read as this page's")
+let otherURI = siwe.replacingOccurrences(of: "URI: https://privateinference.gg", with: "URI: https://evil.xyz/login")
+check(BrowserEthereum.signIn(otherURI)?.isFor(host: "privateinference.gg") == false, "a sign-in whose URI is another site's read as this page's")
+let otherDomain = siwe.replacingOccurrences(of: "privateinference.gg wants", with: "evil.xyz wants")
+check(BrowserEthereum.signIn(otherDomain)?.isFor(host: "privateinference.gg") == false, "a sign-in naming another site read as this page's")
+let schemed = siwe.replacingOccurrences(of: "privateinference.gg wants", with: "https://privateinference.gg:443 wants")
+check(BrowserEthereum.signIn(schemed)?.isFor(host: "privateinference.gg") == true, "a sign-in naming its scheme and port misread")
+let noStatement = siwe.replacingOccurrences(of: "By signing, you are proving you own this wallet and logging in. This does not initiate a transaction or cost any fees.\n\n", with: "")
+check(BrowserEthereum.signIn(noStatement) != nil && BrowserEthereum.signIn(noStatement)?.statement == nil, "a sign-in with no sentence misread")
+check(BrowserEthereum.signIn("Hello from privateinference.gg") == nil, "a plain message read as a sign-in")
+check(BrowserEthereum.signIn(siwe.replacingOccurrences(of: "Nonce: ", with: "Nonc: ")) == nil, "a sign-in with no nonce read as one")
 // Apps on Aztec's browser says it is a Mac (prd §1700n): RainbowKit's
 // isMobile() and its isSafari() read the agent alone.
 let agent = BrowserEthereum.desktopAgent(majorVersion: 26)
@@ -268,6 +301,7 @@ pmutate "the co-signer sends anywhere" 's/\["eth_requestAccounts", "wallet_reque
 pmutate "a top-up without the fee" 's/let need = v \+ p \* topUpGas \* 2/let need = v/'
 pmutate "a wei value read as hex wrong" 's/let q = cur \/ 16/let q = cur \/ 10/'
 pmutate "a retry never asked again" 's/return since >= 0 && since < retryWindow/return false/'
+pmutate "a sign-in for any site" 's/guard site == h else \{ return false \}//'
 pmutate "the agent says iPhone" 's/Macintosh; Intel Mac OS X 10_15_7/iPhone; CPU iPhone OS 18_0 like Mac OS X/'
 pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
 
@@ -286,4 +320,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, 5 + 10 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, 5 + 11 mutations caught)"
