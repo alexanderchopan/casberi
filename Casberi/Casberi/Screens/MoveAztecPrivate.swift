@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import SwiftData
 
 /// **YOUR PRIVATE BALANCE ON AZTEC, IN SEND (prd §1700f items 11–14).** The
 /// same sentence 0xBow's private balance has (`MovePrivateSentence`), for
@@ -16,7 +17,14 @@ import Observation
 ///   "Send 2 USDC from your private account on Aztec to …4f38." An Aztec
 ///   address is a private send inside Aztec; an Ethereum address, anyone's,
 ///   is out through Shield, finished from Needs you. Either asks the
-///   co-signer first (`AztecCoSign`).
+///   co-signer first (`AztecCoSign`). Any token the account can send
+///   privately is offered, by its contract (prd §1711 item 3); only Shield's
+///   USDC and WETH can leave.
+/// - **Checked first** (prd §1711 items 4, 5): an Aztec address must be one
+///   anyone can receive at (Aztec's own `isValid`), and one you never paid,
+///   or one that looks like one you did, is said; an Ethereum address gets
+///   every check Move's Send makes (`MoveChecks.recipient`). A warning makes
+///   the verb "Send anyway", a second tap.
 ///
 /// No chips, no direction to choose: the place you send to or from says it.
 @MainActor
@@ -44,14 +52,33 @@ final class AztecMove {
     struct Option: Equatable, Identifiable {
         let symbol: String
         let amount: String
-        var id: String { symbol + " " + amount }
+        /// The token's contract on Aztec, for a send from your private
+        /// account; nil for a deposit, which is Shield's asset by symbol.
+        let token: String?
+        let decimals: Int
+        var id: String { (token ?? symbol) + " " + amount }
+
+        init(symbol: String, amount: String, token: String? = nil, decimals: Int? = nil) {
+            self.symbol = symbol
+            self.amount = amount
+            self.token = token
+            self.decimals = decimals ?? (symbol == "USDC" ? 6 : 18)
+        }
     }
 
     var mode: Mode = .deposit
     var stage: Stage = .reading
     var symbol = "USDC"
     var amount = ""
+    /// The picked token's contract on Aztec and its decimals (a send).
+    private(set) var token: String?
+    private var pickedDecimals: Int?
     var recipient: String?
+    /// What the recipient was checked against, and for whom (prd §1711).
+    private(set) var findings: [MoveWarnings.Finding] = []
+    private(set) var findingsFor: String?
+    /// The recipient whose warning the first tap on "Send anyway" armed.
+    private(set) var armed: String?
     private(set) var options: [Option] = []
     /// What the Safe holds on Ethereum, base units, by symbol.
     private(set) var safeHeld: [String: String] = [:]
@@ -59,8 +86,17 @@ final class AztecMove {
     private(set) var bringsGas = false
     private(set) var maxUSD: Double?
 
-    var decimals: Int { symbol == "USDC" ? 6 : 18 }
-    var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
+    var decimals: Int { pickedDecimals ?? (symbol == "USDC" ? 6 : 18) }
+    /// Shield's asset for what is picked: by symbol for a deposit, by the
+    /// token's pinned contract for a send (`AztecAccountStore.priced`),
+    /// never by a name any app's token can take.
+    var asset: ShieldBridge.Asset? {
+        guard let token else { return ShieldBridge.assets.first { $0.symbol == symbol } }
+        guard let coin = AztecAccountStore.priced[token.lowercased()] else { return nil }
+        return ShieldBridge.assets.first { $0.symbol.lowercased() == coin }
+    }
+    /// Only Shield's USDC and WETH can leave Aztec.
+    var cannotLeave: Bool { mode == .send && toEthereum && asset == nil }
     var units: String? { PrivateMoney.baseUnits(amount, decimals: decimals) }
     var acting: Bool { if case .working = stage { true } else { false } }
 
@@ -75,11 +111,47 @@ final class AztecMove {
     func pick(_ amount: String, of symbol: String) {
         self.symbol = symbol
         self.amount = amount
+        token = nil
+        pickedDecimals = nil
+    }
+
+    func pick(_ option: Option) {
+        symbol = option.symbol
+        amount = option.amount
+        token = option.token
+        pickedDecimals = option.decimals
+    }
+
+    /// Amounts a token without Shield's steps offers: 1, 2 and 5 at every
+    /// power of ten up to what is held, the last seven, then all of it.
+    static func steps(upTo held: Decimal) -> [String] {
+        guard held > 0 else { return [] }
+        var all: [String] = []
+        for k in -6...9 {
+            for m in ["1", "2", "5"] {
+                all.append(k < 0 ? "0." + String(repeating: "0", count: -k - 1) + m : m + String(repeating: "0", count: k))
+            }
+        }
+        var out = Array(all.filter { (Decimal(string: $0) ?? 0) <= held }.suffix(7))
+        let whole = "\(held)"
+        if out.last.flatMap({ Decimal(string: $0) }) != held, whole.range(of: #"^[0-9]+(\.[0-9]+)?$"#, options: .regularExpression) != nil {
+            out.append(whole)
+        }
+        return out
+    }
+
+    /// Whether Casberi can send a held token privately: the engine read a
+    /// private transfer off its interface; a reading made before it said
+    /// trusts Shield's two tokens alone.
+    static func sendable(_ h: AztecAccountStore.Holding) -> Bool {
+        h.sendable ?? (AztecAccountStore.priced[h.address.lowercased()] != nil)
     }
 
     /// Where the move stands: balances, Shield's word, the account's gas.
     func read() async {
         stage = .reading
+        // A deposit is Shield's asset by symbol, never a send's token.
+        if mode == .deposit { token = nil; pickedDecimals = nil }
         if DemoMode.isActive {
             options = (Self.usdcSteps.prefix(3)).map { Option(symbol: "USDC", amount: $0) }
             if amount.isEmpty { pick("2", of: "USDC") }
@@ -111,15 +183,21 @@ final class AztecMove {
         case .send:
             if AztecProver.isAvailable { await AztecAccountStore.shared.refresh() }
             let store = AztecAccountStore.shared
-            options = store.privateHeld.flatMap { h -> [Option] in
+            // Every token it can send, by its contract (prd §1711 item 3).
+            options = store.privateHeld.filter(Self.sendable).flatMap { h -> [Option] in
                 guard let units = h.privateUnits, let have = Decimal(string: units), let d = h.decimals else { return [] }
-                let steps = h.name == "USDC" ? Self.usdcSteps : Self.wethSteps
-                return steps.filter { (Decimal(string: $0) ?? 0) * pow(10, d) <= have }.map { Option(symbol: h.name, amount: $0) }
+                let steps = switch AztecAccountStore.priced[h.address.lowercased()] {
+                case "usdc"?: Self.usdcSteps
+                case "weth"?: Self.wethSteps
+                default: Self.steps(upTo: have / pow(10, d))
+                }
+                return steps.filter { (Decimal(string: $0) ?? 0) * pow(10, d) <= have }
+                    .map { Option(symbol: h.name, amount: $0, token: h.address, decimals: d) }
             }
             if options.isEmpty { stage = .nothingPrivate; return }
             if AztecGas.needed { stage = .needsGas; return }
-            if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }), let first = options.first {
-                pick(first.amount, of: first.symbol)
+            if !options.contains(where: { $0.token == token && $0.amount == amount }), let first = options.first {
+                pick(first)
             }
             stage = .ready
         }
@@ -144,13 +222,14 @@ final class AztecMove {
 
     /// The move, as the sentence says it.
     func run() async {
-        guard stage == .ready, let units, let asset else { return }
+        guard stage == .ready, let units, !refused, !cannotLeave else { return }
         let report: @Sendable (YourAccountChain.Stage) async -> Void = { s in
             await MainActor.run { self.stage = .working(s == .signing ? String(localized: "Confirm with Face ID") : String(localized: "Sending…")) }
         }
         do {
             switch mode {
             case .deposit:
+                guard let asset else { return }
                 stage = .working(String(localized: "Checking…"))
                 let gas = bringsGas ? try await AztecGas.plan(units: AztecGas.rideAlong) : nil
                 let sent = try await ShieldBridge.deposit(asset, units: units, gas: gas, stage: report)
@@ -158,12 +237,18 @@ final class AztecMove {
             case .send:
                 guard let recipient else { return }
                 if toAztec {
+                    guard let token else { return }
                     try await PrivateRootKey.unlock(reason: String(localized: "Send privately on Aztec"))
                     try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: decimals, symbol: symbol)) on Aztec to \(recipient)"))
                     stage = .working(String(localized: "Proving…"))
-                    let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units]) as? [String: Any]
-                    stage = .done(out?["tx"] as? String ?? "")
-                } else if toEthereum {
+                    let out = try await AztecEngine.shared.call("sendToken", [token, recipient.lowercased(), units]) as? [String: Any]
+                    let hash = out?["tx"] as? String ?? ""
+                    if !hash.isEmpty {
+                        AztecActivity.record(.init(hash: hash, kind: .send, symbol: symbol, amountUnits: units, decimals: decimals,
+                                                   to: recipient.lowercased(), fee: out?["fee"] as? String, at: .now))
+                    }
+                    stage = .done(hash)
+                } else if toEthereum, let asset {
                     stage = .working(String(localized: "Proving…"))
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient)
                     stage = .done(exit.transaction)
@@ -174,6 +259,51 @@ final class AztecMove {
         } catch {
             stage = .failed(AztecEngine.words(error))
         }
+    }
+
+    // MARK: - The recipient, checked (prd §1711 items 4, 5)
+
+    /// The findings that stand for the recipient as it is now.
+    var shownFindings: [MoveWarnings.Finding] {
+        guard let recipient, findingsFor == recipient else { return [] }
+        return findings
+    }
+    var leadWarning: MoveWarnings.Finding? { shownFindings.first }
+    /// "Send anyway": a warning stands; the first tap arms it, the second sends.
+    var warned: Bool { MoveWarnings.arms(shownFindings) }
+    /// An Aztec address no one can receive at: nothing sends.
+    var refused: Bool { shownFindings.contains { if case .fails = $0 { true } else { false } } }
+    /// Still asking about the recipient: the verb waits for the answer.
+    var checking: Bool { mode == .send && recipient != nil && findingsFor != recipient }
+    var mustArm: Bool { warned && armed != recipient }
+    func arm() { armed = recipient }
+
+    /// Checks the recipient once per address. An Aztec address: Aztec's own
+    /// `isValid` (half of all 64-digit values are no one's: a typo there is
+    /// money no one can read), then whether you paid it, or one it looks
+    /// like. An Ethereum address, the end of an exit: everything Move's Send
+    /// looks up, against your account's own history.
+    func checkRecipient(context: ModelContext) async {
+        guard mode == .send, let to = recipient, findingsFor != to else { return }
+        var found: [MoveWarnings.Finding] = []
+        if DemoMode.isActive {
+            found = []
+        } else if AztecAddressText.isAztec(to) {
+            let answer = try? await AztecEngine.shared.call("addressValid", [to]) as? [String: Any]
+            if answer?["valid"] as? Bool == false {
+                found = [.fails(String(localized: "No one can receive at this Aztec address. Check it."))]
+            } else if to.lowercased() != AztecAccountStore.shared.snapshot.address?.lowercased() {
+                let sent = AztecAccountStore.shared.aztecSentTo
+                if sent[to.lowercased()] == nil {
+                    found = [MoveWarnings.aztecImitated(to, sentTo: sent) ?? .firstSend]
+                }
+            }
+        } else if PrivateMoney.isAddress(to), let account = YourAccountKey.address {
+            found = await MoveChecks.recipient(to, from: account, on: YourAccountOp.ethereum, context: context)
+        }
+        guard recipient == to else { return }
+        findings = found
+        findingsFor = to
     }
 
     /// Claims what Aztec has carried, gas first (a claim pays from gas).
@@ -203,6 +333,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     @State private var copied = false
     @State private var passport = false
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ScrollView {
@@ -235,6 +366,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .task(id: move.mode) { await move.read() }
+        // Who it goes to, checked before the verb stands (prd §1711).
+        .task(id: "\(move.mode)|\(move.recipient ?? "")") { await move.checkRecipient(context: modelContext) }
         // What Aztec has carried is claimed while the sentence stands.
         .task {
             guard AztecProver.isAvailable, !DemoMode.isActive else { return }
@@ -330,6 +463,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     @ViewBuilder private var line: some View {
         switch move.stage {
+        case .ready where move.cannotLeave:
+            Text("Only USDC and WETH can leave Aztec.").dsText(.body17).foregroundStyle(DS.attentionInk)
+                .fixedSize(horizontal: false, vertical: true)
+        case .ready where move.leadWarning != nil:
+            // The one warning, in the place of the grey line (prd §1509 item 2).
+            if let lead = move.leadWarning {
+                Text(verbatim: MoveWarnings.line(lead, short: { AddressTail.short($0) },
+                                                 day: { $0.formatted(.dateTime.month(.abbreviated).day()) }))
+                    .dsText(.body17).foregroundStyle(lead.red ? DS.destructiveInk : DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .ready, .working:
             Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -406,11 +550,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var amounts: some View {
         ForEach(move.options) { option in
-            let places = option.symbol == "USDC" ? 6 : 18
+            let places = option.decimals
             let shown = PrivateMoney.figure(PrivateMoney.baseUnits(option.amount, decimals: places) ?? "0", decimals: places, symbol: option.symbol)
-            let picked = option.amount == move.amount && option.symbol == move.symbol
+            let picked = option.amount == move.amount && option.symbol == move.symbol && option.token == move.token
             Button {
-                withAnimation(DS.Motion.standard) { move.pick(option.amount, of: option.symbol); open = nil }
+                withAnimation(DS.Motion.standard) { move.pick(option); open = nil }
                 DSHaptic.selection()
             } label: {
                 HStack(spacing: DS.Space.s3) {
@@ -465,6 +609,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var ready: Bool {
         move.stage == .ready && (move.mode == .deposit || move.toAztec || move.toEthereum) && !DemoMode.isActive
+            && !move.refused && !move.checking && !move.cannotLeave
     }
 
     private var foot: some View {
@@ -503,8 +648,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     Spacer(minLength: 0)
                 default:
                     Spacer(minLength: 0)
-                    footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
+                    footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready,
+                               ink: move.warned && ready ? (move.leadWarning?.red == true ? DS.destructiveInk : DS.attentionInk) : nil) {
                         open = nil
+                        // The first tap on "Send anyway" only arms it; the second sends.
+                        if move.mustArm { move.arm(); DSHaptic.failure(); return }
                         Task { await move.run() }
                     }
                     .disabled(!ready)
@@ -531,6 +679,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var footVerb: String {
         if case .working(let words) = move.stage { return words }
+        if move.checking { return String(localized: "Checking…") }
+        if move.warned { return String(localized: "Send anyway") }
         return String(localized: "Send")
     }
 
@@ -545,11 +695,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .padding(.top, DS.Space.s1)
     }
 
-    private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
+    private func footButton(_ word: String, on: Bool, ink: Color? = nil, act: @escaping () -> Void) -> some View {
         Button(action: act) {
             Text(verbatim: word)
                 .dsText(.heading34)
-                .foregroundStyle(on ? DS.pickInk : DS.textTertiary)
+                .foregroundStyle(on ? (ink ?? DS.pickInk) : DS.textTertiary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(minHeight: 48, alignment: .trailing)

@@ -638,7 +638,7 @@ enum NetworkReach {
         // and names no wallet (raw.githubusercontent.com, declared above).
         Endpoint(service: "Move's checks",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Before you send or swap, asks GoPlus whether the address you are about to pay has been reported for theft or fraud, and Blockscout when a contract was made, both through Tor. OFAC's list of sanctioned addresses is downloaded whole once a day and matched on this phone. Carries the one address being checked, nothing else about you.",
+                 purpose: "Before you send or swap, asks GoPlus whether the address you are about to pay has been reported for theft or fraud, and Blockscout when a contract was made and whether the address was ever used on each of your account's networks, both through Tor. OFAC's list of sanctioned addresses is downloaded whole once a day and matched on this phone. Carries the one address being checked, nothing else about you.",
                  hosts: ["api.gopluslabs.io", "base.blockscout.com", "eth.blockscout.com", "robinhoodchain.blockscout.com"],
                  credentialed: false,
                  throughTor: true),

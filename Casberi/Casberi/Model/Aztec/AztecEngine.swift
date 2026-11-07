@@ -117,7 +117,7 @@ final class AztecEngine: NSObject {
     }
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
-                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji"]
+                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineSent"]
 
     // MARK: - Casberi's own calls
 
@@ -205,8 +205,17 @@ final class AztecEngine: NSObject {
                 AztecBrowserModel.Request.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
                                            isPublic: ($0["type"] as? String) == "public")
             }
-            browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls,
-                                  fee: body["fee"] as? String ?? ""))
+            // What it costs, from a simulation the engine ran first (prd §1711 item 2).
+            let fee = AztecBrowserModel.Request.Fee(units: body["feeUnits"] as? String,
+                                                    payer: AztecFeeWords.Payer(rawValue: body["feeBy"] as? String ?? "") ?? .you)
+            browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls, fee: fee))
+        case "engineSent":
+            // An app's transaction, sent: one Activity row (prd §1711 item 1).
+            guard let hash = body["tx"] as? String else { return }
+            let calls = (body["calls"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+            AztecActivity.record(.init(hash: hash, kind: .app, symbol: nil, amountUnits: nil, decimals: nil,
+                                       to: Self.host(body["origin"]), calls: calls,
+                                       fee: body["fee"] as? String, at: .now))
         default:
             break
         }

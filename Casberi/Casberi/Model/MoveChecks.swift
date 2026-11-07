@@ -158,10 +158,116 @@ enum MoveChecks {
         return c
     }
 
+    // MARK: - The other networks (prd §1711 item 6)
+
+    /// Whether `address` was ever used on `net`: a contract there (its
+    /// code), a send from it (its nonce), else any transaction or token
+    /// transfer Blockscout lists for it. The node reads go to the network's
+    /// own nodes as the account's do, Blockscout's through Tor. nil when it
+    /// cannot be told.
+    static func presence(_ address: String, on net: YourAccountOp.Network) async -> MoveWarnings.Presence? {
+        let key = "\(net.chainId)|\(address.lowercased())"
+        if let hit = await cache.presence(key) { return hit }
+        guard let code = (try? await YourAccountChain.rpc(net, "eth_getCode", [address, "latest"]) as? String)?.lowercased()
+        else { return nil }
+        let hasCode = code.count > 2 && code != "0x0"
+        // An EIP-7702 delegation ("0xef0100" and the delegate) is a person's
+        // own key with code beside it: the key holds on every network, so it
+        // counts as used here, never as a contract missing elsewhere.
+        let contract = hasCode && !code.hasPrefix("0xef0100")
+        var used = hasCode
+        if !used, let nonce = try? await YourAccountChain.rpc(net, "eth_getTransactionCount", [address, "latest"]) as? String {
+            used = PrivateMoney.decimal(hex: nonce) != "0"
+        }
+        if !used {
+            var answered = false
+            for action in ["txlist", "tokentx"] where !used {
+                guard let host = explorer(net.chainId),
+                      let url = URL(string: "https://\(host)/api?module=account&action=\(action)&address=\(address.lowercased())&page=1&offset=1")
+                else { break }
+                var request = URLRequest(url: url)
+                request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
+                guard let (data, http) = await IngestSupport.sendRequest(request, service: service), http.statusCode == 200,
+                      let listed = MoveWarnings.listed(data) else { continue }
+                answered = true
+                used = listed
+            }
+            // Neither list answered: not known to be unused.
+            guard answered else { return nil }
+        }
+        let found = MoveWarnings.Presence(contract: contract, used: used)
+        await cache.put(presence: found, key)
+        return found
+    }
+
+    /// The other-network finding for a send to `address` on `net`, every
+    /// network of your account asked at once.
+    static func otherNetwork(_ address: String, sending net: YourAccountOp.Network) async -> MoveWarnings.Finding? {
+        guard YourAccountOp.networks.contains(net) else { return nil }
+        var seen: [String: MoveWarnings.Presence] = [:]
+        await withTaskGroup(of: (String, MoveWarnings.Presence?).self) { group in
+            for n in YourAccountOp.networks { group.addTask { (n.name, await presence(address, on: n)) } }
+            for await (name, p) in group { if let p { seen[name] = p } }
+        }
+        return MoveWarnings.otherNetwork(here: net.name, seen: seen, order: YourAccountOp.networks.map(\.name))
+    }
+
+    /// The same, for each of a sentence's recipients at once.
+    static func otherNetworks(_ addresses: [String], sending net: YourAccountOp.Network) async -> [MoveWarnings.Finding] {
+        await withTaskGroup(of: MoveWarnings.Finding?.self) { group in
+            for a in addresses { group.addTask { await otherNetwork(a, sending: net) } }
+            var out: [MoveWarnings.Finding] = []
+            for await f in group { if let f { out.append(f) } }
+            return out
+        }
+    }
+
+    // MARK: - One recipient, every check (prd §1711 item 4)
+
+    /// What Move looks up about one address your account is about to pay on
+    /// `net`, outside Move's own sentence (an exit from Aztec): OFAC's list,
+    /// your history, GoPlus, Blockscout's creation date and the other
+    /// networks. The same reads, the same order of words.
+    @MainActor
+    static func recipient(_ address: String, from account: String, on net: YourAccountOp.Network,
+                          context: ModelContext) async -> [MoveWarnings.Finding] {
+        var found: [MoveWarnings.Finding] = []
+        let a = address.lowercased()
+        if let list = Self.sanctions(), list.addresses.contains(a) {
+            found.append(.sanctioned(address: address, listed: list.date))
+        }
+        let sent = Self.sentTo(account, context: context)
+        let book = Self.named()
+        let own = Set([account.lowercased()])
+        if !MoveWarnings.isKnown(address, sentTo: sent, named: Set(book.keys), own: own) {
+            found.append(MoveWarnings.imitated(address, sentTo: sent, named: book, own: own,
+                                               looksLike: AddressSafety.isLookalike) ?? .firstSend)
+        }
+        async let reported = Self.report(address, chainId: net.chainId)
+        async let made = Self.creation(address, chainId: net.chainId)
+        async let elsewhere = Self.otherNetwork(address, sending: net)
+        if let r = await reported, r.reported { found.append(.scam(address: address, sources: r.sources)) }
+        // A contract finding that says nothing is no finding, as Move's own.
+        if case .at(let when)? = await made, case let days = MoveWarnings.ageDays(when, now: .now),
+           MoveWarnings.contractLine(token: false, unverified: false, ageDays: days, neverUsed: sent[a] == nil) != nil {
+            found.append(.contract(token: false, unverified: false, ageDays: days, neverUsed: sent[a] == nil))
+        }
+        if let f = await elsewhere { found.append(f) }
+        return MoveWarnings.ordered(found)
+    }
+
     /// An hour for a report (a fresh one can land), for good for a creation.
+    /// A presence that is used stays used; an unused one is asked again
+    /// after an hour.
     private actor Cache {
         private var reports: [String: (MoveWarnings.Report, Date)] = [:]
         private var creations: [String: MoveWarnings.Creation] = [:]
+        private var presences: [String: (MoveWarnings.Presence, Date)] = [:]
+        func presence(_ key: String) -> MoveWarnings.Presence? {
+            guard let (p, at) = presences[key], p.used || Date.now.timeIntervalSince(at) < 3_600 else { return nil }
+            return p
+        }
+        func put(presence: MoveWarnings.Presence, _ key: String) { presences[key] = (presence, .now) }
         func report(_ key: String) -> MoveWarnings.Report? {
             guard let (r, at) = reports[key], Date.now.timeIntervalSince(at) < 3_600 else { return nil }
             return r

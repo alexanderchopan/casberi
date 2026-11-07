@@ -32,6 +32,10 @@ final class AztecAccountStore {
         /// Base units, as text (they overflow 64 bits). Nil: that side was not read.
         let privateUnits: String?
         let publicUnits: String?
+        /// Whether Casberi can send it privately: its interface offers a
+        /// private transfer (prd §1711 item 3). Nil from a reading made
+        /// before the engine said.
+        var sendable: Bool? = nil
         var id: String { address }
 
         /// What the account holds of it, in whole tokens, private and public
@@ -97,6 +101,27 @@ final class AztecAccountStore {
         var withdrawn: Bool { withdrawal != nil }
     }
 
+    /// One transaction your Aztec account sent (prd §1711): what the
+    /// Wallet's Activity lands, and the history a send's first-send note
+    /// reads. Kept on this iPhone; the transaction's own effects stay on
+    /// Aztec, private where they were.
+    struct Sent: Codable, Equatable, Identifiable {
+        typealias Kind = AztecTxKind
+        let hash: String
+        let kind: Kind
+        let symbol: String?
+        let amountUnits: String?
+        let decimals: Int?
+        /// The Aztec or Ethereum address it went to, or the app's host.
+        let to: String?
+        /// For an app's: the functions it called, in order.
+        var calls: [String]? = nil
+        /// What Aztec charged, in Fee Juice base units; nil when unknown.
+        let fee: String?
+        let at: Date
+        var id: String { hash }
+    }
+
     struct Snapshot: Codable, Equatable {
         var used = false
         var address: String?
@@ -106,6 +131,7 @@ final class AztecAccountStore {
         var gas: [GasDeposit]?
         var shield: [ShieldDeposit]?
         var exits: [ShieldExit]?
+        var sent: [Sent]?
     }
 
     private(set) var snapshot: Snapshot
@@ -255,6 +281,26 @@ final class AztecAccountStore {
         save()
     }
 
+    /// Keeps one transaction the account sent, once by its hash.
+    func addSent(_ tx: Sent) {
+        guard !(snapshot.sent ?? []).contains(where: { $0.hash.lowercased() == tx.hash.lowercased() }) else { return }
+        snapshot.sent = (snapshot.sent ?? []) + [tx]
+        snapshot.used = true
+        save()
+    }
+
+    /// The Aztec accounts this one sent to privately, lowercased, each with
+    /// the newest day it was paid: the first-send note's history (prd §1711
+    /// item 5). Never one it only received from.
+    var aztecSentTo: [String: Date] {
+        var out: [String: Date] = [:]
+        for tx in snapshot.sent ?? [] where tx.kind == .send {
+            guard let to = tx.to?.lowercased() else { continue }
+            if out[to].map({ $0 < tx.at }) ?? true { out[to] = tx.at }
+        }
+        return out
+    }
+
     func markGasClaimed(_ nonce: UInt64) {
         guard let i = snapshot.gas?.firstIndex(where: { $0.nonce == nonce }) else { return }
         snapshot.gas?[i].claimed = true
@@ -291,7 +337,8 @@ final class AztecAccountStore {
                        name: row["symbol"] as? String ?? row["name"] as? String ?? AddressTail.short(address),
                        decimals: row["decimals"] as? Int,
                        privateUnits: row["private"] as? String,
-                       publicUnits: row["public"] as? String)
+                       publicUnits: row["public"] as? String,
+                       sendable: row["sendable"] as? Bool)
     }
 
     private func save() {

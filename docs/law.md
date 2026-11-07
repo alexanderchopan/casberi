@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1868 of 1940 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1869 of 1941 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1892,7 +1892,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 - §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
-- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past
+- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1711)
 - §1510 — Details in Move: the fee on every send, this exact operation simulated and previewed, Raw transaction a page deeper,…
 - §1511 — Move's sentence is placed against the width it was measured for, so a clause never draws over the next (applies §1501…
 - §1512 — Relay stays the one swap provider under Tor: it is read directly, and every move it carries says so on its foot (answ…
@@ -2090,13 +2090,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
-- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j)
+- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j, §1711)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
-- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700k)
-- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h)
+- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700k, §1711)
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1711)
 - §1700g — Aztec is your private account; 0xBow is your private balance
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k)
@@ -2117,6 +2117,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i…
 - §1709 — Permissions and Threats stand on Wallet Home at once: Threats from the phone, Permissions from its last reading, stam…
 - §1710 — Permissions' box is your balance, reached: one disc is what the wallets hold, a delegate or module that reaches all o…
+- §1711 — Your Aztec account, finished in six places: every transaction in Activity, the fee on an app's sheet, any token it ho…
 
 ## Dead rulings → what replaced them (generated)
 
