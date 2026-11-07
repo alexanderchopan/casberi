@@ -71263,4 +71263,6 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 
 **Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
 
-**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** Olla's desktop picker in a phone-width web view, Casberi under Installed there, and a connect through it.
+**A second app, the same picker.** Xochi (xochi.fi, on Aztec's list) drew the same RainbowKit phone modal on build 954 (user, 2026-11-07: "xochi also same issue"): Coinbase, MetaMask, WalletConnect, Rainbow, no Casberi. Item 1 covers it with no change: the agent is the browser's, not Olla's.
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** Olla's or Xochi's desktop picker in a phone-width web view, Casberi under Installed there, and a connect through it.
