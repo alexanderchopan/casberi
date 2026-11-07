@@ -131,5 +131,5 @@ Each is a second tap ("Send anyway"). `-moveSendDraft "<amount>|<address>|USDC@R
 
 - Fix what fails on the branch. Re-run `scripts/verify.sh`.
 - Add the new strings to `Localizable.xcstrings` in Spanish, Japanese, Korean and Chinese, as the 3.0.23 commit did.
-- Record what was measured in §1711 (or a §1711a): the explorer URL, whether the fee estimate matched the charge, a non-Shield token sent, and screens seen.
+- Record what was measured in §1711, or in a new lettered entry after it: the explorer URL, whether the fee estimate matched the charge, a non-Shield token sent, and screens seen.
 - Then TestFlight (`scripts/testflight.sh`) when the user says so.
