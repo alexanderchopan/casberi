@@ -29,13 +29,18 @@ enum MoveWarnings {
         /// A swap's token or a send's recipient that is a contract: not on
         /// Uniswap's list, younger than `newContractDays`, never used by you.
         case contract(token: Bool, unverified: Bool, ageDays: Int?, neverUsed: Bool)
+        /// Used on another of your account's networks and never on this
+        /// one, or a contract there and not here (prd §1711 item 6): money
+        /// sent to a contract that does not exist on this network may be
+        /// stuck, and a place that takes one network may not take another.
+        case otherNetwork(seenOn: [String], here: String, contract: Bool)
         /// You have never sent to this address. A note: the verb stays.
         case firstSend
 
         var red: Bool {
             switch self {
             case .fails, .scam, .sanctioned: true
-            case .lookalike, .contract, .firstSend: false
+            case .lookalike, .otherNetwork, .contract, .firstSend: false
             }
         }
 
@@ -60,8 +65,9 @@ enum MoveWarnings {
             case .sanctioned: 1
             case .scam: 2
             case .lookalike: 3
-            case .contract: 4
-            case .firstSend: 5
+            case .otherNetwork: 4
+            case .contract: 5
+            case .firstSend: 6
             }
         }
         return findings.enumerated().sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }.map(\.element)
@@ -91,9 +97,61 @@ enum MoveWarnings {
             return String(localized: "Looks like \(short(real)), one of yours. They differ in the middle. Check it.")
         case .contract(let token, let unverified, let ageDays, let neverUsed):
             return contractLine(token: token, unverified: unverified, ageDays: ageDays, neverUsed: neverUsed) ?? ""
+        case .otherNetwork(let seenOn, let here, let contract):
+            let places = ListFormatter.localizedString(byJoining: seenOn)
+            return contract
+                ? String(localized: "A contract on \(places), not on \(here). Money sent here may be stuck.")
+                : String(localized: "Used on \(places), never on \(here). Check they can take it on \(here).")
         case .firstSend:
             return String(localized: "First send to this address.")
         }
+    }
+
+    // MARK: - The other networks (prd §1711 item 6)
+
+    /// Whether an address was ever used on one network: a contract there, or
+    /// any transaction or token transfer to or from it.
+    struct Presence: Equatable, Sendable {
+        let contract: Bool
+        let used: Bool
+    }
+
+    /// The finding for a send on `here`, from what each of the account's
+    /// networks said (`order` is their order, for the words). A contract
+    /// elsewhere and not here leads; then an address used elsewhere and
+    /// never here. Nothing when this network did not answer, when the
+    /// address is a contract here, or when it was used here: a network that
+    /// cannot be read says nothing it does not know.
+    static func otherNetwork(here: String, seen: [String: Presence], order: [String]) -> Finding? {
+        guard let local = seen[here], !local.contract else { return nil }
+        let others = order.filter { $0 != here }
+        let contracts = others.filter { seen[$0]?.contract == true }
+        if !contracts.isEmpty { return .otherNetwork(seenOn: contracts, here: here, contract: true) }
+        guard !local.used else { return nil }
+        let used = others.filter { seen[$0]?.used == true }
+        return used.isEmpty ? nil : .otherNetwork(seenOn: used, here: here, contract: false)
+    }
+
+    /// Blockscout's legacy `txlist` or `tokentx` at `offset=1`: whether the
+    /// address has any; nil when the answer cannot be read. An empty list
+    /// comes back as status "0", "No transactions found", and is a no.
+    static func listed(_ data: Data) -> Bool? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let result = root["result"] as? [Any] else { return nil }
+        return !result.isEmpty
+    }
+
+    // MARK: - Aztec accounts (prd §1711 item 5)
+
+    /// The Aztec account you paid that `typed` imitates: the same last four,
+    /// as every row prints an Aztec address (`...e07a`), and a different
+    /// account; the newest one paid. Aztec's addresses carry no checksum,
+    /// so this and Aztec's own `isValid` are what stand between a typo and a
+    /// note no one can read.
+    static func aztecImitated(_ typed: String, sentTo: [String: Date]) -> Finding? {
+        let t = typed.lowercased()
+        let paid = sentTo.filter { $0.key != t && $0.key.suffix(4) == t.suffix(4) }.max { $0.value < $1.value }
+        return paid.map { .lookalike(of: $0.key, name: nil, paid: $0.value) }
     }
 
     /// A contract worth a second look: not on Uniswap's list, or younger than

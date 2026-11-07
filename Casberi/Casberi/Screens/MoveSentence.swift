@@ -2876,7 +2876,7 @@ struct MoveSentence: View {
         guard let lead = leadWarning else { return nil }
         switch lead {
         case .scam, .sanctioned: return DS.destructiveInk
-        case .lookalike, .firstSend: return DS.attentionInk
+        case .lookalike, .otherNetwork, .firstSend: return DS.attentionInk
         case .contract(let token, _, _, _): return token ? nil : DS.attentionInk
         case .fails: return nil
         }
@@ -2923,6 +2923,11 @@ struct MoveSentence: View {
                 found.append(MoveWarnings.imitated(a, sentTo: sent, named: named, own: own,
                                                    looksLike: AddressSafety.isLookalike) ?? .firstSend)
             }
+            // Used on another of your account's networks and never on this
+            // one, or a contract there and not here (prd §1711 item 6),
+            // asked beside the two services.
+            async let crossed = MoveChecks.otherNetworks(
+                to.filter { !zkMoneyDeposits.contains($0.lowercased()) && !own.contains($0.lowercased()) }, sending: net)
             // Both services, for every address at once: each is a Tor round
             // trip of a second or more (measured).
             let asked = to + [token?.token.contract].compactMap { $0 }
@@ -2946,6 +2951,7 @@ struct MoveSentence: View {
                                            neverUsed: sent[a.lowercased()] == nil))
                 }
             }
+            found += await crossed
             if let token, let contract = token.token.contract {
                 if let r = reports[contract] ?? nil, r.reported { found.append(.scam(address: contract, sources: r.sources)) }
                 var age: Int?

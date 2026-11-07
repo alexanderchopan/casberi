@@ -144,6 +144,8 @@ struct BridgeIcon: View {
     static func noteSymbol(for thing: Thing) -> String? {
         // A private move's Activity row wears the eye-slash (prd §1554).
         if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }
+        // And a private move of your Aztec account's (prd §1711).
+        if AztecActivity.isPrivate(thing.sourceRef) { return "eye.slash" }
         guard Pinboard.isNote(thing) else { return nil }
         return Highlight.isHighlight(thing) ? "text.quote" : thing.kind.symbol
     }

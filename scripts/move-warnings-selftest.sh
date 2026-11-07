@@ -92,6 +92,42 @@ check(W.creation(Data(#"{"message":"OK","result":[],"status":"1"}"#.utf8)) == .n
 check(W.creation(Data("<html>Just a moment</html>".utf8)) == nil, "Cloudflare's wall read as an answer")
 check(W.ageDays(Date(timeIntervalSince1970: 0), now: Date(timeIntervalSince1970: 2 * 86_400 + 5)) == 2, "the age is not whole days")
 
+// The other networks (prd §1711 item 6): a Safe made on Base and sent to on Robinhood.
+let nets = ["Base", "Ethereum", "Robinhood"]
+let none = W.Presence(contract: false, used: false), used = W.Presence(contract: false, used: true), safe = W.Presence(contract: true, used: true)
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": safe, "Ethereum": none, "Robinhood": none], order: nets)
+      == .otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: true), "a contract on Base only was not said on Robinhood")
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": safe, "Ethereum": safe, "Robinhood": used], order: nets)
+      == .otherNetwork(seenOn: ["Base", "Ethereum"], here: "Robinhood", contract: true),
+      "money sent to a missing contract here hid it, or the networks lost their order")
+check(W.otherNetwork(here: "Base", seen: ["Base": safe, "Ethereum": none, "Robinhood": none], order: nets) == nil, "a contract here warned")
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": used, "Ethereum": none, "Robinhood": none], order: nets)
+      == .otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: false), "used on Base, never on Robinhood, was not said")
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": used, "Robinhood": used], order: nets) == nil, "an address used here warned")
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": none, "Ethereum": none, "Robinhood": none], order: nets) == nil,
+      "a new address warned: that is the first-send note's")
+check(W.otherNetwork(here: "Robinhood", seen: ["Base": safe], order: nets) == nil, "a network that did not answer was said to be empty")
+check(W.line(.otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: true), short: short, day: day)
+      == "A contract on Base, not on Robinhood. Money sent here may be stuck.", "the missing-contract line drifted")
+check(W.line(.otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: false), short: short, day: day)
+      == "Used on Base, never on Robinhood. Check they can take it on Robinhood.", "the other-network line drifted")
+let crossed = W.ordered([.firstSend, .contract(token: false, unverified: true, ageDays: nil, neverUsed: true),
+                         .otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: true)])
+check(crossed.first == .otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: true), "the other network does not lead a new contract and the note")
+check(W.arms([.otherNetwork(seenOn: ["Base"], here: "Robinhood", contract: false)]), "another network's use did not make the verb a second tap")
+check(W.listed(Data(#"{"message":"OK","result":[{"hash":"0x1"}],"status":"1"}"#.utf8)) == true, "a listed transaction was not read")
+check(W.listed(Data(#"{"message":"No transactions found","result":[],"status":"0"}"#.utf8)) == false, "an empty list read as used")
+check(W.listed(Data(#"{"message":"Error! Invalid address format","result":null,"status":"0"}"#.utf8)) == nil, "an error read as unused")
+check(W.listed(Data("<html>Just a moment</html>".utf8)) == nil, "Cloudflare's wall read as an answer")
+
+// Aztec accounts (prd §1711 item 5): a lookalike of one you paid, by the tail every row prints.
+let aztecPaid = "0x" + String(repeating: "1", count: 60) + "e07a"
+let aztecFake = "0x" + String(repeating: "2", count: 60) + "E07A"
+check(W.aztecImitated(aztecFake, sentTo: [aztecPaid: oct3]) == .lookalike(of: aztecPaid, name: nil, paid: oct3), "an Aztec lookalike was not said")
+check(W.aztecImitated(aztecPaid.uppercased().replacingOccurrences(of: "0X", with: "0x"), sentTo: [aztecPaid: oct3]) == nil,
+      "an Aztec account you paid looked like itself")
+check(W.aztecImitated("0x" + String(repeating: "3", count: 64), sentTo: [aztecPaid: oct3]) == nil, "a different tail was a lookalike")
+
 print(bad == 0 ? "move-warnings self-test: \(ran) checks ok" : "move-warnings self-test: \(bad) of \(ran) failed")
 exit(bad == 0 ? 0 : 1)
 SWIFT
@@ -108,6 +144,14 @@ grep -q 'stage == nil && !all.isEmpty && failNote == nil' "$SENTENCE" \
   || { echo "✗ a send the simulation refuses no longer dims its verb"; exit 1; }
 grep -q 'where sanctions.addresses.contains(a.lowercased())' "$SENTENCE" \
   || { echo "✗ OFAC's list is no longer matched on the phone"; exit 1; }
+grep -q 'found += await crossed' "$SENTENCE" \
+  || { echo "✗ Move's Send no longer asks the other networks (prd §1711 item 6)"; exit 1; }
+AZTEC="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
+grep -q 'found = await MoveChecks.recipient(to, from: account, on: YourAccountOp.ethereum, context: context)' "$AZTEC" \
+  || { echo "✗ an exit from Aztec pays an Ethereum address unchecked (prd §1711 item 4)"; exit 1; }
+grep -q 'AztecEngine.shared.call("addressValid", \[to\])' "$AZTEC" \
+  && grep -q 'if move.mustArm { move.arm(); DSHaptic.failure(); return }' "$AZTEC" \
+  || { echo "✗ an Aztec send no longer checks its address, or a warned send goes on the first tap (prd §1711 item 5)"; exit 1; }
 grep -q '"api.gopluslabs.io", "base.blockscout.com", "eth.blockscout.com", "robinhoodchain.blockscout.com"' "$REACH" \
   && awk '/service: "Move.s checks"/,/throughTor: true/' "$REACH" | grep -q 'throughTor: true' \
   || { echo "✗ Move's checks no longer go through Tor — GoPlus is asked about the address you are paying"; exit 1; }

@@ -137,8 +137,13 @@ extension ShieldBridge {
             guard let ready = try? await AztecEngine.shared.call("messageReady", [d.messageHash]) as? [String: Any],
                   ready["ready"] as? Bool == true else { continue }
             do {
-                _ = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex])
+                let out = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex]) as? [String: Any]
                 AztecAccountStore.shared.markShieldClaimed(d.nonce)
+                if let hash = out?["tx"] as? String {
+                    AztecActivity.record(.init(hash: hash, kind: .arrival, symbol: d.symbol, amountUnits: d.amountUnits,
+                                               decimals: assets.first { $0.symbol == d.symbol }?.decimals,
+                                               to: nil, fee: out?["fee"] as? String, at: .now))
+                }
                 await AztecAccountStore.shared.refresh()
             } catch {
                 NSLog("aztecEngine| shield | claim waits: %@", error.localizedDescription)
@@ -190,6 +195,8 @@ extension ShieldBridge {
         let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: recipient, transaction: transaction,
                                                 message: message, outbox: out["outbox"] as? String, withdrawal: nil, at: .now)
         AztecAccountStore.shared.addExit(exit)
+        AztecActivity.record(.init(hash: transaction, kind: .exit, symbol: asset.symbol, amountUnits: units,
+                                   decimals: asset.decimals, to: recipient, fee: out["fee"] as? String, at: .now))
         await AztecAccountStore.shared.refresh()
         return exit
     }

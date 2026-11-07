@@ -94,8 +94,12 @@ enum AztecGas {
             guard let ready = try? await AztecEngine.shared.call("feeJuiceReady", [deposit.messageHash]) as? [String: Any],
                   ready["ready"] as? Bool == true else { continue }
             do {
-                _ = try await AztecEngine.shared.call("feeJuiceClaim", [String(deposit.nonce), deposit.amountUnits, deposit.leafIndex])
+                let out = try await AztecEngine.shared.call("feeJuiceClaim", [String(deposit.nonce), deposit.amountUnits, deposit.leafIndex]) as? [String: Any]
                 AztecAccountStore.shared.markGasClaimed(deposit.nonce)
+                if let hash = out?["tx"] as? String {
+                    AztecActivity.record(.init(hash: hash, kind: .gas, symbol: String(localized: "Fee Juice"), amountUnits: deposit.amountUnits,
+                                               decimals: 18, to: nil, fee: out?["fee"] as? String, at: .now))
+                }
                 await AztecAccountStore.shared.refresh()
             } catch {
                 NSLog("aztecEngine| gas | claim waits: %@", error.localizedDescription)

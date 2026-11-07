@@ -19,7 +19,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     enum Request: Identifiable, Equatable {
         case connect(requestId: String, host: String)
         case emoji(sessionId: String, host: String, emoji: String)
-        case send(id: Int, host: String, calls: [Call], fee: String)
+        case send(id: Int, host: String, calls: [Call], fee: Fee)
         case ethConnect(id: String, host: String)
         case ethSign(id: String, host: String, text: String)
         /// An app's transaction on Ethereum, in words: what it does, its
@@ -30,6 +30,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         case ethTopUp(id: String, host: String, signer: String, amount: String, holds: String, needs: String)
 
         struct Call: Equatable { let name: String; let to: String; let isPublic: Bool }
+        /// What a transaction costs (prd §1711 item 2): Fee Juice base units
+        /// at today's prices, nil when the engine's simulation could not
+        /// say; and who pays it.
+        struct Fee: Equatable { let units: String?; let payer: AztecFeeWords.Payer }
 
         var id: String {
             switch self {
@@ -631,15 +635,17 @@ struct AztecAskSheet: View {
         DSTray(title: title, height: height, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 content
-                if leadsWithCoSigner {
-                    // The app turned your account's sign-in down (prd §1700l).
-                    DSActVerb(title: String(localized: "Use your co-signer"), glyph: "person.badge.key") { useCoSigner() }
-                    DSDoorRow(icon: "link", title: Text(reconnecting ? "Connect your account anyway" : "Connect your account instead")) { answer(true) }
-                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
-                } else {
-                    DSActVerb(title: acceptWord, glyph: acceptGlyph) { answer(true) }
-                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
+                // One tile, its verb by the ask (hero-tint audit): the
+                // co-signer leads when the app turned your account's sign-in
+                // down or you used it here before (prd §1700l).
+                DSActVerb(title: leadsWithCoSigner ? String(localized: "Use your co-signer") : acceptWord,
+                          glyph: leadsWithCoSigner ? "person.badge.key" : acceptGlyph) {
+                    if leadsWithCoSigner { useCoSigner() } else { answer(true) }
                 }
+                if leadsWithCoSigner {
+                    DSDoorRow(icon: "link", title: Text(reconnecting ? "Connect your account anyway" : "Connect your account instead")) { answer(true) }
+                }
+                DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
                 // For an app that takes only a plain key's signature (prd §1700l).
                 if case .ethConnect = ask, !leadsWithCoSigner, let coSigner {
                     DSDoorRow(icon: "person.badge.key",
@@ -679,7 +685,11 @@ struct AztecAskSheet: View {
                     }
                 }
             }
-            Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            let held = AztecAccountStore.shared.snapshot.holdings.first { $0.kind == .feeJuice }?.publicUnits
+            Text(verbatim: AztecFeeWords.line(units: fee.units, payer: fee.payer, held: held))
+                .dsText(.subhead12)
+                .foregroundStyle(AztecFeeWords.short(units: fee.units, payer: fee.payer, held: held) ? DS.attentionInk : DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         case .ethConnect where leadsWithCoSigner && reconnecting:
             DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (\(AddressTail.short(coSigner ?? ""))).")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
