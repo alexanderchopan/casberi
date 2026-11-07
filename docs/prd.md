@@ -71283,16 +71283,17 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the sheet on the phone, at either height.
 
-## §1711 — Your Aztec account falls in the Wallet's rain, because the pull asks it (extends §619) (user, 2026-11-07: "pull down to refresh in wallet should also show the Aztec icon, not just safe in the wallet icon on the tile rain")
+## §1711 — The Wallet's rain names its private places: Railgun, Privacy Pools and your Aztec account fall because the pull asks them (extends §619) (user, 2026-11-07: "pull down to refresh in wallet should also show the Aztec icon, not just safe in the wallet icon on the tile rain", then "should probably also include the privacy pools one and rail gun since we're adding them")
 
-**The cause.** The rain is the roster of connected seats (`BridgeRefresh.roster`), narrowed to the Wallet category in its room. Your Aztec account is no seat: it is `AztecAccountStore`, read by the Wallet's Private and Tokens places only when their last reading is five minutes old. So a Wallet pull rained Wallet and Safe, and did not ask Aztec at all.
+**The cause.** The rain is the roster of connected seats (`BridgeRefresh.roster`), narrowed to the Wallet category in its room. Railgun and 0xBow Privacy Pools are seats only once evidence lights them (§207, §268), though `WalletIngest.refresh` asks both for every followed address either way. Your Aztec account is no seat at all: `AztecAccountStore`, read by Holdings only when its reading is five minutes old. So a Wallet pull rained Wallet and Safe.
 
-**Ruling.**
-1. **A pull on the Wallet or on All asks your Aztec account** (`AztecAccountStore.pull`): its holdings again, whatever the reading's age, then their prices.
-2. **Its tile falls when it was asked**, after the seats, as `brand-aztec` (`AztecAccountStore.walletSymbol`, "Aztec"). No account in use, no tile.
-3. **The demo rains it and reads nothing**, as every demo seat rains and reads nothing.
-4. The Library tab's pull and the launch sweep do not boot the engine, so they rain no Aztec: the tile stands only where the account was asked (§619).
+**Ruling.** A pull on the Wallet or on All rains, after the seats, each private place it asks (`BridgeRefresh.privateRoster`), a seat already in the roster never twice:
+1. **Railgun**, while an Ethereum address is followed (its sweep reads every one).
+2. **0xBow Privacy Pools**, while an Ethereum address is followed, or your private balance holds notes: the pull asks the ASP for every waiting note and reads the prices again (`PrivateMoneyStore.pull`).
+3. **Aztec**, while your private account is in use: the pull reads its holdings again, whatever the reading's age, then their prices (`AztecAccountStore.pull`), drawn as `brand-aztec`.
+4. **The demo** rains all three and reads nothing, as every demo seat does.
+5. The Library tab's pull and the launch sweep keep the seats' roster: they do not boot Aztec's engine or ask the ASP.
 
-**Mac half (§1402).** None: the Mac has no prover (`AztecProver.isAvailable`), so its pull cannot ask the account and rains no Aztec. The demo's sample account rains on both.
+**Mac half (§1402).** Railgun and Privacy Pools rain on the Mac as on the phone (the sweep and the ASP are the same). The Mac has no prover (`AztecProver.isAvailable`), so its pull cannot ask the Aztec account and rains no Aztec; the demo's sample account rains on both.
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the shower on the phone.

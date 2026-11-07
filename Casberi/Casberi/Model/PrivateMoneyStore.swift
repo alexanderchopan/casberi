@@ -328,6 +328,18 @@ final class PrivateMoneyStore {
     /// The dollars Holdings' rows draw, read when they show.
     func readPrices() async { _ = await walletHolding() }
 
+    /// **A PULL ON THE WALLET ASKS YOUR PRIVATE BALANCE** (prd §1711): the
+    /// ASP for every note still waiting, then the prices, and says whether it
+    /// asked, which is when 0xBow's tile falls. Never in the demo.
+    func pull() -> Bool {
+        guard !DemoMode.isActive, !notes.isEmpty else { return false }
+        Task { @MainActor in
+            await refresh(force: true)
+            await readPrices()
+        }
+        return true
+    }
+
     /// Asks the ASP about every note still waiting.
     func refresh(force: Bool = false) async {
         guard !DemoMode.isActive, PrivateMoney.anyWaiting(notes), force || Date().timeIntervalSince(asked) > 20 else { return }

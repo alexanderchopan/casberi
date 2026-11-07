@@ -245,11 +245,10 @@ extension FeedScreen {
             ? BridgeRefresh.roster(store: bridges)
             : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
             : [source]
-        // Your Aztec account is no seat, so the roster above never named it:
-        // the Wallet's pull rained Wallet and Safe alone (user, 2026-11-07).
-        // The pull asks it now (`AztecAccountStore.pull`), so it falls too.
-        if source == "All" || source == "Wallet", AztecAccountStore.shared.pull() {
-            roster.append(AztecAccountStore.walletSymbol)
+        // The private places the Wallet's pull asks: Railgun, Privacy Pools,
+        // your Aztec account (prd §1711).
+        if source == "All" || source == "Wallet" {
+            roster = BridgeRefresh.privateRoster(after: roster)
         }
         chrome.rain(sources: roster)   // spins the avatar door, deals the shower
         await refreshFeed()

@@ -93,6 +93,33 @@ enum BridgeRefresh {
             .filter { category == nil || CategoryFold.isMember($0, of: category!) }
     }
 
+    /// **THE PRIVATE PLACES A WALLET PULL ASKS, AND RAINS (prd §1711).**
+    /// `roster` names a seat only once it is lit, so the Wallet's pull rained
+    /// Wallet and Safe (user, 2026-11-07: "should also show the Aztec icon,
+    /// not just safe", then "also include the privacy pools one and rail
+    /// gun"). Each tile below stands for a read the pull makes:
+    /// - **Railgun and 0xBow Privacy Pools**: `WalletIngest.refresh` asks both
+    ///   for every followed Ethereum address, lit or not (their sweeps are
+    ///   never seat-gated, §207, §268); your private balance's notes are
+    ///   asked again too (`PrivateMoneyStore.pull`).
+    /// - **Aztec**: your private account, read again (`AztecAccountStore.pull`).
+    /// A seat already in `roster` is not named twice. The demo rains each and
+    /// reads nothing, as every demo seat does.
+    static func privateRoster(after roster: [String]) -> [String] {
+        var out = roster
+        func add(_ name: String) { if !out.contains(name) { out.append(name) } }
+        let demo = DemoMode.isActive
+        let wallets = WalletStore.shared
+        let followsEthereum = wallets.addresses.contains { watch in
+            ENS.isHexAddress(watch.address) || wallets.resolvedForm(of: watch.address).map(ENS.isHexAddress) == true
+        }
+        let privateBalance = PrivateMoneyStore.shared.pull()
+        if demo || followsEthereum { add("Railgun") }
+        if demo || followsEthereum || privateBalance { add("0xBow Privacy Pools") }
+        if AztecAccountStore.shared.pull() { add(AztecAccountStore.walletSymbol) }
+        return out
+    }
+
     static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
         // THE DEMO REACHES NOTHING (2026-08-07). Not a nicety and not merely
         // privacy — the demo marks 60-odd seats connected and watches a wallet
