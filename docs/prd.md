@@ -71240,3 +71240,13 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** The same rows and sheet.
 
 **Not compiled, not measured:** written in a Linux session with no Swift toolchain and no route to nymis.io.
+
+## §1700m — Library's Wallet folder leads with Aztec's directory; the Wallet's Home keeps its door (extends §1700i) (user, 2026-11-07, of the Home door: "is that really where best place is instead of an 'aztec directory' app tile in library? i can't decide"; told Library is where you find apps and the Wallet where you act, "but library is also apps user hasn't connected to yet", then "ok, so we keep the door on wallet home we have now, and you add a tile to the library inside the wallet folder for aztec directory and we use the aztec logo") — RULED, BUILT
+
+1. **Two doors to one directory.** The Wallet's Home keeps Apps on Aztec (§1700i); Library's Wallet folder gains a first cell, **Aztec directory**, Aztec's mark (`brand-aztec`) over its name, raising the same browser over Library (`SourcesFolderAztecDirectory`, `SettingsHome.aztecDirectory`). Finding apps is Library's job beside the apps you could add; using them is the Wallet's.
+2. **It is a directory, not an app.** No dot and no plus, as Notes' first cell (§1347); it is not counted in the folder's "N of M" nor drawn in its closed preview.
+3. **The same gate as the Home door:** an Aztec account, a prover, not the demo (`AztecApps.doorShown`); Library on the Mac has none.
+
+**Checks.** `shield-bridge-selftest.sh` counts Library as the fourth door that may send (with the Home door, a saved Aztec app's link, and DEBUG's probe). `sheet-sweep.json` covers the new sheet with the Home door's reason.
+
+**Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4), and the gate keeps the tile off the Mac.

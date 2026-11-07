@@ -41,6 +41,8 @@ struct SettingsHome: View {
     /// The Track tray of an app that needs only a name (prd §1119), raised
     /// by a door that named it (prd §1234; the Apps screen's until then).
     @State private var trackPick: TrackPick?
+    /// Aztec's directory, raised from the Wallet folder (prd §1700m).
+    @State private var aztecDirectory = false
     /// The folder sprung open over the page (prd §1316).
     @State private var openFolder: String?
     /// The category a door named (`route.openCategory`, prd §1300): its
@@ -166,7 +168,11 @@ struct SettingsHome: View {
                                   // The Notes folder leads with the Notes
                                   // page, pushed beside Library (prd §1347).
                                   notesPage: category == BridgeCatalog.notesCategory
-                                      ? { route.push(.notes) } : nil)
+                                      ? { route.push(.notes) } : nil,
+                                  // The Wallet folder leads with Aztec's
+                                  // directory (prd §1700m).
+                                  aztecDirectory: category == CategoryFold.walletCategory && AztecApps.doorShown
+                                      ? { aztecDirectory = true } : nil)
                     .transition(folderSpring)
             }
         }
@@ -211,6 +217,12 @@ struct SettingsHome: View {
             }
         }
         #endif
+        // Aztec's directory in Casberi's browser, raised over Library as the
+        // Wallet's Home door raises it (prd §1700m, §1700i).
+        .sheet(isPresented: $aztecDirectory) {
+            AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
+                .presentationDragIndicator(.visible)
+        }
         .modifier(DSOneSheet(route: $trackPick, pushes: { _ in route.sheet != nil },
                              raised: { trackTray($0) },
                              pushed: { trackTray($0).environment(\.dsInPane, true) }))

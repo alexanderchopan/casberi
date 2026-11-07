@@ -201,6 +201,11 @@ struct SourcesOpenFolder: View {
     /// folder; the apps you write in follow, as in any folder. Nil for
     /// every other folder.
     var notesPage: (() -> Void)? = nil
+    /// **THE WALLET FOLDER LEADS WITH AZTEC'S DIRECTORY (prd §1700m).** Where
+    /// you find Aztec apps, beside the apps you could add; the Wallet's Home
+    /// keeps its door. Nil for every other folder, and while you have no
+    /// Aztec account (`AztecApps.doorShown`).
+    var aztecDirectory: (() -> Void)? = nil
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
                                 count: 4)
@@ -209,6 +214,9 @@ struct SourcesOpenFolder: View {
         LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
             if let notesPage {
                 SourcesFolderNotesPage(action: notesPage)
+            }
+            if let aztecDirectory {
+                SourcesFolderAztecDirectory(action: aztecDirectory)
             }
             ForEach(folder.apps, id: \.self) { name in
                 SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
@@ -288,6 +296,37 @@ private struct SourcesFolderNotesPage: View {
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Your notes"))
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Aztec's directory, the Wallet folder's first cell (prd §1700m): Aztec's
+/// mark over its name, opening Aztec's own list in Casberi's browser. Never a
+/// dot or a plus: it is a directory, not an app you add.
+private struct SourcesFolderAztecDirectory: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                BridgeIcon(name: "Aztec", size: DS.Face.seat + 12)
+                Text("Aztec directory")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Aztec directory"))
         .accessibilityAddTraits(.isButton)
     }
 }

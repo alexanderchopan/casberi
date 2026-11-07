@@ -204,7 +204,8 @@ fi
 # Sending is on where Apps on Aztec opens a page, and nowhere else (prd §1700k).
 DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr '\n' ' ')
 # ProbeHooks is DEBUG's door (`-aztecAppEthereum`, prd §1700l), compiled out of every shipped build.
-[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
+# SettingsHome is Library's Wallet folder, Aztec's directory (prd §1700m).
+[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/SettingsHome.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
 grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
   || { echo "✗ Apps on Aztec's door no longer offers your account to an Ethereum app"; exit 1; }
