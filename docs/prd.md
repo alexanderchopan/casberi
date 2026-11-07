@@ -71266,3 +71266,19 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **A second app, the same picker.** Xochi (xochi.fi, on Aztec's list) drew the same RainbowKit phone modal on build 954 (user, 2026-11-07: "xochi also same issue"): Coinbase, MetaMask, WalletConnect, Rainbow, no Casberi. Item 1 covers it with no change: the agent is the browser's, not Olla's.
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** Olla's or Xochi's desktop picker in a phone-width web view, Casberi under Installed there, and a connect through it.
+
+## §1700o — A sign-in reads as a sign-in: the app's sentence, the account, the chain, until when and what else it reaches, the whole message one tap away (amends the ethSign sheet of §1700e and §1700k) (user, 2026-11-07, of Private Inference's sign-in on the phone, the 720pt sheet scrolling through URI, Version, Chain ID, Nonce, Issued At and Resources: "any way to make these messages so user doesn't need to scroll?") — BUILT, NOT COMPILED, NOT SEEN
+
+**Why.** An app's sign-in is a Sign-In with Ethereum message (EIP-4361): a head naming the site and the account, the app's own sentence, then fields written for the site's server (URI, version, chain, nonce, issue time, resources). The sheet drew all of it as body text, so the sentence that says what you are doing scrolled under the fields that do not.
+
+1. **A sign-in for the page's own site** (`BrowserEthereum.signIn`, read only when the message's site and its URI's host are the page's host) is titled "Sign in to <host>?" ("… with your co-signer?" when the co-signer signs) and draws the app's sentence, then under it "As ...abcd on Ethereum" (another chain by its number), "Works until <date>" when it carries an expiry, and "Also reaches <hosts>" for its resources. The nonce, version, URI and issue time are not drawn.
+2. **"Show the whole message"** is a door row under it: the message as signed, in full, on the sheet's taller height. What you sign is still all one tap away.
+3. **A sign-in that names another site** is drawn whole, under the old title, with an amber line: "This sign-in names <site>, not <host>." A site cannot sign you into someone else's with the short form.
+4. **Any other message** (not a sign-in, or one missing its URI, version or nonce) is drawn whole, as before.
+5. The sheet is 560pt for a sign-in in words, 720pt for a whole message.
+
+**Checks.** `shield-bridge-selftest.sh`: Private Inference's message reads its site, account, sentence, chain, no expiry and `privy.io`; it is for its own page and not for a lookalike host; another site in the head or in the URI is not this page's; a head with scheme and port reads; a message with no sentence reads; a plain message and one with no nonce are no sign-in. A mutation that drops the site check fails it.
+
+**Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the sheet on the phone, at either height.
