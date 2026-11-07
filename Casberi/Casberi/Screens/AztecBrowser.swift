@@ -117,6 +117,11 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         // The app's site keeps its own storage, apart from the engine's origin.
         config.websiteDataStore = .default()
         page = WKWebView(frame: .zero, configuration: config)
+        // Apps on Aztec's browser says it is a Mac, so a RainbowKit picker
+        // (Olla's) draws Casberi under Installed (prd §1700n).
+        if ethereum && sends {
+            page.customUserAgent = BrowserEthereum.desktopAgent(majorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
+        }
         // A swipe from the edge goes back a page and forward again: Home's
         // door opens a directory you walk through (prd §1700i).
         page.allowsBackForwardNavigationGestures = true
@@ -620,6 +625,15 @@ struct AztecAskSheet: View {
     /// You signed in here with your co-signer before (prd §1700l item 11).
     var remembered = false
     var useCoSigner: () -> Void = {}
+    /// The whole sign-in message, opened from its door (prd §1700o).
+    @State private var whole = false
+
+    /// The message as a sign-in for the page's own site, or nil: a sign-in
+    /// that names another site is drawn whole, with its warning (prd §1700o).
+    private var signIn: BrowserEthereum.SignIn? {
+        guard case .ethSign(_, let host, let text) = ask, let s = BrowserEthereum.signIn(text), s.isFor(host: host) else { return nil }
+        return s
+    }
 
     private var leadsWithCoSigner: Bool {
         if case .ethConnect = ask { return (reconnecting || remembered) && coSigner != nil }
@@ -724,14 +738,39 @@ struct AztecAskSheet: View {
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-        case .ethSign(_, _, let text):
-            // The whole message on the sheet (user: "i shouldn't have to
-            // scroll in this message"); a longer one than fits still scrolls.
-            ScrollView {
-                Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        case .ethSign(_, let host, let text):
+            if let s = signIn, !whole {
+                // A sign-in in words (prd §1700o): the app's sentence, then
+                // what it signs in as, until when, and what else it reaches.
+                if let statement = s.statement {
+                    Text(verbatim: statement).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("As \(AddressTail.short(s.address)) on \(Self.chainName(s.chainId))")
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    if let expires = s.expires {
+                        Text("Works until \(Self.when(expires))").dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    }
+                    if !s.resourceHosts.isEmpty {
+                        Text("Also reaches \(s.resourceHosts.joined(separator: ", "))").dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                DSDoorRow(icon: "text.alignleft", title: Text("Show the whole message")) { whole = true }
+            } else {
+                if let s = BrowserEthereum.signIn(text), !s.isFor(host: host) {
+                    Text("This sign-in names \(s.site), not \(host).")
+                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Longer than the sheet, it scrolls.
+                ScrollView {
+                    Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
             Text(asCoSigner ? "Your co-signer's wallet signs it. It moves nothing."
                             : "Signing proves this is your account. It moves nothing.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
@@ -746,6 +785,8 @@ struct AztecAskSheet: View {
         case .ethConnect(_, let host): leadsWithCoSigner && reconnecting ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
                                      : leadsWithCoSigner ? String(localized: "Connect \(host) with your co-signer?")
                                      : String(localized: "Connect \(host) to your account?")
+        case .ethSign(_, let host, _) where signIn != nil:
+            asCoSigner ? String(localized: "Sign in to \(host) with your co-signer?") : String(localized: "Sign in to \(host)?")
         case .ethSign(_, let host, _): asCoSigner ? String(localized: "\(host) asks your co-signer to sign")
                                                   : String(localized: "\(host) asks your account to sign")
         case .ethSend(_, let host, _, _, _): asCoSigner ? String(localized: "\(host) wants your co-signer to send")
@@ -755,7 +796,7 @@ struct AztecAskSheet: View {
     }
 
     private var height: CGFloat {
-        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: 720; case .send, .ethSend, .ethTopUp: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
     }
 
     private var acceptWord: String {
@@ -775,6 +816,21 @@ struct AztecAskSheet: View {
         case .send, .ethSign, .ethSend, .ethTopUp: "faceid"
         }
     }
+    /// A sign-in's chain in words: Ethereum for 1, else its number.
+    static func chainName(_ id: String?) -> String {
+        guard let id, id != "1" else { return "Ethereum" }
+        return String(localized: "chain \(id)")
+    }
+
+    /// A sign-in's ISO 8601 time as the phone says a date and time; the
+    /// text itself when it is not one.
+    static func when(_ iso: String) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = f.date(from: iso) ?? { f.formatOptions = [.withInternetDateTime]; return f.date(from: iso) }()
+        return date.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? iso
+    }
+
     private var declineWord: String {
         switch ask { case .emoji: String(localized: "They don't"); default: String(localized: "Decline") }
     }

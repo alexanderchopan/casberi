@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1869 of 1941 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1871 of 1943 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2101,9 +2101,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k)
 - §1700j — An Aztec app finds Casberi at once; Connect and the emoji check are asked when you pick Casberi in the app, and hold…
-- §1700k — An Ethereum app on Aztec's list finds your account and may send from it: one call at a time, said in words, run first… (amended by §1700l)
+- §1700k — An Ethereum app on Aztec's list finds your account and may send from it: one call at a time, said in words, run first… (amended by §1700l, §1700n)
 - §1700l — An app that takes only a plain key's signature can sign you in with your co-signer: a quiet line on Connect, its own…
 - §1700m — Library's Wallet folder leads with Aztec's directory; the Wallet's Home keeps its door (extends §1700i)
+- §1700n — Apps on Aztec's browser says it is a Mac, so a RainbowKit picker draws Casberi under Installed
+- §1700o — A sign-in reads as a sign-in: the app's sentence, the account, the chain, until when and what else it reaches, the wh…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)
 - §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the f…
