@@ -20,7 +20,7 @@ Recurring sweep that catches regressions between working sessions. Everything ru
    - Sources (the apps catalogue and the counts box): `-deeplink casberi://apps`.
    - Rooms tray: `-openTray YES`; its search: `-openTray YES -traySearch "<words>"`.
    - Rooms: `-openRoom "<seat or category>"` (`Wallet`, `Work`, `Life`, `Your notes` — never "Notes", prd §975), with `-openSection <raw>` for a tile (Wallet: `home`, `holdings`, `activity`, `spending`, prd §1480 — give it ~15s, the tile lands about 5s after the room); `-walletScope <address | seat:Name>`, `-notesScope folders|voice`. Markets is deleted (prd §1529).
-   - Move tab (prd §1422): `-openRoom "you:move"` (its page; the demo has an account, §1475); `-openMove YES` raises its tray; `-movePreview create|recover|keys` for its other shapes; `-moveSendDraft`, `-moveSwapDraft` for a filled sentence.
+   - Move tab (prd §1422): `-openRoom "you:move"` (its page; the demo has an account, §1475); `-openMove YES` raises its tray; `-movePreview create|recover|keys|ready` for its other shapes, WITH `-openRoom "you:move"` (it is read only by the Move page's body; alone it lands on Feed, 2026-11-07); `-moveSendDraft`, `-moveSwapDraft` for a filled sentence.
    - Search tab: `-openComposer YES` (Find, its field and foot), `-openComposer YES -findProbe "<words>"` for a filled result (the probe fires only once the composer is open).
    - Note sheet: `-openNote YES` (with `-noteDraft "<text>"`, `-notePicture YES`, `-noteVoice YES` for its other shapes).
    - Contacts (the Contacts app's page, prd §1612): `-openAddresses YES`. What this app reaches: `-openReach YES` (`-seedReceipts YES` for an undeclared host).
