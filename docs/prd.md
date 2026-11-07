@@ -71283,7 +71283,21 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the sheet on the phone, at either height.
 
-## §1711 — The Wallet's rain names its private places: Railgun, Privacy Pools and your Aztec account fall because the pull asks them (extends §619) (user, 2026-11-07: "pull down to refresh in wallet should also show the Aztec icon, not just safe in the wallet icon on the tile rain", then "should probably also include the privacy pools one and rail gun since we're adding them")
+## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
+
+**Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.
+
+1. **The foot is the app icon** (`CasberiAppIcon`, `Design/CasberiMark.swift`): the image `tentacle.py` writes as `casberi-app-icon`, clipped to an icon's corner (22.5% of its side). Then "Casberi" in the brand ink and `casberi.app`, as before.
+2. **24pt, up from the mark's 20**, because the C sits inside its tile rather than filling the frame. At the card's 3× that is 72px from the 256px image.
+3. **One foot, every card.** A thing's card, a room's (`RoomShareCard`) and a folder's (`FolderShareCard`) all draw through `ShareCardView`, so all three change.
+4. **One view for the icon.** `YouFace`'s default face (§1708) and the card's foot both draw `CasberiAppIcon`, so the corner is one rule.
+5. The card's ground is `DS.surfaceRaised` resolved dark, so the black tile stands as a tile on it.
+
+**Mac half (§1402).** The card is shared, so the Mac's cards change with it.
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** a rendered card.
+
+## §1712 — The Wallet's rain names its private places: Railgun, Privacy Pools and your Aztec account fall because the pull asks them (extends §619) (user, 2026-11-07: "pull down to refresh in wallet should also show the Aztec icon, not just safe in the wallet icon on the tile rain", then "should probably also include the privacy pools one and rail gun since we're adding them")
 
 **The cause.** The rain is the roster of connected seats (`BridgeRefresh.roster`), narrowed to the Wallet category in its room. Railgun and 0xBow Privacy Pools are seats only once evidence lights them (§207, §268), though `WalletIngest.refresh` asks both for every followed address either way. Your Aztec account is no seat at all: `AztecAccountStore`, read by Holdings only when its reading is five minutes old. So a Wallet pull rained Wallet and Safe.
 

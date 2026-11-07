@@ -246,7 +246,7 @@ extension FeedScreen {
             : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
             : [source]
         // The private places the Wallet's pull asks: Railgun, Privacy Pools,
-        // your Aztec account (prd §1711).
+        // your Aztec account (prd §1712).
         if source == "All" || source == "Wallet" {
             roster = BridgeRefresh.privateRoster(after: roster)
         }

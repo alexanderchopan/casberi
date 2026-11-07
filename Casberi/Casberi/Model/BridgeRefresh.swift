@@ -93,7 +93,7 @@ enum BridgeRefresh {
             .filter { category == nil || CategoryFold.isMember($0, of: category!) }
     }
 
-    /// **THE PRIVATE PLACES A WALLET PULL ASKS, AND RAINS (prd §1711).**
+    /// **THE PRIVATE PLACES A WALLET PULL ASKS, AND RAINS (prd §1712).**
     /// `roster` names a seat only once it is lit, so the Wallet's pull rained
     /// Wallet and Safe (user, 2026-11-07: "should also show the Aztec icon,
     /// not just safe", then "also include the privacy pools one and rail

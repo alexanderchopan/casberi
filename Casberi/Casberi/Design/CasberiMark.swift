@@ -203,6 +203,23 @@ struct CasberiWordmark: View {
     }
 }
 
+/// The app icon itself, as the home screen shows it: §1708's cursive C on its
+/// black tile, the corner iOS gives an icon. `tentacle.py` writes the image
+/// (`casberi-app-icon`) from the icon's drawing. Worn where Casberi stands as
+/// itself to someone else: your default face (§1708) and every share card's
+/// foot (§1711).
+struct CasberiAppIcon: View {
+    var size: CGFloat = 28
+
+    var body: some View {
+        Image("casberi-app-icon")
+            .resizable().interpolation(.high)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
+            .accessibilityLabel(Text(verbatim: "Casberi"))
+    }
+}
+
 /// The mark on its own field, avatar-shaped — the app's face sitting where a
 /// person's photo will. The field is the icon's: black in dark, white in light,
 /// so the arm always reads and its suckers always punch.

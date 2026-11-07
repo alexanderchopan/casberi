@@ -328,7 +328,7 @@ final class PrivateMoneyStore {
     /// The dollars Holdings' rows draw, read when they show.
     func readPrices() async { _ = await walletHolding() }
 
-    /// **A PULL ON THE WALLET ASKS YOUR PRIVATE BALANCE** (prd §1711): the
+    /// **A PULL ON THE WALLET ASKS YOUR PRIVATE BALANCE** (prd §1712): the
     /// ASP for every note still waiting, then the prices, and says whether it
     /// asked, which is when 0xBow's tile falls. Never in the demo.
     func pull() -> Bool {

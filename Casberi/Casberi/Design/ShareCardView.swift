@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The share card's drawing (docs/social-spec.md section 2). Four zones, top to
 /// bottom: the seat or the author, the picture if there is one, the words,
-/// and a foot pinned to the bottom that carries the mark and the app's name
+/// and a foot pinned to the bottom that carries the app icon and the app's name
 /// in the brand ink (and `casberi.app`, quieter, on the far edge) — the one place the brand hue lands on the card, because
 /// the foot is the app's voice and the words above are the thing's (§742).
 ///
@@ -211,12 +211,14 @@ struct ShareCardView: View {
         .padding(.bottom, 10)
     }
 
-    /// The mark and the name in the brand ink, and the address where the
+    /// The app icon and the name in the brand ink, and the address where the
     /// app lives on the far edge — the card is the one thing about Casberi
-    /// the person on the other end sees, so it says where to find it.
+    /// the person on the other end sees, so it shows the icon they will look
+    /// for on the App Store and says where to find it (prd §1711). The tile
+    /// is 24pt, not the old mark's 20, because the C sits inside its tile.
     private var foot: some View {
         HStack(spacing: 8) {
-            CasberiMark(size: 20)
+            CasberiAppIcon(size: 24)
             Text(verbatim: "Casberi")
                 .dsText(.label12)
                 .foregroundStyle(ink.brand)
