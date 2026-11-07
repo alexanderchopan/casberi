@@ -71282,3 +71282,17 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the sheet on the phone, at either height.
+
+## §1711 — Your Aztec account falls in the Wallet's rain, because the pull asks it (extends §619) (user, 2026-11-07: "pull down to refresh in wallet should also show the Aztec icon, not just safe in the wallet icon on the tile rain")
+
+**The cause.** The rain is the roster of connected seats (`BridgeRefresh.roster`), narrowed to the Wallet category in its room. Your Aztec account is no seat: it is `AztecAccountStore`, read by the Wallet's Private and Tokens places only when their last reading is five minutes old. So a Wallet pull rained Wallet and Safe, and did not ask Aztec at all.
+
+**Ruling.**
+1. **A pull on the Wallet or on All asks your Aztec account** (`AztecAccountStore.pull`): its holdings again, whatever the reading's age, then their prices.
+2. **Its tile falls when it was asked**, after the seats, as `brand-aztec` (`AztecAccountStore.walletSymbol`, "Aztec"). No account in use, no tile.
+3. **The demo rains it and reads nothing**, as every demo seat rains and reads nothing.
+4. The Library tab's pull and the launch sweep do not boot the engine, so they rain no Aztec: the tile stands only where the account was asked (§619).
+
+**Mac half (§1402).** None: the Mac has no prover (`AztecProver.isAvailable`), so its pull cannot ask the account and rains no Aztec. The demo's sample account rains on both.
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the shower on the phone.

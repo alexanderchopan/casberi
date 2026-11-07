@@ -285,6 +285,24 @@ final class AztecAccountStore {
         }
     }
 
+    /// **A PULL ON THE WALLET ASKS THE ACCOUNT** (user, 2026-11-07: the rain
+    /// "should also show the Aztec icon, not just safe"). Reads the holdings
+    /// again and their prices, whatever the last reading's age, and says
+    /// whether the account was asked, which is when its tile falls (prd §619:
+    /// the rain is the apps the pull asks). The demo's account is sample data
+    /// and reads nothing, as every demo seat rains and reads nothing; a build
+    /// with no prover (the Mac) cannot ask, so it rains no Aztec.
+    func pull() -> Bool {
+        guard isShown else { return false }
+        if DemoMode.isActive { return true }
+        guard AztecProver.isAvailable else { return false }
+        Task { @MainActor in
+            await refresh()
+            _ = await walletHolding()
+        }
+        return true
+    }
+
     private static func holding(_ row: [String: Any]) -> Holding? {
         guard let kind = (row["kind"] as? String).flatMap(Holding.Kind.init), let address = row["address"] as? String else { return nil }
         return Holding(kind: kind, address: address,

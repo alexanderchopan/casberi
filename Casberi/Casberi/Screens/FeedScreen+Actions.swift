@@ -241,10 +241,16 @@ extension FeedScreen {
         // is deleted with the berries; the wallet's stop still travels on
         // `chrome.pourHue` (set by `land()`), which is what retints the
         // crown (§159) and was always the stronger telling of the same fact.
-        let roster: [String] = source == "All"
+        var roster: [String] = source == "All"
             ? BridgeRefresh.roster(store: bridges)
             : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
             : [source]
+        // Your Aztec account is no seat, so the roster above never named it:
+        // the Wallet's pull rained Wallet and Safe alone (user, 2026-11-07).
+        // The pull asks it now (`AztecAccountStore.pull`), so it falls too.
+        if source == "All" || source == "Wallet", AztecAccountStore.shared.pull() {
+            roster.append(AztecAccountStore.walletSymbol)
+        }
         chrome.rain(sources: roster)   // spins the avatar door, deals the shower
         await refreshFeed()
     }

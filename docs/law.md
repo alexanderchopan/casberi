@@ -247,7 +247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1871 of 1943 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1872 of 1944 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2120,6 +2120,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i…
 - §1709 — Permissions and Threats stand on Wallet Home at once: Threats from the phone, Permissions from its last reading, stam…
 - §1710 — Permissions' box is your balance, reached: one disc is what the wallets hold, a delegate or module that reaches all o…
+- §1711 — Your Aztec account falls in the Wallet's rain, because the pull asks it (extends §619)
 
 ## Dead rulings → what replaced them (generated)
 
