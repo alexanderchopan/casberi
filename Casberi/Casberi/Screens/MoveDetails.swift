@@ -180,7 +180,7 @@ struct MoveDetails: View {
                     }
                 }
                 if !checkedWith.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Checked with").dsText(.body17).foregroundStyle(DS.textSecondary)
                         ForEach(checkedWith, id: \.self) { line in
                             Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
