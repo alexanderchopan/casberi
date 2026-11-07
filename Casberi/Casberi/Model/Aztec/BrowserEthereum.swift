@@ -58,6 +58,17 @@ enum BrowserEthereum {
     })();
     """#
 
+    /// **Apps on Aztec's browser says it is a Mac (prd §1700n).** RainbowKit
+    /// (Olla's picker) decides phone or desktop from the user agent alone,
+    /// and its phone layout draws only the wallets the app lists, dropping
+    /// every EIP-6963 announcement; its desktop layout adds them under
+    /// "Installed". So the browser that may send sends Safari's Mac agent,
+    /// as iPad Safari does: no "iPhone", "iPod", "iPad" or "Android" in it,
+    /// Safari's `Version/… Safari/` kept, the version this phone's own.
+    static func desktopAgent(majorVersion: Int) -> String {
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/\(majorVersion).0 Safari/605.1.15"
+    }
+
     /// What a request needs from the person, if anything.
     enum Need: Equatable {
         /// Answered from what the app knows (chain, accounts, a refusal).
