@@ -34,6 +34,7 @@ import { sha256ToField } from '@aztec-labs/foundation/crypto/sha256';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 import { WALLET_ICON } from './icon.js';
+import { receiptOut, sentOut, feePayer, feeUnits, transferCall, addressValid, describeCalls } from './aztec-tx.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -218,6 +219,8 @@ const own = {
           decimals: decimalsRaw == null ? null : Number(BigInt((decimalsRaw.value ?? decimalsRaw).toString())),
           private: await read(token, 'balance_of_private'),
           public: names.has('balance_of_public') ? await read(token, 'balance_of_public') : null,
+          // Whether Casberi can send it privately (prd §1711 item 3).
+          sendable: transferCall(artifact) != null,
         });
       } catch (e) {
         log('holdingSkipped', { address: address.toString(), error: String(e?.message ?? e).slice(0, 160) });
@@ -252,7 +255,7 @@ const own = {
     const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
     const { receipt } = await fj.methods.check_balance(0n).send({ from: me, fee: { paymentMethod }, wait: { waitForStatus: 'proposed', timeout: 1800 } });
     log('feeJuiceClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+    return receiptOut(receipt);
   },
   // SHIELD INTO AZTEC (prd §1700e): the deposit's claim secret, derived from
   // the root and a nonce like gas's, and the claim on Aztec once the bridge's
@@ -277,22 +280,39 @@ const own = {
       .claim_private(me, BigInt(amount), await derivedSecret(`shield/${nonce}`), BigInt(leafIndex))
       .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
     log('shieldClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+    return receiptOut(receipt);
   },
   // A private send inside Aztec (prd §1700e): Shield's token, account to
   // account, no one's permission; the app has asked Face ID before calling.
   async sendPrivately(symbol, to, units) {
-    const wallet = await getWallet();
-    await registerShield(wallet);
     const asset = SHIELD.assets.find(a => a.symbol === symbol);
     if (!asset) throw new Error(`no ${symbol} on Aztec`);
+    return own.sendToken(asset.token, to, units);
+  },
+  // ANY TOKEN THE ACCOUNT HOLDS (prd §1711 item 3): sent privately by its
+  // contract, through the transfer its own interface offers (aztec-tx.js),
+  // to an address anyone can receive at. A token whose interface offers no
+  // private transfer is refused, never guessed at.
+  async sendToken(tokenAddress, to, units) {
+    const wallet = await getWallet();
+    await registerShield(wallet).catch(() => {});
+    if (!(await addressValid(AztecAddress, to))) throw new Error('No one can receive at this Aztec address');
+    const address = AztecAddress.fromStringUnsafe(tokenAddress);
+    const instance = await wallet.pxe.getContractInstance(address);
+    const classId = instance?.currentContractClassId ?? instance?.originalContractClassId;
+    const artifact = classId && (await wallet.pxe.getContractArtifact(classId));
+    const transfer = artifact && transferCall(artifact);
+    if (!transfer) throw new Error('This token cannot be sent from Casberi');
     const me = AztecAddress.fromStringUnsafe(accountAddress);
-    const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
-    const { receipt } = await token.methods
-      .transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n)
+    const token = await Contract.at(address, artifact, wallet);
+    const { receipt } = await token.methods[transfer.name](...transfer.args(me, AztecAddress.fromStringUnsafe(to), BigInt(units)))
       .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
-    log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+    log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status, via: transfer.name });
+    return receiptOut(receipt);
+  },
+  // Whether an Aztec address can receive at all (prd §1711 item 5).
+  async addressValid(text) {
+    return { valid: await addressValid(AztecAddress, text) };
   },
   // SHIELD OUT OF AZTEC (prd §1700b, §1700d): read from Shield's own client.
   // The bridge checks Shield's signed Passport limit (an Aztec signature over
@@ -330,7 +350,7 @@ const own = {
       rollupVersion: new Fr(BigInt(info.rollupVersion)), chainId: new Fr(BigInt(info.l1ChainId)),
     });
     log('shieldExited', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), block: String(receipt.blockNumber ?? ''), message: message.toString(),
+    return { tx: receipt.txHash.toString(), fee: receiptOut(receipt).fee, block: String(receipt.blockNumber ?? ''), message: message.toString(),
              outbox: info.l1ContractAddresses?.outboxAddress?.toString() ?? null };
   },
   // Once the epoch holding the exit is proven on Ethereum: where its message
@@ -363,18 +383,32 @@ let asks = 0;
 const waiting = new Map();
 
 // What the sheet says about a transaction, read from the request itself: each
-// call's function and contract, private or public, and who pays the fee. (A
-// private call can start public steps of its own; they are not read yet, so
-// the sheet does not claim to know them.)
-const tail = a => '...' + String(a ?? '').slice(-4);
-function describe(args) {
-  const calls = (args?.[0]?.calls ?? []).map(c => ({ name: c.name, to: tail(c.to), type: c.type }));
-  return { calls, fee: 'Paid from your Fee Juice' };
+// call's function and contract, private or public; who pays the fee; and,
+// for a send, what it costs at today's prices from a simulation run first
+// (prd §1711 item 2). (A private call can start public steps of its own;
+// they are not read yet, so the sheet does not claim to know them.)
+async function feeFor(wallet, payload, opts) {
+  try {
+    const simulated = wallet.simulateTx(payload, { from: opts?.from, additionalScopes: opts?.additionalScopes });
+    const timeout = new Promise((_, no) => setTimeout(() => no(new Error('the simulation took too long')), 20000));
+    const result = await Promise.race([simulated, timeout]);
+    return feeUnits(result.gasUsed, await wallet.aztecNode.getCurrentMinFees());
+  } catch (e) {
+    log('feeUnknown', { error: String(e?.message ?? e).slice(0, 160) });
+    return null;
+  }
 }
 
-function askPerson(method, args, origin) {
+async function describe(wallet, method, parsed) {
+  if (method !== 'sendTx') return { calls: [], feeBy: 'you', feeUnits: null };
+  const [payload, opts] = parsed;
+  const by = feePayer(payload, opts?.from);
+  return { calls: describeCalls(payload), feeBy: by, feeUnits: by === 'app' ? null : await feeFor(wallet, payload, opts) };
+}
+
+function askPerson(method, origin, described) {
   const id = ++asks;
-  native('engineApprove', { id, method, origin, ...describe(args) });
+  native('engineApprove', { id, method, origin, ...described });
   return new Promise(resolve => waiting.set(id, resolve));
 }
 
@@ -390,15 +424,22 @@ async function callForApp(method, args, origin) {
     };
   }
   if (typeof wallet[method] !== 'function') throw new Error(`Unknown wallet method: ${method}`);
-  if (!READS.has(method)) {
-    const yes = await askPerson(method, args, origin);
-    log('approval', { method, yes });
-    if (!yes) throw new Error(`The person declined ${method}`);
-  }
   const parsed = schemaHasMethod(WalletSchema, method)
     ? await parseWithOptionals(args ?? [], getSchemaParameters(WalletSchema[method]))
     : args ?? [];
+  let described = null;
+  if (!READS.has(method)) {
+    described = await describe(wallet, method, parsed);
+    const yes = await askPerson(method, origin, described);
+    log('approval', { method, yes });
+    if (!yes) throw new Error(`The person declined ${method}`);
+  }
   const result = await wallet[method](...parsed);
+  // A send an app made lands in the Wallet's Activity (prd §1711 item 1).
+  if (method === 'sendTx') {
+    const out = sentOut(result);
+    if (out.tx) native('engineSent', { origin, ...out, calls: described?.calls ?? [] });
+  }
   return result === undefined ? undefined : JSON.parse(jsonStringify(result));
 }
 

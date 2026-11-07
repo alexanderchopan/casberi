@@ -493,6 +493,10 @@ struct RootShell: View {
             // relay socket — the peer never starts for a phone that signs
             // nothing.
             SafePeer.startIfNeeded { modelContext }
+            // Your Aztec account's transactions land in Activity (prd §1711);
+            // one kept while no store was there lands now.
+            AztecActivity.contextProvider = { modelContext }
+            AztecActivity.landAll()
             // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
             // retired, docs/agent-brief.md rulings 11-12; reverted to
             // "always All" 2026-07-28 per user feedback — the §131 amendment

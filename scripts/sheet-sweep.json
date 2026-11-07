@@ -1633,6 +1633,12 @@
   },
   {
    "covers": [
+    "Screens/AztecBrowser.swift:model.ask#ethTopUp"
+   ],
+   "why": "your co-signer short of ETH for an app's send (prd §1700l item 10): raised only when a live app page in Apps on Aztec's browser asks your co-signer to send and its run finds the co-signer holding less than the value and a fee; the demo opens no app and the sweep cannot be one, as the other asks of that browser"
+  },
+  {
+   "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#aztecApps"
    ],
    "why": "Apps on Aztec (prd §1700i): the Wallet Home door stands only with an Aztec account on an iPhone and never in the demo (`AztecApps.doorShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` the link door opens (seen with `-aztecBrowser`)"
