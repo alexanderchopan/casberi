@@ -1711,6 +1711,34 @@
         }
       }
     },
+    "%@ ETH from your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH de tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者から %@ ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자의 %@ ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自你的共同签名人的 %@ ETH"
+          }
+        }
+      }
+    },
     "%@ ETH in your account" : {
       "localizations" : {
         "es" : {
@@ -64922,6 +64950,34 @@
         }
       }
     },
+    "Casberi sends %@ ETH from your account to your co-signer, then asks it to send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi envía %@ ETH de tu cuenta a tu cofirmante y luego le pide que envíe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi がアカウントから共同署名者に %@ ETH を送り、その後送信を依頼します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 계정에서 공동 서명자에게 %@ ETH를 보낸 뒤 전송을 요청합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 从你的账户向共同签名人发送 %@ ETH，然后请它发送。"
+          }
+        }
+      }
+    },
     "Casberi settings" : {
       "localizations" : {
         "es" : {
@@ -69054,6 +69110,34 @@
         }
       }
     },
+    "Connect %@ with your co-signer?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Conectar %@ con tu cofirmante?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を共同署名者で接続しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 공동 서명자로 연결할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用你的共同签名人连接 %@？"
+          }
+        }
+      }
+    },
     "Connect %@?" : {
       "localizations" : {
         "es" : {
@@ -69611,6 +69695,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仍然连接你的账户"
+          }
+        }
+      }
+    },
+    "Connect your account instead" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar tu cuenta en su lugar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代わりにアカウントを接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대신 계정 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "改为连接你的账户"
           }
         }
       }
@@ -113797,6 +113909,34 @@
         }
       }
     },
+    "Move %@ ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover %@ ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH を移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转移 %@ ETH"
+          }
+        }
+      }
+    },
     "Move %@ into your Aztec account" : {
       "localizations" : {
         "es" : {
@@ -113905,6 +114045,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将 AZTEC 转入你的 Aztec 账户用作 Gas"
+          }
+        }
+      }
+    },
+    "Move ETH to your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover ETH a tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者に ETH を移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에게 ETH 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "把 ETH 转给你的共同签名人"
           }
         }
       }
@@ -114689,6 +114857,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "移动…"
+          }
+        }
+      }
+    },
+    "Moving ETH to your co-signer…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moviendo ETH a tu cofirmante…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者に ETH を移しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에게 ETH를 옮기는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在把 ETH 转给你的共同签名人…"
           }
         }
       }
@@ -183889,6 +184085,34 @@
         }
       }
     },
+    "The ETH for your co-signer is on its way. Try again once it lands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El ETH para tu cofirmante está en camino. Vuelve a intentarlo cuando llegue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者への ETH は送信中です。届いたらもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에게 보낼 ETH가 전송 중입니다. 도착하면 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "给你的共同签名人的 ETH 正在途中。到账后请重试。"
+          }
+        }
+      }
+    },
     "The GPL" : {
       "localizations" : {
         "es" : {
@@ -192894,6 +193118,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这在 %@ 上会失败,因此没有签署任何内容"
+          }
+        }
+      }
+    },
+    "This would fail on Ethereum from your co-signer (%@), so nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto fallaría en Ethereum desde tu cofirmante (%@), así que no se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者（%@）からでは Ethereum 上で失敗するため、何も送信されませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자(%@)에서 이더리움 실행이 실패하므로 아무것도 보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的共同签名人（%@）在以太坊上执行会失败，因此未发送任何内容。"
           }
         }
       }
@@ -214103,6 +214355,34 @@
         }
       }
     },
+    "You signed in here with your co-signer (%@) before." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Antes iniciaste sesión aquí con tu cofirmante (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前ここで共同署名者（%@）でサインインしました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전에 여기서 공동 서명자(%@)로 로그인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你之前在这里用共同签名人（%@）登录过。"
+          }
+        }
+      }
+    },
     "You signed in to %@ as your Safe, from this phone" : {
       "localizations" : {
         "es" : {
@@ -218345,6 +218625,34 @@
         }
       }
     },
+    "Your co-signer (%@) holds %@ ETH. This needs %@ ETH and its fee." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante (%1$@) tiene %2$@ ETH. Esto necesita %3$@ ETH y su comisión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者（%1$@）の残高は %2$@ ETH です。これには %3$@ ETH と手数料が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자(%1$@)의 잔액은 %2$@ ETH입니다. 이 작업에는 %3$@ ETH와 수수료가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人（%1$@）持有 %2$@ ETH。这需要 %3$@ ETH 及手续费。"
+          }
+        }
+      }
+    },
     "Your co-signer approves this, and none is set" : {
       "localizations" : {
         "es" : {
@@ -218425,6 +218733,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人未签名"
+          }
+        }
+      }
+    },
+    "Your co-signer needs ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante necesita ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者に ETH が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에게 ETH가 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人需要 ETH"
+          }
+        }
+      }
+    },
+    "Your co-signer sends" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante envía"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 전송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人发送"
+          }
+        }
+      }
+    },
+    "Your co-signer signs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人签名"
           }
         }
       }

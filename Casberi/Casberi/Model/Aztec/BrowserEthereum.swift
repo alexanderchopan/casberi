@@ -141,6 +141,26 @@ enum BrowserEthereum {
         return "0x" + (hex.isEmpty ? "0" : String(hex.reversed()))
     }
 
+    /// **The co-signer's shortfall for an app's send (prd §1700l item 10).**
+    /// What it must be sent so it can pay `value` and its fee: the value, plus
+    /// `topUpGas` at twice today's gas price, less what it holds, rounded up
+    /// to a whole 0.0001 ETH so the amount reads cleanly. Nil when it already
+    /// holds that much (a send that still fails, fails for another reason).
+    static let topUpGas: Decimal = 300_000
+
+    static func topUp(balanceHex: String, valueWei: String, gasPriceHex: String) -> String? {
+        guard let b = decimal(hexQuantity: balanceHex).flatMap({ Decimal(string: $0) }),
+              let v = Decimal(string: valueWei),
+              let p = decimal(hexQuantity: gasPriceHex).flatMap({ Decimal(string: $0) }) else { return nil }
+        let need = v + p * topUpGas * 2
+        guard need > b else { return nil }
+        let step = Decimal(string: "100000000000000")!
+        var steps = (need - b) / step
+        var whole = Decimal()
+        NSDecimalRound(&whole, &steps, 0, .up)
+        return NSDecimalNumber(decimal: whole * step).stringValue
+    }
+
     /// A transaction hash as a wallet answers one.
     static func isTransactionHash(_ s: String) -> Bool {
         s.count == 66 && s.hasPrefix("0x") && s.dropFirst(2).allSatisfy(\.isHexDigit)

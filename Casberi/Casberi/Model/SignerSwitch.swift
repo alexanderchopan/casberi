@@ -36,6 +36,15 @@ enum SignerSwitch {
                           Wallet(name: "OKX", scheme: "okxwallet", path: "main/"),
                           Wallet(name: "OKX", scheme: "okex", path: "main/")]
 
+    /// The wallet a session's peer names itself as ("MetaMask Wallet",
+    /// "Coinbase Wallet", "Rainbow"), so the co-signer's own wallet can be
+    /// opened onto a fresh pairing with no tap (prd §1700l item 12); nil for
+    /// one not in `wallets`.
+    static func wallet(peerName: String) -> Wallet? {
+        let name = peerName.lowercased()
+        return wallets.first { name.contains($0.name.lowercased()) }
+    }
+
     /// A door onto a pairing: a named wallet's own link, or (`wallet` nil)
     /// the bare `wc:` link whichever app claims the scheme takes.
     struct Door: Equatable, Sendable {

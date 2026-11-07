@@ -69,6 +69,11 @@ check(okx.count == 1 && okx[0].url.absoluteString.hasPrefix("okxwallet://main/wc
 let okex = SignerSwitch.doors(pairing: pairing, installed: { $0.scheme == "okex" })
 check(okex.count == 1 && okex[0].url.absoluteString.hasPrefix("okex://main/wc?uri="), "the OKX app alone: its own main/ link")
 check(!some.contains { $0.wallet == nil }, "with a wallet installed, no bare wc: door")
+// The co-signer's wallet named by its session (prd §1700l item 12).
+check(SignerSwitch.wallet(peerName: "MetaMask Wallet")?.scheme == "metamask", "MetaMask Wallet read as MetaMask")
+check(SignerSwitch.wallet(peerName: "Coinbase Wallet")?.scheme == "cbwallet", "Coinbase Wallet read as Base")
+check(SignerSwitch.wallet(peerName: "rainbow")?.scheme == "rainbow", "a lower-case name read")
+check(SignerSwitch.wallet(peerName: "Trust Wallet") == nil, "a wallet not in the list opens nothing")
 
 print("how an ending treats the session")
 check(SignerSwitch.closes(.switched), "Use another wallet lets the session go")

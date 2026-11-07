@@ -27,7 +27,7 @@ struct SignerRequestSheet: View {
     private let onPhone = UIDevice.current.userInterfaceIdiom == .phone
 
     var body: some View {
-        DSTray(title: signer == nil ? String(localized: "Your Signer") : String(localized: "Your Signer signs too"),
+        DSTray(title: ask.title ?? (signer == nil ? String(localized: "Your Signer") : String(localized: "Your Signer signs too")),
                height: onPhone ? 420 : 600, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 if ask.kept {
@@ -212,8 +212,9 @@ struct SignerRequestSheet: View {
     /// `work` with the sheet it raises (`SignerAsk`): Cancel or pulling the
     /// sheet down cancels `work` and throws `CancellationError`; the sheet
     /// comes down however `work` ends (prd §1601).
-    static func asking<T: Sendable>(signer: String?, _ work: @escaping @Sendable (SignerAsk) async throws -> T) async throws -> T {
-        let ask = await MainActor.run { SignerAsk(signer: signer) }
+    static func asking<T: Sendable>(signer: String?, title: String? = nil,
+                                    _ work: @escaping @Sendable (SignerAsk) async throws -> T) async throws -> T {
+        let ask = await MainActor.run { SignerAsk(signer: signer, title: title) }
         let task = Task { try await work(ask) }
         await MainActor.run {
             ask.stop = { task.cancel() }
@@ -356,6 +357,9 @@ struct SignerRequestSheet: View {
 final class SignerAsk {
     /// Nil while one is being chosen (prd §1457): any wallet's first address.
     let signer: String?
+    /// The sheet's title when the ask is not the Signer co-signing a send
+    /// (an app's sign-in or send by the co-signer, prd §1700l item 12).
+    let title: String?
     private(set) var link: URL?
     private(set) var door: URL?
     private(set) var kept = false
@@ -375,8 +379,9 @@ final class SignerAsk {
     @ObservationIgnored private var close: (@MainActor () -> Void)?
     @ObservationIgnored private var closing = false
 
-    init(signer: String?) {
+    init(signer: String?, title: String? = nil) {
         self.signer = signer
+        self.title = title
     }
 
     /// The ask listens for Use another wallet (prd §1644).

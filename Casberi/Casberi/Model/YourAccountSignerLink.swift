@@ -176,6 +176,20 @@ enum YourAccountSignerLink {
         }
     }
 
+    /// The wallet holding `signer`, from a session it settled before (the
+    /// Signer's kept one, or any other naming that address): the co-signer's
+    /// wallet is opened onto a fresh pairing with no tap (prd §1700l item 12).
+    static func walletHolding(_ signer: String) -> SignerSwitch.Wallet? {
+        guard WalletConnectBridge.isAvailable else { return nil }
+        WalletConnectBridge.configureIfNeeded()
+        for session in Sign.instance.getSessions() {
+            let accounts = session.namespaces[WalletConnectBridge.evmNamespace]?.accounts ?? []
+            guard accounts.contains(where: { $0.address.caseInsensitiveCompare(signer) == .orderedSame }) else { continue }
+            if let wallet = SignerSwitch.wallet(peerName: session.peer.name) { return wallet }
+        }
+        return nil
+    }
+
     /// What a failed ask means for its session (prd §1644), or nil for an
     /// answer (a refusal, a malformed signature) that leaves it as it is.
     /// A cancelled ask is the person's, whatever the request threw.

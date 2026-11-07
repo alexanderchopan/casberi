@@ -175,6 +175,12 @@ check(BrowserEthereum.hexQuantity(decimal: "0") == "0x0", "zero not 0x0")
 let maxWei = "115792089237316195423570985008687907853269984665640564039457584007913129639935"
 check(BrowserEthereum.hexQuantity(decimal: maxWei).flatMap { BrowserEthereum.decimal(hexQuantity: $0) } == maxWei, "uint256 max does not survive decimal to hex and back")
 check(BrowserEthereum.hexQuantity(decimal: "12a") == nil && BrowserEthereum.hexQuantity(decimal: "") == nil, "a value that is not digits sent")
+// The co-signer's shortfall (prd §1700l item 10): 0.01 ETH at 1 gwei from
+// nothing needs 0.01 + 0.0006 (300,000 gas, twice the price); enough needs none.
+check(BrowserEthereum.topUp(balanceHex: "0x0", valueWei: "10000000000000000", gasPriceHex: "0x3b9aca00") == "10600000000000000", "an empty co-signer's top-up misread")
+check(BrowserEthereum.topUp(balanceHex: "0x2386f26fc10000", valueWei: "10000000000000000", gasPriceHex: "0x3b9aca00") == "600000000000000", "a top-up not just the difference")
+check(BrowserEthereum.topUp(balanceHex: "0xde0b6b3a7640000", valueWei: "10000000000000000", gasPriceHex: "0x3b9aca00") == nil, "a funded co-signer asked to be topped up")
+check(BrowserEthereum.topUp(balanceHex: "0x0", valueWei: "1", gasPriceHex: "0x0") == "100000000000000", "a top-up not rounded up to 0.0001 ETH")
 check(BrowserEthereum.isTransactionHash("0x" + String(repeating: "ab", count: 32)) && !BrowserEthereum.isTransactionHash("0x1234"), "a transaction hash misread")
 check(BrowserEthereum.asCoSigner(method: "eth_requestAccounts", connected: true, sends: true).connected == false, "connecting again is not asked again")
 check(BrowserEthereum.asCoSigner(method: "wallet_requestPermissions", connected: true, sends: true).connected == false, "permissions again are not asked again")
@@ -216,6 +222,11 @@ grep -q '"eth_estimateGas", \[tx\]' Casberi/Casberi/Screens/AztecBrowser.swift \
   || { echo "✗ the co-signer's send asks its wallet without running first (prd §1700l item 9)"; exit 1; }
 grep -q 'guard tx\["from"\]?.caseInsensitiveCompare(signer) == .orderedSame' Casberi/Casberi/Model/YourAccountSignerLink.swift \
   || { echo "✗ the co-signer's wallet is asked to send from another address (prd §1700l item 9)"; exit 1; }
+# A co-signer that cannot pay is offered a top-up from your account, and the
+# send runs again before its wallet is asked (prd §1700l item 10).
+grep -q 'if let toppedUp = await topUp(signer: signer, value: value, host: host)' Casberi/Casberi/Screens/AztecBrowser.swift \
+  && grep -q 'guard await runsFrom(tx) else' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ the co-signer's top-up is skipped, or its send is not run again (prd §1700l item 10)"; exit 1; }
 # Connected, the request goes and the wallet is opened onto it, with Ask
 # again: a wallet left in the background misses it (prd §1700l item 6).
 grep -q 'await sent(door(of: pairing.topic))' Casberi/Casberi/Model/YourAccountSignerLink.swift \
@@ -240,6 +251,7 @@ pmutate "send from any account" 's/from\.lowercased\(\) != account\.lowercased\(
 pmutate "value divided wrong" 's/let q = n \/ 10/let q = n \/ 16/'
 pmutate "every approval unlimited" 's/unlimited: amountWord\.prefix\(2\) == "ff"/unlimited: true/'
 pmutate "the co-signer sends anywhere" 's/\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\), sends\)/["eth_requestAccounts", "wallet_requestPermissions"].contains(method), true)/'
+pmutate "a top-up without the fee" 's/let need = v \+ p \* topUpGas \* 2/let need = v/'
 pmutate "a wei value read as hex wrong" 's/let q = cur \/ 16/let q = cur \/ 10/'
 pmutate "a retry never asked again" 's/return since >= 0 && since < retryWindow/return false/'
 pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
@@ -259,4 +271,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 8 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 9 mutations caught)"
