@@ -163,19 +163,30 @@ struct MoveDetails: View {
     // MARK: - The warnings
 
     /// "Found", every warning in its ink; "Checked with", the lists and the
-    /// services asked, and the date of the list.
+    /// services asked, and the date of the list. Always TWO headings: under
+    /// one "Found", the sources read as findings ("Found: OFAC's sanctions
+    /// list") — a person took a first-send warning for a sanctions hit.
     @ViewBuilder private var foundRows: some View {
         if !warnings.isEmpty || !checkedWith.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(warnings.isEmpty ? "Checked with" : "Found").dsText(.body17).foregroundStyle(DS.textSecondary)
-                ForEach(Array(warnings.enumerated()), id: \.offset) { _, w in
-                    Text(verbatim: w.text).dsText(.body17)
-                        .foregroundStyle(w.red ? DS.destructiveInk : DS.attentionInk)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                if !warnings.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text("Found").dsText(.body17).foregroundStyle(DS.textSecondary)
+                        ForEach(Array(warnings.enumerated()), id: \.offset) { _, w in
+                            Text(verbatim: w.text).dsText(.body17)
+                                .foregroundStyle(w.red ? DS.destructiveInk : DS.attentionInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
-                ForEach(checkedWith, id: \.self) { line in
-                    Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                if !checkedWith.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text("Checked with").dsText(.body17).foregroundStyle(DS.textSecondary)
+                        ForEach(checkedWith, id: \.self) { line in
+                            Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
