@@ -120,7 +120,8 @@ every messaging and social surface previews whole. One frame, no scroll.
    no picture — the rung is chosen by fit, never by character count, §766 (its amendment)),
    then `postText` / the lede / `content` in `body17`, capped by the box,
    never a count.
-4. The foot, pinned to the bottom: `CasberiMark(size: 20)` and the word
+4. The foot, pinned to the bottom: the app icon (`CasberiAppIcon(size: 24)`,
+   §1711; `CasberiMark(size: 20)` until 2026-11-07) and the word
    "Casberi" in `DS.brandInk`. This is the one place the brand hue lands on a
    card — the foot is the app's voice, the words above are the thing's
    (§742).
@@ -190,7 +191,7 @@ named, not you, with a phone or an email (their Contacts card's `.call` /
 Messages when there is a phone, else Mail (`ShareTray.recipient(for:context:)`).
 When the card cannot be drawn, `Share…` still stands and carries the link, or
 the title in words; the tray never spins with no door. The card's foot carries
-`casberi.app` on its far edge, quieter than the mark.
+`casberi.app` on its far edge, quieter than the icon.
 
 **Amended 2026-10-17 (prd §1370, the tray is deleted).** The Share disc raises
 the system share sheet directly, with the card and the link as two items

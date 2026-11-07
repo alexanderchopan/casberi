@@ -220,12 +220,8 @@ struct YouFace: View {
         } else {
             // The app icon itself, as the home screen shows it (prd §1708
             // item 6, user: "the 'library' default icon should be the new app
-            // icon too"): `tentacle.py` writes it from the icon's drawing.
-            Image("casberi-app-icon")
-                .resizable().interpolation(.high)
-                .frame(width: size, height: size)
-                .clipShape(RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
-                .accessibilityLabel(Text(verbatim: "Casberi"))
+            // icon too").
+            CasberiAppIcon(size: size)
         }
     }
 }
