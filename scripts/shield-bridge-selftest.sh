@@ -29,7 +29,8 @@
 #   hash signed dressed as a message. In Apps on Aztec's browser it sends
 #   (prd §1700k): only there, only connected, only from your account on
 #   Ethereum to a named address, the value read exactly, an approval read
-#   with its limit, and never a raw transaction or a batch.
+#   with its limit, and never a raw transaction or a batch. That browser says
+#   it is a Mac (prd §1700n), so RainbowKit's phone picker does not drop Casberi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -194,6 +195,12 @@ check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedA
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: signed, now: signed.addingTimeInterval(400), hasCoSigner: true), "asked again long after the sign-in")
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_requestAccounts", signedAt: nil, now: signed, hasCoSigner: true), "asked again with no sign-in")
 check(!BrowserEthereum.asksAgainAfterSign(method: "eth_accounts", signedAt: signed, now: signed.addingTimeInterval(20), hasCoSigner: true), "a read of accounts asked again")
+// Apps on Aztec's browser says it is a Mac (prd §1700n): RainbowKit's
+// isMobile() and its isSafari() read the agent alone.
+let agent = BrowserEthereum.desktopAgent(majorVersion: 26)
+check(agent.range(of: "iPhone|iPod|iPad|android", options: [.regularExpression, .caseInsensitive]) == nil, "the agent reads as a phone to RainbowKit")
+check(agent.range(of: #"Version/([0-9._]+).*Safari"#, options: .regularExpression) != nil, "the agent is not Safari's")
+check(agent.contains("Macintosh") && agent.contains("Version/26.0 "), "the agent is not this phone's Safari on a Mac")
 exit(failed == 0 ? 0 : 1)
 EOF
 xcrun swiftc -Onone -o "$TMP/prov" "$PROVIDER" "$TMP/prov.d/main.swift" 2>"$TMP/perr" || { cat "$TMP/perr"; echo "✗ the provider did not compile"; exit 1; }
@@ -211,6 +218,12 @@ grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
   || { echo "✗ Apps on Aztec's door no longer offers your account to an Ethereum app"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
+# Only the browser that may send says it is a Mac (prd §1700n).
+grep -q 'if ethereum && sends {' Casberi/Casberi/Screens/AztecBrowser.swift \
+  && grep -q 'page.customUserAgent = BrowserEthereum.desktopAgent(' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ Apps on Aztec's browser sends the phone's agent: RainbowKit's phone picker drops Casberi (prd §1700n)"; exit 1; }
+[[ $(grep -c 'customUserAgent' Casberi/Casberi/Screens/AztecBrowser.swift) -eq 1 ]] \
+  || { echo "✗ the browser's agent is set more than once (prd §1700n)"; exit 1; }
 # The co-signer's sign-in has its own one-method pairing, never the kept
 # Signer session (Safe approvals only), and is checked against the key.
 grep -q 'connect(signer: signer, chainIds: \[chainId\], method: appMethod' Casberi/Casberi/Model/YourAccountSignerLink.swift \
@@ -255,6 +268,7 @@ pmutate "the co-signer sends anywhere" 's/\["eth_requestAccounts", "wallet_reque
 pmutate "a top-up without the fee" 's/let need = v \+ p \* topUpGas \* 2/let need = v/'
 pmutate "a wei value read as hex wrong" 's/let q = cur \/ 16/let q = cur \/ 10/'
 pmutate "a retry never asked again" 's/return since >= 0 && since < retryWindow/return false/'
+pmutate "the agent says iPhone" 's/Macintosh; Intel Mac OS X 10_15_7/iPhone; CPU iPhone OS 18_0 like Mac OS X/'
 pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
 
 # ── Mutations: the checks above catch what they claim ───────────────────
@@ -272,4 +286,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, 5 + 9 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, 5 + 10 mutations caught)"

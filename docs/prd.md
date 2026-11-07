@@ -71250,3 +71250,17 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Checks.** `shield-bridge-selftest.sh` counts Library as the fourth door that may send (with the Home door, a saved Aztec app's link, and DEBUG's probe). `sheet-sweep.json` covers the new sheet with the Home door's reason.
 
 **Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4), and the gate keeps the tile off the Mac.
+
+## §1700n — Apps on Aztec's browser says it is a Mac, so a RainbowKit picker draws Casberi under Installed (amends §1700k's "Not seen" on Olla's picker) (user, 2026-11-07, of Olla's Connect a Wallet on the phone after §1700k — MetaMask, WalletConnect, Trust Wallet, Ledger: "tried to connect olla on aztec and it didn't show our wallet injected"; told RainbowKit's phone layout drops every EIP-6963 wallet and decides phone from the user agent alone, offered a Mac agent, asking Olla for `injectedWallet`, or both: "Desktop agent") — RULED, BUILT, NOT COMPILED, NOT SEEN
+
+**The cause.** Olla's picker is RainbowKit (its phone modal's words, "What is a Wallet?", "Get a Wallet", "Learn More", verbatim). Read in RainbowKit 2.2.11: `MobileOptions` lists `useWalletConnectors().filter(w => w.isRainbowKitConnector)`, the app's own list only; `DesktopOptions` calls `useWalletConnectors(true)`, which merges the EIP-6963 connectors in under "Installed". `isMobile()` is `/android/i`, `/iPhone|iPod/`, or `/iPad/` (or `platform === "MacIntel"` with touch) on `navigator.userAgent`. Casberi was announced on Olla's page (§1700k item 1); the phone layout never drew it. Olla lists no `injectedWallet`, so no "Browser Wallet" tile reached `window.ethereum` either.
+
+1. **The browser that may send sends Safari's Mac agent** (`BrowserEthereum.desktopAgent`, set as the web view's `customUserAgent` when `ethereum && sends`): `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/<this iOS major>.0 Safari/605.1.15`, as iPad Safari sends. `navigator.platform` stays `iPhone`, so RainbowKit's large-iOS test stays false. The server gets it too.
+2. **Human Passport's page keeps the phone's agent** (`ethereum`, no `sends`): its Reown picker already reaches Casberi (§1700e).
+3. **What it costs.** A site that sniffs the agent draws its desktop layout in Apps on Aztec's browser; one that deep-links phone wallets shows a QR code instead. Casberi is the wallet there, so neither is a door you lose.
+
+**Checks.** `shield-bridge-selftest.sh`: the agent holds no `iPhone`, `iPod`, `iPad` or `Android`, matches RainbowKit's Safari test and carries this phone's version; the browser sets it once, under `ethereum && sends`; a mutation that makes it an iPhone's fails the run.
+
+**Mac half (§1402).** None: Apps on Aztec stands on the iPhone only (§1700i item 4).
+
+**Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** Olla's desktop picker in a phone-width web view, Casberi under Installed there, and a connect through it.
