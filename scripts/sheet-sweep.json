@@ -1625,10 +1625,11 @@
     "Screens/AztecBrowser.swift:model.ask#ethConnect",
     "Screens/AztecBrowser.swift:model.ask#ethSign",
     "Screens/AztecBrowser.swift:model.ask#ethSend",
+    "Screens/AztecBrowser.swift:model.ask#ethTopUp",
     "Screens/MoveAztecPrivate.swift:passport",
     "Screens/ThingSheetView.swift:aztecApp"
    ],
-   "why": "your account on Human Passport's page (prd §1700e): the page opens only from Move's Shield line when Shield finds the account's score short, which the demo never asks, and its two asks are raised only by that live page asking to connect or sign; the demo refuses every account request there (seen on the simulator 2026-11-04 with `-aztecBrowserEthereum`); an Ethereum app's transaction ask (prd §1700k), raised only by a live app page in Apps on Aztec's browser, which the demo never opens and where the demo refuses every account request; and an Aztec app's link opened from a thing's sheet (prd §1700c), which the demo never routes and holds no such link"
+   "why": "your account on Human Passport's page (prd §1700e): the page opens only from Move's Shield line when Shield finds the account's score short, which the demo never asks, and its two asks are raised only by that live page asking to connect or sign; the demo refuses every account request there (seen on the simulator 2026-11-04 with `-aztecBrowserEthereum`); an Ethereum app's transaction ask (prd §1700k), raised only by a live app page in Apps on Aztec's browser, which the demo never opens and where the demo refuses every account request; the co-signer's top-up ask (prd §1700l item 10), raised only when such a page's send runs on a co-signer connection whose co-signer holds too little ETH, which needs a live page, a paired co-signer and a chain read the demo never makes; and an Aztec app's link opened from a thing's sheet (prd §1700c), which the demo never routes and holds no such link"
   },
   {
    "covers": [
