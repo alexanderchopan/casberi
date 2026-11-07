@@ -631,15 +631,16 @@ struct AztecAskSheet: View {
         DSTray(title: title, height: height, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 content
-                if leadsWithCoSigner {
-                    // The app turned your account's sign-in down (prd §1700l).
-                    DSActVerb(title: String(localized: "Use your co-signer"), glyph: "person.badge.key") { useCoSigner() }
-                    DSDoorRow(icon: "link", title: Text(reconnecting ? "Connect your account anyway" : "Connect your account instead")) { answer(true) }
-                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
-                } else {
-                    DSActVerb(title: acceptWord, glyph: acceptGlyph) { answer(true) }
-                    DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
+                // ONE hero verb (hero-tint-audit): the co-signer leads when the
+                // app turned your account's sign-in down (prd §1700l), else the yes.
+                DSActVerb(title: leadsWithCoSigner ? String(localized: "Use your co-signer") : acceptWord,
+                          glyph: leadsWithCoSigner ? "person.badge.key" : acceptGlyph) {
+                    if leadsWithCoSigner { useCoSigner() } else { answer(true) }
                 }
+                if leadsWithCoSigner {
+                    DSDoorRow(icon: "link", title: Text(reconnecting ? "Connect your account anyway" : "Connect your account instead")) { answer(true) }
+                }
+                DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
                 // For an app that takes only a plain key's signature (prd §1700l).
                 if case .ethConnect = ask, !leadsWithCoSigner, let coSigner {
                     DSDoorRow(icon: "person.badge.key",
