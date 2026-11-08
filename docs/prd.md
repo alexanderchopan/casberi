@@ -71112,6 +71112,10 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 
 **Mac half (§1402).** The icon set is shared, so the Mac's icon changes with it.
 
+### §1708a — Library's Casberi tile wears the app icon (amends §1708 item 4 for that tile) (user, 2026-11-07, of the tile still drawing the arm: "this needs to be our new logo wtf") — BUILT
+
+Library is the App Library: every tile shows its app's icon, so the Casberi folder shows Casberi's (`CasberiAppIcon`, `SourcesLibrary`), not the in-app arm. The arm stays where §1708 item 4 left it elsewhere (the toast, the privacy cover, the intro, the account face); whether those follow is still a separate ruling.
+
 ## §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amends §1700c item 1, §1480 item 2's doors) (user, 2026-11-05, asked how anyone reaches an Aztec app: "how literally would someone be able to use the apps b/c we have them in our aztec reel and we have that emoji matching ui", then of Home or Your account "wallet home it is", and "Build it") — RULED, BUILT
 
 1. **Apps on Aztec is Home's last door**, after Threats, once you have an Aztec account, on All or with your account picked. No count, no word: it leaves the Wallet. Its glyph is a globe (`AztecApps.doorGlyph`), a row through `walletDoorRow`, which has no section because it has no page.

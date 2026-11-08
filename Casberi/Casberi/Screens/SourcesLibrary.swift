@@ -148,7 +148,11 @@ private struct CasberiFolder: View {
                     .aspectRatio(1, contentMode: .fit)
                     .overlay {
                         GeometryReader { geo in
-                            CasberiMark(size: geo.size.width * 0.5)
+                            // The app icon, as every other tile shows its
+                            // app's (prd §1708a, user: "this needs to be our
+                            // new logo"): the arm mark was the one old face
+                            // left in the Library.
+                            CasberiAppIcon(size: geo.size.width * 0.5)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
