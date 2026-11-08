@@ -546,6 +546,18 @@ enum NetworkReach {
                  hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"],
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
+        // The Railgun engine (prd §1713): Railgun's open wallet SDK in a hidden
+        // web view, the Privacy Pools engine's pattern. The page can reach no
+        // host itself; every request is handed to `RailgunEngine`, which sends
+        // it only to a host listed HERE. The indexer and the screening node
+        // serve the whole pool's trees and list, the same bytes to every
+        // wallet, so no request here names you; the proxy call that does is
+        // your account's own send. Keyless (§1163).
+        Endpoint(service: "Railgun engine",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads Railgun's pool on Ethereum for your private balance of any other token: the pool's two trees from Railgun's public indexer, which of its entries the screening node has listed (spendable), the public proving files once, and the pool's roots from MEV Blocker's public node. Asked about the whole pool, never about you.",
+                 hosts: ["rail-squid.squids.live", "ppoi.fdi.network", "ipfs-lb.com", "rpc.mevblocker.io"],
+                 credentialed: false),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow, and what a deposit of yours still holds in Peer's escrow.",

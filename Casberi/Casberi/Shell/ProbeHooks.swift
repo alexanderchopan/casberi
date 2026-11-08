@@ -4173,6 +4173,10 @@ enum ProbeHooks {
         // — the Privacy Pools engine on Sepolia (prd §1540), headless; logs
         // `privacyEngine|` lines (`Shell/PrivacyEngineProbe.swift`).
         Hook(key: "privacyEngineProbe") { raw, _ in PrivacyEngineProbe.run(raw) },
+        // `-railgunEngineProbe load|open|sync|shield|unshield|all` — the
+        // Railgun engine on Ethereum (prd §1713), a random wallet, nothing
+        // sent; logs `railgunEngine|` lines (`Shell/RailgunEngineProbe.swift`).
+        Hook(key: "railgunEngineProbe") { raw, _ in RailgunEngineProbe.run(raw) },
         // `-aztecEngineProbe YES` — your Aztec account's engine on mainnet
         // (prd §1700), headless; logs `aztecEngine| probe |` lines
         // (`Shell/AztecEngineProbe.swift`).

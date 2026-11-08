@@ -198,6 +198,17 @@ The app's Privacy Pools engine (privacy-engine.js) bundles, unmodified:
 
 The licence notices of each are kept at the end of privacy-engine.js. Its exact sources and build are in tools/privacy-pools-engine in Casberi's source.
 
+# Railgun engine
+
+The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25519_scalarmult_wasm_bg.wasm) bundles, unmodified:
+
+- Railgun wallet SDK (@railgun-community/wallet 11.3.0), engine (@railgun-community/engine 9.9.1), shared-models 8.2.1, poseidon-hash-wasm 1.0.3, curve25519-scalarmult-wasm 0.1.5 and circomlibjs, by the Railgun community. MIT License.
+- ethers 6.14.3, by Richard Moore. MIT License.
+- snarkjs 0.7.5, ffjavascript and wasmcurves, by iden3. GNU General Public License, version 3.
+- graphql and graphql-request, memdown, abstract-leveldown, buffer, crypto-browserify, stream-browserify, events, util, assert, path-browserify and process. MIT License.
+
+The licence notices of each are kept at the end of railgun-engine.js. Its exact sources and build are in tools/railgun-engine in Casberi's source.
+
 # ERC-7730 clear-signing registry
 
 The Ethereum Foundation's registry of how contract calls read, bundled in the app. Dedicated to the public domain under CC0 1.0.
