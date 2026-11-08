@@ -297,6 +297,19 @@
 .walk h3.plain::before{content:none;}
 
 /* start here — four steps, numbered by the list itself */
+.pm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0 6px;}
+.pm h5{margin:0 0 2px;font-size:15px;font-weight:700;color:#fff;}
+.pm .c{background:rgba(255,255,255,.05);border-radius:16px;padding:14px 16px;line-height:1.45;color:rgba(255,255,255,.62);font-size:15px;}
+.pm .c b{color:#fff;font-weight:650;}
+.pm .n{display:block;font-weight:700;font-size:17px;margin-bottom:4px;}
+.pm .pp{color:#5ac8fa;}.pm .rg{color:#bf8bff;}.pm .az{color:#ffb340;}
+.pm .t{display:inline-block;font-size:12.5px;font-weight:650;color:#64a8ff;background:rgba(10,132,255,.16);border-radius:999px;padding:2px 9px;margin:2px 4px 6px 0;}
+.pm .f{font-size:13.5px;color:rgba(255,255,255,.5);padding:2px 2px 0;}
+.pm .f b{color:#fff;}
+.pmr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 4px;}
+.pmr div{background:rgba(255,255,255,.05);border-radius:14px;padding:12px 14px;font-size:14.5px;line-height:1.4;color:rgba(255,255,255,.62);}
+.pmr b{display:block;color:#fff;font-weight:650;}
+@media (max-width:760px){.pm,.pmr{grid-template-columns:minmax(0,1fr);}.pm h5.hide{display:none;}}
 .steps{list-style:none;counter-reset:step;padding:0;margin:18px 0 0;}
 .steps li{counter-increment:step;position:relative;padding:11px 0 11px 42px;line-height:1.55;color:var(--muted);}
 .steps li::before{content:counter(step);position:absolute;left:0;top:9px;width:26px;height:26px;
@@ -353,6 +366,7 @@
   <a class="sub" href="#wallet">Wallet</a>
   <a class="sub" href="#account">Your account</a>
   <a class="sub" href="#move">Move</a>
+  <a class="sub" href="#private">Private money</a>
   <a class="sub" href="#library">Library</a>
   <a class="sub" href="#subscriptions">Subscriptions</a>
   <a class="sub" href="#notes">Notes</a>
@@ -398,7 +412,7 @@
       <h4>Money</h4>
       <div class="glance-grid">
         <a class="glance" href="#wallet"><b>Wallet</b><span>Every account you follow in one balance, with holdings, spending and threats. Following is read-only.</span></a>
-        <a class="glance" href="#account"><b>Your account</b><span>A public account (Safe) on Base, Ethereum and Robinhood, a private balance (Privacy Pools) on Ethereum, and a private account (Aztec) on Aztec. Only your keys move them.</span></a>
+        <a class="glance" href="#account"><b>Your account</b><span>A public account (Safe) on Base, Ethereum and Robinhood, a private balance (Privacy Pools and Railgun) on Ethereum, and a private account (Aztec) on Aztec. Only your keys move them.</span></a>
         <a class="glance" href="#move"><b>Move</b><span>Send, swap, receive, sweep or buy a gift card. Face ID approves every move.</span></a>
       </div>
     </div>
@@ -427,6 +441,7 @@
       <a href="#wallet">Wallet</a>
       <a href="#account">Your account</a>
       <a href="#move">Move</a>
+      <a href="#private">Private money</a>
       <a href="#library">Library</a>
       <a href="#subscriptions">Subscriptions</a>
       <a href="#notes">Notes</a>
@@ -457,7 +472,7 @@
     <h3 id="wallet">Wallet</h3>
     <p>The Wallet adds up every account you have and follow, so you see all your money in one place, and what could hurt it.</p>
     <ul class="nothere">
-      <li><strong>See what you have.</strong> <b>Home</b> leads with your balance and its line. <b>Holdings</b> breaks it into tokens, positions and NFTs, and <b>Activity</b> lists every transaction by day.</li>
+      <li><strong>See what you have.</strong> <b>Home</b> leads with your balance and its line. <b>Holdings</b> is Public and Private: your tokens, positions and NFTs, then every private balance — Privacy Pools, Railgun and Aztec — in one block. <b>Activity</b> lists every transaction by day.</li>
       <li><strong>Choose whose money.</strong> The switch under the balance — <b>Yours · Following · All</b> — shows your own account, the accounts you follow, or everything added up. Every page of the Wallet follows it.</li>
       <li><strong>See what you spend.</strong> <b>Spending</b> sets this week or month against the last one, split into Subscriptions, Places, Fees and Round-ups. Fees and round-ups stay out of the total.</li>
       <li><strong>See what could hurt you.</strong> <b>Needs you</b> lists everything waiting on you. <b>Permissions</b> lists who can spend from you, each approval one tap from a cancellation. <b>Threats</b> lists address poisoning, fake tokens and fake transfers.</li>
@@ -473,7 +488,7 @@
 
     <h3 id="account">Your account</h3>
     <p>An account of your own lets you move money from Casberi, with no phrase to write down. Casberi never holds it: only your keys can move it. It lives on Base, Ethereum and Robinhood.</p>
-    <p>It comes in three parts: your <b>public account</b> (a Safe, on Base, Ethereum and Robinhood), your <b>private balance</b> (Privacy Pools, on Ethereum) and your <b>private account</b> (Aztec, on Aztec). The private account is made the first time you use it, from a key in your iCloud Keychain, and every transaction it makes is proved on your iPhone.</p>
+    <p>It comes in three parts: your <b>public account</b> (a Safe, on Base, Ethereum and Robinhood), your <b>private balance</b> (Privacy Pools and Railgun, on Ethereum) and your <b>private account</b> (Aztec, on Aztec). See <a href="#private">Private money</a>. The private account is made the first time you use it, from a key in your iCloud Keychain, and every transaction it makes is proved on your iPhone.</p>
     <p>Tap <b>Create an account</b> on the Wallet, or open Move. It takes four steps:</p>
     <ol class="steps">
       <li><b>A recovery key in iCloud Keychain.</b> If you lose this device, your account opens on another.</li>
@@ -498,15 +513,46 @@
       <li><strong>Swap.</strong> Your phone asks Uniswap and Aerodrome directly for the best price and writes the swap itself, with no aggregator in between. The line under the sentence names the exchange and its pool fee, which is in the price.</li>
       <li><strong>Swap to another network.</strong> Pick the network for what you get, and Across carries it: ETH arrives as ETH, USDC as USDC. Activity shows it arriving.</li>
       <li><strong>Clear out dust.</strong> <b>Sweep</b> swaps every token worth under $1, or $5, on one network for ETH, in one transaction. A token it won’t touch stays listed with the reason — most dust is sent by strangers.</li>
-      <li><strong>Receive.</strong> Pick a network and copy your address. Someone on another network can send a token Relay bridges, and it lands as the one you pick. <b>From another wallet</b> connects a wallet of yours to send in from.</li>
+      <li><strong>Receive.</strong> Pick a network and copy your address, or pick your private balance (see <a href="#private">Private money</a>). Someone on another network can send a token Relay bridges, and it lands as the one you pick. <b>From another wallet</b> connects a wallet of yours to send in from.</li>
       <li><strong>Buy a gift card.</strong> Pick a category and a merchant on Bitrefill. It’s paid from your account in USDC on Base.</li>
-      <li><strong>Round up.</strong> Every send rounds up to the next dollar. The change is counted, and once it passes about $10, the send that gets it there saves it in your private balance in dollars. What it saved is in Spending, under Round-ups.</li>
-      <li><strong>Go private.</strong> Send to Your private balance to move ETH or USDC into 0xBow’s Privacy Pools on Ethereum, where it earns interest once approved. To pay from it, pick Ethereum · Private as Send’s network: a relayer posts the payment.</li>
-      <li><strong>Go private on Aztec.</strong> Send to <b>Your private account · Aztec</b> to move USDC or ETH from your account into Aztec through Shield; the first time, 30 AZTEC goes along as its gas. To pay from it, pick <b>Aztec · Private</b> as Send’s network: to an Aztec address it stays private on Aztec, to an Ethereum address it leaves through Shield and Needs you offers Finish about an hour later. Your co-signer, if required, approves each one.</li>
+      <li><strong>Round up.</strong> Every send rounds up to the next dollar. The change is set aside on Aave on Base, where it earns, and once it reaches $10 the next send moves it into your private balance. What it saved is in Spending, under Round-ups.</li>
+      <li><strong>Go private.</strong> Send to <b>Your private balance</b> — on Ethereum or on Aztec — and pick a private token to pay from it. Casberi picks Privacy Pools, Railgun or Aztec for you; see <a href="#private">Private money</a>.</li>
     </ul>
     <p>Before Face ID asks, the line under the sentence says the most the fee can be. <b>Details</b> shows the whole move and whether this exact move was run on the network and lands as written. What Details shows is what Face ID signs.</p>
     <p>A warning takes that line’s place: the move would fail, the address is sanctioned or reported, it looks like an address you’ve paid, it’s a new contract, or it’s your first send there. Then the verb reads <b>Send anyway</b>: the first tap arms it, the second signs.</p>
     <p><strong>Good to know:</strong> when you require your co-signer, every send and swap needs it too.</p>
+    <div class="pager"><a href="#private"><span>Next</span>Private money →</a></div>
+
+    <h3 id="private">Private money</h3>
+    <p><strong>You never choose.</strong> Casberi picks the place by the token and by who’s sending, and all of it shows in one Private balance.</p>
+    <div class="pm">
+      <h5>Holding</h5><h5 class="hide">Sending</h5><h5 class="hide">Receiving</h5>
+      <div class="c"><span class="n pp">Privacy Pools</span><span class="t">ETH</span><span class="t">USDC</span><br><b>Earns on Aave.</b> $10 at least.</div>
+      <div class="c">From <b>Privacy Pools</b> to <b>anyone on Ethereum</b>.</div>
+      <div class="c"><b>Someone on Ethereum</b> sends you ETH or USDC: it lands in <b>Privacy Pools</b>.</div>
+      <div class="c"><span class="n rg">Railgun</span><span class="t">Any other token on Ethereum</span><br>$10 at least.</div>
+      <div class="c">From <b>Railgun</b> to <b>anyone on Ethereum</b>.</div>
+      <div class="c"><b>Someone on Ethereum</b> sends you DAI, USDT, WBTC, WETH, LINK, UNI or AAVE: it lands in <b>Railgun</b>.</div>
+      <div class="c"><span class="n az">Your Aztec account</span><span class="t">ETH</span><span class="t">USDC</span><br>Its own account on Aztec, filled through Shield.</div>
+      <div class="c">From <b>your Aztec account</b> to <b>anyone on Ethereum</b> or <b>anyone on Aztec</b>.</div>
+      <div class="c"><b>Someone on Aztec</b> sends you ETH or USDC: it lands in <b>your Aztec account</b>.</div>
+      <div class="f">All three show together in <b>your Private balance</b>.</div>
+      <div class="f">You send from <b>whichever one holds the money</b>.</div>
+      <div class="f"><b>Who sends to you, and with what,</b> decides where it lands.</div>
+    </div>
+    <ul class="nothere">
+      <li><strong>Move it in.</strong> In Move, Send to <b>Your private balance · Ethereum</b>. ETH and USDC go into 0xBow’s Privacy Pools, which approves each deposit before it can be spent, and once approved it earns on Aave. Any other token goes into Railgun and is private in about an hour; Railgun takes 0.25% in and 0.25% out. The line under the sentence names which one. Send to <b>Your private balance · Aztec</b> to move USDC or ETH into your Aztec account through Shield, any amount you type; Shield first asks for a Human Passport score, and the first time, 30 AZTEC goes along as its gas.</li>
+      <li><strong>Pay from it.</strong> Your private tokens are rows in Send’s token list, under <b>Private</b>. Pick one, and the sentence reads “from your private balance”. From Privacy Pools, 0xBow’s relayer posts the payment. From Railgun, a Railgun broadcaster posts it and takes its fee inside Railgun, shown before Face ID; if none answers, a fresh address of yours posts it, its gas paid from your private ETH. Either way, your account appears nowhere on the payment. From your Aztec account, a payment to an Aztec address stays private on Aztec; to an Ethereum address it leaves through Shield, and Needs you offers Finish about an hour later.</li>
+      <li><strong>Receive into it.</strong> In Receive, pick <b>Your private balance · Ethereum</b> and each payment gets a fresh address of its own, with New address for the next one; what arrives moves in by the table above, its gas paid from your private ETH. Pick <b>Your private balance · Aztec</b> for your Aztec address, the same every time.</li>
+      <li><strong>See it.</strong> <b>Holdings</b> is Public and Private. Each private row ends with where it sits — “DAI — Ethereum · Railgun” — and one that isn’t spendable yet says “Private in about an hour”. Tap a row to take it back to your account.</li>
+    </ul>
+    <p><strong>Round-ups</strong>, if you turn them on:</p>
+    <div class="pmr">
+      <div><b>Every send rounds up</b>to the next dollar.</div>
+      <div><b>The change earns on Aave</b>on Base, in the open.</div>
+      <div><b>At $10, it goes private</b>into Privacy Pools, still earning.</div>
+    </div>
+    <p><strong>Good to know:</strong> what goes in and what comes out is public on its network, as on every network; what stays hidden is which deposit paid which payment. Your co-signer, if required, approves every move into or out of your private money. See <a href="#privacy">Privacy</a> and <a href="#security">Security</a>.</p>
     <div class="pager"><a href="#library"><span>Next</span>Library →</a></div>
 
     <h3 id="library">Library</h3>
@@ -545,7 +591,8 @@
       <li><strong>Your apps.</strong> Each one is read from your device, from its own service, under that service’s own privacy policy. A key you paste goes only to the service it’s for.</li>
       <li><strong>Your wallets.</strong> On iPhone and iPad, every request that names a wallet — yours or one you follow — goes through Tor, always, with one route per wallet, so no service learns where you are, or that the wallets you look at are one person’s. The Feed’s apps never go through Tor.</li>
       <li><strong>Your moves.</strong> Sends, swaps and sweeps go through Tor too. What lands on a network is public there, as on every network: the addresses, the amounts and the time.</li>
-      <li><strong>Your private balance.</strong> Money going into it and coming out of it is public on Ethereum; what stays hidden is which deposit paid which payment. 0xBow approves each deposit before it can be spent privately, and its relayer sends what you pay out, so it sees where the money goes and how much, never who asked. Receive’s Private switch gives each payment its own fresh address.</li>
+      <li><strong>Your private balance.</strong> Money going into it and coming out of it is public on Ethereum; what stays hidden is which deposit paid which payment. 0xBow approves each deposit before it can be spent privately, and its relayer sends what you pay out, so it sees where the money goes and how much, never who asked. Receiving to your private balance on Ethereum gives each payment its own fresh address.</li>
+      <li><strong>Your Railgun balance.</strong> The same is true of Railgun: going in and coming out are public on Ethereum, and what stays hidden is which deposit paid which payment. A payment to someone else is posted by a Railgun broadcaster, reached over Tor on iPhone and iPad, so neither it nor Ethereum sees your account; if no broadcaster answers, a fresh address of yours posts it instead, its gas paid from your private ETH. Railgun’s screening lists each deposit before it can be spent, about an hour.</li>
       <li><strong>Your private account.</strong> On Aztec, everything is private by default: your balance, who you pay, how much, and the apps you use. Your iPhone makes the proof for every transaction itself, so what you do never leaves it unencrypted. Casberi reads Aztec through Tor from a public node, or from your own. Shield, the bridge in and out, sees your account’s address and the amount when you move money, and asks for a Human Passport score first; an Aztec app you open in Casberi sees your Aztec address only once you connect it.</li>
       <li><strong>What your screenshots say.</strong> Read by Apple’s Vision on your device, and named by Apple’s on-device model. A screenshot that shows a password, a recovery phrase, a key, a card number or a code keeps those lines out of Spotlight and out of anything sent to an agent.</li>
       <li><strong>Agents.</strong> Nothing goes to a model unless you connect an agent and send to it; then it goes from your device straight to that provider, billed to you. Apple Intelligence answers on Apple’s Private Cloud Compute.</li>
@@ -562,7 +609,7 @@
       <li><strong>This device’s key.</strong> Made in the Secure Enclave, it never leaves it and signs only after Face ID. Every send moves your account to a fresh one. Re-enrolling Face ID destroys it; your recovery key brings your account back.</li>
       <li><strong>Your recovery key.</strong> In iCloud Keychain, so every device signed in to your Apple account holds it. It never signs a payment: it only moves your account to a new device, after Face ID, Touch ID or your passcode. Once a month, Needs you asks you to check it.</li>
       <li><strong>Your co-signer,</strong> if you add one: a key in another wallet you hold. Required, it approves every send and swap too, and every transaction from your private account on Aztec. Your Safe enforces it on its networks; on Aztec, Casberi does.</li>
-      <li><strong>Your private balance’s key.</strong> One secret in iCloud Keychain. The keys that spend your private balance are worked out from it on your device when they’re needed and kept only in memory, and spending asks for Face ID first.</li>
+      <li><strong>Your private balance’s key.</strong> One secret in iCloud Keychain, with your Railgun wallet’s key beside it. The keys that spend your private balance are worked out from it on your device when they’re needed and kept only in memory, and spending asks for Face ID first.</li>
       <li><strong>Your private account’s key.</strong> One secret in iCloud Keychain, readable only by Casberi. The keys that sign and read your Aztec account are worked out from it on your device and kept only in memory, and every transaction asks for Face ID. A new iPhone signed in to your Apple account gets your Aztec account back.</li>
       <li><strong>An exported key.</strong> Export makes a new private key for your Safe, adds it as an owner and shows it once; Casberi keeps only its address. For Aztec, it shows the account’s own keys once.</li>
       <li><strong>Your apps’ keys.</strong> A key you paste syncs through iCloud Keychain to your other devices. Sign-ins and tokens that refresh stay on this device and out of backups. <b>Delete access</b> removes them all.</li>
@@ -630,9 +677,9 @@
     <details><summary>What if I lose my phone?</summary><p>Your account’s recovery key is in your iCloud Keychain, so the account opens on a new device signed in to the same Apple account. If you require your co-signer, getting it back needs it too: its wallet shows a code to approve, and Casberi shows the same code to match. Your things come back only if you turned iCloud sync on; apps you connected can be connected again.</p></details>
     <details><summary>What does a swap cost?</summary><p>The network’s fee, and the exchange pool’s fee, which is in the price. A swap to another network adds Across’s fee. Casberi takes nothing. Move shows each before Face ID.</p></details>
     <details><summary>Is it audited?</summary><p>Casberi’s own code has not been independently audited. It deploys no contract of its own: your account is built from Safe’s audited contracts and, when you require your co-signer, Rhinestone’s audited OwnableValidator, and swaps call Uniswap, Aerodrome and Across contracts directly. Every move is run on the network before Face ID, and the source is public under the GPLv3.</p></details>
-    <details><summary>How do round-ups work?</summary><p>Turn on round-ups and every send rounds up to the next dollar. The change is only counted, never set aside, and it counts on every network. Once it passes about $10, the send that gets it there also saves it in your private balance in dollars, where it earns interest: one Face ID for both. If you hold too few dollars, a little ETH is swapped for them. What it saved is under Spending, in Round-ups, and stays out of your spending total.</p></details>
-    <details><summary>How does my private balance work?</summary><p>It’s money only you can see, in 0xBow’s Privacy Pools on Ethereum. In Move, pick Send and choose Your private balance as the recipient: one Face ID moves ETH or USDC in, about 0.005 ETH or $10 at least. 0xBow reviews each deposit before it can be spent, and Needs you shows it waiting. Once approved, it earns interest on Aave and counts in your Wallet total. To pay someone from it, pick Ethereum · Private as Send’s network: a relayer posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does.</p></details>
-    <details><summary>How does my private account on Aztec work?</summary><p>It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to <b>Your private account · Aztec</b> to move USDC or ETH in through Shield, which first asks for a Human Passport score of 20; the first time, 30 AZTEC goes along as gas. Pick <b>Aztec · Private</b> as Send’s network to pay from it: privately to any Aztec account, or out to any Ethereum address. Links to Aztec apps open in Casberi, connected to it.</p></details>
+    <details><summary>How do round-ups work?</summary><p>Turn on round-ups and every send rounds up to the next dollar. The change is set aside on Aave on Base, where it earns in the open. Once it reaches $10, the next send moves it into your private balance in Privacy Pools, where it keeps earning: one Face ID for both. What it saved is under Spending, in Round-ups, and stays out of your spending total.</p></details>
+    <details><summary>How does my private balance work?</summary><p>It’s money only you can see, on Ethereum. You never choose where it sits: ETH and USDC go into 0xBow’s Privacy Pools, where 0xBow reviews each deposit before it can be spent and it earns interest on Aave once approved; any other token goes into Railgun, private in about an hour. In Move, pick Send and choose Your private balance as the recipient, $10 at least. To pay from it, pick a private token in Send’s token list: a relayer or a Railgun broadcaster posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does.</p></details>
+    <details><summary>How does my private account on Aztec work?</summary><p>It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to <b>Your private balance · Aztec</b> to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Library’s Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji.</p></details>
     <details><summary>What if Casberi goes away?</summary><p>Your money stays where it is. Export a private key from Wallet › Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi.</p></details>
     <details><summary>Which networks?</summary><p>Your account is on Base, Ethereum and Robinhood Chain. The accounts you follow are read on Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain, Arc, Tempo, Plasma, Robinhood Chain and Solana, plus Bitcoin and Lightning wallets and the exchanges you connect.</p></details>
     <details><summary>Why Tor?</summary><p>So no service you ask about a wallet learns where you are, or that the wallets you look at belong to one person. It’s always on for wallet reads on iPhone and iPad, and your other apps never go through it.</p></details>
@@ -766,8 +813,8 @@
 {"@type": "Question", "name": "What if I lose my phone?", "acceptedAnswer": {"@type": "Answer", "text": "Your account’s recovery key is in your iCloud Keychain, so the account opens on a new device signed in to the same Apple account. If you require your co-signer, getting it back needs it too: its wallet shows a code to approve, and Casberi shows the same code to match. Your things come back only if you turned iCloud sync on; apps you connected can be connected again."}},
 {"@type": "Question", "name": "What does a swap cost?", "acceptedAnswer": {"@type": "Answer", "text": "The network’s fee, and the exchange pool’s fee, which is in the price. A swap to another network adds Across’s fee. Casberi takes nothing. Move shows each before Face ID."}},
 {"@type": "Question", "name": "Is it audited?", "acceptedAnswer": {"@type": "Answer", "text": "Casberi’s own code has not been independently audited. It deploys no contract of its own: your account is built from Safe’s audited contracts and, when you require your co-signer, Rhinestone’s audited OwnableValidator, and swaps call Uniswap, Aerodrome and Across contracts directly. Every move is run on the network before Face ID, and the source is public under the GPLv3."}},
-{"@type": "Question", "name": "How do round-ups work?", "acceptedAnswer": {"@type": "Answer", "text": "Turn on round-ups and every send rounds up to the next dollar. The change is only counted, never set aside, and it counts on every network. Once it passes about $10, the send that gets it there also saves it in your private balance in dollars, where it earns interest: one Face ID for both. If you hold too few dollars, a little ETH is swapped for them. What it saved is under Spending, in Round-ups, and stays out of your spending total."}},
-{"@type": "Question", "name": "How does my private balance work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s money only you can see, in 0xBow’s Privacy Pools on Ethereum. In Move, pick Send and choose Your private balance as the recipient: one Face ID moves ETH or USDC in, about 0.005 ETH or $10 at least. 0xBow reviews each deposit before it can be spent, and Needs you shows it waiting. Once approved, it earns interest on Aave and counts in your Wallet total. To pay someone from it, pick Ethereum · Private as Send’s network: a relayer posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does."}}, {"@type": "Question", "name": "How does my private account on Aztec work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to Your private account · Aztec to move USDC or ETH in through Shield, which first asks for a Human Passport score of 20. Pick Aztec · Private as Send’s network to pay from it: privately to any Aztec account, or out to any Ethereum address."}},
+{"@type": "Question", "name": "How do round-ups work?", "acceptedAnswer": {"@type": "Answer", "text": "Turn on round-ups and every send rounds up to the next dollar. The change is set aside on Aave on Base, where it earns in the open. Once it reaches $10, the next send moves it into your private balance in Privacy Pools, where it keeps earning: one Face ID for both. What it saved is under Spending, in Round-ups, and stays out of your spending total."}},
+{"@type": "Question", "name": "How does my private balance work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s money only you can see, on Ethereum. You never choose where it sits: ETH and USDC go into 0xBow’s Privacy Pools, where 0xBow reviews each deposit before it can be spent and it earns interest on Aave once approved; any other token goes into Railgun, private in about an hour. In Move, pick Send and choose Your private balance as the recipient, $10 at least. To pay from it, pick a private token in Send’s token list: a relayer or a Railgun broadcaster posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does."}}, {"@type": "Question", "name": "How does my private account on Aztec work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to Your private balance · Aztec to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Library’s Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji."}},
 {"@type": "Question", "name": "What if Casberi goes away?", "acceptedAnswer": {"@type": "Answer", "text": "Your money stays where it is. Export a private key from Wallet › Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi."}},
 {"@type": "Question", "name": "Which networks?", "acceptedAnswer": {"@type": "Answer", "text": "Your account is on Base, Ethereum and Robinhood Chain. The accounts you follow are read on Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain, Arc, Tempo, Plasma, Robinhood Chain and Solana, plus Bitcoin and Lightning wallets and the exchanges you connect."}},
 {"@type": "Question", "name": "Why Tor?", "acceptedAnswer": {"@type": "Answer", "text": "So no service you ask about a wallet learns where you are, or that the wallets you look at belong to one person. It’s always on for wallet reads on iPhone and iPad, and your other apps never go through it."}}
