@@ -185,7 +185,7 @@ extension FeedScreen {
                 // Private's eye where no one mark stands for the place.
                 Group {
                     if let mark {
-                        BridgeIcon(name: mark, size: DS.Mark.badge, circular: true)
+                        BridgeIcon(name: mark, size: DS.Face.badge, circular: true)
                     } else {
                         Image(systemName: "eye.slash").dsGlyph(.body).foregroundStyle(DS.textSecondary)
                     }
