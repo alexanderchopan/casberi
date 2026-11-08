@@ -118,6 +118,12 @@ use "$ENGINE" 'useDNSDiscovery: false' "the broadcasters are found through the r
 use "$ENGINE" "if (getAddress(tx.to) !== getAddress(PROXY)) throw Object.assign(new Error(\`broadcast goes to" "a broadcast is Railgun's proxy call and nothing else"
 use "$ENGINE" '|| getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {' "the page sends only the send and fee it quoted"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'RailgunRouting.allowsSocket(url, declared: RailgunEngine.broadcasterHosts)' "every relay socket passes the rule"
+# §1725: the relays through Tor on the phone, never a direct socket instead.
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'guard let tor = await TorClient.shared.session(isolation: Self.circuit) else { return nil }' "a relay socket rides Tor, or does not open"
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'engine?.toPage(socket: id, "error", "Tor did not connect")' "no Tor, no socket: the page hears an error, never a direct socket"
+[[ $(grep -c 'try await relaysReady()' Casberi/Casberi/Model/RailgunEngine.swift) == 2 ]] \
+  && echo "  ✓ Tor is up before Waku dials, for the broadcasters and the quote" \
+  || { echo "  ✗ Waku can dial before Tor is up (§1725)"; fail=1; }
 
 # §1721 item 3: one door to RailgunPocket.send, and its recipient is your account.
 # The DEBUG probe (Shell/RailgunEngineProbe.swift, compiled out of Release)

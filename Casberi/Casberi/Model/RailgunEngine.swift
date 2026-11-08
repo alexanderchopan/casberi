@@ -218,13 +218,26 @@ final class RailgunEngine: NSObject {
     /// Starts listening for Railgun's broadcasters over the relays and waits
     /// up to `waitMs` for a fee: the tokens they take, right now.
     func broadcasters(waitMs: Int = 45_000) async throws -> [Wire.FeeToken] {
-        try await call(.broadcasters, Wire.Listen(waitMs: waitMs), as: Wire.Listening.self).tokens
+        try await relaysReady()
+        return try await call(.broadcasters, Wire.Listen(waitMs: waitMs), as: Wire.Listening.self).tokens
+    }
+
+    /// Tor up before Waku dials (prd §1725): libp2p gives a dial a few
+    /// seconds, and a circuit takes ~18 s on first use (measured on the
+    /// simulator), so dials made while it connects time out and are not
+    /// retried. Throws when Tor does not connect: nothing is sent another way.
+    private func relaysReady() async throws {
+        try await start()
+        guard let sockets, await sockets.ready() else {
+            throw Wire.Failure(name: "NoTor", message: "Tor did not connect")
+        }
     }
 
     /// What a send to someone else costs through the best broadcaster
     /// taking `feeToken`. Kept in the page for `broadcastSend`.
     func quoteBroadcast(token: String, amount: String, to: String, feeToken: String) async throws -> Wire.Quote {
-        try await call(.quoteBroadcast, Wire.Broadcast(token: token, amount: amount, to: to, feeToken: feeToken),
+        try await relaysReady()
+        return try await call(.quoteBroadcast, Wire.Broadcast(token: token, amount: amount, to: to, feeToken: feeToken),
                        as: Wire.Quote.self)
     }
 
@@ -310,6 +323,12 @@ private final class RailgunEngineLog: NSObject, WKScriptMessageHandler {
 /// here: Swift opens the socket only to a relay the broadcasters'
 /// `NetworkReach` entry declares, records the host, and hands every frame
 /// back. The page itself can open no socket (its CSP names no host).
+///
+/// **Through Tor (prd §1725).** On the phone every relay socket rides Tor,
+/// on one circuit kept for the broadcasters, so the relays never learn this
+/// phone's address; where Tor does not connect the socket fails and nothing
+/// is sent, never a direct socket instead. The Mac has no Tor (§1495) and
+/// connects directly, as its wallet reads do.
 @MainActor
 private final class RailgunEngineSocket: NSObject, WKScriptMessageHandler, URLSessionWebSocketDelegate {
     weak var engine: RailgunEngine?
@@ -317,7 +336,36 @@ private final class RailgunEngineSocket: NSObject, WKScriptMessageHandler, URLSe
     private var ids: [Int: Int] = [:]   // task identifier → page id
     /// Sockets the page closed: their end is a close, never an error.
     private var closing: Set<Int> = []
-    private lazy var session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: .main)
+    private var session: URLSession?
+    private var connecting: Task<URLSession?, Never>?
+    /// The broadcasters' one circuit.
+    static let circuit = "railgun-broadcasters"
+
+    /// Whether the sockets can open: Tor connected (on the phone).
+    func ready() async -> Bool { await ensureSession() != nil }
+
+    /// The sockets' session: Tor's proxy on the phone, its own delegate for
+    /// the open and close; nil while Tor does not connect.
+    private func ensureSession() async -> URLSession? {
+        if let session { return session }
+        if let connecting { return await connecting.value }
+        let task = Task { @MainActor () -> URLSession? in
+            let config: URLSessionConfiguration
+            if TorRoute.available {
+                guard let tor = await TorClient.shared.session(isolation: Self.circuit) else { return nil }
+                config = tor.configuration
+                config.protocolClasses = nil
+            } else {
+                config = .ephemeral
+            }
+            return URLSession(configuration: config, delegate: self, delegateQueue: .main)
+        }
+        connecting = task
+        let made = await task.value
+        connecting = nil
+        session = made
+        return made
+    }
 
     init(engine: RailgunEngine) { self.engine = engine }
 
@@ -332,14 +380,21 @@ private final class RailgunEngineSocket: NSObject, WKScriptMessageHandler, URLSe
                 engine?.toPage(socket: id, "error", "host not declared")
                 return
             }
-            NetworkLedger.shared.record(host: url.host ?? "")
             let protocols = (body["protocols"] as? [String]) ?? []
-            let task = protocols.isEmpty ? session.webSocketTask(with: url) : session.webSocketTask(with: url, protocols: protocols)
-            task.maximumMessageSize = 4 << 20
-            tasks[id] = task
-            ids[task.taskIdentifier] = id
-            task.resume()
-            receive(task, id: id)
+            Task { @MainActor in
+                guard let session = await ensureSession() else {
+                    NSLog("railgunEngine| socket | Tor did not connect | %@", url.host ?? "?")
+                    engine?.toPage(socket: id, "error", "Tor did not connect")
+                    return
+                }
+                NetworkLedger.shared.record(host: url.host ?? "", throughTor: TorRoute.available)
+                let task = protocols.isEmpty ? session.webSocketTask(with: url) : session.webSocketTask(with: url, protocols: protocols)
+                task.maximumMessageSize = 4 << 20
+                tasks[id] = task
+                ids[task.taskIdentifier] = id
+                task.resume()
+                receive(task, id: id)
+            }
         case "send":
             guard let task = tasks[id] else { return }
             let frame: URLSessionWebSocketTask.Message
@@ -392,7 +447,9 @@ private final class RailgunEngineSocket: NSObject, WKScriptMessageHandler, URLSe
         tasks = [:]
         ids = [:]
         closing = []
-        session.invalidateAndCancel()
+        connecting?.cancel()
+        session?.invalidateAndCancel()
+        session = nil
     }
 
     nonisolated func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {

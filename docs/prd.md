@@ -71518,3 +71518,11 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Not built:** a new phone's walk keeps an address paid only a Railgun token (§1562's walk asks ETH and USDC). **Not measured:** a real payment to a fresh address moving into Railgun.
 
 **Mac half (§1402).** The same watch on Catalyst.
+
+## §1725 — Railgun's broadcaster relays are reached through Tor on the phone, one circuit, Tor up before Waku dials, never directly instead; paying the broadcaster in DAI is not built (amends §1723 item 5 and its "Not built: the relays over Tor") (user, 2026-11-08: "you decide what is next do both", of the relays over Tor and paying fees in DAI) — BUILT; heard over Tor on the simulator (six fee tokens in 32 s, 13 s of it Tor connecting)
+
+1. **Every relay socket rides Tor on the phone**, on one circuit kept for the broadcasters (`RailgunEngineSocket`, Tor's own SOCKS settings from `TorClient`, `NetworkReach` "Railgun broadcasters" `throughTor`), so the relays never see this phone's address when it hears fees or hands over a send. Where Tor does not connect the socket fails and nothing is sent; there is no direct socket instead (§1495 item 1). The Mac has no Tor (§1495) and connects directly, as its wallet reads do.
+2. **Tor is up before Waku dials** (`relaysReady`, before listening and before a quote): libp2p gives a dial a few seconds and a circuit's first use took ~18 s on the simulator, so dials made while it connected timed out and were not retried — measured twice ("Timed out waiting for a remote peer") before this.
+3. **Paying the broadcaster in DAI is not built, decided.** The broadcaster takes no DAI, so DAI would have to become WETH inside Railgun first, through Railgun's relay contract and a swap; that transaction itself needs a fee in a token the wallet does not hold, so your account would send it — the same public ETH and the same account-to-Railgun link as §1723 item 4's "Add ETH for fees", which already works, with a swap's slippage and a second contract's calldata to vet on top. Item 4 stands as the one way to pay.
+
+**Checks.** `railgun-selftest.sh`: a relay socket rides Tor or does not open; no Tor reaches the page as an error, never a direct socket; Tor is readied before both the listen and the quote.

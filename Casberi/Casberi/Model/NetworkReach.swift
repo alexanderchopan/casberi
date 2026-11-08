@@ -574,7 +574,9 @@ enum NetworkReach {
                  // The three bootstrap relays and, through peer exchange, the
                  // operator's others (`seed-a`, `support-1`…), all under it.
                  hosts: ["rootedinprivacy.com"],
-                 credentialed: false),
+                 credentialed: false,
+                 // On the phone through Tor, one circuit (prd §1725).
+                 throughTor: true),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow, and what a deposit of yours still holds in Peer's escrow.",
