@@ -140,3 +140,68 @@ enum RailgunEngineProbe {
     private static func peakMB() -> Int { Int((vmInfo()?.ledger_phys_footprint_peak ?? 0) / 1_048_576) }
 }
 #endif
+
+#if DEBUG
+/// `-railgunPocket <step>` — YOUR Railgun wallet (prd §1713), the real one
+/// made from your private root, on Ethereum, through your account. Logs
+/// `railgunPocket|` lines. The sends are REAL MONEY and ask Face ID:
+/// - `status`              open, sync with every root checked, the balances
+/// - `shield:<amount>`     move <amount> DAI from your account in (approve + shield)
+/// - `send:<amount>|all`   send DAI from your Railgun wallet back to your account
+///   (`send:<amount>:<0x…>` to another address)
+enum RailgunPocketProbe {
+    static let dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+
+    @MainActor
+    static func run(_ raw: String) {
+        Task { @MainActor in
+            let parts = raw.split(separator: ":").map(String.init)
+            let started = Date()
+            do {
+                switch parts.first {
+                case "status":
+                    try await status()
+                case "shield":
+                    guard parts.count >= 2, let units = PrivateMoney.baseUnits(parts[1], decimals: 18) else { log("shield: say how much, shield:11"); break }
+                    log("shield: \(parts[1]) DAI, Face ID next")
+                    let hash = try await RailgunPocket.shield(token: dai, amount: units) { s in log("stage \(s)") }
+                    log("shield: landed \(hash ?? "(not yet seen)") · private in about an hour")
+                case "send":
+                    guard parts.count >= 2, let account = YourAccountKey.address else { log("send: say how much, send:all"); break }
+                    let to = parts.count >= 3 ? parts[2] : account
+                    let units: String
+                    if parts[1] == "all" {
+                        try await RailgunPocket.open(reason: nil)
+                        let synced = try await RailgunPocket.sync()
+                        units = synced.balances.first { $0.token.lowercased() == dai.lowercased() }.map { PrivateMoney.decimal(hex: $0.spendable) } ?? "0"
+                    } else {
+                        units = PrivateMoney.baseUnits(parts[1], decimals: 18) ?? "0"
+                    }
+                    log("send: \(PrivateMoney.number(units, decimals: 18) ?? units) DAI to \(YourAccount.short(to)), Face ID next")
+                    let hash = try await RailgunPocket.send(token: dai, amount: units, to: to) { s in log("stage \(s)") }
+                    log("send: landed \(hash ?? "(not yet seen)")")
+                default:
+                    log("unknown step \(raw)")
+                }
+            } catch {
+                log("FAILED \(String(describing: error))")
+            }
+            log("done in \(Int(Date().timeIntervalSince(started))) s")
+        }
+    }
+
+    @MainActor
+    private static func status() async throws {
+        let opened = try await RailgunPocket.open(reason: nil)
+        log("open: wallet \(opened.loaded ? "reopened" : "made") · kept leaves \(opened.keptLeaves) · account \(YourAccountKey.address.map(YourAccount.short) ?? "none")")
+        let s = try await RailgunPocket.sync()
+        log("sync: \(s.syncMs / 1000) s · trusted · txid \(s.txidIndex)/\(s.screeningIndex.map(String.init) ?? "?")")
+        if s.balances.isEmpty { log("balance: nothing yet") }
+        for b in s.balances {
+            log("balance: \(b.token == dai ? "DAI" : b.token) \(PrivateMoney.number(PrivateMoney.decimal(hex: b.amount), decimals: 18) ?? b.amount) · spendable \(PrivateMoney.number(PrivateMoney.decimal(hex: b.spendable), decimals: 18) ?? b.spendable)")
+        }
+    }
+
+    private static func log(_ line: String) { NSLog("railgunPocket| %@", line) }
+}
+#endif

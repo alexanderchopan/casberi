@@ -602,6 +602,8 @@ check(TestnetTx.fees(gasPrice: 21, tip: 0) == (1, 43) && TestnetTx.fees(gasPrice
 typealias R = PrivateRoot
 check(hexs(R.derive(root, .poolSeed)) == "87ded0d942e85e131c31c1f6c7c5d4940c55f1c421194b782e0ae77a2a33cc0c", "the pool seed is Node's HKDF")
 check(hexs(R.derive(root, .freshAddresses)) == "ebfe5265a0746feed62a0421eeaf78063178350a8505bc35c12fda60f8961a41", "the fresh root is Node's HKDF")
+check(hexs(R.derive(root, .railgunWallet)) == "8621c9203bece32e40d4969aa84deb96b02c13551a881bf28f4c8ec935d7d995", "Railgun's wallet entropy is Node's HKDF (prd §1713)")
+check(hexs(R.derive(root, .railgunDatabase)) == "fd34f97e813d0ffcfedd34a724295eb0def4eb1ee4e636a116f4f34994d6022f", "Railgun's database key is Node's HKDF (prd §1713)")
 check(hexs(R.ownerKey(root)) == "b7bcb8cdd801a5cf9a96288b02f1a97e23092fe06a0a1de4db0d513d4a41c437", "the owner's key is Node's HKDF, counter 0")
 check(R.id(root) == "1690d3193e46c034", "the root's public id is Node's SHA-256")
 let freshRoot = R.derive(root, .freshAddresses) ?? []

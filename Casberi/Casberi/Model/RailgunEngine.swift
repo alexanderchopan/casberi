@@ -172,9 +172,9 @@ final class RailgunEngine: NSObject {
 
     /// Opens the 0zk wallet on Ethereum through the account's node. Without
     /// a mnemonic the page makes a random wallet and keeps nothing.
-    func open(mnemonic: String? = nil, encryptionKey: String? = nil, walletID: String? = nil,
+    func open(mnemonic: String? = nil, entropy: String? = nil, encryptionKey: String? = nil, walletID: String? = nil,
               creationBlock: Int? = nil, persist: Bool = true) async throws -> Wire.Opened {
-        let opened = try await call(.open, Wire.Open(mnemonic: mnemonic, encryptionKey: encryptionKey, walletID: walletID,
+        let opened = try await call(.open, Wire.Open(mnemonic: mnemonic, entropy: entropy, encryptionKey: encryptionKey, walletID: walletID,
                                                       rpcUrl: PrivacyNetwork.ethereum.rpcUrl, creationBlock: creationBlock,
                                                       persist: persist),
                                     as: Wire.Opened.self)
