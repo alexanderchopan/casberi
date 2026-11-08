@@ -69,6 +69,9 @@ final class RailgunMove {
     private(set) var quote: RailgunEngineWire.Quote?
     /// The fee token's symbol and decimals, for the line.
     private var feeToken: (symbol: String, decimals: Int)?
+    /// No broadcaster can carry it (none answered, or nothing to pay one
+    /// in), and your private ETH pays a fresh sender's gas (prd §1726).
+    private(set) var viaFresh = false
 
     /// A send to someone else: a broadcaster sends it, never your account.
     var toSomeoneElse: Bool {
@@ -133,8 +136,14 @@ final class RailgunMove {
     func requote() async {
         guard let picked, let to = recipient, toSomeoneElse else { return }
         quote = nil
+        viaFresh = false
         stage = .quoting
-        if DemoMode.isActive { stage = .ready; return }
+        if DemoMode.isActive {
+            // `-railgunDemoFresh YES` shows the fresh sender's line (§1726).
+            viaFresh = UserDefaults.standard.bool(forKey: "railgunDemoFresh")
+            stage = .ready
+            return
+        }
         do {
             let q = try await RailgunPocket.quote(token: picked.contract, amount: picked.units, to: to)
             guard self.picked == picked else { return }
@@ -150,9 +159,16 @@ final class RailgunMove {
             guard self.picked == picked else { return }
             quote = q
             stage = feeToken == nil ? .failed(String(localized: "Railgun did not answer. Nothing was sent.")) : .ready
-        } catch RailgunPocket.Failure.noFeeToken {
+        } catch let failure as RailgunPocket.Failure where [.noFeeToken, .feeTokenPending, .noBroadcaster].contains(failure) {
+            // A fresh sender carries it when your private ETH pays its gas.
+            let covered = await RailgunPocket.privateGasCovers()
             guard self.picked == picked else { return }
-            stage = .needsFees
+            if covered {
+                viaFresh = true
+                stage = .ready
+            } else {
+                stage = failure == .noFeeToken ? .needsFees : .failed(Self.words(failure))
+            }
         } catch {
             guard self.picked == picked else { return }
             stage = .failed(Self.words(error))
@@ -216,6 +232,12 @@ final class RailgunMove {
                     await self?.say(s)
                 }
                 stage = .done(String(localized: "On its way: private in about an hour."))
+            case .takeBack where toSomeoneElse && viaFresh:
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "") { [weak self] words in
+                    self?.stage = .working(words)
+                }
+                stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse:
                 guard let q = quote else { return }
                 stage = .working(String(localized: "Proving on this iPhone…"))
@@ -259,6 +281,8 @@ final class RailgunMove {
         case .feeNotCovered?: String(localized: "That leaves nothing for the broadcaster's fee. Send a little less.")
         case .noFeeToken?: String(localized: "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither.")
         case .feeTokenPending?: String(localized: "Your ETH for fees is private in about an hour. Send then.")
+        case .noPrivateGas?: String(localized: "No broadcaster can send it, and your private ETH can't pay its gas. Nothing was sent.")
+        case .gasOnItsWay?: String(localized: "Its gas is on its way from your private ETH. Try again in a minute.")
         default: String(localized: "Railgun did not answer. Nothing was sent.")
         }
     }
@@ -400,6 +424,8 @@ struct MoveRailgunSentence<Head: View>: View {
         switch move.mode {
         case .deposit:
             return [fee, String(localized: "private in about an hour")].compactMap { $0 }.joined(separator: " · ")
+        case .takeBack where move.toSomeoneElse && move.viaFresh:
+            return [fee, String(localized: "gas from your private ETH")].compactMap { $0 }.joined(separator: " · ")
         case .takeBack where move.toSomeoneElse:
             return [fee, move.feeWords.map { String(localized: "\($0) to the broadcaster") }].compactMap { $0 }.joined(separator: " · ")
         case .takeBack:
@@ -443,7 +469,8 @@ struct MoveRailgunSentence<Head: View>: View {
     // MARK: - The foot
 
     private var ready: Bool {
-        move.stage == .ready && !DemoMode.isActive && (!move.toSomeoneElse || (move.quote != nil && move.feeWords != nil))
+        move.stage == .ready && !DemoMode.isActive
+            && (!move.toSomeoneElse || move.viaFresh || (move.quote != nil && move.feeWords != nil))
     }
 
     private var foot: some View {

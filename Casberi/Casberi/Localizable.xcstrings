@@ -105020,6 +105020,34 @@
         }
       }
     },
+    "Its gas is on its way from your private ETH. Try again in a minute." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Su gas va en camino desde tu ETH privado. Vuelve a intentarlo en un minuto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代が非公開ETHから送られています。1分後にもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비가 비공개 ETH에서 오는 중입니다. 1분 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它的 Gas 正从你的私密 ETH 转来。请一分钟后再试。"
+          }
+        }
+      }
+    },
     "Its highest across this %@ window." : {
       "localizations" : {
         "es" : {
@@ -120514,6 +120542,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "暂无余额"
+          }
+        }
+      }
+    },
+    "No broadcaster can send it, and your private ETH can't pay its gas. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún difusor puede enviarlo y tu ETH privado no alcanza para el gas. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金できるブロードキャスターがなく、非公開ETHではガス代を払えません。何も送金されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낼 수 있는 브로드캐스터가 없고, 비공개 ETH로 가스비를 낼 수 없습니다. 아무것도 보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有广播者能发送，你的私密 ETH 也不够支付 Gas。未发送任何内容。"
           }
         }
       }
@@ -143908,6 +143964,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "为此交易支付手续费"
+          }
+        }
+      }
+    },
+    "Paying its gas from your private ETH…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagando su gas con tu ETH privado…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開ETHからガス代を支払っています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH로 가스비를 내는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在用你的私密 ETH 支付 Gas…"
           }
         }
       }
@@ -232415,6 +232499,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas 从你的账户支付"
+          }
+        }
+      }
+    },
+    "gas from your private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gas de tu ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代は非公開ETHから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비는 비공개 ETH에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas 由你的私密 ETH 支付"
           }
         }
       }

@@ -41,6 +41,11 @@ enum FreshAddress {
 
     static let domain = Array("casberi fresh address v1".utf8)
 
+    /// **Fresh SENDERS (prd §1726)** take indexes from here up, far above any
+    /// receive address (the walk's gap limit never reaches them): a Railgun
+    /// send no broadcaster can carry is submitted by one, a new one each send.
+    static let senderBase: UInt32 = 0x4000_0000
+
     /// Address `index`'s private key, or nil for a root that is not 32 bytes.
     static func key(root: [UInt8], index: UInt32) -> [UInt8]? {
         guard root.count == 32 else { return nil }

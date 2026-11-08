@@ -118,6 +118,19 @@ use "$ENGINE" 'useDNSDiscovery: false' "the broadcasters are found through the r
 use "$ENGINE" "if (getAddress(tx.to) !== getAddress(PROXY)) throw Object.assign(new Error(\`broadcast goes to" "a broadcast is Railgun's proxy call and nothing else"
 use "$ENGINE" '|| getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {' "the page sends only the send and fee it quoted"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'RailgunRouting.allowsSocket(url, declared: RailgunEngine.broadcasterHosts)' "every relay socket passes the rule"
+# §1726: no broadcaster, a fresh sender — its gas your private ETH's, the proof behind Face ID, your account untouched.
+body=$(awk '/static func sendFromFresh\(/{on=1} on{print} on && /^    }$/{exit}' "$POCKET")
+if [[ -z "$body" ]] || printf '%s' "$body" | grep -q 'YourAccountChain' || ! printf '%s' "$body" | grep -q 'PrivateRootKey.unlock' \
+   || ! printf '%s' "$body" | grep -qF 'u.tx.data.lowercased().hasPrefix(FreshTx.railgunTransact)' \
+   || ! printf '%s' "$body" | grep -qF 'u.to.lowercased() == to.lowercased()' \
+   || ! printf '%s' "$body" | grep -qF 'guard estimate > 0, estimate <= FreshTx.railgunSendGas'; then
+  echo "  ✗ a fresh sender's send touches your account, skips Face ID, or sends what it did not check (§1726)"; fail=1
+else
+  echo "  ✓ a fresh sender's send asks for you, is Railgun's send to the recipient under its gas, your account untouched"
+fi
+use "$POCKET" 'UserDefaults.standard.set(Int(sender.index - FreshAddress.senderBase) + 1, forKey: senderKey(sender.root))' "each send takes a new fresh sender, counted the moment it is sent"
+use "$SENT" 'where [.noFeeToken, .feeTokenPending, .noBroadcaster].contains(failure) {' "no broadcaster, or nothing to pay one in, tries a fresh sender"
+
 # §1725: the relays through Tor on the phone, never a direct socket instead.
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'guard let tor = await TorClient.shared.session(isolation: Self.circuit) else { return nil }' "a relay socket rides Tor, or does not open"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'engine?.toPage(socket: id, "error", "Tor did not connect")' "no Tor, no socket: the page hears an error, never a direct socket"

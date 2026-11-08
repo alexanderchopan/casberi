@@ -13,7 +13,11 @@ import Foundation
 ///   ETH; `depositExactShares` to a token's, carrying none);
 /// - a token's `approve` of exactly that token's own router, carrying no ETH;
 /// - on Ethereum, for a token Railgun holds (prd §1713 item 7, §1724): its
-///   `approve` of Railgun's proxy, and the proxy's `shield`, carrying no ETH.
+///   `approve` of Railgun's proxy, and the proxy's `shield`, carrying no ETH;
+/// - on Ethereum, the proxy's `transact` carrying no ETH (prd §1726): a send
+///   from your Railgun wallet that a fresh SENDER submits when no broadcaster
+///   can. The key cannot spend with it: what moves is fixed by a proof only
+///   your Railgun wallet makes, behind Face ID; the key only pays the gas.
 ///
 /// Nothing else can be built here, so no fresh key can be made to pay
 /// anyone, call anything, or sign on another chain. The bytes are EIP-1559
@@ -40,7 +44,7 @@ enum FreshTx {
         // Railgun, Ethereum only: the proxy's shield, or a listed token's
         // approval of the proxy. Nothing carries ETH.
         if network.chainId == railgunChain {
-            if t == railgunProxy { return d.hasPrefix(railgunShield) && carried.isEmpty }
+            if t == railgunProxy { return (d.hasPrefix(railgunShield) || d.hasPrefix(railgunTransact)) && carried.isEmpty }
             if railgunTokens.contains(where: { $0.contract.lowercased() == t }) {
                 guard d.hasPrefix(approve), d.count == 2 + 8 + 128, carried.isEmpty else { return false }
                 return String(d.dropFirst(10).prefix(64)) == String(repeating: "0", count: 24) + railgunProxy.dropFirst(2)
@@ -117,6 +121,11 @@ enum FreshTx {
     /// `shield(((bytes32,(uint8,address,uint256),uint120),(bytes32[3],bytes32))[])`,
     /// from Railgun's own ABI (engine 9.9.1, RailgunSmartWallet).
     static let railgunShield = "0x044a40c3"
+    /// `transact((…)[])`, Railgun's proved send (an unshield here), from the same ABI.
+    static let railgunTransact = "0xd8ae136a"
+    /// The most a fresh sender's unshield may use (measured 516,069 from a
+    /// plain key, §1713 item 8), with room; estimated each time and held to it.
+    static let railgunSendGas = 900_000
     /// The most a fresh address's shield may use; estimated each time and
     /// held to this.
     static let railgunShieldGas = 600_000
