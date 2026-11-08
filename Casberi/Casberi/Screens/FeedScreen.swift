@@ -2076,6 +2076,12 @@ struct FeedScreen: View {
             // balance and its line, and nothing else loads them for it.
             if isActive || roomBoxPlace == .paneBox { streamBlock(); loadWalletLive() }
         }
+        // A landed transfer threw out its wallet's holdings window (prd
+        // §1722): read the number again now, rather than standing on the
+        // pre-transfer figure until the window ran out.
+        .onChange(of: wallet.holdingsRevision) {
+            if isActive || roomBoxPlace == .paneBox { streamBlock() }
+        }
         // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
         // AND re-reads the live tiles for that scope; the rows and balance
         // re-derive from state.

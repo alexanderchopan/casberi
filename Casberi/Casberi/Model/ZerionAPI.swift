@@ -115,9 +115,10 @@ enum ZerionAPI {
     /// one (unreachable, refused, or a shape we can't read). Split out so a
     /// chain-filtered read and its unfiltered retry are the same request made
     /// twice, never two spellings that can drift apart.
-    private static func dataRows(_ url: String, auth: String) async -> [[String: Any]]? {
-        // Through the lane (prd §934): one request at a time, and a 429
-        // waited out rather than read as "unreached".
+    private static func dataRows(_ url: String, auth: String, ahead: Bool = false) async -> [[String: Any]]? {
+        // Through the lane (prd §934, §1722): three in flight, spaced, a
+        // holdings read `ahead` of a transactions sweep, and a 429 waited out
+        // rather than read as "unreached".
         var attempt = 0
         var json: Any?
         var lastStatus = 0
@@ -131,7 +132,7 @@ enum ZerionAPI {
                 #endif
                 return nil
             }
-            let (body, status, http) = await ZerionLane.shared.run {
+            let (body, status, http) = await ZerionLane.shared.run(ahead: ahead) {
                 await IngestSupport.getJSONResponse(url, auth: "Basic \(auth)")
             }
             await ZerionLane.shared.note(dayRemaining: http?.value(forHTTPHeaderField: "ratelimit-org-day-remaining"),
@@ -225,11 +226,13 @@ enum ZerionAPI {
             + "&currency=usd"
         let stem = "https://api.zerion.io/v1/wallets/\(encoded)/positions/?\(base)"
 
+        // The number the person is looking at goes before every transactions
+        // sweep queued on the lane (prd §1722).
         var rows: [[String: Any]]?
         if !ids.isEmpty {
-            rows = await dataRows("\(stem)&filter[chain_ids]=\(ids)", auth: auth)
+            rows = await dataRows("\(stem)&filter[chain_ids]=\(ids)", auth: auth, ahead: true)
         }
-        if rows == nil { rows = await dataRows(stem, auth: auth) }
+        if rows == nil { rows = await dataRows(stem, auth: auth, ahead: true) }
         guard let data = rows else { return nil }
 
         let owner = address.lowercased()   // matches the Alchemy candidate path

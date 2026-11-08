@@ -665,6 +665,9 @@ enum WalletIngest {
                                             knownGood: knownGoodByOwner)
 
         var landed: [Thing] = []
+        /// The watched wallets a transfer or swap landed at this pass: their
+        /// holdings window is thrown out once the landing is saved (prd §1722).
+        var touched: Set<String> = []
         /// The first wallet this pass received qualifying money at (prd §501).
         /// ONE per pass, never one per transfer — see `WalletArrival.pulse`.
         var arrival: (address: String, amount: String?)?
@@ -708,6 +711,7 @@ enum WalletIngest {
                     // received side especially ("Swapped 1 ETH → 4,000 ÚЅDС").
                     WalletSafety.flagSpoofedSymbol(thing, symbols: [sMax.asset, rMax.asset])
                     landed.append(thing)
+                    touched.insert(sMax.address.lowercased())
                 }
                 legs = legs.filter { roundUpLegs[$0.ref] != nil }
             }
@@ -775,6 +779,7 @@ enum WalletIngest {
                     // too (see `flagSpoofedSymbol`).
                     WalletSafety.flagSpoofedSymbol(thing, symbols: [leg.asset])
                     landed.append(thing)
+                    touched.insert(leg.address.lowercased())
                     // MONEY THAT REALLY ARRIVED (prd §501) — the four fences
                     // live on `WalletArrival`; three of them are testable
                     // right here, where the leg's direction, its read price
@@ -813,6 +818,9 @@ enum WalletIngest {
         // a landing the store rejected must never have rained, or the shower
         // celebrates a row that is not there when you look for it.
         if saved, let arrival { WalletArrival.shared.announce(address: arrival.address, amount: arrival.amount) }
+        // The balance behind a landed transfer is not the one the window
+        // holds (prd §1722): drop it, and the room reads again.
+        if saved, !touched.isEmpty { await invalidateHoldings(addresses: Array(touched)) }
         // Then the already-landed legs this pass re-read (2026-08-02): backfill
         // the price the row may predate, and flag the fictions among them.
         // Separate save — a heal must never be able to lose a landing.
@@ -2174,6 +2182,11 @@ enum WalletIngest {
         /// "as of 2h ago" instead of claiming the number is current
         /// (2026-07-17). nil on a live group — the normal case.
         var stale: Date? = nil
+        /// When the holdings behind a LIVE group were read: the window's own
+        /// time on a hit (`HoldingsCache`), the moment of the fetch otherwise,
+        /// nil on a last-known group. A figure served from the window is dated
+        /// by this, never presented as now (prd §1722, §83).
+        var readAt: Date? = nil
 
         /// "$12.4K across 5 tokens" live, or "$12.4K · as of 2h ago" when the
         /// group is a stale last-known snapshot — compact, no cents theater.
@@ -2236,6 +2249,10 @@ enum WalletIngest {
     ///   way now, one chip tap per wallet, and the held-in breakdown carries
     ///   the same fact down to the position.)
     /// - **Scoped, or a single wallet** → that wallet's own map, unchanged.
+    /// How old a window hit must be before the crown stamps it "as of"
+    /// (prd §1722): `AccountPageShape.ago` says "just now" under a minute.
+    static let windowStampAfter: TimeInterval = 60
+
     @MainActor
     static func portfolioRead(scopeTo address: String? = nil) async -> (doc: [String], portfolio: WalletPortfolio)? {
         await portfolioReading(scopeTo: address).read
@@ -2247,7 +2264,7 @@ enum WalletIngest {
     /// over money it showed a minute ago; a reached, empty nil clears it.
     @MainActor
     static func portfolioReading(scopeTo address: String? = nil, only: [String]? = nil) async
-        -> (read: (doc: [String], portfolio: WalletPortfolio)?, failed: Bool) {
+        -> (read: (doc: [String], portfolio: WalletPortfolio)?, failed: Bool, readAt: Date?) {
         // Following (prd §1536) reads every wallet you follow and nothing
         // that is not a wallet: no exchange, cash, validators or Privy app.
         let combined = address == nil && only == nil
@@ -2266,9 +2283,9 @@ enum WalletIngest {
             }
             let account = await MainActor.run { WalletPortfolio.demoAccountHeld(scopeTo: address, only: only) }
             let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account)
-            guard !portfolio.isEmpty else { return (read: nil, failed: false) }
+            guard !portfolio.isEmpty else { return (read: nil, failed: false, readAt: nil) }
             // Cut by section, as the live read is (prd §1698).
-            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)
+            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false, readAt: nil)
         }
         let read = await holdingsByWallet()
         var groups = read.groups
@@ -2288,7 +2305,8 @@ enum WalletIngest {
         // read produced NO group at all — one wallet answering is a real
         // portfolio, and mixing a live wallet with another's remembered
         // figures would date a number nothing on screen could date.
-        if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet() }
+        var standsOnLast = false
+        if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet(); standsOnLast = true }
         // The Wallet feed can scope to one watched wallet (prd §128) — filter
         // the groups AFTER the fetch, never before, so every wallet's value
         // history still samples (holdingsByWallet's recordSample side effect)
@@ -2298,7 +2316,20 @@ enum WalletIngest {
         // Stamped from the groups that SURVIVED the scope, so a scoped page
         // never wears another wallet's date (nil on a live read — the normal
         // case — because a live group carries no `stale`).
-        let asOf = groups.compactMap(\.stale).min()
+        var asOf = groups.compactMap(\.stale).min()
+        // **A WINDOWED FIGURE IS DATED (prd §1722).** The holdings window
+        // serves a read up to ten minutes old, and until now it was drawn
+        // exactly like a live one. The oldest window hit among the groups
+        // dates the number, once it is old enough for the stamp to say
+        // something ("just now" says nothing under a minute). `readAt` is
+        // what the Wallet remembers the reading AS (`WalletLastReading`):
+        // the data's own time, nil when the groups stand on last-known
+        // samples, which are never remembered.
+        let windowAt = groups.compactMap(\.readAt).min()
+        let readAt: Date? = standsOnLast ? nil : (windowAt ?? Date())
+        if asOf == nil, let windowAt, Date().timeIntervalSince(windowAt) >= Self.windowStampAfter {
+            asOf = windowAt
+        }
         // Connected exchanges merge into the COMBINED read only (prd §163). A
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
@@ -2336,8 +2367,11 @@ enum WalletIngest {
         // "shouldn't my private balance number be part of my Yours?").
         let yours = address.map(YourAccountDemo.isYours) ?? false
         // Your Aztec account counts the same way, its own block (prd §1700e).
+        // Railgun's tokens join Privacy Pools' in the one Private block
+        // (prd §1713 item 1, §1722): the same symbol, summed.
         let privately = combined || yours
-            ? (await PrivateMoneyStore.shared.walletHolding()) + (await AztecAccountStore.shared.walletHolding()) : []
+            ? (await PrivateMoneyStore.shared.walletHolding()) + (await RailgunHoldings.shared.walletHolding())
+                + (await AztecAccountStore.shared.walletHolding()) : []
         // What your account has lent on Aave, Round-ups included (prd §1695):
         // counted where Private is, the same way, so Tokens, Lent and Private
         // add up to this number. Zerion leaves the aTokens out and
@@ -2351,7 +2385,7 @@ enum WalletIngest {
             lent = lentRead.venues
             lentAsOf = lentRead.asOf
         }
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || ((!privately.isEmpty || !lent.isEmpty) && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0) }
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || ((!privately.isEmpty || !lent.isEmpty) && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0, readAt: nil) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
                                              venues: cash + privy + privately + lent,
@@ -2407,7 +2441,7 @@ enum WalletIngest {
             // The line carries the total the room's crown reads (prd §953) —
             // it was "" and the true-area treemap (§939) never drew for the
             // combined portfolio; `GenTagMap` hides it where the crown draws.
-            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)
+            return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false, readAt: readAt)
         }
 
         let ids = groups.indices.map { "w\($0)" }
@@ -2415,7 +2449,7 @@ enum WalletIngest {
         for (i, g) in groups.enumerated() {
             doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
-        return (read: (doc: doc, portfolio: portfolio), failed: false)
+        return (read: (doc: doc, portfolio: portfolio), failed: false, readAt: readAt)
     }
 
     /// One map over a whole portfolio — the combined read's, and an app's
@@ -2617,7 +2651,8 @@ enum WalletIngest {
                                     topBySymbol: topBySymbol(g.bySymbol),
                                     bySymbolAll: g.bySymbol,
                                     routeBySymbol: g.routes,
-                                    partsBySymbol: g.parts))
+                                    partsBySymbol: g.parts,
+                                    readAt: g.at))
     }
 
     /// One address that is NOT on the watch list, read for what it holds
@@ -2675,7 +2710,7 @@ enum WalletIngest {
     private static func holdings(addresses: [String])
         async -> (reached: Bool, group: (cells: [String], total: Double, count: Int,
                                          bySymbol: [String: Double], routes: [String: String],
-                                         parts: [String: [String: Double]])?) {
+                                         parts: [String: [String: Double]], at: Date)?) {
         // THE DEMO REACHES NOTHING, at the FUNNEL (2026-08-12). Gating
         // `ZerionAPI` alone was not enough and the measurement said so: this
         // path falls back to Alchemy the moment Zerion is unreached, so the
@@ -2688,7 +2723,8 @@ enum WalletIngest {
         // "couldn't reach the chain" over a room whose balances come from the
         // demo's own seeded samples and are perfectly fine.
         if DemoMode.isActive { return (true, nil) }
-        guard let tokens = await fetchHeldTokens(addresses: addresses) else { return (false, nil) }
+        guard let dated = await fetchHeldTokensDated(addresses: addresses) else { return (false, nil) }
+        let tokens = dated.tokens
         var bySymbol: [String: Double] = [:]
         // Each symbol's biggest single position also remembers WHERE it is
         // (chain slug + token address) so its treemap cell can open the same
@@ -2734,7 +2770,7 @@ enum WalletIngest {
 
         let routes = routeBySymbol.mapValues(\.route)
         return (true, (treemapCells(bySymbol: bySymbol, routes: routes),
-                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes, parts))
+                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes, parts, dated.at))
     }
 
     /// The top-5-by-value treemap cells for a by-symbol map. Extracted
@@ -2896,7 +2932,7 @@ enum WalletIngest {
 
         private struct Entry: Codable { let tokens: [HeldToken]; let at: Date }
         private var fresh: [String: Entry] = [:]
-        private var inFlight: [String: Task<[HeldToken]?, Never>] = [:]
+        private var inFlight: [String: Task<(tokens: [HeldToken], at: Date)?, Never>] = [:]
         /// Survives a cold launch, so a force-quit (or an OS eviction) doesn't
         /// re-buy holdings the app read a minute ago. Small — one entry per
         /// address-set actually used, dropped wholesale on invalidate.
@@ -2907,15 +2943,21 @@ enum WalletIngest {
         /// every concurrent caller then shares). The actor's serialization is
         /// what makes the check-then-register step race-free — there is no await
         /// between reading `inFlight` and writing it.
-        func tokens(key: String, fetch: @Sendable @escaping () async -> [HeldToken]?) async -> [HeldToken]? {
+        /// With WHEN they were read (prd §1722): a hit is the entry's own
+        /// time, so the number drawn from it can say "as of 4m ago" rather
+        /// than stand as current (user: "it's often wrong at first").
+        func tokens(key: String, fetch: @Sendable @escaping () async -> [HeldToken]?) async -> (tokens: [HeldToken], at: Date)? {
             if let e = entry(key), e.at.timeIntervalSinceNow > -Self.window {
                 NSLog("[Casberi] holdingsWindow: HIT (age %.0fs of %.0fs, %d tokens) — no metered call",
                       -e.at.timeIntervalSinceNow, Self.window, e.tokens.count)
-                return e.tokens
+                return (e.tokens, e.at)
             }
             if let running = inFlight[key] { return await running.value }
             NSLog("[Casberi] holdingsWindow: MISS — reading live")
-            let task = Task { await fetch() }
+            let task = Task { () -> (tokens: [HeldToken], at: Date)? in
+                guard let read = await fetch() else { return nil }
+                return (read, Date())
+            }
             inFlight[key] = task
             let result = await task.value
             inFlight[key] = nil
@@ -2924,7 +2966,7 @@ enum WalletIngest {
             // An empty read is never kept (prd §1592): the window outlives a
             // relaunch, so one wrong "holds nothing" stood ten minutes over
             // your account however often you opened the app again.
-            if let result, !result.isEmpty { store(key, Entry(tokens: result, at: Date())) }
+            if let result, !result.tokens.isEmpty { store(key, Entry(tokens: result.tokens, at: result.at)) }
             return result
         }
 
@@ -2955,6 +2997,34 @@ enum WalletIngest {
         func invalidate() {
             fresh.removeAll()
             UserDefaults.standard.removeObject(forKey: Self.storeKey)
+        }
+
+        /// **A TRANSFER THAT LANDED IS NEWS ABOUT THE STATE (prd §1722).**
+        /// The window's own rule — holdings are a state, dated not wrong —
+        /// held until the transactions pass landed the very transfer that
+        /// changed the balance and the window kept serving the figure from
+        /// before it, for up to ten minutes, under a number that looked
+        /// current. So a landing drops every entry naming the wallet it
+        /// landed at, memory and mirror both, and the next read goes live.
+        /// Returns whether anything was dropped.
+        func invalidate(addresses: [String]) -> Bool {
+            let names = addresses.map { $0.lowercased() }.filter { !$0.isEmpty }
+            guard !names.isEmpty else { return false }
+            var all = fresh
+            if let data = UserDefaults.standard.data(forKey: Self.storeKey),
+               let stored = try? JSONDecoder().decode([String: Entry].self, from: data) {
+                for (k, v) in stored where all[k] == nil { all[k] = v }
+            }
+            let gone = all.keys.filter { key in
+                let lower = key.lowercased()
+                return names.contains { lower.contains($0) }
+            }
+            guard !gone.isEmpty else { return false }
+            for key in gone { all[key] = nil }
+            fresh = all
+            if all.isEmpty { UserDefaults.standard.removeObject(forKey: Self.storeKey) }
+            else if let data = try? JSONEncoder().encode(all) { UserDefaults.standard.set(data, forKey: Self.storeKey) }
+            return true
         }
 
         /// The newest read of every address set, whatever its age, never a
@@ -3020,6 +3090,16 @@ enum WalletIngest {
     /// call this; only a deliberate user pull does.
     static func invalidateHoldingsCache() async { await HoldingsCache.shared.invalidate() }
 
+    /// Drops the holdings window of every wallet in `addresses` and tells the
+    /// Wallet room to read again (`WalletStore.holdingsRevision`), once a
+    /// transfer landed at one of them (prd §1722). Nothing moves when no
+    /// entry named them.
+    static func invalidateHoldings(addresses: [String]) async {
+        guard await HoldingsCache.shared.invalidate(addresses: addresses) else { return }
+        NSLog("[Casberi] holdingsWindow: dropped for %d wallet(s) after a landing", addresses.count)
+        await MainActor.run { WalletStore.shared.holdingsRevision &+= 1 }
+    }
+
     /// The priced-holdings read, coalesced and briefly cached (2026-07-17).
     ///
     /// One app foreground fans the SAME `by-address` Portfolio call out 5–8×:
@@ -3038,6 +3118,13 @@ enum WalletIngest {
     /// `HoldingsCache` for the state-vs-event rule that decides what may be
     /// cached and what must always go live.
     private static func fetchHeldTokens(addresses: [String]) async -> [HeldToken]? {
+        await fetchHeldTokensDated(addresses: addresses)?.tokens
+    }
+
+    /// The same read, with WHEN it was made (prd §1722): the window's time on
+    /// a hit, now on a live read. The watched wallets' groups carry it so the
+    /// crown can date a windowed figure.
+    private static func fetchHeldTokensDated(addresses: [String]) async -> (tokens: [HeldToken], at: Date)? {
         guard !addresses.isEmpty else { return nil }
         // Key on the ROUTED request, not the bare addresses: a chain toggled
         // off changes `networks(for:)`, and the key must move with it so a

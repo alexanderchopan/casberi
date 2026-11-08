@@ -380,7 +380,7 @@ def audit(texts: dict) -> list:
     if "guard !result.isEmpty else {" not in body(code["WalletIngest"], "func collectCandidatesZerion("):
         bad.append("an empty Zerion answer is believed alone — your account can stand empty "
                    "beside its private balance (prd §1592)")
-    if "if let result, !result.isEmpty { store(" not in code["WalletIngest"]:
+    if "if let result, !result.tokens.isEmpty { store(" not in code["WalletIngest"]:
         bad.append("HoldingsCache keeps an empty read — one wrong 'holds nothing' outlives a "
                    "relaunch for ten minutes (prd §1592)")
     if "guard hydrated else { return }" not in body(code["WalletStore"], "private func persist("):
@@ -403,8 +403,25 @@ def audit(texts: dict) -> list:
     if "WalletLastReading.remember(read.portfolio" not in sb:
         bad.append("streamBlock no longer keeps a live reading — the next open has nothing to "
                    "draw at once (prd §1593)")
-    if "read.portfolio.asOf == nil" not in sb:
-        bad.append("a last-known reading can overwrite the kept live one (prd §1593)")
+    # §1722: the reading says when it was READ (`readAt`, nil when it stands on
+    # last-known samples), and the Wallet remembers it as of that moment.
+    if "if let at = reading.readAt" not in sb or "wallets: watched, at: at)" not in sb:
+        bad.append("a last-known reading can overwrite the kept live one, or a window hit is "
+                   "remembered as read now (prd §1593, §1722)")
+
+    # §1722 — the holdings window is dated and thrown out by a landing: a hit
+    # older than a minute stamps the crown, a transfer the pass landed drops
+    # its wallet's entries once saved, and the room reads again on the store's
+    # revision rather than standing on the pre-transfer figure.
+    wi = code["WalletIngest"]
+    if "if asOf == nil, let windowAt, Date().timeIntervalSince(windowAt) >= Self.windowStampAfter" not in wi:
+        bad.append("a holdings-window hit is drawn as current — a ten-minute-old figure "
+                   "with no 'as of' (prd §1722, §83)")
+    if "if saved, !touched.isEmpty { await invalidateHoldings(addresses:" not in body(wi, "static func refresh(context:"):
+        bad.append("a landed transfer leaves the holdings window standing — the balance "
+                   "reads pre-transfer for up to ten minutes (prd §1722)")
+    if ".onChange(of: wallet.holdingsRevision)" not in code["FeedScreen"]:
+        bad.append("the Wallet room never re-reads after a landing dropped its window (prd §1722)")
 
     # §1702 — Plasma One's card balance stands in Holdings on its pick and is
     # NEVER counted: the card contract may itself be a watched address whose
@@ -477,14 +494,14 @@ def self_test() -> int:
         ("the last-known fallback is dropped", "WalletIngest",
          lambda t: t.replace("groups = lastKnownHoldingsByWallet()", "groups = []")),
         ("the fallback stops being gated on unreached", "WalletIngest",
-         lambda t: t.replace("if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet() }",
-                             "if groups.isEmpty { groups = lastKnownHoldingsByWallet() }")),
+         lambda t: t.replace("if groups.isEmpty, read.unreached > 0 { groups = lastKnownHoldingsByWallet(); standsOnLast = true }",
+                             "if groups.isEmpty { groups = lastKnownHoldingsByWallet(); standsOnLast = true }")),
         ("a 202 is an answer again", "ZerionAPI",
          lambda t: t.replace("guard lastStatus == 200, let root", "guard let root", 1)),
         ("an empty Zerion answer is believed", "WalletIngest",
          lambda t: t.replace("guard !result.isEmpty else {", "guard true else {", 1)),
         ("the cache keeps an empty read", "WalletIngest",
-         lambda t: t.replace("if let result, !result.isEmpty { store(", "if let result { store(", 1)),
+         lambda t: t.replace("if let result, !result.tokens.isEmpty { store(", "if let result { store(", 1)),
         ("WalletStore saves unhydrated", "WalletStore",
          lambda t: t.replace("        guard hydrated else { return }\n", "", 1)),
         ("the sweep stops putting your account back", "BridgeRefresh",
@@ -495,6 +512,14 @@ def self_test() -> int:
          lambda t: t.replace("WalletLastReading.reading(scope: scopeKey", "WalletLastReading.unread(scope: scopeKey", 1)),
         ("a live reading is not kept", "FeedScreen",
          lambda t: t.replace("WalletLastReading.remember(read.portfolio", "WalletLastReading.noop(read.portfolio", 1)),
+        ("a window hit is drawn as current", "WalletIngest",
+         lambda t: t.replace("if asOf == nil, let windowAt, Date().timeIntervalSince(windowAt) >= Self.windowStampAfter",
+                             "if false, let windowAt, Date().timeIntervalSince(windowAt) >= Self.windowStampAfter", 1)),
+        ("a landing keeps the window", "WalletIngest",
+         lambda t: t.replace("if saved, !touched.isEmpty { await invalidateHoldings(addresses:",
+                             "if false, !touched.isEmpty { await invalidateHoldings(addresses:", 1)),
+        ("the room ignores the revision", "FeedScreen",
+         lambda t: t.replace(".onChange(of: wallet.holdingsRevision)", ".onChange(of: wallet.addresses.count)", 1)),
         ("the portfolio loses its stamp", "WalletPortfolio",
          lambda t: t.replace("var asOf: Date? = nil", "var stampedAt: Date? = nil", 1)),
         ("the crown stops passing the stamp", "FeedScreen",

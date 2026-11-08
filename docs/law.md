@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1882 of 1954 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1883 of 1955 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1293,7 +1293,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §931 — The Wallet review, first round: the marks the read already named, the ribbons' one ink and the faces' names, and one…
 - §932 — The tray's Apple pass: two detents, glass, fill means selected, the lift from the face, the deal, the pick flight (amended by §1589; part superseded by §1014, §1058)
 - §933 — Settings and Addresses are screens of their own; Accounts is Connect | Manage (amended by §1050g, §1129)
-- §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused… (amended by §1592)
+- §934 — Zerion is read through one lane: one request a second, a refusal waited out, an empty day pool closed, and a refused… (amended by §1592, §1722)
 - §935 — The room's faces and venues sit BESIDE the face, not under it (amended by §1044)
 - §936 — The wallet family's tiles speak one grammar: one number over one caption, bars for "how many of each", one accent and… (part superseded by §944, §952)
 - §937 — The room's corner door is deleted: the tray's Manage is the one door to a room's account page (amended by §1033; part superseded by §958)
@@ -1973,7 +1973,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
 - §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line (amended by §1609)
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
-- §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,…
+- §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,… (amended by §1722)
 - §1594 — A delegation opens: what it is, where it is set, and Revoke in the wallet app that set it
 - §1595 — A holdings tile opens its token on one tap, and a native coin charts from a last reading too
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
@@ -2128,6 +2128,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720)
 - §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private…
 - §1720 — Into your private balance on Aztec from your co-signer: when Shield scores your co-signer and not your account, Move'…
+- §1722 — The balance is dated when it is old and read again when it changed, and Zerion is read three at a time with holdings…
 
 ## Dead rulings → what replaced them (generated)
 

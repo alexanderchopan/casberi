@@ -139,6 +139,12 @@ final class WalletStore {
         return name == "\(address.prefix(6))…\(address.suffix(4))"
     }
 
+    /// Bumped when a landed transfer threw out a wallet's holdings window
+    /// (`WalletIngest.invalidateHoldings(addresses:)`, prd §1722), so the
+    /// Wallet room re-reads the number instead of standing on the old one
+    /// until the window ran out.
+    var holdingsRevision = 0
+
     var addresses: [WatchedAddress] {
         didSet {
             persist()

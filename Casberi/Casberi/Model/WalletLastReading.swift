@@ -54,8 +54,12 @@ enum WalletLastReading {
         return next
     }
 
-    @MainActor static func remember(_ portfolio: WalletPortfolio, scope: String?, wallets: [String]) {
-        let next = remembering(portfolio, scope: scope, wallets: wallets, in: stored())
+    /// `at` is when the holdings were READ — a window hit's own time, never
+    /// the moment it was served (prd §1722), so the stamp drawn next open is
+    /// the data's age and not the cache's.
+    @MainActor static func remember(_ portfolio: WalletPortfolio, scope: String?, wallets: [String],
+                                    at: Date = Date()) {
+        let next = remembering(portfolio, scope: scope, wallets: wallets, at: at, in: stored())
         memo = next
         if let data = try? JSONEncoder().encode(next) { DefaultsWrite.set(data, forKey: key) }
     }

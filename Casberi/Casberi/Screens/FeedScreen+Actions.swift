@@ -410,10 +410,11 @@ extension FeedScreen {
                     portfolio = read.portfolio
                     portfolioScope = scopeKey
                 }
-                // Kept for the next open (prd §1593): a live reading only,
-                // never one already standing on last-known samples.
-                if read.portfolio.asOf == nil, !DemoMode.isActive {
-                    WalletLastReading.remember(read.portfolio, scope: scopeKey, wallets: watched)
+                // Kept for the next open (prd §1593): the Wallet's own
+                // reading only — live, or the window's, dated when it was
+                // read (§1722) — never one standing on last-known samples.
+                if let at = reading.readAt, !DemoMode.isActive {
+                    WalletLastReading.remember(read.portfolio, scope: scopeKey, wallets: watched, at: at)
                 }
             } else if reading.failed, portfolio != nil, portfolioScope == scopeKey {
                 // A read that could not look keeps the map this scope already
