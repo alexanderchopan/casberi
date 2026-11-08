@@ -237,9 +237,10 @@ WHOSE="Casberi/Casberi/Model/WalletWhose.swift"
 WHOSESWITCH="Casberi/Casberi/Screens/WalletWhoseSwitch.swift"
 WINDOWED="Casberi/Casberi/Screens/WalletWindowed.swift"
 HOMECROWN="Casberi/Casberi/Screens/RoomHomeCrown.swift"
+PORTFOLIO="Casberi/Casberi/Model/WalletPortfolio.swift"
 for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
          "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY" "$WALLETHOME" "$SCROLL" \
-         "$WHOSE" "$WHOSESWITCH" "$WINDOWED" "$HOMECROWN"; do
+         "$WHOSE" "$WHOSESWITCH" "$WINDOWED" "$HOMECROWN" "$PORTFOLIO"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -626,6 +627,16 @@ guard WalletWindowed.swift "@State private var range: WalletRange" \
   "WalletWindowed no longer owns the pick — a pick must re-run the view that draws the chips (prd §1716)"
 guard WalletWindowed.swift "WalletRange.remembered(offered: offered)" \
   "a remount (the box re-keys on its total) would snap the window back — the remembered pick must be re-derived (prd §1716)"
+
+# ── two windows, 7d and 30d (prd §1717) ──────────────────────────────────────
+# The whole-record window ("Followed") is deleted; 30d is offered only once
+# the record reaches past the week, so the two chips never draw one line.
+deny WalletPortfolio.swift "case watched" \
+  "the whole-record window is back in WalletRange — 7d and 30d only (prd §1717)"
+guard WalletPortfolio.swift 'case month = "30d"' \
+  "WalletRange lost its 30d window (prd §1717)"
+guard WalletPortfolio.swift "first.at < Date.now.addingTimeInterval(-WalletRange.week.span)" \
+  "30d is offered over a record the week already shows whole — two chips, one line, a dead choice (prd §1717, §83)"
 # (The activity chart's own guard went with the chart, prd §1039.)
 # (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
 # stayed the chips' own gate, went with prd §942: a flexing drawing reserves

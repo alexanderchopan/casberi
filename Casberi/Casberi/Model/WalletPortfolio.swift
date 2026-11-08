@@ -468,40 +468,38 @@ struct WalletPortfolio: Equatable, Codable {
     }
 }
 
-/// The balance line's window (2026-07-21). "Watched" — the whole record — is
-/// the base and the only one that always exists; the calendar windows are
-/// OFFERED ONLY WHEN THE SAMPLES REACH BACK THAT FAR, so a chip can never
-/// name a period the history doesn't cover (the same rule the delta pill's
-/// "watched" label was invented to keep: never claim a range you don't have).
+/// The balance line's window (2026-07-21): **7d and 30d, nothing else (prd
+/// §1717, user: "we should just have seven day and 30 day").** The whole-record
+/// window — "watched", drawn "Followed" since §683 — is deleted. What its rule
+/// protected is kept another way: a chip never names a span the record does
+/// not hold. 7d is offered whenever two samples exist and clips to what there
+/// is; 30d only once the record reaches past the week, so the two never draw
+/// the same line (a choice with one answer is §83's dead control); and the
+/// change line dates a record younger than its window from its first sample
+/// ("since Nov 6") instead of saying "7 days" over two.
 enum WalletRange: String, CaseIterable {
     case week = "7d"
     case month = "30d"
-    case watched = "watched"
 
     private static let memoryKey = "wallet.balance.range"
 
-    var span: TimeInterval? {
+    var span: TimeInterval {
         switch self {
         case .week:    return 7 * 86_400
         case .month:   return 30 * 86_400
-        case .watched: return nil
         }
     }
 
     /// What the delta pill says its number is measured over.
     var deltaLabel: String { rawValue }
 
-    /// **WHAT THE CHIP SAYS (prd §683, user: "shouldn't 'watched' be sentence
-    /// case").** `rawValue` is a STORAGE key — it is what lands in
-    /// `UserDefaults` — and it was being drawn as a label, so the chip read
-    /// "watched" in lower case beside "7d" and "30d". The spelling of a key
-    /// and the spelling of a word on screen are different facts; this is the
-    /// second.
+    /// **WHAT THE CHIP SAYS (prd §683).** `rawValue` is a STORAGE key — it is
+    /// what lands in `UserDefaults` — and the word on screen is a second fact,
+    /// so the two stay apart even while they happen to agree.
     var chipLabel: String {
         switch self {
         case .week:    return String(localized: "7d")
         case .month:   return String(localized: "30d")
-        case .watched: return String(localized: "Followed")
         }
     }
 
@@ -512,57 +510,61 @@ enum WalletRange: String, CaseIterable {
         switch self {
         case .week:    return String(localized: "This week")
         case .month:   return String(localized: "This month")
-        case .watched: return String(localized: "Since you started following")
         }
     }
 
-    /// **THE WINDOW AS WORDS, ON THE CHANGE LINE (prd §920).** "30 days" for a
-    /// calendar window; the whole record is dated from its first sample
-    /// ("since Aug 26"), because "watched" names the chip and not a span. The
-    /// year is said only when it is not this one.
+    /// **THE WINDOW AS WORDS, ON THE CHANGE LINE (prd §920, §1717).** "30 days"
+    /// when the record fills the window; a record younger than its window is
+    /// dated from its first sample ("since Nov 6"), because "7 days" over two
+    /// days of line claims five nobody observed (§83). The year is said only
+    /// when it is not this one. A day of slack covers the read cadence (one
+    /// sample every four hours at most), so a full week is never dated.
     func windowWord(since first: Date?) -> String {
-        switch self {
-        case .week:  return String(localized: "7 days")
-        case .month: return String(localized: "30 days")
-        case .watched:
-            guard let first else { return String(localized: "since followed") }
+        if let first, first > Date.now.addingTimeInterval(-span + 86_400) {
             let thisYear = Calendar.current.isDate(first, equalTo: .now, toGranularity: .year)
             let day = thisYear
                 ? first.formatted(.dateTime.month(.abbreviated).day())
                 : first.formatted(.dateTime.month(.abbreviated).day().year())
             return String(localized: "since \(day)")
         }
+        switch self {
+        case .week:  return String(localized: "7 days")
+        case .month: return String(localized: "30 days")
+        }
     }
 
-    /// The samples inside this window — everything, for `.watched`.
+    /// The samples inside this window.
     func clip(_ samples: [WalletStore.ValueSample]) -> [WalletStore.ValueSample] {
-        guard let span else { return samples }
         let cutoff = Date.now.addingTimeInterval(-span)
         return samples.filter { $0.at >= cutoff }
     }
 
-    /// The windows this history can honestly answer: `.watched` whenever two
-    /// samples exist, plus each calendar window whose span the record actually
-    /// covers (the first sample predates it) AND which holds two points of its
-    /// own. Returns a single entry when there's nothing to choose between —
-    /// callers draw no chips for that, since a lone chip is a dead control.
+    /// The windows this history can honestly answer: 7d whenever it holds two
+    /// points of its own; 30d when it holds two AND the record reaches past
+    /// the week, so that it shows something 7d does not. Returns a single
+    /// entry when there's nothing to choose between — callers draw no chips
+    /// for that, since a lone chip is a dead control. Empty when the record
+    /// has fewer than two samples inside the month: no line, the number alone.
     static func offered(for samples: [WalletStore.ValueSample]) -> [WalletRange] {
         guard samples.count >= 2, let first = samples.first else { return [] }
-        return allCases.filter { range in
-            guard let span = range.span else { return true }
-            return first.at <= Date.now.addingTimeInterval(-span)
-                && range.clip(samples).count >= 2
+        var out: [WalletRange] = []
+        if WalletRange.week.clip(samples).count >= 2 { out.append(.week) }
+        if first.at < Date.now.addingTimeInterval(-WalletRange.week.span),
+           WalletRange.month.clip(samples).count >= 2 {
+            out.append(.month)
         }
+        return out
     }
 
     /// The remembered window, narrowed to what the record can currently answer
     /// — a 30d watcher whose history was wiped falls back rather than showing
-    /// an empty line.
+    /// an empty line. A stored "watched" (§1717 deleted it) reads as nothing
+    /// remembered. With no memory, the longest window offered.
     static func remembered(offered: [WalletRange]) -> WalletRange {
         let saved = UserDefaults.standard.string(forKey: memoryKey)
             .flatMap(WalletRange.init(rawValue:))
         if let saved, offered.contains(saved) { return saved }
-        return offered.last ?? .watched
+        return offered.last ?? .week
     }
 
     func remember() { UserDefaults.standard.set(rawValue, forKey: Self.memoryKey) }

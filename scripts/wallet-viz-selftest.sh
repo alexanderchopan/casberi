@@ -401,8 +401,9 @@ do {
 // THE REPORTED BUG (2026-08-03, user: "I have never seen the sankey").
 // Same 84 old moves as the case above — but set aside by the adapter as older
 // than price data instead of counted as failures. They must not reach the
-// floor: on the DEFAULT `.watched` range the window is the whole corpus and
-// nothing ever ages out, so counting them made the floor permanently
+// floor: on the then-DEFAULT `.watched` range (the whole record, deleted by
+// prd §1717) the window was the whole corpus and nothing ever aged out, so
+// counting them made the floor permanently
 // unclearable and the card permanently invisible.
 do {
     let legs = [leg(true, "Coinbase", 2100), leg(false, "Aave", 1000)]

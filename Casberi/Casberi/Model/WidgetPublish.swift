@@ -161,8 +161,8 @@ enum WidgetPublish {
     static func flow(things: [Thing], now: Date = .now) -> WidgetFlowBand? {
         // `span` is a DURATION, not a date — passing it straight through would
         // silently ask for a window starting at 1970.
-        guard let span = WalletRange.week.span,
-              let band = WalletFlowSource.band(from: things,
+        let span = WalletRange.week.span
+        guard let band = WalletFlowSource.band(from: things,
                                                since: now.addingTimeInterval(-span))
         else { return nil }
         let priced = (band.inLanes + band.outLanes).reduce(0) { $0 + $1.count }

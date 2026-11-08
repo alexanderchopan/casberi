@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// **THE WINDOW LIVES WITH THE CONTROL THAT PICKS IT (prd §1716; user,
+/// **THE WINDOW LIVES WITH THE CONTROL THAT PICKS IT (prd §1716; two windows,
+/// 7d and 30d, since prd §1717; user,
 /// 2026-11-06: "on wallet home the period pickers are inactive"; 2026-11-08,
 /// of the crown's 7d · Followed pills: "these are inactive").**
 ///
@@ -45,9 +46,9 @@ struct WalletWindowed<Content: View>: View {
         var word: String { active.windowWord(since: samples.first?.at) }
     }
 
-    /// `.watched` is a placeholder: the body never draws it unless it is the
+    /// `.week` is a placeholder: the body never draws it unless it is the
     /// remembered answer, because `active` is re-derived on every pass.
-    @State private var range: WalletRange = .watched
+    @State private var range: WalletRange = .week
 
     var body: some View {
         let offered = WalletRange.offered(for: samples)

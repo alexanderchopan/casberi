@@ -131,8 +131,9 @@ enum WalletFlow {
     ///
     /// It wasn't, before. The original reasoning said the decline "resolves on
     /// its own — old moves leave a 7- or 30-day window", which is true of those
-    /// two ranges and false of the DEFAULT one: `WalletRange.watched` has a nil
-    /// span, so its window is the entire corpus and nothing ever leaves it. On
+    /// two ranges and false of the DEFAULT one: `WalletRange.watched` (the
+    /// whole record, deleted by prd §1717) had a nil span, so its window was
+    /// the entire corpus and nothing ever left it. On
     /// any wallet with real history the unpriceable rows outnumbered the
     /// priceable ones permanently, the floor never cleared, and the card was
     /// invisible — reported by the user as "I have never seen it", which is

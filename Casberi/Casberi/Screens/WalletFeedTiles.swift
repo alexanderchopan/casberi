@@ -183,8 +183,8 @@ struct WalletBalanceHeadline: View {
     /// `exactFormat`, which the Wallet's dollars already spell at two places.
     var changeFormat: ((Double) -> String)? = nil
     /// **THE CHANGE IS DATED (prd §920).** The window the move is measured
-    /// over, as words — "30 days", or "since Aug 26" for the whole record —
-    /// in the quiet ink after the figure. §483 took the chip's own word
+    /// over, as words — "30 days", or "since Nov 6" for a record younger than
+    /// its window (§1717) — in the quiet ink after the figure. §483 took the chip's own word
     /// ("watched") off this line because it restated the control beneath;
     /// this is not that word, it is the window's span, and it is the ONE
     /// place the crown says how long a history the line draws. nil draws no
@@ -215,7 +215,7 @@ struct WalletBalanceHeadline: View {
     /// The windows this history can honestly answer; fewer than two draws no
     /// chips (a lone chip is a dead control).
     var ranges: [WalletRange] = []
-    var range: WalletRange = .watched
+    var range: WalletRange = .week
     var onPickRange: (WalletRange) -> Void = { _ in }
     /// nil = no door: with one wallet (or scoped to one) the number has no
     /// further breakdown to show — the treemap below IS the composition, so a

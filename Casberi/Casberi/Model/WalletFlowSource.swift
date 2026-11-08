@@ -30,7 +30,7 @@ enum WalletFlowSource {
     /// Builds the band for a window, or nil when there's nothing to draw.
     ///
     /// `since` bounds the window (nil = everything the corpus holds, which is
-    /// what the room's "watched" range means).
+    /// what the room's "watched" range meant before prd §1717 deleted it).
     static func band(from things: [Thing], since: Date?) -> WalletFlow.Band? {
         let split = partition(from: things, since: since)
         return WalletFlow.band(legs: split.legs, predating: split.predating)

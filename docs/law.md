@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1878 of 1950 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1879 of 1951 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -447,7 +447,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §152 — No notifications — ever, as a product identity
 - §153 — Semantic Spotlight + Visual Intelligence — the corpus answers system search
 - §154 — Handoff features don't make the cut
-- §155 — The combined portfolio, made whole (amended by §447)
+- §155 — The combined portfolio, made whole (amended by §447, §1717)
 - §156 — Accessibility as a feature, not a compliance checkbox
 - §157 — Morpho rides the watched wallets — the Aave shape, per market
 - §158 — The wallet room stops being sterile
@@ -1280,7 +1280,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs (part superseded by §939)
 - §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, eve…
 - §919 — The demo's mark is a blue pill that floats, and nothing on the page moves for it (amended by §1005)
-- §920 — The Home crown's Apple pass: the plot runs under the gear, the change is a signed short figure and its window, the ra…
+- §920 — The Home crown's Apple pass: the plot runs under the gear, the change is a signed short figure and its window, the ra… (amended by §1717)
 - §921 — Activity's Apple pass: the count at the crown's rung, a line that never goes missing, the span said in words under th…
 - §923 — Accounts is the spine with faces: the crown's reading, faces at the nodes, ribbons weighted by what moved and coloure…
 - §924 — Permissions draws the permissions: the reach as the crown's reading, one key per permission under its class, amber wh…
@@ -2124,6 +2124,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1714 — The rooms tray is deleted: Search is Find, showing Recent and your recent searches with the keyboard up; no swipe rai… (amended by §1715)
 - §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
+- §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
 
 ## Dead rulings → what replaced them (generated)
 

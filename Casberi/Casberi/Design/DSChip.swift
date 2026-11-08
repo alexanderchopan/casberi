@@ -205,10 +205,9 @@ struct DSRangeChips<Option: Hashable>: View {
 extension DSRangeChips where Option == WalletRange {
     init(ranges: [WalletRange], range: WalletRange, slim: Bool = false,
          onPick: @escaping (WalletRange) -> Void) {
-        // Slim text says "All" for the whole record: beside "7d" and "30d"
-        // with no pill around it, "Watched" reads as a state, not a window.
-        self.init(ranges: ranges, range: range,
-                  label: { slim && $0 == .watched ? String(localized: "All") : $0.chipLabel },
+        // (Slim text said "All" for the whole-record window until prd §1717
+        // deleted that window; 7d and 30d read the same in either grammar.)
+        self.init(ranges: ranges, range: range, label: { $0.chipLabel },
                   slim: slim, onPick: onPick)
     }
 }
