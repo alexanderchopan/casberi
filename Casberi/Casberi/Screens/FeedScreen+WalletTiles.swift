@@ -323,7 +323,7 @@ extension FeedScreen {
                         // wrapper, so it re-draws the line whatever the row
                         // above rebuilds; it lived on `FeedScreen` and the box,
                         // keyed on its total (§1403), never saw it change.
-                        WalletWindowed(samples: samples) { w in
+                        WalletWindowed<WalletBalanceHeadline>(samples: samples) { w in
                         let ranges = w.offered
                         let active = w.active
                         let windowed = w.samples

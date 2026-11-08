@@ -28,7 +28,16 @@ import SwiftUI
 struct WalletWindowed<Content: View>: View {
     /// The record, oldest first.
     let samples: [WalletStore.ValueSample]
-    @ViewBuilder let content: (Window) -> Content
+    let content: (Window) -> Content
+
+    /// Written out, not synthesized: the memberwise initializer a
+    /// `@ViewBuilder let` gets does not let the toolchain infer `Content`
+    /// from a multi-statement trailing closure (both callers failed to
+    /// compile with "generic parameter 'Content' could not be inferred").
+    init(samples: [WalletStore.ValueSample], @ViewBuilder content: @escaping (Window) -> Content) {
+        self.samples = samples
+        self.content = content
+    }
 
     /// One window over the record: what the crown needs to draw it and the
     /// one act that changes it.

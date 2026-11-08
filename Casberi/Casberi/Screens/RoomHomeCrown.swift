@@ -87,7 +87,7 @@ struct RoomHomeCrown: View {
     // template and kept its window on `FeedScreen`, where the box never saw
     // it change — and the devnets' now pick it by one rule.
     var body: some View {
-        WalletWindowed(samples: samples) { w in
+        WalletWindowed<WalletBalanceHeadline>(samples: samples) { w in
             WalletBalanceHeadline(
                 total: w.samples.last?.usd ?? samples.last?.usd ?? fallbackTotal,
                 chart: w.chart,
