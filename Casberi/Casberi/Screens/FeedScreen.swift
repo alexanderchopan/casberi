@@ -681,9 +681,9 @@ struct FeedScreen: View {
     /// Followed chains the last pass held money on and priced nothing (prd §828).
     @State var unpricedChains: [String] = []
 
-    /// The balance line's window (prd §155). Narrowed to what the record can
-    /// actually answer each render; the choice persists across launches.
-    @State var balanceRange: WalletRange = .watched
+    // The balance line's window (prd §155) lived here as `balanceRange` until
+    // prd §1716: the box never saw it change (§1403's unrebuilt row), so the
+    // window is the crown's own now — `WalletWindowed`, around the headline.
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").

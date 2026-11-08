@@ -235,9 +235,11 @@ WALLETHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
 SCROLL="Casberi/Casberi/Screens/FeedScreen+Scroll.swift"
 WHOSE="Casberi/Casberi/Model/WalletWhose.swift"
 WHOSESWITCH="Casberi/Casberi/Screens/WalletWhoseSwitch.swift"
+WINDOWED="Casberi/Casberi/Screens/WalletWindowed.swift"
+HOMECROWN="Casberi/Casberi/Screens/RoomHomeCrown.swift"
 for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
          "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY" "$WALLETHOME" "$SCROLL" \
-         "$WHOSE" "$WHOSESWITCH"; do
+         "$WHOSE" "$WHOSESWITCH" "$WINDOWED" "$HOMECROWN"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -605,6 +607,25 @@ guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
   "the chips left the crown's budget — every crown drawing a range track clips it again"
 guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome))" \
   "the wallet crown stopped paying for its foot row (range chips, Yours · Following · All, prd §1526, §1536) — the track clips at the slot's edge"
+
+# ── the window lives with the control that picks it (prd §1716) ──────────────
+# The 7d · 30d · Followed pick was `FeedScreen.balanceRange`, read back through
+# the box's list row — which §1403 measured as not rebuilding — so the pill
+# dipped and the line kept its window ("these are inactive", twice). The pick
+# is `@State` inside `WalletWindowed`, around each crown's headline; a pick
+# re-runs that body whatever the row above does.
+guard FeedScreen.swift "WalletWindowed(samples: samples) { w in" \
+  "the Wallet's crown left WalletWindowed — its window pick lands in state the box never reads (prd §1716)"
+deny FeedScreen.swift "balanceRange" \
+  "the window is back on FeedScreen as balanceRange — the box, keyed on its total, never saw it change (prd §1403, §1716)"
+guard RoomHomeCrown.swift "WalletWindowed(samples: samples)" \
+  "RoomHomeCrown left WalletWindowed — the devnets' crown picks its window by a second rule (prd §1716)"
+deny RoomHomeCrown.swift "@State private var range" \
+  "RoomHomeCrown grew its own window state again — one rule, WalletWindowed (prd §1716)"
+guard WalletWindowed.swift "@State private var range: WalletRange" \
+  "WalletWindowed no longer owns the pick — a pick must re-run the view that draws the chips (prd §1716)"
+guard WalletWindowed.swift "WalletRange.remembered(offered: offered)" \
+  "a remount (the box re-keys on its total) would snap the window back — the remembered pick must be re-derived (prd §1716)"
 # (The activity chart's own guard went with the chart, prd §1039.)
 # (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
 # stayed the chips' own gate, went with prd §942: a flexing drawing reserves

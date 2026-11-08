@@ -225,11 +225,11 @@ extension FeedScreen {
         let samples = selectedSeat.map(seatValueSamples)
             ?? selectedWallet.map { wallet.valueSamples(forAddress: $0) }
                 ?? wallet.combinedValueSamples(only: walletFollowingOnly)
-        let ranges = WalletRange.offered(for: samples)
-        let active = ranges.contains(balanceRange) ? balanceRange
-            : WalletRange.remembered(offered: ranges)
-        let windowed = active.clip(samples)
-        let chart = TokenChart.from(samples: windowed)
+        // Whether the record draws a LINE at all — the gates below ask only
+        // that. The window over it is `WalletWindowed`'s, around the headline
+        // (prd §1716): every offered window holds two samples or more, so the
+        // whole record's line is nil exactly when the window's is.
+        let chart = TokenChart.from(samples: samples)
         let total = portfolioShown.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
         // The addresses' readings say nothing about an app the menu picked.
         let warnings = selectedSeat == nil ? walletLive.warnings : []
@@ -318,9 +318,18 @@ extension FeedScreen {
                         let scoped = selectedWallet.map {
                             WalletScopeRail.caption(for: $0, in: wallet.addresses)
                         }
+                        // **THE WINDOW IS THE CROWN'S OWN (prd §1716).** The
+                        // 7d · 30d · Followed pick is `@State` inside this
+                        // wrapper, so it re-draws the line whatever the row
+                        // above rebuilds; it lived on `FeedScreen` and the box,
+                        // keyed on its total (§1403), never saw it change.
+                        WalletWindowed(samples: samples) { w in
+                        let ranges = w.offered
+                        let active = w.active
+                        let windowed = w.samples
                         WalletBalanceHeadline(
                             total: total,
-                            chart: chart,
+                            chart: w.chart,
                             // ALWAYS "accounts", never "wallets" (user ruling,
                             // prd §483, 2026-08-26). This forked on whether any
                             // holder was an EXCHANGE — "accounts" when one was,
@@ -392,10 +401,7 @@ extension FeedScreen {
                             chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome)),
                             ranges: ranges,
                             range: active,
-                            onPickRange: { r in
-                                balanceRange = r
-                                r.remember()
-                            },
+                            onPickRange: w.pick,
                             onOpen: nil,
                             // FALSE again (2026-08-16): the hero has no
                             // coloured ground to sit on, so the line takes
@@ -405,6 +411,7 @@ extension FeedScreen {
                             // no blue now. The flag survives for any future
                             // caller that does paint a ground.
                             onColor: false)
+                        }
                     }
                     // Whose the number is (prd §212) — only unscoped and only
                     // with more than one wallet carrying a real line, exactly

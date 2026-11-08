@@ -152,11 +152,11 @@ extension FeedScreen {
         // but the pane's box is quiet, and its balance landed (logged) while
         // the crown kept drawing "No balance yet" (measured 2026-10-18).
         let _ = portfolioShown?.totalUSD
-        // AND THE WINDOW (user, 2026-11-06: "on wallet home the period
-        // pickers are inactive"): the 7d · 30d · Followed pick writes
-        // `balanceRange`, which only the crown read, so the pick landed in
-        // state and the box kept the window it mounted with.
-        let _ = balanceRange
+        // THE WINDOW IS NOT READ HERE (prd §1716). The 2026-11-06 fix read
+        // `balanceRange` on this line so the 7d · 30d · Followed pick would
+        // reach the box, and it did not: this body ran and the row, keyed on
+        // the total alone, kept the crown it had. The pick is `@State` inside
+        // `WalletWindowed` now, around the headline, and needs nothing here.
         Section {
             DSRoomScopeChrome(
                 source: "Wallet",

@@ -82,36 +82,31 @@ struct RoomHomeCrown: View {
     /// door the reading is already standing on.
     var onOpen: (() -> Void)? = nil
 
-    @State private var range: WalletRange = WalletRange.remembered(offered: [])
-
-    var body: some View { datedCrown }
-
-    private var datedCrown: some View {
-        let offered = WalletRange.offered(for: samples)
-        let active = offered.contains(range) ? range : WalletRange.remembered(offered: offered)
-        let windowed = active.clip(samples)
-        let chart = TokenChart.from(samples: windowed)
-        return WalletBalanceHeadline(
-            total: windowed.last?.usd ?? samples.last?.usd ?? fallbackTotal,
-            chart: chart,
-            caption: caption,
-            captionAddress: captionAddress,
-            // An empty caption takes no row (prd §953), as on the Wallet.
-            hidesEmptyCaption: true,
-            format: format,
-            exactFormat: exactFormat,
-            changeFormat: changeFormat,
-            // The window as words, dated from the first sample the line draws
-            // (prd §920).
-            window: active.windowWord(since: windowed.first?.at),
-            chartHeight: chartHeight(chips: offered.count > 1),
-            ranges: offered,
-            range: active,
-            onPickRange: { picked in
-                range = picked
-                picked.remember()
-            },
-            onOpen: onOpen)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    // The window was `@State` here until prd §1716 moved that shape into
+    // `WalletWindowed`, so the Wallet's crown — which never came through this
+    // template and kept its window on `FeedScreen`, where the box never saw
+    // it change — and the devnets' now pick it by one rule.
+    var body: some View {
+        WalletWindowed(samples: samples) { w in
+            WalletBalanceHeadline(
+                total: w.samples.last?.usd ?? samples.last?.usd ?? fallbackTotal,
+                chart: w.chart,
+                caption: caption,
+                captionAddress: captionAddress,
+                // An empty caption takes no row (prd §953), as on the Wallet.
+                hidesEmptyCaption: true,
+                format: format,
+                exactFormat: exactFormat,
+                changeFormat: changeFormat,
+                // The window as words, dated from the first sample the line
+                // draws (prd §920).
+                window: w.word,
+                chartHeight: chartHeight(chips: w.offered.count > 1),
+                ranges: w.offered,
+                range: w.active,
+                onPickRange: w.pick,
+                onOpen: onOpen)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
