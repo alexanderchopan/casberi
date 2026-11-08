@@ -7,15 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D40000000000000000000001 /* AztecEngine in Resources */ = {isa = PBXBuildFile; fileRef = D40000000000000000000002 /* AztecEngine */; };
 		CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000012 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		CF0000000000000000000001 /* NotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF0000000000000000000003 /* NotificationContent.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE0000000000000000000004 /* ReownAppKit */; };
 		CE0000000000000000000007 /* P256K in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000006 /* P256K */; };
 		CE000000000000000000000B /* TorShim in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE000000000000000000000A /* TorShim */; };
+		CF0000000000000000000001 /* NotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF0000000000000000000003 /* NotificationContent.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D30000000000000000000002 /* TDJSON.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D30000000000000000000001 /* TDJSON.xcframework */; };
+		D40000000000000000000001 /* AztecEngine in Resources */ = {isa = PBXBuildFile; fileRef = D40000000000000000000002 /* AztecEngine */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,19 +33,19 @@
 			remoteGlobalIDString = CC0000000000000000000023;
 			remoteInfo = CasberiWidgets;
 		};
-		CF0000000000000000000002 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CA0000000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = CF0000000000000000000007;
-			remoteInfo = NotificationContent;
-		};
 		CD000000000000000000003C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CA0000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = CA0000000000000000000005;
 			remoteInfo = Casberi;
+		};
+		CF0000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF0000000000000000000007;
+			remoteInfo = NotificationContent;
 		};
 		D2000000000000000000000A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -73,7 +73,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D40000000000000000000002 /* AztecEngine */ = {isa = PBXFileReference; lastKnownFileType = folder; path = AztecEngine; sourceTree = "<group>"; };
 		CA0000000000000000000004 /* Casberi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Casberi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB0000000000000000000012 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC0000000000000000000022 /* CasberiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CasberiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -81,6 +80,7 @@
 		CF0000000000000000000003 /* NotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D20000000000000000000002 /* CasberiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CasberiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D30000000000000000000001 /* TDJSON.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TDJSON.xcframework; path = ../Vendor/TDLib/TDJSON.xcframework; sourceTree = SOURCE_ROOT; };
+		D40000000000000000000002 /* AztecEngine */ = {isa = PBXFileReference; lastKnownFileType = folder; path = AztecEngine; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -401,12 +401,12 @@
 					CC0000000000000000000023 = {
 						CreatedOnToolsVersion = 26.5;
 					};
-					CF0000000000000000000007 = {
-						CreatedOnToolsVersion = 26.5;
-					};
 					CD0000000000000000000033 = {
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = CA0000000000000000000005;
+					};
+					CF0000000000000000000007 = {
+						CreatedOnToolsVersion = 26.5;
 					};
 					D20000000000000000000003 = {
 						CreatedOnToolsVersion = 27.0;
@@ -766,7 +766,6 @@
 		CA000000000000000000000C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				EXCLUDED_SOURCE_FILE_NAMES = "railgun-engine.js poseidon_hash_wasm_bg.wasm curve25519_scalarmult_wasm_bg.wasm";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Casberi/Casberi.entitlements;
@@ -775,6 +774,11 @@
 				CURRENT_PROJECT_VERSION = 957;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = (
+					"railgun-engine.js",
+					poseidon_hash_wasm_bg.wasm,
+					curve25519_scalarmult_wasm_bg.wasm,
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Casberi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
@@ -1126,6 +1130,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		CE0000000000000000000008 /* XCLocalSwiftPackageReference "../Vendor/swift-secp256k1" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Vendor/swift-secp256k1";
+		};
+		CE0000000000000000000009 /* XCLocalSwiftPackageReference "../Vendor/TorKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Vendor/TorKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1136,17 +1151,6 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		CE0000000000000000000008 /* XCLocalSwiftPackageReference "../Vendor/swift-secp256k1" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Vendor/swift-secp256k1;
-		};
-		CE0000000000000000000009 /* XCLocalSwiftPackageReference "../Vendor/TorKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Vendor/TorKit;
-		};
-/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		CE0000000000000000000002 /* WalletConnect */ = {
