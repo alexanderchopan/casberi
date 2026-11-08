@@ -23,7 +23,7 @@ extension FeedScreen {
         let store = PrivateMoneyStore.shared
         let rows = store.rows
         // Yours and All only (prd §1590): private money is your Casberi
-        // account's, never a followed wallet's — and 0xBow Privacy Pools'
+        // account's, never a followed wallet's — and Privacy Pools'
         // on its pick, the pool that holds it (prd §1702).
         let poolsPick = selectedSeat?.source == PrivacyPoolsBridge.sourceName
         if selectedSeat == nil || poolsPick, !walletOnFollowing,
@@ -76,8 +76,59 @@ extension FeedScreen {
                 ForEach(rows) { row in
                     walletPrivateRow(row, mask: mask, prices: store.shownPrices)
                 }
+                // Empty, the place stands where its rows will (prd §1718, by
+                // §769's rule: an empty state draws what would fill it): one
+                // row for Privacy Pools, named and marked as a holding's line
+                // ends, saying what it takes; its tap is the Private head's,
+                // Send to your private balance.
+                if rows.isEmpty, !store.restoring, PrivateMove.available {
+                    walletPlaceRow(PrivacyPoolsBridge.sourceName,
+                                   line: String(localized: "Ethereum · ETH or USDC"),
+                                   mark: PrivacyPoolsBridge.sourceName,
+                                   hint: String(localized: "Sends to your private balance")) {
+                        walletOpenPrivate(.deposit)
+                    }
+                }
             }
         }
+    }
+
+    /// **A PRIVATE PLACE WITH NOTHING IN IT YET (prd §1718).** The row a
+    /// holding there will take — the place's mark in the lead, its name, the
+    /// line saying what it takes, no figure — so an empty Private section
+    /// shows the places you have (Privacy Pools, Aztec; Railgun with its
+    /// Holdings), one each, and a tap opens Move's sentence to that place.
+    /// A place appears only once it exists for you; nothing promises one
+    /// you don't have.
+    func walletPlaceRow(_ name: String, line: String, mark: String, hint: String,
+                        act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                BridgeIcon(name: mark, size: DS.Mark.badge, circular: true)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: name)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Text(verbatim: line)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+            }
+            .walletRowPitch()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [name, line].joined(separator: ". ")))
+        .accessibilityHint(Text(verbatim: hint))
+        .walletListRow()
     }
 
     /// The section's total: the private dollars, as the box counts them; with
@@ -138,9 +189,9 @@ extension FeedScreen {
         let figure = mask ?? PrivateMoney.rowUSD(row, prices: prices).map(WalletValue.money)
             ?? PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)
         let (glyph, hue, state, stateInk): (String?, Color, String, Color) = switch row.kind {
-        // What earns says so, worded as Lent and Round-ups are: "3.8% on Aave
-        // · Ethereum" (prd §1563, §1690, user: "it should be consistent w/
-        // how it is in round ups"); the rate unread, "On Aave · Ethereum".
+        // What earns says so, in the one Holdings grammar (prd §1718,
+        // network · fact · place): "Ethereum · 3.8% on Aave · Privacy Pools";
+        // the rate unread, "Ethereum · On Aave · Privacy Pools".
         case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
@@ -163,19 +214,15 @@ extension FeedScreen {
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
-                    // The mark matches the line's words (prd §1700f item 9):
-                    // Aave's where it says "on Aave", as Lent's do; else
-                    // Privacy Pools', which holds it (§1685). A waiting or
-                    // refused deposit keeps its state word alone.
-                    HStack(spacing: DS.Space.s1) {
-                        if row.kind == .held {
-                            ProtocolInlineMark(mark: PrivateMoneyStore.shared.earnsOnAave(row) ? "aave" : "privacy-pools")
-                        }
-                        Text(verbatim: state)
-                            .dsText(.subhead12)
-                            .foregroundStyle(stateInk)
-                            .lineLimit(1)
-                    }
+                    // The line's words carry the place, last (prd §1718,
+                    // amending §1700f item 9's mark beside them): "Ethereum ·
+                    // 1.5% on Aave · Privacy Pools". No small mark, which read
+                    // as a second token. A waiting or refused deposit keeps
+                    // its state word alone.
+                    Text(verbatim: state)
+                        .dsText(.subhead12)
+                        .foregroundStyle(stateInk)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)

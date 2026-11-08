@@ -102,14 +102,20 @@ final class PrivateMoneyStore {
         row.kind == .held && PrivacyNetwork.forChain(row.chainId)?.yield.contains(where: { $0.symbol == row.symbol }) == true
     }
 
+    /// **Network · fact · place (prd §1718).** "Ethereum · 1.5% on Aave ·
+    /// Privacy Pools": where it is, what it does there, and the place that
+    /// holds it last — the one grammar every Holdings row reads in, so a
+    /// Railgun row beside this one is told apart by its last word, not by a
+    /// corner mark.
     func heldLine(_ row: PrivateMoney.Row) -> String {
         let network = PrivateMoney.network(row.chainId)
+        let place = PrivacyPoolsBridge.sourceName
         guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
-            return network
+            return [network, place].joined(separator: " · ")
         }
         // The demo reads nothing: its rates are Lend's demo rates on Ethereum.
         let apy = DemoMode.isActive ? (row.symbol == "ETH" ? 0.0145 : 0.0379) : apys[pool.share.lowercased()]
-        return [PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), network].joined(separator: " · ")
+        return [network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), place].joined(separator: " · ")
     }
 
     /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.

@@ -65,6 +65,26 @@ enum HiddenTokens {
     }
 }
 
+extension WalletPortfolio.Position {
+    /// **The networks a token sits on, in words (prd §1718):** "Base ·
+    /// Ethereum", most held first, each network once. Nothing for a position
+    /// read by no contract (a venue's, a last-known sample): the line says
+    /// where, or it is not drawn.
+    var networksLine: String? {
+        var usd: [String: Double] = [:]
+        var order: [String] = []
+        for part in parts {
+            let network = String(part.key.split(separator: ":", maxSplits: 1).first ?? Substring(part.key))
+            if usd[network] == nil { order.append(network) }
+            usd[network, default: 0] += part.usd
+        }
+        guard !order.isEmpty else { return nil }
+        let names = order.sorted { (usd[$0] ?? 0) == (usd[$1] ?? 0) ? $0 < $1 : (usd[$0] ?? 0) > (usd[$1] ?? 0) }
+            .map { HiddenTokens.place("\($0):native") }
+        return names.joined(separator: " · ")
+    }
+}
+
 extension WalletPortfolio {
     /// One hidden thing as the Hidden row lists it: a whole symbol, or one
     /// contract of it with its place.

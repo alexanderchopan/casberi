@@ -454,7 +454,7 @@ extension FeedScreen {
                     walletHomeDoors(upcoming: upcoming)
                     // The tokens you watch, open (prd §1632 item 2).
                     if walletWatchlistShows { walletWatchlistHomeSection }
-                    // Safe's and 0xBow Privacy Pools' own section (prd §1614).
+                    // Safe's and Privacy Pools' own section (prd §1614).
                     walletPickSection
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)

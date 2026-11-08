@@ -76,7 +76,7 @@ enum CompanyPacks {
         }
         let rows: [String: (String, Listing)] = [
             // Wallet
-            "0xBow Privacy Pools": own("0xBow"),
+            "Privacy Pools": own("0xBow"),
             "Acorns": own("Acorns"),
             "Apple Wallet": apple,
             "Binance": coin("BNB", "BNB", "bnb-binance-coin"),

@@ -239,6 +239,10 @@ final class ShellChrome {
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.
     var movePrivately: PrivateMove.Mode?
+    /// Move raised onto your private account on Aztec (prd §1718): Holdings'
+    /// Aztec placeholder opens the deposit, as `movePrivately` opens
+    /// Privacy Pools'. Cleared when the tray leaves.
+    var moveAztec: AztecMove.Mode?
     /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
     /// Cleared when the tray closes.
     var moveLend: LendMove.Mode?

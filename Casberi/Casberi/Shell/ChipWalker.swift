@@ -60,7 +60,7 @@ actor ChipWalker {
         var out: [(String, Date)] = []
         var folded: [String] = []
         // A seat's rows can land under a source other than its catalogue
-        // name ("0xBow Privacy Pools" lands "Privacy Pools").
+        // name ("Privacy Pools" lands "Privacy Pools").
         for name in seeds {
             if let source = RoomAccounts.host(ofSource: name)?.seat.source { candidates.insert(source) }
         }

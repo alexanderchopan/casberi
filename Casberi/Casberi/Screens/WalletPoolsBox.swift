@@ -10,7 +10,7 @@ import SwiftUI
 /// private, where this build can move (`PrivateMove.available`).
 ///
 /// "Private" is the money's state, never the app's name: the app is always
-/// "0xBow Privacy Pools", as the catalogue says (user, 2026-10-29).
+/// "Privacy Pools", as the catalogue says (user, 2026-10-29).
 struct WalletPoolsBox: View {
     let split: PoolsSplit
     /// Masked under Hide balances.
@@ -31,7 +31,7 @@ struct WalletPoolsBox: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(verbatim: split.isEmpty ? String(localized: "Nothing private yet")
-                 : String(localized: "private in 0xBow Privacy Pools"))
+                 : String(localized: "private in Privacy Pools"))
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)

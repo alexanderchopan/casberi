@@ -506,8 +506,8 @@ enum NetworkReach {
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.
                  hosts: ["testnet.lez.logos.co", "the node address you give it"]),
-        Endpoint(service: "0xBow Privacy Pools",
-                 reach: .whenConnected(bridge: "0xBow Privacy Pools"),
+        Endpoint(service: "Privacy Pools",
+                 reach: .whenConnected(bridge: "Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
                  hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"],
                  throughTor: true,
@@ -518,7 +518,7 @@ enum NetworkReach {
         // `PrivacyEngine`, which sends it only to a host listed HERE
         // (`PrivacyEngineWire.allows`), through the funnel.
         Endpoint(service: "Privacy Pools engine",
-                 reach: .whenConnected(bridge: "0xBow Privacy Pools"),
+                 reach: .whenConnected(bridge: "Privacy Pools"),
                  purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",
                  hosts: ["rpc.mevblocker.io", "api-v2.0xbow.io",
                          "relayer-v2-prod-149184580131.us-east1.run.app",
@@ -535,7 +535,7 @@ enum NetworkReach {
         // IPFS CID and refused unless it hashes to its pin
         // (`PrivacyArtifacts`). Public files; the request names no one.
         Endpoint(service: "Privacy Pools circuits",
-                 reach: .whenConnected(bridge: "0xBow Privacy Pools"),
+                 reach: .whenConnected(bridge: "Privacy Pools"),
                  purpose: "Downloads, once, the public circuit files Privacy Pools proofs are made with (3 to 66 MB each), from public IPFS gateways, and checks each against the fingerprint the app carries before using it.",
                  hosts: ["gateway.pinata.cloud", "ipfs.io"],
                  credentialed: false),

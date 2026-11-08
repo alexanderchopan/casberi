@@ -37,8 +37,8 @@ struct PrivacyPoolsScreen: View {
 
     var body: some View {
         AccountPage(
-            name: "0xBow Privacy Pools", seatID: "privacypools", source: "Privacy Pools",
-            state: AccountPageState.of(name: "0xBow Privacy Pools", seatID: "privacypools",
+            name: "Privacy Pools", seatID: "privacypools", source: "Privacy Pools",
+            state: AccountPageState.of(name: "Privacy Pools", seatID: "privacypools",
                                        connected: hasWallets, store: store),
             mode: .watchedWallets,
             // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This

@@ -46,11 +46,19 @@ struct WalletTokenRowLabel: View {
             // Always a mark — `TokenIcon` draws nothing for a token with no
             // picture, and the row's name then stood in a different column.
             AssetMark(name: position.symbol, size: DS.Face.list)
-            // **ONE LINE, NO SUBTEXT (prd §1338, user: "don't need the
-            // subtext").** Whose it is lives in the token's sheet.
-            Text(position.symbol)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
+            // The networks it sits on, under its name (prd §1718, amending
+            // §1338's "no subtext": the line is WHERE, as every Holdings
+            // row's is). Whose it is still lives in the token's sheet.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(position.symbol)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let line = position.networksLine {
+                    Text(verbatim: line)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
             Spacer(minLength: DS.Space.s2)
             // **THE AMOUNT PINS TO THE EDGE, THE SHARE STANDS BEFORE IT**
             // (user, 2026-09-26: "the dollar values should be aligned").

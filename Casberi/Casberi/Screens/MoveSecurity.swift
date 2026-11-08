@@ -383,7 +383,7 @@ struct MoveSecurity: View {
     /// make it clear in the UI tho that this is how it works").** Said where
     /// it is turned on: here, the keys walk and Create.
     @MainActor static var roundUpsSentence: String {
-        let at = RoundUpsPot.figure(RoundUpsPot.shownTarget)
+        let at = RoundUpsPot.targetWords
         return String(localized: "Round up your sends. The change goes to Round-ups and earns interest. At \(at), it moves to your private balance, where it keeps earning.")
     }
 

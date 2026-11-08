@@ -115,7 +115,7 @@ extension FeedScreen {
     /// What Round-ups holds now (prd §1690): set aside on Aave, earning,
     /// and when it moves into your private balance.
     func spendingRoundUpWaitingRow(_ usd: Double, mask: String?) -> some View {
-        let at = RoundUpsPot.figure(RoundUpsPot.shownTarget)
+        let at = RoundUpsPot.targetWords
         return SubscriptionRow(name: String(localized: "Round-ups"),
                                line: Text(verbatim: String(localized: "Set aside · private at \(at)"))) {
             Text(verbatim: mask ?? AppleWalletRoom.money(usd, "USD"))
@@ -128,7 +128,7 @@ extension FeedScreen {
     /// $10"; under Hide balances "Set aside".
     static func spendingRoundUpWaiting(_ usd: Double, mask: String?) -> String {
         guard mask == nil else { return String(localized: "Set aside") }
-        return String(localized: "\(AppleWalletRoom.money(usd, "USD")) of \(RoundUpsPot.figure(RoundUpsPot.shownTarget))")
+        return String(localized: "\(AppleWalletRoom.money(usd, "USD")) of \(RoundUpsPot.targetWords)")
     }
 
     /// A subscription's row (prd §1469): its newest charge's day and what

@@ -43,9 +43,9 @@ struct RoomAccountsTests {
         #expect(card?.seat.name == "MetaMask Card")
         #expect(RoomAccounts.host(ofSource: SafeBridge.sourceName)?.room == CategoryFold.walletRoom)
         // The source and the catalogue name both resolve (Privacy Pools lands
-        // rows as "Privacy Pools"; its seat is "0xBow Privacy Pools").
-        #expect(RoomAccounts.host(ofSource: PrivacyPoolsBridge.sourceName)?.seat.name == "0xBow Privacy Pools")
-        #expect(RoomAccounts.host(ofSource: "0xBow Privacy Pools") != nil)
+        // rows as "Privacy Pools"; its seat is "Privacy Pools").
+        #expect(RoomAccounts.host(ofSource: PrivacyPoolsBridge.sourceName)?.seat.name == "Privacy Pools")
+        #expect(RoomAccounts.host(ofSource: "Privacy Pools") != nil)
         // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to
         // Reading, which folded into Media (§1204).
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)

@@ -160,7 +160,7 @@ enum CategoryFold {
     /// never by testing `members.contains(label)` directly (bug found live,
     /// 2026-08-11 — see the type doc's own reasoning for why this file exists
     /// and got it wrong on its first pass anyway).** `members` names CATALOG
-    /// OFFERS ("0xBow Privacy Pools"), but a chip's label is the THING'S OWN
+    /// OFFERS ("Privacy Pools"), but a chip's label is the THING'S OWN
     /// `source` string ("Privacy Pools") — the exact alias family
     /// `BridgeCatalog.offer(forSource:)` suffix-matches for, because a source
     /// string and its catalog display name are allowed to differ. Checking the
@@ -332,7 +332,7 @@ enum CategoryFold {
     /// which is why this sorts `present` itself rather than filtering
     /// `members(of:)` (catalog offer NAMES) by it — the same alias bug as
     /// `isMember`/`fold`, a third place it shipped (2026-08-11): "Privacy
-    /// Pools" the source is never equal to "0xBow Privacy Pools" the catalog
+    /// Pools" the source is never equal to "Privacy Pools" the catalog
     /// name, so the old `filter` silently dropped every aliased present
     /// member from the switcher instead of merely mis-ordering it. Each
     /// present source resolves to its OWN catalog offer's name (falling back

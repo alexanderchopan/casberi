@@ -116,10 +116,10 @@ MSCREEN="Casberi/Casberi/Screens/MoveScreen.swift"
 MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
 HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
-use "$SENT" 'listRow(String(localized: "Your private balance"), sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {' "your private balance is no longer a recipient"
+use "$SENT" 'listRow(PrivacyPoolsBridge.sourceName,' "your private balance is no longer a recipient"
 # No Private switch in Send (prd §1700f item 11): sending from your private
 # balance is its network, "Ethereum · Private", in Send's network list.
-use "$SENT" 'listRow(String(localized: "Ethereum · Private"), trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {' "sending from your private balance is no longer a network in Send's list (prd §1700f item 11)"
+use "$SENT" 'trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {' "sending from your private balance is no longer a network in Send's list (prd §1700f item 11)"
 ! grep -q 'goPrivate(.send) } }))' "$SENT" \
     || { echo "✗ a Private switch came back to Send (prd §1700f item 11)"; exit 1; }
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
@@ -128,7 +128,7 @@ use "$SENT" 'listRow(String(localized: "Ethereum · Private"), trailing: held > 
 # private balance" opens Send's networks.
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
+use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
@@ -155,7 +155,8 @@ use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'let portfolio = whole.hid
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "Lent is not in the Wallet's number (prd §1695)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'let (candidates, reached) = await heldCandidates(addresses: addresses)' "the holdings read skips the aToken filter (prd §1695)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read.candidates.filter { !AaveLend.isReceipt($0.contract) }, read.reached)' "an aToken counts in Tokens beside Lent (prd §1695)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletLent.swift" 'walletLentHead(total: mask ?? lend.standing(account: account).map { WalletValue.money($0.usd) })' "Lent's head is not the figure the total counts (prd §1695, §1697)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" 'let lentUSD = lent.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0' "Public's head does not count the lent standing the total counts (prd §1695, §1697, §1718)"
+! grep -q 'walletLentHead' Casberi/Casberi/Screens/FeedScreen+WalletLent.swift || { echo "✗ Lent is a section again (prd §1718: Public · Private, lent is a fact on the row)"; exit 1; }
 use "Casberi/Casberi/Model/LendMove.swift" 'lentAnswered = found.count == AaveLend.markets.count && found.allSatisfy { $0.lent != nil }' "a partial Aave read is taken for nothing lent (prd §1697)"
 use "Casberi/Casberi/Model/LendMove.swift" 'guard let last = Self.lastReading(for: account) else { return nil }' "Lent does not stand on its last reading when Aave is not reached (prd §1697)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'if let lentAsOf { portfolio.asOf = min(portfolio.asOf ?? lentAsOf, lentAsOf) }' "a last Lent reading is presented as current (prd §1697)"
@@ -164,7 +165,7 @@ use "Casberi/Casberi/Model/WalletIngest.swift" 'portfolio.sectionCells(appsApart
 use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false)' "All's box keeps an app's money in its tokens' tiles (prd §1698)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift" 'if let symbol, WalletPortfolio.appCell(symbol) != nil {' "an app's tile opens a token sheet, or nothing (prd §1698)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift" '} else if symbol == WalletPortfolio.lentSymbol {' "Lent's tile opens a token sheet named Lent (prd §1698)"
-awk '/walletLentRows$/{l=NR} /walletPrivateRows$/{p=NR} END{exit !(l && p && l<p)}' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" || { echo "✗ Private stands over Lent (prd §1695)"; exit 1; }
+awk '/walletDoor\(.holdings, name: String\(localized: "Public"\)/{l=NR} /walletPrivateRows$/{p=NR} END{exit !(l && p && l<p)}' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" || { echo "✗ Private stands over Public (prd §1718)"; exit 1; }
 use "Casberi/Casberi/Design/HoldingsTreemap.swift" 'if tile.id == PrivateMoney.walletSymbol {' "the box's Private block lost its eye"
 # Needs you and Take it back (prd §1561): the rows stand on Needs you's page
 # and in its count, the act is a word in a push row behind a dialog, the
@@ -359,7 +360,7 @@ req=$(grep -n 'try require(simulated, on: net, swaps: false)' "$TMP0" | cut -d: 
 op=$(grep -n 'let outcome = try await operate(' "$TMP0" | cut -d: -f1)
 [[ -n "$sim" && -n "$req" && -n "$op" && "$sim" -lt "$req" && "$req" -lt "$op" ]] || { echo "✗ a private call is signed before its simulation is required to land"; exit 1; }
 use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)' "a private row no longer says its rate"
-use Casberi/Casberi/Model/PrivateMoneyStore.swift 'return [PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), network].joined(separator: " · ")' "a private row is not worded as a lent row: \"3.8% on Aave · Ethereum\" (prd §1690)"
+use Casberi/Casberi/Model/PrivateMoneyStore.swift 'return [network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), place].joined(separator: " · ")' "a private row is not worded as a lent row: \"3.8% on Aave · Ethereum\" (prd §1690)"
 use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
 ! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
 use "$TAKE" 'let (hash, figure, pending) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"

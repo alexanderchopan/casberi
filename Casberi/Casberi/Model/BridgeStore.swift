@@ -258,7 +258,7 @@ final class BridgeStore {
                    count: { PeerBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Peer fills for the accounts you follow, from the public chain.",
                          "Read-only — never starts, signs, or settles a trade."]),
-        WalletSeat(id: "privacypools", name: "0xBow Privacy Pools",
+        WalletSeat(id: "privacypools", name: "Privacy Pools",
                    count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Privacy Pools deposits and their screening status for the accounts you follow, from public sources.",
                          "Read-only — never deposits, withdraws, or moves funds."]),

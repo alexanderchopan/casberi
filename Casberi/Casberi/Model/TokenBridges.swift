@@ -588,7 +588,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     ///
     /// Deliberately NOT `BridgeCatalog.offer(forSource:)` run backwards: that
     /// function matches an offer whose name merely ENDS with the source
-    /// ("0xBow Privacy Pools" for "Privacy Pools"), which has no inverse.
+    /// ("Privacy Pools" for "Privacy Pools"), which has no inverse.
     var source: String { rawValue }
 
 

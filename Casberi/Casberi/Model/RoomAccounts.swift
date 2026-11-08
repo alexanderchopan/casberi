@@ -75,7 +75,7 @@ enum RoomAccounts {
     }
 
     /// Matched on the catalogue name or the row source: a seat can register
-    /// under either ("0xBow Privacy Pools" is the offer, "Privacy Pools" lands
+    /// under either ("Privacy Pools" is the offer, "Privacy Pools" lands
     /// the rows).
     static func connected(in room: String, names: Set<String>) -> [Seat] {
         seats(for: room).filter { names.contains($0.name) || ($0.source.map(names.contains) ?? false) }
@@ -307,8 +307,8 @@ enum RoomAccounts {
              holder: WalletCash.holderPrefix + "bitrefill", group: cards, mark: "Bitrefill"),
         Seat(name: "Peer", source: PeerBridge.sourceName,
              holder: nil, group: trades, mark: "Peer"),
-        Seat(name: "0xBow Privacy Pools", source: PrivacyPoolsBridge.sourceName,
-             holder: nil, group: trades, mark: "0xBow Privacy Pools"),
+        Seat(name: "Privacy Pools", source: PrivacyPoolsBridge.sourceName,
+             holder: nil, group: trades, mark: "Privacy Pools"),
         Seat(name: "Railgun", source: RailgunBridge.sourceName,
              holder: nil, group: trades, mark: "Railgun"),
         Seat(name: "ENS", source: ENSWatch.source,

@@ -127,7 +127,7 @@ enum BridgeCatalog {
         // rides the watched wallets the Peer way: no account exists to
         // connect — deposits come from the person's own wallet, so the seat
         // is a switch over the watched list.
-        Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
+        Offer(name: "Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 21)),
         // Wallet group, beside Privacy Pools — the same category for the same
         // reason (prd §268): Railgun trades nothing, it's your own funds
@@ -846,7 +846,7 @@ enum BridgeCatalog {
     /// A source name is NOT always an offer name, which is the whole reason
     /// this exists rather than a bare `offers.first { $0.name == source }`:
     /// `Thing.source` is "Privacy Pools" while the offer (and the wallet seat)
-    /// is "0xBow Privacy Pools", so exact matching alone files the flagship
+    /// is "Privacy Pools", so exact matching alone files the flagship
     /// privacy seat under nothing. The suffix rule fixes that family at a
     /// stroke — it is also what resolves "Music" → "Apple Music" and
     /// "Journal" → "Apple Journal", where the catalog carries
@@ -887,7 +887,7 @@ enum BridgeCatalog {
     /// for every read that asks "is this source's connection in trouble": the
     /// two source chips compared a chip label against `BridgeApp.name`
     /// directly, so for the family whose names differ — "Privacy Pools" the
-    /// source against "0xBow Privacy Pools" the seat — the dashed
+    /// source against "Privacy Pools" the seat — the dashed
     /// needs-reconnecting ring could never light, no matter how broken the
     /// connection was. Silent by construction: a seat that never draws the ring
     /// looks exactly like a seat that is perfectly healthy.
@@ -1067,7 +1067,7 @@ enum BridgeSetupMode {
     /// Reads the wallets already watched — no connection of its own (§515):
     /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and
     /// is not compiled by the harnesses that compile this file).
-    static let walletRidingSeats: Set<String> = ["Peer", "0xBow Privacy Pools", "Railgun", "Safe",
+    static let walletRidingSeats: Set<String> = ["Peer", "Privacy Pools", "Railgun", "Safe",
         // MetaMask Card belongs here because it rides the watched wallets, and
         // leaving it out is not cosmetic (prd §857): `Offer.mode` falls
         // through to `.pasteKey`, so the catalogue row offered **Add key** for

@@ -169,10 +169,17 @@ enum AaveLend {
 
     /// "5.1% on Aave": one place under ten, none past it.
     static func rateLine(_ apy: Double?) -> String? {
+        guard let rate = rateOnly(apy) else { return nil }
+        return String(localized: "\(rate) on Aave")
+    }
+
+    /// The rate alone, "5.1%", for a line that names Aave as its last word
+    /// (Holdings' Lent rows, prd §1718: network · fact · place).
+    static func rateOnly(_ apy: Double?) -> String? {
         guard let apy, apy > 0 else { return nil }
         let pct = apy * 100
         let shown = pct < 10 ? String(format: "%.1f", pct) : String(format: "%.0f", pct)
-        return String(localized: "\(shown)% on Aave")
+        return "\(shown)%"
     }
 
     // MARK: - Words

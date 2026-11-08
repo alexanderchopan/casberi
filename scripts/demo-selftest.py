@@ -231,8 +231,9 @@ KNOWN_NO_CATALOG_SEAT: set = set()
 # `Model/PrivacyPoolsBridge.swift` stamps `source: "Privacy Pools"` on every
 # row it lands, while the catalog leads with the branded "0xBow Privacy
 # Pools" on its product page. The demo is right to match the SOURCE name.
-KNOWN_CATALOG_ALIAS = {
-    "Privacy Pools": "0xBow Privacy Pools",
+KNOWN_CATALOG_ALIAS: dict[str, str] = {
+    # "Privacy Pools" was "0xBow Privacy Pools" in the catalog until prd
+    # §1718 named the seat for the product; source and seat agree now.
 }
 
 # Function names that must never be reachable only from inside `#if DEBUG` —

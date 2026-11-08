@@ -3,7 +3,7 @@ import Foundation
 /// What a WALLET-RIDING seat's product page says before it lights up
 /// (prd §515, 2026-08-29).
 ///
-/// These seats have no connection of their own: Peer, 0xBow Privacy Pools,
+/// These seats have no connection of their own: Peer, Privacy Pools,
 /// Railgun, Safe, MetaMask Card, Plasma One and ether.fi. Watching an address is the
 /// whole consent (§207), every one of their sweeps runs unconditionally inside
 /// `WalletIngest.refresh`, and the seat is pure display gated on evidence

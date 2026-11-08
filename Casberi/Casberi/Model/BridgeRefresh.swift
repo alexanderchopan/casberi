@@ -98,7 +98,7 @@ enum BridgeRefresh {
     /// Wallet and Safe (user, 2026-11-07: "should also show the Aztec icon,
     /// not just safe", then "also include the privacy pools one and rail
     /// gun"). Each tile below stands for a read the pull makes:
-    /// - **Railgun and 0xBow Privacy Pools**: `WalletIngest.refresh` asks both
+    /// - **Railgun and Privacy Pools**: `WalletIngest.refresh` asks both
     ///   for every followed Ethereum address, lit or not (their sweeps are
     ///   never seat-gated, §207, §268); your private balance's notes are
     ///   asked again too (`PrivateMoneyStore.pull`).
@@ -115,7 +115,7 @@ enum BridgeRefresh {
         }
         let privateBalance = PrivateMoneyStore.shared.pull()
         if demo || followsEthereum { add("Railgun") }
-        if demo || followsEthereum || privateBalance { add("0xBow Privacy Pools") }
+        if demo || followsEthereum || privateBalance { add("Privacy Pools") }
         if AztecAccountStore.shared.pull() { add(AztecAccountStore.walletSymbol) }
         return out
     }

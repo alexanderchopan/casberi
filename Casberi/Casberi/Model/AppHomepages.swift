@@ -17,7 +17,7 @@ import Foundation
 /// the ones with no public site of their own have no entry, and so no tile.
 enum AppHomepages {
     static let domain: [String: String] = [
-        "0xBow Privacy Pools": "privacypools.com",
+        "Privacy Pools": "privacypools.com",
         "Railgun": "railgun.org",
         "ENS": "ens.domains",
         "CardPointers": "cardpointers.com",

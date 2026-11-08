@@ -394,7 +394,7 @@ enum BridgeRouter {
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
-        Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
+        Row(offer: "Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
         Row(offer: "Safe", id: "safe", destination: .safe),
         // MetaMask Card has no screen of its own (2026-09-20, the shape Gnosis
@@ -503,7 +503,7 @@ enum BridgeRouter {
     /// `nil` = the offer has no dedicated screen — its Connect runs
     /// `BridgeConnect` instead of pushing.
     static func destination(forOffer name: String) -> Destination? {
-        // Peer & 0xBow Privacy Pools have no setup of their own — "connecting"
+        // Peer & Privacy Pools have no setup of their own — "connecting"
         // them IS watching a wallet (prd §207/§209). So the CONNECT flow (every
         // caller of `forOffer`) routes straight to the Wallet manager instead
         // of a pass-through setup screen that only re-doored there — one fewer
@@ -511,7 +511,7 @@ enum BridgeRouter {
         // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
         // through `destination(forID:)` below, and still returns `.peer`/
         // `.privacyPools` once a wallet is watched and the seat reads connected.
-        if name == "Peer" || name == "0xBow Privacy Pools" || name == "Safe"
+        if name == "Peer" || name == "Privacy Pools" || name == "Safe"
             || name == "Railgun" { return .wallet }
         return rows.first { $0.offer == name }?.destination
     }

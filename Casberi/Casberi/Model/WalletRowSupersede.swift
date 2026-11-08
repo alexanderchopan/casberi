@@ -11,7 +11,7 @@ import SwiftData
 /// collapse them (`SyncReconcile.dedupeBySourceRef` can't — the refs are
 /// namespaced per source, so they're legitimately different rows).
 ///
-/// This shipped with 0xBow Privacy Pools and went unnoticed for weeks, because
+/// This shipped with Privacy Pools and went unnoticed for weeks, because
 /// its deposits are rare enough that the pair rarely appeared side by side.
 /// Railgun made it obvious. Peer and Gnosis Pay (removed, prd §1318) escaped
 /// only by living on chains the wallet sweep didn't read.

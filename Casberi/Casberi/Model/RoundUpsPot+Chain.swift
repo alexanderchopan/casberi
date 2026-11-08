@@ -17,6 +17,16 @@ extension RoundUpsPot {
     /// The figure Round-ups counts toward now, for words.
     @MainActor static var shownTarget: String { shownMoveAt(poolMinimum: PrivateMoneyStore.shared.roundUpsMinimum) }
 
+    /// **The target as a round dollar (prd §1718, user: "i'd rather it say
+    /// just $10. 10.06 is wonky").** The move happens at the pool's minimum
+    /// ($10.06 today, the ladder's floor plus its fee); the words say the
+    /// dollar it rounds to, "$10", everywhere the target is said — the
+    /// sentence, Holdings' Round-ups row, Spending, Move's foot. The cents
+    /// are the pool's, not a figure anyone chose.
+    @MainActor static var targetWords: String {
+        wholeDollars.string(from: NSNumber(value: dollars(shownTarget).rounded())) ?? figure(shownTarget)
+    }
+
     /// "$6.20", "$10": Round-ups' figures, cents shown only when there are any.
     static func figure(_ units: String) -> String {
         let usd = dollars(units)

@@ -200,7 +200,7 @@ extension FeedScreen {
                         if slot.isShowing(crownScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
-                            // Safe and 0xBow Privacy Pools are your account's
+                            // Safe and Privacy Pools are your account's
                             // own (prd §1614): who signs and what waits, and
                             // what is private and how hidden.
                             if selectedSeat?.source == SafeBridge.sourceName {

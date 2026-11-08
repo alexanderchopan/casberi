@@ -3330,7 +3330,7 @@ enum DemoSeedAll {
             // seeded deposits were landing and going straight to `nil`.
             row(.transaction, "Put \(p.amount) into Privacy Pools", source: "Privacy Pools",
                 ref: PrivacyPoolsRoom.depositPrefix + p.label,
-                days: p.days, hour: 20, content: "Ethereum · 0xBow",
+                days: p.days, hour: 20, content: "Ethereum · Privacy Pools",
                 tags: ["Shielded", p.state]) { t in
                 t.walletAddress = demoWallet
                 // The amount as DATA (prd §369) — the receipt states a figure
@@ -3358,7 +3358,7 @@ enum DemoSeedAll {
         out.append(row(.transaction, "Reclaimed 0.1500 ETH from Privacy Pools",
                        source: "Privacy Pools",
                        ref: PrivacyPoolsRoom.reclaimedPrefix + "demo6",
-                       days: 35, hour: 20, content: "Ethereum · 0xBow") { t in
+                       days: 35, hour: 20, content: "Ethereum · Privacy Pools") { t in
             t.walletAddress = demoWallet
             t.transferAmount = "0.1500 ETH"
             t.transferDirection = "received"
@@ -3382,7 +3382,7 @@ enum DemoSeedAll {
         out.append(row(.transaction, "Put 0.0500 ETH into Privacy Pools",
                        source: "Privacy Pools",
                        ref: PrivacyPoolsRoom.depositPrefix + "demo8",
-                       days: 52, hour: 20, content: "Ethereum · 0xBow",
+                       days: 52, hour: 20, content: "Ethereum · Privacy Pools",
                        tags: ["Shielded"]) { t in
             t.walletAddress = demoWallet
             t.transferAmount = "0.0500 ETH"

@@ -243,6 +243,12 @@ enum Corpus {
         // L2BEAT renamed itself ETHBEAT (2026-11-04, prd §1699). Its seat id,
         // ref namespace and defaults stay `l2beat`.
         "L2BEAT": Rename(current: "ETHBEAT"),
+        // The product's name, not the company's (prd §1718, user: "0xBow is
+        // the company and the product is Privacy Pools"). Rows always
+        // carried `source: "Privacy Pools"`; this keeps anything stamped
+        // with the old seat name resolving. Seat id, ref namespace and
+        // defaults stay `privacypools`.
+        "0xBow Privacy Pools": Rename(current: "Privacy Pools"),
     ]
 
     /// A renamed seat: what it answers to now, and — when the rename moved the

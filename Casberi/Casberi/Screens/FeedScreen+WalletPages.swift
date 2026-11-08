@@ -183,7 +183,7 @@ extension FeedScreen {
     /// your account picked, never on another account's or Following's.
     var walletShowsPrivate: Bool {
         if walletOnAll { return true }
-        // 0xBow Privacy Pools' pick is your private balance (prd §1614).
+        // Privacy Pools' pick is your private balance (prd §1614).
         if selectedSeat?.source == PrivacyPoolsBridge.sourceName { return true }
         guard let yours = YourAccountDemo.shownAddress, let scope = chrome.walletScope else { return false }
         return WalletWatch.sameAddress(scope, yours)
@@ -445,16 +445,36 @@ extension FeedScreen {
                     }
                 }
             }
-            if !tokens.isEmpty || anyHidden {
-                // Its dollars, as Apps', Lent's and Private's heads carry
-                // theirs: they add up to the number above them (prd §1695, §1696).
-                walletDoor(.holdings, name: String(localized: "Tokens"),
-                           figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd }),
+            // **PUBLIC · PRIVATE (prd §1718, user: "the title 'Tokens' is
+            // somewhat confusing b/c the whole screen is tokens"; "the
+            // private stuff can be 'lent' also"; option B).** The section
+            // says WHERE the money is; each row's line says what it is doing
+            // there. What your accounts hold in the open — idle tokens and
+            // what Aave holds for you, by worth together — under one head
+            // whose dollars add up to the number above (prd §1695, §1696;
+            // the lent standing, a last reading included, §1697). Lent is
+            // no longer a section: private money is lent too.
+            let lent = walletLentStanding
+            let lentUSD = lent.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0
+            if !tokens.isEmpty || anyHidden || lent.map({ !$0.rows.isEmpty || $0.roundUps != nil }) == true {
+                walletDoor(.holdings, name: String(localized: "Public"),
+                           figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd } + lentUSD),
                            act: { feedSheet = .walletTokens })
-                // A token's row opens that token, every one (prd §1670); the
-                // door and See all open the list.
-                walletTokenPreview(Array(tokens.prefix(Self.holdingsPreviewCount)), mask: mask) { token in
-                    walletOpenToken(token)
+                    .task(id: lent?.account) {
+                        if let lent { await lent.lend.read(account: lent.account) }
+                    }
+                // A token's row opens that token, every one (prd §1670); a
+                // lent row opens Take back; the door and See all open the
+                // tokens list.
+                ForEach(walletPublicRows(tokens: Array(tokens.prefix(Self.holdingsPreviewCount)), lent: lent)) { row in
+                    switch row {
+                    case .token(let token):
+                        walletTokenPreview([token], mask: mask) { walletOpenToken($0) }
+                    case .lent(let m):
+                        if let lent { walletLentRow(m, lend: lent.lend, mask: mask, prices: lent.lend.prices) }
+                    case .roundUps(let units):
+                        walletRoundUpsRow(units, mask: mask)
+                    }
                 }
                 // What your Aztec account holds in the open: its gas, first
                 // (prd §1700e). Never in the figure above.
@@ -479,9 +499,8 @@ extension FeedScreen {
                     }
                 }
             }
-            // What is lent on Aave, Round-ups last, then what is private: the
-            // order the money moves (prd §1695, amends §1674's "under Private").
-            walletLentRows
+            // Then what is private (prd §1718: Public · Private; Lent's rows
+            // stand in Public since option B).
             walletPrivateRows
             // Your Aztec account's holdings, after 0xBow's (prd §1700 item 4).
             walletAztecRows
@@ -541,7 +560,7 @@ extension FeedScreen {
     /// One of a door's top three (prd §1525): the mark in the door's glyph
     /// column, the name and figure a rung under the door's, so the door
     /// still reads as the heading. A press opens what the door opens.
-    func walletPreviewRow<Mark: View>(_ name: String, figure: String?, tone: Color = DS.textSecondary,
+    func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, figure: String?, tone: Color = DS.textSecondary,
                                       act: @escaping () -> Void,
                                       @ViewBuilder mark: () -> Mark) -> some View {
         Button {
@@ -552,10 +571,20 @@ extension FeedScreen {
                 mark()
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                Text(verbatim: name)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+                // A line under the name where the row has one to say: a
+                // token's networks (prd §1718); an app's row has none.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: name)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    if let line {
+                        Text(verbatim: line)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
                 Spacer(minLength: DS.Space.s2)
                 if let figure {
                     walletRowFigure(figure, tone: tone)
@@ -567,16 +596,17 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
-        .accessibilityLabel(Text(verbatim: [name, figure].compactMap { $0 }.joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [name, line, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
 
-    /// A door's tokens, each wearing the mark its treemap tile wears.
+    /// A door's tokens, each wearing the mark its treemap tile wears, over
+    /// the networks it sits on (prd §1718).
     @ViewBuilder
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
                             act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            walletPreviewRow(token.symbol, figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
+            walletPreviewRow(token.symbol, line: token.networksLine, figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
                 AssetMark(name: token.symbol, size: DS.Mark.badge)
             }
             // Hide from the row you see first, as from the Tokens list

@@ -31,13 +31,25 @@ extension FeedScreen {
         if walletShowsAztec {
             let store = AztecAccountStore.shared
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            // Network · fact · place (prd §1718): on Aztec the network is the
+            // place, so the line is the one word.
             ForEach(store.privateHeld) { holding in
-                aztecRow(title: holding.name, line: String(localized: "Private on Aztec"),
+                aztecRow(title: holding.name, line: "Aztec",
                          figure: mask ?? store.usd(holding, units: holding.privateUnits).map(WalletValue.money)
                              ?? Self.aztecFigure(holding, units: holding.privateUnits),
                          mark: holding.name, tone: DS.textPrimary)
             }
             .background { aztecReading }
+            // Empty, the place stands where its rows will (prd §1718, §769):
+            // Aztec, saying what it takes, its tap Move's sentence to your
+            // private account on Aztec.
+            if store.privateHeld.isEmpty {
+                walletPlaceRow("Aztec", line: String(localized: "USDC or ETH"), mark: "Aztec",
+                               hint: String(localized: "Sends to your private account on Aztec")) {
+                    chrome.moveAztec = .deposit
+                    chrome.moveTray = true
+                }
+            }
         }
     }
 
@@ -53,8 +65,10 @@ extension FeedScreen {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             ForEach(store.publicHeld) { holding in
                 let gas = holding.kind == .feeJuice
+                // Network · fact (prd §1718): "Aztec · Gas"; a public token,
+                // "Aztec" alone, as the Tokens rows above it name theirs.
                 aztecRow(title: holding.name,
-                         line: gas ? String(localized: "Gas on Aztec") : String(localized: "Public on Aztec"),
+                         line: gas ? String(localized: "Aztec · Gas") : "Aztec",
                          figure: mask ?? (gas ? nil : store.usd(holding, units: holding.publicUnits).map(WalletValue.money))
                              ?? Self.aztecFigure(holding, units: holding.publicUnits),
                          // Grey, as every Tokens row's figure is.
@@ -107,15 +121,12 @@ extension FeedScreen {
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
-                HStack(spacing: DS.Space.s1) {
-                    // The holder's mark before the line (§1685), unless the
-                    // row's lead is already Aztec's own mark.
-                    if let mark, mark.lowercased() != "aztec" { ProtocolInlineMark(mark: "aztec") }
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
+                // The line's word carries the place (prd §1718): no small
+                // mark beside it.
+                Text(verbatim: line)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)
             walletRowFigure(figure, tone: tone)

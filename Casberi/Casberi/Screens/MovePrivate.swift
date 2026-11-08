@@ -514,10 +514,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// there is a move to make.
     private var credit: some View {
         HStack(spacing: DS.Space.s1) {
-            Text("Powered by 0xBow")
+            Text("Powered by Privacy Pools")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
-            MoveSentence.mark(of: "0xBow").accessibilityHidden(true)
+            MoveSentence.mark(of: "Privacy Pools").accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s1)

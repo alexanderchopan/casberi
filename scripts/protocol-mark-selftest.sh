@@ -125,13 +125,17 @@ guard "a swap's feed row asks the rule (it carries no direction)" "$BAND" \
 guard "the feed row's carried lead is the action glyph with the badge" "$BAND" \
   'case \.carried\(let mark\):'
 guard "Lend's foot credits Aave" "$LEND" 'Text\("Powered by Aave"\)'
-guard "the private send's foot credits 0xBow" "$PRIVATE" 'Text\("Powered by 0xBow"\)'
+guard "the private send's foot credits Privacy Pools (prd §1718)" "$PRIVATE" 'Text\("Powered by Privacy Pools"\)'
 guard "Lend's credit wears the mark through Move's one door" "$LEND" 'MoveSentence\.mark\(of: "Aave"\)'
 guard "Move's mark door falls back to the rule" \
   "Casberi/Casberi/Screens/MoveSentence.swift" 'ProtocolMark\.mark\(forVenue: service\)'
-guard "a Lent row's line wears Aave's mark" "$LENT" 'ProtocolInlineMark\(mark: "aave"\)'
-guard "a held private row's mark matches its words: Aave's on Aave, else Privacy Pools' (prd §1700f item 9)" "$HELD" \
-  'ProtocolInlineMark\(mark: PrivateMoneyStore\.shared\.earnsOnAave\(row\) \? "aave" : "privacy-pools"\)'
+# No small mark on a Holdings row's second line (prd §1718, user: "even aave
+# itself is a token in reality so that can be confusing"): the words carry
+# the place, last — "Base · 5.1% · Aave", "Ethereum · 1.5% on Aave · Privacy Pools".
+guard_absent "a Lent row's line wears a small mark again (prd §1718)" "$LENT" 'ProtocolInlineMark\('
+guard_absent "a private row's line wears a small mark again (prd §1718)" "$HELD" 'ProtocolInlineMark\('
+guard "a Lent row's line ends on its place" "$LENT" '"Aave"\]\.compactMap'
+guard "a private row's line ends on its place" "Casberi/Casberi/Model/PrivateMoneyStore.swift" 'let place = PrivacyPoolsBridge\.sourceName'
 guard_absent "the rule never reads a title (§363)" "$MARK" '\.title'
 
 if (( fail )); then echo "protocol-mark self-test: FAILED"; exit 1; fi
