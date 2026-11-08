@@ -12,6 +12,11 @@ import Foundation
 ///     seed   = HKDF-SHA256(root, salt "casberi private money root v1", info "privacy pools seed")
 ///     fresh  = HKDF-SHA256(root, salt …,                              info "fresh addresses")
 ///     owner  = HKDF-SHA256(root, salt …,  info "testnet owner" ‖ counter), the first valid secp256k1 scalar
+///     railgun wallet   = HKDF-SHA256(root, salt …, info "railgun wallet"): a BIP-39 phrase's 32 bytes of entropy
+///     railgun database = HKDF-SHA256(root, salt …, info "railgun database"): the SDK's wallet encryption key
+///
+/// Railgun's two (prd §1713) are read like the pool seed, without Face ID,
+/// so the balance reads in the background; what spends asks first.
 ///
 /// The seed enters 0xBow's own HKDF tree exactly where the device-only seed
 /// did; the fresh root enters `FreshAddress.key` exactly where the
@@ -31,6 +36,8 @@ enum PrivateRoot {
         case poolSeed = "privacy pools seed"
         case freshAddresses = "fresh addresses"
         case testnetOwner = "testnet owner"
+        case railgunWallet = "railgun wallet"
+        case railgunDatabase = "railgun database"
     }
 
     /// The 32 bytes `purpose` takes from `root`; nil for a root that is not 32 bytes.

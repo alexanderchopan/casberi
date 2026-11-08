@@ -30,7 +30,7 @@ import memdown from 'memdown';
 import leveljs from 'level-js';
 import axios from 'axios';
 import * as snarkjs from 'snarkjs';
-import { Wallet, keccak256, concat, toUtf8Bytes, getAddress, Interface, JsonRpcProvider } from 'ethers';
+import { Wallet, Mnemonic, keccak256, concat, toUtf8Bytes, getAddress, Interface, JsonRpcProvider } from 'ethers';
 
 const SDK = { wallet: '11.3.0', engine: '9.9.1', snarkjs: '0.7.5' };
 const V2 = TXIDVersion.V2_PoseidonMerkle;
@@ -229,8 +229,11 @@ const methods = {
       providerLoaded = true;
     }
     // A probe's wallet: random, unless the store already keeps it by id.
-    const generated = !p.mnemonic && !p.walletID;
-    const mnemonic = p.mnemonic ?? Wallet.createRandom().mnemonic.phrase;
+    // Your wallet: a BIP-39 phrase from 32 bytes the app derives from your
+    // private root (prd §1713), made here and never sent back. A probe's:
+    // random, unless the store already keeps it by id.
+    const generated = !p.mnemonic && !p.entropy && !p.walletID;
+    const mnemonic = p.mnemonic ?? (p.entropy ? Mnemonic.fromEntropy(p.entropy).phrase : Wallet.createRandom().mnemonic.phrase);
     encryptionKey = p.encryptionKey ?? Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('hex');
     const head = Number(await rpc('eth_blockNumber', []));
     // A wallet kept in the store opens by its id; a new one is made, and a

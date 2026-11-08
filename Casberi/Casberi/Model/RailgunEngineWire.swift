@@ -57,6 +57,8 @@ enum RailgunEngineWire {
     /// and keeps nothing (a probe); with one, the Keychain's (prd §1713 item 3).
     struct Open: Encodable {
         var mnemonic: String? = nil
+        /// 0x-hex, 32 bytes: the phrase's entropy, from your private root.
+        var entropy: String? = nil
         /// 32 bytes, hex without 0x: the SDK's wallet encryption key.
         var encryptionKey: String? = nil
         /// A wallet the store already keeps, opened by its id.

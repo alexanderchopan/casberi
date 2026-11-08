@@ -4177,6 +4177,9 @@ enum ProbeHooks {
         // Railgun engine on Ethereum (prd §1713), a random wallet, nothing
         // sent; logs `railgunEngine|` lines (`Shell/RailgunEngineProbe.swift`).
         Hook(key: "railgunEngineProbe") { raw, _ in RailgunEngineProbe.run(raw) },
+        // `-railgunPocket status|shield:<DAI>|send:<DAI|all>[:<0x…>]` — YOUR
+        // Railgun wallet through your account, REAL MONEY, Face ID (prd §1713).
+        Hook(key: "railgunPocket") { raw, _ in RailgunPocketProbe.run(raw) },
         // `-aztecEngineProbe YES` — your Aztec account's engine on mainnet
         // (prd §1700), headless; logs `aztecEngine| probe |` lines
         // (`Shell/AztecEngineProbe.swift`).
