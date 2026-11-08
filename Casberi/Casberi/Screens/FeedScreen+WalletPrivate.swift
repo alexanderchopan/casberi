@@ -34,13 +34,18 @@ extension FeedScreen {
                 // Your Aztec account's rows stand under this head on All and
                 // Yours (`walletAztecRows`), so its figure adds them (prd §1700e).
                 let aztecStore = AztecAccountStore.shared
-                let aztec = selectedSeat == nil && aztecStore.isShown
-                    ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
+                // Railgun's tokens too (prd §1721): one Private balance.
+                let railgun = RailgunHoldings.shared
+                let railgunRows = selectedSeat == nil ? railgun.shown : []
+                let aztec = (selectedSeat == nil && aztecStore.isShown
+                    ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0)
+                    + railgunRows.compactMap { railgun.usd($0, units: $0.amount) }.reduce(0, +)
                 walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, plus: aztec))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
                         await store.readYield()
+                        await RailgunHoldings.shared.refresh()
                         // A new phone finds its private money again here
                         // (prd §1562, every build since §1567): each root's
                         // notes from the pool, its fresh addresses walked
@@ -76,6 +81,12 @@ extension FeedScreen {
                 ForEach(rows) { row in
                     walletPrivateRow(row, mask: mask, prices: store.shownPrices)
                 }
+                // Railgun's tokens (prd §1713, §1721): whatever the wallet
+                // holds, spendable first, then what Railgun's screening has
+                // yet to list.
+                if selectedSeat == nil {
+                    walletRailgunRows(mask: mask)
+                }
                 // Empty, the place stands where its rows will (prd §1718, by
                 // §769's rule: an empty state draws what would fill it): one
                 // row for Privacy Pools, named and marked as a holding's line
@@ -83,7 +94,7 @@ extension FeedScreen {
                 // Send to your private balance.
                 // One row whatever protocol sits behind it (prd §1719): the
                 // token decides Privacy Pools or Railgun, never the person.
-                if rows.isEmpty, !store.restoring, PrivateMove.available {
+                if rows.isEmpty, RailgunHoldings.shared.shown.isEmpty, !store.restoring, PrivateMove.available {
                     walletPlaceRow(String(localized: "Your private balance"),
                                    line: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
                                    mark: nil,
@@ -93,6 +104,71 @@ extension FeedScreen {
                 }
             }
         }
+    }
+
+    /// **RAILGUN'S TOKENS IN THE PRIVATE BLOCK (prd §1713 items 1, 4 and 5,
+    /// §1721).** Network · fact · place, the place last and no inline mark
+    /// (§1718): "DAI — Ethereum · Railgun", the dollars trailing (the amount
+    /// where Casberi has no price). What Railgun's screening has not yet
+    /// listed reads "Private in about an hour", grey, behind a clock: a
+    /// state, nobody waiting on you, never amber (item 5). A tap opens Send
+    /// from it, which takes it back to your account (§1721 item 3).
+    @ViewBuilder
+    func walletRailgunRows(mask: String?) -> some View {
+        let store = RailgunHoldings.shared
+        ForEach(store.spendableShown) { h in
+            walletRailgunRow(h, units: h.spendable, line: String(localized: "Ethereum · Railgun"), pending: false, mask: mask)
+        }
+        ForEach(store.pendingShown) { h in
+            walletRailgunRow(h, units: h.pending, line: String(localized: "Private in about an hour"), pending: true, mask: mask)
+        }
+    }
+
+    private func walletRailgunRow(_ h: RailgunHoldings.Held, units: String, line: String, pending: Bool, mask: String?) -> some View {
+        let store = RailgunHoldings.shared
+        let figure = mask ?? store.usd(h, units: units).map(WalletValue.money)
+            ?? RailgunHoldings.figure(units, decimals: h.decimals)
+        return Button {
+            guard !pending else { return }
+            DSHaptic.selection()
+            chrome.moveRailgun = .init(contract: h.contract, takeBack: true)
+            chrome.moveTray = true
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Group {
+                    if pending {
+                        Image(systemName: "clock")
+                            .dsGlyph(.body, weight: .regular)
+                            .foregroundStyle(DS.textSecondary)
+                    } else {
+                        AssetMark(name: h.symbol, size: DS.Mark.badge)
+                    }
+                }
+                .frame(width: DSRoomChassis.headGlyph)
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: h.symbol)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Text(verbatim: line)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure, tone: pending ? DS.textSecondary : DS.textPrimary)
+            }
+            .walletRowPitch()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .disabled(pending)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(pending ? [] : .isButton)
+        .accessibilityLabel(Text(verbatim: [h.symbol, line, figure].joined(separator: ". ")))
+        .walletListRow()
     }
 
     /// **A PRIVATE PLACE WITH NOTHING IN IT YET (prd §1718).** The row a

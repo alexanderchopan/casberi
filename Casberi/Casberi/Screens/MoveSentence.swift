@@ -38,7 +38,7 @@ struct MoveSentence: View {
 
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
          privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false, lending: LendMove.Mode? = nil,
-         aztecPrivately: AztecMove.Mode? = nil) {
+         aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
@@ -46,9 +46,11 @@ struct MoveSentence: View {
         // Holdings' Aztec placeholder opens Send onto your private account
         // on Aztec (prd §1718), as `privately` opens it onto Privacy Pools.
         let aztec = AztecProver.isAvailable && mode == nil ? aztecPrivately : nil
-        let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil && aztec == nil
-        let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && !toFresh
-        _verb = State(initialValue: mode != nil || aztec != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        // A Railgun row in Holdings opens Send onto taking it back (prd §1721).
+        let railgun = RailgunPocket.available && mode == nil && aztec == nil ? railgunPrivately : nil
+        let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil && aztec == nil && railgun == nil
+        let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && railgun == nil && !toFresh
+        _verb = State(initialValue: mode != nil || aztec != nil || railgun != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
@@ -58,7 +60,12 @@ struct MoveSentence: View {
         let aztecMove = AztecMove()
         aztecMove.mode = aztec ?? .deposit
         _aztecMove = State(initialValue: aztecMove)
-        picksUpDraft = mode == nil && aztec == nil && !toFresh && opening == nil && arrival == nil && !lends
+        let railgunMove = RailgunMove()
+        railgunMove.mode = railgun?.takeBack == true ? .takeBack : .deposit
+        railgunMove.wanted = railgun?.contract
+        _railgunMove = State(initialValue: railgunMove)
+        _railgunOpen = State(initialValue: railgun != nil)
+        picksUpDraft = mode == nil && aztec == nil && railgun == nil && !toFresh && opening == nil && arrival == nil && !lends
     }
 
     /// **LEND (prd §1674): a verb.** Picked, `MoveLendSentence` draws under
@@ -83,6 +90,18 @@ struct MoveSentence: View {
     @State private var freshReceive = false
     /// Receive to your private balance on Aztec: your Aztec address (prd §1719).
     @State private var aztecReceive = false
+    /// Your private balance on Ethereum for any token but ETH and USDC:
+    /// Railgun's sentence, in or back (prd §1713, §1721).
+    @State private var railgunOpen = false
+    @State private var railgunMove: RailgunMove
+
+    private func goRailgun(_ mode: RailgunMove.Mode, contract: String?) {
+        railgunMove.mode = mode
+        railgunMove.wanted = contract
+        withAnimation(DS.Motion.standard) { open = nil; railgunOpen = true }
+        DSHaptic.selection()
+        Task { await railgunMove.read() }
+    }
 
     private func goPrivate(_ mode: PrivateMove.Mode) {
         privateMove.mode = mode
@@ -991,7 +1010,7 @@ struct MoveSentence: View {
         // The verbs open on the account page over any verb's own sentence
         // (Lend, Send privately, a fresh Receive), so every verb word opens
         // the one list (prd §1681).
-        let ownSentence = (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || verb == .lend) && open != .verb
+        let ownSentence = (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
         ZStack {
             accountPage
                 .opacity(ownSentence ? 0 : 1)
@@ -1006,6 +1025,16 @@ struct MoveSentence: View {
                 MoveFreshSentence(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { freshReceive = false; open = .elsewhere }
                 }) { verbWord(title(.receive)) }
+                .transition(.opacity)
+            }
+            if railgunOpen, privateMode == nil, open != .verb {
+                MoveRailgunSentence(move: railgunMove, inTray: inTray, leave: { why in
+                    withAnimation(DS.Motion.standard) {
+                        railgunOpen = false
+                        open = why == .pickRecipient ? .to : .with
+                        if why == .pickRecipient { search = "" }
+                    }
+                }) { verbWord(title(.send)) }
                 .transition(.opacity)
             }
             if aztecReceive, privateMode == nil, open != .verb {
@@ -1042,6 +1071,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: freshReceive)
         .animation(DS.Motion.standard, value: aztecReceive)
+        .animation(DS.Motion.standard, value: railgunOpen)
         .animation(DS.Motion.standard, value: verb)
     }
 
@@ -2262,8 +2292,9 @@ struct MoveSentence: View {
     private func pickVerb(_ v: Verb) {
         withAnimation(DS.Motion.standard) {
             open = nil
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen else { return }
             privateMode = nil
+            railgunOpen = false
             aztecMode = nil
             freshReceive = false
             aztecReceive = false
@@ -3359,6 +3390,15 @@ struct MoveSentence: View {
                 }))
             }
         }
+        // Railgun's tokens (prd §1721): picking one takes it back to your
+        // account, until Railgun's broadcaster carries a send to someone else.
+        let railgun = RailgunHoldings.shared
+        for h in railgun.spendableShown {
+            out.append(("railgun|" + h.id, h.symbol, "Ethereum", RailgunHoldings.figure(h.spendable, decimals: h.decimals),
+                        railgun.usd(h, units: h.spendable), { [self] in
+                goRailgun(.takeBack, contract: h.contract)
+            }))
+        }
         if AztecProver.isAvailable, YourAccountKey.address != nil || DemoMode.isActive {
             let aztec = AztecAccountStore.shared
             if aztec.isShown {
@@ -3474,7 +3514,14 @@ struct MoveSentence: View {
             }
             if poolsHere {
                 listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {
-                    goPrivate(.deposit)
+                    // The token decides (prd §1713 item 1): ETH and USDC to
+                    // Privacy Pools, any other token on Ethereum to Railgun.
+                    if RailgunPocket.available, let held = with, network == Op.ethereum,
+                       RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract, chainId: network.chainId) {
+                        goRailgun(.deposit, contract: held.token.contract)
+                    } else {
+                        goPrivate(.deposit)
+                    }
                 }
             }
             if aztecHere {

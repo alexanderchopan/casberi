@@ -44,9 +44,33 @@ enum RailgunPocket {
         case notWritten
     }
 
+    /// Whether this build carries the engine at all: DEBUG only until it
+    /// ships (a Release build excludes `railgun-engine.js` and its wasm).
+    static var available: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
+    /// Railgun's fees as the proxy last answered them, in basis points
+    /// (`shieldFee`/`unshieldFee`, read on every open, §1713 item 6); nil
+    /// until an open has read them.
+    static var shieldFeeBps: Int?
+    static var unshieldFeeBps: Int?
+
     // MARK: - Opening
 
     private static func walletKey(_ root: String) -> String { "railgun.wallet." + root }
+
+    /// Whether a Railgun wallet already exists for your current root: the
+    /// only case in which Casberi reads one, so no root is ever made just to
+    /// look (§1721 item 1).
+    static var hasWallet: Bool {
+        guard let id = PrivateRootKey.currentID else { return false }
+        return UserDefaults.standard.string(forKey: walletKey(id)) != nil
+    }
 
     /// Opens your wallet in the engine, made from root `id`. `reason` asks
     /// for the device owner first (what spends); nil only reads.
@@ -61,13 +85,30 @@ enum RailgunPocket {
               var key = PrivateRoot.derive(root, .railgunDatabase) else { throw Failure.curve }
         defer { for i in entropy.indices { entropy[i] = 0 }; for i in key.indices { key[i] = 0 } }
         let engine = RailgunEngine.shared
-        if engine.isOpen { return try await engine.open(entropy: hex(entropy, prefix: true), encryptionKey: hex(key),
-                                                         walletID: UserDefaults.standard.string(forKey: walletKey(id))) }
+        if engine.isOpen {
+            let opened = try await engine.open(entropy: hex(entropy, prefix: true), encryptionKey: hex(key),
+                                               walletID: UserDefaults.standard.string(forKey: walletKey(id)))
+            noteFees(opened)
+            return opened
+        }
         let opened = try await engine.open(entropy: hex(entropy, prefix: true), encryptionKey: hex(key),
                                            walletID: UserDefaults.standard.string(forKey: walletKey(id)),
                                            creationBlock: checkpointBlock)
         UserDefaults.standard.set(opened.walletID, forKey: walletKey(id))
+        noteFees(opened)
         return opened
+    }
+
+    private static func noteFees(_ opened: RailgunEngineWire.Opened) {
+        if let bps = opened.shieldFeeBps.flatMap(Int.init) { shieldFeeBps = bps }
+        if let bps = opened.unshieldFeeBps.flatMap(Int.init) { unshieldFeeBps = bps }
+    }
+
+    /// "0.25%": a fee in basis points as Railgun's foot says it.
+    static func percent(bps: Int) -> String {
+        let pct = Double(bps) / 100
+        return (pct.rounded() == pct ? String(format: "%.0f", pct) : String(format: "%.2f", pct)
+            .replacingOccurrences(of: #"0+$"#, with: "", options: .regularExpression)) + "%"
     }
 
     private static func hex(_ bytes: [UInt8], prefix: Bool = false) -> String {

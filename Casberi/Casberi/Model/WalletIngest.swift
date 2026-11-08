@@ -2368,7 +2368,7 @@ enum WalletIngest {
         let yours = address.map(YourAccountDemo.isYours) ?? false
         // Your Aztec account counts the same way, its own block (prd §1700e).
         // Railgun's tokens join Privacy Pools' in the one Private block
-        // (prd §1713 item 1, §1722): the same symbol, summed.
+        // (prd §1713 item 1, §1721): the same symbol, summed.
         let privately = combined || yours
             ? (await PrivateMoneyStore.shared.walletHolding()) + (await RailgunHoldings.shared.walletHolding())
                 + (await AztecAccountStore.shared.walletHolding()) : []

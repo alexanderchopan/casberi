@@ -243,6 +243,9 @@ final class ShellChrome {
     /// Aztec placeholder opens the deposit, as `movePrivately` opens
     /// Privacy Pools'. Cleared when the tray leaves.
     var moveAztec: AztecMove.Mode?
+    /// Move raised onto a Railgun token (prd §1721): a Holdings row takes it
+    /// back to your account. Cleared when the tray leaves.
+    var moveRailgun: RailgunMove.Opening?
     /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
     /// Cleared when the tray closes.
     var moveLend: LendMove.Mode?

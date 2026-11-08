@@ -50,7 +50,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false }) {
+                      onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -77,6 +77,16 @@ struct MoveTrayPresenter: ViewModifier {
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] movePrivately: raised %@", mode == .send ? "send" : "deposit")
             chrome.movePrivately = mode
+            chrome.moveTray = true
+        }
+        // `-moveRailgun in|back` raises Railgun's sentence (prd §1721): `in`
+        // as a non-ETH/USDC token sent to your private balance on Ethereum,
+        // `back` as a Railgun row in Holdings.
+        .task {
+            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), how == "in" || how == "back" else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] moveRailgun: raised %@", how)
+            chrome.moveRailgun = .init(contract: nil, takeBack: how == "back")
             chrome.moveTray = true
         }
         // `-moveToAztec YES` raises Send onto your private account on Aztec,
@@ -206,7 +216,8 @@ struct MoveScreen: View {
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
                              privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,
-                             lending: chrome.moveLend, aztecPrivately: chrome.moveAztec)
+                             lending: chrome.moveLend, aztecPrivately: chrome.moveAztec,
+                             railgunPrivately: chrome.moveRailgun)
                     .transition(.opacity)
             } else if let mode = chrome.movePrivately, PrivateMove.available {
                 // No account yet, so no other verb can be tapped: Send's

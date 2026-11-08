@@ -131,7 +131,7 @@ use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no
 # private balance" opens Send's networks.
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
+use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
@@ -148,7 +148,8 @@ use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped b
 use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "private money no longer counts in the Wallet's total"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'let privately = combined || yours' "Yours no longer counts your private balance; only All does (prd §1590)"
-use "Casberi/Casberi/Model/WalletIngest.swift" '? (await PrivateMoneyStore.shared.walletHolding()) + (await AztecAccountStore.shared.walletHolding()) : []' "the private balance (0xBow, and your Aztec account since §1700e) no longer reaches Yours and All"
+use "Casberi/Casberi/Model/WalletIngest.swift" '? (await PrivateMoneyStore.shared.walletHolding()) + (await RailgunHoldings.shared.walletHolding())' "the private balance (0xBow, Railgun since §1721) no longer reaches Yours and All"
+use "Casberi/Casberi/Model/WalletIngest.swift" '+ (await AztecAccountStore.shared.walletHolding()) : []' "your Aztec account (§1700e) no longer reaches Yours and All"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'if address == nil || !privately.isEmpty || !lent.isEmpty, groups.count' "Yours with private money draws one wallet's map and drops the Private block (prd §1590)"
 use "$HOLD" 'if selectedSeat == nil || poolsPick, !walletOnFollowing,' "the Private section shows under Following again (prd §1590)"
 use "$HOLD" 'let poolsPick = selectedSeat?.source == PrivacyPoolsBridge.sourceName' "a picked app other than 0xBow shows the Private section (prd §1702 opened it for 0xBow's pick only)"
