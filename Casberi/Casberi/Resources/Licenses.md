@@ -200,7 +200,7 @@ The licence notices of each are kept at the end of privacy-engine.js. Its exact 
 
 # Railgun engine
 
-The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25519_scalarmult_wasm_bg.wasm) bundles, unmodified:
+The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25519_scalarmult_wasm_bg.wasm; in test builds only until it ships) bundles, unmodified:
 
 - Railgun wallet SDK (@railgun-community/wallet 11.3.0), engine (@railgun-community/engine 9.9.1), shared-models 8.2.1, poseidon-hash-wasm 1.0.3, curve25519-scalarmult-wasm 0.1.5 and circomlibjs, by the Railgun community. MIT License.
 - ethers 6.14.3, by Richard Moore. MIT License.
