@@ -85228,6 +85228,34 @@
         }
       }
     },
+    "Ethereum · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · %@"
+          }
+        }
+      }
+    },
     "Ethereum · Private" : {
       "localizations" : {
         "es" : {

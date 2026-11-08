@@ -329,6 +329,12 @@ grep -q 'guard stage == .ready, amountOK, let units' "$MOVEAZ" \
   || { echo "✗ an Aztec move runs without a clear amount (prd §1700q)"; exit 1; }
 grep -q 'move.stage == .ready && move.amountOK &&' "$MOVEAZ" \
   || { echo "✗ Send stands lit over an unclear amount (prd §1700q)"; exit 1; }
+awk '/static func exit\(/{e=1} e&&/let theirs = await eligibility\(coSigner\), theirs.eligible/{t=NR} e&&/limit\(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner\)/{l=NR} END{exit !(t && l && t<l)}' "$APP" \
+  || { echo "✗ an exit asks Shield only for your account, never your co-signer (prd §1700r)"; exit 1; }
+grep -q 'guard stage == .reading || stage == .ready else { return }' "$MOVEAZ" \
+  || { echo "✗ a refresh behind the stored balance can undo a move under way (prd §1700r)"; exit 1; }
+grep -q 'if typed.hasPrefix(".") { typed = "0" + typed }' "$MOVEAZ" \
+  || { echo "✗ \".5\" no longer reads as half: Send stays off (prd §1700r)"; exit 1; }
 grep -q 'case moreThanHeld' "$MOVEAZ" && grep -q 'want > have' "$MOVEAZ" \
   || { echo "✗ an amount over what you hold is not said (prd §1700q)"; exit 1; }
 

@@ -312,13 +312,26 @@ extension ShieldBridge {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
-        guard standing.eligible else {
+        // **OUT AS IN, BY YOUR CO-SIGNER (prd §1700r, user: "it says shield
+        // needs a human passport score of 20 and mine is 0" — the deposit had
+        // gone in by the co-signer, §1720).** When your account is not
+        // eligible and your co-signer is, the co-signer signs in to Shield for
+        // the exit's limit. The exit itself is proved here and pays only the
+        // address in the sentence.
+        var signer = account
+        var byCoSigner = false
+        if !standing.eligible, !standing.sanctioned,
+           let coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first,
+           let theirs = await eligibility(coSigner), theirs.eligible {
+            signer = coSigner
+            byCoSigner = true
+        } else if !standing.eligible {
             throw Failure(message: standing.sanctioned
                 ? String(localized: "Shield will not move money for this account")
                 : String(localized: "Shield needs a Human Passport score of \(Int(standing.threshold)); yours is \(Int(standing.score))"))
         }
         let aztec = try await AztecEngine.shared.accountAddress()
-        let limit = try await limit(.outOfAztec, asset: asset, units: units, account: account, aztec: aztec)
+        let limit = try await limit(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner)
         guard let max = Decimal(string: limit.maxAmount), let want = Decimal(string: units), want <= max else {
             let most = Decimal(string: limit.maxAmount).map { PrivateMoney.figure(NSDecimalNumber(decimal: $0).stringValue, decimals: asset.decimals, symbol: asset.symbol) }
             throw Failure(message: most.map { String(localized: "Shield allows up to \($0) at a time") } ?? String(localized: "Shield did not give a limit for this move"))

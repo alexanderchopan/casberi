@@ -65,11 +65,13 @@ final class AztecMove {
 
     var decimals: Int { symbol == "USDC" ? 6 : 18 }
     var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
-    /// What was typed, in base units: a comma is a decimal point, and a
-    /// trailing point (mid-typing) is ignored.
+    /// What was typed, in base units: a comma is a decimal point, a leading
+    /// point reads as "0.", and a trailing point (mid-typing) is ignored.
     var units: String? {
         var typed = amount.replacingOccurrences(of: ",", with: ".")
         if typed.hasSuffix(".") { typed.removeLast() }
+        // ".5" is half (prd §1700r, user: "the send button stays inactive").
+        if typed.hasPrefix(".") { typed = "0" + typed }
         return PrivateMoney.baseUnits(typed, decimals: decimals)
     }
     /// How much of the picked token there is to move, base units.
@@ -160,12 +162,23 @@ final class AztecMove {
             keepPick()
             stage = .ready
         case .send:
-            if AztecProver.isAvailable { await AztecAccountStore.shared.refresh() }
+            // **WHAT IT LAST READ, AT ONCE (prd §1700r, user: "why does
+            // 'reading aztec' take so long?" — the engine's start and sync, a
+            // minute or two measured).** The stored balance stands while the
+            // engine refreshes behind it; a move already under way is never
+            // taken back to ready.
             let store = AztecAccountStore.shared
-            holdings = store.privateHeld.compactMap { h -> Holding? in
-                guard let units = h.privateUnits, let have = Decimal(string: units), have > 0, h.decimals != nil else { return nil }
-                return Holding(symbol: h.name, units: units)
+            func fill() {
+                holdings = store.privateHeld.compactMap { h -> Holding? in
+                    guard let units = h.privateUnits, let have = Decimal(string: units), have > 0, h.decimals != nil else { return nil }
+                    return Holding(symbol: h.name, units: units)
+                }
             }
+            fill()
+            if !holdings.isEmpty, !AztecGas.needed { keepPick(); stage = .ready }
+            if AztecProver.isAvailable { await store.refresh() }
+            guard stage == .reading || stage == .ready else { return }
+            fill()
             if holdings.isEmpty { stage = .nothingPrivate; return }
             if AztecGas.needed { stage = .needsGas; return }
             keepPick()
@@ -537,6 +550,26 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// An Aztec account (a private send) or an Ethereum address (out
     /// through Shield), typed or pasted.
     @ViewBuilder private var recipients: some View {
+        // **YOUR ADDRESSES FIRST (prd §1700r, user: "it doesn't suggest my
+        // existing addresses" — "it should").** Your account on Ethereum
+        // (an exit to yourself), then the address book as Send's To lists it,
+        // filtered by what is typed; the field and Paste stay for anyone else.
+        ForEach(suggestions, id: \.address) { s in
+            Button { take(s.address) } label: {
+                HStack(spacing: DS.Space.s3) {
+                    WalletFace(address: s.address, size: DS.Face.list, circular: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: s.name).dsText(MoveSentence.choiceRung).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1).minimumScaleFactor(0.5)
+                        Text(verbatim: s.line).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+                    }
+                    Spacer(minLength: DS.Space.s2)
+                }
+                .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+        }
         if notAnAddress {
             Text("That isn't an Aztec or Ethereum address").dsText(.body17).foregroundStyle(DS.attentionInk)
                 .padding(.top, DS.Space.s2)
@@ -553,6 +586,28 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+    }
+
+    private struct Suggestion { let name: String; let line: String; let address: String }
+
+    /// Your account, then the book's Ethereum addresses (prd §1700r).
+    private var suggestions: [Suggestion] {
+        let q = typed.trimmingCharacters(in: .whitespaces).lowercased()
+        let typingAnAddress = AztecAddressText.isAztec(q) || PrivateMoney.isAddress(q)
+        guard !typingAnAddress else { return [] }
+        var out: [Suggestion] = []
+        let mine = YourAccountKey.address
+        let yours = String(localized: "Your account")
+        if let mine, q.isEmpty || yours.lowercased().contains(q) || mine.lowercased().hasPrefix(q) {
+            out.append(Suggestion(name: yours, line: String(localized: "Ethereum · \(AddressTail.short(mine))"), address: mine))
+        }
+        for e in AddressBook.shared.all where ENS.isHexAddress(e.address)
+            && !(mine.map { WalletWatch.sameAddress($0, e.address) } ?? false)
+            && (q.isEmpty || e.name.lowercased().contains(q) || e.address.lowercased().hasPrefix(q)) {
+            out.append(Suggestion(name: e.name, line: AddressTail.short(e.address), address: EIP55.checksum(e.address)))
+            if out.count >= 20 { break }
+        }
+        return out
     }
 
     private func take(_ raw: String) {

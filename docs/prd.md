@@ -71310,6 +71310,17 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** None: Aztec stands on the iPhone only.
 
+## §1700r — Sending from Aztec lists your addresses, reads ".5", exits by your co-signer's score and shows the last balance at once (amends §1700f item 14's To, which was a field and Paste only, and §1720 for exits) (user, 2026-11-08, exiting to Ethereum for the first time: "when i do that it doesn't suggest my existing addresses", then "it should", with a screenshot of the field and Paste alone) — RULED, BUILT
+
+1. **The To list leads with Your account** (Ethereum, its tail): an exit to yourself is the common one.
+2. **Then the address book's Ethereum addresses**, as Send's own To lists them, a face each, filtered by what is typed, twenty at most; the field and Paste stay for anyone else. A typed or pasted address hides the list.
+3. An Aztec address in the book would be listed the day the book holds one; today it holds Ethereum addresses only.
+4. **".5" is half** (user, the same send: "the send button stays inactive" over "Send .5 USDC"): a leading point reads as "0."; before, the amount parsed as nothing and Send stayed off with no word why.
+5. **An exit signs in to Shield by your co-signer when your account has no score** (user, the same day: "it says shield needs a human passport score of 20 and mine is 0"; the deposit had gone in by the co-signer under §1720, the exit asked only for the account). `ShieldBridge.exit` asks your account first; not eligible, not sanctioned, and the co-signer eligible, the co-signer signs Shield's sign-in through the Signer sheet and Shield's out-of-Aztec limit is the co-signer's. The exit is still proved on the phone and pays only the address in the sentence. **Unmeasured:** whether Shield ties that limit to the recipient; a refusal comes back in Shield's own words.
+6. **The send sentence shows what it last read at once** (user: "why does 'reading aztec' take so long?" — the engine's start and sync, 51 s to the account and 108 s to the balances, measured on the simulator): the stored private balance stands while the engine refreshes behind it, and a refresh never takes a move under way back to ready.
+
+**Mac half (§1402).** None: Aztec stands on the iPhone only.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.
