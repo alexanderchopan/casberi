@@ -44,15 +44,10 @@ enum RailgunPocket {
         case notWritten
     }
 
-    /// Whether this build carries the engine at all: DEBUG only until it
-    /// ships (a Release build excludes `railgun-engine.js` and its wasm).
-    static var available: Bool {
-        #if DEBUG
-        true
-        #else
-        false
-        #endif
-    }
+    /// Whether this build carries the engine: every build since prd §1721
+    /// (user: "i don't want it hidden"). Kept as the one switch the rows and
+    /// sentences ask.
+    static var available: Bool { true }
 
     /// Railgun's fees as the proxy last answered them, in basis points
     /// (`shieldFee`/`unshieldFee`, read on every open, §1713 item 6); nil
