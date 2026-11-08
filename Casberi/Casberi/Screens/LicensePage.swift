@@ -21,6 +21,7 @@ enum Licenses {
         "ERC-7730 clear-signing registry": "Public domain · Ethereum Foundation",
         "Privacy Pools engine": "MIT and GPL 3 · 0xbow, iden3, wevm",
         "QRCode": "MIT · Darren Ford",
+        "Railgun engine": "MIT and GPL 3 · Railgun community, iden3, Richard Moore",
         "Reown Swift SDK": "WalletConnect Community License · Reown",
         "swift-qrcode-generator": "MIT · Project Nayuki, fwcd",
         "SwiftImageReadWrite": "MIT · Darren Ford",
