@@ -615,11 +615,11 @@ guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1 || Wall
 # dipped and the line kept its window ("these are inactive", twice). The pick
 # is `@State` inside `WalletWindowed`, around each crown's headline; a pick
 # re-runs that body whatever the row above does.
-guard FeedScreen.swift "WalletWindowed(samples: samples) { w in" \
+guard FeedScreen.swift "WalletWindowed<WalletBalanceHeadline>(samples: samples) { w in" \
   "the Wallet's crown left WalletWindowed — its window pick lands in state the box never reads (prd §1716)"
 deny FeedScreen.swift "balanceRange" \
   "the window is back on FeedScreen as balanceRange — the box, keyed on its total, never saw it change (prd §1403, §1716)"
-guard RoomHomeCrown.swift "WalletWindowed(samples: samples)" \
+guard RoomHomeCrown.swift "WalletWindowed<WalletBalanceHeadline>(samples: samples)" \
   "RoomHomeCrown left WalletWindowed — the devnets' crown picks its window by a second rule (prd §1716)"
 deny RoomHomeCrown.swift "@State private var range" \
   "RoomHomeCrown grew its own window state again — one rule, WalletWindowed (prd §1716)"
