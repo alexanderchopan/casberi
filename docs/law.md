@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1885 of 1957 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1886 of 1958 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2131,6 +2131,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1721 — Railgun in Holdings and Move, in every build: its tokens in the one Private block, moving in by the token you picked,…
 - §1722 — The balance is dated when it is old and read again when it changed, and Zerion is read three at a time with holdings…
 - §1723 — A Railgun send to someone else goes through Railgun's broadcaster: found over Waku's three relays through the app's o…
+- §1724 — Receive into Railgun: a fresh address paid any listed token but ETH and USDC moves it into your Railgun private balan…
 
 ## Dead rulings → what replaced them (generated)
 

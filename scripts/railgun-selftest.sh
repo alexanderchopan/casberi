@@ -141,6 +141,13 @@ else
   echo "  ✓ a send to someone else asks for you and your account signs nothing"
 fi
 use "$SENT" 'guard let account = YourAccountKey.address else' "the take-back recipient is your account's address"
+# §1724: what a fresh address is paid moves into Railgun, its shield your engine's.
+FRESH="Casberi/Casberi/Model/FreshReceive.swift"
+use "$FRESH" 'await lookRailgunTokens(entry, eth: balance, network: network, interactive: force, context: context)' "a fresh address's other tokens are looked at once ETH and USDC are not there"
+use "$FRESH" 'prepared.token.lowercased() == token.contract,' "the shield is of the token that arrived"
+use "$FRESH" 'PrivateMoney.decimal(hex: prepared.amount) == held,' "the shield is of exactly what arrived"
+use "$FRESH" 'guard estimate > 0, estimate <= FreshTx.railgunShieldGas else { throw FreshFailure.gas(estimate) }' "a shield over its gas budget is refused"
+use "$FRESH" 'guard interactive, spendable >= cost else {' "private ETH pays the gas only while you look"
 
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

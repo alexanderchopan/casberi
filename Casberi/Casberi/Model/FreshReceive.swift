@@ -167,7 +167,8 @@ final class FreshReceive {
             // for its gas.
             switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool: usdcPool != nil) {
             case .nothing:
-                break
+                // Any other token moves into Railgun (prd §1713 item 7, §1724).
+                await lookRailgunTokens(entry, eth: balance, network: network, interactive: force, context: context)
             case .eth:
                 await lookEthereum(entry, balance: balance, network: network, context: context)
             case .usdc:
@@ -480,6 +481,123 @@ final class FreshReceive {
         }
     }
 
+    /// **ANY OTHER TOKEN AT A FRESH ADDRESS MOVES INTO RAILGUN (prd §1713
+    /// item 7, §1724).** The listed tokens (`FreshTx.railgunTokens`) are each
+    /// asked by `balanceOf`; the first paid $10 worth or more moves. Your
+    /// private ETH pays its gas, relayed, as USDC's does (no link to your
+    /// account); then the address approves Railgun's proxy for exactly what
+    /// arrived and shields it into your Railgun wallet, the shield prepared
+    /// by your own engine. Ethereum only, where the engine ships.
+    private func lookRailgunTokens(_ entry: FreshAddress.Entry, eth: String, network: PrivacyNetwork,
+                                   interactive: Bool, context: ModelContext) async {
+        guard RailgunPocket.available, network.chainId == FreshTx.railgunChain else { return }
+        for token in FreshTx.railgunTokens {
+            guard let held = try? await PrivateRPC.tokenBalance(network, token: token.contract, of: entry.address),
+                  (Decimal(string: held) ?? 0) > 0 else { continue }
+            NSLog("privateWatch| fresh | %@ | %@ | %@ %@ units", network.name, YourAccount.short(entry.address), held, token.symbol)
+            await lookRailgun(entry, token: token, held: held, eth: eth, network: network, interactive: interactive, context: context)
+            return
+        }
+    }
+
+    private func lookRailgun(_ entry: FreshAddress.Entry, token: FreshTx.RailgunToken, held: String, eth: String,
+                             network: PrivacyNetwork, interactive: Bool, context: ModelContext) async {
+        guard let root = entry.root, let ethPool = network.yieldPool(for: PrivateMove.eth) else { return }
+        let symbol = token.symbol
+        var out: String?
+        var step = FreshAddress.SentStep.gas
+        do {
+            let fees = try await PrivateRPC.fees(network)
+            // The same $10 floor as moving in (§1713 item 2): less is not
+            // worth its gas. No price, no floor to measure: not moved.
+            let price = await MainnetPrices.prices(for: [symbol.lowercased()])[symbol.lowercased()]
+            let units = (Decimal(string: held) ?? 0) / pow(10, token.decimals)
+            guard let price, NSDecimalNumber(decimal: units).doubleValue * price >= RailgunRouting.floorUSD else {
+                if case .waiting = entry.state { set(entry.id, .tooLittle(amount: held), symbol: symbol) }
+                return
+            }
+            guard let gas = FreshAddress.railgunGas(ethHeld: eth, maxFee: String(fees.maxFee)) else { return }
+            if gas.shortfall != "0" {
+                let store = PrivateMoneyStore.shared
+                await store.readYield()
+                let fee = await PrivateMove.relayerFee(ethPool, network: network, to: entry.address) ?? "0"
+                let spendable = Decimal(string: store.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0
+                let cost = (Decimal(string: gas.shortfall) ?? 0) + (Decimal(string: fee) ?? 0)
+                guard interactive, spendable >= cost else {
+                    set(entry.id, .needsGas(amount: held), symbol: symbol)
+                    NSLog("freshAddress| needs gas | %u | %@ %@ | short %@ wei | private ETH %@ | asked %@", entry.index, held, symbol,
+                          gas.shortfall, PrivateMoney.plain(spendable), interactive ? "yes" : "no (background)")
+                    return
+                }
+                // Kept before the relayer is asked: never asked for twice.
+                set(entry.id, .sent(amount: held, tx: "", step: .gas, nonce: nil, at: Date()), symbol: symbol)
+                out = ""
+                let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: gas.shortfall, to: entry.address,
+                                                          reason: String(localized: "Move \(symbol) to private"))
+                out = tx
+                set(entry.id, .sent(amount: held, tx: tx, step: .gas, nonce: nil, at: Date()), symbol: symbol)
+                NSLog("freshAddress| gas from private ETH | %u | %@ wei | %@", entry.index, gas.shortfall, tx)
+                guard try await FreshSigner.landed(tx, on: network) else { return }
+            }
+            out = nil
+            step = .approve
+            set(entry.id, .moving(amount: held), symbol: symbol)
+            guard let hexAmount = PrivateMoney.hex(held),
+                  let approve = FreshTx.railgunApproval(token, amount: held) else { throw FreshFailure.planned }
+            if !(await allowanceCovers(token.contract, spender: FreshTx.railgunProxy, owner: entry.address, amount: held, network: network)) {
+                let approval = try await FreshSigner.send(to: approve.to, data: approve.data, value: "0x0", index: entry.index, root: root,
+                                                          from: entry.address, network: network, gas: FreshTx.approveGas,
+                                                          tip: fees.tip, maxFee: fees.maxFee) { hash, nonce in
+                    out = hash
+                    set(entry.id, .sent(amount: held, tx: hash, step: .approve, nonce: nonce, at: Date()), symbol: symbol)
+                }
+                guard try await FreshSigner.landed(approval, on: network, seconds: 120) else { return }
+                out = nil
+                set(entry.id, .moving(amount: held), symbol: symbol)
+            }
+            step = .deposit
+            // The shield, made by your own engine: to your Railgun wallet, of
+            // exactly this token and amount, to Railgun's proxy.
+            try await RailgunPocket.open(reason: nil)
+            let prepared = try await RailgunEngine.shared.prepareShield(token: token.contract, amount: hexAmount)
+            guard prepared.tx.to.lowercased() == FreshTx.railgunProxy,
+                  prepared.tx.data.lowercased().hasPrefix(FreshTx.railgunShield),
+                  prepared.token.lowercased() == token.contract,
+                  PrivateMoney.decimal(hex: prepared.amount) == held,
+                  PrivateMoney.decimal(hex: prepared.tx.value) == "0" else { throw FreshFailure.planned }
+            let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
+                                                            [["from": entry.address, "to": prepared.tx.to, "data": prepared.tx.data, "value": "0x0"]])) ?? 0
+            guard estimate > 0, estimate <= FreshTx.railgunShieldGas else { throw FreshFailure.gas(estimate) }
+            let hash = try await FreshSigner.send(to: prepared.tx.to, data: prepared.tx.data, value: "0x0", index: entry.index, root: root,
+                                                  from: entry.address, network: network, gas: FreshTx.railgunShieldGas,
+                                                  tip: fees.tip, maxFee: fees.maxFee) { hash, nonce in
+                out = hash
+                set(entry.id, .sent(amount: held, tx: hash, step: .deposit, nonce: nonce, at: Date()), symbol: symbol)
+            }
+            if try await FreshSigner.landed(hash, on: network) {
+                finish(entry, amount: held, tx: hash, symbol: symbol, network: network, context: context)
+                NSLog("freshAddress| shielded | %@ | %u | %@ | %@ %@ units", network.name, entry.index, hash, held, symbol)
+            }
+        } catch {
+            if step == .gas, out != nil, error is PrivacyEngineWire.Failure || error is PrivateOnEthereum.Failure {
+                set(entry.id, .failed(amount: held), symbol: symbol)
+                failure = PrivateMove.words(error, network: network)
+                return
+            }
+            if step == .gas, out != nil { return }
+            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network)
+        }
+    }
+
+    /// Whether `owner` already allows `spender` `amount` of `token`.
+    private func allowanceCovers(_ token: String, spender: String, owner: String, amount: String, network: PrivacyNetwork) async -> Bool {
+        let data = "0xdd62ed3e" + String(repeating: "0", count: 24) + owner.dropFirst(2).lowercased()
+            + String(repeating: "0", count: 24) + spender.dropFirst(2).lowercased()
+        guard let answer = try? await PrivateRPC.call(network, "eth_call", [["to": token, "data": data], "latest"]) as? String,
+              let have = PrivateYield.word(answer, 0).flatMap({ Decimal(string: $0) }), let need = Decimal(string: amount) else { return false }
+        return have >= need
+    }
+
     /// Whether `owner` already allows the token's router `amount` (an
     /// approval that landed after its look ended is not sent again).
     private func allowanceCovers(_ pool: PrivacyNetwork.YieldPool, owner: String, amount: String, network: PrivacyNetwork) async -> Bool {
@@ -546,6 +664,13 @@ final class FreshReceive {
     private func finish(_ entry: FreshAddress.Entry, amount: String, tx: String, symbol: String?, network: PrivacyNetwork, context: ModelContext) {
         let pool = network.yield.first { $0.symbol == (symbol ?? "ETH") }
         set(entry.id, .moved(amount: amount, tx: tx), symbol: symbol)
+        // Railgun's token (§1724): its row, and Railgun's reading again.
+        if pool == nil, let token = FreshTx.railgunToken(symbol: symbol) {
+            let figure = PrivateMoney.figure(amount, decimals: token.decimals, symbol: token.symbol)
+            PrivateActivity.land(hash: tx, title: PrivateMoney.activityTitle(figure: figure, to: nil), chainId: network.chainId, context: context)
+            Task { await RailgunHoldings.shared.refresh(force: true) }
+            return
+        }
         if let pool {
             let figure = PrivateMoney.figure(amount, decimals: pool.underlyingDecimals, symbol: pool.symbol)
             PrivateActivity.land(hash: tx, title: PrivateMoney.activityTitle(figure: figure, to: nil), chainId: network.chainId, context: context)

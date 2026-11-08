@@ -738,6 +738,19 @@ check(!made(ppUSDC.router, "0xc63148e8" + String(repeating: "ab", count: 66), "0
       "a token deposit carries ETH, or the token router's deposit is refused")
 let otherSpender = "0x095ea7b3" + String(repeating: "0", count: 24) + "4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030" + String(repeating: "0", count: 63) + "1"
 check(!made(ppUSDC.underlying, otherSpender, "0x0"), "a fresh key approves anyone but its token's router")
+// §1724: Railgun, Ethereum only — a listed token's approval of the proxy, the proxy's shield, no ETH.
+let dai = FreshTx.railgunToken(symbol: "DAI")!
+let railApprove = FreshTx.railgunApproval(dai, amount: "400000000000000000000")!
+check(made(railApprove.to, railApprove.data, "0x0"), "a fresh address approves Railgun's proxy for a listed token")
+check(!made(railApprove.to, railApprove.data, "0x1"), "a Railgun approval carries ETH")
+check(!made(dai.contract, otherSpender, "0x0"), "a fresh key approves anyone but Railgun's proxy for a Railgun token")
+check(!made("0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", railApprove.data, "0x0"), "a fresh key approves Railgun's proxy for an unlisted token")
+let shieldData = FreshTx.railgunShield + String(repeating: "ab", count: 96)
+check(made(FreshTx.railgunProxy, shieldData, "0x0"), "a fresh address shields into Railgun")
+check(!made(FreshTx.railgunProxy, shieldData, "0x1"), "a shield carries ETH")
+check(!made(FreshTx.railgunProxy, "0xd8ae136a" + String(repeating: "ab", count: 96), "0x0"), "a fresh key calls Railgun's other functions (transact)")
+check(!made(FreshTx.railgunProxy, shieldData, "0x0", testnetWithPools), "a fresh key shields into Railgun off Ethereum")
+check(!FreshTx.railgunTokens.contains { $0.symbol == "USDC" || $0.symbol == "ETH" }, "ETH or USDC is watched for Railgun, not Privacy Pools")
 check(usdcApprove.map { !made($0.to, $0.data, "0x1") } == true, "an approval carries ETH")
 check(!made(ppUSDC.underlying, "0xa9059cbb" + String(repeating: "0", count: 128), "0x0"), "a fresh key transfers USDC away")
 check(!made(ppETH.share, depData, "0x1"), "a fresh key calls the share")

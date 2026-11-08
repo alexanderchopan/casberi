@@ -9238,6 +9238,34 @@
         }
       }
     },
+    "%@ moving in · private in about an hour" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ entrando · privado en una hora aproximadamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を移動中 · 約1時間で非公開に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 이동 중 · 약 1시간 후 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 正在转入 · 大约一小时后变为私密"
+          }
+        }
+      }
+    },
     "%@ needs %lld of its %lld owners, so every one of them is load-bearing. If this phone is lost or its Face ID is re-enrolled, that Safe can never be signed for again — and its owners can't be changed either, because that takes a signature too. Add one more owner." : {
       "localizations" : {
         "es" : {

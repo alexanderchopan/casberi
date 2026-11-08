@@ -71503,3 +71503,18 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Not built:** the relays over Tor (a relay sees this phone's address when it hears or hands over a send); a second broadcaster to fall back on (there is one); a swap inside Railgun to pay a fee in a token the broadcaster does not take. **Not measured:** a real send through the broadcaster (it needs money in Railgun, and nobody but you may send it).
 
 **Mac half (§1402).** The same sentence and sockets on Catalyst.
+
+## §1724 — Receive into Railgun: a fresh address paid any listed token but ETH and USDC moves it into your Railgun private balance, its gas paid from your private ETH as USDC's is (builds §1713 item 7; extends §1567 item 6's relayed gas and §1567 item 1's `FreshTx` to Railgun's approval and shield; §1541 item 3's gas question answered as §1567 answered it for USDC) (user, 2026-11-08, picked "Receive into Railgun" as the next Railgun piece) — BUILT; compiled, the signer's rules and the wiring checked; NOT run with a real payment
+
+1. **What is watched.** A fresh address is asked about ETH and USDC first (§1568 item 4); when neither is there, about each of seven common Ethereum tokens by `balanceOf` through the same node — DAI, USDT, WBTC, WETH, LINK, UNI, AAVE (`FreshTx.railgunTokens`) — because a node cannot list what an address holds, and asking an indexer would name the address to it. The first paid moves. ETH and USDC are never on the list: they stay Privacy Pools' (§1713 item 1).
+2. **The floor is $10**, at the price Casberi reads (§1713 item 2); less, or no price, reads "arrived, too little to move".
+3. **The gas is your private ETH's, relayed** (§1567 item 6): the approval and the shield cost at most (80,000 + 600,000) gas at the cap (`FreshAddress.railgunGas`); what the address lacks is a relayed withdrawal from your private ETH to it, only while you look at Receive, paid once (§1568 item 6). No private ETH to cover it: "arrived; needs a little private ETH to move".
+4. **The move.** The fresh address approves Railgun's proxy for exactly what arrived (unless an approval stands), then sends the proxy's `shield` — prepared by your own engine, to your Railgun wallet, checked to be of that token, that amount, to the proxy, carrying nothing, and estimated under 600,000 gas. Nothing names your account.
+5. **The fresh key's rules grow by two shapes, Ethereum only** (`FreshTx.allowed`): a listed token's `approve` of Railgun's proxy, and the proxy's `shield` (`0x044a40c3`, from Railgun's own ABI), neither carrying ETH. Any other call to the proxy, any other spender, any unlisted token, any other chain: refused.
+6. **The line.** Moved: "400 DAI moving in · private in about an hour" (Railgun's screening, §1713 item 5), and one Activity row. Holdings reads Railgun again.
+
+**Checks.** `private-money-selftest.sh` (the signer's rules: the approval and shield made; ETH carried, another spender, an unlisted token, another function and a test network refused; ETH and USDC never listed; a scratch mutant proved the checks run). `railgun-selftest.sh` (the shield's token, amount and gas checked; private ETH spent only while you look).
+
+**Not built:** a new phone's walk keeps an address paid only a Railgun token (§1562's walk asks ETH and USDC). **Not measured:** a real payment to a fresh address moving into Railgun.
+
+**Mac half (§1402).** The same watch on Catalyst.

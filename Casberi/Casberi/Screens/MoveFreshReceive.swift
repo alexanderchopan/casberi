@@ -141,13 +141,19 @@ struct MoveFreshSentence<Head: View>: View {
     }
 
     private func words(_ state: FreshAddress.State, symbol: String) -> (String, Color)? {
-        func figure(_ amount: String) -> String { PrivateMoney.figure(amount, decimals: symbol == "USDC" ? 6 : 18, symbol: symbol) }
+        let railgun = FreshTx.railgunToken(symbol: symbol)
+        func figure(_ amount: String) -> String {
+            PrivateMoney.figure(amount, decimals: railgun?.decimals ?? (symbol == "USDC" ? 6 : 18), symbol: symbol)
+        }
         switch state {
         case .waiting:
             return nil
         // A transaction out and not yet seen reads as the move under way it is.
         case .moving(let amount), .sent(let amount, _, _, _, _):
             return (String(localized: "\(figure(amount)) arrived, moving in…"), DS.textSecondary)
+        // Railgun's screening lists a shield in about an hour (§1713 item 5).
+        case .moved(let amount, _) where railgun != nil:
+            return (String(localized: "\(figure(amount)) moving in · private in about an hour"), DS.textSecondary)
         case .moved(let amount, let tx):
             switch PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })?.status {
             case .approved: return (String(localized: "\(figure(amount)) private now"), DS.confirmInk)

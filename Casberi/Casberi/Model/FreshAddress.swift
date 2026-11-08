@@ -284,6 +284,15 @@ enum FreshAddress {
         return (PrivateMoney.plain(need), PrivateMoney.plain(max(need - held, 0)))
     }
 
+    /// **A RAILGUN TOKEN AT A FRESH ADDRESS (prd §1724): its gas.** The
+    /// approval of Railgun's proxy and the shield, at most, at `maxFee`; the
+    /// shortfall is paid from your private ETH, relayed, as USDC's is.
+    static func railgunGas(ethHeld: String, maxFee: String) -> (need: String, shortfall: String)? {
+        guard let held = Decimal(string: ethHeld), let fee = Decimal(string: maxFee) else { return nil }
+        let need = Decimal(FreshTx.approveGas + FreshTx.railgunShieldGas) * fee
+        return (PrivateMoney.plain(need), PrivateMoney.plain(max(need - held, 0)))
+    }
+
     // MARK: - The pool's terms for a token (`Entrypoint.assets`)
 
     /// `assets(address)`'s selector.
