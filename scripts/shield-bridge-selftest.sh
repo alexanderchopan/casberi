@@ -306,6 +306,23 @@ pmutate "the agent says iPhone" 's/Macintosh; Intel Mac OS X 10_15_7/iPhone; CPU
 pmutate "the co-signer is not asked again" 's/\(connected && !\["eth_requestAccounts", "wallet_requestPermissions"\]\.contains\(method\),/(connected,/'
 
 # ── Mutations: the checks above catch what they claim ───────────────────
+# **Into Aztec from your co-signer (prd §1720).** Shield's portal takes a
+# deposit only from the wallet whose score it signed (its "For" variant is
+# Shield's router's alone), so a co-signer deposit is the co-signer's own
+# send of the plain deposit, signed in by the co-signer, and Move reaches it
+# only when your account is not eligible and your co-signer is.
+grep -q 'let limit = try await limit(.intoAztec, asset: asset, units: units, account: coSigner, aztec: aztec, coSigner: true)' "$APP" \
+  || { echo "✗ the co-signer's deposit is not signed in by the co-signer (prd §1720)"; exit 1; }
+grep -q 'try await coSend(\["from": coSigner, "to": asset.portal, "data": deposit, "value": "0x0"\]' "$APP" \
+  || { echo "✗ the co-signer's deposit is not the co-signer's own send of the plain deposit (prd §1720)"; exit 1; }
+! grep -q '6641be24\|depositToAztecPrivateFor(' "$APP" "$WIRE" \
+  || { echo "✗ a deposit-for call is written: only Shield's router may make one (NotTrustedForwarder, prd §1720)"; exit 1; }
+grep -q 'personalSignDigest(message), signer: account' "$APP" \
+  || { echo "✗ the co-signer's sign-in is not checked against the message Casberi wrote (prd §1720)"; exit 1; }
+MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
+awk '/if !standing.eligible, !standing.sanctioned,/{a=NR} /theirs.eligible \{/{b=NR} /viaCoSigner = coSigner/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
+  || { echo "✗ Move deposits from your co-signer other than when your account is not eligible and it is (prd §1720)"; exit 1; }
+
 mutate() { # label, perl expression
   sed -e '' "$WIRE" > "$TMP/wire.swift"
   perl -0pi -e "$2" "$TMP/wire.swift"
@@ -320,4 +337,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, 5 + 11 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, the co-signer's deposit, 5 + 11 mutations caught)"

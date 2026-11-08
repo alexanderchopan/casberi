@@ -58,6 +58,9 @@ final class AztecMove {
     /// Whether a deposit brings gas along (the account is short of it).
     private(set) var bringsGas = false
     private(set) var maxUSD: Double?
+    /// Your co-signer, when Shield scores it and not your account: the
+    /// deposit is then the co-signer's own (prd §1720).
+    private(set) var viaCoSigner: String?
 
     var decimals: Int { symbol == "USDC" ? 6 : 18 }
     var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
@@ -89,14 +92,30 @@ final class AztecMove {
         guard let safe = YourAccountKey.address else { stage = .failed(String(localized: "There is no account on this iPhone")); return }
         switch mode {
         case .deposit:
-            async let standing = ShieldBridge.eligibility(safe)
+            async let safeStanding = ShieldBridge.eligibility(safe)
             var held: [String: String] = [:]
             for asset in ShieldBridge.assets { held[asset.symbol] = await Self.balance(of: asset.ethToken, at: safe) }
             held["AZTEC"] = await Self.balance(of: AztecGas.token, at: safe)
-            safeHeld = held
             bringsGas = AztecProver.isAvailable && AztecGas.needed
+            guard var standing = await safeStanding else { stage = .failed(String(localized: "Shield did not answer")); return }
+            // **YOUR CO-SIGNER, WHEN SHIELD SCORES IT (prd §1720).** A Safe
+            // cannot link accounts on Human Passport's page; your co-signer
+            // can. When your account is not eligible and your co-signer is,
+            // the deposit is the co-signer's, and what it holds counts too
+            // (your account moves it the rest).
+            viaCoSigner = nil
+            if !standing.eligible, !standing.sanctioned,
+               let coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first,
+               let theirs = await ShieldBridge.eligibility(coSigner), theirs.eligible {
+                viaCoSigner = coSigner
+                standing = theirs
+                for asset in ShieldBridge.assets {
+                    let more = Decimal(string: await Self.balance(of: asset.ethToken, at: coSigner)) ?? 0
+                    held[asset.symbol] = NSDecimalNumber(decimal: (Decimal(string: held[asset.symbol] ?? "0") ?? 0) + more).stringValue
+                }
+            }
+            safeHeld = held
             options = depositOptions(held)
-            guard let standing = await standing else { stage = .failed(String(localized: "Shield did not answer")); return }
             maxUSD = standing.maxUSD
             if standing.sanctioned || !standing.eligible {
                 stage = .shieldNo(score: Int(standing.score), threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
@@ -153,8 +172,15 @@ final class AztecMove {
             case .deposit:
                 stage = .working(String(localized: "Checking…"))
                 let gas = bringsGas ? try await AztecGas.plan(units: AztecGas.rideAlong) : nil
-                let sent = try await ShieldBridge.deposit(asset, units: units, gas: gas, stage: report)
-                stage = .done(sent.transaction)
+                if let coSigner = viaCoSigner {
+                    let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
+                        self.stage = .working(words)
+                    }
+                    stage = .done(sent.transaction)
+                } else {
+                    let sent = try await ShieldBridge.deposit(asset, units: units, gas: gas, stage: report)
+                    stage = .done(sent.transaction)
+                }
             case .send:
                 guard let recipient else { return }
                 if toAztec {
@@ -361,7 +387,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         switch move.mode {
         case .deposit:
             let gas = move.bringsGas ? String(localized: "with 30 AZTEC as its gas") : nil
-            return [String(localized: "Through Shield"), String(localized: "0.5% fee"), String(localized: "5 to 15 minutes"), gas]
+            // Who moves it, said once, when it is not your account (prd
+            // §1720): Shield takes it from the wallet it scored.
+            let who = move.viaCoSigner.map { String(localized: "From your co-signer (\(AddressTail.short($0)))") }
+            return [who, String(localized: "Through Shield"), String(localized: "0.5% fee"), String(localized: "5 to 15 minutes"), gas]
                 .compactMap { $0 }.joined(separator: " · ")
         case .send:
             if move.toEthereum {

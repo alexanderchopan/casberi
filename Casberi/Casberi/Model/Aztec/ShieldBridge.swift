@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Shield's app half (prd §1700d, §1700e): its API, the Safe's sign-in, the
 /// moves in and out. What it writes and reads is `ShieldWire.swift`.
@@ -21,8 +22,11 @@ extension ShieldBridge {
     @MainActor private static var session: (account: String, token: String, until: Date)?
 
     /// A session token for `account`, signing in (Face ID) when there is none.
+    /// `coSigner`: `account` is your co-signer, whose own wallet signs the
+    /// sign-in through the Signer sheet (prd §1720) — the wallet Shield
+    /// scored when you linked accounts on its page.
     @MainActor
-    static func token(account: String, aztec: String) async throws -> String {
+    static func token(account: String, aztec: String, coSigner: Bool = false) async throws -> String {
         if let s = session, s.account.lowercased() == account.lowercased(), s.until > .now { return s.token }
         guard let (data, http) = await IngestSupport.sendRequest(URLRequest(url: URL(string: "\(base)/api/auth/nonce")!), service: service),
               http.statusCode == 200, let nonce = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -30,8 +34,19 @@ extension ShieldBridge {
             throw Failure(message: String(localized: "Shield did not answer"))
         }
         let message = siwe(account: EIP55.checksum(account), aztec: aztec, nonce: nonce, now: .now)
-        let signature = try await YourAccountMessage.signText(message, on: YourAccountOp.ethereum, account: account,
+        let signature: [UInt8]
+        if coSigner {
+            let hex = "0x" + Array(message.utf8).map { String(format: "%02x", $0) }.joined()
+            signature = try await SignerRequestSheet.asking(signer: account, title: String(localized: "Your co-signer signs in to Shield")) { ask in
+                try await YourAccountSignerLink.signForApp(method: "personal_sign", params: [hex, account],
+                                                          digest: NearAIVerify.personalSignDigest(message), signer: account,
+                                                          resend: ask.resends, sent: { ask.ask(kept: $0) },
+                                                          show: { ask.pair($0); openCoSignerWallet(account, onto: $0) })
+            }
+        } else {
+            signature = try await YourAccountMessage.signText(message, on: YourAccountOp.ethereum, account: account,
                                                               reason: String(localized: "Sign in to Shield with your account"))
+        }
         let body: [String: Any] = [
             "message": message, "signature": "0x" + signature.map { String(format: "%02x", $0) }.joined(),
             "l1LoginMethod": "wallet", "l1WalletProvider": "casberi",
@@ -50,8 +65,9 @@ extension ShieldBridge {
     // MARK: - Shield's signed limit
 
     @MainActor
-    static func limit(_ direction: Direction, asset: Asset, units: String, account: String, aztec: String) async throws -> Limit {
-        let token = try await token(account: account, aztec: aztec)
+    static func limit(_ direction: Direction, asset: Asset, units: String, account: String, aztec: String,
+                      coSigner: Bool = false) async throws -> Limit {
+        let token = try await token(account: account, aztec: aztec, coSigner: coSigner)
         var body: [String: Any] = ["portalAddress": asset.portal, "direction": direction.rawValue]
         if direction == .intoAztec {
             body["amount"] = units; body["tokenSymbol"] = asset.symbol; body["tokenDecimals"] = asset.decimals
@@ -128,6 +144,142 @@ extension ShieldBridge {
                                                       leafIndex: message.index, claimed: false, at: .now)
         AztecAccountStore.shared.addShield(pending)
         return pending
+    }
+
+    /// **INTO AZTEC FROM YOUR CO-SIGNER (prd §1720).** Shield scores the
+    /// wallet that signs in, and its portal takes a deposit only from that
+    /// wallet (`depositToAztecPrivateFor` answers `NotTrustedForwarder` to
+    /// anyone but Shield's router, measured 2026-11-07), so when your
+    /// co-signer holds the Human Passport score the deposit is the
+    /// co-signer's own: Shield's limit signed in by the co-signer; what the
+    /// co-signer lacks (the token, and ETH for two sends) moved to it from
+    /// your account first, gas for Aztec riding along — one operation, Face
+    /// ID, the Signer when your account needs both keys; then the
+    /// co-signer's wallet approves the portal (only if it must) and
+    /// deposits. The claim on Aztec follows in `settle()` as for any deposit.
+    @MainActor
+    static func depositFromCoSigner(_ asset: Asset, units: String, coSigner: String, gas: AztecGas.Plan? = nil,
+                                    said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
+        guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
+        guard YourAccountKey.address != nil else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
+        guard let standing = await eligibility(coSigner), standing.eligible else {
+            throw Failure(message: String(localized: "Shield does not take money from your co-signer yet"))
+        }
+        let aztec = try await AztecEngine.shared.accountAddress()
+        said(String(localized: "Your co-signer signs in to Shield…"))
+        let limit = try await limit(.intoAztec, asset: asset, units: units, account: coSigner, aztec: aztec, coSigner: true)
+        let nonce = UInt64.random(in: 1...UInt64.max)
+        guard let plan = try await AztecEngine.shared.call("shieldPlan", [String(nonce)]) as? [String: Any],
+              let secretHash = plan["secretHash"] as? String,
+              let deposit = depositCalldata(units: units, secretHash: secretHash, limit: limit),
+              let amount = word(decimal: units), let portalWord = word(hex: asset.portal) else {
+            throw Failure(message: String(localized: "This move could not be written"))
+        }
+        let approve = "0x095ea7b3" + portalWord + amount
+        let net = YourAccountOp.ethereum
+        // What the co-signer lacks, from your account, in one operation.
+        let held = Decimal(string: await AztecMove.balance(of: asset.ethToken, at: coSigner)) ?? 0
+        let wanted = Decimal(string: units) ?? 0
+        let allowed = Decimal(string: await allowance(of: asset.ethToken, owner: coSigner, spender: asset.portal)) ?? 0
+        let ethNeeded = try await coSignerGas(coSigner, approves: allowed < wanted)
+        var calls: [(to: String, data: String, value: String)] = gas?.calls ?? []
+        if held < wanted, let short = word(decimal: NSDecimalNumber(decimal: wanted - held).stringValue),
+           let to = word(hex: coSigner) {
+            calls.append((to: asset.ethToken, data: "0xa9059cbb" + to + short, value: "0"))
+        }
+        if let ethNeeded { calls.append((to: coSigner, data: "0x", value: ethNeeded)) }
+        if !calls.isEmpty {
+            said(String(localized: "Confirm with Face ID"))
+            let sent = try await YourAccountChain.appCalls(calls, on: net,
+                reason: String(localized: "Move \(asset.symbol) to your co-signer for Aztec"),
+                signer: { SignerRequestSheet.coSigner(owner: $0, chainId: net.chainId) }) { _ in }
+            guard case .landed = sent.outcome else {
+                throw Failure(message: String(localized: "On its way to your co-signer. Try again once it lands."))
+            }
+            if let gas, case .landed(let tx?, _) = sent.outcome,
+               let receipt = try? await YourAccountChain.rpc(net, "eth_getTransactionReceipt", [tx]) as? [String: Any] {
+                AztecGas.record(gas, transaction: tx, receipt: receipt)
+            }
+        }
+        if allowed < wanted {
+            said(String(localized: "Approve in your co-signer's wallet"))
+            let tx = try await coSend(["from": coSigner, "to": asset.ethToken, "data": approve, "value": "0x0"], signer: coSigner,
+                                      title: String(localized: "Your co-signer lets Shield take \(asset.symbol)"))
+            _ = try await mined(tx)
+        }
+        said(String(localized: "Deposit in your co-signer's wallet"))
+        let tx = try await coSend(["from": coSigner, "to": asset.portal, "data": deposit, "value": "0x0"], signer: coSigner,
+                                  title: String(localized: "Your co-signer moves \(asset.symbol) into Aztec"))
+        let receipt = try await mined(tx)
+        guard let message = message(in: receipt, portal: asset.portal) else {
+            throw Failure(message: String(localized: "Sent, but its message to Aztec could not be read yet"))
+        }
+        let pending = AztecAccountStore.ShieldDeposit(nonce: nonce, symbol: asset.symbol, amountUnits: message.amount,
+                                                      transaction: tx, messageHash: message.key,
+                                                      leafIndex: message.index, claimed: false, at: .now)
+        AztecAccountStore.shared.addShield(pending)
+        NSLog("shieldBridge| co-signer deposited | %@ | %@ %@", tx, units, asset.symbol)
+        return pending
+    }
+
+    /// One send by the co-signer's own wallet, through the Signer sheet.
+    @MainActor
+    private static func coSend(_ tx: [String: String], signer: String, title: String) async throws -> String {
+        try await SignerRequestSheet.asking(signer: signer, title: title) { ask in
+            try await YourAccountSignerLink.sendForApp(tx: tx, signer: signer, resend: ask.resends,
+                                                      sent: { ask.ask(kept: $0) },
+                                                      show: { ask.pair($0); openCoSignerWallet(signer, onto: $0) })
+        }
+    }
+
+    /// ETH (wei, decimal) your co-signer needs for its approve and deposit
+    /// beyond what it holds, with room for the price to move; nil when it
+    /// holds enough.
+    private static func coSignerGas(_ coSigner: String, approves: Bool) async throws -> String? {
+        let net = YourAccountOp.ethereum
+        guard let balanceHex = try await YourAccountChain.rpc(net, "eth_getBalance", [coSigner, "latest"]) as? String,
+              let priceHex = try await YourAccountChain.rpc(net, "eth_gasPrice", []) as? String,
+              let balance = Decimal(string: decimal(hex: String(balanceHex.dropFirst(2))) ?? ""),
+              let price = Decimal(string: decimal(hex: String(priceHex.dropFirst(2))) ?? "") else {
+            throw Failure(message: String(localized: "Ethereum did not answer"))
+        }
+        let units: Decimal = (approves ? 70_000 : 0) + 260_000
+        let need = units * price * 2
+        guard balance < need else { return nil }
+        var rounded = Decimal(), short = need - balance
+        NSDecimalRound(&rounded, &short, 0, .up)
+        return NSDecimalNumber(decimal: rounded).stringValue
+    }
+
+    /// `owner`'s ERC-20 allowance to `spender`, base units, or "0".
+    private static func allowance(of token: String, owner: String, spender: String) async -> String {
+        guard let o = word(hex: owner), let s = word(hex: spender),
+              let answer = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_call",
+                                                           [["to": token, "data": "0xdd62ed3e" + o + s], "latest"]) as? String
+        else { return "0" }
+        return decimal(hex: String(answer.dropFirst(2))) ?? "0"
+    }
+
+    /// The receipt of `tx` once Ethereum has it (ten minutes at most).
+    private static func mined(_ tx: String) async throws -> [String: Any] {
+        for _ in 0..<150 {
+            if let r = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_getTransactionReceipt", [tx]) as? [String: Any] {
+                guard (r["status"] as? String) == "0x1" else { throw Failure(message: String(localized: "It failed on Ethereum")) }
+                return r
+            }
+            try await Task.sleep(for: .seconds(4))
+        }
+        throw Failure(message: String(localized: "Sent; Aztec will see it once Ethereum shows it"))
+    }
+
+    /// Opens the co-signer's own wallet onto a fresh pairing, on the phone,
+    /// when a session it settled before names it (prd §1700l item 12).
+    @MainActor
+    static func openCoSignerWallet(_ signer: String, onto pairing: URL) {
+        guard UIDevice.current.userInterfaceIdiom == .phone,
+              let wallet = YourAccountSignerLink.walletHolding(signer),
+              let link = SignerSwitch.link(wallet, pairing: pairing) else { return }
+        UIApplication.shared.open(link)
     }
 
     /// Claims every Shield deposit Aztec has carried, privately, to your account.
