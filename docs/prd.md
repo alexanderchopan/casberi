@@ -71299,6 +71299,17 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** None: the gate keeps Aztec off the Mac.
 
+## §1700q — Your private balance on Aztec takes any amount: typed, never picked from a list; the first real Shield deposit (amends §1700f items 11–14's amount box, and the Aztec half of §1719) (user, 2026-11-08, depositing for the first time: "it is giving me a dfeault selector of 1 2 5 usdc and not letting me enter exact amounts"; told the round steps were copied from 0xBow's ladder so an amount cannot match a later exit: "i just did it and it worked! and yes we don't want a fixed list we want be able to add whatever user wants") — RULED, BUILT
+
+1. **The amount is typed** on the decimal pad, in the sentence's own rung (`AztecMove.amount`), the token's places at most; the token is its own word, which opens USDC and WETH with how much of each you hold (`AztecMove.holdings`). In and out alike. `usdcSteps`/`wethSteps` are deleted.
+2. **What stands in the way is said, in the line under the sentence:** "You have 12.40 USDC." when it is more than you hold; "Shield moves up to $1,000 at a time for your score." over Shield's cap (`passportMaxUsd`, USDC only — WETH has no price here, so Shield refuses it itself). Send stays off until the amount is above zero and clear (`amountOK`).
+3. **The trade-off, chosen:** round amounts were harder to match to a later exit; the person decides the amount, and nothing says otherwise.
+4. **The first real Shield deposit** went in from the phone on 2026-11-08 (user-reported "it worked"); the claim on Aztec is not separately confirmed here.
+
+**Not seen** on a device with the typed field; built and checked on the simulator's sentence. 0xBow's and Railgun's ladders (§1567, §1694, §1713) are unchanged.
+
+**Mac half (§1402).** None: Aztec stands on the iPhone only.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

@@ -57896,34 +57896,6 @@
         }
       }
     },
-    "At least 1 USDC or 0.0005 WETH moves in." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Entra al menos 1 USDC o 0,0005 WETH."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "最低1 USDCまたは0.0005 WETHが入ります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "최소 1 USDC 또는 0.0005 WETH가 들어갑니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "至少转入 1 USDC 或 0.0005 WETH。"
-          }
-        }
-      }
-    },
     "Attach" : {
       "localizations" : {
         "es" : {
@@ -145741,6 +145713,34 @@
         }
       }
     },
+    "Picks the token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige el token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンを選びます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰을 고릅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择代币"
+          }
+        }
+      }
+    },
     "Picks what they send" : {
       "localizations" : {
         "es" : {
@@ -170800,6 +170800,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Shield 暂不接受来自你的共同签名人的资金"
+          }
+        }
+      }
+    },
+    "Shield moves USDC or WETH from your account on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield mueve USDC o WETH desde tu cuenta en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ShieldはEthereum上のあなたのアカウントからUSDCまたはWETHを移動します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 Ethereum의 내 계정에서 USDC 또는 WETH를 옮깁니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 从你在 Ethereum 上的账户转移 USDC 或 WETH。"
+          }
+        }
+      }
+    },
+    "Shield moves up to $%lld at a time for your score." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tu puntuación, Shield mueve hasta $%lld cada vez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのスコアでは、Shieldは1回に最大$%lldまで移動できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 점수로는 Shield가 한 번에 최대 $%lld까지 옮깁니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按你的分数，Shield 每次最多转移 $%lld。"
           }
         }
       }
@@ -196259,6 +196315,34 @@
         }
       }
     },
+    "Token, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Token, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークン、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代币，%@"
+          }
+        }
+      }
+    },
     "Tokens" : {
       "localizations" : {
         "es" : {
@@ -215291,6 +215375,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你私密持有 %@。在此生成证明约需 20 秒，之后约一小时即可完成。"
+          }
+        }
+      }
+    },
+    "You have %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tienes %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手元にあるのは%@です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 금액은 %@입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你有 %@。"
           }
         }
       }

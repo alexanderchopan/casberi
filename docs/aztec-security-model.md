@@ -120,5 +120,6 @@ for whoever changes the code.
 - **Proven off chain**: the 7579 zero-validator signature (state-override replay
   against the account); every Shield calldata against viem
   (`shield-bridge-selftest.sh`).
-- **Not yet moved real money**: a Shield deposit and claim, a private send, an exit
-  and its Finish. They wait on a Human Passport score of 20.
+- **Proven on mainnet, on the phone (2026-11-08)**: a Shield deposit from your
+  account (user-reported; the claim not separately confirmed).
+- **Not yet moved real money**: a private send, an exit and its Finish.

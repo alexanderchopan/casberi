@@ -322,6 +322,15 @@ grep -q 'personalSignDigest(message), signer: account' "$APP" \
 MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
 awk '/if !standing.eligible, !standing.sanctioned,/{a=NR} /theirs.eligible \{/{b=NR} /viaCoSigner = coSigner/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
   || { echo "✗ Move deposits from your co-signer other than when your account is not eligible and it is (prd §1720)"; exit 1; }
+# Any amount (prd §1700q): typed, never a list; Send and run() both wait on a clear amount.
+! grep -q 'usdcSteps\|wethSteps' "$MOVEAZ" \
+  || { echo "✗ Move's Aztec amount is a fixed list again (prd §1700q)"; exit 1; }
+grep -q 'guard stage == .ready, amountOK, let units' "$MOVEAZ" \
+  || { echo "✗ an Aztec move runs without a clear amount (prd §1700q)"; exit 1; }
+grep -q 'move.stage == .ready && move.amountOK &&' "$MOVEAZ" \
+  || { echo "✗ Send stands lit over an unclear amount (prd §1700q)"; exit 1; }
+grep -q 'case moreThanHeld' "$MOVEAZ" && grep -q 'want > have' "$MOVEAZ" \
+  || { echo "✗ an amount over what you hold is not said (prd §1700q)"; exit 1; }
 
 mutate() { # label, perl expression
   sed -e '' "$WIRE" > "$TMP/wire.swift"
@@ -337,4 +346,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, the co-signer's deposit, 5 + 11 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, the co-signer's deposit, any amount, 5 + 11 mutations caught)"

@@ -41,10 +41,11 @@ final class AztecMove {
         case failed(String)
     }
 
-    struct Option: Equatable, Identifiable {
+    /// A token you can move, and how much of it, base units.
+    struct Holding: Equatable, Identifiable {
         let symbol: String
-        let amount: String
-        var id: String { symbol + " " + amount }
+        let units: String
+        var id: String { symbol }
     }
 
     var mode: Mode = .deposit
@@ -52,7 +53,7 @@ final class AztecMove {
     var symbol = "USDC"
     var amount = ""
     var recipient: String?
-    private(set) var options: [Option] = []
+    private(set) var holdings: [Holding] = []
     /// What the Safe holds on Ethereum, base units, by symbol.
     private(set) var safeHeld: [String: String] = [:]
     /// Whether a deposit brings gas along (the account is short of it).
@@ -64,7 +65,37 @@ final class AztecMove {
 
     var decimals: Int { symbol == "USDC" ? 6 : 18 }
     var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
-    var units: String? { PrivateMoney.baseUnits(amount, decimals: decimals) }
+    /// What was typed, in base units: a comma is a decimal point, and a
+    /// trailing point (mid-typing) is ignored.
+    var units: String? {
+        var typed = amount.replacingOccurrences(of: ",", with: ".")
+        if typed.hasSuffix(".") { typed.removeLast() }
+        return PrivateMoney.baseUnits(typed, decimals: decimals)
+    }
+    /// How much of the picked token there is to move, base units.
+    var available: String? { holdings.first { $0.symbol == symbol }?.units }
+
+    /// **ANY AMOUNT (prd §1700q, user: "we don't want a fixed list we want be
+    /// able to add whatever user wants").** The amount is typed; what stands
+    /// in its way is said, never a list of allowed amounts: more than you
+    /// hold, or more than Shield moves for your score.
+    enum AmountProblem: Equatable {
+        case moreThanHeld(String)
+        case overShieldCap(Int)
+    }
+    var amountProblem: AmountProblem? {
+        guard let units, let want = Decimal(string: units), want > 0 else { return nil }
+        if let available, let have = Decimal(string: available), want > have {
+            return .moreThanHeld(PrivateMoney.figure(available, decimals: decimals, symbol: symbol))
+        }
+        // Shield's cap is in dollars: USDC is read as dollars; WETH's is
+        // Shield's to refuse, as there is no price here to read it by.
+        if mode == .deposit, symbol == "USDC", let maxUSD, want > Decimal(maxUSD) * 1_000_000 {
+            return .overShieldCap(Int(maxUSD))
+        }
+        return nil
+    }
+    var amountOK: Bool { units != nil && amountProblem == nil }
     var acting: Bool { if case .working = stage { true } else { false } }
 
     /// Whether `recipient` is an Aztec account (a private send) or an
@@ -72,20 +103,23 @@ final class AztecMove {
     var toAztec: Bool { recipient.map(AztecAddressText.isAztec) ?? false }
     var toEthereum: Bool { recipient.map(PrivateMoney.isAddress) ?? false }
 
-    static let usdcSteps = ["1", "2", "5", "10", "25", "50", "100", "250", "500", "1000"]
-    static let wethSteps = ["0.0005", "0.001", "0.0025", "0.005", "0.01", "0.025", "0.05", "0.1"]
-
-    func pick(_ amount: String, of symbol: String) {
+    /// Picks the token; the typed amount stays.
+    func pick(_ symbol: String) {
         self.symbol = symbol
-        self.amount = amount
+    }
+
+    /// The picked token stays if it is still held; else the first held.
+    private func keepPick() {
+        if !holdings.contains(where: { $0.symbol == symbol }), let first = holdings.first { symbol = first.symbol }
     }
 
     /// Where the move stands: balances, Shield's word, the account's gas.
     func read() async {
         stage = .reading
         if DemoMode.isActive {
-            options = (Self.usdcSteps.prefix(3)).map { Option(symbol: "USDC", amount: $0) }
-            if amount.isEmpty { pick("2", of: "USDC") }
+            holdings = [Holding(symbol: "USDC", units: "25000000")]
+            symbol = "USDC"
+            if amount.isEmpty { amount = "2" }
             stage = .ready
             return
         }
@@ -115,41 +149,34 @@ final class AztecMove {
                 }
             }
             safeHeld = held
-            options = depositOptions(held)
+            holdings = depositHoldings(held)
             maxUSD = standing.maxUSD
             if standing.sanctioned || !standing.eligible {
                 stage = .shieldNo(score: Int(standing.score), threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
                 return
             }
             let gasShort = bringsGas && (Decimal(string: held["AZTEC"] ?? "0") ?? 0) < (Decimal(string: AztecGas.rideAlong) ?? 0)
-            if options.isEmpty || gasShort { stage = .needsFunds(address: safe); return }
-            if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }), let first = options.first {
-                pick(options.count > 1 ? options[1].amount : first.amount, of: first.symbol)
-            }
+            if holdings.isEmpty || gasShort { stage = .needsFunds(address: safe); return }
+            keepPick()
             stage = .ready
         case .send:
             if AztecProver.isAvailable { await AztecAccountStore.shared.refresh() }
             let store = AztecAccountStore.shared
-            options = store.privateHeld.flatMap { h -> [Option] in
-                guard let units = h.privateUnits, let have = Decimal(string: units), let d = h.decimals else { return [] }
-                let steps = h.name == "USDC" ? Self.usdcSteps : Self.wethSteps
-                return steps.filter { (Decimal(string: $0) ?? 0) * pow(10, d) <= have }.map { Option(symbol: h.name, amount: $0) }
+            holdings = store.privateHeld.compactMap { h -> Holding? in
+                guard let units = h.privateUnits, let have = Decimal(string: units), have > 0, h.decimals != nil else { return nil }
+                return Holding(symbol: h.name, units: units)
             }
-            if options.isEmpty { stage = .nothingPrivate; return }
+            if holdings.isEmpty { stage = .nothingPrivate; return }
             if AztecGas.needed { stage = .needsGas; return }
-            if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }), let first = options.first {
-                pick(first.amount, of: first.symbol)
-            }
+            keepPick()
             stage = .ready
         }
     }
 
-    private func depositOptions(_ held: [String: String]) -> [Option] {
-        ShieldBridge.assets.flatMap { asset -> [Option] in
-            guard let have = Decimal(string: held[asset.symbol] ?? "0"), have > 0 else { return [] }
-            let steps = asset.symbol == "USDC" ? Self.usdcSteps : Self.wethSteps
-            return steps.filter { (Decimal(string: $0) ?? 0) * pow(10, asset.decimals) <= have }
-                .map { Option(symbol: asset.symbol, amount: $0) }
+    private func depositHoldings(_ held: [String: String]) -> [Holding] {
+        ShieldBridge.assets.compactMap { asset -> Holding? in
+            guard let units = held[asset.symbol], let have = Decimal(string: units), have > 0 else { return nil }
+            return Holding(symbol: asset.symbol, units: units)
         }
     }
 
@@ -163,7 +190,7 @@ final class AztecMove {
 
     /// The move, as the sentence says it.
     func run() async {
-        guard stage == .ready, let units, let asset else { return }
+        guard stage == .ready, amountOK, let units, let asset else { return }
         let report: @Sendable (YourAccountChain.Stage) async -> Void = { s in
             await MainActor.run { self.stage = .working(s == .signing ? String(localized: "Confirm with Face ID") : String(localized: "Sending…")) }
         }
@@ -222,8 +249,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     var leave: (MovePrivateLeave) -> Void = { _ in }
     @ViewBuilder let head: () -> Head
 
-    private enum Blank { case amount, recipient }
+    private enum Blank { case token, recipient }
     @State private var open: Blank?
+    @FocusState private var typing: Bool
     @State private var typed = ""
     @State private var notAnAddress = false
     @State private var copied = false
@@ -312,13 +340,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             MovePhrase(String(localized: "Your private account on Aztec needs gas first."), ink: DS.textPrimary)
         default:
             if !isDone { head() }
-            MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
-                Button { if move.stage == .ready { toggle(.amount) } } label: {
-                    MoveWord(figure, ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
-                        .environment(\.moveQuiet, open != nil && open != .amount)
+            if move.stage == .ready {
+                MoveClause { amountField }
+                MoveClause {
+                    Button { toggle(.token) } label: {
+                        MoveWord(move.symbol, ink: DS.pickInk)
+                            .environment(\.moveQuiet, open != nil && open != .token)
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Token, \(move.symbol)"))
+                    .accessibilityHint(Text("Picks the token"))
                 }
-                .buttonStyle(RowPress())
-                .accessibilityLabel(Text("Amount, \(figure)"))
+            } else {
+                MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
+                    MoveWord(figure, ink: DS.textPrimary)
+                        .accessibilityLabel(Text("Amount, \(figure)"))
+                }
             }
             if move.mode == .deposit {
                 // "Your private balance", as on Ethereum (prd §1719): in Move
@@ -355,13 +392,42 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))
     }
 
+    /// The amount, typed (prd §1700q): the decimal pad, the token's places
+    /// at most, and the figure in the sentence's own rung.
+    private var amountField: some View {
+        MoveRungReader { rung in
+            TextField(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
+                      prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+                .keyboardType(.decimalPad)
+                .focused($typing)
+                .dsText(rung)
+                .monospacedDigit()
+                .foregroundStyle(DS.pickInk)
+                .fixedSize()
+                .opacity(open != nil ? 0.3 : 1)
+        }
+        .accessibilityLabel(Text("Amount"))
+        .onChange(of: move.amount) { _, now in
+            if open != nil, typing { open = nil }
+            if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
+               now.distance(from: dot, to: now.endIndex) - 1 > move.decimals {
+                move.amount = String(now[...now.index(dot, offsetBy: move.decimals)])
+            }
+        }
+    }
+
     // MARK: - The line
 
     @ViewBuilder private var line: some View {
         switch move.stage {
         case .ready, .working:
-            Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if move.stage == .ready, let problem = move.amountProblem {
+                Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .needsFunds:
             Text(verbatim: fundsLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -401,12 +467,19 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         }
     }
 
+    private func problemLine(_ problem: AztecMove.AmountProblem) -> String {
+        switch problem {
+        case .moreThanHeld(let have): String(localized: "You have \(have).")
+        case .overShieldCap(let cap): String(localized: "Shield moves up to $\(cap) at a time for your score.")
+        }
+    }
+
     private var fundsLine: String {
         let gasShort = move.bringsGas && (Decimal(string: move.safeHeld["AZTEC"] ?? "0") ?? 0) < (Decimal(string: AztecGas.rideAlong) ?? 0)
-        if gasShort, !(move.options.isEmpty) {
+        if gasShort, !(move.holdings.isEmpty) {
             return String(localized: "Your Aztec account needs 30 AZTEC as gas the first time.")
         }
-        return String(localized: "At least 1 USDC or 0.0005 WETH moves in.")
+        return String(localized: "Shield moves USDC or WETH from your account on Ethereum.")
     }
 
     private var doneLine: String {
@@ -428,7 +501,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             switch blank {
-            case .amount: amounts
+            case .token: tokens
             case .recipient: recipients
             }
         }
@@ -436,20 +509,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var amounts: some View {
-        ForEach(move.options) { option in
-            let places = option.symbol == "USDC" ? 6 : 18
-            let shown = PrivateMoney.figure(PrivateMoney.baseUnits(option.amount, decimals: places) ?? "0", decimals: places, symbol: option.symbol)
-            let picked = option.amount == move.amount && option.symbol == move.symbol
+    /// The tokens there are to move, each with how much (prd §1700q).
+    private var tokens: some View {
+        ForEach(move.holdings) { holding in
+            let places = holding.symbol == "USDC" ? 6 : 18
+            let shown = PrivateMoney.figure(holding.units, decimals: places, symbol: holding.symbol)
+            let picked = holding.symbol == move.symbol
             Button {
-                withAnimation(DS.Motion.standard) { move.pick(option.amount, of: option.symbol); open = nil }
+                withAnimation(DS.Motion.standard) { move.pick(holding.symbol); open = nil }
                 DSHaptic.selection()
             } label: {
                 HStack(spacing: DS.Space.s3) {
-                    AssetMark(name: option.symbol, size: DS.Face.list)
-                    Text(verbatim: shown).dsText(.body17)
-                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary).monospacedDigit()
+                    AssetMark(name: holding.symbol, size: DS.Face.list)
+                    Text(verbatim: holding.symbol).dsText(.body17)
+                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
                     Spacer(minLength: DS.Space.s2)
+                    Text(verbatim: shown).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                 }
                 .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
                 .contentShape(Rectangle())
@@ -496,7 +571,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     // MARK: - The foot
 
     private var ready: Bool {
-        move.stage == .ready && (move.mode == .deposit || move.toAztec || move.toEthereum) && !DemoMode.isActive
+        move.stage == .ready && move.amountOK && (move.mode == .deposit || move.toAztec || move.toEthereum) && !DemoMode.isActive
     }
 
     private var foot: some View {
@@ -537,6 +612,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     Spacer(minLength: 0)
                     footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
                         open = nil
+                        typing = false
                         Task { await move.run() }
                     }
                     .disabled(!ready)
