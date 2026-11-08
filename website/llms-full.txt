@@ -39,7 +39,7 @@ Four steps to start. Then one short section per tab, in the order the tabs stand
 3. Pick one and connect it. Calendar and Photos are one tap; an account needs only an address.
 4. Tap Feed. What you connected is there.
 
-Casberi is five tabs along the bottom. Feed is what's happening. Wallet is what you have. Move is what you do with it. Library is your apps and you. Search finds anything. Scroll down and the tabs fold into one circle; tap it to bring them back. On iPad and Mac the tabs run down the side, and ⌘1 to ⌘5 open them.
+Casberi is three places along the bottom, and one act. Feed is what's happening, Wallet is what you have, and Library is your apps and you; swipe between them. Move, the circle beside them, is what you do with your money. Search is Library's field. On the Mac they run down the side, ⌘1 to ⌘4 open them, and ⌘F goes to Library's field.
 
 ### Feed
 
@@ -129,7 +129,7 @@ Good to know: what goes in and what comes out is public on its network, as on ev
 
 Library is where you connect apps and find everything that's yours. Its tab wears your face.
 
-At the top, eight counts — Apps, Calendars, Cards, Contacts, Mail lists, Media, Subscriptions and Wallet — each open their list. Under them come Casberi's own settings, then a folder for each category with its apps. Tap an app you have and its feed rises; hold it for Open and Settings. Apps is the whole catalog, A–Z, with what you've added marked. Contacts is everyone you deal with, from every app.
+It's a search field and folders: Casberi's own settings first, then a folder for each category with its apps. Tap an app you have and its feed rises; hold it for Open and Settings. Two open a page of their own: Contacts, in Social, is everyone you deal with, from every app, and Calendar, in Day, is your calendars and the ones you subscribe to. The Wallet folder starts with Aztec directory, where apps on Aztec open in Casberi.
 
 Over a hundred apps, connecting three ways:
 
@@ -155,7 +155,7 @@ It's a section of the Feed; your notes' page — All, Folders, Voice — is in L
 
 Anything you save, you can find again by what it says.
 
-Tap Search and type. Apps, accounts, people, notes, subscriptions and your things show under their categories, and a tap goes there. Find, the last row, searches your things by what they say. Spotlight finds them too.
+Type in Library's field. Apps, accounts, people, notes, subscriptions and your things show under their categories, and a tap goes there. Find, the last row, searches your things by what they say. Spotlight finds them too.
 
 To save something, share it from any app. Screenshots come in on their own and are searchable by what's in them; voice notes are transcribed. Save to Casberi in Control Center opens the composer from anywhere — paste to save, or tap the mic and talk. Typing alone never saves. Casberi note starts a note.
 
