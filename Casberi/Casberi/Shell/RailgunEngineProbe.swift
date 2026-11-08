@@ -1,6 +1,7 @@
 #if DEBUG
 import Darwin
 import Foundation
+import UIKit
 
 /// `-railgunEngineProbe <step>` — drives the Railgun engine (prd §1713)
 /// headless on Ethereum and NSLogs `railgunEngine| <step> | <ms> | <detail>`
@@ -155,6 +156,11 @@ enum RailgunPocketProbe {
     @MainActor
     static func run(_ raw: String) {
         Task { @MainActor in
+            // A sync takes minutes and a locked phone suspends the app (measured
+            // twice on the iPhone: gone ~40 s in), so the screen stays awake
+            // until the step is done.
+            UIApplication.shared.isIdleTimerDisabled = true
+            defer { UIApplication.shared.isIdleTimerDisabled = false }
             let parts = raw.split(separator: ":").map(String.init)
             let started = Date()
             do {
