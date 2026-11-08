@@ -63,6 +63,7 @@ struct MoveSentence: View {
         let railgunMove = RailgunMove()
         railgunMove.mode = railgun?.takeBack == true ? .takeBack : .deposit
         railgunMove.wanted = railgun?.contract
+        railgunMove.recipient = railgun?.recipient
         _railgunMove = State(initialValue: railgunMove)
         _railgunOpen = State(initialValue: railgun != nil)
         picksUpDraft = mode == nil && aztec == nil && railgun == nil && !toFresh && opening == nil && arrival == nil && !lends
@@ -95,9 +96,12 @@ struct MoveSentence: View {
     @State private var railgunOpen = false
     @State private var railgunMove: RailgunMove
 
-    private func goRailgun(_ mode: RailgunMove.Mode, contract: String?) {
+    /// `recipient`: out to someone else through a broadcaster (prd §1721
+    /// item 3); nil or your own account is taking it back.
+    private func goRailgun(_ mode: RailgunMove.Mode, contract: String?, recipient: String? = nil) {
         railgunMove.mode = mode
         railgunMove.wanted = contract
+        railgunMove.recipient = mode == .takeBack ? recipient : nil
         withAnimation(DS.Motion.standard) { open = nil; railgunOpen = true }
         DSHaptic.selection()
         Task { await railgunMove.read() }
@@ -3390,13 +3394,14 @@ struct MoveSentence: View {
                 }))
             }
         }
-        // Railgun's tokens (prd §1721): picking one takes it back to your
-        // account, until Railgun's broadcaster carries a send to someone else.
+        // Railgun's tokens (prd §1721): picking one sends it to the recipient
+        // already in the sentence through a broadcaster, or takes it back to
+        // your account when there is none (§1721 item 3).
         let railgun = RailgunHoldings.shared
         for h in railgun.spendableShown {
             out.append(("railgun|" + h.id, h.symbol, "Ethereum", RailgunHoldings.figure(h.spendable, decimals: h.decimals),
                         railgun.usd(h, units: h.spendable), { [self] in
-                goRailgun(.takeBack, contract: h.contract)
+                goRailgun(.takeBack, contract: h.contract, recipient: resolved?.address)
             }))
         }
         if AztecProver.isAvailable, YourAccountKey.address != nil || DemoMode.isActive {

@@ -83,10 +83,12 @@ struct MoveTrayPresenter: ViewModifier {
         // as a non-ETH/USDC token sent to your private balance on Ethereum,
         // `back` as a Railgun row in Holdings.
         .task {
-            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), how == "in" || how == "back" else { return }
+            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), ["in", "back", "send"].contains(how) else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] moveRailgun: raised %@", how)
-            chrome.moveRailgun = .init(contract: nil, takeBack: how == "back")
+            // `send`: out to someone else, a broadcaster's send (§1721 item 3).
+            chrome.moveRailgun = .init(contract: nil, takeBack: how != "in",
+                                       recipient: how == "send" ? "0x8ba1f109551bD432803012645Ac136ddd64DBA72" : nil)
             chrome.moveTray = true
         }
         // `-moveToAztec YES` raises Send onto your private account on Aztec,

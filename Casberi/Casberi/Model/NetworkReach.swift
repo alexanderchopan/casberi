@@ -563,6 +563,18 @@ enum NetworkReach {
                  purpose: "Reads Railgun's pool on Ethereum for your private balance of any other token: the pool's two trees from Railgun's public indexer, which of its entries the screening node has listed (spendable), the public proving files once, and the pool's roots from MEV Blocker's public node. Asked about the whole pool, never about you.",
                  hosts: ["rail-squid.squids.live", "ppoi.fdi.network", "ipfs-lb.com", "rpc.mevblocker.io"],
                  credentialed: false),
+        // Railgun's broadcasters (prd §1721 item 3): a send from your private
+        // balance to someone else is handed to a broadcaster over Waku, whose
+        // relays are the only sockets the engine's page may open
+        // (`RailgunEngineSocket`). The relays carry every wallet's fee offers
+        // and sends, encrypted to the broadcaster.
+        Endpoint(service: "Railgun broadcasters",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Finds Railgun's broadcasters and their fees, and hands one your private send to someone else, encrypted to it, so the broadcaster submits it and no account of yours appears on it. Reached over Waku's relays, only when you send privately to someone else.",
+                 // The three bootstrap relays and, through peer exchange, the
+                 // operator's others (`seed-a`, `support-1`…), all under it.
+                 hosts: ["rootedinprivacy.com"],
+                 credentialed: false),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow, and what a deposit of yours still holds in Peer's escrow.",

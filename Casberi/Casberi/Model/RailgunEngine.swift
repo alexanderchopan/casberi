@@ -40,6 +40,8 @@ final class RailgunEngine: NSObject {
     typealias Wire = RailgunEngineWire
 
     private var webView: WKWebView?
+    /// The broadcasters' relay sockets (prd §1721 item 3), Swift's own.
+    private var sockets: RailgunEngineSocket?
     private var readyWaiters: [CheckedContinuation<Void, Error>] = []
     private var isReady = false
     private(set) var isOpen = false
@@ -94,6 +96,9 @@ final class RailgunEngine: NSObject {
             let controller = config.userContentController
             controller.addScriptMessageHandler(RailgunEngineNet(), contentWorld: .page, name: "railgunNet")
             controller.add(RailgunEngineLog(engine: self), name: "railgunLog")
+            let sockets = RailgunEngineSocket(engine: self)
+            self.sockets = sockets
+            controller.add(sockets, name: "railgunSocket")
             let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
             #if DEBUG
             view.isInspectable = true
@@ -126,6 +131,8 @@ final class RailgunEngine: NSObject {
 
     /// Drops the page, its wallet and every prepared transaction with it.
     func stop() {
+        sockets?.closeAll()
+        sockets = nil
         webView?.configuration.userContentController.removeAllScriptMessageHandlers()
         webView?.removeFromSuperview()
         webView = nil
@@ -206,6 +213,50 @@ final class RailgunEngine: NSObject {
                        as: Wire.PreparedUnshield.self)
     }
 
+    // MARK: - Broadcasters (prd §1721 item 3)
+
+    /// Starts listening for Railgun's broadcasters over the relays and waits
+    /// up to `waitMs` for a fee: the tokens they take, right now.
+    func broadcasters(waitMs: Int = 45_000) async throws -> [Wire.FeeToken] {
+        try await call(.broadcasters, Wire.Listen(waitMs: waitMs), as: Wire.Listening.self).tokens
+    }
+
+    /// What a send to someone else costs through the best broadcaster
+    /// taking `feeToken`. Kept in the page for `broadcastSend`.
+    func quoteBroadcast(token: String, amount: String, to: String, feeToken: String) async throws -> Wire.Quote {
+        try await call(.quoteBroadcast, Wire.Broadcast(token: token, amount: amount, to: to, feeToken: feeToken),
+                       as: Wire.Quote.self)
+    }
+
+    /// Proves the quoted send and hands it to its broadcaster; the page
+    /// refuses any send or fee but the quote's.
+    func broadcastSend(token: String, amount: String, to: String, feeToken: String, fee: String) async throws -> Wire.Broadcasted {
+        try await call(.broadcastSend, Wire.Broadcast(token: token, amount: amount, to: to, feeToken: feeToken, fee: fee),
+                       as: Wire.Broadcasted.self)
+    }
+
+    /// The relays the broadcasters are reached through: their `NetworkReach`
+    /// entry's.
+    static let broadcasterService = "Railgun broadcasters"
+    static var broadcasterHosts: [String] {
+        NetworkReach.endpoint(forService: broadcasterService)?.hosts ?? []
+    }
+
+    /// Hands one socket event to the page (`globalThis.__railgunSocket`),
+    /// synchronously from the main thread, so frames reach libp2p in the
+    /// order they arrived: one task per frame could reorder them, and a
+    /// swapped frame breaks the relay's encrypted stream.
+    fileprivate func toPage(socket id: Int, _ kind: String, _ payload: String?, binary: Bool = false) {
+        guard let webView else { return }
+        let text = payload.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: .fragmentsAllowed) }
+            .map { String(decoding: $0, as: UTF8.self) } ?? "null"
+        let kindJSON = kind == "open" || kind == "message" || kind == "close" || kind == "error" ? "\"\(kind)\"" : "\"error\""
+        webView.evaluateJavaScript("globalThis.__railgunSocket?.(\(id), \(kindJSON), \(text), \(binary)); 0",
+                                   in: nil, in: .page) { result in
+            if case .failure(let error) = result { NSLog("railgunEngine| socket to page failed | %@", String(describing: error).prefix(300).description) }
+        }
+    }
+
     func close() async {
         _ = try? await call(.close, Wire.Empty(), as: Wire.Empty.self)
         isOpen = false
@@ -249,6 +300,118 @@ private final class RailgunEngineLog: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let line = message.body as? String else { return }
         MainActor.assumeIsolated { engine?.pageSaid(line) }
+    }
+}
+
+// MARK: - The relays' sockets (prd §1721 item 3)
+
+/// Railgun's broadcasters are reached over Waku, which speaks only
+/// WebSocket. The page's `WebSocket` is a stand-in (`socket.js`) that posts
+/// here: Swift opens the socket only to a relay the broadcasters'
+/// `NetworkReach` entry declares, records the host, and hands every frame
+/// back. The page itself can open no socket (its CSP names no host).
+@MainActor
+private final class RailgunEngineSocket: NSObject, WKScriptMessageHandler, URLSessionWebSocketDelegate {
+    weak var engine: RailgunEngine?
+    private var tasks: [Int: URLSessionWebSocketTask] = [:]
+    private var ids: [Int: Int] = [:]   // task identifier → page id
+    /// Sockets the page closed: their end is a close, never an error.
+    private var closing: Set<Int> = []
+    private lazy var session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: .main)
+
+    init(engine: RailgunEngine) { self.engine = engine }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any], let op = body["op"] as? String,
+              let id = (body["id"] as? NSNumber)?.intValue else { return }
+        switch op {
+        case "open":
+            guard let raw = body["url"] as? String, let url = URL(string: raw),
+                  RailgunRouting.allowsSocket(url, declared: RailgunEngine.broadcasterHosts) else {
+                NSLog("railgunEngine| socket refused | %@", (body["url"] as? String) ?? "?")
+                engine?.toPage(socket: id, "error", "host not declared")
+                return
+            }
+            NetworkLedger.shared.record(host: url.host ?? "")
+            let protocols = (body["protocols"] as? [String]) ?? []
+            let task = protocols.isEmpty ? session.webSocketTask(with: url) : session.webSocketTask(with: url, protocols: protocols)
+            task.maximumMessageSize = 4 << 20
+            tasks[id] = task
+            ids[task.taskIdentifier] = id
+            task.resume()
+            receive(task, id: id)
+        case "send":
+            guard let task = tasks[id] else { return }
+            let frame: URLSessionWebSocketTask.Message
+            if let text = body["text"] as? String { frame = .string(text) }
+            else if let b64 = body["data64"] as? String, let data = Data(base64Encoded: b64) { frame = .data(data) }
+            else { return }
+            task.send(frame) { [weak self] error in
+                guard let error else { return }
+                Task { @MainActor in self?.failed(id, error) }
+            }
+        case "close":
+            let code = URLSessionWebSocketTask.CloseCode(rawValue: (body["code"] as? NSNumber)?.intValue ?? 1000) ?? .normalClosure
+            closing.insert(id)
+            tasks[id]?.cancel(with: code, reason: nil)
+        default:
+            break
+        }
+    }
+
+    private func receive(_ task: URLSessionWebSocketTask, id: Int) {
+        task.receive { [weak self] result in
+            Task { @MainActor in
+                guard let self, self.tasks[id] === task else { return }
+                switch result {
+                case .success(.data(let data)):
+                    self.engine?.toPage(socket: id, "message", data.base64EncodedString(), binary: true)
+                case .success(.string(let text)):
+                    self.engine?.toPage(socket: id, "message", text)
+                case .success:
+                    break
+                case .failure(let error):
+                    self.failed(id, error)
+                    return
+                }
+                self.receive(task, id: id)
+            }
+        }
+    }
+
+    private func failed(_ id: Int, _ error: Error) {
+        guard let task = tasks.removeValue(forKey: id) else { return }
+        ids[task.taskIdentifier] = nil
+        task.cancel()
+        if closing.remove(id) != nil { engine?.toPage(socket: id, "close", "1000"); return }
+        engine?.toPage(socket: id, "error", String(describing: error).prefix(200).description)
+    }
+
+    func closeAll() {
+        for task in tasks.values { task.cancel(with: .goingAway, reason: nil) }
+        tasks = [:]
+        ids = [:]
+        closing = []
+        session.invalidateAndCancel()
+    }
+
+    nonisolated func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        let tid = webSocketTask.taskIdentifier
+        MainActor.assumeIsolated {
+            guard let id = ids[tid] else { return }
+            engine?.toPage(socket: id, "open", `protocol` ?? "")
+        }
+    }
+
+    nonisolated func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+                                didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        let tid = webSocketTask.taskIdentifier
+        MainActor.assumeIsolated {
+            guard let id = ids.removeValue(forKey: tid) else { return }
+            tasks[id] = nil
+            closing.remove(id)
+            engine?.toPage(socket: id, "close", String(closeCode.rawValue))
+        }
     }
 }
 

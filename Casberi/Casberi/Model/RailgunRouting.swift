@@ -77,4 +77,39 @@ enum RailgunRouting {
         let m = (x / p).rounded()
         return m < 1.5 ? 2 * p : m < 3.5 ? 5 * p : 10 * p
     }
+
+    // MARK: - Broadcasters (prd §1721 item 3, §1723)
+
+    /// A relay's socket: `wss` to a declared domain or a host under it (Waku's
+    /// peer exchange names the operator's other relays, `seed-a`,
+    /// `support-1`…), on its Waku port (8000) or 443, and nothing else — no
+    /// user, no other scheme, no lookalike domain.
+    static func allowsSocket(_ url: URL, declared: [String]) -> Bool {
+        guard url.scheme == "wss", url.user == nil, url.password == nil,
+              url.port == nil || url.port == 443 || url.port == 8000,
+              let host = url.host?.lowercased(), !host.isEmpty else { return false }
+        return declared.contains { d in
+            let d = d.lowercased()
+            return host == d || host.hasSuffix("." + d)
+        }
+    }
+
+    /// Which token pays the broadcaster: the token being sent if a
+    /// broadcaster takes it, else the first taken token the wallet can spend
+    /// any of, in the broadcasters' own order. Nil when the wallet holds none:
+    /// the send cannot pay its way (Move offers a little ETH for fees).
+    static func feeToken(sending token: String, taken: [String], spendable: [String: Decimal]) -> String? {
+        let has = { (t: String) in (spendable[t.lowercased()] ?? 0) > 0 }
+        if let same = taken.first(where: { $0.lowercased() == token.lowercased() }), has(same) { return same }
+        return taken.first(where: has)
+    }
+
+    /// Whether the wallet covers the send and its fee: in one token, both;
+    /// in two, each its own.
+    static func covers(amount: Decimal, of token: String, fee: Decimal, in feeToken: String,
+                       spendable: [String: Decimal]) -> Bool {
+        let a = spendable[token.lowercased()] ?? 0
+        if token.lowercased() == feeToken.lowercased() { return amount + fee <= a }
+        return amount <= a && fee <= (spendable[feeToken.lowercased()] ?? 0)
+    }
 }

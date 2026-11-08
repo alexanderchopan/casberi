@@ -15,7 +15,7 @@ import Foundation
 enum RailgunEngineWire {
 
     enum Method: String, CaseIterable {
-        case info, open, sync, balances, prepareShield, prepareUnshield, close
+        case info, open, sync, balances, prepareShield, prepareUnshield, broadcasters, quoteBroadcast, broadcastSend, close
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -91,6 +91,22 @@ enum RailgunEngineWire {
         var forSafe = true
         var maxFeePerGas: String? = nil
         var maxPriorityFeePerGas: String? = nil
+    }
+
+    /// Listens for Railgun's broadcasters and waits up to `waitMs` for a fee.
+    struct Listen: Encodable, Equatable {
+        let waitMs: Int
+    }
+
+    /// A send to someone else through a broadcaster (prd §1721 item 3):
+    /// `amount` of `token` to `to`, the broadcaster's fee in `feeToken`.
+    /// 0x-hex amounts. `fee` only on the send: the quote's, unchanged.
+    struct Broadcast: Encodable, Equatable {
+        let token: String
+        let amount: String
+        let to: String
+        let feeToken: String
+        var fee: String? = nil
     }
 
     // MARK: - Replies
@@ -207,5 +223,41 @@ enum RailgunEngineWire {
     /// Whether the engine may reach `url`: the one rule both engines share.
     static func allows(_ url: URL, declared: [String]) -> Bool {
         PrivacyEngineWire.allows(url, declared: declared)
+    }
+
+    // MARK: - Broadcasters (prd §1721 item 3)
+
+    /// One token a broadcaster takes its fee in, right now: its rate (base
+    /// units per 10^18 wei of gas, 0x-hex) and how many broadcasters offer it.
+    struct FeeToken: Decodable, Equatable {
+        let token: String
+        let feePerUnitGas: String
+        let broadcasters: Int
+    }
+
+    struct Listening: Decodable, Equatable {
+        let tokens: [FeeToken]
+        let ms: Int
+    }
+
+    /// What a send costs: the fee, in `feeToken`, 0x-hex base units; the
+    /// broadcaster's 0zk address and when its offer lapses (ms since 1970).
+    struct Quote: Decodable, Equatable {
+        let token: String
+        let amount: String
+        let to: String
+        let feeToken: String
+        let fee: String
+        let gasEstimate: String
+        let gasPrice: String
+        let broadcaster: String
+        let expiration: Double
+        let ms: Int
+    }
+
+    struct Broadcasted: Decodable, Equatable {
+        let txHash: String
+        let proofMs: Int
+        let ms: Int
     }
 }

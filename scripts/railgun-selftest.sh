@@ -1,6 +1,6 @@
 #!/bin/zsh
-# Casberi Railgun self-test (prd §1713, §1721): your private balance on
-# Ethereum for every token but ETH and USDC.
+# Casberi Railgun self-test (prd §1713, §1721, §1723): your private balance
+# on Ethereum for every token but ETH and USDC.
 #
 #   Casberi/Casberi/Model/RailgunRouting.swift   (compiled whole, unmodified)
 #   Casberi/Casberi/Model/RailgunPocket.swift     (the calls it may send)
@@ -18,8 +18,15 @@
 #     that is not the proxy, signs something nobody reviewed;
 #   • a Private block drawn from what Casberi routed, not from the engine's
 #     balances, hides a token someone else shielded to you (item 4);
-#   • a screen that reaches `RailgunPocket.send` with any recipient but your
-#     own account shows your account paying a stranger (§1721 item 3).
+#   • a screen that reaches your account's send (`RailgunPocket.send(token:`)
+#     with any recipient but your own account shows your account paying a
+#     stranger (§1721 item 3); a send to someone else is a broadcaster's
+#     (`RailgunPocket.send(quote)`), and your account signs nothing in it;
+#   • a fee token picked from what the wallet cannot spend, or a check that
+#     lets the send and its fee overdraw one token, fails at the broadcaster
+#     after the proof, with Face ID already spent;
+#   • a relay socket to any host but the three declared ones reaches
+#     wherever Waku's peer exchange points (§1723).
 #
 # Pure, local, deterministic. Exit non-zero on failure.
 set -euo pipefail
@@ -68,6 +75,23 @@ check(RailgunRouting.ladder(decimals: 18, held: "6" + "00000000000000000", price
 check(RailgunRouting.ladder(decimals: 18, held: "4" + e18, price: 1, floorUSD: nil).last?.units == "4" + e18, "taking back always ends on all of it")
 check(RailgunRouting.nice(0.666) == 1 && RailgunRouting.nice(12) == 20 && RailgunRouting.nice(10) == 10, "nice rounds up to 1, 2, 5")
 check(RailgunRouting.nextNice(1) == 2 && RailgunRouting.nextNice(2) == 5 && RailgunRouting.nextNice(5) == 10, "the next step is 1, 2, 5, 10")
+// §1723: the broadcaster's fee token and the relays.
+let weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+let taken = [weth, usdc]
+check(RailgunRouting.feeToken(sending: dai, taken: taken, spendable: [dai.lowercased(): 400, usdc.lowercased(): 3]) == usdc, "DAI pays in a token a broadcaster takes and the wallet holds")
+check(RailgunRouting.feeToken(sending: weth, taken: taken, spendable: [weth.lowercased(): 1, usdc.lowercased(): 3]) == weth, "a token a broadcaster takes pays its own fee")
+check(RailgunRouting.feeToken(sending: dai, taken: taken, spendable: [dai.lowercased(): 400, weth.lowercased(): 0]) == nil, "nothing to pay in is nil, never a token the wallet cannot spend")
+check(RailgunRouting.feeToken(sending: dai, taken: [], spendable: [usdc.lowercased(): 3]) == nil, "no broadcaster, no fee token")
+check(!RailgunRouting.covers(amount: 1, of: weth, fee: Decimal(string: "0.001")!, in: weth, spendable: [weth.lowercased(): 1]), "a send and its fee in one token cannot overdraw it")
+check(RailgunRouting.covers(amount: 400, of: dai, fee: Decimal(string: "0.14")!, in: usdc, spendable: [dai.lowercased(): 400, usdc.lowercased(): 3]), "a send and its fee in two tokens each draw on their own")
+check(!RailgunRouting.covers(amount: 400, of: dai, fee: 4, in: usdc, spendable: [dai.lowercased(): 400, usdc.lowercased(): 3]), "a fee the wallet cannot pay is refused before the proof")
+let relays = ["rootedinprivacy.com"]
+check(RailgunRouting.allowsSocket(URL(string: "wss://relay-a.rootedinprivacy.com:8000/")!, declared: relays), "a declared relay's Waku socket opens")
+check(RailgunRouting.allowsSocket(URL(string: "wss://support-1.rootedinprivacy.com:8000/")!, declared: relays), "a relay peer exchange names under the operator's domain opens")
+check(!RailgunRouting.allowsSocket(URL(string: "wss://evilrootedinprivacy.com:8000/")!, declared: relays), "a lookalike domain never opens")
+check(!RailgunRouting.allowsSocket(URL(string: "ws://relay-a.rootedinprivacy.com:8000/")!, declared: relays), "a plain ws socket never opens")
+check(!RailgunRouting.allowsSocket(URL(string: "wss://relay-a.rootedinprivacy.com:9000/")!, declared: relays), "another port never opens")
+check(!RailgunRouting.allowsSocket(URL(string: "wss://node-01.waku.org:8000/")!, declared: relays), "a peer Waku found elsewhere never opens")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 if ! xcrun swiftc -O -o "$TMP/rule" "$ROUTE" "$TMP/main.swift" 2> "$TMP/err"; then
@@ -86,21 +110,35 @@ use "$INGEST" 'await RailgunHoldings.shared.walletHolding()' "Railgun counts in 
 use "$PRIV" 'walletRailgunRows(mask: mask)' "Holdings draws Railgun's rows in Private"
 use "$PRIV" 'String(localized: "Private in about an hour")' "a shield in screening reads as a state (§1713 item 5)"
 use "$MOVE" 'RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract, chainId: network.chainId)' "Your private balance · Ethereum routes by the picked token"
-use "$SENT" 'MovePhrase(String(localized: "your account."), glue: String(localized: "to"))' "taking back says your account and nothing else"
+use "$SENT" 'move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account.")' "the recipient is your account, or someone else by their tail"
+use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the broadcaster's path, before taking back"
+use "$POCKET" 'RailgunRouting.feeToken(sending: token, taken: taken.map(\.token), spendable: spendable)' "the fee token is the rule's"
+use "$POCKET" 'RailgunRouting.covers(amount: wanted, of: token, fee: fee, in: feeToken, spendable: spendable)' "the fee is checked against the wallet before any proof"
+use "$ENGINE" 'useDNSDiscovery: false' "the broadcasters are found through the relays only, no DNS discovery"
+use "$ENGINE" "if (getAddress(tx.to) !== getAddress(PROXY)) throw Object.assign(new Error(\`broadcast goes to" "a broadcast is Railgun's proxy call and nothing else"
+use "$ENGINE" '|| getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {' "the page sends only the send and fee it quoted"
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'RailgunRouting.allowsSocket(url, declared: RailgunEngine.broadcasterHosts)' "every relay socket passes the rule"
 
 # §1721 item 3: one door to RailgunPocket.send, and its recipient is your account.
 # The DEBUG probe (Shell/RailgunEngineProbe.swift, compiled out of Release)
 # is the one other caller: it drives the pocket with a test wallet's own money.
 grep -q '^#if DEBUG' Casberi/Casberi/Shell/RailgunEngineProbe.swift \
   || { echo "  ✗ the Railgun probe is no longer DEBUG-only"; fail=1; }
-calls=$(grep -rn 'RailgunPocket\.send(' Casberi/Casberi/Screens Casberi/Casberi/Shell | grep -v 'RailgunEngineProbe.swift' | grep -v '^\S*:\s*///' || true)
-count=$(printf '%s\n' "$calls" | grep -c 'RailgunPocket\.send(' || true)
+calls=$(grep -rn 'RailgunPocket\.send(token:' Casberi/Casberi/Screens Casberi/Casberi/Shell | grep -v 'RailgunEngineProbe.swift' | grep -v '^\S*:\s*///' || true)
+count=$(printf '%s\n' "$calls" | grep -c 'RailgunPocket\.send(token:' || true)
 if [[ "$count" != "1" ]] || ! printf '%s' "$calls" | grep -qF 'to: account)'; then
-  echo "  ✗ a screen reaches RailgunPocket.send other than taking back to your account (§1721 item 3)"
+  echo "  ✗ a screen reaches your account's Railgun send other than taking back to your account (§1721 item 3)"
   printf '%s\n' "$calls"
   fail=1
 else
-  echo "  ✓ one screen sends from Railgun, to your account"
+  echo "  ✓ your account sends from Railgun only to your account"
+fi
+# §1723: the broadcaster's send asks for you and signs nothing with your account.
+body=$(awk '/static func send\(_ q: RailgunEngineWire.Quote\)/{on=1} on{print} on && /^    }$/{exit}' "$POCKET")
+if [[ -z "$body" ]] || printf '%s' "$body" | grep -q 'YourAccountChain' || ! printf '%s' "$body" | grep -q 'PrivateRootKey.unlock'; then
+  echo "  ✗ the broadcaster's send touches your account, or does not ask for you first (§1723)"; fail=1
+else
+  echo "  ✓ a send to someone else asks for you and your account signs nothing"
 fi
 use "$SENT" 'guard let account = YourAccountKey.address else' "the take-back recipient is your account's address"
 

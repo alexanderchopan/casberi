@@ -42,7 +42,18 @@ enum RailgunPocket {
         case notRailgun
         case nothingSpendable
         case notWritten
+        /// No broadcaster answered on Waku (prd §1721 item 3).
+        case noBroadcaster
+        /// The wallet holds none of the tokens a broadcaster takes its fee in.
+        case noFeeToken
+        /// It holds one, still in Railgun's screening (fees added within the hour).
+        case feeTokenPending
+        /// The send and its fee are more than the wallet can spend.
+        case feeNotCovered
     }
+
+    /// Ethereum's WETH: what a little ETH for broadcasters' fees becomes.
+    static let weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
     /// Whether this build carries the engine: every build since prd §1721
     /// (user: "i don't want it hidden"). Kept as the one switch the rows and
@@ -169,6 +180,76 @@ enum RailgunPocket {
                                                            reason: String(localized: "Send from your private balance"), stage: stage)
         let hash = landed(sent)
         NSLog("railgunPocket| unshielded | %@ | %@ of %@ to %@ | proof %d ms", hash ?? "not yet seen", amount, token, YourAccount.short(to), u.proofMs)
+        return hash
+    }
+
+    // MARK: - Out, to someone else (prd §1721 item 3)
+
+    /// What sending `amount` (base units, decimal) of `token` from your
+    /// Railgun wallet to `to` costs through a broadcaster: the wallet synced
+    /// and every root checked, the broadcasters heard on Waku, the fee token
+    /// picked (`RailgunRouting.feeToken`) and the fee quoted. Reads only:
+    /// nothing is proved or sent, and no Face ID is asked.
+    static func quote(token: String, amount: String, to: String) async throws -> RailgunEngineWire.Quote {
+        guard PrivateMoney.isAddress(to), let hexAmount = PrivateMoney.hex(amount),
+              let wanted = Decimal(string: amount), wanted > 0 else { throw Failure.notWritten }
+        try await open(reason: nil)
+        let synced = try await sync()
+        var spendable: [String: Decimal] = [:]
+        for b in synced.balances {
+            spendable[b.token.lowercased()] = Decimal(string: PrivateMoney.decimal(hex: b.spendable)) ?? 0
+        }
+        guard wanted <= spendable[token.lowercased()] ?? 0 else { throw Failure.nothingSpendable }
+        let taken = try await RailgunEngine.shared.broadcasters()
+        guard !taken.isEmpty else { throw Failure.noBroadcaster }
+        guard let feeToken = RailgunRouting.feeToken(sending: token, taken: taken.map(\.token), spendable: spendable) else {
+            var whole: [String: Decimal] = [:]
+            for b in synced.balances { whole[b.token.lowercased()] = Decimal(string: PrivateMoney.decimal(hex: b.amount)) ?? 0 }
+            throw RailgunRouting.feeToken(sending: token, taken: taken.map(\.token), spendable: whole) == nil
+                ? Failure.noFeeToken : Failure.feeTokenPending
+        }
+        let q = try await RailgunEngine.shared.quoteBroadcast(token: token, amount: hexAmount, to: to, feeToken: feeToken)
+        let fee = Decimal(string: PrivateMoney.decimal(hex: q.fee)) ?? 0
+        guard RailgunRouting.covers(amount: wanted, of: token, fee: fee, in: feeToken, spendable: spendable) else {
+            throw Failure.feeNotCovered
+        }
+        NSLog("railgunPocket| quoted | %@ of %@ to %@ | fee %@ of %@ | %d ms", amount, token, YourAccount.short(to),
+              PrivateMoney.decimal(hex: q.fee), feeToken, q.ms)
+        return q
+    }
+
+    /// Sends the quoted send: asks for the device owner, then the proof made
+    /// on this phone pays the broadcaster its fee inside Railgun and the
+    /// broadcaster submits it. Your account signs nothing and pays no gas, so
+    /// it appears nowhere on the transaction. Returns its hash.
+    static func send(_ q: RailgunEngineWire.Quote) async throws -> String {
+        guard YourAccountKey.address != nil else { throw Failure.noAccount }
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        let sent = try await RailgunEngine.shared.broadcastSend(token: q.token, amount: q.amount, to: q.to,
+                                                                feeToken: q.feeToken, fee: q.fee)
+        NSLog("railgunPocket| broadcast | %@ | %@ of %@ to %@ | proof %d ms", sent.txHash, PrivateMoney.decimal(hex: q.amount),
+              q.token, YourAccount.short(q.to), sent.proofMs)
+        return sent.txHash
+    }
+
+    /// A little ETH into your Railgun wallet as WETH, for broadcasters' fees:
+    /// wrap, approve and shield, one Face ID operation from your account.
+    static func addFees(wei: String,
+                        stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> String? {
+        guard let hexAmount = PrivateMoney.hex(wei) else { throw Failure.notWritten }
+        try await open(reason: nil)
+        let prepared = try await RailgunEngine.shared.prepareShield(token: weth, amount: hexAmount)
+        guard prepared.tx.to.lowercased() == proxy, let approve = prepared.approve,
+              approve.to.lowercased() == weth,
+              approve.data.lowercased() == approveCall(amount: hexAmount) else { throw Failure.notRailgun }
+        // WETH's `deposit()`: the ETH becomes WETH in your account first.
+        let calls = [(to: weth, data: "0xd0e30db0", value: wei),
+                     (to: approve.to, data: approve.data, value: "0"),
+                     (to: prepared.tx.to, data: prepared.tx.data, value: PrivateMoney.decimal(hex: prepared.tx.value))]
+        let sent = try await YourAccountChain.privateCalls(calls, on: accountNetwork,
+                                                           reason: String(localized: "Move to private"), stage: stage)
+        let hash = landed(sent)
+        NSLog("railgunPocket| fees added | %@ | %@ wei", hash ?? "not yet seen", wei)
         return hash
     }
 

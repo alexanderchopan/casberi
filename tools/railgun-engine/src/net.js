@@ -11,6 +11,8 @@
 // the app instead, which checks the host against the engine's `NetworkReach`
 // entry and sends it through its one funnel. Bodies come back base64, because
 // the proving files are binary.
+import './socket.js';
+
 const pageFetch = globalThis.fetch.bind(globalThis);
 
 async function railgunFetch(input, init = {}) {

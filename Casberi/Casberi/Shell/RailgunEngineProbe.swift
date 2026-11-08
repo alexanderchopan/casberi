@@ -90,6 +90,14 @@ enum RailgunEngineProbe {
             guard let held else { log("unshield", ms(t), "nothing spendable in this wallet (a random one): not prepared"); return }
             let u = try await engine.prepareUnshield(token: held.token, amount: held.spendable, to: probeRecipient)
             log("unshield", ms(t), "type \(u.type) to \(u.tx.to.prefix(10))… gas \(u.gasEstimate) proof \(u.proofMs) ms · fee \(u.fee ?? "?")")
+        case "broadcasters":
+            // §1723: Railgun's broadcasters heard over the relays' sockets,
+            // read-only; no wallet is opened and nothing is sent.
+            try await engine.start()
+            let t = Date()
+            let tokens = try await engine.broadcasters()
+            log("broadcasters", ms(t), tokens.isEmpty ? "none heard"
+                : tokens.map { "\($0.token.prefix(8))… ×\($0.broadcasters) @\($0.feePerUnitGas)" }.joined(separator: " · "))
         case "forget":
             let t = Date()
             try await engine.forget()

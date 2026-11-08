@@ -203,6 +203,8 @@ The licence notices of each are kept at the end of privacy-engine.js. Its exact 
 The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25519_scalarmult_wasm_bg.wasm) bundles, unmodified:
 
 - Railgun wallet SDK (@railgun-community/wallet 11.3.0), engine (@railgun-community/engine 9.9.1), shared-models 8.2.1, poseidon-hash-wasm 1.0.3, curve25519-scalarmult-wasm 0.1.5 and circomlibjs, by the Railgun community. MIT License.
+- Railgun broadcaster client (@railgun-community/waku-broadcaster-client-web 10.0.1), by the Railgun community. MIT License.
+- Waku (@waku/sdk, @waku/discovery and their libp2p, @chainsafe/libp2p-noise and @libp2p packages), by Status Research & Development and Protocol Labs. MIT License or Apache License 2.0.
 - ethers 6.14.3, by Richard Moore. MIT License.
 - snarkjs 0.7.5, ffjavascript and wasmcurves, by iden3. GNU General Public License, version 3.
 - graphql and graphql-request, memdown, abstract-leveldown, buffer, crypto-browserify, stream-browserify, events, util, assert, path-browserify and process. MIT License.

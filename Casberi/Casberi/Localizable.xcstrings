@@ -13666,6 +13666,34 @@
         }
       }
     },
+    "%@ to the broadcaster" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ para el difusor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターに %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터에게 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 给广播者"
+          }
+        }
+      }
+    },
     "%@ to your private balance" : {
       "localizations" : {
         "es" : {
@@ -42067,6 +42095,62 @@
         }
       }
     },
+    "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un difusor cobra su comisión en WETH o USDC, y tu saldo privado no tiene ninguno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターの手数料はWETHかUSDCで支払いますが、非公開残高にはどちらもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터는 WETH나 USDC로 수수료를 받는데, 비공개 잔액에 둘 다 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者以 WETH 或 USDC 收取费用，而你的私密余额两者都没有。"
+          }
+        }
+      }
+    },
+    "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither. Add about $10 of ETH for fees first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un difusor cobra su comisión en WETH o USDC, y tu saldo privado no tiene ninguno. Primero añade unos $10 de ETH para comisiones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターの手数料はWETHかUSDCで支払いますが、非公開残高にはどちらもありません。先に手数料用に約$10分のETHを追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터는 WETH나 USDC로 수수료를 받는데, 비공개 잔액에 둘 다 없습니다. 먼저 수수료용으로 약 $10어치 ETH를 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者以 WETH 或 USDC 收取费用，而你的私密余额两者都没有。请先添加约 $10 的 ETH 用于支付费用。"
+          }
+        }
+      }
+    },
     "A bug in the list, not a hidden service — please report it." : {
       "localizations" : {
         "es" : {
@@ -47610,6 +47694,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加 %lld 项"
+          }
+        }
+      }
+    },
+    "Add ETH for fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir ETH para comisiones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手数料用にETHを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수수료용 ETH 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加 ETH 用于费用"
           }
         }
       }
@@ -73796,6 +73908,34 @@
         }
       }
     },
+    "Couldn't price ETH. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo obtener el precio de ETH. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHの価格を取得できませんでした。何も送金されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH 가격을 가져오지 못했습니다. 아무것도 보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法获取 ETH 价格。未发送任何内容。"
+          }
+        }
+      }
+    },
     "Couldn't reach %@" : {
       "localizations" : {
         "es" : {
@@ -91367,6 +91507,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "查找你读过的内容"
+          }
+        }
+      }
+    },
+    "Finding a broadcaster…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buscando un difusor…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターを探しています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터를 찾는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在寻找广播者…"
           }
         }
       }
@@ -119230,6 +119398,34 @@
         }
       }
     },
+    "No Railgun broadcaster answered. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún difusor de Railgun respondió. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgunのブロードキャスターから応答がありません。何も送金されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 브로드캐스터가 응답하지 않았습니다. 아무것도 보내지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有 Railgun 广播者响应。未发送任何内容。"
+          }
+        }
+      }
+    },
     "No Safe accounts detected." : {
       "localizations" : {
         "es" : {
@@ -134082,6 +134278,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在途中：大约一小时后变为私密。"
+          }
+        }
+      }
+    },
+    "On its way: private in about an hour. Then send again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino: privado en una hora aproximadamente. Luego vuelve a enviar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金中：約1時間で非公開になります。その後もう一度送金してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가는 중: 약 1시간 후 비공개가 됩니다. 그다음 다시 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在途中：大约一小时后变为私密。之后再发送一次。"
           }
         }
       }
@@ -184257,6 +184481,34 @@
         }
       }
     },
+    "That leaves nothing for the broadcaster's fee. Send a little less." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Así no queda nada para la comisión del difusor. Envía un poco menos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターの手数料分が残りません。少し少なめに送ってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터 수수료가 남지 않습니다. 조금 덜 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这样就没有余额支付广播者费用了。请少发一点。"
+          }
+        }
+      }
+    },
     "That looks like the token pasted twice. Clear the field and paste it once." : {
       "localizations" : {
         "es" : {
@@ -186377,6 +186629,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "余额，以及需要你处理的"
+          }
+        }
+      }
+    },
+    "The broadcaster did not confirm. Check Activity before sending again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El difusor no lo confirmó. Revisa Actividad antes de volver a enviar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターから確認がありません。再送金の前にアクティビティを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터가 확인하지 않았습니다. 다시 보내기 전에 활동을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者没有确认。再次发送前请先查看活动。"
           }
         }
       }
@@ -218143,6 +218423,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的Cloudflare令牌已过期"
+          }
+        }
+      }
+    },
+    "Your ETH for fees is private in about an hour. Send then." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu ETH para comisiones será privado en una hora aproximadamente. Envía entonces."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手数料用のETHは約1時間で非公開になります。その後に送金してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수수료용 ETH는 약 1시간 후 비공개가 됩니다. 그때 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你用于费用的 ETH 大约一小时后变为私密。届时再发送。"
           }
         }
       }

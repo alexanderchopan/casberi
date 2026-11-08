@@ -23,7 +23,9 @@ import {
   getRailgunAddress, walletForID, loadWalletByID, unloadWalletByID, deleteWalletByID, balanceForERC20Token, populateShield, populateShieldBaseToken,
   gasEstimateForUnprovenUnshield, generateUnshieldProof, populateProvedUnshield,
   gasEstimateForUnprovenUnshieldBaseToken, generateUnshieldBaseTokenProof, populateProvedUnshieldBaseToken,
+  calculateBroadcasterFeeERC20Amount,
 } from '@railgun-community/wallet';
+import { WakuBroadcasterClient, BroadcasterTransaction } from '@railgun-community/waku-broadcaster-client-web';
 import { NetworkName, NETWORK_CONFIG, TXIDVersion, EVMGasType } from '@railgun-community/shared-models';
 import { RailgunEngine, Merkletree } from '@railgun-community/engine';
 import memdown from 'memdown';
@@ -200,6 +202,40 @@ async function balanceList() {
   return out;
 }
 
+// ---- Railgun's broadcasters (prd §1721 item 3). A send to someone else is
+// submitted by a broadcaster, who pays the gas and takes its fee in a token
+// out of this wallet, so no account of yours appears on the transaction.
+// They are found over Waku, through the three relays only (no DNS discovery:
+// every socket goes through Swift, which refuses any other host).
+let broadcasting = null;
+let quoted = null;
+
+async function startBroadcasters() {
+  broadcasting ??= WakuBroadcasterClient.start(CHAIN, {
+    poiActiveListKeys: [], useDNSDiscovery: false, feeExpirationTimeout: 60000, peerDiscoveryTimeout: 30000,
+  }, () => {}, { log: (m) => { if (/error|fail|connected/i.test(String(m))) say(`waku ${String(m).slice(0, 200)}`); }, error: (e) => say(`wakuError ${String(e?.message ?? e).slice(0, 200)}`) })
+    .catch((e) => { broadcasting = null; throw e; });
+  await broadcasting;
+}
+
+// Every fee token a broadcaster takes right now, with its rate (token base
+// units per 10^18 wei of gas) and how many broadcasters offer it.
+function broadcasterTokens() {
+  const all = WakuBroadcasterClient.findAllBroadcastersForChain(CHAIN, false) ?? [];
+  const byToken = new Map();
+  for (const b of all) {
+    const token = getAddress(b.tokenAddress);
+    if (!byToken.has(token)) byToken.set(token, new Set());
+    byToken.get(token).add(b.railgunAddress);
+  }
+  const out = [];
+  for (const [token, who] of byToken) {
+    const best = WakuBroadcasterClient.findBestBroadcaster(CHAIN, token, false);
+    if (best) out.push({ token, feePerUnitGas: hex(BigInt(best.tokenFee.feePerUnitGas)), broadcasters: who.size });
+  }
+  return out;
+}
+
 const gasDetails = (p, gasEstimate = 0n) => ({
   evmGasType: EVMGasType.Type2, gasEstimate,
   maxFeePerGas: BigInt(p.maxFeePerGas ?? '0x77359400'), maxPriorityFeePerGas: BigInt(p.maxPriorityFeePerGas ?? '0x5f5e100'),
@@ -366,7 +402,92 @@ const methods = {
     };
   },
 
+  // Starts listening for broadcasters (once) and waits up to `waitMs` for a
+  // fee to arrive. Reads nothing about this wallet.
+  async broadcasters(p) {
+    const t = now();
+    await startBroadcasters();
+    const until = now() + Number(p.waitMs ?? 45000);
+    let tokens = broadcasterTokens();
+    while (!tokens.length && now() < until) {
+      await new Promise((r) => setTimeout(r, 1000));
+      tokens = broadcasterTokens();
+    }
+    return { tokens, ms: Math.round(now() - t) };
+  },
+
+  // What a send of `amount` of `token` to `to` costs through the best
+  // broadcaster taking `feeToken`: the gas estimated with a dummy proof, the
+  // fee in `feeToken`. Kept in this page for `broadcastSend`; nothing is
+  // proved or sent here.
+  async quoteBroadcast(p) {
+    requireOpen();
+    const t = now();
+    await startBroadcasters();
+    const amount = BigInt(p.amount);
+    if (amount <= 0n) throw new Error('amount must be positive');
+    const to = getAddress(p.to);
+    const token = getAddress(p.token);
+    const feeToken = getAddress(p.feeToken);
+    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, false);
+    if (!selected) throw Object.assign(new Error(`no broadcaster takes ${feeToken}`), { name: 'NoBroadcaster' });
+    // Type 1 (a broadcast batch carries a minimum gas price), at the node's
+    // price and a third over it, so a block's rise does not strand it.
+    const gasPrice = (BigInt(await rpc('eth_gasPrice', [])) * 4n) / 3n;
+    const feeTokenDetails = { tokenAddress: feeToken, feePerUnitGas: BigInt(selected.tokenFee.feePerUnitGas) };
+    const recipients = [{ tokenAddress: token, amount, recipientAddress: to }];
+    const estimating = { evmGasType: EVMGasType.Type1, gasEstimate: 0n, gasPrice };
+    const est = await gasEstimateForUnprovenUnshield(V2, NETWORK, walletID, encryptionKey, recipients, [], estimating, feeTokenDetails, false);
+    const details = { evmGasType: EVMGasType.Type1, gasEstimate: est.gasEstimate, gasPrice };
+    const fee = calculateBroadcasterFeeERC20Amount(feeTokenDetails, details).amount;
+    quoted = { token, amount, to, feeToken, fee, details, gasPrice, selected, at: Date.now() };
+    return {
+      token, amount: hex(amount), to, feeToken, fee: hex(fee), gasEstimate: hex(est.gasEstimate), gasPrice: hex(gasPrice),
+      broadcaster: selected.railgunAddress, expiration: Number(selected.tokenFee.expiration ?? 0), ms: Math.round(now() - t),
+    };
+  },
+
+  // Proves the quoted send and hands it to its broadcaster: the proof pays
+  // the broadcaster `fee` of `feeToken` inside Railgun, and the unshield
+  // sends `amount` to `to` from Railgun's proxy. Refuses a quote that moved:
+  // another send, another fee, or older than its broadcaster's offer.
+  async broadcastSend(p) {
+    requireOpen();
+    const t = now();
+    const q = quoted;
+    if (!q) throw Object.assign(new Error('nothing quoted'), { name: 'NotQuoted' });
+    if (getAddress(p.token) !== q.token || BigInt(p.amount) !== q.amount || getAddress(p.to) !== q.to
+        || getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {
+      throw Object.assign(new Error('the send is not the one quoted'), { name: 'NotQuoted' });
+    }
+    if (q.selected.tokenFee.expiration && Date.now() > Number(q.selected.tokenFee.expiration)) {
+      throw Object.assign(new Error('the broadcaster offer expired'), { name: 'QuoteExpired' });
+    }
+    const recipients = [{ tokenAddress: q.token, amount: q.amount, recipientAddress: q.to }];
+    const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
+    const pt = now();
+    await generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], feeRecipient, false, q.gasPrice, () => {});
+    const proofMs = Math.round(now() - pt);
+    const populated = await populateProvedUnshield(V2, NETWORK, walletID, recipients, [], feeRecipient, false, q.gasPrice, q.details);
+    const tx = populated.transaction;
+    if (getAddress(tx.to) !== getAddress(PROXY)) throw Object.assign(new Error(`broadcast goes to ${tx.to}, not Railgun`), { name: 'NotRailgun' });
+    const sending = await BroadcasterTransaction.create(V2, tx.to, tx.data, q.selected.railgunAddress, q.selected.tokenFee.feesID,
+      CHAIN, populated.nullifiers ?? [], q.gasPrice, false, populated.preTransactionPOIsPerTxidLeafPerList ?? {});
+    // From here the broadcaster may already have the send: a failure is
+    // "not confirmed", never "nothing was sent".
+    let txHash;
+    try {
+      txHash = await sending.send();
+    } catch (e) {
+      quoted = null;
+      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+    }
+    quoted = null;
+    return { txHash, proofMs, ms: Math.round(now() - t) };
+  },
+
   async close() {
+    quoted = null;
     if (walletID && openedRandom) await deleteWalletByID(walletID).catch(() => {});
     if (walletID) unloadWalletByID(walletID);
     walletID = null;

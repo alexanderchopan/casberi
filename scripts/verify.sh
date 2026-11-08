@@ -2986,7 +2986,7 @@ harness "Private money self-test" "send, receive, take back, round-ups, recovery
 # USDC never to Railgun, nothing off Ethereum), the $10 floor and the no-price
 # refusal, the Safe's unshield as the proxy's plain call, and no screen sending
 # Railgun money to anyone but your own account until the broadcaster ships.
-harness "Railgun self-test" "routing by token, the ten-dollar ladder, the Safe unshield, take back to your account only" "scripts/railgun-selftest.sh" "the Railgun self-test failed — run scripts/railgun-selftest.sh"
+harness "Railgun self-test" "routing by token, the ten-dollar ladder, the Safe unshield, your account sends only to you, the broadcaster's fee and relays" "scripts/railgun-selftest.sh" "the Railgun self-test failed — run scripts/railgun-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
