@@ -2982,6 +2982,11 @@ harness "Privacy engine self-test" "the wire, the network door, testnet only, 27
 # you and Take it back, round-ups into private, recovery from the iCloud root,
 # Ethereum with Aave yield. A wrong amount, owner or key here moves real money.
 harness "Private money self-test" "send, receive, take back, round-ups, recovery, yield, mainnet calls pinned, every mutation caught" "scripts/private-money-selftest.sh" "the private money self-test failed — run scripts/private-money-selftest.sh"
+# Railgun (prd §1713, §1721): which private pocket a token goes to (ETH and
+# USDC never to Railgun, nothing off Ethereum), the $10 floor and the no-price
+# refusal, the Safe's unshield as the proxy's plain call, and no screen sending
+# Railgun money to anyone but your own account until the broadcaster ships.
+harness "Railgun self-test" "routing by token, the ten-dollar ladder, the Safe unshield, take back to your account only" "scripts/railgun-selftest.sh" "the Railgun self-test failed — run scripts/railgun-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
