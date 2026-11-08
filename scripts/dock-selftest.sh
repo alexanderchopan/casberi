@@ -364,9 +364,11 @@ grep -q 'feedTop += 1' "$TMP/gofeed.nc" \
        echo "  would do nothing, §83's dead control (prd §1280)."; fail=1; }
 grep -q 'sourceRequest = "All"' "$TMP/gofeed.nc" \
   || { echo "✗ goToFeed no longer lands on the Feed (prd §1280)."; fail=1; }
-grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
-  || { echo "✗ the iPad rail's face no longer toggles the rooms tray (prd §1133f) — the two"; \
-       echo "  seats are one door and must behave identically."; fail=1; }
+# The rail's face goes to the Feed too since prd §1714 (the tray is Search,
+# the rail's own tile): the two faces are one door and behave identically.
+grep -q 'chrome.goToFeed()' "$TMP/main.nc" \
+  && ! grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
+  || { echo "✗ the rail's face no longer goes to the Feed as the phone's does (prd §1714)."; fail=1; }
 # THE APPS SCREEN IS DELETED (prd §1234): Sources' Apps is the one catalogue,
 # and every door that asked for the catalogue lands there. Its switcher,
 # Settings rows and Casberi row went with it (§1033, §933, §1111).

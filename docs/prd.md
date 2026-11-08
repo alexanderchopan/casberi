@@ -71349,3 +71349,17 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 **Mac half (§1402).** The same Private block and the same rule. The engine's web view runs on Catalyst as the Privacy Pools engine does (§1563); whether its 61 s holds on the Mac is measured at build.
 
 **Not built. Not seen** inside Casberi: every measurement above ran in Node or the test app. **Not measured:** receiving a token at a fresh address, a token with no price, a shield of a fee-on-transfer token (Railgun refuses some; the error must be worded).
+
+## §1714 — The rooms tray is deleted: Search is Find, showing Recent and your recent searches with the keyboard up; no swipe raises it and the rail's face goes to the Feed (retires the tray's rooms of §930, §1013, §1061, §1133, §1203 item 6 and §1255; §1062's and §1125's swipes; §1280 item 2's keyboard down and item 4's rail face; §1589 item 1; §1664 item 2) (user, 2026-11-07: "we have over time made the app library be more than just where you connect and get set up. it is now if you tap on eone of the items there you go to its room. does this make the tray we have less necessary?"; on the canvas "Tray vs. Library", of option B, Recent and every app you have flat: "consider in the demo, it shows the app w/ all apps connected. that would make B just really hard to deal with"; of C: "my gut tells me c is what is best to do. the downside is it takes user one extra tap to get to their rooms. but if they want less taps that is what the feed is for or the library. i don't use the tray and its probably confusing to somene"; "i'd rather say 'recent'"; of a Library folder's name opening its room: "that isn't gonna work b/c if you tap that you expect the folder to open"; "if we keep the button we should get rid of the swipe to open it"; "do it") — BUILT
+
+**Why.** Three surfaces led to the same rooms in the same categories: the Feed's section names, Library's folders, and the tray's category rows. Since §1418 a tap on one of your apps in Library does what the tray's icon did. The tray kept only what Search already holds (Recent, the search itself), and its category rows were a wall to read with every app connected, as the demo is.
+
+1. **Search is Find.** The Search button (the bar's circle on the phone, the rail's tile, ⌘F) raises the same layer (`RoomsTray`), now with the keyboard up. At rest it shows **Recent**, the rooms you went to last, then **Recent searches** and Try. The Wallet's card and the category rows are deleted from view and model (§723): `categoryRow`, the scroll to your room, the standing glyphs and the broken-seat test. Typing is unchanged (§1171, §1185, §1589): apps, accounts, people, notes and things, grouped as before, an account's hold, Return.
+2. **No swipe raises it.** A swipe past either end of the walk springs back, on the phone as beside the rail (§1402).
+3. **The rail's face goes to the Feed**, as the phone's has since §1280.
+4. **Library is unchanged.** Its folders open, and an app of yours goes to its room (§1418). Category rooms open from the Feed's section names. A folder's name stays the folder's (user, above). Library draws no Recent folder: Recent is Search's.
+5. A room's lone seat on the phone (`openStandingFolder`) lands in its category's room instead of raising the tray.
+
+**Mac half (§1402).** The rail's Search tile and ⌘F open Search typing; the rail's face goes to the Feed; Escape closes Search as before.
+
+Mock: the design canvas "Tray vs. Library", option C.

@@ -590,7 +590,9 @@ struct MainSurface: View {
         if showsRail {
             chrome.folderRequest = category
         } else {
-            withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+            // The tray is Search since prd §1714: the seat lands in its
+            // category's room, as the Feed's section name does.
+            chrome.sourceRequest = category
         }
     }
 
@@ -1616,8 +1618,14 @@ struct MainSurface: View {
                     // the tray is the only place a room's apps, You's places
                     // and search live, and a rail whose face opened Apps left
                     // the iPad and the Mac no way to them.
+                    // The rail's face goes to the Feed (prd §1714), as the
+                    // phone's has since §1280: the tray it opened is Search,
+                    // the rail's own Search tile and ⌘F.
                     onAccounts: {
-                        withAnimation(DS.Motion.standard) { chrome.roomsTray.toggle() }
+                        withAnimation(DS.Motion.standard) {
+                            chrome.roomsTray = false
+                            chrome.goToFeed()
+                        }
                     },
                     refreshSpin: chrome.refreshPulse) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
@@ -2658,31 +2666,10 @@ struct MainSurface: View {
         guard let target = neighbour(delta) else {
             // Nothing that way: the rubber-banded room springs home.
             dragCancel()
-            // **Home's left edge opens the tray (prd §1062, a user: on Home
-            // "there is nothing to swipe right onto"; user: "ok").** Home is
-            // the one screen with nothing before it, and the tray grows out
-            // of the bottom-left corner, so pulling right from Home pulls it
-            // out.
-            //
-            // **…and so does the last room's right edge (prd §1125, user:
-            // "if you get to the last swipe of rooms the last swipe left
-            // brings up the tray").** The walk's far end has nothing after
-            // it either, so a swipe left there opens the tray instead of
-            // springing home. Both ends of the walk now lead somewhere.
-            //
-            // **Since §1203 the walk is two poles, so these are its two ends**:
-            // a swipe right on the Feed and a swipe left on the Wallet. A room
-            // opened on top springs back from a swipe left; its swipe right is
-            // the way back out (`neighbour`).
-            let atEnd = isRegular
-                ? (delta > 0 || HomeScope.contains(filter.source))
-                : true
-            // Where the rail stands a swipe past the end stops (prd §1402,
-            // §1407): the tray is the Search tile's and ⌘F's there (§1664).
-            if atEnd, route.path.isEmpty, !chrome.roomsTray, !isRegular {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
-            }
+            // **A SWIPE PAST EITHER END STOPS (prd §1714, retiring §1062's
+            // and §1125's tray).** The ends raised the tray; the tray is
+            // Search now, a mode with the keyboard up and its own button, so
+            // the walk's ends spring back, as they did beside the rail (§1402).
             return
         }
         // The card leaving is the heaviest thing the dock does, and it felt

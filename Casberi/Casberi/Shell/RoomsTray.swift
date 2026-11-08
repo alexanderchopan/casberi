@@ -29,6 +29,15 @@ import SwiftData
 /// else; a category with a broken seat wears the attention colour on its
 /// glyph and says so. **Every pick is `ShellChrome.sourceRequest`**, the hop
 /// every room-to-room door takes.
+///
+/// **SINCE prd §1714 IT IS SEARCH, AND ONLY SEARCH** (user, 2026-11-07:
+/// "i don't use the tray and its probably confusing to somene"). Library
+/// became where you go to an app (§1418) and the Feed's section names open
+/// the category rooms, so the rooms this card drew (the Wallet's card, a row
+/// per category) are deleted. Search raises it with the keyboard up; at rest
+/// it shows Recent, then your recent searches. No swipe raises it and the
+/// rail's face goes to the Feed; Search's button and ⌘F are its doors.
+/// The name stays: it is still the layer under the band.
 struct RoomsTray: View {
     /// The rail's width where the shell draws one (iPad, Mac), else 0. With a
     /// rail the face stands at its top, so the card opens beside it from the
@@ -191,12 +200,13 @@ struct RoomsTray: View {
         }
         #endif
         .onChange(of: chrome.roomsTray) { _, up in
-            // The bar raises the tray with the keyboard DOWN (prd §1280,
-            // amends §1209a): the bar is the tray's only door on the phone, so
-            // its contents must be in view; a tap on the field types.
-            // Deal the rows in once the card has landed; under Reduce Motion
-            // they are simply there.
+            // **SEARCH TYPES AT ONCE (prd §1714, retiring §1280 item 2 and
+            // §1664 item 2).** The keyboard stayed down so the tray's rooms
+            // showed; the rooms are deleted, and what is left (Recent, your
+            // recent searches) fits above the keys. Deal the rows in once the
+            // card has landed; under Reduce Motion they are simply there.
             dealt = up
+            if up { searching = true }
             if up && !reduceMotion { bounceTick += 1 }
             if !up {
                 query = ""; searching = false; noteCorpus = []; holdings = []
@@ -250,34 +260,20 @@ struct RoomsTray: View {
         // stand on their own glass, the way the search capsule floats beside
         // the face, and the stack scrolls as one menu. A search's results are
         // one card under the field.
-        return ScrollViewReader { proxy in
-        ScrollView {
+        return ScrollView {
             VStack(alignment: .leading, spacing: Self.cardGap) {
                 if railInset > 0 { card { searchField } }
-                // Focused and empty, the search teaches alone, as
-                // Spotlight's suggestions do (prd §1211 item 5).
-                if showsSearchHome {
-                    card { searchHome }
-                } else if query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty {
-                    // NO YOU ROW AND NO NAME (prd §1207 item 5, user: "the
-                    // tray can drop your name it's superfluous now and
-                    // settings already has a place"): Recent alone leads
-                    // (user: "it would only have recent"). Feed and Wallet
-                    // are the walk's, Markets, Sources and Settings the Feed's
-                    // tiles (user: "markets stays in feed"), and a note is the Feed's
-                    // Notes tile (§1231; the band's seat is the Wallet's, §1278).
+                // **SEARCH IS FIND (prd §1714): the tray's rooms are
+                // deleted.** Library holds every app by category and opens
+                // yours (§1418), the Feed's section names open the category
+                // rooms, so at rest Search shows what only it can: Recent,
+                // the rooms you went to last, then your recent searches.
+                if query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty {
                     if hasRecent {
                         card { recentRow(gap: gap) }
                     }
-                    if walletCard {
-                        card { categoryRow(CategoryFold.walletCategory, index: 2, gap: gap) }
-                    }
-                    if !feedCategories.isEmpty {
-                        card {
-                            ForEach(Array(feedCategories.enumerated()), id: \.element) { index, category in
-                                categoryRow(category, index: index + 3, gap: gap)
-                            }
-                        }
+                    if !recentSearches.isEmpty || !tries.isEmpty {
+                        card { searchHome }
                     }
                 } else {
                     card { searchResults }
@@ -301,27 +297,6 @@ struct RoomsTray: View {
             // pull that drops the keyboard while you type.
             if railInset == 0, pulling, !searching, pulled < -Self.pullToClose, chrome.roomsTray { close() }
         }
-        // **OPENS ON YOUR ROOM (prd §1589):** the card you stand in is
-        // brought into view, so Life is not five Wallet lines down.
-        .onAppear {
-            // The room you stand in, or the app risen over the Feed (an app
-            // of a Feed section opens as a sheet, prd §1208a).
-            let risen = chrome.appSheet.map { CategoryFold.chipLabel(for: $0.source, folded: chrome.chipOrder) }
-            let target = standingCategory ?? risen.flatMap { CategoryFold.isCategory($0) ? $0 : nil }
-            #if DEBUG
-            NSLog("[Casberi] trayScroll? source=%@ target=%@", filter.source, target ?? "nil")
-            #endif
-            guard let here = target, here != CategoryFold.walletCategory else { return }
-            Task { @MainActor in
-                // Once the card has risen, so the move is seen as a place.
-                try? await Task.sleep(for: .milliseconds(250))
-                withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.rowAnchor(here), anchor: .center) }
-                #if DEBUG
-                NSLog("[Casberi] trayScroll: %@", here)
-                #endif
-            }
-        }
-        }
         .scrollDismissesKeyboard(.interactively)
         .frame(width: width, height: max(height, 1))
         // The stack's own corner clips a card scrolled under its edge to the
@@ -338,8 +313,6 @@ struct RoomsTray: View {
 
     /// How far past the top a pull goes before it closes the tray.
     static let pullToClose: CGFloat = 90
-
-    static func rowAnchor(_ category: String) -> String { "tray.row." + category }
 
     /// Whether Recent has anything to show (prd §1136 item 8).
     private var hasRecent: Bool { !recentItems.isEmpty }
@@ -397,42 +370,10 @@ struct RoomsTray: View {
             .sorted { CategoryOrder.rank(of: $0, in: order) < CategoryOrder.rank(of: $1, in: order) }
     }
 
-    /// The categories' card: every row but the Wallet's, which has a card of
-    /// its own (prd §1203 item 6).
-    private var feedCategories: [String] {
-        categories.filter { $0 != CategoryFold.walletCategory }
-    }
-
-    /// Whether the Wallet's card stands: it holds a connected seat.
-    private var walletCard: Bool { categories.contains(CategoryFold.walletCategory) }
-
     /// The category the room you are standing in belongs to.
     private var standingCategory: String? {
         let label = CategoryFold.chipLabel(for: filter.source, folded: chrome.chipOrder)
         return CategoryFold.isCategory(label) ? label : nil
-    }
-
-    /// A category's glyph when it is the standing one: the fill variant, which
-    /// the HIG reserves for selection. Categories whose glyph has no fill
-    /// keep the one they have.
-    private static let filledGlyphs: [String: String] = [
-        "Agents":   "terminal.fill",
-        "Media":    "play.circle.fill",
-        "Social":   "bubble.left.and.bubble.right.fill",
-        "Testnets": "flask.fill",
-        "Life":     "face.smiling",            // the filled one; the names run backwards
-    ]
-
-    private func glyph(for category: String, lit: Bool) -> String {
-        lit ? (Self.filledGlyphs[category] ?? CategoryFold.glyph(for: category))
-            : CategoryFold.glyph(for: category)
-    }
-
-    /// Whether one of the category's seats needs you — the same test the
-    /// face's ring makes (`DoorAlarm`), read per tile so the tile can say which.
-    private func broken(_ category: String) -> Bool {
-        let names = Set(seats(in: category) + appNames(in: category))
-        return bridges.bridges.contains { names.contains($0.name) && $0.status == .attention }
     }
 
     /// A category's seats, in the tray's order.
@@ -448,18 +389,6 @@ struct RoomsTray: View {
     /// merges, and an unmerged one (Work, Day…) keeps today's tray exactly.
     private func mergedRoom(in category: String) -> String? {
         seats(in: category).first { RoomAccounts.mergedRooms.contains($0) }
-    }
-
-    /// The names of the apps a category holds: its seats, and for a merged
-    /// room every app it folded in that is connected. A search finds the
-    /// category by any of them (a search for Gnosis finds Wallet), and a
-    /// broken one marks its tile. The tray draws no app marks since §1050l:
-    /// a tile lands in its category, whose room scopes to each app.
-    private func appNames(in category: String) -> [String] {
-        let own = seats(in: category).map { BridgeCatalog.seatName(forSource: $0) }
-        guard let room = mergedRoom(in: category) else { return own }
-        let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        return own + RoomAccounts.connected(in: room, names: names).map(\.name)
     }
 
     /// You: five doors, drawn as APP TILES in the brand pink (prd §976,
@@ -532,63 +461,6 @@ struct RoomsTray: View {
                 pickCategory(CategoryFold.walletCategory)
             },
         ]
-    }
-
-    /// A category's row (prd §1061, user: "what if the icon for the category
-    /// is the first icon where the apps are now … that way if you touch that
-    /// icon you go to the room"): its name on its own line, then a run of
-    /// icons — the category's own glyph on a plain disc first, then EVERY app
-    /// and account in it, six to a line (prd §1133b, §1133c, user: "i think
-    /// we have to go back to tray and display all the apps"; the "+N" folder
-    /// repeated the row's icons and had to be opened every time). The name and the disc land in the category's room on All;
-    /// an icon lands in the room scoped to it, the one showing ringed. The
-    /// standing category fills its glyph; a broken app inside wears the
-    /// attention hue on the category's glyph, and the label says it too.
-    ///
-    /// **THE GLYPH IS PINK, AND THE WALLET HAS ONE (prd §1255, user: "turn
-    /// the categories icons into the brand color … wallet needs a wallet
-    /// icon in its row").** The disc stays first in the run, where it reads
-    /// as a thing to tap (user: "someone won't know to tap it" in the
-    /// header); the glyph takes the brand ink, as every glyph has since
-    /// §1252. The Wallet drew no disc because its door was the You row's
-    /// (§1203 item 6); that row is gone (§1207 item 5), so it leads as every
-    /// category does.
-    private func categoryRow(_ category: String, index: Int, gap: CGFloat) -> some View {
-        let lit = standingCategory == category
-        let needsYou = broken(category)
-        let folder = folder(for: category)
-        return wrapped(folder, gap: gap) {
-            Button {
-                pickCategory(category)
-            } label: {
-                Text(category)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, minHeight: Self.nameHeight, alignment: .bottomLeading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .accessibilityLabel(needsYou
-                ? Text("\(category), needs your attention")
-                : Text(category))
-            .accessibilityAddTraits(lit ? .isSelected : [])
-        } lead: {
-            Button {
-                pickCategory(category)
-            } label: {
-                roundIcon(glyph(for: category, lit: lit),
-                          ink: needsYou ? DS.attention : DS.brandInk,
-                          fill: lit ? DS.fillStrong : DS.surfaceRaised,
-                          bounces: lit)
-            }
-            .buttonStyle(PressSpring())
-            .dsTapTarget()
-            // The name says the same door (prd §1589): one stop, not two.
-            .accessibilityHidden(true)
-        }
-        .modifier(Dealt(on: dealt, index: index, reduceMotion: reduceMotion))
-        .id(Self.rowAnchor(category))
     }
 
     /// The apps a row shows: a merged room's connected apps, the ones you
@@ -1551,6 +1423,10 @@ struct RoomsTray: View {
             }
         }
         .scrollIndicators(.hidden)
+        // As tall as its chips: a horizontal scroll proposed less than their
+        // height and the card's glass cut their bottoms (seen, prd §1714,
+        // now that Try shows every time Search opens).
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// AN EMPTY SEARCH TEACHES (prd §1211 item 5): what you searched lately,

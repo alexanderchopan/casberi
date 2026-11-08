@@ -68,9 +68,9 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for
     /// the phone's bar, the rail (prd §1402) and the ⌘-digits.
     @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
-        // Search is no place: the tray, everywhere (prd §1664) — beside the
-        // rail it opens by the tile, your apps showing, and Return in its
-        // field still hands the words to Find.
+        // Search is no place: the tray, everywhere (prd §1664), which since
+        // §1714 is Search alone: Recent and your recent searches, the
+        // keyboard up, and Return in its field still hands the words to Find.
         if tab == .search {
             withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
             return

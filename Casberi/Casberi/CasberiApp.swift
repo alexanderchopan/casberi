@@ -299,7 +299,7 @@ struct CasberiApp: App {
             // `CommandGroup` placement can address it — which hands the
             // shortcut back to this item. Edit → Find is where a Mac user
             // looks for it, and it opens what the rail's Search tile does:
-            // the rooms tray, your apps in it (prd §1664);
+            // Search, typing at once (prd §1664, §1714);
             // Return in the field still hands the words to Find (§215).
             CommandGroup(after: .pasteboard) {
                 Button("Find…") {
