@@ -1633,10 +1633,9 @@
   },
   {
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#aztecApps",
     "Screens/SettingsHome.swift:aztecDirectory"
    ],
-   "why": "Apps on Aztec (prd §1700i) and Library's Aztec directory tile (prd §1700m): the Wallet Home door and the Wallet folder's tile stand only with an Aztec account on an iPhone and never in the demo (`AztecApps.doorShown`), so the sweep's demo launch never draws either; the sheet is the same `AztecBrowserView` the link door opens (seen with `-aztecBrowser`)"
+   "why": "Library's Aztec directory tile (prd §1700m, the one door since §1700p): the Wallet folder's tile stands only with an Aztec account on an iPhone and never in the demo (`AztecApps.doorShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` the link door opens (seen with `-aztecBrowser`)"
   }
  ]
 }

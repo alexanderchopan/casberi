@@ -98,7 +98,7 @@ for whoever changes the code.
   (`tools/aztec-engine/src/connect-gate.js`, `aztec-connect-selftest.sh`).
 - The Ethereum provider (`BrowserEthereum`, Human Passport's door) connects on an
   ask, signs only messages (personal_sign, Ethereum typed data), never sends.
-- In Apps on Aztec's browser (the directory door and a saved Aztec app's link)
+- In Aztec's directory browser (Library's Aztec directory tile and a saved Aztec app's link)
   the same provider also sends (prd §1700k): one `eth_sendTransaction` call at a
   time, from your account on Ethereum to a named address, never a raw
   transaction or a batch. The sheet says what it does (an approval read with its

@@ -55784,34 +55784,6 @@
         }
       }
     },
-    "Apps on Aztec" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apps en Aztec"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aztec のアプリ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aztec 앱"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aztec 上的应用"
-          }
-        }
-      }
-    },
     "Apps, needs attention" : {
       "localizations" : {
         "es" : {

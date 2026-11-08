@@ -367,13 +367,13 @@ enum NetworkReach {
                  hosts: ["nemi.fi", "olla.finance", "xochi.fi", "app.ravenhouse.xyz", "rolling.chat",
                          "privateinference.gg", "dfaztec-s1.dfarchon.xyz"],
                  credentialed: false),
-        // Apps on Aztec (prd §1700i): Home's door opens Aztec's own
+        // Aztec's directory (prd §1700i, §1700p): Library's tile opens Aztec's own
         // directory in Casberi's browser; the app a card leads to loads its
         // own page there, as a saved link's does. An app on Ethereum (Olla)
         // finds your account there too and may ask to send (prd §1700k).
         Endpoint(service: "Aztec's app directory",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "When you open Apps on Aztec from the Wallet's Home, loads Aztec's own list of apps in Casberi's browser. An app you open from it loads its own page there, and sees your Aztec account's address, or your account's on Ethereum, only once you connect it; every transaction asks you first.",
+                 purpose: "When you open Aztec directory in Library's Wallet folder, loads Aztec's own list of apps in Casberi's browser. An app you open from it loads its own page there, and sees your Aztec account's address, or your account's on Ethereum, only once you connect it; every transaction asks you first.",
                  hosts: ["aztec.network"],
                  credentialed: false),
         Endpoint(service: "Human Passport",

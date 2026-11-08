@@ -64,8 +64,6 @@ extension FeedScreen {
         case socialFollow
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
         case walletFollow
-        /// Aztec's directory in Casberi's browser, from Home's door (prd §1700i).
-        case aztecApps
         case walletTokens
         /// Set or change the savings goal on your private balance (prd §1667).
         case savingsGoal
@@ -105,7 +103,6 @@ extension FeedScreen {
             case .feedOrder: "feedOrder"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
-            case .aztecApps: "aztecApps"
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
             case .watchToken: "watchToken"
@@ -309,11 +306,6 @@ extension FeedScreen {
             SocialFollowSheet()
         case .walletFollow:
             WalletFollowSheet(landsOnClose: true)
-        case .aztecApps:
-            // An app on Aztec's list may be on Ethereum (Olla): your account
-            // is offered there too, and may send (prd §1700k).
-            AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
-                .presentationDragIndicator(.visible)
         case .watchToken:
             WatchTokenSheet(held: walletHeldTokens)
         case .savingsGoal:

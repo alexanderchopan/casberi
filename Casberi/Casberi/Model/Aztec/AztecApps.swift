@@ -9,7 +9,8 @@ import Foundation
 /// vouches for none of them: the list says only where your Aztec account can
 /// be offered. Wallets (Nulo, zk.money, Nyx), Shield (Move's own) and
 /// ZKPassport's SDK are left out: they are not apps you connect a wallet to.
-/// Not a list anywhere on screen (item 1); Home's door opens Aztec's (§1700i).
+/// Not a list anywhere on screen (item 1); Library's Aztec directory tile
+/// opens Aztec's (§1700m, §1700p).
 enum AztecApps {
     static let hosts: Set<String> = [
         "nemi.fi",                 // Nemi, a private exchange
@@ -21,16 +22,16 @@ enum AztecApps {
         "dfaztec-s1.dfarchon.xyz", // Dark Forest Aztec
     ]
 
-    /// **APPS ON AZTEC (prd §1700i, amends item 1 of §1700c).** Wallet
-    /// Home's door opens Aztec's own directory, straight at its list: a card
+    /// **AZTEC'S DIRECTORY (prd §1700i, amends item 1 of §1700c; its door is
+    /// Library's tile alone since §1700p).** Opens Aztec's own directory,
+    /// straight at its list: a card
     /// opens Aztec's page for the app, whose Open link opens the app, all in
     /// the same browser, whose relay is on every page it loads. Casberi keeps
     /// no list of its own; this set still says only which saved links open
     /// in Casberi.
     static let directory = URL(string: "https://aztec.network/apps#directory")!
-    static let doorGlyph = "globe"
 
-    /// The door stands once there is an Aztec account, on an iPhone (the
+    /// The tile stands once there is an Aztec account, on an iPhone (the
     /// prover), never in the demo.
     @MainActor static var doorShown: Bool {
         AztecAccountStore.shared.isShown && AztecProver.isAvailable && !DemoMode.isActive

@@ -71283,6 +71283,16 @@ Once the private account exists, Keys' Networks row counts Aztec with your Safe'
 
 **Not compiled:** written in a Linux session with no Swift toolchain. **Not seen:** the sheet on the phone, at either height.
 
+## §1700p — Aztec's directory has one door, Library's tile; the Wallet's Home loses Apps on Aztec (amends §1700i, §1700m item 1) (user, 2026-11-07, of the Home door after §1700m: "i just don't see the logic to have the aztec apps on the wallet home page", "they exist in the library", "in the directory"; told every other Home door is the state of something yours and this one is a catalogue of other people's apps, and that Library is where apps are found: "Yes, remove it") — RULED, BUILT
+
+1. **Home's doors are yours.** Your account, Following, Needs you, Permissions and Threats each say the state of something you hold; a catalogue of others' apps is not one, and was the one door that left the Wallet. The row, its sheet (`FeedSheetRoute.aztecApps`) and `AztecApps.doorGlyph` are deleted (§723).
+2. **Library's Wallet folder is the one door** (§1700m's tile, same gate, same browser, sending as before).
+3. **Later, not now:** the Aztec apps you have connected are state, and would stand under Permissions, not as a door of their own.
+
+**Checks.** `shield-bridge-selftest.sh`'s doors that may send are Library's tile, a saved Aztec app's link and DEBUG's probe; its directory check reads `SettingsHome`. `sheet-sweep.json` drops the Home sheet. The reach line names Library.
+
+**Mac half (§1402).** None: the gate keeps Aztec off the Mac.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

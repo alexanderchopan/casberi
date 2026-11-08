@@ -41,8 +41,7 @@ extension FeedScreen {
         .id(Self.walletDoorAnchor(section))
     }
 
-    /// A door's row with no page of its own: Apps on Aztec (prd §1700i)
-    /// leaves the Wallet for Aztec's directory, so it has no section.
+    /// A door's row, drawn for a section or by hand.
     func walletDoorRow(glyph: String, name: String, figure: String? = nil,
                        figureTone: Color = DS.textPrimary, word: String? = nil,
                        wordTone: Color = DS.textSecondary, act: @escaping () -> Void) -> some View {
@@ -313,17 +312,6 @@ extension FeedScreen {
                     walletDoor(.threats, figure: "\(unseen)", figureTone: DS.destructiveInk)
                 } else {
                     walletDoor(.threats, word: String(localized: "All seen"))
-                }
-            }
-            // **APPS ON AZTEC (prd §1700i, user: "wallet home it is").** Last
-            // of the doors, once you have an Aztec account, on All or with
-            // your account picked: Aztec's own directory in Casberi's browser,
-            // where a card's app finds your Aztec account. Aztec keeps the
-            // list; Casberi lists nothing of its own (§1700c). Never on the
-            // Mac (no prover) or in the demo.
-            if onAll || yoursPicked, AztecApps.doorShown {
-                walletDoorRow(glyph: AztecApps.doorGlyph, name: String(localized: "Apps on Aztec")) {
-                    feedSheet = .aztecApps
                 }
             }
             // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"

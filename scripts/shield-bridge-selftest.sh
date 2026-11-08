@@ -241,14 +241,14 @@ xcrun swiftc -Onone -o "$TMP/prov" "$PROVIDER" "$TMP/prov.d/main.swift" 2>"$TMP/
 if grep -n "eth_sendRawTransaction\|wallet_sendCalls" "$PROVIDER" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
   echo "✗ the provider names a raw or batch send: one call per eth_sendTransaction only (prd §1700k)"; exit 1
 fi
-# Sending is on where Apps on Aztec opens a page, and nowhere else (prd §1700k).
+# Sending is on where Aztec's directory opens a page, and nowhere else (prd §1700k, §1700p).
 DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr '\n' ' ')
 # ProbeHooks is DEBUG's door (`-aztecAppEthereum`, prd §1700l), compiled out of every shipped build.
 # SettingsHome is Library's Wallet folder, Aztec's directory (prd §1700m).
-[[ "$DOORS" == "Casberi/Casberi/Screens/FeedScreen+Sheets.swift Casberi/Casberi/Screens/SettingsHome.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
+[[ "$DOORS" == "Casberi/Casberi/Screens/SettingsHome.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
-grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
-  || { echo "✗ Apps on Aztec's door no longer offers your account to an Ethereum app"; exit 1; }
+grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/SettingsHome.swift \
+  || { echo "✗ Library's Aztec directory no longer offers your account to an Ethereum app"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
 # Only the browser that may send says it is a Mac (prd §1700n).
