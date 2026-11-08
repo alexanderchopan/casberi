@@ -1,15 +1,17 @@
 import SwiftData
 import SwiftUI
 
-/// **RECEIVE, PRIVATELY: A FRESH ADDRESS (prd §1560; the board "Fresh").**
-/// Receive's Private switch, on: the sentence
+/// **RECEIVE TO YOUR PRIVATE BALANCE: A FRESH ADDRESS (prd §1560, §1719).**
+/// Picked as "Your private balance · Ethereum" in Receive's "on" list (no
+/// switch since §1719), the sentence
 ///
-///     Receive on Sepolia privately.
+///     Receive to your private balance on Ethereum at …e07a.
 ///
-/// over the switch (on, off returns to Receive), one line only when there is
-/// something to say (what arrived, moving in, waiting for approval), then
-/// the newest fresh address as a code and by its tail ("...e07a", a tap
-/// copies the whole), and the foot: "New address" grey at the leading
+/// ("your private balance" goes back to the list; the tail copies), one line
+/// only when there is something to say (what arrived, moving in, waiting
+/// for approval), then the address in groups of five, as public Receive
+/// shows yours (a tap copies the whole; no QR, user: "i don't know why we
+/// need the qr code"), and the foot: "New address" grey at the leading
 /// edge, "Share" pink at the trailing. No helper text.
 ///
 /// While it shows, every fresh address is looked at every 15 s
@@ -17,7 +19,7 @@ import SwiftUI
 /// itself. Sepolia only, DEBUG builds only (`PrivateMove.available`).
 struct MoveFreshSentence<Head: View>: View {
     var inTray = false
-    /// The switch turned off: back to Receive.
+    /// "your private balance" tapped: back to Receive's "on" list.
     var leave: () -> Void = {}
     @ViewBuilder let head: () -> Head
 
@@ -37,12 +39,22 @@ struct MoveFreshSentence<Head: View>: View {
                 // (prd §1681).
                 MoveFlow {
                     head()
+                    MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
+                                    ink: moving ? DS.textPrimary : DS.pickInk,
+                                    action: { if !moving { leave() } },
+                                    hint: Text("Picks where it lands"))
                     MovePhrase(network.name, glue: String(localized: "on"))
-                    MovePhrase(String(localized: "privately."), ink: DS.pickInk)
+                    if let entry {
+                        MoveClause(glue: String(localized: "at")) {
+                            Button { copy(entry.address) } label: {
+                                MoveWord(copied ? String(localized: "Copied") : YourAccount.short(entry.address) + ".", ink: DS.textPrimary)
+                            }
+                            .buttonStyle(RowPress())
+                            .accessibilityLabel(Text("The new address, \(entry.address)"))
+                            .accessibilityHint(Text("Copies the address"))
+                        }
+                    }
                 }
-                MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))
-                    .padding(.top, DS.Space.s4)
-                    .disabled(moving)
                 // The line stands over the code, where it is seen: under
                 // it, a phone's foot covers it until scrolled.
                 line
@@ -99,36 +111,20 @@ struct MoveFreshSentence<Head: View>: View {
     /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1567).
     private var network: PrivacyNetwork { book.network ?? .ethereum }
 
-    /// The address as a code (EIP-681, naming its network, so a wallet that
-    /// reads it pays on the right one) and by its tail.
+    /// The address in groups of five, as public Receive shows yours; a tap
+    /// copies the whole (prd §1719: no QR).
     private func code(_ address: String) -> some View {
-        VStack(spacing: DS.Space.s4) {
-            if let image = SignerRequestSheet.code("ethereum:\(address)@\(network.chainId)") {
-                Image(uiImage: image)
-                    .interpolation(.none)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 156, height: 156)
-                    .padding(DS.Space.s3)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
-                    .accessibilityLabel(Text("Code for the new address"))
-            }
-            Button {
-                DSPasteboard.copy(address)
-                DSHaptic.tap()
-                withAnimation(DS.Motion.standard) { copied = true }
-            } label: {
-                Text(verbatim: copied ? String(localized: "Copied") : YourAccount.short(address))
-                    .dsText(.body17)
-                    .monospaced()
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(minHeight: 44)
-            }
+        Button { copy(address) } label: { AddressGroupsGrid(address: address) }
             .buttonStyle(RowPress())
-            .accessibilityLabel(Text("The new address, \(address)"))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel(Text(verbatim: address))
             .accessibilityHint(Text("Copies the address"))
-        }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func copy(_ address: String) {
+        DSPasteboard.copy(address)
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { copied = true }
     }
 
     /// One line, only when there is something to say.

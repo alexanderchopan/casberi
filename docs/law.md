@@ -244,19 +244,19 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1880 of 1952 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1881 of 1953 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
-- §6 — How it works today — Alice (amended by §1113, §1568)
+- §6 — How it works today — Alice (amended by §1113, §1568, §1719)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
 - §9 — Problems (amended by §1556, §1567, §1568)
 - §10 — Solutions (amended by §1208)
 - §11 — Bob vs Alice, per feature (amended by §1556)
-- §12 — Run 2 synthesis
+- §12 — Run 2 synthesis (amended by §1719)
 - §13 — Features
 - §14 — Platform (amended by §1567)
 - §15 — Write model
@@ -1940,7 +1940,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
-- §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567)
+- §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567, §1719)
 - §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576)
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
@@ -2093,8 +2093,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
 - §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700k)
-- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h)
-- §1700g — Aztec is your private account; 0xBow is your private balance
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1719)
+- §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k, §1700p)
 - §1700j — An Aztec app finds Casberi at once; Connect and the emoji check are asked when you pick Casberi in the app, and hold…
@@ -2125,7 +2125,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
-- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small…
+- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719)
+- §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private…
 
 ## Dead rulings → what replaced them (generated)
 

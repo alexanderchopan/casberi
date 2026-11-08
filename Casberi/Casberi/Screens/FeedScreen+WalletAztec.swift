@@ -44,8 +44,8 @@ extension FeedScreen {
             // Aztec, saying what it takes, its tap Move's sentence to your
             // private account on Aztec.
             if store.privateHeld.isEmpty {
-                walletPlaceRow("Aztec", line: String(localized: "USDC or ETH"), mark: "Aztec",
-                               hint: String(localized: "Sends to your private account on Aztec")) {
+                walletPlaceRow(String(localized: "Your private balance"), line: "Aztec", mark: nil,
+                               hint: String(localized: "Sends to your private balance on Aztec")) {
                     chrome.moveAztec = .deposit
                     chrome.moveTray = true
                 }

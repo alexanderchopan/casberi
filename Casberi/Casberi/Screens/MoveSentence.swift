@@ -81,6 +81,8 @@ struct MoveSentence: View {
     /// switch draws `MoveFreshSentence` under these verbs, over the
     /// account's sentence. Off on every arrival, never remembered on.
     @State private var freshReceive = false
+    /// Receive to your private balance on Aztec: your Aztec address (prd §1719).
+    @State private var aztecReceive = false
 
     private func goPrivate(_ mode: PrivateMove.Mode) {
         privateMove.mode = mode
@@ -989,7 +991,7 @@ struct MoveSentence: View {
         // The verbs open on the account page over any verb's own sentence
         // (Lend, Send privately, a fresh Receive), so every verb word opens
         // the one list (prd §1681).
-        let ownSentence = (privateMode != nil || freshReceive || aztecMode != nil || verb == .lend) && open != .verb
+        let ownSentence = (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || verb == .lend) && open != .verb
         ZStack {
             accountPage
                 .opacity(ownSentence ? 0 : 1)
@@ -1000,8 +1002,15 @@ struct MoveSentence: View {
                     .transition(.opacity)
             }
             if freshReceive, privateMode == nil, open != .verb {
+                // "your private balance" goes back to where it lands.
                 MoveFreshSentence(inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { freshReceive = false }
+                    withAnimation(DS.Motion.standard) { freshReceive = false; open = .elsewhere }
+                }) { verbWord(title(.receive)) }
+                .transition(.opacity)
+            }
+            if aztecReceive, privateMode == nil, open != .verb {
+                MoveAztecReceive(inTray: inTray, leave: {
+                    withAnimation(DS.Motion.standard) { aztecReceive = false; open = .elsewhere }
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
@@ -1009,7 +1018,7 @@ struct MoveSentence: View {
                 MoveAztecPrivateSentence(move: aztecMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
                         aztecMode = nil
-                        open = why == .pickRecipient ? .to : .network
+                        open = why == .pickRecipient ? .to : .with
                         if why == .pickRecipient { search = "" }
                     }
                 }) { verbWord(title(.send)) }
@@ -1020,8 +1029,9 @@ struct MoveSentence: View {
                     withAnimation(DS.Motion.standard) {
                         privateMode = nil
                         // Its recipient opens Send's recipients; its "from"
-                        // opens Send's networks (prd §1700f item 11).
-                        open = why == .pickRecipient ? .to : .network
+                        // opens the token list, where private money is one
+                        // of the rows (prd §1719).
+                        open = why == .pickRecipient ? .to : .with
                         if why == .pickRecipient { search = "" }
                     }
                 }) { verbWord(title(.send)) }
@@ -1031,6 +1041,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: privateMode)
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: freshReceive)
+        .animation(DS.Motion.standard, value: aztecReceive)
         .animation(DS.Motion.standard, value: verb)
     }
 
@@ -1305,13 +1316,9 @@ struct MoveSentence: View {
             // the total tx").
             // No Private switch in Send (prd §1700f item 11): the network list
             // is where the money is, the two private balances among it.
-            // Receive's Private switch (prd §1560): off on arrival; on, a
-            // fresh address. Your own account's Receive only, never a
-            // route from another network or the arrival's sentence.
-            if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.freshAvailable {
-                MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))
-                    .padding(.top, DS.Space.s4)
-            }
+            // No Private switch in Receive either (prd §1719, retiring
+            // §1560's): your private balance is a place in Receive's "on"
+            // list, on Ethereum (a fresh address) and on Aztec.
             if verb == .send || verb == .swap || verb == .buy, receipt == nil, let step = roundUpStep, step.change != "0" {
                 let change = RoundUpsPot.dollars(step.change)
                 row(nil) {
@@ -2255,10 +2262,11 @@ struct MoveSentence: View {
     private func pickVerb(_ v: Verb) {
         withAnimation(DS.Motion.standard) {
             open = nil
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecMode != nil else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil else { return }
             privateMode = nil
             aztecMode = nil
             freshReceive = false
+            aztecReceive = false
             verb = v
             receipt = nil
         }
@@ -3285,9 +3293,11 @@ struct MoveSentence: View {
             ForEach(rows, id: \.key) { row in
                 let h = row.held
                 let worth = h.usd.map { Self.money($0) }
+                // Holdings' grammar (prd §1719): the network, then the
+                // amount; the dollars trail, as every Wallet row's do.
                 listRow(h.token.symbol,
-                        sub: networkPicked && verb != .buy ? worth : [worth, row.net.name].compactMap { $0 }.joined(separator: " · "),
-                        trailing: Op.spoken(left(h), decimals: h.token.decimals), mark: h.token.symbol) {
+                        sub: "\(row.net.name) · \(Op.spoken(left(h), decimals: h.token.decimals))",
+                        trailing: worth, mark: h.token.symbol) {
                     pick {
                         if !networkPicked || row.net != network { switchNetwork(row.net) }
                         // Spend's amount is the card's value in dollars, whatever pays.
@@ -3295,7 +3305,22 @@ struct MoveSentence: View {
                     }
                 }
             }
-            if rows.isEmpty {
+            // **PRIVATE MONEY IS ROWS HERE (prd §1719).** Send's "what" lists
+            // your private tokens under one "Private" header, after the
+            // public ones: picking one is the whole choice ("Send 0.1 ETH
+            // from your private balance to …"). No switch, no network to
+            // pick first; network and token pin down the one place.
+            if verb == .send, !privateWithRows(q).isEmpty {
+                listHeader(String(localized: "Private"))
+                ForEach(privateWithRows(q), id: \.key) { p in
+                    listRow(p.symbol, sub: "\(p.network) · \(p.amount)", trailing: p.usd.map { Self.money($0) },
+                            mark: p.symbol) {
+                        pick {}
+                        p.act()
+                    }
+                }
+            }
+            if rows.isEmpty, verb != .send || privateWithRows(q).isEmpty {
                 Text(verbatim: !heldEverywhere && (!networkPicked || heldBy[network.chainId] == nil) ? String(localized: "Reading…")
                      : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
                      : networkPicked && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
@@ -3304,6 +3329,50 @@ struct MoveSentence: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
+    }
+
+    /// Your private tokens as Send's "what" rows (prd §1719): what your
+    /// private balance holds on Ethereum (Privacy Pools' approved notes, by
+    /// token) and on Aztec, biggest first, filtered as the list is.
+    private func privateWithRows(_ q: String) -> [(key: String, symbol: String, network: String, amount: String, usd: Double?, act: () -> Void)] {
+        var out: [(key: String, symbol: String, network: String, amount: String, usd: Double?, act: () -> Void)] = []
+        if PrivateMove.available {
+            let pools = PrivateMoneyStore.shared
+            // By token and by the network the money is on (the row's own,
+            // never the build's test network).
+            var byToken: [String: (symbol: String, network: String, amount: Decimal, usd: Double?)] = [:]
+            for r in pools.rows where r.kind == .held {
+                let units = (Decimal(string: r.amount) ?? 0) / pow(10, r.decimals)
+                let usd = PrivateMoney.rowUSD(r, prices: pools.shownPrices)
+                let key = "\(r.chainId)|\(r.symbol)"
+                let was = byToken[key]
+                byToken[key] = (r.symbol, PrivateMoney.network(r.chainId), (was?.amount ?? 0) + units,
+                                usd.map { $0 + (was?.usd ?? 0) } ?? was?.usd)
+            }
+            for (key, v) in byToken {
+                let symbol = v.symbol, net = v.network
+                let amount = NSDecimalNumber(decimal: v.amount).doubleValue
+                    .formatted(.number.precision(.significantDigits(1...4)))
+                out.append(("pools|" + key, symbol, net, amount, v.usd, { [self] in
+                    privateMove.symbol = symbol
+                    goPrivate(.send)
+                }))
+            }
+        }
+        if AztecProver.isAvailable, YourAccountKey.address != nil || DemoMode.isActive {
+            let aztec = AztecAccountStore.shared
+            if aztec.isShown {
+                for h in aztec.privateHeld {
+                    out.append(("aztec|" + h.name, h.name, "Aztec", FeedScreen.aztecFigure(h, units: h.privateUnits),
+                                aztec.usd(h, units: h.privateUnits), { [self] in
+                        aztecMove.symbol = h.name
+                        goAztec(.send, recipient: resolved?.address)
+                    }))
+                }
+            }
+        }
+        return out.filter { q.isEmpty || $0.symbol.lowercased().hasPrefix(q) }
+            .sorted { ($0.usd ?? -1) > ($1.usd ?? -1) }
     }
 
     /// What For offers, on the picked network or on each: what you hold
@@ -3387,30 +3456,29 @@ struct MoveSentence: View {
         // The person the line above goes to leads, said so (§1442h).
         let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
         return VStack(alignment: .leading, spacing: 0) {
-            // **THE PRIVATE PLACES, ONE GROUP (prd §1718, amending §1700f
-            // item 12 and §1700g item 2's recipient names).** "Private" said
-            // once as the header; each row is a PLACE — Privacy Pools, Aztec
-            // (Railgun with its Holdings) — its line saying what it takes,
-            // the same three words Holdings' Private rows end in. One tap
-            // picks it, never typed. The sentence keeps its nouns: "your
-            // private balance" (Privacy Pools), "your private account on
-            // Aztec" (§1700g).
+            // **YOUR PRIVATE BALANCE, ONE NOUN, TOLD APART BY NETWORK (prd
+            // §1719, amending §1718 item 6 and §1700g item 2).** Two rows
+            // under one "Private" header, both "Your private balance", the
+            // line its network — as two USDC rows are told apart. No
+            // protocol is ever picked: on Ethereum the token decides
+            // (ETH and USDC to Privacy Pools, any other token to Railgun),
+            // named only in the sentence's foot. One tap, never typed.
+            let balanceWord = String(localized: "Your private balance")
+            let privateNet = (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name
             let poolsHere = PrivateMove.available
-                && (q.isEmpty || PrivacyPoolsBridge.sourceName.lowercased().contains(q) || String(localized: "Private").lowercased().contains(q))
+                && (q.isEmpty || balanceWord.lowercased().contains(q) || privateNet.lowercased().contains(q))
             let aztecHere = (YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable
-                && (q.isEmpty || "aztec".contains(q) || String(localized: "Private").lowercased().contains(q))
+                && (q.isEmpty || balanceWord.lowercased().contains(q) || "aztec".contains(q))
             if poolsHere || aztecHere {
                 listHeader(String(localized: "Private"))
             }
             if poolsHere {
-                listRow(PrivacyPoolsBridge.sourceName,
-                        sub: String(localized: "ETH or USDC on \((PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name)"),
-                        symbol: "eye.slash") {
+                listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {
                     goPrivate(.deposit)
                 }
             }
             if aztecHere {
-                listRow("Aztec", sub: String(localized: "USDC or ETH"), symbol: "eye.slash") {
+                listRow(balanceWord, sub: "Aztec", symbol: "eye.slash") {
                     goAztec(.deposit)
                 }
             }
@@ -3463,6 +3531,32 @@ struct MoveSentence: View {
                         // A pick ends the arrival (prd §1488).
                         if fresh { fresh = false; arrived = true }
                     }
+                }
+            }
+            // **YOUR PRIVATE BALANCE, WHERE IT LANDS (prd §1719).** The same
+            // two rows as Send › To: on Ethereum a one-time fresh address
+            // whose money moves in by itself (§1560); on Aztec your Aztec
+            // address, the same every time.
+            let receivesPools = PrivateMove.freshAvailable
+            let receivesAztec = AztecProver.isAvailable && AztecAccountStore.shared.shown.address != nil
+            if receivesPools || receivesAztec {
+                listHeader(String(localized: "Private"))
+            }
+            if receivesPools {
+                listRow(String(localized: "Your private balance"),
+                        sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
+                        symbol: "eye.slash", picked: freshReceive) {
+                    pick {}
+                    if fresh { fresh = false; arrived = true }
+                    goFresh()
+                }
+            }
+            if receivesAztec {
+                listRow(String(localized: "Your private balance"), sub: "Aztec", symbol: "eye.slash", picked: aztecReceive) {
+                    pick {}
+                    if fresh { fresh = false; arrived = true }
+                    withAnimation(DS.Motion.standard) { open = nil; aztecReceive = true }
+                    DSHaptic.selection()
                 }
             }
             ForEach(elsewhereNetworks) { n in
@@ -3574,38 +3668,9 @@ struct MoveSentence: View {
                     pick { switchNetwork(n) }
                 }
             }
-            // **WHERE THE MONEY IS, THE PRIVATE PLACES AMONG IT (prd §1700f
-            // item 11; named as places under one "Private" header, §1718).**
-            // No switch: Send's network says where the money is, and your
-            // private places are among those — Privacy Pools (on Ethereum),
-            // Aztec — each row a place, its line its network where that is
-            // not the place itself.
-            if verb == .send {
-                let poolsHere = PrivateMove.available
-                let aztecHere = AztecProver.isAvailable && (YourAccountKey.address != nil || DemoMode.isActive)
-                if poolsHere || aztecHere {
-                    listHeader(String(localized: "Private"))
-                }
-                if poolsHere {
-                    let pools = PrivateMoneyStore.shared
-                    let held = pools.rows.filter { $0.kind == .held }
-                        .compactMap { PrivateMoney.rowUSD($0, prices: pools.shownPrices) }.reduce(0, +)
-                    listRow(PrivacyPoolsBridge.sourceName,
-                            sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
-                            trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {
-                        goPrivate(.send)
-                    }
-                }
-                if aztecHere {
-                    let aztec = AztecAccountStore.shared
-                    let _ = aztec.prices // read, so the row redraws once they land
-                    let held = aztec.isShown ? aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
-                    listRow("Aztec", trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {
-                        goAztec(.send, recipient: resolved?.address)
-                    }
-                    .task { _ = await aztec.walletHolding() } // its prices
-                }
-            }
+            // Real networks only (prd §1719, retiring §1700f item 11's
+            // "Ethereum · Private" and "Aztec · Private" rows): private money
+            // is picked as its tokens, in the token list (`withList`).
         }
     }
 

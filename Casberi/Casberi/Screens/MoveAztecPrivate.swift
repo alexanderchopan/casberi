@@ -295,13 +295,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .accessibilityLabel(Text("Amount, \(figure)"))
             }
             if move.mode == .deposit {
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
+                // "Your private balance", as on Ethereum (prd §1719): in Move
+                // a balance is where money sits; "account" stays where it
+                // has an address and apps (Your account, Receive).
+                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
                                 ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
                 MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
             } else {
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private account on Aztec"),
+                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance on Aztec"),
                                 ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))

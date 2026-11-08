@@ -81,10 +81,12 @@ extension FeedScreen {
                 // row for Privacy Pools, named and marked as a holding's line
                 // ends, saying what it takes; its tap is the Private head's,
                 // Send to your private balance.
+                // One row whatever protocol sits behind it (prd §1719): the
+                // token decides Privacy Pools or Railgun, never the person.
                 if rows.isEmpty, !store.restoring, PrivateMove.available {
-                    walletPlaceRow(PrivacyPoolsBridge.sourceName,
-                                   line: String(localized: "Ethereum · ETH or USDC"),
-                                   mark: PrivacyPoolsBridge.sourceName,
+                    walletPlaceRow(String(localized: "Your private balance"),
+                                   line: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
+                                   mark: nil,
                                    hint: String(localized: "Sends to your private balance")) {
                         walletOpenPrivate(.deposit)
                     }
@@ -100,11 +102,18 @@ extension FeedScreen {
     /// Holdings), one each, and a tap opens Move's sentence to that place.
     /// A place appears only once it exists for you; nothing promises one
     /// you don't have.
-    func walletPlaceRow(_ name: String, line: String, mark: String, hint: String,
+    func walletPlaceRow(_ name: String, line: String, mark: String?, hint: String,
                         act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                BridgeIcon(name: mark, size: DS.Mark.badge, circular: true)
+                // Private's eye where no one mark stands for the place.
+                Group {
+                    if let mark {
+                        BridgeIcon(name: mark, size: DS.Mark.badge, circular: true)
+                    } else {
+                        Image(systemName: "eye.slash").dsGlyph(.body).foregroundStyle(DS.textSecondary)
+                    }
+                }
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {

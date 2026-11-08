@@ -116,10 +116,13 @@ MSCREEN="Casberi/Casberi/Screens/MoveScreen.swift"
 MPRIV="Casberi/Casberi/Screens/MovePrivate.swift"
 HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
-use "$SENT" 'listRow(PrivacyPoolsBridge.sourceName,' "your private balance is no longer a recipient"
-# No Private switch in Send (prd §1700f item 11): sending from your private
-# balance is its network, "Ethereum · Private", in Send's network list.
-use "$SENT" 'trailing: held > 0 ? Self.money(held) : nil, symbol: "eye.slash") {' "sending from your private balance is no longer a network in Send's list (prd §1700f item 11)"
+# Your private balance is a recipient, one noun told apart by network (prd §1719).
+use "$SENT" 'listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {' "your private balance on Ethereum is no longer a recipient"
+use "$SENT" 'listRow(balanceWord, sub: "Aztec", symbol: "eye.slash") {' "your private balance on Aztec is no longer a recipient"
+# No Private switch in Send (prd §1700f item 11), and no private "network"
+# either (prd §1719): private money is rows in Send's token list.
+use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no longer rows in Send's token list (prd §1719)"
+! grep -q 'localized: "Ethereum · Private"' "$SENT" || { echo "✗ a private place is a network in Send's list again (prd §1719)"; exit 1; }
 ! grep -q 'goPrivate(.send) } }))' "$SENT" \
     || { echo "✗ a Private switch came back to Send (prd §1700f item 11)"; exit 1; }
 ! grep -qE 'case (swap|send|receive|buy|sweep), private|case private' "$SENT" || { echo "✗ Private became a verb"; exit 1; }
@@ -228,15 +231,16 @@ echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, 
 FRESHM="Casberi/Casberi/Model/FreshReceive.swift"
 FRESHK="Casberi/Casberi/Model/FreshAddressKey.swift"
 FRESHV="Casberi/Casberi/Screens/MoveFreshReceive.swift"
-use "$SENT" 'MovePrivateSwitch(isOn: Binding(get: { false }, set: { if $0 { goFresh() } }))' "Receive's Private switch is not off on arrival"
-awk '/set: \{ if \$0 \{ goFresh\(\) \} \}/{print prev} {prev=$0}' "$SENT" | grep -q 'if verb == .receive, receipt == nil, elsewhere == nil, !fresh, PrivateMove.freshAvailable {' \
-    || { echo "✗ Receive's Private switch stands somewhere other than your own account's Receive"; exit 1; }
+# No Private switch in Receive (prd §1719): your private balance is a place
+# in Receive's "on" list, and picking it opens the fresh address.
+! grep -q 'MovePrivateSwitch' "$SENT" || { echo "✗ a Private switch came back to Move (prd §1719)"; exit 1; }
+use "$SENT" 'let receivesPools = PrivateMove.freshAvailable' "your private balance is no longer offered where Receive lands"
 use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
-use "$FRESHV" 'Text(verbatim: copied ? String(localized: "Copied") : YourAccount.short(address))' "the fresh address is no longer drawn by its tail"
-use "$FRESHV" 'SignerRequestSheet.code("ethereum:\(address)@\(network.chainId)")' "the code no longer carries the whole address on its network"
+use "$FRESHV" 'MoveWord(copied ? String(localized: "Copied") : YourAccount.short(entry.address) + ".", ink: DS.textPrimary)' "the fresh address is no longer said by its tail"
+use "$FRESHV" 'Button { copy(address) } label: { AddressGroupsGrid(address: address) }' "the fresh address is no longer drawn whole, in groups (prd §1719: no QR)"
 use "$FRESHV" 'Text("New address").dsText(.heading24).foregroundStyle(DS.textSecondary)' "New address is not the foot's grey word"
 use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
-use "$FRESHV" 'MovePrivateSwitch(isOn: Binding(get: { true }, set: { on in if !on { leave() } }))' "the fresh sentence's switch no longer leaves when turned off"
+use "$FRESHV" 'action: { if !moving { leave() } },' "the fresh sentence's \"your private balance\" no longer goes back to the list"
 ! grep -qE 'prefix\([0-9]+\)' "$FRESHV" || { echo "✗ the fresh sentence draws an address's head"; exit 1; }
 use "$FRESHM" 'return try await PrivacyEngine.shared.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
