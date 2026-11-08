@@ -298,12 +298,14 @@ struct CasberiApp: App {
             // menu in `buildMenu(with:)` — the only door, since no
             // `CommandGroup` placement can address it — which hands the
             // shortcut back to this item. Edit → Find is where a Mac user
-            // looks for it, and it opens what the rail's Search tile does:
-            // Search, typing at once (prd §1664, §1714);
-            // Return in the field still hands the words to Find (§215).
+            // looks for it, and it opens Library with its field focused:
+            // Search is Library's field (prd §1715); Return in it still hands
+            // the words to Find (§215).
             CommandGroup(after: .pasteboard) {
                 Button("Find…") {
-                    withAnimation(DS.Motion.standard) { focusedChrome?.roomsTray = true }
+                    guard let chrome = focusedChrome, let scene = focusedScene else { return }
+                    PlaceTab.open(.library, chrome: chrome, route: scene.route)
+                    chrome.librarySearch &+= 1
                 }
                 .keyboardShortcut("f", modifiers: .command)
             }

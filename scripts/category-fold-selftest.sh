@@ -297,21 +297,21 @@ PY4B
 # row with no marks: §975's collision folded the room into a category chip
 # whose venues were empty. The tray's `categories` must gate on
 # `categoryVenues`, so any label that folds without a seat draws no row.
-python3 - "Casberi/Casberi/Shell/RoomsTray.swift" <<'PY4C'
+python3 - "Casberi/Casberi/Shell/LibrarySearch.swift" <<'PY4C'
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r'private var categories: \[String\] \{(.*?)\n    \}', src, re.S)
-assert m, "RoomsTray.categories not found"
+assert m, "LibrarySearch.categories not found"
 body = m.group(1)
 if "categoryVenues" not in body or ".isEmpty" not in body:
-    print("✗ RoomsTray.categories draws a category with no connected seat — gate it on chrome.categoryVenues (prd §977)")
+    print("✗ LibrarySearch.categories draws a category with no connected seat — gate it on chrome.categoryVenues (prd §977)")
     sys.exit(1)
 print("  ✓ the tray draws a category row only while it holds a connected seat")
 # The two GATHERED sections stand without a seat, as the Feed stands them
 # (prd §1347 item 2, §1451; user: "'notes' isn't showing up in my tray … i
 # have it on my feed"): Day from what is ahead, Notes from what you write.
 if "RoomAccounts.dayRoom, HomeScope.notesSection" not in body or "CategoryOrder.rank" not in body:
-    print("✗ RoomsTray.categories no longer lists Day and Notes in the Feed's order — the tray and the Feed disagree (prd §1347, §1451)")
+    print("✗ LibrarySearch.categories no longer lists Day and Notes in the Feed's order — the tray and the Feed disagree (prd §1347, §1451)")
     sys.exit(1)
 print("  ✓ Day and Notes stand in the tray in the Feed's order")
 PY4C

@@ -14,11 +14,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/TraySearch.swift"
-TRAY="Casberi/Casberi/Shell/RoomsTray.swift"
+TRAY="Casberi/Casberi/Shell/LibrarySearch.swift"
 [[ -f "$SRC" ]] || { echo "✗ $SRC not found"; exit 1; }
 
-# The tray uses the rules: it groups through TraySearch, and the search runs
-# after a pause, outside the body.
+# Library's field uses the rules (prd §1715, the tray's search until then): it
+# groups through TraySearch, and the search runs after a pause, outside the body.
 grep -q 'TraySearch.groups(' "$TRAY" \
   || { echo "✗ the tray no longer groups its hits through TraySearch.groups"; exit 1; }
 grep -q 'TraySearch.closest(' "$TRAY" \

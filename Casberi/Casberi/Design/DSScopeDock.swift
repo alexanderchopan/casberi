@@ -56,9 +56,7 @@ struct DSScopeDock<Scope: DSTileScope>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottomLeading) {
-            // The tray's search stands in this slot while the tray is up
-            // (prd §1177), so the bar steps out rather than blur under it.
-            if sizeClass == .compact, sections.count > 2 || onlyVerbs, !chrome.keyboardUp, !chrome.roomsTray {
+            if sizeClass == .compact, sections.count > 2 || onlyVerbs, !chrome.keyboardUp {
                 DSScopeTiles(sections: sections, active: active,
                              attention: attention, strip: true, verbs: verbs, hold: hold, onPick: onPick)
                     .padding(.horizontal, DS.Space.s1)

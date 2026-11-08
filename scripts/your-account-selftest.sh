@@ -319,7 +319,7 @@ FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted �
 # The gates: Move is a tab in every build, with no switch to hide it, and a
 # release build never offers a test network.
 grep -rq 'MoveTab' Casberi/Casberi --include='*.swift' && { echo "✗ a switch hides Move again — a dormant feature in a release build is App Review 2.3.1 (prd §1435)"; exit 1; }
-grep -q 'case feed, wallet, move, library, search' "$TABS" || { echo "✗ Move is not one of the five tabs (prd §1422)"; exit 1; }
+grep -q 'case feed, wallet, library, move' "$TABS" || { echo "✗ Move is not one of the four tabs (prd §1422, §1715)"; exit 1; }
 grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overridden — a build could drop a tab (prd §1435)"; exit 1; }
 # The account's networks are the same in every build, no test network among
 # them, DEBUG included (prd §1441a).

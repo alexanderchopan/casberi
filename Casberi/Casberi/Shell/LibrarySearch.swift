@@ -1,49 +1,28 @@
 import SwiftUI
 import SwiftData
 
-/// The rooms tray (prd §930; the Apple pass §932) — the phone's whole
-/// navigation behind ONE button, the face.
+/// **SEARCH IS LIBRARY'S FIELD (prd §1715; user, 2026-11-07: "honestly i feel
+/// like search is so infrequently used … i do think we can get rid of the
+/// search").** The rooms tray (prd §930–§1714) that held the one search as a
+/// layer under the band is deleted with its tab: this is that search, drawn
+/// as Library's field and the rows under it. Library is "my apps and me",
+/// the place you already go to find an app, so the field that found every
+/// app grew into the one search: typing finds apps, accounts, people,
+/// calendars, notes, holdings and things, grouped by category
+/// (`TraySearch`, prd §1171, §1185); an exact name leads and Return opens
+/// it (§1589); a person, an app or a time becomes a token and makes a page
+/// (§1211); Return with nothing else hands the words to Find (§215). Focused
+/// and empty it offers your recent searches and Try. ⌘F on the Mac opens
+/// Library and focuses it (`ShellChrome.librarySearch`).
 ///
-/// **A floating glass menu since prd §1058** (user: "look how apple does
-/// imessage in app tray … lets go back to glass and do it this way … today
-/// our tray covers the entire width of the app and it looks weird"). It is
-/// Messages' attachment menu: a rounded glass card above the face's corner,
-/// about two thirds of the screen wide, scrolling when the list is longer
-/// than the card. Since §1061 a row is a name and a run of icons (an app's
-/// a rounded square since §1122, in columns under a blurred room):
-/// You's four doors (Home, Notes, Addresses, Settings) lead, then each
-/// category in the person's Dock order (§1050j) — its own disc, its two
-/// most-opened apps, "+N". No grabber and no detents. Since prd §1133 it
-/// holds EVERY way to move: Search (the door to Find; its own capsule beside
-/// the face on the phone since §1176), You is a row
-/// like the others, and every row shows all its apps and accounts, wrapping
-/// under its name (§1133b); the pill that picked them in the title row is
-/// deleted. Glass on the floating layer is the design
-/// law's own place for it; §1014's solid black answered a dense wall of
-/// marks, which the tray no longer draws (§1050l).
-///
-/// **A layer of `RootShell`'s stack, never a sheet (§394):** it sits UNDER
-/// the face so the tap that opened it closes it, and a tap anywhere else
-/// closes it too. It grows out of the face's corner on the dock's spring and
-/// the rows deal in top to bottom. A filled glyph says SELECTED and nothing
-/// else; a category with a broken seat wears the attention colour on its
-/// glyph and says so. **Every pick is `ShellChrome.sourceRequest`**, the hop
-/// every room-to-room door takes.
-///
-/// **SINCE prd §1714 IT IS SEARCH, AND ONLY SEARCH** (user, 2026-11-07:
-/// "i don't use the tray and its probably confusing to somene"). Library
-/// became where you go to an app (§1418) and the Feed's section names open
-/// the category rooms, so the rooms this card drew (the Wallet's card, a row
-/// per category) are deleted. Search raises it with the keyboard up; at rest
-/// it shows Recent, then your recent searches. No swipe raises it and the
-/// rail's face goes to the Feed; Search's button and ⌘F are its doors.
-/// The name stays: it is still the layer under the band.
-struct RoomsTray: View {
-    /// The rail's width where the shell draws one (iPad, Mac), else 0. With a
-    /// rail the face stands at its top, so the card opens beside it from the
-    /// top-left corner (prd §1133f); on the phone it grows out of the face's
-    /// corner at the bottom.
-    var railInset: CGFloat = 0
+/// Every landing is the one the tray made: a room through
+/// `ShellChrome.sourceRequest`, an account page through `route.openAccount`,
+/// a person or a calendar on its page in Library (`SettingsLanding`), a thing
+/// through its deep link.
+struct LibrarySearch: View {
+    /// Whether the search has the page: focused, or holding words or a token.
+    /// Library hides its folders while it does.
+    @Binding var active: Bool
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(FeedFilter.self) private var filter
@@ -52,144 +31,61 @@ struct RoomsTray: View {
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
 
-    /// A row's round icons: the category's own and its apps', one size —
-    /// the touch floor since prd §1094 (users: "the menu buttons are super
-    /// duper small"; they were `DS.Face.row`, 30). Not the face button's 56:
-    /// five discs at 56 are wider than the card, and the face stands
-    /// beside the card, so a disc its size would read as a second one.
+    /// A result's mark: the touch floor since prd §1094.
     static let icon: CGFloat = DS.Face.tray
-    /// The gap between icons: 6, and less on a phone too narrow for the You
-    /// row's six doors at 6 (prd §1123). The category runs take the same gap,
-    /// so their columns stay under the You row's last four.
-    static let iconGap: CGFloat = 6
-    static let youDoorCount = 6
-    static func gap(inner: CGFloat) -> CGFloat {
-        let fit = (inner - CGFloat(youDoorCount) * icon) / CGFloat(youDoorCount - 1)
-        return max(2, min(iconGap, fit))
-    }
-    /// A category's run is a fixed four columns — its disc, two apps, "+N" —
-    /// standing under the You row's last four, so every category's own disc
-    /// sits in ONE column (prd §1122). Right-aligned runs put Markets' disc at
-    /// the far edge and Testnets' in the middle.
-    /// A row's name line: the touch floor tall, its word sitting at the
-    /// bottom, over its icons (prd §1133c).
-    static let nameHeight: CGFloat = DS.Hit.min
-    /// 60 since prd §1094a (user: "create some space between the rows so it
-    /// doesn't look so cramped"): 16pt between a row's 44pt discs and the
-    /// next, and ten rows before the card scrolls on a 17 Pro.
-    static let rowHeight: CGFloat = 60
-    /// The card's corner: Messages' menu, a continuous corner.
-    static let radius: CGFloat = 32
-    /// How much of the screen the card may take: 330 wide since §1123 (320
-    /// since §1094), exactly the You row's six 44pt doors at a 6pt gap inside
-    /// the card's 18pt sides — most of a 375pt phone, where the gap gives a
-    /// point, and four fifths of a 402pt one — and three quarters down before
-    /// it scrolls.
-    static let widthShare: CGFloat = 0.86
-    static let maxWidth: CGFloat = 330
-    static let heightShare: CGFloat = 0.72
-    /// The stagger between one row's arrival and the next.
-    static let dealStep: Double = 0.02
 
-    @State private var contentHeight: CGFloat = 0
-    /// What the tray's search holds (prd §1133e); cleared when it closes.
+    /// What the field holds (prd §1133e); cleared when the search lets go.
     @State private var query = ""
     @FocusState private var searching: Bool
     /// A taken suggestion flies into the field (prd §1208l).
     @Namespace private var tokenSpace
-    /// What the search reads beyond the tray's own names (prd §1171), read
+    /// What the search reads beyond the names it knows (prd §1171), read
     /// when the field is first focused, never in a body (§628): your notes
     /// and the phone's calendars.
     @State private var noteCorpus: [Thing] = []
     @State private var phoneCalendars: [PhoneCalendar] = []
-    @State private var dealt = false
     @State private var bounceTick = 0
-    /// The kinds were read on this open (prd §1589).
-    @State private var kindsThisOpen = false
-    /// A finger is on the scroll (prd §1589's pull to close).
-    @State private var pulling = false
-
-    private var liftMotion: Animation { reduceMotion ? DS.Motion.glide : DS.Motion.folder }
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: corner) {
-                if chrome.roomsTray {
-                    // The catcher: a tap anywhere else closes the menu — a
-                    // real control, so it is a Button. It BLURS the room, as
-                    // Messages' plus menu does (prd §1122, amending §1058's
-                    // clear catcher): the room's box stood out past the card's
-                    // edge and its pink ink bled through the glass.
-                    Button {
-                        close()
-                    } label: {
-                        // A PAGE'S GROUND ON THE PHONE (prd §1207 item 5): the
-                        // tray rises onto solid black, full height, so it reads
-                        // as a page you are on, not a menu over a blurred room;
-                        // beside the rail it keeps the blur.
-                        if railInset == 0 {
-                            Color.black.ignoresSafeArea()
-                        } else {
-                            DSBackdropBlur().ignoresSafeArea()
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    // Escape closes it on a keyboard (prd §1664), as it closes a Mac menu.
-                    .keyboardShortcut(.cancelAction)
-                    // …and a SWIPE anywhere else closes it too (2026-10-03,
-                    // user: "trays get stuck … not easy to swipe down or
-                    // dismiss"). The drag cancelled the Button's tap, so a
-                    // swipe — the gesture every other tray answers — did
-                    // nothing at all. Messages' menu closes on either.
-                    .highPriorityGesture(DragGesture(minimumDistance: 12).onEnded { _ in close() })
-                    .accessibilityLabel(Text("Close"))
-                    .transition(.opacity)
-                    panel(screen: geo.size, top: geo.safeAreaInsets.top)
-                        // Out of the face's corner and back into it (§932).
-                        .transition(reduceMotion
-                            ? .opacity
-                            // On the phone it grows out of Search, the bar's
-                            // trailing tab (prd §1589), not the old face's corner.
-                            : .scale(scale: 0.06, anchor: railInset > 0 ? .topLeading : .bottomTrailing)
-                                .combined(with: .opacity))
-                    // The search's own capsule beside the face (prd §1176):
-                    // out of the face's side as the card comes out of its top.
-                    if railInset == 0 {
-                        // It replaces the band's bar where that bar stood, so
-                        // it neither grows nor fades in: one bar (§1208l).
-                        searchCapsule(screen: geo.size)
-                            .transition(.identity)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            field
+            if active {
+                if query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty {
+                    searchHome
+                } else {
+                    searchResults
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner)
-            // The card AND its search capsule are the modal (prd §1589): on the
-            // panel alone, VoiceOver skipped the field beside it.
-            .accessibilityAddTraits(chrome.roomsTray ? .isModal : [])
-            .accessibilityAction(.escape) { close() }
-            // **SHUT, THE LAYER IS NOT THERE (2026-10-31).** The escape action
-            // makes this full-screen frame an accessibility element even
-            // with nothing in it: from §1589 on it stood over the whole app
-            // for VoiceOver and XCUITest ("found but not hittable" on every
-            // journey and sheet sweep). `allowsHitTesting` lets touches
-            // through; this lets accessibility through.
-            .accessibilityHidden(!chrome.roomsTray)
         }
-        .allowsHitTesting(chrome.roomsTray)
-        .animation(liftMotion, value: chrome.roomsTray)
+        .onChange(of: searching) { _, focused in
+            // Read once a focus (prd §1589): a refocus after the keyboard was
+            // swiped down must not read 2,000 notes again under the keys.
+            if focused, kindsRead == 0 { Task { await readKinds() } }
+            settle()
+        }
+        .onChange(of: query) { _, _ in settle() }
+        .onChange(of: tokens) { _, _ in settle(); Task { await runSearch(pause: false) } }
+        .onChange(of: active) { _, on in
+            if !on { letGo() }
+        }
+        // ⌘F, the Feed's "an app" way in: the field takes the keyboard.
+        .onChange(of: chrome.librarySearch) { _, _ in searching = true }
+        // The search runs once the typing pauses, never in a body (prd
+        // §1185), and again when the kinds it reads have landed.
+        .task(id: query) { await runSearch() }
+        .onChange(of: kindsRead) { _, _ in Task { await runSearch(pause: false) } }
         #if DEBUG
-        // `-openTray YES`: raise the tray at mount, no tap (prd §1008), so a
-        // screenshot of it does not depend on a simulator tap landing.
+        // `-openTray YES` focuses the field at mount (the hook's name kept
+        // for the sweeps that launch with it; RootShell presents Library),
+        // and `-traySearch "<words>"` types into it: a simctl-booted
+        // simulator draws no keyboard to type with.
         .task {
-            guard UserDefaults.standard.bool(forKey: "openTray") else { return }
-            // `-openTrayDelay <s>`: after an `-openRoom` has landed (prd §1589).
+            let words = UserDefaults.standard.string(forKey: "traySearch")
+            guard UserDefaults.standard.bool(forKey: "openTray") || words != nil else { return }
             try? await Task.sleep(for: .seconds(max(1, UserDefaults.standard.double(forKey: "openTrayDelay"))))
-            // Beside the rail too since prd §1664: the rail's Search and ⌘F open it.
-            NSLog("[Casberi] openTray: raised%@", railInset > 0 ? " beside the rail" : "")
-            withAnimation(liftMotion) { chrome.roomsTray = true }
-            // `-traySearch "<words>"` types into the field (prd §1171): a
-            // simctl-booted simulator draws no keyboard to type with.
-            if let words = UserDefaults.standard.string(forKey: "traySearch") {
+            NSLog("[Casberi] openTray: Library's field focused")
+            searching = true
+            if let words {
                 await readKinds()
                 query = words
                 NSLog("[Casberi] traySearch: %@ | %d notes, %d holdings read", words, noteCorpus.count, holdings.count)
@@ -199,145 +95,30 @@ struct RoomsTray: View {
             }
         }
         #endif
-        .onChange(of: chrome.roomsTray) { _, up in
-            // **SEARCH TYPES AT ONCE (prd §1714, retiring §1280 item 2 and
-            // §1664 item 2).** The keyboard stayed down so the tray's rooms
-            // showed; the rooms are deleted, and what is left (Recent, your
-            // recent searches) fits above the keys. Deal the rows in once the
-            // card has landed; under Reduce Motion they are simply there.
-            dealt = up
-            if up { searching = true }
-            if up && !reduceMotion { bounceTick += 1 }
-            if !up {
-                query = ""; searching = false; noteCorpus = []; holdings = []
-                tokens = []; suggestions = []; thingCorpus = []; preview = [:]
-                kindsThisOpen = false
-            }
-        }
-        // Read once an open (prd §1589): a refocus after the keyboard was
-        // swiped down read 2,000 notes again under the rising keys.
-        .onChange(of: searching) { _, focused in
-            if focused, !kindsThisOpen {
-                kindsThisOpen = true
-                Task { await readKinds() }
-            }
-        }
-        // The search runs once the typing pauses, never in a body (prd
-        // §1185), and again when the kinds it reads have landed.
-        .task(id: query) { await runSearch() }
-        .onChange(of: tokens) { _, _ in Task { await runSearch(pause: false) } }
-        .onChange(of: kindsRead) { _, _ in Task { await runSearch(pause: false) } }
     }
 
-    // MARK: - The card
-
-    private func panel(screen: CGSize, top safeTop: CGFloat = 0) -> some View {
-        // The page's width on the phone (prd §1207 item 5): the room's own
-        // column, edge to edge; beside the rail the menu's 330.
-        let width = railInset > 0 ? min(screen.width * Self.widthShare, Self.maxWidth)
-            : screen.width - 2 * DSRoomChassis.inset
-        // Beside the rail the field leads the card, which then stands at its
-        // full height while searching so the field stays above the keyboard
-        // however few results there are (prd §1133e); it hangs from the top,
-        // under the status bar and the demo's pill (§1133f). On the phone the
-        // field is the capsule under the card (§1176), so the card hugs what
-        // it holds and grows up from the capsule as results arrive.
-        let railTopInset = railInset > 0 ? safeTop + DSDemoMark.screenClearance + Self.railTop : 0
-        // Full height on the phone (prd §1207 item 5): everything above the
-        // band, under the status bar; three quarters beside the rail.
-        let full = railInset > 0
-            ? (screen.height - railTopInset) * Self.heightShare
-            : screen.height - safeTop - DSDock.seatClearance - DS.Space.s2
-        let standsFull = railInset > 0 && (searching || !query.isEmpty)
-        let height = (standsFull || railInset == 0) ? full : min(contentHeight, full)
-        // Six to a line across the whole width on the phone, so a full
-        // line reaches the card's far edge instead of stopping short.
-        let gap = railInset > 0 ? Self.gap(inner: width - 2 * DS.Space.s4)
-            : max(Self.iconGap, (width - 2 * DS.Space.s4 - CGFloat(Self.lineSlots) * Self.icon) / CGFloat(Self.lineSlots - 1))
-        // **THREE CARDS, ONE SCROLL (prd §1203 item 6, user: "can they be
-        // detached from each other … like how we have the search bar").**
-        // You (your row, then Recent), the Wallet, and the categories each
-        // stand on their own glass, the way the search capsule floats beside
-        // the face, and the stack scrolls as one menu. A search's results are
-        // one card under the field.
-        return ScrollView {
-            VStack(alignment: .leading, spacing: Self.cardGap) {
-                if railInset > 0 { card { searchField } }
-                // **SEARCH IS FIND (prd §1714): the tray's rooms are
-                // deleted.** Library holds every app by category and opens
-                // yours (§1418), the Feed's section names open the category
-                // rooms, so at rest Search shows what only it can: Recent,
-                // the rooms you went to last, then your recent searches.
-                if query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty {
-                    if hasRecent {
-                        card { recentRow(gap: gap) }
-                    }
-                    if !recentSearches.isEmpty || !tries.isEmpty {
-                        card { searchHome }
-                    }
-                } else {
-                    card { searchResults }
-                }
-            }
-            .background {
-                GeometryReader { g in
-                    Color.clear
-                        .onAppear { contentHeight = g.size.height }
-                        .onChange(of: g.size.height) { _, h in contentHeight = h }
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        // The phone's page always gives under a pull, so a pull down past
-        // the top closes it, as a sheet does (prd §1589).
-        .scrollBounceBehavior(railInset == 0 ? .always : .basedOnSize)
-        .onScrollPhaseChange { _, phase in pulling = phase == .interacting }
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, pulled in
-            // A finger's pull only, never a fling's overshoot, and never the
-            // pull that drops the keyboard while you type.
-            if railInset == 0, pulling, !searching, pulled < -Self.pullToClose, chrome.roomsTray { close() }
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .frame(width: width, height: max(height, 1))
-        // The stack's own corner clips a card scrolled under its edge to the
-        // cards' shape, so nothing square shows past the glass.
-        .clipShape(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
-        // Above the face, in its column: the menu grows out of the button
-        // that raised it, as Messages' grows out of its plus. Beside the
-        // rail's face on the iPad and the Mac (§1133f), clear of the Mac's
-        // window buttons.
-        .padding(.leading, railInset > 0 ? railInset + DS.Space.s2 : DSRoomChassis.inset)
-        .padding(.bottom, railInset > 0 ? 0 : DSDock.seatClearance)
-        .padding(.top, railTopInset)
+    /// The field has the page while it is focused or holds anything.
+    private func settle() {
+        let on = searching || !query.trimmingCharacters(in: .whitespaces).isEmpty || !tokens.isEmpty
+        if active != on { withAnimation(DS.Motion.standard) { active = on } }
     }
 
-    /// How far past the top a pull goes before it closes the tray.
-    static let pullToClose: CGFloat = 90
-
-    /// Whether Recent has anything to show (prd §1136 item 8).
-    private var hasRecent: Bool { !recentItems.isEmpty }
-
-    /// One of the tray's cards: its rows on their own glass, the corner the
-    /// whole card had (prd §1203 item 6).
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { content() }
-            .padding(.vertical, DS.Space.s3)
-            .padding(.horizontal, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsGlass(cornerRadius: Self.radius)
+    /// Letting go: the folders return, and what the search read is dropped
+    /// so the next focus reads it fresh.
+    private func letGo() {
+        query = ""; tokens = []; suggestions = []; results = []; resultsFor = ""
+        noteCorpus = []; holdings = []; thingCorpus = []; preview = [:]
+        kindsRead = 0
     }
 
-    /// The air between two cards: the gap the search capsule keeps from the
-    /// face beside it.
-    static let cardGap: CGFloat = DS.Space.s2
-
-    /// Where the card stands: by the face's corner.
-    private var corner: Alignment { railInset > 0 ? .topLeading : .bottomLeading }
-
-    /// The card's top beside the rail's face: under the Mac's window buttons
-    /// (the rail clears them by `s8`), a step down on the iPad.
-    static var railTop: CGFloat {
-        ProcessInfo.processInfo.isMacCatalystApp ? DS.Space.s8 + DS.Space.s2 : DS.Space.s4
+    /// The field: the glyph, the words and Clear, on the entry well — the
+    /// one box a page draws (prd §708).
+    private var field: some View {
+        searchControl()
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: DS.Hit.min)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.bottom, active ? DS.Space.s2 : 0)
     }
 
     // MARK: - Rows
@@ -451,7 +232,7 @@ struct RoomsTray: View {
                  lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
             Door(word: String(localized: "Settings"), glyph: ScopeTileGlyph.settings,
                  lit: place == .settings || place == .apps,
-                 key: HomeScope.Place.settings.source) { screen(.casberi) },
+                 key: HomeScope.Place.settings.source) { openSettings() },
             // The other pole (prd §1203) closes the row (user, 2026-10-08:
             // "move the wallet to the last position … feed markets notes
             // settings wallet"): the Feed's places in its tiles' order, then
@@ -492,45 +273,6 @@ struct RoomsTray: View {
     /// RECENT (prd §1136 item 8): the apps you went to last, newest first,
     /// one line of six under You. Never a You door — those are one tap
     /// already — only what sits deeper: an app inside a category. Read off
-    /// `ChipMemory`'s visit stamps, the same record that ranks a row's apps.
-    private var recentItems: [FolderItem] {
-        let names = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        var seen = Set<String>()
-        var out: [FolderItem] = []
-        for key in ChipMemory.recent() {
-            // Never the app you are standing in (prd §1589), its own room or
-            // a merged room picked to it.
-            guard !HomeScope.contains(key), key != filter.source,
-                  let host = RoomAccounts.host(ofSource: key),
-                  RoomAccounts.connected(in: host.room, names: names).contains(where: { $0.name == host.seat.name }),
-                  !(host.room == filter.source && chrome.mergedScope[host.room] == RoomAccounts.scopeID(host.seat)),
-                  seen.insert(host.seat.name).inserted else { continue }
-            let seat = host.seat
-            out.append(appItem(seat, id: "recent:" + seat.name, lit: false))
-            if out.count == Self.lineSlots { break }
-        }
-        return out
-    }
-
-    @ViewBuilder
-    private func recentRow(gap: CGFloat) -> some View {
-        let items = recentItems
-        if let first = items.first {
-            wrapped(Folder(items: Array(items.dropFirst()), action: nil), gap: gap) {
-                Text("Recent")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: Self.nameHeight, alignment: .bottomLeading)
-                    .accessibilityAddTraits(.isHeader)
-            } lead: {
-                Button(action: first.act) { itemFace(first) }
-                    .buttonStyle(PressSpring())
-                    .dsTapTarget()
-                    .accessibilityLabel(Text(verbatim: first.name))
-            }
-            .modifier(Dealt(on: dealt, index: 1, reduceMotion: reduceMotion))
-        }
-    }
 
     // MARK: - Search (prd §1133)
 
@@ -551,45 +293,7 @@ struct RoomsTray: View {
     /// above it and the results read down from the card's top, as
     /// Spotlight's do. Beside the rail the face is at the TOP, so there the
     /// field still leads the card (`searchField`).
-    private func searchCapsule(screen: CGSize) -> some View {
-        // The bar reaches the page's far edge with the cards above it (prd
-        // §1207 item 5).
-        let width = screen.width - 2 * DSRoomChassis.inset
-        let typing = chrome.keyboardUp
-        // The room bar's slot (`DSScopeDock`), which fades while the tray
-        // is up, so the search takes the bar's place (prd §1177).
-        let beside = typing ? DSRoomChassis.inset : DSDock.agentSeat(minimized: false)
-        // Typing, the unfolded seat's row, so the card above keeps its gap.
-        let height = typing ? DSDock.agentSize(minimized: false) : DSDock.agentSize(fold: chrome.fold)
-        let bottom = typing ? DSDock.agentBottomInset(minimized: false) : DSDock.agentBottomInset(fold: chrome.fold)
-        // ONE BAR (prd §1208l): until you type it is the band's bar, in the
-        // band's bar's place — the Wallet button's room kept — and it widens as the keyboard
-        // comes, so the field you tapped is the field you type in.
-        let note = typing ? 0 : height + DS.Space.s2
-        return searchControl(caret: true)
-            .padding(.horizontal, DS.Space.s4)
-            .frame(width: max(DSRoomChassis.inset + width - beside - note, 1), height: height)
-            .dsGlass(cornerRadius: height / 2)
-            .padding(.leading, beside)
-            .padding(.bottom, bottom)
-            .animation(liftMotion, value: typing)
-    }
-
-    /// The field beside the rail: the card's first row, on a faint plate.
-    private var searchField: some View {
-        searchControl(caret: false)
-            .padding(.horizontal, DS.Space.s3)
-            .frame(height: Self.searchHeight)
-            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.bottom, DS.Space.s2)
-            .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
-    }
-
-    /// The glyph, the words and Clear — one field in either place. `caret`
-    /// draws a blinking cursor in the phone's idle field (prd §1280): the
-    /// tray rises with the keyboard down so its contents show, and the
-    /// cursor still says a tap types.
-    private func searchControl(caret: Bool) -> some View {
+    private func searchControl() -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body)
@@ -621,11 +325,6 @@ struct RoomsTray: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .onSubmit { submit() }
-                .overlay(alignment: .leading) {
-                    if caret, !searching, query.isEmpty, tokens.isEmpty {
-                        IdleCaret().allowsHitTesting(false)
-                    }
-                }
             if !query.isEmpty || !tokens.isEmpty {
                 Button {
                     query = ""
@@ -1237,9 +936,11 @@ struct RoomsTray: View {
 
     static let pivotGroup = "pivot"
 
+    /// A person or a calendar: its page in Library, where you stand.
     private func landInSettings(_ landing: SettingsLanding) {
+        DSHaptic.selection()
+        close()
         chrome.settingsLanding = landing
-        screen(.casberi)
     }
 
     /// Open a thing's sheet or page.
@@ -1465,13 +1166,6 @@ struct RoomsTray: View {
         }
     }
 
-    private var showsSearchHome: Bool {
-        searching && query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty
-            && (!recentSearches.isEmpty || !tries.isEmpty)
-    }
-
-    /// Return opens the top page when the words make one (prd §1211 item
-    /// 7), else hands them to Find.
     private func submit() {
         // Results still answering older words never take Return (prd §1589).
         guard tokens.isEmpty ? resultsFor == query.trimmingCharacters(in: .whitespaces) : true else {
@@ -1740,86 +1434,6 @@ struct RoomsTray: View {
     /// category, so You's six tiles all fit on one row"). The App Library's
     /// grammar: a name, then its icons in one grid; every line the same six
     /// columns, You's places on one line, a long category simply running on.
-    private func wrapped<Name: View, Lead: View>(_ folder: Folder, gap: CGFloat,
-                                                  @ViewBuilder name: () -> Name,
-                                                  @ViewBuilder lead: () -> Lead) -> some View {
-        var cells: [RunCell] = [.lead]
-        if let action = folder.action { cells.append(.action(action)) }
-        cells += folder.items.map(RunCell.item)
-        let lines = stride(from: 0, to: cells.count, by: Self.lineSlots).map {
-            Array(cells[$0 ..< min($0 + Self.lineSlots, cells.count)])
-        }
-        let leadView = lead()
-        return VStack(alignment: .leading, spacing: 0) {
-            name()
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                HStack(spacing: gap) {
-                    ForEach(line) { cell in runCell(cell, lead: leadView) }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, Self.lineGap / 2)
-            }
-        }
-    }
-
-    /// The space between two lines of icons: 16, the gap §1094a put between
-    /// one row's discs and the next.
-    static let lineGap: CGFloat = rowHeight - icon
-
-    /// One place in a run.
-    private enum RunCell: Identifiable {
-        case lead
-        case action(DSRoomAction)
-        case item(FolderItem)
-        var id: String {
-            switch self {
-            case .lead: "lead"
-            case .action: "action"
-            case .item(let item): "item:" + item.id
-            }
-        }
-    }
-
-    /// A full line under the name holds six: You's row, the width the card
-    /// is sized for.
-    static let lineSlots = youDoorCount
-
-    @ViewBuilder
-    private func runCell<Lead: View>(_ cell: RunCell, lead: Lead) -> some View {
-        switch cell {
-        case .lead:
-            lead
-        case .action(let action):
-            Button {
-                DSHaptic.selection()
-                action.run()
-            } label: {
-                roundIcon(action.symbol, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
-            }
-            .buttonStyle(PressSpring())
-            .dsTapTarget()
-            .accessibilityLabel(Text(action.title))
-        case .item(let item):
-            Button(action: item.act) {
-                itemFace(item)
-            }
-            .buttonStyle(PressSpring())
-            .dsTapTarget()
-            .accessibilityLabel(Text(verbatim: item.name))
-            .accessibilityValue(item.address == nil ? Text("") : Text("Account"))
-            .accessibilityAddTraits(item.lit ? .isSelected : [])
-            .contextMenu {
-                if let settings = item.settings {
-                    AppMenu(open: item.act, settings: settings)
-                } else if let address = item.address {
-                    accountMenu(item, address: address)
-                }
-            }
-        }
-    }
-
-    /// An item's icon: an app a rounded square, an address or a place a
-    /// circle (§1122), the one showing ringed in pink.
     @ViewBuilder
     private func itemFace(_ item: FolderItem) -> some View {
         switch item.face {
@@ -1845,22 +1459,6 @@ struct RoomsTray: View {
     }
 
     /// An account's hold (prd §1589): show it, copy its address, send to it.
-    @ViewBuilder
-    private func accountMenu(_ item: FolderItem, address: String) -> some View {
-        Button { item.act() } label: { Label(String(localized: "Show in Wallet"), systemImage: "wallet.bifold") }
-        Button {
-            DSPasteboard.copy(address)
-            chrome.flash(String(localized: "Address copied"), tone: .success)
-        } label: { Label(String(localized: "Copy address"), systemImage: "doc.on.doc") }
-        if YourAccountDemo.shownAddress.map({ !WalletWatch.sameAddress($0, address) }) ?? false {
-            Button {
-                close()
-                chrome.moveDraft = MoveSentence.sendDraft(to: address)
-                chrome.moveTray = true
-            } label: { Label(String(localized: "Send to \(item.name)"), systemImage: "paperplane") }
-        }
-    }
-
     // MARK: - Pieces
 
     /// The round icon: a glyph on a plain disc, and the standing place's
@@ -1880,20 +1478,6 @@ struct RoomsTray: View {
 
     /// One mark's arrival in the cascade: fades and grows in, one step after
     /// the mark before it. Under Reduce Motion it is simply there.
-    private struct Dealt: ViewModifier {
-        let on: Bool
-        let index: Int
-        let reduceMotion: Bool
-        func body(content: Content) -> some View {
-            content
-                .opacity(on || reduceMotion ? 1 : 0)
-                .scaleEffect(on || reduceMotion ? 1 : 0.6)
-                .animation(reduceMotion ? nil
-                           : DS.Motion.standard.delay(Double(index) * RoomsTray.dealStep),
-                           value: on)
-        }
-    }
-
     // MARK: - Acts
 
     /// Land in a room. A category label resolves through `CategoryFold.landing`
@@ -1906,11 +1490,12 @@ struct RoomsTray: View {
         chrome.sourceRequest = target
     }
 
-    /// Open a screen of its own — Apps, Addresses or Settings (§933, §1111).
-    private func screen(_ door: HomeRoute.Node) {
+    /// Casberi's own settings: the folder, as its tile opens it (§1111,
+    /// §1405), through the pick Library answers.
+    private func openSettings() {
         DSHaptic.selection()
         close()
-        route.present(door)
+        chrome.settingsPick = .casberi
     }
 
     /// Open an app's account page over where you stand (prd §1159), the way
@@ -1935,8 +1520,11 @@ struct RoomsTray: View {
         pick(category)
     }
 
+    /// A landing lets the field go: the keyboard drops and the folders
+    /// return under whatever rose.
     private func close() {
-        withAnimation(liftMotion) { chrome.roomsTray = false }
+        searching = false
+        withAnimation(DS.Motion.standard) { active = false }
     }
 }
 
@@ -1976,25 +1564,5 @@ private struct TokenFlight: ViewModifier {
             // The strip's own change animates it as a fade.
             content
         }
-    }
-}
-
-/// The cursor drawn in the tray's idle field on the phone (prd §1280): the
-/// system's tint, its width and height, blinking at the system's pace. It is
-/// a picture of a cursor, not focus: the keyboard stays down until a tap.
-/// Under Reduce Motion it stands still.
-private struct IdleCaret: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.53)) { context in
-            let on = reduceMotion
-                || Int(context.date.timeIntervalSinceReferenceDate / 0.53) % 2 == 0
-            RoundedRectangle(cornerRadius: 1)
-                .fill(DS.pickInk)
-                .frame(width: 2, height: 22)
-                .opacity(on ? 1 : 0)
-        }
-        .accessibilityHidden(true)
     }
 }

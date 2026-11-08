@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// Where the shell draws a rail (`MainSurface.showsRail`: the Mac and a
 /// regular iPad) it lists what the phone's bar lists (`PlaceTabBar`, prd
-/// §1327, §1343, §1347): Feed · Wallet · Library, and Search. The rail of
+/// §1327, §1343, §1347): Feed · Wallet · Library, and Move. The rail of
 /// nine categories it replaces (§273) was the phone's dock turned 90°, and
 /// the phone no longer has that dock: Day is a Feed section, every other
 /// category is a section of the Feed's one scroll, and the places you
@@ -24,7 +24,6 @@ struct PlaceRail: View {
     @Environment(ShellChrome.self) private var chrome
     let current: PlaceTab?
     let open: (PlaceTab) -> Void
-    let search: () -> Void
     /// Each tile's presses, for the glyph's bounce — the bar's (`PlaceTabBar`).
     @State private var taps: [PlaceTab: Int] = [:]
 
@@ -37,10 +36,9 @@ struct PlaceRail: View {
             tile(.library)
             tile(.feed)
             tile(.wallet)
+            // Move stands apart at the end, as the phone's circle does
+            // beside its three places (prd §1715).
             tile(.move)
-            // Search stands apart at the end, as the phone's circle does
-            // beside its four tabs (prd §1640).
-            searchTile
                 .padding(.top, DS.Space.s3)
             Spacer(minLength: 0)
             demoFoot
@@ -118,33 +116,6 @@ struct PlaceRail: View {
             .opacity(chrome.demoLeaving ? 0 : 1)
             .animation(DS.Motion.standard, value: chrome.demoLeaving)
         }
-    }
-
-    private var searchTile: some View {
-        Button {
-            taps[.search, default: 0] &+= 1
-            DSHaptic.tap()
-            search()
-        } label: {
-            VStack(spacing: 2) {
-                Image(systemName: "magnifyingglass")
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(DS.textPrimary)
-                    .symbolEffect(.bounce, value: taps[.search] ?? 0)
-                    .frame(height: 26)
-                Text("Search")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-            }
-            .frame(width: Self.tileWidth, height: Self.tileHeight)
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .dsTooltip(String(localized: "Search") + "  ⌘F")
-        .accessibilityLabel(Text("Search"))
-        .accessibilityHint(Text("Find anything, or make a page of it"))
     }
 
     @ViewBuilder

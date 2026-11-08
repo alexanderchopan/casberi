@@ -357,17 +357,14 @@ grep -q 'chrome.goToFeed()' "$TMP/root.nc" \
   || { echo "✗ the phone's face no longer goes to the Feed (prd §1280)."; fail=1; }
 SHELLCHROME="$ROOT/Casberi/Casberi/Shell/ShellChrome.swift"
 awk '/func goToFeed\(\)/{f=1} f{print} f&&/^    }/{exit}' "$SHELLCHROME" > "$TMP/gofeed.nc"
-grep -q 'roomsTray = false' "$TMP/gofeed.nc" \
-  || { echo "✗ goToFeed no longer closes the tray — the face over the tray must close it (prd §1280)."; fail=1; }
 grep -q 'feedTop += 1' "$TMP/gofeed.nc" \
   || { echo "✗ goToFeed no longer returns the Feed to its top — pressed on the Feed the face"; \
        echo "  would do nothing, §83's dead control (prd §1280)."; fail=1; }
 grep -q 'sourceRequest = "All"' "$TMP/gofeed.nc" \
   || { echo "✗ goToFeed no longer lands on the Feed (prd §1280)."; fail=1; }
-# The rail's face goes to the Feed too since prd §1714 (the tray is Search,
-# the rail's own tile): the two faces are one door and behave identically.
+# The rail's face goes to the Feed too since prd §1714 (the tray it opened
+# is deleted, §1715): the two faces are one door and behave identically.
 grep -q 'chrome.goToFeed()' "$TMP/main.nc" \
-  && ! grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
   || { echo "✗ the rail's face no longer goes to the Feed as the phone's does (prd §1714)."; fail=1; }
 # THE APPS SCREEN IS DELETED (prd §1234): Sources' Apps is the one catalogue,
 # and every door that asked for the catalogue lands there. Its switcher,
@@ -389,14 +386,16 @@ grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRou
   || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1111)."; fail=1; }
 ! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ a second Settings node is back — Settings is .casberi (prd §1111)."; fail=1; }
-strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
-# Since prd §1136 the You row is Home · Markets · Notes · Sources: Apps and
-# Addresses are filters inside Sources, which keeps Casberi's own settings as
-# its pinned first row. The door to Sources is `.casberi`'s place.
-grep -q 'screen(.casberi)' "$TMP/tray.nc" \
-  || { echo "✗ the tray's You row lost its Sources door (prd §1136)."; fail=1; }
-grep -q 'screen(.apps)' "$TMP/tray.nc" && grep -q 'screen(.addresses)' "$TMP/tray.nc" \
-  && { echo "✗ the tray's You row has Apps and Addresses doors again — they are filters in Sources (prd §1136)."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/LibrarySearch.swift" > "$TMP/tray.nc"
+# The rooms tray is deleted (prd §1715): its search is Library's field, and
+# the Settings it finds opens Casberi's folder through the pick Library
+# answers (§1405), never a second screen.
+[ ! -f "Casberi/Casberi/Shell/RoomsTray.swift" ] \
+  || { echo "✗ the rooms tray is back — Search is Library's field (prd §1715)."; fail=1; }
+grep -q 'chrome.settingsPick = .casberi' "$TMP/tray.nc" \
+  || { echo "✗ the search's Settings hit no longer opens Casberi's folder (prd §1715)."; fail=1; }
+grep -q 'route.present(' "$TMP/tray.nc" \
+  && { echo "✗ the search presents a screen of its own — it stands in Library (prd §1715)."; fail=1; }
 # The Addresses screen is deleted (prd §1323): the directory is Sources ›
 # Contacts, so a door or a case naming it is a screen nothing should reach.
 grep -qE '^[[:space:]]*case addresses[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
@@ -865,7 +864,7 @@ grep -q 'swipeTable' "$TMP/tokens.nc" \
 # §1033 put a sliders disc beside each room's name; once rooms merged, the disc
 # no longer named one app, and the user ruled one door: a connected row in
 # Apps opens that app's account page. A hold on a tray mark stays deleted.
-strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
+strip_comments "Casberi/Casberi/Shell/LibrarySearch.swift" > "$TMP/tray.nc"
 strip_comments "Casberi/Casberi/Screens/SettingsHome.swift" > "$TMP/apps.nc"
 [ ! -f "Casberi/Casberi/Shell/RoomAccountDoor.swift" ] \
   && ! grep -q 'RoomAccountDoor' Casberi/Casberi/Screens/FeedScreen*.swift \

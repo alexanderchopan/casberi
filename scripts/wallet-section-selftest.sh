@@ -396,21 +396,12 @@ grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: Watch a wallet is not handed to the Accounts pill, or no longer raises the Watch tray (prd §1107, §1090)"
 [[ "$chrome_fn" != *"verbs:"* ]] \
   || fail "drift: the wallet hands the chrome verb tiles again — Watch is the Accounts list's first row (prd §1107)"
-# Since prd §1133 the pill is deleted and the act leads the room's run in
-# the rooms tray (its folder until §1133b): drawn before every account, and the Wallet's raised from any
-# room through `walletFollowPending`, which the Wallet room answers. The
-# Wallet's row lost its + (prd §1423: no other row draws one); a typed
-# address's "Follow this account" is the tray's way in now.
-tray_bare=$(sed -e 's://.*$::' Casberi/Casberi/Shell/RoomsTray.swift)
-act_at=$(print -r -- "$tray_bare" | grep -n "if let action = folder.action { cells.append(.action(action)) }" | head -1 | cut -d: -f1 || true)
-rows_at=$(print -r -- "$tray_bare" | grep -n "cells += folder.items.map(RunCell.item)" | head -1 | cut -d: -f1 || true)
-[[ -n "$act_at" && -n "$rows_at" ]] && (( act_at < rows_at )) \
-  || fail "drift: the folder no longer leads with its act — Follow sinks under a long list (prd §1107, §1133)"
-grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/RoomsTray.swift \
+# Since prd §1133 the Wallet's Follow is raised from any room through
+# `walletFollowPending`, which the Wallet room answers; a typed address in
+# Library's field (prd §1715, the tray's search until then) is the way in.
+grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/LibrarySearch.swift \
   && grep -q "chrome.walletFollowPending = false" Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
-  || fail "drift: the tray's Follow this account no longer reaches the Wallet room (prd §1133, §1423)"
-grep -q "rail.action.map" Casberi/Casberi/Shell/RoomsTray.swift \
-  || fail "drift: the folder drops a standing room's act — New account is unreachable (prd §1107, §1133)"
+  || fail "drift: the search's Follow this account no longer reaches the Wallet room (prd §1133, §1423, §1715)"
 
 # ── §757: the rows stand on nothing, and Home reserves no box ────────────────
 # **THE PLATES** (user, 2026-09-15: "they should not have cards"). Actions and

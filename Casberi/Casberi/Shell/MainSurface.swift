@@ -788,12 +788,11 @@ struct MainSurface: View {
     private var railInset: some View {
         if showsRail {
             // THE RAIL IS THE TAB BAR (prd §1402): the three places and
-            // Search, your face at its head as Library's tile; the category
-            // strip turned 90° (§273) went with the phone's dock. Search
-            // opens the rooms tray beside the rail, as the phone's does (§1664).
+            // Move, your face at its head as Library's tile; the category
+            // strip turned 90° (§273) went with the phone's dock. Search is
+            // Library's field (prd §1715), which ⌘F focuses.
             PlaceRail(current: PlaceTab.current(filter.source),
-                      open: { PlaceTab.open($0, chrome: chrome, route: route) },
-                      search: { PlaceTab.open(.search, chrome: chrome, route: route) })
+                      open: { PlaceTab.open($0, chrome: chrome, route: route) })
                 // Clearance for the traffic lights (2026-08-17). With the
                 // title bar collapsed (`RootShell.applyMacWindowChrome`) the
                 // content runs to the top edge, and the window buttons float
@@ -1623,7 +1622,6 @@ struct MainSurface: View {
                     // the rail's own Search tile and ⌘F.
                     onAccounts: {
                         withAnimation(DS.Motion.standard) {
-                            chrome.roomsTray = false
                             chrome.goToFeed()
                         }
                     },

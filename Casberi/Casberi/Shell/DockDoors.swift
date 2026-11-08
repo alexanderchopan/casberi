@@ -43,7 +43,7 @@ struct DockDoors: View {
                    doorUnion: union,
                    size: markSize,
                    onBack: onBack,
-                   lit: chrome.roomsTray && onBack == nil,
+                   lit: false,
                    name: String(localized: "Feed"))
             // The capture flight lands on THIS seat since prd §930 — the
             // door to Home, now that the "All" chip that used to publish the

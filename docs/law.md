@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1876 of 1948 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1877 of 1949 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1549,7 +1549,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1173 — The demo has three calendars
 - §1174 — A chart's windows are tiles, and the hour is one of them
 - §1175 — Pin is deleted
-- §1176 — The tray's search is its own capsule beside the face (amended by §1177)
+- §1176 — The tray's search is its own capsule beside the face (amended by §1177; part superseded by §1715)
 - §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot
 - §1178 — A thing sheet's acts are the rooms' tiles
 - §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest
@@ -1803,7 +1803,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565; part superseded by §1688)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493, §1628)
-- §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
+- §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,… (amended by §1715)
 - §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's doll…
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…
 - §1425 — The Move page has one Add: Send's, which batches; money coming in is Receive (amends §1422's and the 2026-10-18 canva…
@@ -2021,7 +2021,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1637 — A Telegram channel post's sheet: the channel's real @handle, "Forwarded from" over a forward's words, its views as th…
 - §1638 — The mark is one octopus arm curled into a lowercase c, leaning −9°; the octopus becomes the website's illustration; t… (amended by §1639, §1708)
 - §1639 — The app icon is the black tile in every appearance: the default (light) icon is the dark art, byte for byte
-- §1640 — Day is the week: the Feed's Day section draws this week with its faces over the next thing; Search stands apart from…
+- §1640 — Day is the week: the Feed's Day section draws this week with its faces over the next thing; Search stands apart from… (amended by §1715)
 - §1641 — A chat with people says its last message in the Feed, never "Chat with <name>" (applies §1615's last line to the Feed…
 - §1642 — A chat with people stands in the Feed as its last message in one bubble, on the rows' text edge (amends §749's bare r… (amended by §1660)
 - §1643 — A public Telegram group wears its own photo; a private one keeps its initial until its photo can sync (amends §707's… (amended by §1660)
@@ -2045,7 +2045,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1661 — A Feed row stands in 16pt of air, the Wallet's keeps 8
 - §1662 — Spending's pace: last month whole is the bar to beat, drawn behind this month's line and said in one line, with no bu…
 - §1663 — SimpleFIN is back: your banks and cards through a SimpleFIN Bridge subscription the person pays for, each bank wearin…
-- §1664 — On the Mac, Search opens the rooms tray, as the phone's does
+- §1664 — On the Mac, Search opens the rooms tray, as the phone's does (part superseded by §1715)
 - §1665 — A word typed on Base also searches CoinGecko's Base list; what it adds finds, never marks
 - §1666 — Spend pays with anything: ETH or USDC on Base or Ethereum, turned into USDC on Base first
 - §1667 — A savings goal on your private balance: one number and maybe a day, kept on this phone, under Private in Holdings (us… (amended by §1700f)
@@ -2121,7 +2121,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1711 — Every share card's foot wears the app icon, not the arm
 - §1712 — The Wallet's rain names its private places: Railgun, Privacy Pools and your Aztec account fall because the pull asks…
 - §1713 — Railgun is the private balance for any other token on Ethereum: ETH and USDC stay on Privacy Pools, everything else s…
-- §1714 — The rooms tray is deleted: Search is Find, showing Recent and your recent searches with the keyboard up; no swipe rai…
+- §1714 — The rooms tray is deleted: Search is Find, showing Recent and your recent searches with the keyboard up; no swipe rai… (amended by §1715)
+- §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field
 
 ## Dead rulings → what replaced them (generated)
 

@@ -34,9 +34,9 @@ struct SettingsHome: View {
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
     @State private var casberiOpen = false
-    /// What Library's field filters (prd §1245).
-    @State private var query = ""
-    @FocusState private var searchFocused: Bool
+    /// Library's field is the one search (prd §1715): while it has the page
+    /// (focused, or holding words) the folders step aside for its rows.
+    @State private var searching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The Track tray of an app that needs only a name (prd §1119), raised
     /// by a door that named it (prd §1234; the Apps screen's until then).
@@ -85,27 +85,17 @@ struct SettingsHome: View {
             // The places' row is gone (prd §1327 item 1): they are tabs.
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    // SOURCES FINDS ITS APPS (prd §1245, user: "there is no
-                    // fab, notes, or search bar, so you can't search for
-                    // apps"): risen as a sheet it covers the band's bar, so
-                    // the Apps list keeps a field of its own. On the phone
-                    // Library is a page under the band (prd §1321), whose
-                    // search finds every app: the field stays only for a
-                    // name a search landed on.
-                    if !casberiOpen, !Self.bandSearches || !query.isEmpty {
-                        DSSlabField(placeholder: String(localized: "Search"),
-                                    text: $query, actionLabel: "",
-                                    focus: $searchFocused,
-                                    glyph: "magnifyingglass", clearable: true,
-                                    size: .slab, submitLabel: .search, action: {})
+                    // **SEARCH IS LIBRARY'S FIELD (prd §1715, retiring the
+                    // Search tab and the tray it raised).** The field that
+                    // found every app (§1245) is the one search: typing finds
+                    // apps, accounts, people, notes and things, grouped by
+                    // category, and the folders step aside for its rows.
+                    if !casberiOpen {
+                        LibrarySearch(active: $searching)
                     }
                     // THE LIBRARY (prd §1316): every category a folder,
-                    // Casberi's own settings the first slot. The field
-                    // focused or holding words lists every app A–Z instead,
-                    // as the App Library's does.
-                    if appsSearching {
-                        appsList
-                    } else {
+                    // Casberi's own settings the first slot.
+                    if !searching {
                         SourcesLibrary(folders: libraryFolders, has: isYours,
                                        open: { category in
                                            withAnimation(DS.Motion.folder) { openFolder = category }
@@ -119,7 +109,6 @@ struct SettingsHome: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-            if !casberiOpen, appsSearching { appsByLetter }
             // Room for the floating bar, as every room leaves it.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
@@ -136,17 +125,6 @@ struct SettingsHome: View {
                 try? await Task.sleep(for: .milliseconds(550))
                 withAnimation(DS.Motion.folder) { openFolder = category }
                 landCategory = nil
-            }
-        }
-        // The A–Z strip (prd §1153): the apps' index on the trailing edge,
-        // a letter tapped or slid to jumps the list to its header.
-        .overlay(alignment: .bottomTrailing) {
-            if !casberiOpen, appsSearching, query.isEmpty {
-                LetterIndex(letters: appLetters.map(\.letter)) { letter in
-                    proxy.scrollTo(Self.appLetterID(letter), anchor: .top)
-                }
-                .padding(.trailing, 2)
-                .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
             }
         }
         // Casberi's folder springs open on its settings, each a tile like an
@@ -238,7 +216,7 @@ struct SettingsHome: View {
             route.openConnect = false
             withAnimation(DS.Motion.standard) {
                 casberiOpen = false
-                query = ""
+                searching = false
             }
             landCategory = category
         }
@@ -276,11 +254,6 @@ struct SettingsHome: View {
     }
 
     // MARK: - Acts
-
-    /// The landed name, over the kind you're on.
-    private func hit(_ name: String) -> Bool {
-        query.isEmpty || name.localizedCaseInsensitiveContains(query)
-    }
 
     @ViewBuilder
     private func trackTray(_ pick: TrackPick) -> some View {
@@ -347,23 +320,10 @@ struct SettingsHome: View {
 
     // MARK: - Apps
 
-    /// APPS, THE FIRST LANDING (prd §1166, user: "it shouldn't just be
-    /// start here, it should be all the apps"): every app, yours and the
-    /// ones you could add, as the library's folders (§1316) or, searching,
-    /// A–Z. This draws only the search's empty answer; the letters follow
-    /// as rows of their own.
-    @ViewBuilder
-    private var appsList: some View {
-        if appCategories.isEmpty {
-            DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
-                         scale: .list(rows: 3))
-        }
-    }
-
     /// Every app the search admits, under its category: categories A–Z,
     /// Other last; apps A–Z.
     private var appCategories: [(category: String, apps: [BridgeCatalog.Offer])] {
-        let offers = BridgeCatalog.offers.filter { Self.inLibrary($0) && hit($0.name) }
+        let offers = BridgeCatalog.offers.filter { Self.inLibrary($0) }
         let other = String(localized: "Other")
         let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
         // THE FEED'S ORDER (prd §1347): Library's folders and the Feed's
@@ -397,10 +357,6 @@ struct SettingsHome: View {
     private var libraryFolders: [SourcesLibrary.Folder] {
         SourcesLibrary.folders(appCategories, has: isYours)
     }
-
-    /// The field focused or holding words: every app A–Z, as the App
-    /// Library's search lists them (prd §1316).
-    private var appsSearching: Bool { searchFocused || !query.isEmpty }
 
     /// An app in an open folder, as its row opens it: yours goes, the rest
     /// their way in.
@@ -456,59 +412,12 @@ struct SettingsHome: View {
         return BridgeRouter.roomSource(forID: app.id) ?? app.name
     }
 
-    // MARK: - A–Z (prd §1253, the search's list since §1316)
-
-    /// Every app the search admits, A–Z under its first letter; anything
-    /// that does not start with a letter files under "#", last.
-    private var appLetters: [(letter: String, names: [String])] {
-        let names = BridgeCatalog.offers
-            .filter { Self.inLibrary($0) && hit($0.name) }
-            .map(\.name)
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-        let groups = Dictionary(grouping: names) { name -> String in
-            let first = name.prefix(1).uppercased()
-            return first.range(of: "^[A-Z]$", options: .regularExpression) != nil ? first : "#"
-        }
-        return groups.keys
-            .sorted { ($0 == "#") != ($1 == "#") ? $1 == "#" : $0 < $1 }
-            .map { ($0, groups[$0] ?? []) }
-    }
-
     /// The built-ins are not apps you add: Markets is automatic (§1167),
     /// and the Wallet seat is the wallets you follow, added by the Wallets
     /// count's plus (user: "wallet should no longer be a tile in the wallet
     /// folder").
     static func inLibrary(_ offer: BridgeCatalog.Offer) -> Bool {
         BridgeCatalog.category(of: offer) != HomeScope.markets && offer.name != "Wallet"
-    }
-
-    static func appLetterID(_ letter: String) -> String { "apps-letter-\(letter)" }
-
-    /// The A–Z list as real rows, so the index can scroll to a letter.
-    @ViewBuilder
-    private var appsByLetter: some View {
-        ForEach(appLetters, id: \.letter) { group in
-            Section {
-                ForEach(group.names, id: \.self) { name in
-                    offerRow(name, card: true)
-                        .listRowInsets(.init(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
-                                             bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            } header: {
-                // The header's own insets, so the letter stands in the rows'
-                // column and not the system's header inset past it.
-                Text(verbatim: group.letter)
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.headInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                         bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
-                    .id(Self.appLetterID(group.letter))
-            }
-            .listSectionSpacing(DS.Space.s2)
-        }
     }
 
     /// One catalogue app by name: yours wears its state and opens its page,

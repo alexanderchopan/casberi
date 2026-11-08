@@ -24,7 +24,7 @@ D = "demo"
 # Sources is the Library tab (prd §1327, §1347); the Feed has no Sources tile.
 SRC = [{"wait": 2}, {"tap": "button:=Library"}]
 APPS = "button:~, Apps"                    # Sources' Apps count: on the Sources page under every sheet it raises
-SEARCH = "button:=Search"                  # the band's Search: takes a touch whenever no sheet covers it
+SEARCH = "button:=Move"                    # the band's Move circle (prd §1715): takes a touch whenever no sheet covers it
 BACK = "button:=Back"
 GRAB = "button:=Sheet Grabber"
 WALLET = [{"tap": "button:=Wallet"}]
@@ -61,7 +61,7 @@ TS = "Screens/ThingSheetView.swift:"
 def section(room, item):
     return [{"tap": f"button:=Add to {room}"}, {"tap": f"button:^{item}"}]
 MARKETS = WALLET+[{"tap": "button:^Markets, What"}]
-PIVOT = [{"wait": 2}, {"tap": SEARCH}, {"focus": "field:?Search"}, {"type": "Telegram"}, {"tap": "button:^Everything from Telegram"}]
+PIVOT = [{"wait": 2}, {"tap": "button:=Library"}, {"focus": "field:?Search"}, {"type": "Telegram"}, {"tap": "button:^Everything from Telegram"}]
 HISTORY = WALLET+[{"tap": "button:^Home, The line"}, {"swipeUp": 5}, {"tap": "button:^See all "}]
 ENTRIES = [
   # ---- Library, a page (prd §1321). Its counts box and the lists and trays it
@@ -99,9 +99,9 @@ ENTRIES = [
        anchor="button:=Done", swipe=False, control="button:=Done", afterControl="button:^Sign in"),
   dict(id="spotify-login", covers=["Screens/SpotifyScreen.swift:showLogin"], launch=[D], steps=APP("Spotify")+[{"tap": "button:^Sign in"}],
        anchor="button:=Done", swipe=False, control="button:=Done", afterControl="button:^Sign in"),
-  # An app picked from the rooms tray rises as the app sheet (prd §1321, `routeIntoFeed`).
-  rises("tray-app", [RS+"chrome.appSheet"], [D, "-openTray", "YES"], [{"tap": "button:=GitHub"}], "button:^Share this week", afterSwipe=SEARCH),
-  dict(id="room-share", covers=["Screens/FeedScreen.swift:roomShare"], launch=[D, "-openTray", "YES"],
+  # An app found in Library's field rises as the app sheet (prd §1321, §1715, `routeIntoFeed`).
+  rises("tray-app", [RS+"chrome.appSheet"], [D, "-openTray", "YES", "-traySearch", "GitHub"], [{"tap": "button:=GitHub"}], "button:^Share this week", afterSwipe=SEARCH),
+  dict(id="room-share", covers=["Screens/FeedScreen.swift:roomShare"], launch=[D, "-openTray", "YES", "-traySearch", "GitHub"],
        steps=[{"tap": "button:=GitHub"}, {"tap": "button:^Share this week"}], anchor="button:=Close"),
   # ---- The Feed ----
   dict(id="feed-thing", covers=[FS+"thing"], launch=[D], steps=WALLET+[{"tap": "button:^Needs you. "}, {"tap": "button:~Needs attention · £200"}],
@@ -124,7 +124,7 @@ ENTRIES = [
   # The Feed's Reorder tile (prd §1345).
   dict(id="feed-reorder", covers=[FS+"feedOrder"], launch=[D], steps=[{"wait": 2}, {"swipeLeftOn": "button:^Day, "}, {"tap": "button:^Reorder,"}], anchor="text:=Feed order"),
   dict(id="person-by-link", covers=[RS+"deepLinkPerson"], launch=[D, "-deeplink", "casberi://person/Bluesky/uma"], steps=[{"wait": 3}], anchor=GRAB, afterSwipe=SEARCH),
-  # Find's pivot page: since prd §1326 a thing's From card no longer opens it; the band's Search does.
+  # Find's pivot page: since prd §1326 a thing's From card no longer opens it; Library's field does (§1715).
   dict(id="pivot", covers=[RS+"chrome.pivot"], launch=[D], steps=PIVOT, anchor=GRAB, afterSwipe=SEARCH),
   # ---- The thing sheet's own steps (prd §1315: they push inside it) ----
   pushed("thing-track", [TS+"faceTarget#track"], [D], OPEN("Spotify · $11.99")+[{"tap": "button:^Track"}], "button:=Track Spotify", "button:^Track",

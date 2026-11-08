@@ -494,11 +494,10 @@ extension FeedScreen {
         DSHaptic.selection()
         switch way {
         case .app:
-            if SettingsHome.bandSearches {
-                withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
-            } else {
-                route.present(.apps)
-            }
+            // Library, its field focused (prd §1715): the one search finds
+            // every app you could add.
+            route.present(.apps)
+            chrome.librarySearch &+= 1
         case .calendar:     route.openSetup(forOffer: "Calendar")
         // A card arrives through its app (§1234): the catalogue, Wallet's
         // apps first (prd §1469, Spending's start box).

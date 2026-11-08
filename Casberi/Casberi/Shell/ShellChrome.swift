@@ -227,7 +227,9 @@ final class ShellChrome {
     /// opened and closed by the face in the dock's seat. A layer of
     /// `RootShell`'s stack (`RoomsTray`), so the seat stays above it and the
     /// same tap that opened it closes it (§705's toggle, one size up).
-    var roomsTray = false
+    /// Search is Library's field (prd §1715): bumped, Library focuses it —
+    /// the Mac's ⌘F, the Feed's "an app" way in.
+    var librarySearch = 0
     /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
     var moveTray = false
     /// Move's sheet is whole (prd §1681): a word's choices or the keys are
@@ -1155,7 +1157,6 @@ final class ShellChrome {
     /// The face on the phone (prd §1280): the Feed from anywhere, the tray
     /// closed if it was up; on the Feed itself, back to its top.
     func goToFeed() {
-        roomsTray = false
         feedTop += 1
         sourceRequest = "All"
     }
@@ -1163,7 +1164,6 @@ final class ShellChrome {
     /// The band's Wallet button (prd §1278): the Wallet on Home, on All, from
     /// any page; on the Wallet itself it returns to Home.
     func openWallet() {
-        roomsTray = false
         Task { @MainActor in MoveWarm.start() }
         walletScope = nil
         walletSection = .home
@@ -1178,7 +1178,6 @@ final class ShellChrome {
     /// its row under Your account (prd §1700f item 2); else the Safe's.
     var yourAccountShowsAztec = false
     func openYourAccount(at anchor: String) {
-        roomsTray = false
         walletScope = nil
         walletSection = .yourAccount
         walletScrollRequest = anchor

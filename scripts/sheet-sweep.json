@@ -398,7 +398,9 @@
    "launch": [
     "demo",
     "-openTray",
-    "YES"
+    "YES",
+    "-traySearch",
+    "GitHub"
    ],
    "steps": [
     {
@@ -406,7 +408,7 @@
     }
    ],
    "anchor": "button:^Share this week",
-   "afterSwipe": "button:=Search"
+   "afterSwipe": "button:=Move"
   },
   {
    "id": "room-share",
@@ -416,7 +418,9 @@
    "launch": [
     "demo",
     "-openTray",
-    "YES"
+    "YES",
+    "-traySearch",
+    "GitHub"
    ],
    "steps": [
     {
@@ -467,7 +471,7 @@
     }
    ],
    "anchor": "text:^From your Telegram archive",
-   "afterSwipe": "button:=Search"
+   "afterSwipe": "button:=Move"
   },
   {
    "id": "share-tray",
@@ -702,7 +706,7 @@
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Search"
+   "afterSwipe": "button:=Move"
   },
   {
    "id": "pivot",
@@ -717,7 +721,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Search"
+     "tap": "button:=Library"
     },
     {
      "focus": "field:?Search"
@@ -730,7 +734,7 @@
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Search"
+   "afterSwipe": "button:=Move"
   },
   {
    "id": "thing-track",
@@ -753,7 +757,7 @@
     }
    ],
    "anchor": "button:=Track Spotify",
-   "afterSwipe": "button:=Search"
+   "afterSwipe": "button:=Move"
   },
   {
    "id": "pivot-thing",
@@ -768,7 +772,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Search"
+     "tap": "button:=Library"
     },
     {
      "focus": "field:?Search"
@@ -784,7 +788,7 @@
     }
    ],
    "anchor": "text:^From your Telegram archive",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^Kettlebell complexes for cyclists, "
   },
@@ -809,7 +813,7 @@
     }
    ],
    "anchor": "button:=@you",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^Replying to you"
   },
@@ -858,7 +862,7 @@
     }
    ],
    "anchor": "button:=@nils",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^@nils, "
   },
@@ -943,7 +947,7 @@
     }
    ],
    "anchor": "link:=Full review on Walletbeat",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "offscreen": true,
    "control": "button:=Back",
    "afterControl": "button:^What Walletbeat says about Trezor"
@@ -972,7 +976,7 @@
     }
    ],
    "anchor": "button:=Follow",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:=@nils"
   },
@@ -1000,7 +1004,7 @@
     }
    ],
    "anchor": "text:=Through",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^Following"
   },
@@ -1031,7 +1035,7 @@
     }
    ],
    "anchor": "text:=From",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^Compilers from scratch"
   },
@@ -1056,7 +1060,7 @@
     }
    ],
    "anchor": "field:?A site's address",
-   "afterSwipe": "button:=Search",
+   "afterSwipe": "button:=Move",
    "control": "button:=Back",
    "afterControl": "button:^Follow, Follow"
   },

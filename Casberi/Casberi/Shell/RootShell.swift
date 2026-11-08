@@ -1048,6 +1048,13 @@ struct RootShell: View {
             // Settings is Casberi's own page again since prd §1111 (the apps
             // are their own door, Apps), so `-accountDetail`, read in
             // `SettingsRows`, stands on the screen this presents.
+            // `-openTray YES` / `-traySearch "<words>"`: Search is Library's
+            // field (prd §1715), so the hooks that raised the tray present
+            // Library; `LibrarySearch` focuses the field and types.
+            if UserDefaults.standard.bool(forKey: "openTray")
+                || UserDefaults.standard.string(forKey: "traySearch") != nil {
+                sceneState.route.present(.casberi)
+            }
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 // The Settings face, not Sources (prd §1208c).
                 chrome.settingsPick = .casberi
@@ -2540,17 +2547,8 @@ struct RootShell: View {
             // What was actually lost with the sheet was DETENTS — dragging UP
             // to full height — not drag-to-dismiss, which is rebuilt in
             // `SourcesOverlay`. Those two got conflated for a moment here.
-            // THE ROOMS TRAY, under the seat (prd §930). A layer of this stack
-            // for §394's reason — a sheet presents in its own context and
-            // would cover the face that closes it — and BEFORE the seat's
-            // cluster, so the face rides above it. Always mounted; it draws
-            // nothing and takes no touch until `chrome.roomsTray`, so its own
-            // `if` can animate the panel in and out. `rootPresented` for
-            // §394a's reason: a layer here sits above the shell's environment
-            // injections and must be handed them.
-            rootPresented(RoomsTray(railInset: padShell.railInset))
-                .environment(sceneState.route)
-                .environment(sceneState.filter)
+            // The rooms tray that stood here (prd §930–§1714) is deleted
+            // with prd §1715: Search is Library's field.
 
             if !composerOpen {
                 // The floating cluster (whisper + bar) renders as one
@@ -2620,8 +2618,7 @@ struct RootShell: View {
                             // (`demoTagOnTitle`, prd §1389), never the band:
                             // the bar unfolds across the width and would meet it.
                             PlaceTabBar(current: PlaceTab.current(sceneState.filter.source),
-                                        open: openPlaceTab,
-                                        search: { withAnimation(DS.Motion.standard) { chrome.roomsTray = true } })
+                                        open: openPlaceTab)
                         }
                     } else if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {

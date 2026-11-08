@@ -163,7 +163,7 @@ struct DemoTagOnTitle: ViewModifier {
         // shrinks to fit the room the pill leaves, as it does for a long name.
         HStack(spacing: DS.Space.s2) {
             content
-            if DSDemoMark.marking, DSDemoMark.inBand, route.path.isEmpty, !chrome.roomsTray {
+            if DSDemoMark.marking, DSDemoMark.inBand, route.path.isEmpty {
                 // The tag stands on the surface the shell already drains
                 // (`MainSurface`'s own `demoLeaving` opacity), so it reads no
                 // drain of its own: the pill's opacity is its entrance alone

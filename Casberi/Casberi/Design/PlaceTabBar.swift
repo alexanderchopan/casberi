@@ -5,26 +5,29 @@ import SwiftUI
 /// accessible and to make sense, so they need to be on the tab bar").**
 /// Feed · Wallet · Library, in that order: the places you manage (prd §1343,
 /// §1347, user: "tabs should be places you actually manage things"); Day and
-/// Notes are Feed sections, and Notes' folders live in Library. Search
-/// stands beside them. Library wears your face,
-/// the octopus until you choose one, and carries the face's broken-app ring.
+/// Notes are Feed sections, and Notes' folders live in Library. Library
+/// wears your face, the octopus until you choose one, and carries the face's
+/// broken-app ring.
 ///
 /// Each tab is the place's own `filter.source`, so the tab you are on is
 /// derived from the one switch the shell already has, and the swipe walks the
 /// same places in the same order (`HomeScope.phoneWalk`).
 ///
-/// **FIVE EQUAL TABS IN ONE BAR (prd §1422, user: "feed wallet actions
-/// library search"; of the label, "ok lets go w/ Move").** Feed · Wallet ·
-/// Move · Library · Search. Search stands apart as a circle since §1640.
-/// Move is your account's page. Search is a tab
-/// with no place: it raises the tray's search on the phone, Find elsewhere,
-/// and it is never in the swipe.
+/// **THREE PLACES AND THE ACT (prd §1715, amends §1422's five and §1640's
+/// Search circle; user, 2026-11-07: "feed wallet and library are all
+/// places. and 'move' the the fab"; "i do think we can get rid of the
+/// search").** Feed · Wallet · Library stand in the capsule and are the swipe;
+/// Move, an act and a tray (§1442), is the circle at the trailing edge where
+/// Search stood. Search is deleted from the bar: it is Library's field
+/// (`LibrarySearch`), and ⌘F focuses that field on the Mac. The order holds
+/// §1640's reading — the Feed first as the place you land, Library last as
+/// the App Library is — and Move beside the Wallet buys nothing, because a
+/// tray raised over wherever you are is not a place anyone walks to.
 ///
 /// **Move is in every build** (prd §1435): no feature is hidden or dormant
-/// in a release (App Review 2.3.1), so the tab that was DEBUG-only while its
-/// account learned to send and recover is simply one of the five.
+/// in a release (App Review 2.3.1).
 enum PlaceTab: String, Identifiable, CaseIterable {
-    case feed, wallet, move, library, search
+    case feed, wallet, library, move
 
     var id: String { rawValue }
 
@@ -32,20 +35,19 @@ enum PlaceTab: String, Identifiable, CaseIterable {
         switch self {
         case .feed:    String(localized: "Feed")
         case .wallet:  String(localized: "Wallet")
-        case .move:    String(localized: "Move")
         case .library: String(localized: "Library")
-        case .search:  String(localized: "Search")
+        case .move:    String(localized: "Move")
         }
     }
 
-    /// The place's `filter.source`; nil for Search, which is no place.
+    /// The place's `filter.source`; nil for Move, which is no place (prd
+    /// §1442: a tray over wherever you are), so the swipe never lands on it.
     @MainActor var source: String? {
         switch self {
         case .feed:    "All"
         case .wallet:  CategoryFold.walletRoom
-        case .move:    HomeScope.Place.move.source
         case .library: HomeScope.Place.settings.source
-        case .search:  nil
+        case .move:    nil
         }
     }
 
@@ -55,9 +57,8 @@ enum PlaceTab: String, Identifiable, CaseIterable {
         switch self {
         case .feed:    ScopeTileGlyph.feed
         case .wallet:  ScopeTileGlyph.wallets
-        case .move:    ScopeTileGlyph.move
         case .library: ScopeTileGlyph.apps
-        case .search:  "magnifyingglass"
+        case .move:    ScopeTileGlyph.move
         }
     }
 
@@ -68,15 +69,7 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for
     /// the phone's bar, the rail (prd §1402) and the ⌘-digits.
     @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
-        // Search is no place: the tray, everywhere (prd §1664), which since
-        // §1714 is Search alone: Recent and your recent searches, the
-        // keyboard up, and Return in its field still hands the words to Find.
-        if tab == .search {
-            withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
-            return
-        }
         withAnimation(DS.Motion.standard) {
-            chrome.roomsTray = false
             switch tab {
             case .feed:
                 chrome.goToFeed()
@@ -84,7 +77,7 @@ enum PlaceTab: String, Identifiable, CaseIterable {
                 chrome.openWallet()
             case .move:
                 // Move is an act, not a place (prd §1442): its tab raises
-                // the tray over wherever you are, as Search raises its own.
+                // the tray over wherever you are.
                 chrome.moveTray = true
             case .library:
                 chrome.settingsPick = .sources
@@ -93,8 +86,6 @@ enum PlaceTab: String, Identifiable, CaseIterable {
                 // asked, the tiles rain and your face turns. The shell runs
                 // it, where the store and the context are.
                 chrome.libraryPull &+= 1
-            case .search:
-                break
             }
         }
     }
@@ -109,23 +100,21 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     }
 }
 
-/// The bar itself: four tabs in one glass capsule and Search a circle beside
-/// it at the trailing edge (prd §1640, amending §1422's one bar of five). Read down, it folds into one circle for the tab you
-/// are on (`ShellChrome.minimized`, the scroll fold the band already had);
-/// that circle, or a scroll back up, unfolds it. While the tray is up the bar
-/// is that one circle too, and it closes the tray: the tray's own field
-/// stands where the bar was.
+/// The bar itself: three places in one glass capsule and Move a circle beside
+/// it at the trailing edge (prd §1715, amending §1640's Search circle). Read
+/// down, it folds into one circle for the tab you are on
+/// (`ShellChrome.minimized`, the scroll fold the band already had); that
+/// circle, or a scroll back up, unfolds it.
 struct PlaceTabBar: View {
     @Environment(ShellChrome.self) private var chrome
     let current: PlaceTab?
     let open: (PlaceTab) -> Void
-    let search: () -> Void
     /// Each tab's presses, for the glyph's bounce (user, 2026-10-19: "they
     /// should" animate when touched). Library's face spins instead, on the
     /// shower its tap deals (`PlaceTab.open`).
     @State private var taps: [PlaceTab: Int] = [:]
 
-    private var folded: Bool { chrome.minimized || chrome.roomsTray }
+    private var folded: Bool { chrome.minimized }
     /// **THE LABELS WIN OVER THE PAGE (user, 2026-10-15: "it is hard to see
     /// the icons and words especially when selected").** The glass takes the
     /// page's own ground as its tint, so a busy row under the bar sinks back
@@ -145,23 +134,23 @@ struct PlaceTabBar: View {
         .animation(DS.Motion.standard, value: folded)
     }
 
-    /// **SEARCH STANDS APART (prd §1640, amends §1422's one bar; user,
-    /// 2026-11-01: "ok we can split it then as long as it collapses", "search
-    /// fro some reason feels more appropriate on the end").** The four tabs
-    /// keep their order in the capsule (Move beside the Wallet it acts on,
-    /// Library at the right as the App Library is) and Search is its own
-    /// circle at the trailing edge, as iOS draws a search tab. Read down,
-    /// both fold into the one circle they always did.
+    /// **THE ACT STANDS APART (prd §1715, amends §1640's Search circle; user,
+    /// 2026-11-01, of the split: "ok we can split it then as long as it
+    /// collapses").** The three places keep their order in the capsule
+    /// (Library at the right as the App Library is) and Move is its own
+    /// circle at the trailing edge, the shape iOS gives a search tab, here
+    /// given to the one control that is an act. Read down, both fold into
+    /// the one circle they always did.
     private var bar: some View {
         HStack(spacing: DS.Space.s2) {
             tabs
-            searchCircle
+            moveCircle
         }
     }
 
     private var tabs: some View {
         HStack(spacing: 0) {
-            ForEach(PlaceTab.allCases.filter { $0 != .search }) { tab in
+            ForEach(PlaceTab.allCases.filter { $0 != .move }) { tab in
                 Button {
                     taps[tab, default: 0] &+= 1
                     DSHaptic.selection()
@@ -197,33 +186,31 @@ struct PlaceTabBar: View {
         .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }
 
-    /// Search's own circle, the bar's height, at the trailing edge.
-    private var searchCircle: some View {
+    /// Move's own circle, the bar's height, at the trailing edge: it raises
+    /// the Move tray over wherever you stand (prd §1442), through the one
+    /// door every tab press takes.
+    private var moveCircle: some View {
         Button {
-            taps[.search, default: 0] &+= 1
+            taps[.move, default: 0] &+= 1
             DSHaptic.tap()
-            search()
+            open(.move)
         } label: {
-            mark(.search, on: false, glyphSize: .body, taps: taps[.search] ?? 0)
+            mark(.move, on: false, glyphSize: .body, taps: taps[.move] ?? 0)
                 .frame(width: size, height: size)
                 .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: PlaceTab.search.label))
-        .accessibilityHint(Text("Find anything, or make a page of it"))
+        .accessibilityLabel(Text(verbatim: PlaceTab.move.label))
+        .accessibilityHint(Text("Swap, send or receive money"))
     }
 
-    /// The tab you are on, alone: a tap unfolds the bar, or closes the tray.
+    /// The tab you are on, alone: a tap unfolds the bar.
     private var foldedCircle: some View {
         let tab = current ?? .feed
         return Button {
             DSHaptic.selection()
-            if chrome.roomsTray {
-                withAnimation(DS.Motion.standard) { chrome.roomsTray = false }
-            } else {
-                chrome.unfold()
-            }
+            chrome.unfold()
         } label: {
             mark(tab, on: true, glyphSize: .body)
                 .frame(width: size, height: size)
@@ -232,7 +219,7 @@ struct PlaceTabBar: View {
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(verbatim: tab.label))
-        .accessibilityHint(chrome.roomsTray ? Text("Closes search") : Text("Shows every place"))
+        .accessibilityHint(Text("Shows every place"))
         .background { if tab == .feed { FeedTabFrame() } }
     }
 
