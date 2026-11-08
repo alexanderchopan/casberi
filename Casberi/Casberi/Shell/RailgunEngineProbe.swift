@@ -17,6 +17,11 @@ import Foundation
 /// - `unshield`  prepare an unshield to the probe's address: an empty wallet
 ///               says so
 /// - `all`       load, open, sync, shield, unshield
+/// - `forget`    delete the kept trees (the engine's store)
+///
+/// The trees are kept on disk (prd §1713 item 9): run `all` twice and the
+/// second sync reads only what landed since. `-railgunEngineMemory YES` keeps
+/// them in memory instead. The random wallet is deleted on `done`.
 enum RailgunEngineProbe {
 
     static let dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
@@ -34,6 +39,7 @@ enum RailgunEngineProbe {
                     if step == "load" || step == "open" { break }
                 }
             }
+            await RailgunEngine.shared.close()
             log("done", 0, "footprint \(footprintMB()) MB peak \(peakMB()) MB")
         }
     }
@@ -49,8 +55,21 @@ enum RailgunEngineProbe {
             log("load", ms(t), "sdk \(info.sdk) engine \(info.engine) snarkjs \(info.snarkjs) wasm=\(info.webAssembly) workers=\(info.workers) cores=\(info.cores) secureContext=\(info.secureContext)")
         case "open":
             let t = Date()
-            let opened = try await engine.open()
-            log("open", ms(t), "random=\(opened.generated) head \(opened.headBlock) fees \(opened.shieldFeeBps ?? "?")/\(opened.unshieldFeeBps ?? "?") bps · address \(opened.address.prefix(12))…")
+            let memory = UserDefaults.standard.bool(forKey: "railgunEngineMemory")
+            // The probe's test wallet is made once and reopened by its id, as
+            // a real one is: its id and encryption key are kept in DEBUG
+            // defaults (it never holds anything). A new wallet each launch
+            // would trial-decrypt every kept leaf (measured: 448 s).
+            let defaults = UserDefaults.standard
+            let keptID = memory ? nil : defaults.string(forKey: "railgunProbe.walletID")
+            let key = (memory ? nil : defaults.string(forKey: "railgunProbe.encryptionKey"))
+                ?? (0..<32).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
+            let opened = try await engine.open(encryptionKey: key, walletID: keptID, persist: !memory)
+            if !memory {
+                defaults.set(opened.walletID, forKey: "railgunProbe.walletID")
+                defaults.set(key, forKey: "railgunProbe.encryptionKey")
+            }
+            log("open", ms(t), "storage \(opened.storage ?? "?") · wallet \(opened.loaded ? "reopened" : "new") · kept leaves \(opened.keptLeaves) · random=\(opened.generated) head \(opened.headBlock) fees \(opened.shieldFeeBps ?? "?")/\(opened.unshieldFeeBps ?? "?") bps · address \(opened.address.prefix(12))…")
         case "sync":
             try await ensureOpen()
             let cap = UserDefaults.standard.integer(forKey: "railgunEngineSyncCap")
@@ -70,6 +89,12 @@ enum RailgunEngineProbe {
             guard let held else { log("unshield", ms(t), "nothing spendable in this wallet (a random one): not prepared"); return }
             let u = try await engine.prepareUnshield(token: held.token, amount: held.spendable, to: probeRecipient)
             log("unshield", ms(t), "type \(u.type) to \(u.tx.to.prefix(10))… gas \(u.gasEstimate) proof \(u.proofMs) ms · fee \(u.fee ?? "?")")
+        case "forget":
+            let t = Date()
+            try await engine.forget()
+            UserDefaults.standard.removeObject(forKey: "railgunProbe.walletID")
+            UserDefaults.standard.removeObject(forKey: "railgunProbe.encryptionKey")
+            log("forget", ms(t), "kept trees deleted")
         default:
             log(step, 0, "unknown step")
         }

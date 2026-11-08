@@ -59,9 +59,14 @@ enum RailgunEngineWire {
         var mnemonic: String? = nil
         /// 32 bytes, hex without 0x: the SDK's wallet encryption key.
         var encryptionKey: String? = nil
+        /// A wallet the store already keeps, opened by its id.
+        var walletID: String? = nil
         /// The account's own node (§1713 item 9).
         let rpcUrl: String
         var creationBlock: Int? = nil
+        /// Trees kept on disk (IndexedDB in the engine's own store), or in
+        /// memory only.
+        var persist = true
     }
 
     struct Sync: Encodable, Equatable {
@@ -101,7 +106,15 @@ enum RailgunEngineWire {
     struct Opened: Decodable, Equatable {
         /// The 0zk address. Casberi never shows it (§1713 item 4).
         let address: String
+        let walletID: String
+        /// Opened from the store, not made now.
+        let loaded: Bool
         let generated: Bool
+        /// `indexeddb` or `memory`.
+        let storage: String?
+        /// Tree 4's leaves already kept when the wallet opened: 0 on a first
+        /// launch.
+        let keptLeaves: Int
         let headBlock: Int
         let shieldFeeBps: String?
         let unshieldFeeBps: String?

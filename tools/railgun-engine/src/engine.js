@@ -20,13 +20,14 @@ globalThis.Buffer ??= Buffer;
 import {
   ArtifactStore, startRailgunEngine, getProver, loadProvider, createRailgunWallet, refreshBalances, awaitWalletScan, getEngine,
   setOnUTXOMerkletreeScanCallback, setOnTXIDMerkletreeScanCallback, setOnBalanceUpdateCallback, setLoggers,
-  getRailgunAddress, walletForID, balanceForERC20Token, populateShield, populateShieldBaseToken,
+  getRailgunAddress, walletForID, loadWalletByID, unloadWalletByID, deleteWalletByID, balanceForERC20Token, populateShield, populateShieldBaseToken,
   gasEstimateForUnprovenUnshield, generateUnshieldProof, populateProvedUnshield,
   gasEstimateForUnprovenUnshieldBaseToken, generateUnshieldBaseTokenProof, populateProvedUnshieldBaseToken,
 } from '@railgun-community/wallet';
 import { NetworkName, NETWORK_CONFIG, TXIDVersion, EVMGasType } from '@railgun-community/shared-models';
 import { RailgunEngine, Merkletree } from '@railgun-community/engine';
 import memdown from 'memdown';
+import leveljs from 'level-js';
 import axios from 'axios';
 import * as snarkjs from 'snarkjs';
 import { Wallet, keccak256, concat, toUtf8Bytes, getAddress, Interface, JsonRpcProvider } from 'ethers';
@@ -55,9 +56,11 @@ const erc20 = new Interface(['function approve(address spender, uint256 amount)'
 
 // ---- State: the engine is started once; a wallet is open or not.
 let started = false;
+let storage = null;
 let providerLoaded = false;
 let fees = null;
 let walletID = null;
+let openedRandom = false;
 let encryptionKey = null;
 let utxo = null;
 let txid = null;
@@ -134,14 +137,19 @@ async function seedTxidTree() {
   return Number(prev.blockNumber);
 }
 
-async function startOnce() {
+// The trees live in IndexedDB, in the engine's own persistent WebKit store
+// (`RailgunEngine`): the first open builds them from the checkpoint, every
+// later one resumes from the last block it read (prd §1713 item 9). A probe
+// can ask for memory instead (`persist: false`), which keeps nothing.
+async function startOnce(persist) {
   if (started) return;
   patchTreesForCheckpoint();
   setLoggers(
     (m) => { if (/invalid|incomplete|merkleroot|error|quick ?sync|fail/i.test(String(m))) say(`sdk ${String(m).slice(0, 300)}`); },
     (e) => say(`sdkError ${String(e?.message ?? e).slice(0, 300)}`),
   );
-  await startRailgunEngine('casberi', memdown(), false, store, false, false, POI_NODES);
+  await startRailgunEngine('casberi', persist ? leveljs('casberi-railgun') : memdown(), false, store, false, false, POI_NODES);
+  storage = persist ? 'indexeddb' : 'memory';
   getProver().setSnarkJSGroth16(snarkjs.groth16);
   // A line whenever a tree's status changes or it moves 5%, so a sync that
   // stalls is seen stalling.
@@ -213,20 +221,31 @@ const methods = {
     const t = now();
     if (!p.rpcUrl) throw new Error('rpcUrl required');
     rpcUrl = p.rpcUrl;
-    await startOnce();
+    await startOnce(p.persist !== false);
     if (!providerLoaded) {
       const r = await loadProvider({ chainId: CHAIN.id, providers: [{ provider: rpcUrl, priority: 1, weight: 2, maxLogsPerBatch: 10, stallTimeout: 4000 }] }, NETWORK, 15000);
       fees = { shieldFeeBps: r.feesSerialized?.shieldFeeV2 ?? null, unshieldFeeBps: r.feesSerialized?.unshieldFeeV2 ?? null };
       await seedTxidTree();
       providerLoaded = true;
     }
-    const generated = !p.mnemonic;
+    // A probe's wallet: random, unless the store already keeps it by id.
+    const generated = !p.mnemonic && !p.walletID;
     const mnemonic = p.mnemonic ?? Wallet.createRandom().mnemonic.phrase;
     encryptionKey = p.encryptionKey ?? Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('hex');
     const head = Number(await rpc('eth_blockNumber', []));
-    const info = await createRailgunWallet(encryptionKey, mnemonic, { [NETWORK]: p.creationBlock ?? head });
+    // A wallet kept in the store opens by its id; a new one is made, and a
+    // probe's random one is deleted again on close.
+    let info = null;
+    if (p.walletID) info = await loadWalletByID(encryptionKey, p.walletID, false).catch(() => null);
+    const loaded = !!info;
+    info ??= await createRailgunWallet(encryptionKey, mnemonic, { [NETWORK]: p.creationBlock ?? head });
     walletID = info.id;
-    return { address: info.railgunAddress, generated, headBlock: head, ...fees, ms: Math.round(now() - t) };
+    // A random wallet in memory goes on close; one in the store stays, for
+    // the next open by its id.
+    openedRandom = generated && storage === 'memory';
+    const ut = getEngine().getUTXOMerkletree(V2, CHAIN);
+    const kept = await ut.getTreeLength(4);
+    return { address: info.railgunAddress, walletID: info.id, loaded, generated, storage, keptLeaves: kept, headBlock: head, ...fees, ms: Math.round(now() - t) };
   },
 
   // Builds the trees from the checkpoint, scans the wallet, then checks every
@@ -345,6 +364,8 @@ const methods = {
   },
 
   async close() {
+    if (walletID && openedRandom) await deleteWalletByID(walletID).catch(() => {});
+    if (walletID) unloadWalletByID(walletID);
     walletID = null;
     encryptionKey = null;
     seen = null;

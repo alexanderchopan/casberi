@@ -53,6 +53,21 @@ final class RailgunEngine: NSObject {
         "connect-src \(scheme):",
     ].joined(separator: "; ")
 
+    /// One fixed identifier: the same store every launch, and only this
+    /// engine's (`forget` removes it).
+    static let storeID = UUID(uuidString: "6A5C0E1D-7A11-4C2E-9F3B-0A1100000001")!
+    static var store: WKWebsiteDataStore { WKWebsiteDataStore(forIdentifier: storeID) }
+
+    /// Deletes the kept trees and wallet records: the next open builds them
+    /// again from the checkpoint.
+    func forget() async throws {
+        stop()
+        // Clearing the store's data, not removing the store:
+        // `WKWebsiteDataStore.remove(forIdentifier:)` never returned on the
+        // simulator (measured 2026-11-07), even with no web view using it.
+        await Self.store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
+    }
+
     static var page: String {
         """
         <!doctype html><html><head><meta charset="utf-8">
@@ -68,8 +83,13 @@ final class RailgunEngine: NSObject {
         if isReady { return }
         if webView == nil {
             let config = WKWebViewConfiguration()
-            // Nothing the page does is kept on disk: no cookies, no storage.
-            config.websiteDataStore = .nonPersistent()
+            // The engine's OWN persistent store, apart from every other web
+            // view: the pool's trees live there in IndexedDB, so a launch after
+            // the first resumes from the last block it read instead of
+            // rebuilding them (prd §1713 item 9). What is kept is the public
+            // pool and the SDK's wallet record, which it encrypts with the
+            // Keychain's key; no cookie is ever set, the page reaches no host.
+            config.websiteDataStore = Self.store
             config.setURLSchemeHandler(RailgunEngineScheme.shared, forURLScheme: Self.scheme)
             let controller = config.userContentController
             controller.addScriptMessageHandler(RailgunEngineNet(), contentWorld: .page, name: "railgunNet")
@@ -152,9 +172,11 @@ final class RailgunEngine: NSObject {
 
     /// Opens the 0zk wallet on Ethereum through the account's node. Without
     /// a mnemonic the page makes a random wallet and keeps nothing.
-    func open(mnemonic: String? = nil, encryptionKey: String? = nil, creationBlock: Int? = nil) async throws -> Wire.Opened {
-        let opened = try await call(.open, Wire.Open(mnemonic: mnemonic, encryptionKey: encryptionKey,
-                                                      rpcUrl: PrivacyNetwork.ethereum.rpcUrl, creationBlock: creationBlock),
+    func open(mnemonic: String? = nil, encryptionKey: String? = nil, walletID: String? = nil,
+              creationBlock: Int? = nil, persist: Bool = true) async throws -> Wire.Opened {
+        let opened = try await call(.open, Wire.Open(mnemonic: mnemonic, encryptionKey: encryptionKey, walletID: walletID,
+                                                      rpcUrl: PrivacyNetwork.ethereum.rpcUrl, creationBlock: creationBlock,
+                                                      persist: persist),
                                     as: Wire.Opened.self)
         isOpen = true
         return opened
