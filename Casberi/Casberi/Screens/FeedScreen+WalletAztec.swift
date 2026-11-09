@@ -137,8 +137,8 @@ extension FeedScreen {
         .walletListRow()
     }
 
-    /// Your account's accounts (§1700a item 1): once the Aztec account has
-    /// been used, the card lists both — the Safe, then Aztec — by their own
+    /// Your account's accounts (§1700a item 1): once the Aztec account's
+    /// address is known (§1700t), the card lists both — the Safe, then Aztec — by their own
     /// names, the line under each saying how it works and its address's tail
     /// ("Public · …c8e01", "Private · …2b3c"; user, 2026-11-04: "do as you
     /// recommend"). Not "Public/Private account": 0xBow's private balance is a
@@ -156,6 +156,10 @@ extension FeedScreen {
             accountListRow(mark: "aztec", title: String(localized: "Aztec"),
                            line: String(localized: "Private · \(AddressTail.short(aztec))"),
                            lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
+        } else if store.isShown, !DemoMode.isActive, AztecProver.isAvailable {
+            // The account is yours from the start (prd §1700t) but its
+            // address comes from the engine: read it once, here, and keep it.
+            Color.clear.frame(height: 0).task { _ = await store.refresh() }
         }
     }
 

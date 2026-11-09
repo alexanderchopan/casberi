@@ -254,6 +254,10 @@ grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
 grep -q 'YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive' Casberi/Casberi/Model/Aztec/AztecApps.swift \
   && ! awk '/static var doorShown/,/^    }/' Casberi/Casberi/Model/Aztec/AztecApps.swift | grep -q 'isShown' \
   || { echo "✗ Aztec's directory tile waits for an Aztec account already used, so nobody new reaches it"; exit 1; }
+# The account shows once you have it, and a pull never starts the engine cold (prd §1700t).
+grep -q 'shown.used || (YourAccountKey.address != nil && AztecProver.isAvailable)' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
+  && grep -q 'guard isShown, shown.used || addressKnown else { return false }' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
+  || { echo "✗ the Aztec account waits for first use to show, or a pull starts the engine for someone who never opened Aztec"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
 # Only the browser that may send says it is a Mac (prd §1700n).

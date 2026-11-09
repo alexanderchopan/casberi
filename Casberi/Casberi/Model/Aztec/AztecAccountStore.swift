@@ -122,8 +122,16 @@ final class AztecAccountStore {
     /// phone's reading.
     var shown: Snapshot { DemoMode.isActive ? Self.demo : snapshot }
 
-    /// Whether the row and the Holdings place show (§1700a item 2).
-    var isShown: Bool { shown.used }
+    /// Whether the account shows: once you HAVE it (prd §1700t, amending
+    /// §1700a item 2's "once it is used"). On an iPhone that is the moment
+    /// there is Your account; on the Mac, once the iPhone has used it.
+    var isShown: Bool {
+        shown.used || (YourAccountKey.address != nil && AztecProver.isAvailable)
+    }
+
+    /// Whether its address is known yet: the engine derives it, so an
+    /// account never opened has none until its first read (`walletAccountList`).
+    var addressKnown: Bool { shown.address != nil }
 
     /// The demo's Aztec account: an address no key derives, a little private
     /// USDC on Aztec (Shield's bridged USDC) and some Fee Juice for gas.
@@ -293,7 +301,9 @@ final class AztecAccountStore {
     /// and reads nothing, as every demo seat rains and reads nothing; a build
     /// with no prover (the Mac) cannot ask, so it rains no Aztec.
     func pull() -> Bool {
-        guard isShown else { return false }
+        // Read only an account the engine has run for once (§1700t): a pull
+        // never starts it cold for someone who has not opened Aztec.
+        guard isShown, shown.used || addressKnown else { return false }
         if DemoMode.isActive { return true }
         guard AztecProver.isAvailable else { return false }
         Task { @MainActor in

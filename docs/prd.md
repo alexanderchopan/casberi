@@ -71329,6 +71329,15 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** Unchanged: no prover on Catalyst, so no tile.
 
+## §1700t — Your Aztec account shows once you have it: on an iPhone, from the moment there is Your account, never waiting for first use (amends §1700a item 2 and item 1's "no engine started for someone who never uses Aztec"; extends §1700s) (user, 2026-11-08, told an existing user with an empty wallet could see neither the account nor the directory: "Their account should show once they have it", "yes") — BUILT
+
+1. **`AztecAccountStore.isShown` is "used, or Your account on an iPhone"**, so the Holdings place ("Your private balance · Aztec", its tap Move's deposit), Networks' "and Aztec", the recovery keys and Your node's Aztec block stand from the start. The Mac still shows it once the iPhone has used it (no prover there).
+2. **The address is read once.** It comes only from the engine, so the Your account card, seeing an account with no address, reads it once in the background and keeps it; the card then lists Safe and Aztec as §1700a item 1 draws them. That is the one engine start an unopened account costs.
+3. **A pull never starts the engine cold**: it reads Aztec only for an account used or with its address known. An empty Holdings place reads nothing on its own (the read hangs off held rows, as before).
+4. **Guarded** in `shield-bridge-selftest.sh`.
+
+**Mac half (§1402).** Unchanged: shown once the iPhone has used it.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

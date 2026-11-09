@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1891 of 1963 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1892 of 1964 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2088,7 +2088,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
 - §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j)
-- §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it
+- §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it (amended by §1700t)
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
@@ -2106,7 +2106,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700p — Aztec's directory has one door, Library's tile; the Wallet's Home loses Apps on Aztec (amended by §1700s)
 - §1700q — Your private balance on Aztec takes any amount: typed, never picked from a list; the first real Shield deposit
 - §1700r — Sending from Aztec lists your addresses, reads ".5", exits by your co-signer's score and shows the last balance at once
-- §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used
+- §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used (amended by §1700t)
+- §1700t — Your Aztec account shows once you have it: on an iPhone, from the moment there is Your account, never waiting for fir…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)
 - §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the f…
