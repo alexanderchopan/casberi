@@ -298,6 +298,9 @@ extension DSTextStyle {
     /// most open leading; what separates it from `body17` is air and ink, not a
     /// size nobody could see.
     static let reading17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 27, relative: .body)
+    /// A short thing's words in the box's poster tier (prd §1734): the one
+    /// regular rung above 17, so a two-line note fills the lead it stands in.
+    static let reading22 = DSTextStyle(size: 22, weight: .regular, tracking: 0, lineHeight: 30, relative: .title2)
     /// A row's figure. Bold at the body size — the face and the weight carry
     /// it, so a row is TWO sizes rather than four. Anchored to `.body` like
     /// every other 17 (prd §762): on `.callout` it grew slower than the title

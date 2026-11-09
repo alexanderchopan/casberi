@@ -58,6 +58,10 @@ struct FeedLedeCard: View {
     /// The room's head sentence when the head had nothing else to draw (prd
     /// §760) — "Nothing needs you" — under the cover, in the note's register.
     var note: String? = nil
+    /// The Feed's box says what it is (prd §1734): "Newest" leads its line,
+    /// so the one thing standing over the tiles is named. Nil in a room,
+    /// whose name already says whose newest thing this is.
+    var label: String? = nil
     /// **EVERY COVER HOLDS THE BOX (prd §904).** There is no flag here for a
     /// cover to shrink by. §772 let a thin `.words` cover give way to its
     /// words, §775 made every All cover do so and §815 held the kind-tile
@@ -178,6 +182,7 @@ struct FeedLedeCard: View {
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[9], extra: extra)
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[10], extra: extra)
             cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[11], extra: extra)
+            cover(face, receipt: receipt, rungs: rungs, fit: Self.fits[12], extra: extra)
         }
         // Every room's lead is one height (prd §760), and since §766 the cover
         // draws it the way a head does: `dsRoomHeadBlock` — the inset, the air
@@ -564,6 +569,12 @@ struct FeedLedeCard: View {
                 .leadCycle(source: thing.source, id: thing.id, fact: thing.title,
                            faceSize: DS.Face.list, markCircular: true,
                            restsOnMark: discIsMark(castFace: castFace))
+            if let label {
+                Text(verbatim: label)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
             // The person leads on a post (prd §756), in the primary tier, and
             // the network follows in the quiet one — the order the row itself
             // uses, and the order that makes "who" the first thing read.
@@ -795,7 +806,7 @@ struct FeedLedeCard: View {
                 tickableProse(prose, fit: fit)
             } else {
                 Text(verbatim: prose)
-                    .dsText(.body17)
+                    .dsText(fit.tier == .poster ? .reading22 : .body17)
                     .foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(grown ? nil : Self.proseLines(fit))
@@ -1041,6 +1052,12 @@ struct FeedLedeCard: View {
     /// words at `heading24`, the lede and the shelf grown. What grows is
     /// decided per tier, never as one switch.
     enum Tier: Hashable {
+        /// **A SHORT THING FILLS THE BOX BY SIZE (prd §1734).** `heading34`
+        /// words and a `reading22` lede, tried first and kept only when the
+        /// whole thing fits uncut: the box holds one thing, so a two-line
+        /// note is set larger where a second thing would have filled the
+        /// air. 34, the screen name's own rung and no larger (§1006).
+        case poster
         /// `heading28` words, `body17` lede, two face rows. It was
         /// `heading40` until prd §1006: 40 heavy under a 34pt screen name
         /// made the card, not the screen, the largest words on the page.
@@ -1057,9 +1074,21 @@ struct FeedLedeCard: View {
         let bodyLines: Int
 
         /// The words' rung — one of two, never a third (§762's ramp).
-        var statementRung: DSTextStyle { tier == .large ? .heading28 : .heading24 }
+        var statementRung: DSTextStyle {
+            switch tier {
+            case .poster: .heading34
+            case .large: .heading28
+            case .mid, .regular: .heading24
+            }
+        }
         /// The lede's rung.
-        var ledeRung: DSTextStyle { tier == .regular ? .subhead12 : .body17 }
+        var ledeRung: DSTextStyle {
+            switch tier {
+            case .poster: .reading22
+            case .large, .mid: .body17
+            case .regular: .subhead12
+            }
+        }
         /// How many rows of faces the cast shelf may take.
         var castRows: Int { tier == .regular ? 1 : 2 }
     }
@@ -1074,10 +1103,11 @@ struct FeedLedeCard: View {
     /// four-line one beside it — and the body gives way last, because the
     /// last two rungs exist precisely to keep the box from being empty.
     ///
-    /// TWELVE spellings. Each is measured in turn until one fits, so this
+    /// THIRTEEN spellings (twelve until prd §1734's poster tier). Each is measured in turn until one fits, so this
     /// list is the cover's layout cost; a new tier is a reason to measure
     /// `HitchMeter` on the room's open, not a free line here.
     static let fits: [Fit] = [
+        Fit(tier: .poster,  statementLines: 8, bodyLines: 6),
         Fit(tier: .large,   statementLines: 8, bodyLines: 6),
         Fit(tier: .large,   statementLines: 6, bodyLines: 4),
         Fit(tier: .mid,     statementLines: 8, bodyLines: 6),

@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1904 of 1976 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1905 of 1977 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2150,6 +2150,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1731 — The Wallet stands on one left edge and draws every chart in one ink, its picker line at one height; Move's sentence i…
 - §1732 — The Wallet waits less: one holdings read per wallet a pass, the total's extras beside it, Tor on activation, the door…
 - §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder'…
+- §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
 
 ## Dead rulings → what replaced them (generated)
 

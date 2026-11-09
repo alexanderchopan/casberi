@@ -409,6 +409,9 @@ extension FeedScreen {
                 sectionCaps[category] = (sectionCaps[category] ?? Self.sectionFirstRows) + Self.sectionMoreRows
             }
         }
+        // In the rows' TEXT column (prd §1734): under the titles it continues,
+        // where it stood under their icons.
+        .padding(.leading, DS.Mark.row + DS.Space.s3)
         .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir,
                              leading: DSRoomChassis.rowInset,
@@ -555,74 +558,6 @@ struct NewDot: View {
     }
 }
 
-extension FeedScreen {
-    /// **NEWEST (prd §1256, user: "i like the 'newest' card … build
-    /// newest. it's great").** The glance tiles cut each category's newest
-    /// to two lines in a square, and the sections under them showed the
-    /// same things again (user: "hard to read b/c they cut off the feed
-    /// item and harder to scan"). One card holds the newest few across every
-    /// category as the Feed's rows, the box's thing left out; the sections
-    /// skip them. A category is reached from the tray or its section's name.
-    @ViewBuilder
-    func newestCard(_ things: [Thing], nextEventID: UUID?) -> some View {
-        if !things.isEmpty {
-            panelSection(String(localized: "Newest"), glyph: "clock", things: things) {
-                let positions = cardRunPositions(count: things.count, isBreaker: { _ in false })
-                ForEach(Array(keyed(things).enumerated()), id: \.element.id) { i, item in
-                    if let thing = item.live {
-                        // The title and the app's icon, as every Feed row
-                        // (prd §1497, user: "i don't like that the newest
-                        // category shows the name of the app on supertext
-                        // above"). The icon says where it came from, so the
-                        // app's name and time over the title (§1256) went.
-                        shapedListRow(thing, index: i, nextEventID: nextEventID, position: positions[i])
-                    }
-                }
-            }
-            .environment(\.dsTitleOnly, true)
-        }
-    }
-
-    /// How many rows Newest holds.
-    static let newestRows = 5
-
-    /// The newest live things across the Feed's own categories, NEVER
-    /// day-bound (prd §1399, user, past midnight: "or is it because it's
-    /// midnight and its reset?" — "make Newest match the box"): the card is
-    /// named Newest, not Today, so the five newest things are its answer at
-    /// 00:05 as at 18:00, as the box always holds the newest thing (§1136i).
-    /// The box's thing and the same news again are left out (prd §1208j);
-    /// `elsewhere` names the categories that are their own place (§1331).
-    /// `.isLive` before any read, the dead-Thing rule; one pass, a bounded
-    /// top-N, never a sort of the whole set.
-    ///
-    /// ONE thing per app (prd §1581, user: "yes that is how it should be"),
-    /// the sections' own rule (§1103): a busy app's newer thing takes its one
-    /// slot, so no single app can fill the card.
-    static func newestThings(_ visible: [Thing], lede: Thing?, elsewhere: Set<String>) -> [Thing] {
-        let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
-        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
-        let now = Date.now
-        var top: [Thing] = []
-        top.reserveCapacity(newestRows + 1)
-        for thing in visible {
-            guard thing.isLive, thing.id != ledeID else { continue }
-            let at = thing.capturedAt
-            guard at <= now else { continue }
-            if top.count == newestRows, let last = top.last, at <= last.capturedAt { continue }
-            guard TitleSeam.split(thing.title).0 != ledeTitle,
-                  !elsewhere.contains(BridgeCatalog.category(forSource: thing.source) ?? "") else { continue }
-            if let same = top.firstIndex(where: { $0.source == thing.source }) {
-                guard top[same].capturedAt < at else { continue }
-                top.remove(at: same)
-            }
-            let i = top.firstIndex { $0.capturedAt < at } ?? top.count
-            top.insert(thing, at: i)
-            if top.count > newestRows { top.removeLast() }
-        }
-        return top
-    }
-}
 
 /// Two across; one across at the accessibility text sizes, where a square
 /// cannot hold the words (prd §1208l).

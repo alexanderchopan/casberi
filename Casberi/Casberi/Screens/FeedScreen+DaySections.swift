@@ -303,26 +303,11 @@ extension FeedScreen {
         if source == "All" { feedCategoryRow }
         // What stopped working, named, before anything that arrived (prd §1162).
         if source == "All" { reconnectSection }
-        // "Nothing yet today" only when today truly holds nothing: a box
-        // holding today's one thing IS today.
-        if source == "All", groups.isEmpty,
-           !(homeCover.map { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) } ?? false) {
-            // With nothing connected the start box above is the whole Feed:
-            // the preview of a full Today is deleted (prd §1426, retiring
-            // §1169's) — the demo already shows what it becomes.
-            if bridges.connectedCount > 0 { nothingYetToday }
-        }
-        // NEWEST (prd §1256): the newest few across every category, as the
-        // Feed's rows on one card, where the glance tiles stood (§1208d).
-        // Only the Feed's own categories (prd §1331): the Wallet and the
-        // testnets are their own place, so their moves never stand here,
-        // as they never stand in the sections under it. Never day-bound
-        // (prd §1399): it reads what the box's fallback reads, so past
-        // midnight Home is the box, "Nothing yet today", then last night's
-        // five — never a box alone.
-        let elsewhere: Set<String> = [CategoryFold.walletRoom, RoomAccounts.testnetsRoom, HomeScope.markets]
-        let newest = scroll ? Self.newestThings(visible, lede: homeCover, elsewhere: elsewhere) : []
-        if scroll { newestCard(newest, nextEventID: nextEventID) }
+        // **NO SECOND NEWEST (prd §1734, retiring §1256's card and the
+        // "Nothing yet today." line):** the box IS the newest thing and says
+        // so; five more under the tiles made a list of the same idea, and a
+        // sentence about today stood between the box and the day each section
+        // already names. The sections follow the tiles.
         ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -418,7 +403,7 @@ extension FeedScreen {
         // THE FEED IS ONE SCROLL ON THE PHONE (prd §1208): every category
         // in its own frame, stacked, in place of today's category runs.
         if scroll {
-            feedScrollSections(visible, hiding: Set(newest.map(\.id)).union(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []),
+            feedScrollSections(visible, hiding: Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []),
                                nextEventID: nextEventID)
             jumpRoom
         }
@@ -455,7 +440,8 @@ extension FeedScreen {
     @ViewBuilder
     func homeLead(_ ledeThing: Thing?, heroShown: Bool) -> some View {
         if let ledeThing, ledeThing.isLive {
-            Section { ledeListRow(ledeThing) }
+            // On the Feed the box says what it holds (prd §1734): "Newest".
+            Section { ledeListRow(ledeThing, label: source == "All" ? String(localized: "Newest") : nil) }
         } else if source == "All", !heroShown {
             Section {
                 // **THE WAYS IN, IN THE FEED'S BOX (prd §1365, user: "ok", of
@@ -504,21 +490,6 @@ extension FeedScreen {
         case .card:         route.present(.apps)
         case .subscription: feedSheet = .subscriptionAdd
         case .wallet:       feedSheet = .walletFollow
-        }
-    }
-
-    /// Today with nothing in it yet: one quiet line.
-    @ViewBuilder
-    var nothingYetToday: some View {
-        // No "Today" divider since prd §1166: the screen's title is Today.
-        Section {
-            Text("Nothing yet today.")
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                          bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
         }
     }
 
@@ -599,6 +570,20 @@ extension FeedScreen {
     /// its app's look, and 8pt between rows that tall read as one block. The
     /// Wallet's rows stay one line and keep `rowAir` (`shapedListRow(air:)`).
     static let thingAir: CGFloat = DS.Space.s2
+
+    /// **A ONE-LINE ROW ON THE FEED TAKES THE WALLET'S PITCH (prd §1734,
+    /// narrowing §1661).** Under a category's heading a title-and-icon row
+    /// stands at `rowAir`, 52pt, where `thingAir` gave it 64. A post or a
+    /// chat keeps `thingAir`: §1661's reason stands for a row that tall,
+    /// which at 8pt apart read as one block (seen on the simulator).
+    func sectionAir(_ thing: Thing, inFeed: Bool) -> CGFloat {
+        guard inFeed else { return Self.thingAir }
+        // The app's own shape: on the Feed `rowShape` answers the room's.
+        switch Shape(source: thing.source) {
+        case .social, .x, .instagram, .tiktok, .snapchat, .chat, .telegram: return Self.thingAir
+        default: return Self.rowAir
+        }
+    }
 
 
     /// Whether a row steps back on a skim — ambient, or already read.
@@ -695,7 +680,9 @@ extension FeedScreen {
     @ViewBuilder
     func ledeListRow(_ thing: Thing,
                              top: CGFloat = DS.Space.s2,
-                             bottom: CGFloat = DSRoomChassis.leadGap) -> some View {
+                             bottom: CGFloat = DSRoomChassis.leadGap,
+                             // The Feed's box names itself (prd §1734).
+                             label: String? = nil) -> some View {
         // The cover is the box (prd §1403): the pane's where there is one.
         if roomBoxPlace != .listWithoutBox {
         Button {
@@ -705,7 +692,8 @@ extension FeedScreen {
                          selected: DS.isMac
                             && chrome.walkSelected == thing.id.uuidString,
                          // A quiet head's sentence, under the cover (prd §760).
-                         note: heads?.quietHead?.quietLine)
+                         note: heads?.quietHead?.quietLine,
+                         label: label)
                 .modifier(rowEntrance(0))
                 // A new newest thing lands rather than cuts (prd §1379).
                 .coverLanding(thing.id, in: source)
@@ -906,7 +894,8 @@ extension FeedScreen {
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
                        dated: dated, cover: cover, isTile: isTile, tileShape: tileShape,
-                       renewals: renewals[label] ?? [])
+                       renewals: renewals[label] ?? [],
+                       inFeed: capNow != nil)
         }
         if window.more {
             if let capNow { sectionMoreRow(capNow.category) } else { olderRow(hidden: window.hidden) }
@@ -958,7 +947,10 @@ extension FeedScreen {
                             // you, prd §1327 item 9), by id: each draws as
                             // the Feed's grouped row, its app's icon leading
                             // and its line naming the place.
-                            places: [UUID: String] = [:]) -> some View {
+                            places: [UUID: String] = [:],
+                            // Under a category's heading on the Feed (prd §1734):
+                            // the day is a quiet label and a row takes `rowAir`.
+                            inFeed: Bool = false) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -998,7 +990,22 @@ extension FeedScreen {
                 // on what the system hands a header slot.
                 // The day alone — its count is deleted (prd §914, user:
                 // "people don't want to know").
-                if headed {
+                if headed, inFeed {
+                    // **THE CATEGORY IS THE HEADING; ITS DAY IS A LABEL (prd
+                    // §1734).** On the Feed a section is named by its
+                    // category in the 24pt head, and the day under it stood as
+                    // a second heading, "Yesterday" in bold under every one.
+                    Text(label)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .textCase(nil)
+                        .padding(.leading, DSRoomChassis.rowInset)
+                        .padding(.top, DS.Space.s2)
+                        .listRowInsets(EdgeInsets())
+                        .feedRowBackground()
+                        .listRowSeparator(.hidden)
+                        .accessibilityAddTraits(.isHeader)
+                } else if headed {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         Text(label)
                             .dsText(.heading20)
@@ -1041,13 +1048,13 @@ extension FeedScreen {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i], replies: replies,
                                           grouped: true, app: (source: thing.source, date: thing.capturedAt),
-                                          place: place)
+                                          place: place, air: sectionAir(thing, inFeed: inFeed))
                                 // The app's icon leads the row (prd §1157);
                                 // the row's own lead stands empty (§1103a).
                                 .environment(\.dsGroupedSource, thing.source)
                         } else {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                          position: positions[i], replies: replies)
+                                          position: positions[i], replies: replies, air: sectionAir(thing, inFeed: inFeed))
                         }
                     }
                 }
