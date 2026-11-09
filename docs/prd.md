@@ -71678,3 +71678,30 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Checks.** `railgun-selftest.sh`: the rows stand in Move's foot; a failure stays on its step; a move-in's plan is signed; the engine's step lines move the rows; every proof says it starts and the broadcaster's hand-over says it left (three and one, in the source); the bundled engine carries them (`node build.mjs --check` reproduces it); the take-back guard of §1721 reads the call's recipient with the hook after it. **Seen** on the iPhone 17 Pro simulator: a send to someone mid-proof (Confirmed with Face ID, Checked 2 s, Proving on this iPhone, Sending on Ethereum next), done ("Sent privately · 13 s", every row checked), failed on Proving ("No Railgun broadcaster answered. Nothing was sent.", Try again), and a move-in done (Checked · Signed · Sent on Ethereum).
 
 **Mac half (§1402).** The same rows on Catalyst; `DeviceWord` says "this Mac".
+
+## §1731 — The Wallet stands on one left edge and draws every chart in one ink, its picker line at one height; Move's sentence is three inks, its picker is the Wallet's row, and every Move foot clears the tab bar (amends §1259's green line, §1389's and §1338's tile edge, §1662's pace line, §495's content inset; retires §1616's step-back and §1681's heading24 choice) (user, 2026-11-09, of a mockup of each: "for wallet: do all these except do not change the glyphs", "for move: do all")
+
+**Why.** Each Wallet page was built to its own rulings, so the four disagreed: the title, the box, the day header and the rows stood at four insets; the charts were green, blue, white and green-edged; Home's picker sat higher than the other three. Move's sentence drew three colours each at two opacities, and its token rows were heavier than the same tokens in Holdings.
+
+**Wallet.**
+
+1. **One left edge.** The box's number, chart and picker stand in the rows' column: `DSRoomChassis.contentInset` is 0, because §766's well already carries the `s3` that closes the gap and the slot's own was a second one. Activity's day header takes `rowInset`, panel or not. The treemap gains the same width and ends where the rows end.
+2. **One chart ink.** Home's balance line and Spending's running line are the primary ink, as Activity's bars already were; the last window stays grey behind Spending's. Colour on these pages is a state: the signed figure under the balance, an amber or red count. This amends §1259 (the line was green by ruling) with the user's go-ahead on the mockup that showed it white.
+3. **The treemap is not outlined.** Every tile stands on the plain fill; the day's direction is one small triangle in the tile's corner, in the move's hue. A tile too narrow for its dollars says its share, so none stands blank.
+4. **One picker line.** Yours · Following · All leads and the window trails, on the box's bottom edge on all four pages: Home's crown fills its slot (`fillsSlot`) as the other three figures do, and its window is words beside the whose-switch, not pills. A slim word is hit at 44pt and laid out at 32.
+5. **Rows read as rows.** A Holdings preview row's name and figure are the primary ink. USDT0 is a dollar coin, so a Plasma One row trails dollars with its quantity on the line. A move between your own accounts uses the moves' formatter.
+6. **Spending's pace labels the chart.** "$N left to match October" stands in the chart's lower trailing corner, not as a second sentence under the statement; with no line to label it keeps its sentence.
+7. **The tiles are untouched** (user: "do not change the glyphs").
+
+**Move.**
+
+8. **Three inks.** A word you have settled is white (the verb, a picked token or network, "now."), the one being asked is the pick's pink, and what is still to come (an empty blank, a small word) is grey. Nothing dims: `moveQuiet` and its 0.3 are deleted from the sentence and from the private, Aztec, Railgun and lending sentences. Pink stays for a verb that acts (a copy, the foot) and the keys walk's named thing.
+9. **A choice is the Wallet's row.** `choiceRung` is `body17` over `subhead12`, the figure `price17` in the primary ink, at the same 52pt pitch.
+10. **Every foot clears the bar.** `MoveFootClearance` is the sentence's own clearance, now on Create's and the keys walk's feet too.
+11. **Create draws what it makes.** Under the one line of small print, each network at the picker's row, hidden from VoiceOver because the sentence says them.
+
+**Not done.** Activity's swap rows still trail nothing when the title carries both legs (§1386, §1414), and a move priced in no dollars trails its token ("+21,000 sats"): both are honest and were left. Create's verb stays at the trailing edge, where every Move foot's verb is, not the leading edge the mockup drew.
+
+**Mac half (§1402).** The same views draw the pane, so the edge, the inks and the picker line follow; the foot clearance is the phone's alone (`sizeClass == .compact`).
+
+**Checks.** Built and looked at on the simulator over the demo: Wallet Home, Holdings, Activity and Spending on All; Move's sentence empty and drafted, Create and the keys walk in the tray. Move as a page under the tab bar could not be raised (nothing presents it since §1442), so the foot's clearance there is by the sentence's own arithmetic, unseen. Catalyst was not compiled and `verify.sh` was not run. `wallet-row-audit`, `ds-template-audit` (Spending's stale tint exemption removed), `status-ink-audit`, `design-ramp-audit`, `section-glyph-audit`, `day-divider-audit`, `row-anatomy-audit`, `room-chassis-audit`, `footnote-audit`, `hero-tint-audit`; `your-account`, `private-money` (one pinned line updated), `wallet-section`, `wallet-makeover`, `spending`, `wallet-viz`, `move-details`, `move-warnings` self-tests pass.

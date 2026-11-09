@@ -1099,9 +1099,6 @@ struct MoveSentence: View {
                         VStack(alignment: .leading, spacing: 0) {
                             sentence
                         }
-                        // The rest of the sentence steps back while a blank's
-                        // choices are open; the open word keeps its ink (§1616).
-                        .environment(\.moveQuiet, open != nil)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
                         // An open list runs to the tray's bottom edge, under
                         // the home bar (prd §1616 item 5): with no card, a box
@@ -1436,7 +1433,7 @@ struct MoveSentence: View {
                 if group.hasCurrent {
                     toWord
                 } else {
-                    word(group.name ?? "", ink: DS.pickInk)
+                    word(group.name ?? "", ink: MoveSentence.settledInk)
                 }
             }
         }
@@ -1454,7 +1451,7 @@ struct MoveSentence: View {
     @ViewBuilder private var otherSentence: some View {
         let pieces = otherPieces
         ForEach(Array(pieces.enumerated()), id: \.offset) { n, piece in
-            MoveClause(glue: piece.glue, glueInk: n == 0 ? DS.textSecondary : DS.textPrimary) {
+            MoveClause(glue: piece.glue, glueInk: n == 0 ? DS.textSecondary : MoveSentence.glueInk) {
                 MoveWord(piece.text + (n == pieces.count - 1 ? "." : ""), ink: DS.textPrimary)
             }
             .contextMenu {
@@ -1551,7 +1548,7 @@ struct MoveSentence: View {
     @ViewBuilder private var sweepAmountClauses: some View {
         MoveClause { word(sweepCountWord, ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "under")) {
-            sweepUnderMenu { MoveWord("$\(sweepUnder)", ink: DS.pickInk) }
+            sweepUnderMenu { MoveWord("$\(sweepUnder)", ink: MoveSentence.settledInk) }
         }
         MoveClause(glue: String(localized: "for")) {
             let back = word(sweepBackWord, ink: DS.textPrimary)
@@ -1830,7 +1827,7 @@ struct MoveSentence: View {
                 Button {
                     withAnimation(DS.Motion.standard) { open = .elsewhereCoin }
                     DSHaptic.selection()
-                } label: { word(route.token.symbol, ink: DS.pickInk) }
+                } label: { word(route.token.symbol, ink: MoveSentence.settledInk) }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Picks what they send"))
             }
@@ -1839,7 +1836,7 @@ struct MoveSentence: View {
                 Button {
                     withAnimation(DS.Motion.standard) { open = .elsewhere }
                     DSHaptic.selection()
-                } label: { word(route.from.name, ink: DS.pickInk) }
+                } label: { word(route.from.name, ink: MoveSentence.settledInk) }
                     .buttonStyle(RowPress())
             }
             // What arrives is your pick (prd §1470): Relay swaps on the way.
@@ -1847,7 +1844,7 @@ struct MoveSentence: View {
                 Button {
                     withAnimation(DS.Motion.standard) { open = .arrives }
                     DSHaptic.selection()
-                } label: { word(route.arrives.symbol, ink: DS.pickInk) }
+                } label: { word(route.arrives.symbol, ink: MoveSentence.settledInk) }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Picks what you receive"))
             }
@@ -1888,7 +1885,7 @@ struct MoveSentence: View {
                         withAnimation(DS.Motion.standard) { open = .elsewhere }
                         DSHaptic.selection()
                     }
-                } label: { word(YourAccount.short(account), ink: networkPicked ? DS.pickInk : DS.textPrimary) }
+                } label: { word(YourAccount.short(account), ink: networkPicked ? MoveSentence.settledInk : DS.textPrimary) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Your address, \(account)"))
                     .accessibilityHint(networkPicked ? Text("Copies your address") : Text("Pick a network first"))
@@ -1921,7 +1918,7 @@ struct MoveSentence: View {
     private var receiveNetworkWord: some View {
         Group {
             if networkPicked {
-                blank(network.name + ".", ink: DS.pickInk, .elsewhere, label: Text("On \(network.name), change"))
+                blank(network.name + ".", ink: MoveSentence.settledInk, .elsewhere, label: Text("On \(network.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .elsewhere, label: Text("Pick a network"))
             }
@@ -1945,7 +1942,7 @@ struct MoveSentence: View {
     @ViewBuilder private func receiptClauses(_ r: Receipt) -> some View {
         ForEach(Array(r.lines.enumerated()), id: \.offset) { n, line in
             MovePhrase(line.text, glue: n == 0 ? r.past : line.glue,
-                       glueInk: n == 0 || line.starts ? DS.textSecondary : DS.textPrimary, ink: DS.textPrimary,
+                       glueInk: n == 0 || line.starts ? DS.textSecondary : MoveSentence.glueInk, ink: DS.textPrimary,
                        breaks: line.starts)
                 .transition(.opacity.combined(with: .offset(y: 8)))
         }
@@ -1955,12 +1952,18 @@ struct MoveSentence: View {
     /// sentence, and of the create flow, wears it; nothing picks another.
     /// `heading34` since prd §1679 (was `heading52`): the verbs, the sentence,
     /// its choices and the foot are one size, a screen's name in the app.
+    /// **THREE INKS (prd §1731):** a word you have settled is white, the
+    /// one being asked is `DS.pickInk`, and what is still to come — an
+    /// empty blank, a small word — is grey. Nothing dims: the open word is
+    /// the only pink one, so it needs no help standing out (retires
+    /// §1616's step-back).
+    static var settledInk: Color { DS.textPrimary }
+    static var glueInk: Color { DS.textSecondary }
     static let rung: DSTextStyle = .heading34
-    /// A choice's word, a step under the sentence (prd §1681, amending
-    /// §1679 item 3): at the rung a list outweighed the sentence it serves.
-    /// The Wallet's section and door rung (§1496), so a list here reads as
-    /// one there does.
-    static let choiceRung: DSTextStyle = .heading24
+    /// A choice is the Wallet's own row (prd §1731, retiring §1681's
+    /// heading24): the name at `body17` over its line at `subhead12`, the
+    /// figure at `price17`, so a token reads here as it does in Holdings.
+    static let choiceRung: DSTextStyle = .body17
     /// A choice's mark: the Wallet's list size (prd §1681, was 44).
     static let listMark: CGFloat = DS.Face.list
     /// A choice's row, at least: the word and its line with air (prd §1681).
@@ -2033,7 +2036,6 @@ struct MoveSentence: View {
             DSHaptic.selection()
         } label: {
             word(text, ink: open == lit ? DS.pickInk : ink)
-                .environment(\.moveQuiet, open != nil && open != lit)
         }
         .buttonStyle(RowPress())
         .disabled(stage != nil)
@@ -2175,12 +2177,12 @@ struct MoveSentence: View {
     /// The line being filled: the amount with its token, one clause; typed
     /// in dollars, "of <token>" is the clause after it.
     @ViewBuilder private func currentSellClauses(glue: String?, trail: String?, leads: Bool = false) -> some View {
-        MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : DS.textPrimary, trail: inDollars ? nil : trail) {
+        MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : MoveSentence.glueInk, trail: inDollars ? nil : trail) {
             // The figure and its token wrap between them when the two are
             // wider than a line ("1234567.89" over "USDC"), never truncate.
             MoveClauseLayout(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
+                    if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : MoveSentence.settledInk) }
                     amountField
                 }
                 if !inDollars { withWord }
@@ -2203,8 +2205,8 @@ struct MoveSentence: View {
             return nil
         }()
         if let s = line {
-            MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : DS.textPrimary, trail: trail) {
-                word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: DS.pickInk)
+            MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : MoveSentence.glueInk, trail: trail) {
+                word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: MoveSentence.settledInk)
             }
             .layoutValue(key: FlowBreak.self, value: leads)
             .contentShape(Rectangle())
@@ -2273,7 +2275,7 @@ struct MoveSentence: View {
     /// verbs' own line, §1438a, and its scroll, §1679 item 2).** Pink, as
     /// every word that changes is; a tap opens the verbs under the sentence.
     private func verbWord(_ text: String) -> some View {
-        blank(text, ink: DS.pickInk, .verb, label: Text("\(text), change what Move does"))
+        blank(text, ink: MoveSentence.settledInk, .verb, label: Text("\(text), change what Move does"))
             .disabled(stage != nil || privateMove.acting || lendMove.acting)
     }
 
@@ -2356,7 +2358,7 @@ struct MoveSentence: View {
                 if !typing, !amount.isEmpty {
                     Text(verbatim: amount)
                         .dsText(rung)
-                        .foregroundStyle(DS.pickInk)
+                        .foregroundStyle(MoveSentence.settledInk)
                         .monospacedDigit()
                         .contentTransition(.numericText())
                         .fixedSize()
@@ -2364,9 +2366,6 @@ struct MoveSentence: View {
                 }
             }
             .fixedSize()
-            // A field, not a `MoveWord`: it steps back with the sentence
-            // itself while a blank's choices are open (prd §1616).
-            .opacity(open != nil ? 0.3 : 1)
         }
             .disabled(stage != nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
@@ -2382,7 +2381,7 @@ struct MoveSentence: View {
     }
 
     private var withWord: some View {
-        blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.textTertiary : DS.pickInk,
+        blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.textTertiary : MoveSentence.settledInk,
               .with, label: Text("Spend \(with?.token.symbol ?? ""), change"))
     }
 
@@ -2396,7 +2395,7 @@ struct MoveSentence: View {
             // The whole swap's result, pink like every value; locked by a
             // kept swap (§1442c), a tap says so (§1442g).
             let symbol = crossBuy?.symbol ?? buy.token.symbol
-            let word = blank((back ?? "") + symbol, ink: DS.pickInk,
+            let word = blank((back ?? "") + symbol, ink: MoveSentence.settledInk,
                              .buy, label: Text("For \(symbol), change"))
             if pricing {
                 // While the pools price it, the word breathes: working, not stuck.
@@ -2419,7 +2418,7 @@ struct MoveSentence: View {
             ?? (to.isEmpty ? String(localized: "address")
                 : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
         let missing: Bool = { if case .missing = lookup { true } else { false } }()
-        return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
+        return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : MoveSentence.settledInk),
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.
                 .keyframeAnimator(initialValue: 0.0, trigger: shake) { content, x in
@@ -2438,7 +2437,7 @@ struct MoveSentence: View {
     private var networkWord: some View {
         Group {
             if networkPicked {
-                blank(network.name + ".", ink: DS.pickInk, .network, label: Text("On \(network.name), change"))
+                blank(network.name + ".", ink: MoveSentence.settledInk, .network, label: Text("On \(network.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
@@ -2449,7 +2448,7 @@ struct MoveSentence: View {
     private var originWord: some View {
         Group {
             if networkPicked {
-                blank(network.name, ink: DS.pickInk, .network, label: Text("From \(network.name), change"))
+                blank(network.name, ink: MoveSentence.settledInk, .network, label: Text("From \(network.name), change"))
             } else {
                 blank(String(localized: "network"), ink: DS.textTertiary, .network, label: Text("Pick a network"))
             }
@@ -2462,7 +2461,7 @@ struct MoveSentence: View {
     private var destinationWord: some View {
         Group {
             if networkPicked {
-                blank(buyHome.name + (whenDrawn ? "" : "."), ink: DS.pickInk, .destination, label: Text("Get it on \(buyHome.name), change"))
+                blank(buyHome.name + (whenDrawn ? "" : "."), ink: MoveSentence.settledInk, .destination, label: Text("Get it on \(buyHome.name), change"))
             } else {
                 // "now." carries the full stop while it stands (prd §1683).
                 blank(whenDrawn ? String(localized: "network") : String(localized: "network."),
@@ -2476,7 +2475,7 @@ struct MoveSentence: View {
     private func searchRow(for which: Blank) -> some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "magnifyingglass")
-                .dsGlyph(.title, weight: .semibold)
+                .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: Self.listMark)
                 .accessibilityHidden(true)
@@ -3299,13 +3298,13 @@ struct MoveSentence: View {
                     Text(verbatim: title).dsText(Self.choiceRung)
                         .foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.5)
-                    if let sub { Text(verbatim: sub).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(2) }
+                    if let sub { Text(verbatim: sub).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(2) }
                 }
                 .layoutPriority(1)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
                     // One line, always: a long name shrinks instead.
-                    Text(verbatim: trailing).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                    Text(verbatim: trailing).dsText(.price17).foregroundStyle(DS.textPrimary).monospacedDigit()
                         .lineLimit(1).fixedSize()
                 }
             }
@@ -4028,9 +4027,9 @@ struct MoveSentence: View {
         case nil:
             // Until the pair is known there is no price to ask for: the
             // word opens the blank it waits on (prd §83, no dead control).
-            MoveClause { blank(String(localized: "now."), ink: DS.pickInk, whenWaitsOn, lit: .when, label: Text("Now, change")) }
+            MoveClause { blank(String(localized: "now."), ink: MoveSentence.settledInk, whenWaitsOn, lit: .when, label: Text("Now, change")) }
         case .now:
-            MoveClause { blank(String(localized: "now."), ink: DS.pickInk, .when, label: Text("Now, change")) }
+            MoveClause { blank(String(localized: "now."), ink: MoveSentence.settledInk, .when, label: Text("Now, change")) }
         case .price:
             MoveClause(glue: String(localized: "when \(pricedToken?.symbol ?? "") is")) { priceWord }
         }
@@ -4045,7 +4044,7 @@ struct MoveSentence: View {
             let words = priceInPercent
                 ? (v < 0 ? "−" : "+") + String(priceText.drop { $0 == "-" || $0 == "+" || $0 == "−" }) + "%"
                 : Self.priceWords(v, places: p.places)
-            blank(words + ".", ink: DS.pickInk, .when, label: Text("When \(pricedToken?.symbol ?? "") is \(words), change"))
+            blank(words + ".", ink: MoveSentence.settledInk, .when, label: Text("When \(pricedToken?.symbol ?? "") is \(words), change"))
         }
     }
 
@@ -4639,7 +4638,7 @@ struct MoveSentence: View {
             }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, footClearance)
+        .modifier(MoveFootClearance(inTray: inTray))
         // The page's own ground, so a long list scrolls under the foot. It
         // fades in over `footFade` above the foot, so a line passing under
         // it goes soft instead of being cut in half, which read as a fault
@@ -4660,14 +4659,6 @@ struct MoveSentence: View {
 
     /// How far above the foot its ground fades in.
     static let footFade: CGFloat = 32
-
-    /// The phone's tab bar floats over the page's bottom edge and reserves
-    /// nothing, so the foot clears it by the bar's own geometry; a keyboard
-    /// covers the bar (prd §865), and the foot rides on the keys.
-    private var footClearance: CGFloat {
-        guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
-        return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold) + DS.Space.s2
-    }
 
     /// Read, nothing anywhere, and nothing under way: the foot has no act
     /// to draw (prd §1518). A move landing keeps its foot.
@@ -5730,7 +5721,7 @@ struct MoveSentence: View {
     @ViewBuilder private var depositClauses: some View {
         MoveClause {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk)
+                word("$", ink: amount.isEmpty ? DS.textTertiary : MoveSentence.settledInk)
                 amountField
             }
             .contentShape(Rectangle())
@@ -5738,11 +5729,11 @@ struct MoveSentence: View {
             .dsCardLead(Text("Edits the amount")) { focus = .amount }
         }
         MoveClause(glue: String(localized: "of")) {
-            blank(depositCoin.symbol, ink: DS.pickInk, .depositCoin, label: Text("\(depositCoin.symbol), change"))
+            blank(depositCoin.symbol, ink: MoveSentence.settledInk, .depositCoin, label: Text("\(depositCoin.symbol), change"))
         }
         MoveClause(glue: String(localized: "on")) {
             if depositSeller != nil {
-                blank(network.name + ".", ink: DS.pickInk, .depositNetwork, label: Text("On \(network.name), change"))
+                blank(network.name + ".", ink: MoveSentence.settledInk, .depositNetwork, label: Text("On \(network.name), change"))
             } else {
                 blank(String(localized: "network."), ink: DS.textTertiary, .depositNetwork, label: Text("Pick a network"))
             }
@@ -5843,7 +5834,7 @@ struct MoveSentence: View {
     @ViewBuilder private var buyClauses: some View {
         MoveClause {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk)
+                word("$", ink: amount.isEmpty ? DS.textTertiary : MoveSentence.settledInk)
                 amountField
             }
             .contentShape(Rectangle())
@@ -5856,17 +5847,17 @@ struct MoveSentence: View {
         // and Receive (prd §1481).
         MoveClause { word(buyProduct?.noun ?? String(localized: "gift card"), ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "for")) {
-            blank(buyGroup?.title ?? String(localized: "category"), ink: buyGroup == nil ? DS.textTertiary : DS.pickInk,
+            blank(buyGroup?.title ?? String(localized: "category"), ink: buyGroup == nil ? DS.textTertiary : MoveSentence.settledInk,
                   .group, label: Text("Pick a category"))
         }
         MoveClause(glue: String(localized: "at")) {
             blank(buyProduct.map { BitrefillBuy.shortName($0.name) } ?? String(localized: "merchant"),
-                  ink: buyProduct == nil ? DS.textTertiary : DS.pickInk, .merchant, label: Text("Pick a merchant"))
+                  ink: buyProduct == nil ? DS.textTertiary : MoveSentence.settledInk, .merchant, label: Text("Pick a merchant"))
         }
         // What pays is a choice (prd §1666): USDC on Base as it is, ETH or
         // USDC on Base or Ethereum swapped into it first.
         MoveClause(glue: String(localized: "with")) {
-            blank(with?.token.symbol ?? String(localized: "coin"), ink: with == nil ? DS.textTertiary : DS.pickInk,
+            blank(with?.token.symbol ?? String(localized: "coin"), ink: with == nil ? DS.textTertiary : MoveSentence.settledInk,
                   .with, label: Text("Pick what pays"))
         }
         MoveClause(glue: String(localized: "on")) { word(network.name + ".", ink: DS.textPrimary) }
@@ -6552,16 +6543,6 @@ extension EnvironmentValues {
         get { self[MoveRungKey.self] }
         set { self[MoveRungKey.self] = newValue }
     }
-    /// The sentence while a blank's choices are open: every word steps
-    /// back but the open one (prd §1616).
-    var moveQuiet: Bool {
-        get { self[MoveQuietKey.self] }
-        set { self[MoveQuietKey.self] = newValue }
-    }
-}
-
-private struct MoveQuietKey: EnvironmentKey {
-    static let defaultValue = false
 }
 
 /// A field or a glyph that must wear the sentence's size reads it here.
@@ -6617,6 +6598,26 @@ struct MoveClauseLayout: Layout {
     }
 }
 
+/// **EVERY MOVE FOOT CLEARS THE TAB BAR (prd §1731).** The phone's bar
+/// floats over the page's bottom edge and reserves nothing, so a foot clears
+/// it by the bar's own geometry; a keyboard covers the bar (prd §865), and
+/// the foot rides on the keys. One modifier for the sentence's foot, Create's
+/// and the keys walk's: the last two had a plain `s2` and stood under the bar.
+struct MoveFootClearance: ViewModifier {
+    let inTray: Bool
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        content.padding(.bottom, clearance)
+    }
+
+    private var clearance: CGFloat {
+        guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
+        return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold) + DS.Space.s2
+    }
+}
+
 /// One word or phrase of the sentence, at the sentence's size; digits roll.
 /// A phrase is its words, so a phrase wider than a line can wrap between
 /// them (prd §1501); VoiceOver reads it as one phrase.
@@ -6624,7 +6625,6 @@ struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
     @Environment(\.moveRung) private var rung
-    @Environment(\.moveQuiet) private var quiet
     init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
     var body: some View {
         let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
@@ -6647,7 +6647,6 @@ struct MoveWord: View {
             .contentTransition(.numericText())
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            .opacity(quiet ? 0.3 : 1)
     }
 }
 
@@ -6656,7 +6655,7 @@ struct MoveWord: View {
 /// wraps inside itself only when it is wider than a whole line (§1501).
 struct MoveClause<Value: View>: View {
     var glue: String? = nil
-    var glueInk: Color = DS.textPrimary
+    var glueInk: Color = MoveSentence.glueInk
     var trail: String? = nil
     @ViewBuilder let value: () -> Value
     var body: some View {
@@ -6682,7 +6681,7 @@ struct MoveClause<Value: View>: View {
 /// every word is the one control, VoiceOver reading it once.
 struct MoveWordsClause: View {
     var glue: String? = nil
-    var glueInk: Color = DS.textPrimary
+    var glueInk: Color = MoveSentence.glueInk
     let words: String
     var ink: Color = DS.textPrimary
     var action: (() -> Void)? = nil
@@ -6713,11 +6712,11 @@ struct MoveWordsClause: View {
 struct MovePhrase: View {
     let text: String
     var glue: String? = nil
-    var glueInk: Color = DS.textPrimary
+    var glueInk: Color = MoveSentence.glueInk
     var ink: Color = DS.textPrimary
     /// Starts a new line: a second sentence's first piece (prd §1494).
     var breaks = false
-    init(_ text: String, glue: String? = nil, glueInk: Color = DS.textPrimary, ink: Color = DS.textPrimary,
+    init(_ text: String, glue: String? = nil, glueInk: Color = MoveSentence.glueInk, ink: Color = DS.textPrimary,
          breaks: Bool = false) {
         self.text = text; self.glue = glue; self.glueInk = glueInk; self.ink = ink; self.breaks = breaks
     }

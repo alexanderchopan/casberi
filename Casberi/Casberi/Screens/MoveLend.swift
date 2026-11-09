@@ -34,7 +34,6 @@ struct MoveLendSentence<Head: View>: View {
                         .padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
-                    .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.figure)
                     .animation(DS.Motion.standard, value: move.chainId)
                 Group {
@@ -94,8 +93,7 @@ struct MoveLendSentence<Head: View>: View {
             if !done { head() }
             MoveClause(glue: done ? glue : nil) {
                 Button { toggle(.amount) } label: {
-                    MoveWord(move.figure, ink: live ? DS.pickInk : DS.textPrimary)
-                        .environment(\.moveQuiet, open != nil && open != .amount)
+                    MoveWord(move.figure, ink: MoveSentence.settledInk)
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("Amount, \(move.figure)"))
@@ -104,8 +102,7 @@ struct MoveLendSentence<Head: View>: View {
             MovePhrase(String(localized: "Aave"), glue: move.mode == .lend ? String(localized: "on") : String(localized: "from"))
             MoveClause(glue: String(localized: "on")) {
                 Button { toggle(.network) } label: {
-                    MoveWord((move.network?.name ?? "") + ".", ink: live ? DS.pickInk : DS.textPrimary)
-                        .environment(\.moveQuiet, open != nil && open != .network)
+                    MoveWord((move.network?.name ?? "") + ".", ink: MoveSentence.settledInk)
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("On \(move.network?.name ?? ""), change"))

@@ -399,6 +399,7 @@ extension FeedScreen {
                             // own gate for drawing them, not a second guess at
                             // it.
                             chartHeight: DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome)),
+                            fillsSlot: true,
                             ranges: ranges,
                             range: active,
                             onPickRange: w.pick,

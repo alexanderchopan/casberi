@@ -171,14 +171,20 @@ struct DSRangeChips<Option: Hashable>: View {
                             // The pick crossfades (prd §966); the weight snaps,
                             // which is the one channel SwiftUI will not tween.
                             .animation(DS.Motion.standard, value: r == range)
-                            .frame(minHeight: Self.hit)
+                            // A 44pt target in a 32pt line (prd §1731): the
+                            // word is hit at `DS.Hit.min` and laid out at
+                            // `hit`, so the crown's budget does not move.
+                            .frame(minHeight: DS.Hit.min)
                             .contentShape(Rectangle())
+                            .padding(.vertical, (Self.hit - DS.Hit.min) / 2)
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityAddTraits(r == range ? .isSelected : [])
                 }
-                Spacer(minLength: 0)
             }
+            // Leading, with no trailing gap of its own (prd §1731): a spacer
+            // here cost a fixed-size picker one `s4` at its trailing end.
+            .frame(maxWidth: .infinity, alignment: .leading)
         } else if ranges.count > 1 {
             // **ONE EVEN ROW (prd §920).** Every window takes the same share
             // of the width and the row spans the figure above it — Stocks'

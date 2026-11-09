@@ -255,20 +255,19 @@ struct HoldingsTreemap: View {
     /// flat or unread move keeps the plain fill (§83).
     private func fill(_ id: String, lit isLit: Bool, widest: Double) -> Color {
         if isLit { return DS.tint }
-        // THE MAP IS NOT PAINTED (prd §1389): the only box in the app with a
-        // saturated fill was this one. The move's hue is a faint wash, and
-        // the edge carries its strength (`edge`); a flat or unread move keeps
-        // the plain fill (§83).
-        guard let m = move(id), abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
-        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.14)
+        // THE MAP IS NOT PAINTED (prd §1389), AND NOT OUTLINED (prd §1731):
+        // every tile stands on the plain fill; the day's direction is one
+        // small glyph in the tile's corner (`moveGlyph`), where a green or
+        // red wash and edge made the box the one coloured chart in the
+        // Wallet.
+        return DS.fillFaint
     }
 
-    /// A tile's edge: the move's hue at its strength against the board's
-    /// biggest move (Markets' rule, §1081); none when flat, unread or lit.
-    private func edge(_ id: String, lit isLit: Bool, widest: Double) -> Color? {
-        guard !isLit, let m = move(id), abs(m) >= 0.0005, widest > 0 else { return nil }
-        let strength = min(1, abs(m) / widest)
-        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.45 + 0.55 * strength)
+    /// The day's direction for a tile, as a glyph and its hue (a glyph keeps
+    /// the hue, §1004); none when flat, unread or lit.
+    private func moveGlyph(_ id: String, lit isLit: Bool) -> (symbol: String, hue: Color)? {
+        guard !isLit, let m = move(id), abs(m) >= 0.0005 else { return nil }
+        return m > 0 ? ("arrowtriangle.up.fill", DS.confirm) : ("arrowtriangle.down.fill", DS.destructive)
     }
 
     /// What a tile is worth: the holding's money, or Other's true share of
@@ -399,6 +398,14 @@ struct HoldingsTreemap: View {
                                 .foregroundStyle(isLit ? Color.white : DS.textPrimary)
                                 .lineLimit(1)
                                 .fixedSize()
+                            // Too narrow for the dollars, a tile still says
+                            // its share (prd §1731): no tile stands blank.
+                            Text(HoldingsTreemapLayout.percent(tile.share))
+                                .dsText(.label12)
+                                .monospacedDigit()
+                                .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
+                                .lineLimit(1)
+                                .fixedSize()
                             Color.clear.frame(width: 0, height: 0)
                         }
                     }
@@ -416,10 +423,13 @@ struct HoldingsTreemap: View {
             .clipped()
             .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
                 .fill(fill(tile.id, lit: isLit, widest: widest)))
-            .overlay {
-                if let edge = edge(tile.id, lit: isLit, widest: widest) {
-                    RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
-                        .strokeBorder(edge, lineWidth: 1.5)
+            .overlay(alignment: .topTrailing) {
+                if let glyph = moveGlyph(tile.id, lit: isLit) {
+                    Image(systemName: glyph.symbol)
+                        .dsGlyph(.tick)
+                        .foregroundStyle(glyph.hue)
+                        .padding(pad)
+                        .accessibilityHidden(true)
                 }
             }
             .opacity(lit != nil && !isLit ? 0.35 : 1)

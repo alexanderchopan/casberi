@@ -26,14 +26,6 @@ struct WalletSpendingFigure: View {
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
-            // **THE PACE (prd §1662):** the last window whole, as what is
-            // left to match it or how far past it, under the line that
-            // compares to the same point. The chart gives up its height.
-            if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
-                Text(verbatim: pace)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
             // **THE THREE ROWS ARE DOORS NOW (prd §1480 item 5):**
             // Subscriptions, Places and Fees stand under the tiles, each
             // opening its page, so the box says the window and its total.
@@ -52,8 +44,11 @@ struct WalletSpendingFigure: View {
                 GeometryReader { geo in
                     TokenChartPlot(chart: TokenChart(closes: reading.running,
                                                      price: reading.total, change: 0),
-                                   accent: DS.tint, height: geo.size.height, pulses: false,
-                                   lineWidth: 2.6, fillOpacity: 0.22,
+                                   // The Wallet's one chart ink (prd §1731,
+                                   // retiring the tint here): this window
+                                   // white, the last one grey behind it.
+                                   accent: DS.textPrimary, height: geo.size.height, pulses: false,
+                                   lineWidth: 2.6, fillOpacity: 0.1,
                                    endpointDot: true, fillsToLow: true,
                                    behind: reading.lastRunning,
                                    xSpan: Double(max(reading.windowDays - 1, 1)))
@@ -61,16 +56,39 @@ struct WalletSpendingFigure: View {
                 .frame(minHeight: 0, maxHeight: .infinity)
                 .layoutPriority(-1)
                 .padding(.top, DS.Space.s3)
+                // The end dot's radius, inside the slot's clip (prd §1731).
+                .padding(.trailing, 4)
                 .accessibilityElement()
                 .accessibilityLabel(Text("Spending so far, day by day"))
+                // **THE PACE (prd §1662) LABELS THE LINE IT IS ABOUT (prd
+                // §1731):** what is left to match the last window, or how
+                // far past it, stands in the chart under the grey line's
+                // end — a running total climbs to its right, so that corner
+                // is always clear — where it was a second grey sentence
+                // under the statement and cost the chart a line of height.
+                .overlay(alignment: .bottomTrailing) {
+                    if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
+                        Text(verbatim: pace)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+            } else if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
+                // No line to label: the pace keeps its sentence.
+                Text(verbatim: pace)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
             }
             HStack(spacing: DS.Space.s4) {
-                // Yours · Everything leads the foot (prd §1526).
+                // Yours · Everything leads the foot (prd §1526); the window
+                // trails it (prd §1731).
                 WalletWhoseSwitch()
+                Spacer(minLength: 0)
                 DSRangeChips(ranges: Spending.Window.allCases, range: window,
                              label: Self.label, slim: true, onPick: onPick)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .padding(.top, DS.Space.s3)
+            .padding(.top, DS.Space.s2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .contain)

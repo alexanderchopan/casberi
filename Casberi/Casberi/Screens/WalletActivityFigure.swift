@@ -91,11 +91,14 @@ struct WalletActivityFigure: View {
             HStack(spacing: DS.Space.s4) {
                 // Yours · Everything leads the foot (prd §1526).
                 WalletWhoseSwitch()
+                // The window trails the line (prd §1731).
+                Spacer(minLength: 0)
                 DSRangeChips(ranges: Spending.Window.allCases, range: window,
                              label: { $0 == .week ? String(localized: "Week") : String(localized: "Month") },
                              slim: true) { picked in
                     withAnimation(DS.Motion.standard) { windowRaw = picked.rawValue }
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.top, DS.Space.s2)
         }

@@ -212,6 +212,12 @@ struct WalletBalanceHeadline: View {
     /// 96 as well as at 120 — the 24pt buys a third transaction row above the
     /// fold, which is the thing the room is actually opened for.
     var chartHeight: CGFloat = 120
+    /// **THE CROWN FILLS ITS BOX (prd §1731).** The Wallet's Home line takes
+    /// every point the slot leaves, as Activity's bars and Spending's line
+    /// do, so the Yours · Following · All line stands on the box's bottom
+    /// edge on all four pages. `chartHeight` was a cap counted for chrome the
+    /// crown no longer draws, and left air under Home's picker alone.
+    var fillsSlot: Bool = false
     /// The windows this history can honestly answer; fewer than two draws no
     /// chips (a lone chip is a dead control).
     var ranges: [WalletRange] = []
@@ -286,13 +292,14 @@ struct WalletBalanceHeadline: View {
     @State private var pillShown = false
     @State private var entered = false
 
-    /// **THE LINE IS GREEN (prd §1259, user: "wallet balance line should be
-    /// green. not red or our brand color").** The line draws the balance, not
-    /// its direction, so it takes one ink whatever the window did; the signed
-    /// figure under the number (`moveLine`) still states the direction in
-    /// colour, so a loss is said once, in words.
+    /// **THE LINE IS THE PAGE'S INK (prd §1731, amending §1259's green).**
+    /// Every Wallet chart draws in one ink — this line, Activity's bars,
+    /// Spending's line — so colour on these pages only ever means a state.
+    /// The line draws the balance, not its direction; the signed figure
+    /// under the number (`moveLine`) still says the direction in colour, so
+    /// a gain or a loss is said once, in words.
     private var accent: Color {
-        onColor ? .white : TokenChartStyle.accent(up: true, scheme: scheme)
+        onColor ? .white : DS.textPrimary
     }
 
     /// The number in the headline seat: the live total when the holdings read
@@ -385,7 +392,9 @@ struct WalletBalanceHeadline: View {
                                // floored at the series' low falls under it
                                // as Stocks draws, so the line reads as the
                                // total said twice rather than a decoration.
-                               lineWidth: 2.6, fillOpacity: 0.22,
+                               // A white wash at the green's 0.22 read as a
+                               // grey plate under the line (prd §1731).
+                               lineWidth: 2.6, fillOpacity: 0.1,
                                endpointDot: true, fillsToLow: true,
                                // Scrub (2026-08-03, §297): a press-then-drag —
                                // or a resting cursor on the Mac — rolls the
@@ -394,7 +403,7 @@ struct WalletBalanceHeadline: View {
                                cursorIndex: scrubIndex,
                                onScrub: { scrubIndex = $0 })
                 }
-                .frame(minHeight: 0, maxHeight: chartHeight)
+                .frame(minHeight: 0, maxHeight: fillsSlot ? .infinity : chartHeight)
                 .layoutPriority(-1)
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
@@ -413,12 +422,20 @@ struct WalletBalanceHeadline: View {
                     .onAppear { draw(settled: Self.lastShown != nil); enter() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
+                    // The end dot's radius, inside the slot's clip: the
+                    // slot's own inset held it before §1731 took that away.
+                    .padding(.trailing, fillsSlot ? 4 : 0)
                 if ranges.count > 1 || whose {
                     // Yours · Everything leads the foot (prd §1526), the
                     // window beside it: one row of choices, never a new one.
                     HStack(spacing: DS.Space.s4) {
-                        if whose { WalletWhoseSwitch() }
-                        if ranges.count > 1 { rangeChips }
+                        // Whose leads, when trails (prd §1731): the line's
+                        // two ends, the same on every Wallet page.
+                        if whose {
+                            WalletWhoseSwitch()
+                            Spacer(minLength: 0)
+                        }
+                        if ranges.count > 1 { rangeChips.fixedSize(horizontal: whose, vertical: false) }
                     }
                     .padding(.top, whose && ranges.count < 2 ? DS.Space.s2 : 0)
                 }
@@ -427,10 +444,13 @@ struct WalletBalanceHeadline: View {
                 // follow then it won't show my Yours balance").** A scope with
                 // fewer than two readings draws no line; the switch rode inside
                 // it, so a new Yours stood with no way back to All or Following.
+                // With no line it still stands on the box's bottom edge (§1731).
+                if fillsSlot { Spacer(minLength: 0) }
                 WalletWhoseSwitch()
                     .padding(.top, DS.Space.s2)
             }
         }
+        .frame(maxHeight: fillsSlot ? .infinity : nil, alignment: .topLeading)
     }
 
     /// The reading itself — caption, total, delta, and why it moved. Rendered
@@ -683,7 +703,9 @@ struct WalletBalanceHeadline: View {
     /// concentric corner and the never-draw-a-lone-chip rule; this keeps only
     /// the spacing that belongs to the crown's own stack.
     private var rangeChips: some View {
-        DSRangeChips(ranges: ranges, range: range, onPick: onPickRange)
+        // Words, as Activity's and Spending's window is (prd §1731): one
+        // picker grammar on the line, never pills beside words.
+        DSRangeChips(ranges: ranges, range: range, slim: whose, onPick: onPickRange)
             .padding(.top, DS.Space.s2)
     }
 

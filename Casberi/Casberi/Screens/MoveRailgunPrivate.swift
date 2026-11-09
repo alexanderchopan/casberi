@@ -641,7 +641,6 @@ struct MoveRailgunSentence<Head: View>: View {
                     head().padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
-                    .environment(\.moveQuiet, open)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.holding)
                 Group {
@@ -713,7 +712,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 MoveClause { amountField }
                 MoveClause {
                     Button { toggle() } label: {
-                        MoveWord(move.holding?.symbol ?? "", ink: DS.pickInk)
+                        MoveWord(move.holding?.symbol ?? "", ink: MoveSentence.settledInk)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Token, \(move.holding?.symbol ?? "")"))
@@ -895,7 +894,6 @@ struct MoveRailgunSentence<Head: View>: View {
                 .monospacedDigit()
                 .foregroundStyle(DS.pickInk)
                 .fixedSize()
-                .opacity(open ? 0.3 : 1)
         }
         .accessibilityLabel(Text("Amount"))
         .onChange(of: move.amount) { _, now in

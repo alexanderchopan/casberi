@@ -201,7 +201,7 @@ struct MoveKeysWalk: View {
             .disabled(!verbEnabled)
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
+        .modifier(MoveFootClearance(inTray: inTray))
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
     }
 

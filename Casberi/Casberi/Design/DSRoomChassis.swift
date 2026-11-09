@@ -307,7 +307,13 @@ enum DSRoomChassis {
     /// doubling was real; 15 was not the number to land on. Measured, not
     /// eyeballed: the pixel scan was too noisy to settle it and the row's own
     /// `listRowInsets` was exact.
-    static let contentInset: CGFloat = DS.Space.s3
+    ///
+    /// **ZERO NOW (prd §1731).** §766's well took `s3` of its own outside the
+    /// slot, so this `s3` was the doubling again: a box's number, chart and
+    /// picker stood at 46 over rows at 32, and a treemap stopped 14pt short
+    /// of the rows' trailing edge. The well's `s3` is the one that closes the
+    /// gap; the slot adds nothing.
+    static let contentInset: CGFloat = 0
 
     /// The height `DSRoomSlot` reserves for a headline, drawn or not.
     ///

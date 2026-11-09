@@ -63,7 +63,6 @@ struct MovePrivateSentence<Head: View>: View {
                         .padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
-                    .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
@@ -202,8 +201,7 @@ struct MovePrivateSentence<Head: View>: View {
                     guard move.stage == .ready else { return }
                     toggle(.amount)
                 } label: {
-                    MoveWord(figure, ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
-                        .environment(\.moveQuiet, open != nil && open != .amount)
+                    MoveWord(figure, ink: MoveSentence.settledInk)
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("Amount, \(figure)"))
@@ -236,7 +234,7 @@ struct MovePrivateSentence<Head: View>: View {
                 guard live else { return }
                 leave(.pickRecipient)
             } label: {
-                MoveWord(String(localized: "your private balance"), ink: live ? DS.pickInk : DS.textPrimary)
+                MoveWord(String(localized: "your private balance"), ink: MoveSentence.settledInk)
             }
             .buttonStyle(RowPress())
             .accessibilityHint(Text("Picks who it goes to"))
@@ -250,12 +248,11 @@ struct MovePrivateSentence<Head: View>: View {
             } label: {
                 Group {
                     if let to = move.recipient {
-                        MoveWord(YourAccount.short(to), ink: pickable ? DS.pickInk : DS.textPrimary)
+                        MoveWord(YourAccount.short(to), ink: MoveSentence.settledInk)
                     } else {
                         MoveWord(String(localized: "address"), ink: open == .recipient ? DS.pickInk : DS.textTertiary)
                     }
                 }
-                .environment(\.moveQuiet, open != nil && open != .recipient)
             }
             .buttonStyle(RowPress())
             .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))

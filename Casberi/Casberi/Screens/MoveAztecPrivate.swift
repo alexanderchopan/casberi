@@ -472,7 +472,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     head().padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
-                    .environment(\.moveQuiet, open != nil)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
@@ -553,8 +552,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 MoveClause { amountField }
                 MoveClause {
                     Button { toggle(.token) } label: {
-                        MoveWord(move.symbol, ink: DS.pickInk)
-                            .environment(\.moveQuiet, open != nil && open != .token)
+                        MoveWord(move.symbol, ink: MoveSentence.settledInk)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Token, \(move.symbol)"))
@@ -590,12 +588,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         Button { if live { toggle(.recipient) } } label: {
             Group {
                 if let to = move.recipient {
-                    MoveWord(AddressTail.short(to) + ".", ink: live ? DS.pickInk : DS.textPrimary)
+                    MoveWord(AddressTail.short(to) + ".", ink: MoveSentence.settledInk)
                 } else {
                     MoveWord(String(localized: "address."), ink: open == .recipient ? DS.pickInk : DS.textTertiary)
                 }
             }
-            .environment(\.moveQuiet, open != nil && open != .recipient)
         }
         .buttonStyle(RowPress())
         .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))
@@ -613,7 +610,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .monospacedDigit()
                 .foregroundStyle(DS.pickInk)
                 .fixedSize()
-                .opacity(open != nil ? 0.3 : 1)
         }
         .accessibilityLabel(Text("Amount"))
         .onChange(of: move.amount) { _, now in

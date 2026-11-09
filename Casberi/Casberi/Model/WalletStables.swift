@@ -19,6 +19,9 @@ enum WalletStables {
         "USDE", "PYUSD", "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD",
         "GHO", "FRAX", "BUSD", "RLUSD", "USDG", "USDP", "GUSD", "USDD", "USD0",
         "DOLA", "MIM", "USDL", "AUSD", "USDF",
+        // Tether's omnichain USDT, what Plasma One settles in (prd §1731): its
+        // rows said "−246.31 USDT0" in a column that is dollars.
+        "USDT0",
     ]
 
     static func isDollar(_ symbol: String) -> Bool {

@@ -557,7 +557,9 @@ extension FeedScreen {
     /// One of a door's top three (prd §1525): the mark in the door's glyph
     /// column, the name and figure a rung under the door's, so the door
     /// still reads as the heading. A press opens what the door opens.
-    func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, figure: String?, tone: Color = DS.textSecondary,
+    /// The name and figure are the primary ink (prd §1731): grey at this
+    /// rung read as a row you could not press.
+    func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, figure: String?, tone: Color = DS.textPrimary,
                                       act: @escaping () -> Void,
                                       @ViewBuilder mark: () -> Mark) -> some View {
         Button {
@@ -573,7 +575,7 @@ extension FeedScreen {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: name)
                         .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     if let line {
                         Text(verbatim: line)

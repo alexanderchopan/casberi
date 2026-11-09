@@ -310,6 +310,28 @@ struct MoveScreen: View {
                         // limit changed (prd §1500).
                         Text("Face ID approves every move.")
                             .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        // What Create makes, drawn before it exists (prd
+                        // §1731, §769): each network at the picker's row.
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(YourAccountOp.networks.filter { !$0.isTest }, id: \.chainId) { network in
+                                HStack(spacing: DS.Space.s3) {
+                                    if let mark = MoveSentence.networkMark(chainId: network.chainId) {
+                                        Image(mark)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: MoveSentence.listMark, height: MoveSentence.listMark)
+                                            .clipShape(Circle())
+                                            .accessibilityHidden(true)
+                                    }
+                                    Text(verbatim: network.name)
+                                        .dsText(MoveSentence.choiceRung)
+                                        .foregroundStyle(DS.textPrimary)
+                                }
+                                .frame(minHeight: MoveSentence.listRowHeight)
+                            }
+                        }
+                        // The sentence already says them aloud.
+                        .accessibilityHidden(true)
                     }
                     if let note {
                         Text(verbatim: note.text)
@@ -361,7 +383,7 @@ struct MoveScreen: View {
             .disabled(creating)
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
+        .modifier(MoveFootClearance(inTray: inTray))
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
     }
 

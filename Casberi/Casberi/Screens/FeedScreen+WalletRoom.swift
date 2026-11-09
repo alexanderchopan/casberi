@@ -1448,9 +1448,10 @@ extension FeedScreen {
                             .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.headInk)
                     }
                     .textCase(nil)
-                    // On a panel the day stands in the rows' column, as the
-                    // Feed's days do (prd §1219).
-                    .padding(.leading, panelled ? DSRoomChassis.rowInset : DS.Space.s4)
+                    // The day stands in the rows' column, on a panel or off
+                    // one (prd §1219, §1731): Activity's days stood at the
+                    // tiles' edge, 14pt left of every row under them.
+                    .padding(.leading, DSRoomChassis.rowInset)
                     // The FIRST day heading sits directly under the scope
                     // switcher, which already carries its own bottom inset — the
                     // macro pad belongs BETWEEN days, not above the first one, and
@@ -1499,7 +1500,9 @@ extension FeedScreen {
         let amount = sent.transferAmount ?? ""
         let money = sent.transferUSD.flatMap { usd -> String? in
             guard usd.isFinite else { return nil }
-            let text = WalletValue.money(usd)
+            // The moves' own formatter (prd §1731): cents under $1,000, as
+            // every other row in the column says its dollars.
+            let text = WalletValue.payment(usd)
             return text.contains(where: { ("1"..."9").contains($0) }) ? text : nil
         }
         let route = "\(walletPlaceName(sent)) → \(walletPlaceName(received))"
