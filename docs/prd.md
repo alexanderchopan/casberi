@@ -71737,3 +71737,14 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Mac half (§1402).** The same views draw Library's column, so every item follows.
 
 **Checks.** Built and looked at on the simulator over the demo: Library at rest, with one recent app, with Gmail marked as needing you (`-seatAttention Gmail`), Day's folder open, and search for "coffee". The first-run Start row was not seen: the simulator holds the demo. Catalyst was not compiled and `verify.sh` was not run. `plate-audit`, `row-anatomy-audit`, `ds-template-audit`, `status-ink-audit`, `design-ramp-audit`, `footnote-audit`, `setup-copy-audit` and `tray-search-selftest` pass.
+
+## §1735 — Move stays when the bar folds, and wears ink: read down, the places fold to the one circle on the leading side and Move keeps its seat at the trailing edge; Move's circle is a solid disc in the primary ink (amends §1715 item 2's glass circle and the fold of §1640; declines a Wallet dot on the bar) (user, 2026-11-09, of the canvas "Tab bar improvements": "move stays, ok"; of the colour: "you pick"; of the Wallet's amber dot: "do not do"; of the folded bar, the place's circle and Move or Move alone: "Place and Move") — BUILT; seen on the simulator
+
+1. **Move stays.** Folded, the bar was the current place's circle alone, so the one act was two taps away mid-page. Now the three places fold to that circle on the leading side (§1734 item 7 held) and Move stays at the trailing edge (`PlaceTabBar.body`). Move alone was weighed and declined: the place's circle is the one tap that brings the places back without a scroll up, and the only thing naming where you are once the title has scrolled away.
+2. **Move wears ink.** On the places' glass, in the places' ink and with no word, the circle read as a fourth place. It is a solid disc in `DS.textPrimary` with the glyph in `DS.page`. Never the pick's pink: on this bar pink means the tab you are on.
+3. **No dot on Wallet.** An amber dot for Needs you was offered and declined; `needs-you-selftest.sh` already fails a `WalletAlarm` on the tab.
+4. **Mac half (§1402).** The rail does not fold, and its Move tile carries its word and stands apart already: unchanged.
+
+**Checks.** Built and looked at on the simulator over the demo, dark: the bar at rest and folded on the Feed. Light, the Wallet and Library folded, and Catalyst were not seen; `verify.sh` was not run. `ds-template-audit` passes.
+
+Canvas: https://claude.ai/artifact/AqgEFLcjvWceQprDa1ieJi

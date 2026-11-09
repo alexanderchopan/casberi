@@ -123,13 +123,17 @@ struct PlaceTabBar: View {
     static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
     var body: some View {
+        // MOVE STAYS (prd §1735): read down, the places fold to the one
+        // circle on the leading side and the act keeps its seat at the
+        // trailing edge, so it is one tap from anywhere on the page.
         HStack(spacing: DS.Space.s2) {
             if folded {
                 foldedCircle
                 Spacer(minLength: 0)
             } else {
-                bar
+                tabs
             }
+            moveCircle
         }
         .animation(DS.Motion.standard, value: folded)
     }
@@ -139,15 +143,8 @@ struct PlaceTabBar: View {
     /// collapses").** The three places keep their order in the capsule
     /// (Library at the right as the App Library is) and Move is its own
     /// circle at the trailing edge, the shape iOS gives a search tab, here
-    /// given to the one control that is an act. Read down, both fold into
-    /// the one circle they always did.
-    private var bar: some View {
-        HStack(spacing: DS.Space.s2) {
-            tabs
-            moveCircle
-        }
-    }
-
+    /// given to the one control that is an act. Read down, the places fold
+    /// into the one circle they always did and Move stays (prd §1735).
     private var tabs: some View {
         HStack(spacing: 0) {
             ForEach(PlaceTab.allCases.filter { $0 != .move }) { tab in
@@ -189,15 +186,23 @@ struct PlaceTabBar: View {
     /// Move's own circle, the bar's height, at the trailing edge: it raises
     /// the Move tray over wherever you stand (prd §1442), through the one
     /// door every tab press takes.
+    ///
+    /// **THE ACT WEARS INK (prd §1735).** On the places' own glass, in the
+    /// places' own ink and with no word, the circle read as a fourth place.
+    /// It is a solid disc in the primary ink with the glyph in the page's:
+    /// never the pick's pink, which on this bar means the tab you are on.
     private var moveCircle: some View {
         Button {
             taps[.move, default: 0] &+= 1
             DSHaptic.tap()
             open(.move)
         } label: {
-            mark(.move, on: false, glyphSize: .body, taps: taps[.move] ?? 0)
+            Image(systemName: PlaceTab.move.glyph)
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(DS.page)
+                .symbolEffect(.bounce, value: taps[.move] ?? 0)
                 .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
+                .background(DS.textPrimary, in: Circle())
                 .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())
