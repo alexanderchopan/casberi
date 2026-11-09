@@ -107,7 +107,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Way-back audit (scripts/way-back-audit.py) — every screen has a way back: a full-screen cover shows a close control on every branch, no sheet switches its swipe off unlisted, a hidden back button keeps `DSSwipeBack()`** → docs/verify.md
 - **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
-- **Day-divider audit (scripts/day-divider-audit.py) — the day header wears `DS.brandInk` (the mark's hue, one notch softer, prd §742); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
+- **Day-divider audit (scripts/day-divider-audit.py) — the day header wears `DS.headInk` (white words, prd §1252); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
 - **A mark PACKS, a word TILES (prd §917): the source maps are circle packs (`Design/DSCirclePack.swift`, `circle-pack-selftest.sh`); the Wallet's and the devnets' holdings are a true-area treemap (`Design/HoldingsTreemap.swift`, §939, §949); words keep `UnitTreemap`** → docs/hooks/design.md · prd §917 · §939 · §949
 - **Design-template audit (scripts/ds-template-audit.py) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
@@ -503,7 +503,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - **One section rung (prd §1496): every section name and Wallet door is `heading24` with its glyph in the head column; a door has no line, its state is the figure's ink or one amber word; Your account is Keys and Spending in one-word rows; the second key is the Co-signer; `heading28` is the lede's alone** → prd §1496 → docs/hooks/design.md · prd §762
 - **Every row in every room is one anatomy (prd §764, amended by §902)** Weight carries a fact (the next event, a state word), never a row's title. → docs/hooks/design.md · prd §764
 - No hairlines — zero exceptions; nothing draws a line. Widget/tile radius = `DS.Radius.widget`. **The catalog is rows (what you could add) and the sources tray is tiles (what you have); keep that split** → docs/hooks/design.md · prd §518
-- **The day divider is the one line of type in the brand pink (`DS.brandInk`), and the cover card is not.** → docs/hooks/design.md · prd §740 · §742
+- **White words, pink glyphs (prd §1252): the day divider takes `DS.headInk`; `DS.brandInk` is a glyph's.** → docs/hooks/design.md · prd §1252 · §740
 - **The elevated card has ONE caller left, and it is a control (prd §759).** `dsWidgetSurface` is off every block in the app. → docs/hooks/design.md · prd §759
 - **No plates under ANY spelling (prd §782, user: "these plates").** `dsInkFill` is the floating layer's only. → docs/hooks/design.md · prd §782
 - **A room head draws NO PLATE (prd §758, supersedes §745's "one surface" and §757's "the head keeps its card").** `dsRoomHeadCard()` is `dsRoomHeadBlock()` and applies no `dsWidgetSurface`. → docs/hooks/design.md · prd §758

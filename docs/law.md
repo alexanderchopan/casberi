@@ -43,7 +43,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - One left edge: a title row stands in the rows' column (`titleIndent`). A short note in the lead climbs the ladder's title rungs; an event's start stands in a row's trailing slot (§1472). The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
 - One ink for the pick: `DS.pickInk` (pink) says state and verb, a door is `textSecondary` with its chevron, and `DS.tint` (the theme blue) is for charts and in-text links only, plus the Exit demo pill. `ds-template-audit.py` check E (§1385).
-- The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
+- The brand is pink; orange was declined (§899). Words are white and glyphs pink (§1252): the day header and the category's name take `DS.headInk`, the day header at `heading20` (§1006), and `DS.brandInk` is a glyph's.
 - Every pour is ink (`DS.pourInk`); hue never says where something came from (§524).
 - A mark packs, a word tiles: source maps are circle packs (§917). Wallet holdings are §939's treemap (Wallet section below).
 - A deadline is a bar with ticks, never a thumb (§1006).
