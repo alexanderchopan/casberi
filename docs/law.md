@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1905 of 1977 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1906 of 1978 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2131,7 +2131,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1712 — The Wallet's rain names its private places: Railgun, Privacy Pools and your Aztec account fall because the pull asks…
 - §1713 — Railgun is the private balance for any other token on Ethereum: ETH and USDC stay on Privacy Pools, everything else s… (amended by §1727)
 - §1714 — The rooms tray is deleted: Search is Find, showing Recent and your recent searches with the keyboard up; no swipe rai… (amended by §1715)
-- §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field
+- §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field (amended by §1735)
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
 - §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720)
@@ -2151,6 +2151,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1732 — The Wallet waits less: one holdings read per wallet a pass, the total's extras beside it, Tor on activation, the door…
 - §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder'…
 - §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
+- §1735 — Move stays when the bar folds, and wears ink: read down, the places fold to the one circle on the leading side and Mo…
 
 ## Dead rulings → what replaced them (generated)
 
