@@ -100,17 +100,6 @@ extension FeedScreen {
             .lineLimit(1)
     }
 
-    /// Home's empty state for one account (prd §1492): the doors' rows drawn
-    /// empty, under "Nothing needs you on <account>".
-    var walletHomeQuiet: some View {
-        let headline = roomPick.map { String(localized: "Nothing needs you on \($0)") }
-            ?? String(localized: "Nothing needs you")
-        return DSEmptyState(headline: Text(verbatim: headline),
-                            words: Text(WalletSection.needsYou.emptyBody ?? ""),
-                            scale: .list(rows: 3))
-            .walletListRow()
-    }
-
     /// The doors as one section under the tiles, no header: the title above
     /// already names the page (prd §1480, user: "do we even need to say
     /// 'Overview'").
@@ -246,8 +235,11 @@ extension FeedScreen {
 
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
     /// tiles, five doors: Your account, Following, Needs you, Permissions,
-    /// Threats (Markets is a tile, §1498). Needs you, Permissions and Threats draw no row while
-    /// empty; Your account stands on All or with your account picked.
+    /// Threats (Markets is a tile, §1498). Needs you, Permissions and Threats
+    /// STAND while empty on All and on a picked account (prd §1729): a fresh
+    /// account otherwise never met the Threats page, where Privacy by Nymis
+    /// lives (§1701). On an app pick, Permissions and Threats still leave
+    /// while empty (§1618). Your account stands on All or with your account picked.
     @ViewBuilder
     func walletHomeDoors(upcoming: [Thing]) -> some View {
         let onAll = walletOnAll
@@ -292,38 +284,43 @@ extension FeedScreen {
                            word: bridges.bridges.first { seat.owns($0.name) }?.statusLine,
                            act: { openAppPage(seat.name) })
             }
-            // **NEEDS YOU STANDS AT 0 ON AN APP (prd §1618 item 1, user: "they
-            // may not all have 'needs you' but needs you could be 0").** On All
-            // it leaves while empty, as Permissions and Threats do.
-            if needs > 0 || selectedSeat != nil {
-                // What waits on you is the pick's ink (§1385: pink says state).
-                walletDoor(.needsYou, figure: "\(needs)", figureTone: needs > 0 ? DS.pickInk : DS.textSecondary)
-            }
-            if permissions > 0 {
+            // **NEEDS YOU STANDS AT 0 (prd §1618 item 1 on an app, §1729
+            // everywhere, user: "Yes, build A").** What waits on you is the
+            // pick's ink (§1385: pink says state); none is grey.
+            walletDoor(.needsYou, figure: "\(needs)", figureTone: needs > 0 ? DS.pickInk : DS.textSecondary)
+            // **PERMISSIONS AND THREATS STAND WHILE EMPTY (prd §1729, user:
+            // "they wouldn't see … that they can use something like nymis").**
+            // A door that leaves while empty hides the page behind it: a fresh
+            // account never reached Threats, where Privacy by Nymis lives
+            // (§1701). So on All and on a picked account the two doors stand,
+            // their state one grey word (§1496). On an app pick they still
+            // leave while empty: the app's page is its own (§1618).
+            // ONE row per door, its trailing text computed: two rows under one
+            // anchor crossfade as the counts land (seen: "None" under "5").
+            let appPicked = selectedSeat != nil
+            if permissions > 0 || !appPicked {
                 // A grant with no limit wants you (prd §1107a).
-                walletDoor(.permissions, figure: "\(permissions)",
-                           figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary)
+                walletDoor(.permissions, figure: permissions > 0 ? "\(permissions)" : nil,
+                           figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary,
+                           word: permissions > 0 ? nil : String(localized: "None"))
             }
-            if counts.flagged > 0 {
+            if counts.flagged > 0 || !appPicked {
                 // Every threat is red (prd §1463); the count is what you have
-                // not seen yet, and none left says so (prd §1587).
+                // not seen yet, and none left says so (prd §1587). No threat
+                // found, and the word says whether Nymis has looked (§1729
+                // item 2): "Unscanned" while an account in scope has never
+                // been read, "None" once every one has.
                 let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
-                if unseen > 0 {
-                    walletDoor(.threats, figure: "\(unseen)", figureTone: DS.destructiveInk)
-                } else {
-                    walletDoor(.threats, word: String(localized: "All seen"))
-                }
+                let word: String? = counts.flagged > 0
+                    ? (unseen > 0 ? nil : String(localized: "All seen"))
+                    : (walletPrivacySlots.contains { NymisScans.shared.reading($0.id) == nil }
+                       ? String(localized: "Unscanned") : String(localized: "None"))
+                walletDoor(.threats, figure: unseen > 0 ? "\(unseen)" : nil,
+                           figureTone: DS.destructiveInk, word: word)
             }
-            // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"
-            // to "Nothing needs you on Railgun").** With Following and Markets
-            // on All only (§1491), an app with no asks, grants or threats left
-            // Home blank under the tiles. §769's empty state fills it: what
-            // would stand here, empty, and the account named. Reached by the
-            // Home tile; a fresh pick turns to Activity first (below).
-            // An app picked draws its account and Needs you instead (§1618).
-            if quiet, selectedSeat == nil {
-                walletHomeQuiet
-            }
+            // §1492's quiet state ("Nothing needs you on Railgun") is deleted
+            // (prd §1729): the doors standing at 0 and None say it, and an app
+            // picked draws its account and Needs you instead (§1618).
         }
         // **AN APP PICKED WITH NOTHING ON HOME OPENS ON ITS ACTIVITY (prd
         // §1615 item 6, user: "yes", reversing §1492's "never jumps").** Ten Wallet
