@@ -31,10 +31,12 @@ enum AztecApps {
     /// in Casberi.
     static let directory = URL(string: "https://aztec.network/apps#directory")!
 
-    /// The tile stands once there is an Aztec account, on an iPhone (the
-    /// prover), never in the demo.
+    /// The tile stands for anyone with Your account, on an iPhone (the
+    /// prover), never in the demo (prd §1700s). Never on the Aztec account
+    /// being USED: the directory is how it first gets used, so that gate hid
+    /// the door from everyone who had not already found Aztec in Move.
     @MainActor static var doorShown: Bool {
-        AztecAccountStore.shared.isShown && AztecProver.isAvailable && !DemoMode.isActive
+        YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive
     }
 
     /// Whether `url` is one of them: https, its host or `www.` before it.

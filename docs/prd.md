@@ -71321,6 +71321,14 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** None: Aztec stands on the iPhone only.
 
+## §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used (amends §1700m's "while you have an Aztec account" and §1700p's one door) (user, 2026-11-08, told a user on 3.0.24 sees no directory because the tile waited for a used account: "wtf. how does a user create it", "yes!") — BUILT
+
+1. **The gate was circular.** `AztecApps.doorShown` read `AztecAccountStore.isShown`, which is true only once the account has been used (§1700a item 2). Opening an Aztec app is one of the ways it gets used, and since §1700p Library's tile is the only door, so nobody who had not already deposited through Move could ever see it.
+2. **The tile now stands on Your account** (`YourAccountKey.address != nil`), on an iPhone (the prover), never in the demo. The account's own row, Holdings place, recovery keys and Networks count still wait for first use, as §1700a says: the door is the way in, not a sign of an account.
+3. **Guarded** in `shield-bridge-selftest.sh`: the tile's gate names Your account and never `isShown`.
+
+**Mac half (§1402).** Unchanged: no prover on Catalyst, so no tile.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

@@ -249,6 +249,11 @@ DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr 
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
 grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/SettingsHome.swift \
   || { echo "✗ Library's Aztec directory no longer offers your account to an Ethereum app"; exit 1; }
+# The directory is how the Aztec account first gets used, so its tile may not
+# wait for that use (prd §1700s).
+grep -q 'YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive' Casberi/Casberi/Model/Aztec/AztecApps.swift \
+  && ! awk '/static var doorShown/,/^    }/' Casberi/Casberi/Model/Aztec/AztecApps.swift | grep -q 'isShown' \
+  || { echo "✗ Aztec's directory tile waits for an Aztec account already used, so nobody new reaches it"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
 # Only the browser that may send says it is a Mac (prd §1700n).

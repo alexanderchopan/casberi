@@ -208,7 +208,7 @@ struct SourcesOpenFolder: View {
     /// **THE WALLET FOLDER LEADS WITH AZTEC'S DIRECTORY (prd §1700m).** Where
     /// you find Aztec apps, beside the apps you could add; the Wallet's Home
     /// keeps its door. Nil for every other folder, and while you have no
-    /// Aztec account (`AztecApps.doorShown`).
+    /// Your account (`AztecApps.doorShown`, prd §1700s).
     var aztecDirectory: (() -> Void)? = nil
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
