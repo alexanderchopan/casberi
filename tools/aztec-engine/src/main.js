@@ -355,6 +355,13 @@ const own = {
     return { address: accountAddress, secretKey: secret.toString(), signingKey: signingKey.toString(),
              salt: Fr.ZERO.toString(), kind: 'schnorr-initializerless' };
   },
+  // What a send costs right now (prd §1700y): the node's minimum fee per
+  // unit of gas, Fee Juice in its smallest unit. Move multiplies it by a
+  // send's measured gas for "Costs about $0.02".
+  async minFees() {
+    const f = await (await getWallet()).aztecNode.getCurrentMinFees();
+    return { l2: f.feePerL2Gas.toString(), da: f.feePerDaGas.toString() };
+  },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
     return { chainId: c.chainId.toBigInt().toString(), version: c.version.toBigInt().toString() };

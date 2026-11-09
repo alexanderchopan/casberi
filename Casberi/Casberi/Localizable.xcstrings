@@ -58823,6 +58823,34 @@
         }
       }
     },
+    "Aztec's gas, for your account there" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas de Aztec, para tu cuenta allí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecのガス代（そこでのアカウント用）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 가스비, 그곳의 계정용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 的 Gas，供你在那里的账户使用"
+          }
+        }
+      }
+    },
     "Aztec's proof is not on Ethereum yet" : {
       "localizations" : {
         "es" : {
@@ -97808,6 +97836,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas 用于支付你的 Aztec 账户的操作费用，不能发送给任何人。"
+          }
+        }
+      }
+    },
+    "Gas, from your Fee Juice" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas, de tu Fee Juice"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代、Fee Juiceから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비, Fee Juice에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas，来自你的 Fee Juice"
           }
         }
       }
@@ -239467,6 +239523,34 @@
         }
       }
     },
+    "on Ethereum in about an hour" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en Ethereum en una hora aprox."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1時間でEthereumに"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1시간 후 Ethereum에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约一小时后到达 Ethereum"
+          }
+        }
+      }
+    },
     "on last week" : {
       "localizations" : {
         "es" : {
@@ -241886,6 +241970,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 0xBow Privacy Pools 中私密"
+          }
+        }
+      }
+    },
+    "private in 5 to 15 minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "privado en 5 a 15 minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5〜15分で非公開に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5~15분 후 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "5 到 15 分钟后变为私密"
           }
         }
       }
@@ -248852,6 +248964,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "当前水平"
+          }
+        }
+      }
+    },
+    "who, what and how much stay private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "quién, qué y cuánto siguen siendo privados"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "誰が、何を、いくらかは非公開のまま"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "누가, 무엇을, 얼마나는 비공개로 유지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "谁、什么、多少都保持私密"
           }
         }
       }

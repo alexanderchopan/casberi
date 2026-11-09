@@ -63,6 +63,172 @@ final class AztecMove {
     /// deposit is then the co-signer's own (prd §1720).
     private(set) var viaCoSigner: String?
 
+    // MARK: - In dollars (prd §1700y, as Railgun's §1728)
+
+    /// USD per coin, by symbol: USDC, WETH (at ETH's price), AZTEC.
+    private(set) var prices: [String: Double] = [:]
+    /// Aztec's minimum fee per unit of L2 gas, in Fee Juice's smallest unit.
+    private(set) var feePerL2Gas: Decimal?
+    /// Ethereum's gas price, wei, for a move-in signed by Your account.
+    private(set) var gasPriceWei: Decimal?
+    /// When this sentence began reading, for "Getting your private balance
+    /// ready · 12 s" in the foot (real seconds, as Railgun's).
+    private(set) var readingSince: Date?
+
+    /// Shield's cut, both ways: 0.5% (its own page, prd §1700d).
+    static let shieldBps = 50
+    /// A private send's gas on Aztec: one transfer used 644K to 742K
+    /// (twelve fee-bearing mainnet blocks read 2026-11-08); the higher, rounded.
+    static let sendMana = 750_000
+    /// An exit through Shield burns and messages Ethereum: more than a send.
+    static let exitMana = 1_400_000
+    /// A move-in on Ethereum: Shield's deposit used 170K to 175K (its portal's
+    /// own deposits, read 2026-11-09), plus Your account's approve and its own
+    /// overhead (~120K, measured 2026-11-03); gas riding along adds its
+    /// portal's deposit and approve.
+    static let depositGas = 350_000
+    static let gasAlongGas = 150_000
+
+    static func usd(_ value: Double) -> String {
+        value.formatted(.currency(code: "USD").precision(.fractionLength(2)))
+    }
+
+    /// Base units of a token in dollars.
+    func dollars(_ units: String, symbol: String) -> Double? {
+        guard let price = prices[symbol], let u = Decimal(string: units) else { return nil }
+        let places = symbol == "USDC" ? 6 : 18
+        return NSDecimalNumber(decimal: u / pow(10, places)).doubleValue * price
+    }
+
+    /// The line under the sentence: "$25.00 · you have $120.00" (prd §1700y).
+    /// No price: what you have, in the token.
+    var amountLine: String? {
+        guard let available else { return nil }
+        var parts: [String] = []
+        if let units, (Decimal(string: units) ?? 0) > 0, let usd = dollars(units, symbol: symbol) { parts.append(Self.usd(usd)) }
+        parts.append(dollars(available, symbol: symbol).map { String(localized: "you have \(Self.usd($0))") }
+                     ?? String(localized: "you have \(PrivateMoney.figure(available, decimals: decimals, symbol: symbol))"))
+        return parts.joined(separator: " · ")
+    }
+
+    /// Half · All (prd §1700y, Railgun's §1728 item 1 without its floor):
+    /// each types its amount, exact; one Shield would refuse is not drawn.
+    enum Pick: CaseIterable { case half, all }
+
+    func amount(for pick: Pick) -> String? {
+        guard let available, let held = Decimal(string: available), held > 0 else { return nil }
+        var value: Decimal
+        switch pick {
+        case .half:
+            var half = held / 2, down = Decimal()
+            NSDecimalRound(&down, &half, 0, .down)
+            value = down
+        case .all: value = held
+        }
+        guard value > 0 else { return nil }
+        if mode == .deposit, symbol == "USDC", let maxUSD, value > Decimal(maxUSD) * 1_000_000 { return nil }
+        var whole = value / pow(10, decimals), cut = Decimal()
+        NSDecimalRound(&cut, &whole, decimals, .down)
+        return NSDecimalNumber(decimal: cut).stringValue
+    }
+
+    /// What this move costs, in dollars and its parts (prd §1700y, the shape
+    /// of Railgun's `Cost`): Shield's cut where Shield carries it, then the
+    /// gas: Aztec's from your Fee Juice, Ethereum's from your account, and
+    /// 30 AZTEC when gas rides along. nil where a price is missing: the foot
+    /// then says Shield's percentage, as before.
+    var cost: PrivateCost? {
+        guard amountOK, let units else { return nil }
+        var usd = 0.0
+        var parts: [PrivateCost.Part] = []
+        func aztecGas(_ mana: Int) -> Double? {
+            guard let feePerL2Gas, let aztec = prices["AZTEC"] else { return nil }
+            let fj = Decimal(mana) * feePerL2Gas / pow(10, 18)
+            return NSDecimalNumber(decimal: fj).doubleValue * aztec
+        }
+        func shieldCut() -> Bool {
+            var raw = (Decimal(string: units) ?? 0) * Decimal(Self.shieldBps) / 10_000, cut = Decimal()
+            NSDecimalRound(&cut, &raw, 0, .down)
+            let text = NSDecimalNumber(decimal: cut).stringValue
+            guard let cutUSD = dollars(text, symbol: symbol) else { return false }
+            usd += cutUSD
+            parts.append(.init(words: String(localized: "Shield"), figure: PrivateMoney.figure(text, decimals: decimals, symbol: symbol)))
+            return true
+        }
+        switch mode {
+        case .deposit:
+            guard shieldCut(), let gasPriceWei, let eth = prices["WETH"] else { return nil }
+            let gas = Decimal(Self.depositGas + (bringsGas ? Self.gasAlongGas : 0)) * gasPriceWei / pow(10, 18)
+            let gasUSD = NSDecimalNumber(decimal: gas).doubleValue * eth
+            usd += gasUSD
+            parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gasUSD))")))
+            if bringsGas {
+                guard let along = dollars(AztecGas.rideAlong, symbol: "AZTEC") else { return nil }
+                usd += along
+                parts.append(.init(words: String(localized: "Aztec's gas, for your account there"), figure: "30 AZTEC"))
+            }
+        case .send where toEthereum:
+            guard shieldCut(), let gas = aztecGas(Self.exitMana) else { return nil }
+            usd += gas
+            parts.append(.init(words: String(localized: "Gas, from your Fee Juice"), figure: String(localized: "about \(Self.usd(gas))")))
+        case .send:
+            guard let gas = aztecGas(Self.sendMana) else { return nil }
+            usd += gas
+            parts.append(.init(words: String(localized: "Gas, from your Fee Juice"), figure: String(localized: "about \(Self.usd(gas))")))
+        }
+        return PrivateCost(usd: usd, parts: parts)
+    }
+
+    /// What the cost line says after the dollars: what the move buys you.
+    var costTail: String {
+        switch mode {
+        case .deposit: String(localized: "private in 5 to 15 minutes")
+        case .send where toEthereum: String(localized: "on Ethereum in about an hour")
+        case .send: String(localized: "who, what and how much stay private")
+        }
+    }
+
+    #if DEBUG
+    /// For `CasberiTests`: a sentence's inputs, no network (prd §1700y).
+    func seedForTests(mode: Mode, symbol: String, held: String, amount: String, recipient: String? = nil,
+                      prices: [String: Double], feePerL2Gas: Decimal?, gasPriceWei: Decimal?,
+                      maxUSD: Double? = nil, bringsGas: Bool = false) {
+        self.mode = mode
+        self.symbol = symbol
+        self.holdings = [Holding(symbol: symbol, units: held)]
+        self.amount = amount
+        self.recipient = recipient
+        self.prices = prices
+        self.feePerL2Gas = feePerL2Gas
+        self.gasPriceWei = gasPriceWei
+        self.maxUSD = maxUSD
+        self.bringsGas = bringsGas
+    }
+    #endif
+
+    /// Prices, and the fees a cost is made of; read with the balances, never
+    /// holding up the sentence.
+    private func readCosts() async {
+        var found: [String: Double] = [:]
+        let mainnet = await MainnetPrices.prices(for: ["usdc", "eth"])
+        if let usdc = mainnet["usdc"] { found["USDC"] = usdc }
+        if let eth = mainnet["eth"] { found["WETH"] = eth }
+        let aztec = await DefiLlamaPrices.prices(for: [("eth-mainnet", AztecGas.token)])
+        if let p = aztec.values.first?.price { found["AZTEC"] = p }
+        prices = found
+        switch mode {
+        case .deposit:
+            if let hex = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_gasPrice", []) as? String {
+                gasPriceWei = ShieldBridge.decimal(hex: String(hex.dropFirst(2))).flatMap { Decimal(string: $0) }
+            }
+        case .send:
+            guard AztecProver.isAvailable,
+                  let fees = try? await AztecEngine.shared.call("minFees") as? [String: Any],
+                  let l2 = fees["l2"] as? String else { return }
+            feePerL2Gas = Decimal(string: l2)
+        }
+    }
+
     var decimals: Int { symbol == "USDC" ? 6 : 18 }
     var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
     /// What was typed, in base units: a comma is a decimal point, a leading
@@ -118,13 +284,20 @@ final class AztecMove {
     /// Where the move stands: balances, Shield's word, the account's gas.
     func read() async {
         stage = .reading
+        readingSince = .now
+        defer { readingSince = nil }
         if DemoMode.isActive {
             holdings = [Holding(symbol: "USDC", units: "25000000")]
             symbol = "USDC"
             if amount.isEmpty { amount = "2" }
+            // The demo's cost is a sample, as Railgun's demo fee is (prd §1700y).
+            prices = ["USDC": 1, "WETH": 3000, "AZTEC": 0.0124]
+            feePerL2Gas = 2_186_613_113_685
+            gasPriceWei = 400_000_000
             stage = .ready
             return
         }
+        Task { await readCosts() }
         guard let safe = YourAccountKey.address else { stage = .failed(String(localized: "There is no account on this iPhone")); return }
         switch mode {
         case .deposit:
@@ -342,7 +515,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var leadsWithVerb: Bool {
         switch move.stage {
-        case .ready, .working: true
+        // A failure keeps the sentence's own verb: "Send" drew twice (above
+        // and inside), found by the Railgun session on the simulator (prd §1700y).
+        case .ready, .working, .failed: true
         default: false
         }
     }
@@ -461,6 +636,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             } else if move.stage == .ready, let problem = move.amountProblem {
                 Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if move.stage == .ready {
+                // The amount in dollars and two choices (prd §1700y, as
+                // Railgun's §1728 item 1); what it costs is the foot's.
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    if let words = move.amountLine {
+                        Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    chips
+                }
             } else {
                 Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -676,10 +862,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
+            // ONE THING AT A TIME over the act (prd §1700y, agreed with the
+            // Railgun session): the steps while it works and after, the
+            // warming row while the balance is read, the cost while ready.
             if let run = stepsRun {
                 // Face ID came before a send's clock; a move-in signs inside it.
                 PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
                     .padding(.bottom, DS.Space.s3)
+                    .transition(.opacity)
+            } else if move.stage == .reading, move.mode == .send, let since = move.readingSince {
+                PrivateWarmingRow(since: since)
+                    .padding(.bottom, DS.Space.s1)
+                    .transition(.opacity)
+            } else if move.stage == .ready, move.amountOK {
+                PrivateCostLine(cost: move.cost, tail: move.costTail, fallback: readyLine)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
             }
             HStack(alignment: .firstTextBaseline) {
@@ -729,6 +927,28 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+    }
+
+    /// Half · All (prd §1700y): each types its amount, exact; one Shield
+    /// would refuse, or nothing to halve, is not drawn (§83).
+    @ViewBuilder private var chips: some View {
+        let picks = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
+        if !picks.isEmpty {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(picks, id: \.pick) { item in
+                    let on = move.amount == item.value
+                    Button {
+                        typing = false
+                        move.amount = item.value
+                        DSHaptic.selection()
+                    } label: {
+                        Chip(text: item.pick == .half ? String(localized: "Half") : String(localized: "All"), selected: on)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
+                }
+            }
+        }
     }
 
     /// Fits beside the act, never cut (prd §1700f item 13).
