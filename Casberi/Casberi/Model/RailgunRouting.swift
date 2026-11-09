@@ -7,10 +7,10 @@ import Foundation
 /// - **Routing is by token, and the person never picks.** On Ethereum, ETH
 ///   and USDC go to Privacy Pools; any other token goes to Railgun. Off
 ///   Ethereum, nothing goes to Railgun.
-/// - **The same $10 floor** as Privacy Pools: a token moves in from $10
-///   worth at the price Casberi reads, rounded up to 1, 2 or 5 of its power
-///   of ten. A token with no price has no floor to measure, so it is not
-///   offered in. Taking back has no floor: all of it is always offered.
+/// - **The same $10 floor** as Privacy Pools: any typed amount moves in
+///   at $10 worth or more at the price Casberi reads (§1727). A token with
+///   no price has no floor to measure, so it is not offered in. Taking back
+///   has no floor.
 enum RailgunRouting {
     /// Ethereum's USDC, the one dollar Privacy Pools holds there.
     static let ethereumUSDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
@@ -22,45 +22,12 @@ enum RailgunRouting {
         return contract.lowercased() != ethereumUSDC && symbol.uppercased() != "ETH"
     }
 
-    /// One amount a sentence offers: base units, decimal; `all` is the
-    /// whole of what is held.
-    struct Step: Equatable {
-        let units: String
-        let all: Bool
-    }
-
-    /// The amounts a token offers. With `floorUSD`, from that much worth up
-    /// to (not past) what is held, then all of it; with no price, nothing.
-    /// Without a floor (taking back), steps from $10 worth where priced,
-    /// and all of it always.
-    static func ladder(decimals: Int, held: String, price: Double?, floorUSD: Double?) -> [Step] {
-        guard let heldUnits = Decimal(string: held), heldUnits > 0 else { return [] }
-        let scale = pow(Decimal(10), decimals)
-        let whole = NSDecimalNumber(decimal: heldUnits / scale).doubleValue
-        var steps: [Double] = []
-        if let floorUSD {
-            guard let price, price > 0 else { return [] }
-            let start = nice(floorUSD / price)
-            guard start <= whole else { return [] }
-            var x = start
-            while x < whole, steps.count < 4 {
-                steps.append(x)
-                x = nextNice(x)
-            }
-        } else if let price, price > 0 {
-            var x = nice(Self.floorUSD / price)
-            while x < whole, steps.count < 3 {
-                steps.append(x)
-                x = nextNice(x)
-            }
-        }
-        var out = steps.map { step -> Step in
-            var units = Decimal(step) * scale, rounded = Decimal()
-            NSDecimalRound(&rounded, &units, 0, .down)
-            return Step(units: NSDecimalNumber(decimal: rounded).stringValue, all: false)
-        }
-        out.append(Step(units: held, all: true))
-        return out
+    /// Whether `units` of a token is worth `floorUSD` or more at `price`.
+    /// A token with no price has no floor to measure: never.
+    static func meetsFloor(units: String, decimals: Int, price: Double?, floorUSD: Double) -> Bool {
+        guard let price, price > 0, let held = Decimal(string: units), held > 0 else { return false }
+        let whole = NSDecimalNumber(decimal: held / pow(Decimal(10), decimals)).doubleValue
+        return whole * price >= floorUSD * 0.999_999
     }
 
     /// The smallest 1, 2 or 5 times a power of ten at or above `x`.
@@ -69,13 +36,6 @@ enum RailgunRouting {
         let p = pow(10, floor(log10(x)))
         for m in [1.0, 2.0, 5.0, 10.0] where m * p >= x * 0.999_999 { return m * p }
         return 10 * p
-    }
-
-    /// The next of 1, 2, 5, 10 … after a nice `x`.
-    static func nextNice(_ x: Double) -> Double {
-        let p = pow(10, floor(log10(x) + 1e-9))
-        let m = (x / p).rounded()
-        return m < 1.5 ? 2 * p : m < 3.5 ? 5 * p : 10 * p
     }
 
     // MARK: - Broadcasters (prd §1721 item 3, §1723)

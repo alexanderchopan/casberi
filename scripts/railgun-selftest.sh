@@ -59,22 +59,16 @@ check(!RailgunRouting.goesToRailgun(symbol: "USDC", contract: "0xA0b86991c6218b3
 check(!RailgunRouting.goesToRailgun(symbol: "ETH", contract: nil, chainId: 1), "ETH never goes to Railgun")
 check(!RailgunRouting.goesToRailgun(symbol: "WETH", contract: nil, chainId: 1), "a token with no contract never goes to Railgun")
 check(!RailgunRouting.goesToRailgun(symbol: "DAI", contract: dai, chainId: 8453), "nothing off Ethereum goes to Railgun")
-// $10 floor at $1 a DAI, 18 decimals, 400 held: 10, 20, 50, 100, then all.
+// §1727: any typed amount moves in at $10 worth or more.
 let e18 = "000000000000000000"
-let held = "400" + e18
-let steps = RailgunRouting.ladder(decimals: 18, held: held, price: 1, floorUSD: 10)
-check(steps.map(\.units) == ["10" + e18, "20" + e18, "50" + e18, "100" + e18, held], "DAI moves in from $10, then all of it")
-check(steps.last?.all == true && steps.dropLast().allSatisfy { !$0.all }, "only the last step is all of it")
-check(RailgunRouting.ladder(decimals: 18, held: held, price: nil, floorUSD: 10).isEmpty, "a token with no price is not offered in")
-check(RailgunRouting.ladder(decimals: 18, held: "5" + e18, price: 1, floorUSD: 10).isEmpty, "less than $10 worth is not offered in")
-// LINK at $15: $10 is 0.666…, rounded up to 1.
-let link = RailgunRouting.ladder(decimals: 18, held: "3" + e18, price: 15, floorUSD: 10)
-check(link.first?.units == "1" + e18, "the floor rounds up to 1, 2 or 5 of its power of ten")
-// Taking back: no floor, all of it always, priced or not.
-check(RailgunRouting.ladder(decimals: 18, held: "6" + "00000000000000000", price: nil, floorUSD: nil).map(\.all) == [true], "taking back offers all of it with no price")
-check(RailgunRouting.ladder(decimals: 18, held: "4" + e18, price: 1, floorUSD: nil).last?.units == "4" + e18, "taking back always ends on all of it")
+check(RailgunRouting.meetsFloor(units: "10" + e18, decimals: 18, price: 1, floorUSD: 10), "$10 of DAI moves in")
+check(RailgunRouting.meetsFloor(units: "13250000000000000000", decimals: 18, price: 1, floorUSD: 10), "a typed 13.25 DAI moves in")
+check(!RailgunRouting.meetsFloor(units: "7" + e18, decimals: 18, price: 1, floorUSD: 10), "$7 of DAI is under the minimum")
+check(!RailgunRouting.meetsFloor(units: "400" + e18, decimals: 18, price: nil, floorUSD: 10), "a token with no price is not offered in")
+check(RailgunRouting.meetsFloor(units: "1" + e18, decimals: 18, price: 15, floorUSD: 10), "1 LINK at $15 moves in")
+check(!RailgunRouting.meetsFloor(units: "600000000000000000", decimals: 18, price: 15, floorUSD: 10), "0.6 LINK at $15 does not")
+check(RailgunRouting.meetsFloor(units: "20000", decimals: 8, price: 60000, floorUSD: 10), "WBTC's eight places")
 check(RailgunRouting.nice(0.666) == 1 && RailgunRouting.nice(12) == 20 && RailgunRouting.nice(10) == 10, "nice rounds up to 1, 2, 5")
-check(RailgunRouting.nextNice(1) == 2 && RailgunRouting.nextNice(2) == 5 && RailgunRouting.nextNice(5) == 10, "the next step is 1, 2, 5, 10")
 // §1723: the broadcaster's fee token and the relays.
 let weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 let taken = [weth, usdc]
@@ -112,6 +106,13 @@ use "$PRIV" 'String(localized: "Private in about an hour")' "a shield in screeni
 use "$MOVE" 'RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract, chainId: network.chainId)' "Your private balance · Ethereum routes by the picked token"
 use "$SENT" 'move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account.")' "the recipient is your account, or someone else by their tail"
 use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the broadcaster's path, before taking back"
+# §1727: the amount is typed, the $10 floor holds on what is typed, and
+# nothing moves on an amount the line objects to.
+use "$SENT" '.keyboardType(.decimalPad)' "the amount is typed on the decimal pad"
+use "$SENT" 'if mode == .deposit, !RailgunRouting.meetsFloor(units: units, decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) {' "a typed amount under \$10 worth does not move in"
+use "$SENT" 'guard let picked, amountOK, !DemoMode.isActive else { return }' "nothing runs on an amount the line objects to"
+use "$SENT" 'move.stage == .ready && move.amountOK && !DemoMode.isActive' "Send waits on a clear amount"
+use "$SENT" 'if let failure = error as? YourAccountChain.Failure { return failure.message }' "your account's own reason is said, never folded into Railgun did not answer"
 use "$POCKET" 'RailgunRouting.feeToken(sending: token, taken: taken.map(\.token), spendable: spendable)' "the fee token is the rule's"
 use "$POCKET" 'RailgunRouting.covers(amount: wanted, of: token, fee: fee, in: feeToken, spendable: spendable)' "the fee is checked against the wallet before any proof"
 use "$ENGINE" 'useDNSDiscovery: false' "the broadcasters are found through the relays only, no DNS discovery"

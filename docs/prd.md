@@ -71585,3 +71585,14 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Checks.** `private-money-selftest.sh`: the sender's send made, with ETH refused, another proxy function refused, the sender's indexes far from receive's. `railgun-selftest.sh`: the fallback's send asks for you, is Railgun's send to the recipient under its gas, never touches your account; a new sender each send; the fallback taken for no broadcaster and for nothing to pay one in.
 
 **Not measured:** a real send from a fresh sender. A sender's leftover gas (at most the unused part of 900,000 at the cap) stays at that address.
+
+## §1727 — Your private balance on Ethereum takes any amount of a Railgun token, typed, from $10 worth; the line says the minimum, and a failure says its own reason (amends §1713 item 2's ladder of 1, 2 or 5 steps and §1721's amounts, as §1700q did for Aztec; keeps §1713 item 2's $10 floor) (user, 2026-11-08: "we need some way for the user to know it is 10$ tho", "it should be clear, sending to private balance reuqires 10$ minimum"; "why doesn't it let me choose how much to enter, it said 10 dai or my full balance. it should let me enter in a custom amount"; "i also am getting error 'railgun did not answer' is that our fault?") — BUILT; seen on the simulator
+
+1. **The amount is typed** on the decimal pad, the token's places at most, in the sentence's own rung; the token is its own word, opening the tokens you can move with what you hold of each (`RailgunMove.holdings`). Picking a token keeps the typed amount.
+2. **The minimum is said, never implied by a list.** Under $10 worth going in, the line reads "Moving to your private balance takes $10 or more." in the attention ink, and Send waits; more than you hold reads "You have 7 DAI." When nothing you hold on Ethereum is worth $10, the sentence itself says the same minimum (`RailgunRouting.meetsFloor`). Taking back and sending have no floor.
+3. **A send to someone else is quoted again** once typing pauses (0.7 s); a quote is never for an amount other than the one shown.
+4. **A failure says its cause.** Your account's own reason (Face ID, gas, Ethereum) is its message; Face ID not opening the private account and Ethereum unreachable are named; "Railgun did not answer" is left for Railgun's engine alone, and every failure is logged (`railgunMove| failed`). The report came from the iPhone with no cause visible; which failure it was is NOT known.
+
+**Checks.** `railgun-selftest.sh`: the floor on typed amounts (DAI, LINK at $15, WBTC's eight places, no price), the decimal pad, nothing running or Send lit on an amount the line objects to, and your account's reason said.
+
+**Mac half (§1402).** The same sentence on Catalyst; the decimal pad is the Mac's keyboard.

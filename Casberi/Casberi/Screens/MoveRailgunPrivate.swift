@@ -7,8 +7,9 @@ import SwiftUI
 /// - **In** (`.deposit`): picked as "Your private balance · Ethereum" with a
 ///   token on Ethereum already in the sentence. "Send 12 DAI to your private
 ///   balance on Ethereum." Your account approves and shields in one Face ID
-///   operation (`RailgunPocket.shield`). Amounts start at $10 worth (item 2);
-///   a token Casberi cannot price is not offered.
+///   operation (`RailgunPocket.shield`). The amount is typed (prd §1727);
+///   it moves in at $10 worth or more (§1713 item 2), and a token Casberi
+///   cannot price is not offered.
 /// - **Out** (`.takeBack`): picked from a Railgun row (Send's token list,
 ///   Holdings). "Send 400 DAI from your private balance to your account."
 ///   your account sends it. To someone else ("…to ...e07a.") a Railgun
@@ -33,7 +34,7 @@ final class RailgunMove {
 
     enum Stage: Equatable {
         case reading
-        /// Nothing on Ethereum worth $10 to move in, or nothing private to take back.
+        /// Under the $10 minimum to move in, or nothing private to take back.
         case nothing
         /// A send to someone else, asking a broadcaster what it costs.
         case quoting
@@ -45,22 +46,44 @@ final class RailgunMove {
         case failed(String)
     }
 
-    struct Option: Equatable, Identifiable {
+    /// What moves: a token and the typed amount of it.
+    struct Option: Equatable {
         let contract: String
         let symbol: String
         let decimals: Int
         /// Base units, decimal.
         let units: String
-        let all: Bool
-        var id: String { contract.lowercased() + " " + units }
+    }
+
+    /// A token that can move, and how much of it there is.
+    struct Holding: Equatable, Identifiable {
+        let contract: String
+        let symbol: String
+        let decimals: Int
+        /// Base units, decimal.
+        let units: String
+        let price: Double?
+        var id: String { contract.lowercased() }
+    }
+
+    /// **ANY AMOUNT (prd §1727, user: "it should let me enter in a custom
+    /// amount").** What stands in a typed amount's way is said, never a list
+    /// of allowed amounts.
+    enum AmountProblem: Equatable {
+        case moreThanHeld(String)
+        /// Moving in under $10 worth (§1713 item 2).
+        case underMinimum
     }
 
     var mode: Mode = .deposit
     var stage: Stage = .reading
     /// The token asked for when the sentence opened.
     var wanted: String?
-    private(set) var options: [Option] = []
-    private(set) var picked: Option?
+    private(set) var holdings: [Holding] = []
+    /// The token picked, by contract.
+    private(set) var token: String?
+    /// The amount, typed.
+    var amount = ""
     private(set) var feeBps: Int?
     /// Out to someone else (prd §1721 item 3); nil, or your own account's
     /// address, is taking it back.
@@ -81,9 +104,61 @@ final class RailgunMove {
 
     static var floorUSD: Double { RailgunRouting.floorUSD }
 
-    func pick(_ option: Option) {
-        picked = option
-        if toSomeoneElse { Task { await requote() } }
+    var holding: Holding? { holdings.first { $0.contract.lowercased() == token?.lowercased() } }
+
+    /// What was typed, in the token's base units: a comma is a decimal
+    /// point, and a trailing point (mid-typing) is ignored.
+    var units: String? {
+        guard let holding else { return nil }
+        var typed = amount.replacingOccurrences(of: ",", with: ".")
+        if typed.hasSuffix(".") { typed.removeLast() }
+        return PrivateMoney.baseUnits(typed, decimals: holding.decimals)
+    }
+
+    /// The token and the typed amount, once there is more than nothing.
+    var picked: Option? {
+        guard let h = holding, let units, let want = Decimal(string: units), want > 0 else { return nil }
+        return Option(contract: h.contract, symbol: h.symbol, decimals: h.decimals, units: units)
+    }
+
+    var amountProblem: AmountProblem? {
+        guard let h = holding, let units, let want = Decimal(string: units), want > 0 else { return nil }
+        if let have = Decimal(string: h.units), want > have {
+            return .moreThanHeld(RailgunHoldings.figure(h.units, decimals: h.decimals) + " " + h.symbol)
+        }
+        if mode == .deposit, !RailgunRouting.meetsFloor(units: units, decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) {
+            return .underMinimum
+        }
+        return nil
+    }
+
+    var amountOK: Bool { picked != nil && amountProblem == nil }
+
+    /// Picks the token; the typed amount stays.
+    func pick(_ h: Holding) {
+        token = h.contract
+        amountChanged()
+    }
+
+    private var quoteTask: Task<Void, Never>?
+
+    /// A new amount or token: any quote is for the old one. A send to
+    /// someone else asks a broadcaster again once typing pauses.
+    func amountChanged() {
+        quoteTask?.cancel()
+        quote = nil
+        switch stage {
+        case .quoting, .needsFees, .failed: stage = .ready
+        case .ready: break
+        default: return
+        }
+        guard toSomeoneElse, amountOK else { return }
+        stage = .quoting
+        quoteTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            await self?.requote()
+        }
     }
 
     var acting: Bool { if case .working = stage { true } else { false } }
@@ -92,15 +167,16 @@ final class RailgunMove {
     /// Railgun wallet's spendable tokens (back), and Railgun's fee.
     func read() async {
         stage = .reading
-        picked = nil
+        quoteTask?.cancel()
+        quote = nil
         feeBps = await Self.readFee(mode == .deposit ? "shieldFee()" : "unshieldFee()")
-        var found: [Option] = []
+        var found: [Holding] = []
         switch mode {
         case .deposit where DemoMode.isActive:
             // The demo's account holds only ETH and USDC on Ethereum; its
-            // sentence shows 120 DAI moving in, at $1, and sends nothing.
-            found = Self.ladder(contract: RailgunHoldings.demo[0].contract, symbol: "DAI", decimals: 18,
-                                held: "120000000000000000000", price: 1, floorUSD: Self.floorUSD)
+            // sentence shows DAI moving in, at $1, and sends nothing.
+            found = [Holding(contract: RailgunHoldings.demo[0].contract, symbol: "DAI", decimals: 18,
+                             units: "120000000000000000000", price: 1)]
         case .deposit:
             guard let account = YourAccountKey.address else {
                 stage = .nothing; return
@@ -110,25 +186,27 @@ final class RailgunMove {
             for h in await YourAccountTokens.held(account, on: net) {
                 guard let contract = h.token.contract, contract.lowercased() != dollar,
                       RailgunRouting.goesToRailgun(symbol: h.token.symbol, contract: contract, chainId: net.chainId),
-                      let price = h.price, price > 0 else { continue }
-                found += Self.ladder(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
-                                     held: h.units, price: price, floorUSD: Self.floorUSD)
+                      let price = h.price, price > 0,
+                      RailgunRouting.meetsFloor(units: h.units, decimals: h.token.decimals, price: price, floorUSD: Self.floorUSD)
+                else { continue }
+                found.append(Holding(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
+                                     units: h.units, price: price))
             }
         case .takeBack:
             let store = RailgunHoldings.shared
-            for h in store.spendableShown {
-                let price = store.prices[h.symbol.uppercased()]
-                found += Self.ladder(contract: h.contract, symbol: h.symbol, decimals: h.decimals,
-                                     held: h.spendable, price: price, floorUSD: nil)
+            found = store.spendableShown.map {
+                Holding(contract: $0.contract, symbol: $0.symbol, decimals: $0.decimals,
+                        units: $0.spendable, price: store.prices[$0.symbol.uppercased()])
             }
         }
-        options = found
-        let first = found.first { $0.contract.lowercased() == wanted?.lowercased() && $0.all }
+        holdings = found
+        let keep = found.first { $0.contract.lowercased() == token?.lowercased() }
             ?? found.first { $0.contract.lowercased() == wanted?.lowercased() }
             ?? found.first
-        picked = first
-        stage = first == nil ? .nothing : .ready
-        if first != nil, toSomeoneElse { await requote() }
+        token = keep?.contract
+        if DemoMode.isActive, amount.isEmpty { amount = "25" }
+        stage = keep == nil ? .nothing : .ready
+        amountChanged()
     }
 
     /// Asks a broadcaster what sending the picked amount costs. The demo
@@ -213,17 +291,9 @@ final class RailgunMove {
         return Int(PrivateMoney.decimal(hex: hex))
     }
 
-    /// The amounts a token offers, from `RailgunRouting.ladder`.
-    static func ladder(contract: String, symbol: String, decimals: Int, held: String,
-                       price: Double?, floorUSD: Double?) -> [Option] {
-        RailgunRouting.ladder(decimals: decimals, held: held, price: price, floorUSD: floorUSD).map {
-            Option(contract: contract, symbol: symbol, decimals: decimals, units: $0.units, all: $0.all)
-        }
-    }
-
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
-        guard let picked, !DemoMode.isActive else { return }
+        guard let picked, amountOK, !DemoMode.isActive else { return }
         do {
             switch mode {
             case .deposit:
@@ -267,16 +337,28 @@ final class RailgunMove {
         }
     }
 
+    /// Says what went wrong (prd §1727): your account's own reason (Face ID,
+    /// gas, Ethereum), never folded into "Railgun did not answer", and the
+    /// cause logged whatever the words.
     static func words(_ error: Error) -> String {
+        NSLog("railgunMove| failed | %@", String(describing: error))
         // The broadcaster may already have it: never "nothing was sent".
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastUnconfirmed" {
             return String(localized: "The broadcaster did not confirm. Check Activity before sending again.")
+        }
+        if let failure = error as? YourAccountChain.Failure { return failure.message }
+        if error is PrivateRootKey.Failure {
+            return String(localized: "Face ID did not open the private account")
+        }
+        if error is URLError {
+            return String(localized: "Ethereum could not be reached")
         }
         return switch error as? RailgunPocket.Failure {
         case .untrusted?: String(localized: "Railgun's records did not check out. Nothing was sent.")
         case .nothingSpendable?: String(localized: "Not private yet: Railgun lists it in about an hour.")
         case .notRailgun?: String(localized: "That was not Railgun's call. Nothing was sent.")
         case .noAccount?: String(localized: "No account on this iPhone")
+        case .noRoot?, .curve?: String(localized: "Face ID did not open the private account")
         case .noBroadcaster?: String(localized: "No Railgun broadcaster answered. Nothing was sent.")
         case .feeNotCovered?: String(localized: "That leaves nothing for the broadcaster's fee. Send a little less.")
         case .noFeeToken?: String(localized: "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither.")
@@ -294,7 +376,9 @@ struct MoveRailgunSentence<Head: View>: View {
     var leave: (MovePrivateLeave) -> Void = { _ in }
     @ViewBuilder let head: () -> Head
 
+    /// The token list is open.
     @State private var open = false
+    @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -306,10 +390,10 @@ struct MoveRailgunSentence<Head: View>: View {
                 MoveFlow { sentence }
                     .environment(\.moveQuiet, open)
                     .animation(DS.Motion.standard, value: move.stage)
-                    .animation(DS.Motion.standard, value: move.picked)
+                    .animation(DS.Motion.standard, value: move.holding)
                 Group {
-                    if open, move.stage == .ready {
-                        amounts
+                    if open, picking {
+                        tokens
                             .padding(.vertical, DS.Space.s2)
                             .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
                     } else {
@@ -359,16 +443,26 @@ struct MoveRailgunSentence<Head: View>: View {
             MovePhrase(String(localized: "Reading…"), ink: DS.textSecondary)
         case .nothing:
             MovePhrase(move.mode == .deposit
-                       ? String(localized: "Nothing on Ethereum worth $10 to move in.")
+                       ? String(localized: "Moving to your private balance takes $10 or more.")
                        : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
         default:
             if !isDone { head() }
-            MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
-                Button { if move.stage == .ready { toggle() } } label: {
-                    MoveWord(figure, ink: move.stage == .ready ? DS.pickInk : DS.textPrimary)
+            if picking {
+                // The amount typed, the token its own word (prd §1727).
+                MoveClause { amountField }
+                MoveClause {
+                    Button { toggle() } label: {
+                        MoveWord(move.holding?.symbol ?? "", ink: DS.pickInk)
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Token, \(move.holding?.symbol ?? "")"))
+                    .accessibilityHint(Text("Picks the token"))
                 }
-                .buttonStyle(RowPress())
-                .accessibilityLabel(Text("Amount, \(figure)"))
+            } else {
+                MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
+                    MoveWord(figure, ink: DS.textPrimary)
+                        .accessibilityLabel(Text("Amount, \(figure)"))
+                }
             }
             switch move.mode {
             case .deposit:
@@ -397,6 +491,9 @@ struct MoveRailgunSentence<Head: View>: View {
 
     @ViewBuilder private var line: some View {
         switch move.stage {
+        case .ready where move.amountProblem != nil:
+            Text(verbatim: problemLine).dsText(.body17).foregroundStyle(DS.attentionInk)
+                .fixedSize(horizontal: false, vertical: true)
         case .ready, .working, .quoting:
             Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -433,28 +530,64 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
-    // MARK: - Amounts
+    private var problemLine: String {
+        switch move.amountProblem {
+        case .moreThanHeld(let have)?: String(localized: "You have \(have).")
+        case .underMinimum?: String(localized: "Moving to your private balance takes $10 or more.")
+        case nil: ""
+        }
+    }
+
+    // MARK: - Amount and token
 
     private func toggle() {
+        typing = false
         withAnimation(DS.Motion.standard) { open.toggle() }
         DSHaptic.selection()
     }
 
-    private var amounts: some View {
+    /// The amount, typed (prd §1727): the decimal pad, the token's places at
+    /// most, the figure in the sentence's own rung — as Aztec's (§1700q).
+    private var amountField: some View {
+        MoveRungReader { rung in
+            TextField(text: $move.amount,
+                      prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+                .keyboardType(.decimalPad)
+                .focused($typing)
+                .dsText(rung)
+                .monospacedDigit()
+                .foregroundStyle(DS.pickInk)
+                .fixedSize()
+                .opacity(open ? 0.3 : 1)
+        }
+        .accessibilityLabel(Text("Amount"))
+        .onChange(of: move.amount) { _, now in
+            if open, typing { open = false }
+            let places = move.holding?.decimals ?? 18
+            if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
+               now.distance(from: dot, to: now.endIndex) - 1 > places {
+                move.amount = String(now[...now.index(dot, offsetBy: places)])
+                return
+            }
+            move.amountChanged()
+        }
+    }
+
+    private var tokens: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(move.options) { option in
-                let shown = (option.all ? String(localized: "All ") : "")
-                    + RailgunHoldings.figure(option.units, decimals: option.decimals) + " " + option.symbol
-                let picked = option == move.picked
+            ForEach(move.holdings) { h in
+                let picked = h == move.holding
                 Button {
-                    withAnimation(DS.Motion.standard) { move.pick(option); open = false }
+                    withAnimation(DS.Motion.standard) { move.pick(h); open = false }
                     DSHaptic.selection()
                 } label: {
                     HStack(spacing: DS.Space.s3) {
-                        AssetMark(name: option.symbol, size: DS.Face.list)
-                        Text(verbatim: shown).dsText(.body17)
-                            .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary).monospacedDigit()
+                        AssetMark(name: h.symbol, size: DS.Face.list)
+                        Text(verbatim: h.symbol).dsText(.body17)
+                            .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
+                        Text(verbatim: RailgunHoldings.figure(h.units, decimals: h.decimals)).dsText(.body17)
+                            .foregroundStyle(DS.textSecondary).monospacedDigit()
                     }
                     .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
                     .contentShape(Rectangle())
@@ -469,7 +602,7 @@ struct MoveRailgunSentence<Head: View>: View {
     // MARK: - The foot
 
     private var ready: Bool {
-        move.stage == .ready && !DemoMode.isActive
+        move.stage == .ready && move.amountOK && !DemoMode.isActive
             && (!move.toSomeoneElse || move.viaFresh || (move.quote != nil && move.feeWords != nil))
     }
 

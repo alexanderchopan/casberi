@@ -115841,6 +115841,34 @@
         }
       }
     },
+    "Moving to your private balance takes $10 or more." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasar a tu saldo privado requiere $10 o más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高への移動は$10以上から可能です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액으로 옮기려면 $10 이상이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入私密余额至少需要 $10。"
+          }
+        }
+      }
+    },
     "Moving…" : {
       "localizations" : {
         "es" : {
@@ -129892,34 +129920,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 上还没有"
-          }
-        }
-      }
-    },
-    "Nothing on Ethereum worth $10 to move in." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Nada en Ethereum que valga $10 para ingresar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "移せる$10相当のものがEthereumにありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "옮길 수 있는 $10 상당의 자산이 Ethereum에 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ethereum 上没有价值 $10 的可转入资产。"
           }
         }
       }
