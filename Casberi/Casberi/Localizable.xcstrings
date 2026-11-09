@@ -103962,6 +103962,34 @@
         }
       }
     },
+    "It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Necesita iniciar sesión con una billetera de Ethereum fuera de Casberi, como MetaMask. Añade esa billetera como tu cofirmante y luego inicia sesión con ella aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi の外にある MetaMask などのイーサリアムウォレットでのサインインが必要です。そのウォレットを共同署名者として追加してから、ここでサインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask 같은 Casberi 외부의 이더리움 지갑으로 로그인해야 합니다. 그 지갑을 공동 서명자로 추가한 다음 여기에서 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它需要用 Casberi 之外的以太坊钱包（例如 MetaMask）登录。请将该钱包添加为你的共同签名人，然后在这里用它登录。"
+          }
+        }
+      }
+    },
     "It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (%@)." : {
       "localizations" : {
         "es" : {

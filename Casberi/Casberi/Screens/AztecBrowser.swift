@@ -572,6 +572,8 @@ struct AztecBrowserView: View {
     @StateObject private var model: AztecBrowserModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    /// Optional: a cover need not carry it; without it, no co-signer door.
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
 
     init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
         _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends))
@@ -598,7 +600,15 @@ struct AztecBrowserView: View {
         .sheet(item: $model.ask, onDismiss: { model.sheetGone() }) { ask in
             AztecAskSheet(ask: ask, sends: model.sends, coSigner: model.coSigner, asCoSigner: model.ethCoSigner != nil, reconnecting: model.reconnecting,
                           remembered: model.rememberedCoSigner,
-                          useCoSigner: { Task { await model.connectAsCoSigner(ask) } }) { yes in Task { await model.answer(ask, yes: yes) } }
+                          useCoSigner: { Task { await model.connectAsCoSigner(ask) } },
+                          addCoSigner: chrome.map { chrome in {
+                              // No co-signer to sign in with (prd §1700u): turn
+                              // the app down, leave the browser, land on Your
+                              // account's keys, where Co-signer is added.
+                              Task { await model.answer(ask, yes: false) }
+                              dismiss()
+                              chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
+                          } }) { yes in Task { await model.answer(ask, yes: yes) } }
         }
     }
 }
@@ -625,6 +635,10 @@ struct AztecAskSheet: View {
     /// You signed in here with your co-signer before (prd §1700l item 11).
     var remembered = false
     var useCoSigner: () -> Void = {}
+    /// Where an app turned your account down and there is no co-signer to
+    /// sign in with instead: Your account's keys (prd §1700u). Nil where the
+    /// browser cannot reach the shell.
+    var addCoSigner: (() -> Void)? = nil
     /// The whole sign-in message, opened from its door (prd §1700o).
     @State private var whole = false
 
@@ -639,6 +653,13 @@ struct AztecAskSheet: View {
         if case .ethConnect = ask { return (reconnecting || remembered) && coSigner != nil }
         return false
     }
+
+    /// The app turned your account down and you have no co-signer: the way
+    /// on is to add one (prd §1700u), never the same Connect again.
+    private var needsCoSigner: Bool {
+        if case .ethConnect = ask { return reconnecting && coSigner == nil && addCoSigner != nil }
+        return false
+    }
     let answer: (Bool) -> Void
 
     var body: some View {
@@ -647,11 +668,14 @@ struct AztecAskSheet: View {
                 content
                 // ONE hero verb (hero-tint-audit): the co-signer leads when the
                 // app turned your account's sign-in down (prd §1700l), else the yes.
-                DSActVerb(title: leadsWithCoSigner ? String(localized: "Use your co-signer") : acceptWord,
-                          glyph: leadsWithCoSigner ? "person.badge.key" : acceptGlyph) {
-                    if leadsWithCoSigner { useCoSigner() } else { answer(true) }
+                DSActVerb(title: leadsWithCoSigner ? String(localized: "Use your co-signer")
+                                 : needsCoSigner ? String(localized: "Add a co-signer") : acceptWord,
+                          glyph: leadsWithCoSigner || needsCoSigner ? "person.badge.key" : acceptGlyph) {
+                    if leadsWithCoSigner { useCoSigner() }
+                    else if needsCoSigner, let addCoSigner { addCoSigner() }
+                    else { answer(true) }
                 }
-                if leadsWithCoSigner {
+                if leadsWithCoSigner || needsCoSigner {
                     DSDoorRow(icon: "link", title: Text(reconnecting ? "Connect your account anyway" : "Connect your account instead")) { answer(true) }
                 }
                 DSDoorRow(icon: "xmark", title: Text(declineWord), role: .destructive) { answer(false) }
@@ -695,6 +719,10 @@ struct AztecAskSheet: View {
                 }
             }
             Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+        case .ethConnect where needsCoSigner:
+            DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         case .ethConnect where leadsWithCoSigner && reconnecting:
             DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (\(AddressTail.short(coSigner ?? ""))).")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -782,7 +810,7 @@ struct AztecAskSheet: View {
         case .connect(_, let host): String(localized: "Connect \(host)?")
         case .emoji: String(localized: "Check the site shows")
         case .send(_, let host, _, _): String(localized: "\(host) wants to send")
-        case .ethConnect(_, let host): leadsWithCoSigner && reconnecting ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
+        case .ethConnect(_, let host): (leadsWithCoSigner || needsCoSigner) && reconnecting ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
                                      : leadsWithCoSigner ? String(localized: "Connect \(host) with your co-signer?")
                                      : String(localized: "Connect \(host) to your account?")
         case .ethSign(_, let host, _) where signIn != nil:
@@ -796,7 +824,7 @@ struct AztecAskSheet: View {
     }
 
     private var height: CGFloat {
-        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner || needsCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
     }
 
     private var acceptWord: String {

@@ -258,6 +258,10 @@ grep -q 'YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.i
 grep -q 'shown.used || (YourAccountKey.address != nil && AztecProver.isAvailable)' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
   && grep -q 'guard isShown, shown.used || addressKnown else { return false }' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
   || { echo "✗ the Aztec account waits for first use to show, or a pull starts the engine for someone who never opened Aztec"; exit 1; }
+# An app that refused your account, and no co-signer: say so and offer to add one (prd §1700u).
+grep -q 'return reconnecting && coSigner == nil && addCoSigner != nil' Casberi/Casberi/Screens/AztecBrowser.swift \
+  && grep -q 'chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ a person with no co-signer is asked the same Connect again after an app refused their account"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
 # Only the browser that may send says it is a Mac (prd §1700n).

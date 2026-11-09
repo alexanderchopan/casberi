@@ -71338,6 +71338,15 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** Unchanged: shown once the iPhone has used it.
 
+## §1700u — An app that turned your account down, with no co-signer to sign in with, says so and offers Add a co-signer (amends §1700l item 5, which spoke only to someone with a co-signer) (user, 2026-11-08, of "doesn't accept Aztec accounts or Safes" and a person with no co-signer: "we should have a message that says … 'turn on your cosigner' or something") — BUILT; compiled, NOT seen with a real app turning a sign-in down
+
+1. **Before, someone with no co-signer was asked the same Connect again**, with no word that the app had refused: item 5's refusal was drawn only when a co-signer could lead.
+2. **Now the retry says it**: "<site> doesn't accept Aztec accounts or Safes", then "It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here."
+3. **Add a co-signer leads**: it turns the app down, closes the browser and lands on Wallet › Your account, whose Co-signer row adds one (`ShellChrome.openYourAccount`). "Connect your account anyway" and Decline stay under it.
+4. **Guarded** in `shield-bridge-selftest.sh`.
+
+**Mac half (§1402).** None: the browser stands on the iPhone only.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.
