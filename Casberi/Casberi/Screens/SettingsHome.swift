@@ -45,6 +45,9 @@ struct SettingsHome: View {
     @State private var aztecDirectory = false
     /// The folder sprung open over the page (prd §1316).
     @State private var openFolder: String?
+    /// The apps last opened from Library, for its Recent row (prd §1733);
+    /// read when the page appears, never in a body (§628).
+    @State private var recents: [String] = []
     /// The category a door named (`route.openCategory`, prd §1300): its
     /// folder springs open once the page has risen, then lets go.
     @State private var landCategory: String?
@@ -96,16 +99,26 @@ struct SettingsHome: View {
                     // THE LIBRARY (prd §1316): every category a folder,
                     // Casberi's own settings the first slot.
                     if !searching {
-                        SourcesLibrary(folders: libraryFolders, has: isYours,
+                        SourcesLibrary(folders: libraryFolders, has: isYours, needs: needsYou,
+                                       recents: recents.filter(isYours),
+                                       // The way in, until anything is yours.
+                                       starts: bridges.bridges.contains { $0.status != .paused } ? []
+                                           : LibraryRecents.starts.filter { name in
+                                               BridgeCatalog.offers.contains { $0.name == name }
+                                           },
                                        open: { category in
                                            withAnimation(DS.Motion.folder) { openFolder = category }
                                        },
+                                       openApp: { openFromFolder($0) },
+                                       settings: { name in yours(name).map { app in { openPage(app) } } },
                                        openCasberi: { openCasberiFolder() })
-                        .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset - DS.Space.s1)
                     }
                 }
-                .listRowInsets(.init(top: DS.Space.s2, leading: DS.Space.s4,
-                                     bottom: DS.Space.s4, trailing: DS.Space.s4))
+                // **ONE LEFT EDGE (prd §1733):** the field, the Recent row and
+                // the folders stand in the rows' column, under the title. The
+                // field stood at 18, the wells at 28 and their words at 32.
+                .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                     bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
@@ -115,6 +128,7 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
         }
         .dsRoomList()
+        .onAppear { recents = LibraryRecents.load() }
         .onChange(of: landCategory) { _, category in
             guard let category else { return }
             #if DEBUG
@@ -139,7 +153,7 @@ struct SettingsHome: View {
         .overlay {
             if let category = openFolder, !casberiOpen,
                let folder = libraryFolders.first(where: { $0.category == category }) {
-                SourcesOpenFolder(folder: folder, has: isYours,
+                SourcesOpenFolder(folder: folder, has: isYours, needs: needsYou,
                                   open: { openFromFolder($0) },
                                   settings: { name in yours(name).map { app in { openPage(app) } } },
                                   close: { withAnimation(DS.Motion.folder) { openFolder = nil } },
@@ -353,9 +367,14 @@ struct SettingsHome: View {
         bridges.bridges.contains { $0.name == name && $0.status != .paused }
     }
 
+    /// Whether an app of yours needs you, as its row's amber line says it.
+    private func needsYou(_ name: String) -> Bool {
+        bridges.bridges.contains { $0.name == name && $0.status == .attention }
+    }
+
     /// Every category as a folder, yours first in each (prd §1316).
     private var libraryFolders: [SourcesLibrary.Folder] {
-        SourcesLibrary.folders(appCategories, has: isYours)
+        SourcesLibrary.folders(appCategories, has: isYours, needs: needsYou)
     }
 
     /// An app in an open folder, as its row opens it: yours goes, the rest
@@ -388,6 +407,8 @@ struct SettingsHome: View {
     /// Apps. One with nowhere to go (`landsNothing`) or one that needs you
     /// opens its page, the step it needs next.
     private func openYours(_ app: BridgeApp) {
+        // What you open here leads the Recent row next time (prd §1733).
+        recents = LibraryRecents.add(app.name, to: recents)
         if app.status == .attention || LiveRoomSources.landsNothing.contains(app.name) {
             openPage(app)
         } else {

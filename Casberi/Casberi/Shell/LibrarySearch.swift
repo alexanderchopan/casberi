@@ -31,8 +31,10 @@ struct LibrarySearch: View {
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
 
-    /// A result's mark: the touch floor since prd §1094.
-    static let icon: CGFloat = DS.Face.tray
+    /// A result's mark: the Feed row's own lead (prd §1733, retiring §1094's
+    /// 44pt disc). A hit is a row like any other, in the rows' column; the
+    /// row is still hit across its whole 52pt pitch.
+    static let icon: CGFloat = DS.Mark.row
 
     /// What the field holds (prd §1133e); cleared when the search lets go.
     @State private var query = ""
@@ -1056,15 +1058,11 @@ struct LibrarySearch: View {
             ForEach(Array(results.enumerated()), id: \.element.id) { index, group in
                 VStack(alignment: .leading, spacing: 0) {
                 if !group.title.isEmpty {
-                HStack(spacing: DS.Space.s1) {
-                    if let glyph = group.glyph {
-                        Image(systemName: glyph).dsGlyph(.caption)
-                    }
-                    Text(verbatim: group.title).dsText(.label12)
-                }
+                // A group's word alone (prd §1733): the glyph beside it was
+                // a second mark over rows that each wear their own.
+                Text(verbatim: group.title).dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s3)
-                .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
                 } else {
                     Color.clear.frame(height: DS.Space.s2)
@@ -1086,7 +1084,10 @@ struct LibrarySearch: View {
                     .padding(.top, DS.Space.s3)
             }
             // Your things, through Find: the one search over everything kept.
-            if !words.isEmpty {
+            // **ONE DOOR TO EVERYTHING (prd §1733):** while the results lead
+            // with "Everything that says …", this second row to the same
+            // things is not drawn; Return still takes it.
+            if !words.isEmpty, !results.contains(where: { $0.id == Self.pivotGroup }) {
             Button(action: searchThings) {
                 HStack(spacing: DS.Space.s3) {
                     roundIcon("magnifyingglass", ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
@@ -1265,7 +1266,7 @@ struct LibrarySearch: View {
                     }
                 }
                 .frame(width: Self.icon, height: Self.icon)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(Self.marked(hit.name, words))
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
@@ -1314,7 +1315,7 @@ struct LibrarySearch: View {
         }
     }
 
-    static let resultHeight: CGFloat = 56
+    static let resultHeight: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir
 
     /// Hand the words to Find and close the tray.
     private func searchThings() {
@@ -1468,7 +1469,7 @@ struct LibrarySearch: View {
             .fill(fill)
             .overlay(
                 Image(systemName: glyph)
-                    .dsGlyph(.title, weight: .medium)
+                    .dsGlyph(.subhead, weight: .medium)
                     .foregroundStyle(ink)
                     .symbolEffect(.bounce.up, value: bounces ? bounceTick : 0)
             )

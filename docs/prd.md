@@ -71719,3 +71719,21 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Checks.** `wallet-perf-audit.py` (8 rules, 9 mutations); `wallet-total-audit.py` rules 6 and 7 follow A2 and A3. Unmeasured on a phone: the spec's Baseline is the next step.
 
 **Mac half (§1402).** The same code on Catalyst; no surface changed.
+
+## §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder's amber word for an app that needs you, an open folder as Yours then Add, one left edge, settings last, and search hits on the Feed's row (amends §1319's green dot, §1321's first slot, §1612's "title and the folders", §1094's 44pt hit mark) (user, 2026-11-09, of a mockup of each: "build it"; of the folders' order: left in the Feed's order, not A–Z)
+
+**Why.** Library was a catalogue first and yours second. Every folder drew the catalogue's icons whether you had them or not, with a green dot on each you did, so a full Library and an empty one looked alike and the dot said nothing once most were lit. Reaching an app you use took a folder and a hunt. The title, the field, the wells and their words stood at four insets.
+
+1. **Recent.** Under the field, the five apps of yours last opened from Library, newest first, each one tap from where its folder cell goes (`LibraryRecents`). With no app of yours, the same row is "Start with any of these": five apps, A–Z, each wearing the plus and taking its way in. With apps but nothing opened here yet, no row.
+2. **Yours in colour, the rest stepped back.** In a folder's well an app you could add draws at 0.3. The green dot is deleted. This amends §1319, which kept every icon in colour so a first run was "not a wall of grey": the Start row is the bright thing on a first run.
+3. **The one dot is amber.** An app of yours that needs you wears it, and its folder's line says "Gmail needs you" (or "2 need you") in the attention ink in place of the count.
+4. **An open folder is Yours, then Add**, each under its word. Yours carries the Notes page and Aztec's directory where the folder has them; under Add an icon stands in full colour with the plus.
+5. **One left edge.** The field, the Recent row, the wells and their words stand in the rows' column, under the title.
+6. **Settings come last.** Casberi's folder leaves the first slot (§1321) for the end of the grid. The folders keep the Feed's order (§1347); asked whether they should be A–Z, the answer was no: one order for the nine categories, and the Feed's Reorder moves both.
+7. **Search hits are rows.** A hit's mark is the Feed row's 30pt lead at a 52pt pitch, hit across the whole row; a group's word stands without a glyph; "Search your things for …" is not drawn while the results lead with "Everything that says …" (Return still takes it).
+
+**Not done.** Recent records only what is opened from Library (a folder cell or the row itself), not every room you visit.
+
+**Mac half (§1402).** The same views draw Library's column, so every item follows.
+
+**Checks.** Built and looked at on the simulator over the demo: Library at rest, with one recent app, with Gmail marked as needing you (`-seatAttention Gmail`), Day's folder open, and search for "coffee". The first-run Start row was not seen: the simulator holds the demo. Catalyst was not compiled and `verify.sh` was not run. `plate-audit`, `row-anatomy-audit`, `ds-template-audit`, `status-ink-audit`, `design-ramp-audit`, `footnote-audit`, `setup-copy-audit` and `tray-search-selftest` pass.

@@ -19,64 +19,122 @@ struct SourcesLibrary: View {
         /// Yours first, A–Z, then the rest, A–Z.
         let apps: [String]
         let have: Int
+        /// The apps of yours that need you (prd §1733), A–Z.
+        var needs: [String] = []
         var id: String { category }
     }
 
     let folders: [Folder]
     /// Whether an app is yours: drawn in colour.
     let has: (String) -> Bool
+    /// Whether an app of yours needs you: the one amber dot.
+    let needs: (String) -> Bool
+    /// The apps of yours last opened here, newest first (prd §1733).
+    let recents: [String]
+    /// With nothing added: the apps a first run could start with.
+    let starts: [String]
     let open: (String) -> Void
+    /// An app's own tap, as its folder's cell takes it.
+    let openApp: (String) -> Void
+    let settings: (String) -> (() -> Void)?
     let openCasberi: () -> Void
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s4, alignment: .top),
                                 count: 3)
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: DS.Space.s6) {
-            CasberiFolder(action: openCasberi)
-            ForEach(folders) { folder in
-                SourcesFolderTile(folder: folder, has: has) { open(folder.category) }
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            // **ONE TAP TO WHAT YOU USE (prd §1733).** The apps of yours last
+            // opened here; before anything is yours, the same row is the way
+            // in, each app wearing the plus.
+            if !recents.isEmpty {
+                SourcesQuickRow(title: String(localized: "Recent"), apps: recents, adds: false,
+                                needs: needs, settings: settings, open: openApp)
+            } else if !starts.isEmpty {
+                SourcesQuickRow(title: String(localized: "Start with any of these"), apps: starts, adds: true,
+                                needs: { _ in false }, settings: { _ in nil }, open: openApp)
+            }
+            LazyVGrid(columns: columns, alignment: .leading, spacing: DS.Space.s6) {
+                ForEach(folders) { folder in
+                    SourcesFolderTile(folder: folder, has: has, needs: needs) { open(folder.category) }
+                }
+                // **SETTINGS COME LAST (prd §1733, amending §1321's first
+                // slot):** the rarest door leaves the first seat to what you
+                // open every day.
+                CasberiFolder(action: openCasberi)
             }
         }
     }
 
     /// Every category's apps, yours first.
     static func folders(_ groups: [(category: String, apps: [BridgeCatalog.Offer])],
-                        has: (String) -> Bool) -> [Folder] {
+                        has: (String) -> Bool,
+                        needs: (String) -> Bool = { _ in false }) -> [Folder] {
         groups.map { group in
             let names = group.apps.map(\.name)
             let yours = names.filter(has)
             return Folder(category: group.category,
                           apps: yours + names.filter { !has($0) },
-                          have: yours.count)
+                          have: yours.count,
+                          needs: yours.filter(needs))
+        }
+    }
+
+    /// A folder's line: what needs you, in words, else its count.
+    static func fact(_ folder: Folder) -> (text: String, needsYou: Bool) {
+        switch folder.needs.count {
+        case 0:  return (String(localized: "\(folder.have) of \(folder.apps.count)"), false)
+        case 1:  return (String(localized: "\(folder.needs[0]) needs you"), true)
+        default: return (String(localized: "\(folder.needs.count) need you"), true)
         }
     }
 }
 
-/// AN APP YOU HAVE WEARS A GREEN DOT (prd §1319, user: "C is better but not
-/// green check can't we do green dot?"). Every icon stands in its own colour,
-/// as the App Library draws them, so a first run is not a wall of grey; the
-/// dot at the corner says which are yours. The ring is the ground it sits
-/// on, so the dot reads apart from the icon under it.
+/// **WHAT IS YOURS IS IN COLOUR; THE REST STEPS BACK (prd §1733, amending
+/// §1319's green dot).** A dot on every app you have said nothing once most
+/// were lit, and a full Library and an empty one looked alike. An app you
+/// could add draws at `stepped`; the one dot left is amber, on an app of
+/// yours that needs you, so a mark on an icon is always an exception.
 private extension View {
-    func sourcesYours(_ yours: Bool, size: CGFloat, ring: Color) -> some View {
-        modifier(SourcesYoursDot(yours: yours, size: size, ring: ring))
+    func sourcesState(yours: Bool, needsYou: Bool, size: CGFloat, ring: Color) -> some View {
+        modifier(SourcesStateMark(yours: yours, needsYou: needsYou, size: size, ring: ring))
+    }
+
+    /// The pink plus on an app you could add.
+    func sourcesAddBadge(_ adds: Bool) -> some View {
+        overlay(alignment: .topTrailing) {
+            if adds {
+                Image(systemName: "plus")
+                    .dsGlyph(.tick, weight: .bold)
+                    .foregroundStyle(.white)
+                    .frame(width: 20, height: 20)
+                    .background(DS.brandInk, in: Circle())
+                    .offset(x: 6, y: -6)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 
-/// The dot, which springs in the moment an app becomes yours (prd §1588):
-/// back in its folder after a connect, the new one is the one that moves.
-private struct SourcesYoursDot: ViewModifier {
+/// The mark, which springs in the moment an app becomes yours (prd §1588):
+/// back in its folder after a connect, the new one is the one that lights.
+private struct SourcesStateMark: ViewModifier {
+    /// How far an app you could add steps back.
+    static let stepped = 0.3
+
     let yours: Bool
+    let needsYou: Bool
     let size: CGFloat
     let ring: Color
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        content.overlay(alignment: .bottomTrailing) {
-            if yours {
+        content
+            .opacity(yours ? 1 : Self.stepped)
+            .overlay(alignment: .bottomTrailing) {
+            if yours && needsYou {
                 Circle()
-                    .fill(DS.confirm)
+                    .fill(DS.attention)
                     .frame(width: size, height: size)
                     // The ring is the ground under it: the page, and the
                     // folder's own lift where it stands in a well.
@@ -89,6 +147,45 @@ private struct SourcesYoursDot: ViewModifier {
             }
         }
         .animation(reduceMotion ? nil : DS.Motion.folder, value: yours)
+        .animation(reduceMotion ? nil : DS.Motion.folder, value: needsYou)
+    }
+}
+
+/// Library's row over the folders (prd §1733): up to five apps at the seat
+/// size, each one tap from its room, or from its way in while it wears the
+/// plus.
+private struct SourcesQuickRow: View {
+    let title: String
+    let apps: [String]
+    let adds: Bool
+    let needs: (String) -> Bool
+    let settings: (String) -> (() -> Void)?
+    let open: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(verbatim: title)
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: DS.Space.s4) {
+                ForEach(apps.prefix(LibraryRecents.keep), id: \.self) { name in
+                    Button {
+                        DSHaptic.selection()
+                        open(name)
+                    } label: {
+                        BridgeIcon(name: name, size: DS.Face.seat)
+                            .sourcesState(yours: true, needsYou: needs(name), size: 12, ring: DS.page)
+                            .sourcesAddBadge(adds)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressSpring())
+                    .contextMenu {
+                        if let settings = settings(name) { AppMenu(open: { open(name) }, settings: settings) }
+                    }
+                    .accessibilityLabel(adds ? Text("\(name), Add") : Text(verbatim: name))
+                }
+            }
+        }
     }
 }
 
@@ -96,6 +193,7 @@ private struct SourcesYoursDot: ViewModifier {
 private struct SourcesFolderTile: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
+    let needs: (String) -> Bool
     let action: () -> Void
 
     var body: some View {
@@ -115,7 +213,8 @@ private struct SourcesFolderTile: View {
                                       alignment: .leading, spacing: gap) {
                                 ForEach(folder.apps.prefix(9), id: \.self) { name in
                                     BridgeIcon(name: name, size: side)
-                                        .sourcesYours(has(name), size: max(7, side * 0.34), ring: DS.page)
+                                        .sourcesState(yours: has(name), needsYou: needs(name),
+                                                      size: max(7, side * 0.34), ring: DS.page)
                                 }
                             }
                             .padding(pad)
@@ -123,13 +222,14 @@ private struct SourcesFolderTile: View {
                     }
                     .dsWell(cornerRadius: DS.Radius.widget)
                 SourcesFolderWords(name: folder.category,
-                                   fact: String(localized: "\(folder.have) of \(folder.apps.count)"))
+                                   fact: SourcesLibrary.fact(folder).text,
+                                   needsYou: SourcesLibrary.fact(folder).needsYou)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("\(folder.category), \(folder.have) of \(folder.apps.count)"))
+        .accessibilityLabel(Text(verbatim: "\(folder.category), \(SourcesLibrary.fact(folder).text)"))
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -171,17 +271,20 @@ private struct CasberiFolder: View {
 private struct SourcesFolderWords: View {
     let name: String
     let fact: String
+    /// The fact is an app that needs you: the one amber word (prd §1733).
+    var needsYou = false
 
     var body: some View {
+        // On the well's own edge, which is the page's (prd §1733): the `s1`
+        // these stood in was one of Library's four left insets.
         VStack(alignment: .leading, spacing: 0) {
             Text(verbatim: name)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.8)
             Text(verbatim: fact)
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
+                .dsText(.subhead12).foregroundStyle(needsYou ? DS.attentionInk : DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, DS.Space.s1)
     }
 }
 
@@ -193,6 +296,7 @@ private struct SourcesFolderWords: View {
 struct SourcesOpenFolder: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
+    var needs: (String) -> Bool = { _ in false }
     let open: (String) -> Void
     /// An app of yours's page, offered on its long press (prd §1418); nil for
     /// one you could add.
@@ -214,19 +318,48 @@ struct SourcesOpenFolder: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
                                 count: 4)
 
+    /// **YOURS, THEN ADD (prd §1733).** Two groups, each under its word: what
+    /// you have, whole and in colour, then what you could add, each wearing
+    /// the plus. They stood in one grid, told apart by a dot and a badge.
     private var apps: some View {
-        LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
-            if let notesPage {
-                SourcesFolderNotesPage(action: notesPage)
+        let yours = folder.apps.filter(has)
+        let rest = folder.apps.filter { !has($0) }
+        return VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if !yours.isEmpty || notesPage != nil || aztecDirectory != nil {
+                group(String(localized: "Yours")) {
+                    if let notesPage {
+                        SourcesFolderNotesPage(action: notesPage)
+                    }
+                    if let aztecDirectory {
+                        SourcesFolderAztecDirectory(action: aztecDirectory)
+                    }
+                    ForEach(yours, id: \.self) { name in
+                        SourcesFolderApp(name: name, yours: true, needsYou: needs(name),
+                                         settings: settings(name)) { open(name) }
+                    }
+                }
             }
-            if let aztecDirectory {
-                SourcesFolderAztecDirectory(action: aztecDirectory)
-            }
-            ForEach(folder.apps, id: \.self) { name in
-                SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
+            if !rest.isEmpty {
+                group(String(localized: "Add")) {
+                    ForEach(rest, id: \.self) { name in
+                        SourcesFolderApp(name: name, yours: false, needsYou: false,
+                                         settings: settings(name)) { open(name) }
+                    }
+                }
             }
         }
-        .padding(.top, DS.Space.s2)
+        .padding(.top, DS.Space.s1)
+    }
+
+    private func group<Cells: View>(_ title: String, @ViewBuilder cells: () -> Cells) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(verbatim: title)
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                .accessibilityAddTraits(.isHeader)
+            LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
+                cells()
+            }
+        }
     }
 
     var body: some View {
@@ -335,11 +468,13 @@ private struct SourcesFolderAztecDirectory: View {
     }
 }
 
-/// One app in an open folder: its icon over its name; yours wears the green
-/// dot, one you could add the pink plus.
+/// One app in an open folder: its icon over its name; one you could add
+/// wears the pink plus, one of yours that needs you the amber dot. Under
+/// Add an icon stands in full colour: the group's word says it is not yours.
 private struct SourcesFolderApp: View {
     let name: String
     let yours: Bool
+    let needsYou: Bool
     let settings: (() -> Void)?
     let action: () -> Void
 
@@ -347,17 +482,8 @@ private struct SourcesFolderApp: View {
         Button(action: action) {
             VStack(spacing: DS.Space.s1) {
                 BridgeIcon(name: name, size: DS.Face.seat + 12)
-                    .sourcesYours(yours, size: 14, ring: DS.surfaceRaised)
-                    .overlay(alignment: .topTrailing) {
-                        if !yours {
-                            Image(systemName: "plus")
-                                .dsGlyph(.tick, weight: .bold)
-                                .foregroundStyle(.white)
-                                .frame(width: 20, height: 20)
-                                .background(DS.brandInk, in: Circle())
-                                .offset(x: 6, y: -6)
-                        }
-                    }
+                    .sourcesState(yours: true, needsYou: yours && needsYou, size: 14, ring: DS.surfaceRaised)
+                    .sourcesAddBadge(!yours)
                 Text(verbatim: name)
                     .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)
