@@ -146,7 +146,7 @@ grep -q '^#if DEBUG' Casberi/Casberi/Shell/RailgunEngineProbe.swift \
   || { echo "  ✗ the Railgun probe is no longer DEBUG-only"; fail=1; }
 calls=$(grep -rn 'RailgunPocket\.send(token:' Casberi/Casberi/Screens Casberi/Casberi/Shell | grep -v 'RailgunEngineProbe.swift' | grep -v '^\S*:\s*///' || true)
 count=$(printf '%s\n' "$calls" | grep -c 'RailgunPocket\.send(token:' || true)
-if [[ "$count" != "1" ]] || ! printf '%s' "$calls" | grep -qF 'to: account)'; then
+if [[ "$count" != "1" ]] || ! printf '%s' "$calls" | grep -qE 'to: account[,)]'; then
   echo "  ✗ a screen reaches your account's Railgun send other than taking back to your account (§1721 item 3)"
   printf '%s\n' "$calls"
   fail=1
@@ -154,7 +154,7 @@ else
   echo "  ✓ your account sends from Railgun only to your account"
 fi
 # §1723: the broadcaster's send asks for you and signs nothing with your account.
-body=$(awk '/static func send\(_ q: RailgunEngineWire.Quote\)/{on=1} on{print} on && /^    }$/{exit}' "$POCKET")
+body=$(awk '/static func send\(_ q: RailgunEngineWire.Quote/{on=1} on{print} on && /^    }$/{exit}' "$POCKET")
 if [[ -z "$body" ]] || printf '%s' "$body" | grep -q 'YourAccountChain' || ! printf '%s' "$body" | grep -q 'PrivateRootKey.unlock'; then
   echo "  ✗ the broadcaster's send touches your account, or does not ask for you first (§1723)"; fail=1
 else
@@ -185,6 +185,17 @@ use "$MOVEF" 'NSDecimalRound(&up, &tokens, min(h.decimals, 6), .up)' "the \$10 c
 use "$MOVEF" 'if usd >= 0.01, usd > (underFloor?.usd ?? 0) { underFloor = Short(symbol: h.token.symbol, usd: usd) }' "under the floor, the sentence names the token worth the most"
 use "$MOVEF" 'guard let gas = gasUSD(RailgunPocket.unshieldGas, plus: RailgunPocket.lastRelayerFeeWei ?? 0) else { return nil }' "a fresh sender's cost counts the relayer's fee"
 use "$MOVEF" 'guard let feeWords, let feeUSD = broadcasterFeeUSD else { return nil }' "a broadcaster's cost is its quoted fee, priced"
+
+use "$MOVEF" "PrivateStepRows(run: run, confirmed: move.unlockedFirst" "the steps stand in Move's foot, Aztec's rows (§1728 item 5)"
+use "$MOVEF" "steps.fail(Self.words(error))" "a failure stays on the step it reached"
+use "$MOVEF" "steps.begin(.move, plan: .signed(.ethereum))" "a move-in's rows are signed, as Aztec's Shield deposit's"
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'PrivateSendSteps.shared.mark(key)' "the engine's step lines move the rows"
+[[ $(grep -c "say('step proving')" "$ENGINE") == 3 && $(grep -c "say('step sent')" "$ENGINE") == 1 ]] \
+  && echo "  ✓ every proof says it starts, and the broadcaster's hand-over says it left" \
+  || { echo "  ✗ a Railgun proof or hand-over no longer says its step (§1728 item 5)"; fail=1; }
+grep -q "step proving" Casberi/Casberi/Resources/railgun-engine.js \
+  && echo "  ✓ the bundled engine carries the step lines" \
+  || { echo "  ✗ the bundled engine was not rebuilt with the step lines"; fail=1; }
 
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

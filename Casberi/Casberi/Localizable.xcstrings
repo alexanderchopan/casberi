@@ -58991,6 +58991,34 @@
         }
       }
     },
+    "Back in your account · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De vuelta en tu cuenta · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントに戻りました · %lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정으로 돌아옴 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已回到你的账户 · %lld 秒"
+          }
+        }
+      }
+    },
     "Back in your account." : {
       "localizations" : {
         "es" : {

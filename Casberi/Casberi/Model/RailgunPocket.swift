@@ -204,10 +204,13 @@ enum RailgunPocket {
     /// Sends `amount` (base units, decimal) of `token` from your Railgun
     /// wallet to `to`: the proof made on this phone, the proxy call sent by
     /// your account. Asks for the device owner first, then Face ID.
-    static func send(token: String, amount: String, to: String,
+    /// `unlocked` runs once you have said yes, so Move's rows start their
+    /// clock after Face ID (prd §1728, §1700x).
+    static func send(token: String, amount: String, to: String, unlocked: @MainActor () -> Void = {},
                      stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> String? {
         guard PrivateMoney.isAddress(to), let hexAmount = PrivateMoney.hex(amount) else { throw Failure.notWritten }
         try await open(reason: String(localized: "Send from your private balance"))
+        unlocked()
         let synced = try await sync()
         guard let held = synced.balances.first(where: { $0.token.lowercased() == token.lowercased() }),
               let spendable = Decimal(string: PrivateMoney.decimal(hex: held.spendable)),
@@ -265,9 +268,10 @@ enum RailgunPocket {
     /// on this phone pays the broadcaster its fee inside Railgun and the
     /// broadcaster submits it. Your account signs nothing and pays no gas, so
     /// it appears nowhere on the transaction. Returns its hash.
-    static func send(_ q: RailgunEngineWire.Quote) async throws -> String {
+    static func send(_ q: RailgunEngineWire.Quote, unlocked: @MainActor () -> Void = {}) async throws -> String {
         guard YourAccountKey.address != nil else { throw Failure.noAccount }
         try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        unlocked()
         let sent = try await RailgunEngine.shared.broadcastSend(token: q.token, amount: q.amount, to: q.to,
                                                                 feeToken: q.feeToken, fee: q.fee)
         NSLog("railgunPocket| broadcast | %@ | %@ of %@ to %@ | proof %d ms", sent.txHash, PrivateMoney.decimal(hex: q.amount),
@@ -313,7 +317,7 @@ enum RailgunPocket {
     /// submits the proved unshield. Face ID for the proof and the gas. The
     /// gas sent and not yet landed throws `gasOnItsWay`: the next try finds
     /// it there and goes on. A new sender after each send.
-    static func sendFromFresh(token: String, amount: String, to: String,
+    static func sendFromFresh(token: String, amount: String, to: String, unlocked: @MainActor () -> Void = {},
                               stage: @escaping @MainActor (String) -> Void) async throws -> String {
         guard YourAccountKey.address != nil else { throw Failure.noAccount }
         guard PrivateMoney.isAddress(to), let hexAmount = PrivateMoney.hex(amount) else { throw Failure.notWritten }
@@ -322,6 +326,7 @@ enum RailgunPocket {
         }
         let sender = try senderAddress()
         try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        unlocked()
         // The gas first, so the proof is made against the pool as it is when
         // it goes.
         let held = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [sender.address, "latest"])) ?? 0
@@ -352,6 +357,7 @@ enum RailgunPocket {
                                                         [["from": sender.address, "to": u.tx.to, "data": u.tx.data, "value": "0x0"]])) ?? 0
         guard estimate > 0, estimate <= FreshTx.railgunSendGas else { throw Failure.notRailgun }
         stage(String(localized: "Sending…"))
+        PrivateSendSteps.shared.mark(.sent)
         let hash = try await FreshSigner.send(to: u.tx.to, data: u.tx.data, value: "0x0", index: sender.index, root: sender.root,
                                               from: sender.address, network: network, gas: FreshTx.railgunSendGas,
                                               tip: fees.tip, maxFee: fees.maxFee) { _, _ in

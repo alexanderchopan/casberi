@@ -149,6 +149,11 @@ final class RailgunEngine: NSObject {
             readyWaiters = []
             return
         }
+        // A proof starting, a send handed over: Move's rows (prd §1728,
+        // §1700x). `mark` does nothing when no send of Move's is running.
+        if line.hasPrefix("step "), let key = PrivateSendSteps.Key(rawValue: String(line.dropFirst(5))) {
+            PrivateSendSteps.shared.mark(key)
+        }
         NSLog("railgunEngine| page | %@", line)
     }
 

@@ -381,12 +381,14 @@ const methods = {
       if (forSafe) throw Object.assign(new Error('a Safe unshields WETH as a token; ETH needs a plain wallet'), { name: 'NotForSafe' });
       est = await gasEstimateForUnprovenUnshieldBaseToken(V2, NETWORK, to, walletID, encryptionKey, { tokenAddress: token, amount }, gasDetails(p), undefined, true);
       const pt = now();
+      say('step proving');
       await generateUnshieldBaseTokenProof(V2, NETWORK, to, walletID, encryptionKey, { tokenAddress: token, amount }, undefined, true, undefined, () => {});
       proofMs = Math.round(now() - pt);
       ({ transaction } = await populateProvedUnshieldBaseToken(V2, NETWORK, to, walletID, { tokenAddress: token, amount }, undefined, true, undefined, gasDetails(p, est.gasEstimate)));
     } else {
       est = await gasEstimateForUnprovenUnshield(V2, NETWORK, walletID, encryptionKey, recipients, [], gasDetails(p), undefined, true);
       const pt = now();
+      say('step proving');
       await generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], undefined, true, undefined, () => {});
       proofMs = Math.round(now() - pt);
       ({ transaction } = await populateProvedUnshield(V2, NETWORK, walletID, recipients, [], undefined, true, undefined, gasDetails(p, est.gasEstimate)));
@@ -466,6 +468,8 @@ const methods = {
     const recipients = [{ tokenAddress: q.token, amount: q.amount, recipientAddress: q.to }];
     const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
     const pt = now();
+    // The steps Move's rows show (prd §1728, §1700x): the proof, then the hand-over.
+    say('step proving');
     await generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], feeRecipient, false, q.gasPrice, () => {});
     const proofMs = Math.round(now() - pt);
     const populated = await populateProvedUnshield(V2, NETWORK, walletID, recipients, [], feeRecipient, false, q.gasPrice, q.details);
@@ -476,6 +480,7 @@ const methods = {
     // From here the broadcaster may already have the send: a failure is
     // "not confirmed", never "nothing was sent".
     let txHash;
+    say('step sent');
     try {
       txHash = await sending.send();
     } catch (e) {

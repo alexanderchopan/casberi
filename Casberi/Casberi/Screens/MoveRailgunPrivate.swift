@@ -235,6 +235,11 @@ final class RailgunMove {
         if DemoMode.isActive, amount.isEmpty { amount = "25" }
         stage = keep == nil ? .nothing : .ready
         amountChanged()
+        #if DEBUG
+        if DemoMode.isActive, UserDefaults.standard.string(forKey: "railgunStepsPreview") != nil {
+            Task { await previewSteps() }
+        }
+        #endif
     }
 
     /// Asks a broadcaster what sending the picked amount costs. The demo
@@ -363,20 +368,14 @@ final class RailgunMove {
     /// account, a broadcaster in its fee token, or your private ETH for a
     /// fresh sender. nil where a price is missing: the line then says
     /// Railgun's percentage, as before.
-    struct Cost: Equatable {
-        struct Part: Equatable, Hashable { let words: String; let figure: String }
-        let usd: Double
-        let parts: [Part]
-    }
-
-    var cost: Cost? {
+    var cost: PrivateCost? {
         guard let picked, let h = holding, let price = h.price, let bps = feeBps,
               let units = Decimal(string: picked.units) else { return nil }
         var cutUnits = units * Decimal(bps) / 10_000, cut = Decimal()
         NSDecimalRound(&cut, &cutUnits, 0, .down)
         let cutText = NSDecimalNumber(decimal: cut).stringValue
         var usd = YourAccountOp.dollars(cutText, decimals: h.decimals, price: price)
-        var parts = [Cost.Part(words: String(localized: "Railgun"),
+        var parts = [PrivateCost.Part(words: String(localized: "Railgun"),
                                figure: RailgunHoldings.figure(cutText, decimals: h.decimals) + " " + h.symbol)]
         func gasUSD(_ gas: Int, plus extraWei: Decimal = 0) -> Double? {
             guard let gasPriceWei, let ethUSD else { return nil }
@@ -402,7 +401,7 @@ final class RailgunMove {
             usd += gas
             parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gas))")))
         }
-        return Cost(usd: usd, parts: parts)
+        return PrivateCost(usd: usd, parts: parts)
     }
 
     /// The broadcaster's fee in dollars: WETH at ETH's price, any other fee
@@ -433,13 +432,19 @@ final class RailgunMove {
             }
             var wei = Decimal(RailgunRouting.nice(Self.floorUSD / price)) * pow(10, 18), whole = Decimal()
             NSDecimalRound(&whole, &wei, 0, .up)
-            stage = .working(String(localized: "Confirm with Face ID"))
+            // A shield like any move-in: its rows are signed (§1728 item 5).
+            PrivateSendSteps.shared.forget(.move)
+            unlockedFirst = false
+            PrivateSendSteps.shared.begin(.move, plan: .signed(.ethereum))
+            stage = .working(String(localized: "Sending…"))
             _ = try await RailgunPocket.addFees(wei: NSDecimalNumber(decimal: whole).stringValue) { [weak self] s in
                 await self?.say(s)
             }
+            PrivateSendSteps.shared.finish()
             stage = .done(String(localized: "On its way: private in about an hour. Then send again."))
             await RailgunHoldings.shared.refresh(force: true)
         } catch {
+            PrivateSendSteps.shared.fail(Self.words(error))
             stage = .failed(Self.words(error))
         }
     }
@@ -455,48 +460,133 @@ final class RailgunMove {
     }
 
     /// Moves it: in through your account's shield, or back to your account.
+    /// **THE STEPS, AS AZTEC'S (prd §1728 item 5, §1700x).** One model and
+    /// one set of rows for every private send (`PrivateSendSteps`,
+    /// `PrivateStepRows`), standing in the foot over the act. A move-in is
+    /// signed: Checking · Signing · Sent on Ethereum. A send to someone is
+    /// proved after Face ID: Checking · Proving on this iPhone · Sent on
+    /// Ethereum. Taking back is proved, then signed by your account. The
+    /// engine says when a proof starts and a send leaves (`step` lines);
+    /// your account's stages say the signing.
+    static let takeBackPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, .signing, .sent(.ethereum)])
+
+    /// Moves it: in through your account's shield, or back to your account.
     func run() async {
         guard let picked, amountOK, !DemoMode.isActive else { return }
+        let steps = PrivateSendSteps.shared
+        // Last send's rows go; this send's start with it.
+        steps.forget(.move)
+        unlockedFirst = false
         do {
             switch mode {
             case .deposit:
-                stage = .working(String(localized: "Confirm with Face ID"))
+                steps.begin(.move, plan: .signed(.ethereum))
+                stage = .working(String(localized: "Sending…"))
                 _ = try await RailgunPocket.shield(token: picked.contract, amount: picked.units) { [weak self] s in
                     await self?.say(s)
                 }
+                steps.finish()
                 stage = .done(String(localized: "On its way: private in about an hour."))
             case .takeBack where toSomeoneElse && viaFresh:
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "") { [weak self] words in
-                    self?.stage = .working(words)
-                }
+                _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
+                                                          unlocked: { [weak self] in self?.started(.send(.ethereum)) }) { _ in }
+                steps.finish()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse:
                 guard let q = quote else { return }
-                stage = .working(String(localized: "Proving on this iPhone…"))
-                _ = try await RailgunPocket.send(q)
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.send(q, unlocked: { [weak self] in self?.started(.send(.ethereum)) })
                 quote = nil
+                steps.finish()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack:
                 guard let account = YourAccountKey.address else { stage = .failed(String(localized: "No account on this iPhone")); return }
-                stage = .working(String(localized: "Proving on this iPhone…"))
-                _ = try await RailgunPocket.send(token: picked.contract, amount: picked.units, to: account) { [weak self] s in
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.send(token: picked.contract, amount: picked.units, to: account,
+                                                 unlocked: { [weak self] in self?.started(Self.takeBackPlan) }) { [weak self] s in
                     await self?.say(s)
                 }
+                steps.finish()
                 stage = .done(String(localized: "Back in your account."))
             }
+            DSHaptic.success()
             await RailgunHoldings.shared.refresh(force: true)
         } catch {
+            // The rows keep the failure on the step it reached (§1700x).
+            steps.fail(Self.words(error))
             stage = .failed(Self.words(error))
         }
     }
 
+    #if DEBUG
+    /// `-railgunStepsPreview send|in|fail` (prd §1728 item 5): in the demo,
+    /// plays one run through the real model, sentence and foot: a send to
+    /// someone (Face ID, checking 2 s, proving 8 s, handed over), a move-in
+    /// (checking, signing, sent), or a send that fails while proving. Nothing
+    /// is sent; NSLogs each step.
+    func previewSteps() async {
+        guard DemoMode.isActive, let kind = UserDefaults.standard.string(forKey: "railgunStepsPreview") else { return }
+        let steps = PrivateSendSteps.shared
+        func step(_ key: PrivateSendSteps.Key, after s: Double) async {
+            try? await Task.sleep(for: .seconds(s))
+            steps.mark(key)
+            NSLog("railgunStepsPreview| %@ | %@", kind, key.rawValue)
+        }
+        try? await Task.sleep(for: .seconds(3))
+        steps.forget(.move)
+        unlockedFirst = false
+        if kind == "in" {
+            steps.begin(.move, plan: .signed(.ethereum))
+            stage = .working(String(localized: "Sending…"))
+            await step(.signing, after: 2)
+            await step(.sent, after: 3)
+            try? await Task.sleep(for: .seconds(6))
+            steps.finish()
+            stage = .done(String(localized: "On its way: private in about an hour."))
+            return
+        }
+        started(.send(.ethereum))
+        await step(.proving, after: 2)
+        if kind == "fail" {
+            try? await Task.sleep(for: .seconds(5))
+            steps.fail(Self.words(RailgunPocket.Failure.noBroadcaster))
+            stage = .failed(Self.words(RailgunPocket.Failure.noBroadcaster))
+            return
+        }
+        await step(.sent, after: 8)
+        try? await Task.sleep(for: .seconds(3))
+        steps.finish()
+        stage = .done(String(localized: "Sent privately."))
+    }
+    #endif
+
+    /// Face ID said yes: the rows' clock starts, and "Confirmed with Face
+    /// ID" leads them.
+    private func started(_ plan: PrivateSendSteps.Plan) {
+        unlockedFirst = true
+        PrivateSendSteps.shared.begin(.move, plan: plan)
+        stage = .working(String(localized: "Sending…"))
+    }
+
+    /// Face ID came before this send's clock (a send out, never a move-in).
+    private(set) var unlockedFirst = false
+
+    /// Your account's stages: its Face ID and co-signer are the Signing
+    /// step, its sending the Sent one.
     private func say(_ s: YourAccountChain.Stage) {
+        let steps = PrivateSendSteps.shared
         switch s {
-        case .preparing: stage = .working(String(localized: "Preparing…"))
-        case .signing: stage = .working(String(localized: "Confirm with Face ID"))
-        case .cosigning: stage = .working(String(localized: "Waiting for your co-signer"))
-        case .sending, .landing: stage = .working(String(localized: "Sending…"))
+        case .preparing: break
+        case .signing:
+            steps.mark(.signing)
+            stage = .working(String(localized: "Confirm with Face ID"))
+        case .cosigning:
+            steps.mark(.signing)
+            stage = .working(String(localized: "Waiting for your co-signer"))
+        case .sending, .landing:
+            steps.mark(.sent)
+            stage = .working(String(localized: "Sending…"))
         }
     }
 
@@ -541,8 +631,6 @@ struct MoveRailgunSentence<Head: View>: View {
 
     /// The token list is open.
     @State private var open = false
-    /// The cost's parts are showing.
-    @State private var showParts = false
     @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
@@ -588,9 +676,11 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
+    /// The sentence draws the verb itself: never above it as well (a failed
+    /// send drew "Send" twice).
     private var leadsWithVerb: Bool {
         switch move.stage {
-        case .ready, .working, .quoting, .needsFees: true
+        case .ready, .working, .quoting, .needsFees, .failed: true
         default: false
         }
     }
@@ -677,8 +767,11 @@ struct MoveRailgunSentence<Head: View>: View {
                 chips
             }
         case .working(let words):
-            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            // The steps stand in the foot; the sentence stands alone.
+            if stepsRun == nil {
+                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .nothing where move.mode == .deposit && move.underFloor != nil:
             // Get more of it (prd §1728 item 2): Receive, or Swap.
             if let short = move.underFloor {
@@ -688,14 +781,17 @@ struct MoveRailgunSentence<Head: View>: View {
                 }
             }
         case .failed(let words):
-            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
-                .fixedSize(horizontal: false, vertical: true)
+            // A failure the rows carry is said once, on its step.
+            if stepsRun == nil {
+                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .needsFees:
             Text("A broadcaster takes its fee in WETH or USDC, and your private balance holds neither. Add about $10 of ETH for fees first.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .done(let words):
-            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Text(verbatim: doneLine(words)).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         default:
             EmptyView()
@@ -709,73 +805,50 @@ struct MoveRailgunSentence<Head: View>: View {
     /// on, in real seconds: the wallet syncing, then the broadcasters.
     @ViewBuilder private var costLine: some View {
         if move.stage == .quoting {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
+            if let since = RailgunSync.shared.since {
+                PrivateWarmingRow(since: since)
+            } else {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .small)
-                    Text(verbatim: quotingWords(at: context.date)).dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
+                    Text("Finding a broadcaster…").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-            }
-        } else if let cost = move.cost {
-            VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    withAnimation(DS.Motion.standard) { showParts.toggle() }
-                    DSHaptic.selection()
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(verbatim: costWords(cost)).dsText(.body17).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                        Image(systemName: showParts ? "chevron.up" : "chevron.down")
-                            .dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)
-                    }
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text(showParts ? "Hides what it costs" : "Shows what it costs"))
-                if showParts {
-                    ForEach(cost.parts, id: \.self) { part in
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                            Text(verbatim: part.words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(verbatim: part.figure).dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                        }
-                        .frame(minHeight: 32)
-                        .accessibilityElement(children: .combine)
-                    }
-                    .transition(.opacity)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         } else {
-            Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // The shared view (§1700y); no price, Railgun's percentage.
+            PrivateCostLine(cost: move.cost, tail: costTail, fallback: readyLine)
         }
     }
 
-    /// "Getting your private balance ready · 12 s", then "Finding a
-    /// broadcaster · 4 s": real seconds, never a percentage (as §1700w).
-    private func quotingWords(at now: Date) -> String {
-        if let since = RailgunSync.shared.since {
-            let s = max(0, Int(now.timeIntervalSince(since).rounded()))
-            return String(localized: "Getting your private balance ready · \(s) s")
-        }
-        return String(localized: "Finding a broadcaster…")
-    }
-
-    /// "Costs about $0.39 · your account isn't on it".
-    private func costWords(_ cost: RailgunMove.Cost) -> String {
-        let figure = cost.usd < 0.01 ? String(localized: "Costs under $0.01")
-            : String(localized: "Costs about \(RailgunMove.usd(cost.usd))")
-        let tail: String? = switch move.mode {
+    /// What the cost buys: private in an hour (in), your account nowhere on
+    /// it (to someone else); taking back says the sum alone.
+    private var costTail: String? {
+        switch move.mode {
         case .deposit: String(localized: "private in about an hour")
         case .takeBack where move.toSomeoneElse: String(localized: "your account isn't on it")
         case .takeBack: nil
         }
-        return [figure, tail].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    // MARK: - The steps (prd §1728 item 5, §1700x)
+
+    /// This sentence's send, while it works, once it failed with its steps,
+    /// and once it is done: the rows stand in the foot over the act.
+    private var stepsRun: PrivateSendSteps.Run? {
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move else { return nil }
+        switch move.stage {
+        case .working: return run
+        case .failed: return run.ok == false ? run : nil
+        case .done: return run.ok == true ? run : nil
+        default: return nil
+        }
+    }
+
+    /// The line under a finished send: how long it took, tap to block.
+    private func doneLine(_ words: String) -> String {
+        guard let total = stepsRun?.total, move.mode == .takeBack else { return words }
+        return move.toSomeoneElse ? String(localized: "Sent privately · \(total) s")
+            : String(localized: "Back in your account · \(total) s")
     }
 
     /// Where no price makes a dollar cost: Railgun's percentage and who
@@ -908,7 +981,13 @@ struct MoveRailgunSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
-            if showsCost {
+            // One thing at a time over the act (§1700x): the steps while it
+            // works and after, else the cost (or what a quote waits on).
+            if let run = stepsRun {
+                PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
+                    .padding(.bottom, DS.Space.s3)
+                    .transition(.opacity)
+            } else if showsCost {
                 costLine
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, DS.Space.s1)
