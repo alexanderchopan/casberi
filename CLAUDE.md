@@ -224,7 +224,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-forceBackgroundLaunch YES` — stamp this launch as a background launch so `RootShell`'s gate stays closed (NSLogs `backgroundLaunch: yes`, prd §642); the sim cannot background-launch, so a pass proves the branch renders, not that the watchdog is beaten.
 - `-ratingAskProbe YES` — ask for Apple's rating sheet on the next foreground whatever the rule says (`Model/RatingAsk.swift`: four days of real use, never the demo, once per version; `rating-ask-selftest.sh`; NSLogs `ratingAsk|`) → prd §1477
 - `-storeVersionProbe <x.y.z>` — pretend the App Store has x.y.z: the shell flashes "Casberi x.y.z is out" and Settings' colophon draws "Update to x.y.z" (`Model/StoreVersion.swift`; NSLogs `storeVersion:`). DEBUG never asks the store; older TestFlight builds expire on each beta ship (`testflight-expire-after.sh`) → prd §1104
-- `-fresh YES|NO` — sticky new-user mode (persists until flipped or reinstall); re-shows onboarding.
+- `-fresh YES|NO` — sticky new-user mode (persists until flipped or reinstall); re-shows onboarding on an empty install only.
 - `-accountDetail <case>` — open a settings detail sheet (`Screens/AccountScreen.swift`, `SettingsRows`' own onAppear, so pair it with `-openSettings YES`).
 - `-openAddresses YES` — push the Contacts app's page over Library (`ContactsPage`; Library has no box and Contacts is Social's, prd §1612).
 - `-openAddressCard <0x…>` — raise the address card for a book entry when the Wallet page appears (`Screens/WalletScreen.swift`; pair with `-openSetup "Wallet"` and `casberi://account`; NSLogs `openAddressCard:`).
