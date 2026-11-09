@@ -74,6 +74,9 @@ struct ToastLayer: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.clear
+            #if DEBUG
+            AztecStepsPreview()
+            #endif
             if let toast = chrome.toast {
                 ToastPill(chrome: chrome, text: toast)
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { rect in

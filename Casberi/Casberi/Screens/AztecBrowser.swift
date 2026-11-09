@@ -582,6 +582,10 @@ struct AztecBrowserView: View {
     var body: some View {
         VStack(spacing: 0) {
             AztecPage(view: model.page)
+                // An approved transaction's steps float over the page's foot (prd §1700w).
+                .overlay(alignment: .bottom) {
+                    if model.aztec { AztecStepCapsule().padding(.bottom, DS.Space.s6) }
+                }
             if let sending = model.sending {
                 Text(verbatim: sending).dsText(.subhead12).foregroundStyle(DS.textSecondary).padding()
             }

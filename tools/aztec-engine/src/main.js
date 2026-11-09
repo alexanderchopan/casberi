@@ -34,6 +34,7 @@ import { sha256ToField } from '@aztec-labs/foundation/crypto/sha256';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
 import { WALLET_ICON } from './icon.js';
+import { watched } from './steps.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -45,6 +46,8 @@ const READS = new Set([
   'registerSender', 'registerContract', 'getPrivateEvents', 'executeUtility', 'simulateTx', 'requestCapabilities',
 ]);
 
+// Casberi's own calls that are sends: Move draws their steps (prd §1700w).
+const WATCHED_OWN = new Set(['sendPrivately', 'shieldExit']);
 const native = (name, value) => window.webkit?.messageHandlers?.[name]?.postMessage(JSON.stringify(value));
 const t0 = performance.now();
 const ms = () => Math.round(performance.now() - t0);
@@ -398,7 +401,9 @@ async function callForApp(method, args, origin) {
   const parsed = schemaHasMethod(WalletSchema, method)
     ? await parseWithOptionals(args ?? [], getSchemaParameters(WalletSchema[method]))
     : args ?? [];
-  const result = await wallet[method](...parsed);
+  // An approved transaction reports its steps to the browser (prd §1700w).
+  const run = () => wallet[method](...parsed);
+  const result = await (READS.has(method) ? run() : watched('app', run));
   return result === undefined ? undefined : JSON.parse(jsonStringify(result));
 }
 
@@ -468,7 +473,10 @@ window.casberiEngine = {
   // Casberi's own call: the answer comes back as `engineReply`.
   call(id, method, argsJSON) {
     const fn = own[method];
-    const run = fn ? fn(...JSON.parse(argsJSON ?? '[]')) : Promise.reject(new Error(`unknown call ${method}`));
+    const go = () => fn(...JSON.parse(argsJSON ?? '[]'));
+    // Move's sends report their steps (prd §1700w); claims and reads do not.
+    const run = !fn ? Promise.reject(new Error(`unknown call ${method}`))
+      : WATCHED_OWN.has(method) ? watched('move', go) : go();
     run.then(
       result => native('engineReply', { id, result }),
       e => native('engineReply', { id, error: String(e?.message ?? e).slice(0, 400) }),

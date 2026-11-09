@@ -226,11 +226,15 @@ final class AztecMove {
                 if toAztec {
                     try await PrivateRootKey.unlock(reason: String(localized: "Send privately on Aztec"))
                     try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: decimals, symbol: symbol)) on Aztec to \(recipient)"))
-                    stage = .working(String(localized: "Proving…"))
+                    // The rows' clock starts at the tap, before a cold engine
+                    // has said anything (prd §1700w).
+                    AztecSendSteps.shared.begin(.move)
+                    stage = .working(String(localized: "Sending…"))
                     let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units]) as? [String: Any]
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
-                    stage = .working(String(localized: "Proving…"))
+                    AztecSendSteps.shared.begin(.move)
+                    stage = .working(String(localized: "Sending…"))
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient)
                     stage = .done(exit.transaction)
                 }
@@ -434,7 +438,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     @ViewBuilder private var line: some View {
         switch move.stage {
         case .ready, .working:
-            if move.stage == .ready, let problem = move.amountProblem {
+            if case .working = move.stage, move.mode == .send,
+               let run = AztecSendSteps.shared.run, run.kind == .move {
+                // What is done, what is running, what is next (prd §1700w).
+                AztecStepRows(run: run)
+            } else if move.stage == .ready, let problem = move.amountProblem {
                 Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
@@ -495,12 +503,18 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         return String(localized: "Shield moves USDC or WETH from your account on Ethereum.")
     }
 
+    /// How long the send took, tap to block, so the next wait feels known (prd §1700w).
+    private var sentTotal: Int? {
+        guard let run = AztecSendSteps.shared.run, run.kind == .move, run.ok == true else { return nil }
+        return run.total
+    }
+
     private var doneLine: String {
         switch move.mode {
         case .deposit: String(localized: "On its way: Aztec carries it in minutes, then it is yours.")
         case .send:
             move.toEthereum ? String(localized: "Proved. In about an hour Needs you offers Finish on Ethereum.")
-                : String(localized: "Sent privately.")
+                : sentTotal.map { String(localized: "Sent privately · \($0) s") } ?? String(localized: "Sent privately.")
         }
     }
 

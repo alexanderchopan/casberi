@@ -30143,6 +30143,34 @@
         }
       }
     },
+    "%lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 秒"
+          }
+        }
+      }
+    },
     "%lld sales" : {
       "localizations" : {
         "es" : {
@@ -81304,6 +81332,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "断开会停止同步。已经落地的内容仍归你所有。"
+          }
+        }
+      }
+    },
+    "Dismisses" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cierra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "閉じます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "닫습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭"
           }
         }
       }
@@ -149034,6 +149090,34 @@
         }
       }
     },
+    "Proved on your phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrado en tu teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iPhoneで証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "휴대폰에서 증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在你的手机上证明"
+          }
+        }
+      }
+    },
     "Proved. In about an hour Needs you offers Finish on Ethereum." : {
       "localizations" : {
         "es" : {
@@ -149198,6 +149282,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在此 iPhone 上生成证明…"
+          }
+        }
+      }
+    },
+    "Proving on your phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrando en tu teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iPhoneで証明中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "휴대폰에서 증명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在你的手机上证明"
           }
         }
       }
@@ -167694,6 +167806,34 @@
         }
       }
     },
+    "Sending to Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecに送信中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로 보내는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在发送到 Aztec"
+          }
+        }
+      }
+    },
     "Sending · %@%@" : {
       "localizations" : {
         "es" : {
@@ -168356,6 +168496,34 @@
         }
       }
     },
+    "Sent privately · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado en privado · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で送信済み · %lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 보냄 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已私密发送 · %lld 秒"
+          }
+        }
+      }
+    },
     "Sent privately." : {
       "localizations" : {
         "es" : {
@@ -168408,6 +168576,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已发送至"
+          }
+        }
+      }
+    },
+    "Sent to Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecに送信済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로 보냄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送到 Aztec"
           }
         }
       }

@@ -6,6 +6,7 @@
 // stays WebAssembly. Outside the app (no `webkit`) or with `?prover=wasm`,
 // bb.js's own WebAssembly prover runs, to compare.
 import { BackendType } from '@bbjs/bb_backends/index.js';
+import { sawProof } from './steps.js';
 import { BarretenbergWasmAsyncBackend, BarretenbergWasmSyncBackend } from '@bbjs/bb_backends/wasm.js';
 
 const wantWasm = new URLSearchParams(globalThis.location?.search ?? '').get('prover') === 'wasm';
@@ -17,6 +18,8 @@ export const proverKind = !wantWasm && globalThis.webkit?.messageHandlers ? 'nat
 let tail = Promise.resolve();
 class NativeBridgeBackend {
   call(input) {
+    // Only proofs reach the async prover: the send's "proving" step (prd §1700w).
+    sawProof();
     const run = tail.then(async () => {
       const response = await fetch('/bb', { method: 'POST', body: input, headers: { 'content-type': 'application/octet-stream' } });
       if (!response.ok) throw new Error(`native prover ${response.status}: ${await response.text()}`);

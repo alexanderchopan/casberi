@@ -58,4 +58,25 @@ sed 's/      if (!yes) return end(id);/      if (!yes) yes = true;/' $GATE_SRC >
 cmp -s $GATE_SRC $TMP/no-means-yes.js && { echo "✗ mutation 'a no to Connect is ignored' changed nothing"; exit 1; }
 mutant "a no to Connect is ignored" GATE=$TMP/no-means-yes.js
 
+# ── The steps a send shows (prd §1700w) ─────────────────────────────────
+STEPS_SRC=$ENGINE/src/steps.js
+grep -q "if (isSendTx(body)) sawSendTx();" $ENGINE/src/net-shim.js \
+  && grep -q "    sawProof();" $ENGINE/src/native-backend.js \
+  && grep -q "WATCHED_OWN.has(method) ? watched('move', go) : go()" $MAIN \
+  && grep -q "READS.has(method) ? run() : watched('app', run)" $MAIN \
+  || { echo "✗ a send's steps are not read where they happen (the prover, the node's sendTx, Move's sends, an app's transaction)"; exit 1; }
+(cd $ENGINE && node test/steps.test.mjs) || { echo "✗ the step checks failed"; exit 1; }
+steps_mutant() { # name, sed expression
+  sed "$2" $STEPS_SRC > $TMP/steps.js
+  cmp -s $STEPS_SRC $TMP/steps.js && { echo "✗ mutation '$1' changed nothing"; exit 1; }
+  if (cd $ENGINE && STEPS=$TMP/steps.js node test/steps.test.mjs >/dev/null 2>&1); then
+    echo "✗ mutation '$1' passed: the step checks cannot see it"; exit 1
+  fi
+  echo "✓ mutation '$1' fails the step checks"
+}
+steps_mutant "proving posted on every proof" 's/  if (!watching || watching.proving) return;/  if (!watching) return;/'
+steps_mutant "a claim's proof posts with nothing watched" 's/  if (!watching || watching.sent) return;/  if (watching?.sent) return;/'
+steps_mutant "a failure reads as done" "s/ok ? 'done' : 'failed'/'done'/"
+steps_mutant "only a string body is a send" 's/  else if (ArrayBuffer.isView(body))/  else if (false)/'
+
 echo "aztec connect self-test: ok"

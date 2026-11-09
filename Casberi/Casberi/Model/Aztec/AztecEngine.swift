@@ -117,7 +117,7 @@ final class AztecEngine: NSObject {
     }
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
-                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji"]
+                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep"]
 
     // MARK: - Casberi's own calls
 
@@ -174,6 +174,9 @@ final class AztecEngine: NSObject {
                 ?? (body["detail"]).flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed]) }
                     .map { String(decoding: $0, as: UTF8.self) } ?? ""
             NSLog("aztecEngine| %@ | %@", event, String(detail.prefix(600)))
+        case "engineStep":
+            // A send's steps, for the screen that started it (prd §1700w).
+            AztecSendSteps.shared.received(body)
         case "engineToTab":
             guard let inner = body["message"], let data = try? JSONSerialization.data(withJSONObject: inner) else { return }
             browser?.deliver(String(decoding: data, as: UTF8.self))

@@ -4,6 +4,8 @@
 // Swift sends it only to a host Casberi declares for the engine (NetworkReach),
 // through the app's one funnel — Tor where the policy says, a receipt for each
 // (prd §1700, the Privacy Pools engine's rule, §1540).
+import { isSendTx, sawSendTx } from './steps.js';
+
 const nativeFetch = globalThis.fetch.bind(globalThis);
 
 globalThis.fetch = async (input, init = {}) => {
@@ -16,5 +18,7 @@ globalThis.fetch = async (input, init = {}) => {
   const headers = new Headers(init.headers ?? request?.headers ?? {});
   headers.set('x-casberi-target', url.href);
   const body = method === 'GET' || method === 'HEAD' ? undefined : (init.body ?? (request ? await request.arrayBuffer() : undefined));
+  // A transaction handed to Aztec's node: the send's "sent" step (prd §1700w).
+  if (isSendTx(body)) sawSendTx();
   return nativeFetch('/net', { method: 'POST', headers: { ...Object.fromEntries(headers), 'x-casberi-method': method }, body, signal: init.signal });
 };
