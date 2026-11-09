@@ -441,9 +441,9 @@ On for the App Store and TestFlight (user: "we want it on for app store and test
 
 - **Pay a zk.money tag (prd §1692).** `-openMove YES -moveSendDraft "20|zac.zk.money|USDC@Ethereum"`: a trailing `@<network>` on a send draft picks the network before the lines fill. The demo pays a made-up deposit address (`ZkMoney.demoDeposit`) and asks nothing; a real account asks zk.money's resolver, its gateway, then `resolveWithProof` on Ethereum. A tag on Base or in ETH draws the refusal line.
 
-## `-aztecStepsPreview move|app` — a send's steps, drawn (prd §1700w)
+## `-privateStepsPreview move|app|fail|signed` — a private send's steps, drawn (prd §1700w, §1700x)
 
-Plays one send's steps over the shell through the real `AztecSendSteps` (checking 2 s, proving 9 s, handed to Aztec 8 s, done), drawn in the toast window's layer: `move` draws Move's three rows under a sample sentence, `app` the browser's capsule over a blank page. No engine, no money (a simulator cannot prove a mainnet send). NSLogs `aztecStepsPreview| <kind> | <step>`.
+Plays one send's steps over the shell through the real `PrivateSendSteps`, drawn in the toast window's layer: `move` an Aztec send in Move's rows under a sample sentence (checking 2 s, proving 9 s, sent 8 s, done), `app` the same in the Aztec browser's capsule, `fail` a proof that fails with its reason on the row, `signed` a Railgun move-in (Checking · Signing · Sent on Ethereum) led by Confirmed with Face ID. No engine, no money. NSLogs `privateStepsPreview| <mode> | <step>`. Was `-aztecStepsPreview`.
 
 ## `-aztecEngineProbe YES` — your Aztec account's engine (prd §1700)
 

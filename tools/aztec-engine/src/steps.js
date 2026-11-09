@@ -30,9 +30,12 @@ export function sawSendTx() {
   post({ step: 'sent', kind: watching.kind });
 }
 
-export function endSend(ok) {
+export function endSend(ok, reason) {
   if (!watching) return;
-  post({ step: ok ? 'done' : 'failed', kind: watching.kind, sent: watching.sent });
+  const end = { step: ok ? 'done' : 'failed', kind: watching.kind, sent: watching.sent };
+  // A failure's own words ride along (prd §1700x): the row it failed at says them.
+  if (!ok && reason) end.reason = String(reason).slice(0, 200);
+  post(end);
   watching = null;
 }
 
@@ -44,7 +47,7 @@ export async function watched(kind, run) {
     endSend(true);
     return result;
   } catch (e) {
-    endSend(false);
+    endSend(false, e?.message ?? e);
     throw e;
   }
 }

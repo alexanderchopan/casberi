@@ -69700,6 +69700,34 @@
         }
       }
     },
+    "Confirmed with Face ID" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Confirmado con Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face IDで確認済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID로 확인됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已通过面容 ID 确认"
+          }
+        }
+      }
+    },
     "Connect" : {
       "localizations" : {
         "es" : {
@@ -149370,30 +149398,86 @@
         }
       }
     },
-    "Proved on your phone" : {
+    "Proved on this Mac" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Demostrado en tu teléfono"
+            "value" : "Demostrado en este Mac"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "iPhoneで証明済み"
+            "value" : "このMacで証明済み"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "휴대폰에서 증명됨"
+            "value" : "이 Mac에서 증명됨"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "已在你的手机上证明"
+            "value" : "已在此 Mac 上证明"
+          }
+        }
+      }
+    },
+    "Proved on this iPad" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrado en este iPad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPadで証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPad에서 증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在此 iPad 上证明"
+          }
+        }
+      }
+    },
+    "Proved on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrado en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneで証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에서 증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在此 iPhone 上证明"
           }
         }
       }
@@ -149538,6 +149622,90 @@
         }
       }
     },
+    "Proving on this Mac" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrando en este Mac"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このMacで証明中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Mac에서 증명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在此 Mac 上证明"
+          }
+        }
+      }
+    },
+    "Proving on this iPad" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrando en este iPad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPadで証明中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPad에서 증명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在此 iPad 上证明"
+          }
+        }
+      }
+    },
+    "Proving on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demostrando en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneで証明中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에서 증명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在此 iPhone 上证明"
+          }
+        }
+      }
+    },
     "Proving on this iPhone…" : {
       "localizations" : {
         "es" : {
@@ -149562,34 +149730,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在此 iPhone 上生成证明…"
-          }
-        }
-      }
-    },
-    "Proving on your phone" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Demostrando en tu teléfono"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "iPhoneで証明中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "휴대폰에서 증명 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在你的手机上证明"
           }
         }
       }
@@ -168086,6 +168226,34 @@
         }
       }
     },
+    "Sending on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumで送信中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 보내는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 Ethereum 上发送"
+          }
+        }
+      }
+    },
     "Sending on Ethereum…" : {
       "localizations" : {
         "es" : {
@@ -168744,6 +168912,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同时使用 %@ 个 nonce 密钥发送。"
+          }
+        }
+      }
+    },
+    "Sent on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumで送信済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 보냄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 Ethereum 上发送"
           }
         }
       }

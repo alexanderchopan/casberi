@@ -176,7 +176,7 @@ final class AztecEngine: NSObject {
             NSLog("aztecEngine| %@ | %@", event, String(detail.prefix(600)))
         case "engineStep":
             // A send's steps, for the screen that started it (prd §1700w).
-            AztecSendSteps.shared.received(body)
+            PrivateSendSteps.shared.received(body, plan: .send(.aztec))
         case "engineToTab":
             guard let inner = body["message"], let data = try? JSONSerialization.data(withJSONObject: inner) else { return }
             browser?.deliver(String(decoding: data, as: UTF8.self))

@@ -29,6 +29,7 @@ posted.length = 0;
 await watched('app', async () => { throw new Error('declined'); }).catch(() => {});
 check(steps() === 'checking,failed', `a failed send posts checking, failed (got ${steps()})`);
 check(posted.at(-1).sent === false, 'a failure before Aztec says nothing was sent');
+check(posted.at(-1).reason === 'declined', `a failure carries its reason (got ${posted.at(-1).reason})`);
 
 // The next send starts clean.
 posted.length = 0;

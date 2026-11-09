@@ -204,21 +204,36 @@ final class AztecMove {
     /// The move, as the sentence says it.
     func run() async {
         guard stage == .ready, amountOK, let units, let asset else { return }
+        let steps = PrivateSendSteps.shared
+        // Last send's rows go; this send's start at its own tap (prd §1700x).
+        steps.forget(.move)
         let report: @Sendable (YourAccountChain.Stage) async -> Void = { s in
-            await MainActor.run { self.stage = .working(s == .signing ? String(localized: "Confirm with Face ID") : String(localized: "Sending…")) }
+            await MainActor.run {
+                self.stage = .working(s == .signing ? String(localized: "Confirm with Face ID") : String(localized: "Sending…"))
+                switch s {
+                case .signing, .cosigning: steps.mark(.signing)
+                case .sending, .landing: steps.mark(.sent)
+                case .preparing: break
+                }
+            }
         }
         do {
             switch mode {
             case .deposit:
                 stage = .working(String(localized: "Checking…"))
+                // A move-in is signed on Ethereum, not proved (prd §1700x), as
+                // Railgun's is: Checking · Signing · Sent on Ethereum.
+                steps.begin(.move, plan: .signed(.ethereum))
                 let gas = bringsGas ? try await AztecGas.plan(units: AztecGas.rideAlong) : nil
                 if let coSigner = viaCoSigner {
                     let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
                         self.stage = .working(words)
                     }
+                    steps.finish()
                     stage = .done(sent.transaction)
                 } else {
                     let sent = try await ShieldBridge.deposit(asset, units: units, gas: gas, stage: report)
+                    steps.finish()
                     stage = .done(sent.transaction)
                 }
             case .send:
@@ -228,12 +243,12 @@ final class AztecMove {
                     try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: decimals, symbol: symbol)) on Aztec to \(recipient)"))
                     // The rows' clock starts at the tap, before a cold engine
                     // has said anything (prd §1700w).
-                    AztecSendSteps.shared.begin(.move)
+                    steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
                     let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units]) as? [String: Any]
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
-                    AztecSendSteps.shared.begin(.move)
+                    steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient)
                     stage = .done(exit.transaction)
@@ -242,6 +257,8 @@ final class AztecMove {
             }
             DSHaptic.success()
         } catch {
+            // The rows keep the failure on the step it reached (prd §1700x).
+            steps.fail(AztecEngine.words(error))
             stage = .failed(AztecEngine.words(error))
         }
     }
@@ -438,10 +455,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     @ViewBuilder private var line: some View {
         switch move.stage {
         case .ready, .working:
-            if case .working = move.stage, move.mode == .send,
-               let run = AztecSendSteps.shared.run, run.kind == .move {
-                // What is done, what is running, what is next (prd §1700w).
-                AztecStepRows(run: run)
+            if stepsRun != nil {
+                // The steps stand in the foot; the sentence stands alone (prd §1700x).
+                EmptyView()
             } else if move.stage == .ready, let problem = move.amountProblem {
                 Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
@@ -459,8 +475,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .needsGas:
             Text("30 AZTEC from your account pays for it, about $0.45.").dsText(.body17).foregroundStyle(DS.textSecondary)
         case .failed(let words):
-            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
-                .fixedSize(horizontal: false, vertical: true)
+            // A failure the rows carry is said once, on its step.
+            if stepsRun == nil {
+                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .done:
             Text(verbatim: doneLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -505,7 +524,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     /// How long the send took, tap to block, so the next wait feels known (prd §1700w).
     private var sentTotal: Int? {
-        guard let run = AztecSendSteps.shared.run, run.kind == .move, run.ok == true else { return nil }
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move, run.ok == true else { return nil }
         return run.total
     }
 
@@ -643,8 +662,26 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         move.stage == .ready && move.amountOK && (move.mode == .deposit || move.toAztec || move.toEthereum) && !DemoMode.isActive
     }
 
+    /// This sentence's send, while it works, once it failed with its steps, and
+    /// once it is done (prd §1700x): the rows stand in the foot above the act.
+    private var stepsRun: PrivateSendSteps.Run? {
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move else { return nil }
+        switch move.stage {
+        case .working: return run
+        case .failed: return run.ok == false ? run : nil
+        case .done: return run.ok == true ? run : nil
+        default: return nil
+        }
+    }
+
     private var foot: some View {
         VStack(spacing: 0) {
+            if let run = stepsRun {
+                // Face ID came before a send's clock; a move-in signs inside it.
+                PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
+                    .padding(.bottom, DS.Space.s3)
+                    .transition(.opacity)
+            }
             HStack(alignment: .firstTextBaseline) {
                 switch move.stage {
                 case .needsFunds(let address):

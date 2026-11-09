@@ -75,7 +75,7 @@ struct ToastLayer: View {
         ZStack(alignment: .bottom) {
             Color.clear
             #if DEBUG
-            AztecStepsPreview()
+            PrivateStepsPreview()
             #endif
             if let toast = chrome.toast {
                 ToastPill(chrome: chrome, text: toast)
