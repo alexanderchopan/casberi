@@ -482,6 +482,10 @@ struct FeedScreen: View {
         // deleted; the column stays prefetched because it is one `Int?` and
         // the row itself reads it.
         \.messageCount,
+        // The Wallet's move rows read what a transfer was worth per row
+        // (`walletMoveRow`, `walletOwnMoveRow`): one `Double?`, else a fault
+        // for every row drawn (docs/wallet-perf-spec.md B6).
+        \.transferUSD,
     ]
 
     // KNOWN AND DELIBERATE: `content` stays OUT. It is the heavy column for
@@ -1552,7 +1556,7 @@ struct FeedScreen: View {
             // §1343; the strip that carried this task is gone, §1413).
             .task(id: walletSubscriptionsKey) {
                 if source == "All" || source == RoomAccounts.dayRoom {
-                    await SubscriptionsReading.shared.refresh(modelContext)
+                    await SubscriptionsReading.shared.refresh(modelContext, key: walletSubscriptionsKey)
                 }
             }
             // The face pressed on the Feed (prd §1280): back to its top.

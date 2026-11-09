@@ -232,7 +232,10 @@ def audit(texts: dict) -> list:
                    "Privy with no switch (prd §1048)")
     # Combined means no address AND no group: Following (prd §1536) reads
     # wallets only, so cash is gated on both.
-    if "if combined { (cash, unpricedCash) = await WalletCash.priced() }" not in pr \
+    # Since docs/wallet-perf-spec.md A2 the cash read starts beside the
+    # holdings, through one helper whose first line is the gate.
+    if "async let cashRead = Self.cashIfCombined(combined)" not in pr \
+            or "guard combined else { return ([], []) }" not in body(ingest, "func cashIfCombined(") \
             or "let combined = address == nil && only == nil" not in pr:
         bad.append("cash is not gated on the combined scope — a page scoped to one address "
                    "would count a bank balance (prd §1048)")
@@ -392,9 +395,11 @@ def audit(texts: dict) -> list:
                    "account back — a locked launch knows no account until a relaunch (prd §1592)")
 
     # 7 — the Wallet opens on a number (prd §1593).
-    fg = code["RootShell"].split("let runForegroundWork", 1)[-1].split("await GestureGate.idle()", 1)[0]
-    if "TorClient.shared.start()" not in fg:
-        bad.append("Tor no longer starts with the foreground, ahead of the hand-still wait — a "
+    # Since docs/wallet-perf-spec.md A3: on activation itself, ahead of the
+    # sleep that holds the foreground work back, not inside that work.
+    act = body(code["RootShell"], "private func handleActivation(").split("let runForegroundWork", 1)[0]
+    if "TorClient.shared.start()" not in act:
+        bad.append("Tor no longer starts on activation, ahead of the foreground work's sleep — a "
                    "cold launch waits out the whole connect before any balance (prd §1593)")
     sb = body(code["FeedScreen"], "func streamBlock(")
     if "WalletLastReading.reading(scope: scopeKey" not in sb.split("holdingsReads += 1", 1)[0]:
@@ -536,8 +541,7 @@ def self_test() -> int:
          lambda t: t.replace("    var walletHoldings:",
                              "    var countsInWallet = true\n    var walletHoldings:")),
         ("cash leaks into a scoped page", "WalletIngest",
-         lambda t: t.replace("if combined { (cash, unpricedCash) = await WalletCash.priced() }",
-                             "(cash, unpricedCash) = await WalletCash.priced()")),
+         lambda t: t.replace("guard combined else { return ([], []) }", "", 1)),
         ("cash leaks into Following", "WalletIngest",
          lambda t: t.replace("let combined = address == nil && only == nil",
                              "let combined = address == nil")),

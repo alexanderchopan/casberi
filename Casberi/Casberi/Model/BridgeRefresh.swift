@@ -58,6 +58,10 @@ enum BridgeRefresh {
     /// they never stopped back-to-back sweeps. Mirrors the min-interval gate
     /// `GitHubGraphStore.refreshIfStale` already uses per-store.
     private static var lastSweep: Date?
+    /// Whether the room last landed on was the Wallet (`FeedScreen.streamBlock`
+    /// writes it on every land). It orders the sweep's wallet slot and
+    /// nothing else, so a wrong guess costs a few seconds, never a read.
+    static var walletShown = false
     private static let minSweepInterval: TimeInterval = 45
 
     /// Per-heal throttle (2026-07-24 perf): the pure DELETE-SYNC passes —
@@ -630,7 +634,12 @@ enum BridgeRefresh {
             }
         }
         if !WalletStore.shared.addresses.isEmpty {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+            // **THE WALLET ON SCREEN GOES FIRST (docs/wallet-perf-spec.md C4).**
+            // Its slot sat behind some thirty others, up to ~6s after the
+            // lead-in; standing on the Wallet, it takes the first slot's time
+            // and no one else's slot moves.
+            let s = BridgeRefresh.walletShown ? leadInMs : slot()
+            BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await WalletIngest.refresh(context: context)
                 // The dates §790 fixed only going forward (prd §792).

@@ -2144,6 +2144,13 @@ struct RootShell: View {
         askForRatingIfDue()
         // What Move will ask, asked now (prd §1610): Tor's circuits open and
         // your tokens read before Move is.
+        // Tor connects while the app draws, not when the first wallet read
+        // asks for it (prd §1593), and on ACTIVATION, not after the 250ms
+        // (first: 800ms) hold that keeps the sweep out of the launch's frames
+        // (docs/wallet-perf-spec.md A3): every wallet read waits on its
+        // bootstrap. It starts a thread and returns; free once started; no
+        // wallet, no Tor (§1495).
+        if !WalletStore.shared.addresses.isEmpty, !DemoMode.isActive { TorClient.shared.start() }
         MoveWarm.start()
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
@@ -2190,13 +2197,6 @@ struct RootShell: View {
         // row lead can tell a landing from the corpus. Idempotent.
         LandingLedger.install()
         let runForegroundWork: @MainActor () -> Void = {
-            // Tor connects while the app draws, before the hand-still wait,
-            // not when the first wallet read asks for it (prd §1593): a cold
-            // launch waited out the whole connect before any balance could
-            // arrive (user: "still takes a few seconds, maybe bc of Tor").
-            // It starts a thread and returns; free once started; no wallet,
-            // no Tor (§1495).
-            if !WalletStore.shared.addresses.isEmpty, !DemoMode.isActive { TorClient.shared.start() }
             // **NOTHING BELOW RUNS UNDER A FINGER (prd §666, 2026-09-09).** The
             // sweep, the index backfills and the detectors all land on the main
             // actor, and a foreground that arrives while a person is already

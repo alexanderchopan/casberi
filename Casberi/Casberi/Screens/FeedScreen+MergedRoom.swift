@@ -4,7 +4,7 @@ import SwiftUI
 // (prd §1049, §1050d, built §1052). Reading first; Agents, Media, Life, Day
 // and Work follow. The Wallet keeps its own menu (addresses and apps), and
 // Testnets crosses networks from each network's menu (§1050k). A pick
-// narrows the list to that app (`selectedSeat`, through `walletScopeAllows`)
+// narrows the list to that app (`selectedSeat`, through `walletScopeTest`)
 // and the box to that app's own head, or to its newest row.
 extension FeedScreen {
     /// The apps the menu lists: the room's connected ones, and only once

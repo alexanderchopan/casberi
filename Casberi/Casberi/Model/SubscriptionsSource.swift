@@ -33,6 +33,17 @@ final class SubscriptionsReading {
     static let sources: [String] = [AppleWalletBridge.sourceName, WalletCards.privacySource, RocketMoneyLive.source,
                                     SimpleFINShape.source]
 
+    /// The key the last keyed refresh ran for (docs/wallet-perf-spec.md B4).
+    private var refreshedFor: String?
+
+    /// Spending and Day start this on one key; the second leaves. A caller
+    /// with no key (a sheet, a track) always reads.
+    func refresh(_ context: ModelContext, key: String) async {
+        guard key != refreshedFor else { return }
+        refreshedFor = key
+        await refresh(context)
+    }
+
     func refresh(_ context: ModelContext, now: Date = .now) async {
         let members = Self.sources
         let d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },

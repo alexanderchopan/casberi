@@ -637,6 +637,7 @@ enum IngestSupport {
         // every Alchemy request on this phone, not just the one refused
         // (`AlchemyBrake`, 2026-10-20).
         let braked = AlchemyBrake.brakes(host: request.url?.host)
+        WalletPerf.countRequest(host: request.url?.host)
         if braked { await AlchemyBrake.shared.waitForTurn() }
         var answer: (Data, URLResponse)?
         if let tor {

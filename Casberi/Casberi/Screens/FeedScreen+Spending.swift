@@ -45,8 +45,10 @@ extension FeedScreen {
             SpendingReading.shared.narrow(scope)
         }
         .task(id: walletSpendingKey) {
-            await SubscriptionsReading.shared.refresh(modelContext)
-            await SpendingReading.shared.refresh(modelContext)
+            await GestureGate.idle()
+            guard !Task.isCancelled else { return }
+            await SubscriptionsReading.shared.refresh(modelContext, key: walletSubscriptionsKey)
+            await SpendingReading.shared.refresh(modelContext, key: walletSpendingKey)
         }
     }
 

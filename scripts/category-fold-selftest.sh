@@ -577,7 +577,7 @@ grep -qE '@State private var selectedWallet' "$FEED" \
 # room reaches Social and Work, where every walletAddress is nil — so those
 # rooms render EMPTY with nothing on screen able to explain why.
 grep -q 'guard roomTakesWalletScope' "$FEED" \
-  || { echo "✗ walletScopeAllows no longer gates on the room — a live wallet scope would empty"; \
+  || { echo "✗ walletScopeTest no longer gates on the room — a live wallet scope would empty"; \
        echo "  every non-wallet room, since their rows carry no walletAddress (§356)."; exit 1; }
 # PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling, kept
 # through the §357 move: the switcher and the wallet rail now ride

@@ -71705,3 +71705,17 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Mac half (§1402).** The same views draw the pane, so the edge, the inks and the picker line follow; the foot clearance is the phone's alone (`sizeClass == .compact`).
 
 **Checks.** Built and looked at on the simulator over the demo: Wallet Home, Holdings, Activity and Spending on All; Move's sentence empty and drafted, Create and the keys walk in the tray. Move as a page under the tab bar could not be raised (nothing presents it since §1442), so the foot's clearance there is by the sentence's own arithmetic, unseen. Catalyst was not compiled and `verify.sh` was not run. `wallet-row-audit`, `ds-template-audit` (Spending's stale tint exemption removed), `status-ink-audit`, `design-ramp-audit`, `section-glyph-audit`, `day-divider-audit`, `row-anatomy-audit`, `room-chassis-audit`, `footnote-audit`, `hero-tint-audit`; `your-account`, `private-money` (one pinned line updated), `wallet-section`, `wallet-makeover`, `spending`, `wallet-viz`, `move-details`, `move-warnings` self-tests pass.
+
+## §1732 — The Wallet waits less: one holdings read per wallet a pass, the total's extras beside it, Tor on activation, the doors' riders first, the balance history decoded once per write, and every open, total and pass timed (docs/wallet-perf-spec.md)
+
+1. **Timed** (`WalletPerf`): `WalletOpen` (the tab to the first figure), `WalletCurrent` (the holdings read and the extras after it), `WalletPass` (the sweep, each rider, the Zerion and Alchemy requests it spent) in `PerfReadings`; `-walletPerf YES` logs a `walletPerf|` line for each, in Release too.
+2. **One holdings read per wallet** (A1): a multi-wallet ask is each wallet's windowed read merged, so the room's read and the sweep's are one; nil only when no wallet answered.
+3. **The total's extras start with the holdings** (A2): exchanges, validators, cash, private money and Aave run beside the read; the number is still drawn once, whole.
+4. **Tor starts on activation** (A3), ahead of the foreground work's sleep.
+5. **The doors' riders first** (C1): approvals, delegations and Safe before every other rider; the spam filters' reads start at the top of the pass (C2); Spotlight once a pass (C3); the Wallet on screen takes the sweep's first slot (C4).
+6. **The balance history is decoded once per write** (B1), keyed on the stored bytes, and the combined line merges in one pass; the Wallet's scope is resolved once per list, not per row (B3); Spending and Subscriptions read once per open, after the hand is still (B4); `transferUSD` is prefetched (B6).
+7. **Declined** (user: "a missed position would be worse than slower"): a rider that found nothing is never asked less often. Every rider asks every wallet every pass.
+
+**Checks.** `wallet-perf-audit.py` (8 rules, 9 mutations); `wallet-total-audit.py` rules 6 and 7 follow A2 and A3. Unmeasured on a phone: the spec's Baseline is the next step.
+
+**Mac half (§1402).** The same code on Catalyst; no surface changed.

@@ -352,6 +352,7 @@ extension FeedScreen {
     }
 
     func streamBlock() {
+        BridgeRefresh.walletShown = source == "Wallet"
         guard source == "Wallet" else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
             if portfolio != nil { portfolio = nil }
@@ -381,6 +382,7 @@ extension FeedScreen {
             blockStream.paint(shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown, appsApart: walletOnAll))
             portfolio = last
             portfolioScope = scopeKey
+            WalletPerf.openDrew()
         }
         holdingsReads += 1
         Task { @MainActor in
@@ -410,6 +412,8 @@ extension FeedScreen {
                     portfolio = read.portfolio
                     portfolioScope = scopeKey
                 }
+                // No last reading to draw first: the live one is the open.
+                WalletPerf.openDrew()
                 // Kept for the next open (prd §1593): the Wallet's own
                 // reading only — live, or the window's, dated when it was
                 // read (§1722) — never one standing on last-known samples.

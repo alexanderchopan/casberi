@@ -97,6 +97,11 @@ extension FeedScreen {
             ?? feedThings
         // Resolved once, not per row (prd §1079).
         let people = socialScopeMembers
+        // The Wallet's scope too (docs/wallet-perf-spec.md B3): its four reads
+        // (the app picked, the room, Following's list, the address) were
+        // resolved again for every row, and the app pick builds a set over
+        // every connected bridge.
+        let walletAllows = walletScopeTest()
         // DAY IS ITS OWN DOOR (prd §1231): on the phone's scrolling Feed the
         // calendar and to-dos stand behind the Day tile, never in the Feed —
         // its box, its glances or its sections.
@@ -129,7 +134,7 @@ extension FeedScreen {
                 // only; the chip opens the room that holds the rest.
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
-                && walletScopeAllows(thing)
+                && walletAllows(thing)
                 && personScopeAllows(thing, people: people)
                 && notesScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty
@@ -265,20 +270,22 @@ extension FeedScreen {
     /// (2026-07-20): things are stamped with the RESOLVED hex while the scope
     /// is the WATCHED spelling, so a raw compare empties an ENS/SNS-watched
     /// wallet's scoped feed entirely.
-    private func walletScopeAllows(_ thing: Thing) -> Bool {
+    private func walletScopeTest() -> (Thing) -> Bool {
         // An app the menu picked (prd §1048b) keeps its own rows, and an app
         // whose rows don't ride this room keeps none: its money is in the box.
-        if let seat = selectedSeat { return seat.owns(thing.source) }
+        if let seat = selectedSeat { return { seat.owns($0.source) } }
+        guard roomTakesWalletScope else { return { _ in true } }
+        let wallet = self.wallet
         // Following (prd §1536): any wallet you follow, never yours or an app.
-        if roomTakesWalletScope, let only = walletFollowingOnly {
-            return only.contains { wallet.scopeMatches(thing.walletAddress, scope: $0) }
+        if let only = walletFollowingOnly {
+            return { thing in only.contains { wallet.scopeMatches(thing.walletAddress, scope: $0) } }
         }
-        guard roomTakesWalletScope, let scope = selectedWallet else { return true }
-        return wallet.scopeMatches(thing.walletAddress, scope: scope)
+        guard let scope = selectedWallet else { return { _ in true } }
+        return { wallet.scopeMatches($0.walletAddress, scope: scope) }
     }
 
     /// The per-person scope (prd §362, 2026-08-11) — the social rail's own
-    /// filter, the exact counterpart of `walletScopeAllows` above, and gated the
+    /// filter, the exact counterpart of `walletScopeTest` above, and gated the
     /// same way for the same reason: on the ROOM, never on the scope's nil-ness.
     /// The scope is cleared on every source change (`MainSurface`), so this gate
     /// is belt-and-braces rather than the primary defence — but it is the one

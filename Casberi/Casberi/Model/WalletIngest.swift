@@ -407,6 +407,7 @@ enum WalletIngest {
         let watched = WalletStore.shared.addresses.map(\.address)
         guard !watched.isEmpty, !running else { return watched.isEmpty ? nil : 0 }
         running = true
+        let perf = WalletPerf.Pass()
         // **THE PASS ENDS WITH ITS OWN PRUNE (prd §1411).** This pass read
         // `watched` once, above; a wallet unfollowed while it runs keeps
         // landing through every arm below until the pass is over. The
@@ -439,6 +440,15 @@ enum WalletIngest {
         // has no transfer jobs at all, which must not read as "unreachable":
         // `reachedAny` stays false, and the holdings path is what speaks.
         let evmAddresses = evmOnly(addresses)
+        // **THE SPAM FILTERS' READS START NOW (docs/wallet-perf-spec.md C2).**
+        // What each wallet holds, and its NFT collections, are asked of the
+        // addresses alone, never of the transfers; they were awaited one after
+        // another below, after the transfer reads. Started here they run
+        // beside those reads, and every row still waits for all of them before
+        // the filter decides it. Values only: no model crosses these awaits.
+        async let heldByOwnerRead = heldPricedContractsByOwner(addresses: addresses)
+        async let ownedNFTsRead = ownedNFTContracts(addresses: evmAddresses)
+        async let verifiedNFTsRead = verifiedNFTKeys(addresses: evmAddresses)
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Wallet")
         // The cross-provider safety net for the Zerion cutover (2026-07-19):
@@ -612,14 +622,14 @@ enum WalletIngest {
         // floor) is dropped from the ACTIVITY feed too now (2026-07-15), the
         // same way the holdings treemap already drops it. One batched read for
         // the whole pass.
-        let heldByOwner = await heldPricedContractsByOwner(addresses: addresses)
+        let heldByOwner = await heldByOwnerRead
         let heldPriced = heldByOwner.map { Set($0.values.joined()) }
         // …and the non-spam NFT contracts each wallet holds, for the NFT arm of
         // the same filter — an airdropped junk NFT is dropped from the feed the
         // way a junk token is (2026-07-15). Keyed "address|network". EVM only:
         // `getContractsForOwner` is an EVM method, and the legs it filters are
         // EVM legs anyway.
-        let ownedNFTs = await ownedNFTContracts(addresses: evmAddresses)
+        let ownedNFTs = await ownedNFTsRead
         // …and the same cached bytes' other two answers, for the NFT-origin
         // rule (2026-08-26, prd §481). Both are KEEP-ONLY signals: a collection
         // somebody picked for their shelf (§387's "a pick overrides the
@@ -627,7 +637,7 @@ enum WalletIngest {
         // Neither can remove a row, so a failed read costs nothing but a
         // narrower keep. `picks` is per-wallet because a pick is; `verified` is
         // flat because safelisting is a fact about the collection.
-        let verifiedNFTs = await verifiedNFTKeys(addresses: evmAddresses)
+        let verifiedNFTs = await verifiedNFTsRead
         var pickedNFTs: [String: Set<String>] = [:]
         for address in evmAddresses {
             let picks = WalletNFTStore.shared.book.picks(wallet: address)
@@ -802,9 +812,11 @@ enum WalletIngest {
         var added = await WalletAcross.sync(context: context)
         for thing in landed {
             context.insert(thing)
-            SpotlightIndex.index([thing])
             added += 1
         }
+        // One index call for the pass's rows, where it was one per row
+        // (docs/wallet-perf-spec.md C3); same rows, same moment, before the save.
+        if !landed.isEmpty { SpotlightIndex.index(landed) }
         // Durable before the gas total accumulates (2026-07-20 review):
         // gas is a bare running sum with no per-tx ledger, so a job whose
         // underlying thing never actually saved (an app kill, a rejected
@@ -812,6 +824,7 @@ enum WalletIngest {
         // way to detect or undo the double-count — the same "land and SAVE
         // before advancing" lesson `WalletApprovals` already learned.
         let saved = added == 0 || context.saveHonestly()
+        perf.mark("transfersLanded")
         if saved, !gasJobs.isEmpty { await WalletGas.accumulate(jobs: gasJobs) }
         // ANNOUNCED ONLY AFTER THE SAVE (prd §501). "Really inserted" is the
         // first of the arrival fences and it is not knowable before this line:
@@ -829,12 +842,39 @@ enum WalletIngest {
         // incremental filtered-log read per wallet per chain, landing
         // "Approved X to spend unlimited Y" things whose link is the wallet's
         // Revoke.cash page. Inside the running guard like everything above.
-        let approvalsAdded = await WalletApprovals.sync(context: context,
+        let approvalsAdded = await perf.rider("WalletApprovals.sync") { await WalletApprovals.sync(context: context,
                                                         addresses: evmAddresses,
                                                         existing: existing,
                                                         heldByOwner: heldByOwner,
-                                                        ownedNFTs: ownedNFTs)
+                                                        ownedNFTs: ownedNFTs) }
         added += approvalsAdded
+        // **THE DOORS' RIDERS RIDE FIRST (docs/wallet-perf-spec.md C1).**
+        // Needs you reads Safe's queue and Permissions reads approvals and
+        // delegations; every other rider below fills a page behind a door. So
+        // these go before the rest, and a pass that is still reading Morpho
+        // has already answered the two doors on Home.
+        // EIP-7702 delegation watch (2026-07-20) rides the same pass — one
+        // eth_getCode per wallet per active EVM chain, landing a thing only
+        // when the delegate CHANGES. Inside the running guard like everything
+        // above.
+        let delegationAdded = await perf.rider("WalletSafety.sync") { await WalletSafety.sync(context: context,
+                                                      addresses: evmAddresses,
+                                                      existing: existing) }
+        added += delegationAdded
+        // Safe multisig pending-queue watch (2026-07-20) rides the same
+        // pass — detection + queue read per wallet per active EVM chain,
+        // landing a thing for every newly seen pending transaction. Inside
+        // the running guard like everything above.
+        //
+        // Safe lands under its OWN source now (2026-08-11, `SafeBridge.sourceName`
+        // — see that file's top-of-file doc), so it needs its own existing-refs
+        // set rather than the shared `source: "Wallet"` one every sub-bridge
+        // above still reads.
+        let safeAdded = await perf.rider("SafeBridge.sync") { await SafeBridge.sync(context: context,
+                                              addresses: evmAddresses,
+                                              existing: IngestSupport.existingSourceRefs(
+                                                  context, source: SafeBridge.sourceName)) }
+        added += safeAdded
         // Peer fills ride the same pass (prd §112) — a filtered-log read per
         // wallet against Peer's orchestrators on Base, landing "Bought 25
         // USDC with Venmo on Peer" things. Inside the running guard like
@@ -843,44 +883,44 @@ enum WalletIngest {
         // Nothing in this list is seat-gated — see `BridgeStore
         // .reconcileWalletSeats`, where the seats are written FROM what these
         // sweeps find, never the other way round.)
-        let peerAdded = await PeerBridge.sync(context: context,
+        let peerAdded = await perf.rider("PeerBridge.sync") { await PeerBridge.sync(context: context,
                                               addresses: evmAddresses,
-                                              existing: existing)
+                                              existing: existing) }
         added += peerAdded ?? 0
         // Privacy Pools rides the same pass (prd §162) — one filtered
         // Entrypoint-log read per wallet on mainnet, landing deposits, plus
         // the ASP status poll that lands "your deposit cleared" alerts.
         // Inside the running guard like everything above; not seat-gated
         // (see the Peer note).
-        let privacyPoolsAdded = await PrivacyPoolsBridge.sync(context: context,
+        let privacyPoolsAdded = await perf.rider("PrivacyPoolsBridge.sync") { await PrivacyPoolsBridge.sync(context: context,
                                                               addresses: evmAddresses,
-                                                              existing: existing)
+                                                              existing: existing) }
         added += privacyPoolsAdded ?? 0
         // Railgun rides the same pass (prd §268) — two filtered ERC-20
         // Transfer reads per wallet on mainnet (into the pool, and back out),
         // landing "Shielded 1.2 WETH into Railgun" and "Received 500 USDC
         // from Railgun". Inside the running guard like everything above; not
         // seat-gated (see the Peer note).
-        let railgunAdded = await RailgunBridge.sync(context: context,
+        let railgunAdded = await perf.rider("RailgunBridge.sync") { await RailgunBridge.sync(context: context,
                                                      addresses: evmAddresses,
-                                                     existing: existing)
+                                                     existing: existing) }
         added += railgunAdded ?? 0
         // MetaMask Card spends ride the same pass (2026-09-20) — the shape the
         // Gnosis Pay seat set (prd §222, removed §1318): one filtered
         // settlement-transfer read per wallet on Linea, both card programmes
         // in the same call, landing "Spent $12.40 with MetaMask Card" things. No-ops for a wallet that
         // holds no card, which is almost all of them.
-        let metamaskCardAdded = await MetaMaskCardBridge.sync(context: context,
+        let metamaskCardAdded = await perf.rider("MetaMaskCardBridge.sync") { await MetaMaskCardBridge.sync(context: context,
                                                               addresses: evmAddresses,
-                                                              existing: existing)
+                                                              existing: existing) }
         added += metamaskCardAdded ?? 0
         // Plasma One rides the same pass (prd §1311) — an onchain card, and
         // the first that settles in a daily batch: one row a day per
         // card. A plain key costs one `eth_getCode`, re-asked daily, and no
         // scan; only an account with code on Plasma is walked.
-        let plasmaOneAdded = await PlasmaOneCard.sync(context: context,
+        let plasmaOneAdded = await perf.rider("PlasmaOneCard.sync") { await PlasmaOneCard.sync(context: context,
                                                       addresses: evmAddresses,
-                                                      existing: existing)
+                                                      existing: existing) }
         added += plasmaOneAdded ?? 0
         // Rows landed before this seat had a room of its own move ONCE, here,
         // so the first sync after updating leaves nothing behind in Wallet
@@ -890,31 +930,31 @@ enum WalletIngest {
         // filtered `Spend` read per Cash account on Optimism, plus the credit
         // line's risk crossing. Gated on `isEtherFiSafe`, so a wallet that
         // holds no Cash account costs exactly one eth_call and no scan.
-        let etherfiCashAdded = await EtherFiCash.sync(context: context,
+        let etherfiCashAdded = await perf.rider("EtherFiCash.sync") { await EtherFiCash.sync(context: context,
                                                        addresses: evmAddresses,
-                                                       existing: existing)
+                                                       existing: existing) }
         added += etherfiCashAdded ?? 0
-        let etherfiRiskAdded = await EtherFiCash.syncRisk(context: context,
+        let etherfiRiskAdded = await perf.rider("EtherFiCash.syncRisk") { await EtherFiCash.syncRisk(context: context,
                                                            addresses: evmAddresses,
-                                                           existing: existing)
+                                                           existing: existing) }
         added += etherfiRiskAdded ?? 0
         // …and the ether.fi unstake queue (2026-07-31) — a reconciling row per
         // outstanding withdraw request, retitled in place when it turns
         // claimable. Gated on `balanceOf`, so a wallet with nothing unstaking
         // costs exactly one eth_call.
-        let etherfiUnstakeAdded = await EtherFiUnstake.syncEvents(context: context,
+        let etherfiUnstakeAdded = await perf.rider("EtherFiUnstake.syncEvents") { await EtherFiUnstake.syncEvents(context: context,
                                                                    addresses: evmAddresses,
-                                                                   existing: existing)
+                                                                   existing: existing) }
         added += etherfiUnstakeAdded ?? 0
         // …and AZTEC staked on Aztec (prd §1279): an exit that can be taken
         // out, a staked sequencer that stopped attesting, an Aztec vote still
         // to come. Rides the same five-minute book the Positions card reads.
-        let aztecAdded = await AztecStaking.syncEvents(context: context, addresses: evmAddresses,
-                                                       existing: existing)
+        let aztecAdded = await perf.rider("AztecStaking.syncEvents") { await AztecStaking.syncEvents(context: context, addresses: evmAddresses,
+                                                       existing: existing) }
         added += aztecAdded ?? 0
         // …and zFi orders whose escrow is waiting to be taken back (prd §1282),
         // off the same five-minute book Positions reads.
-        let zfiAdded = await ZFiOrders.syncEvents(context: context, addresses: evmAddresses, existing: existing)
+        let zfiAdded = await perf.rider("ZFiOrders.syncEvents") { await ZFiOrders.syncEvents(context: context, addresses: evmAddresses, existing: existing) }
         added += zfiAdded ?? 0
         // The seats have all run, so any generic row written earlier THIS pass
         // for a transaction one of them just claimed can now go (prd §271).
@@ -927,13 +967,13 @@ enum WalletIngest {
         // ENS names expire (2026-07-21) — keyless, one GET per readable name,
         // landing a dated row the "What's coming up?" chip sorts on. Inside the
         // running guard like everything above.
-        let ensAdded = await ENSExpiry.sync(context: context, addresses: evmAddresses,
-                                            existing: existing)
+        let ensAdded = await perf.rider("ENSExpiry.sync") { await ENSExpiry.sync(context: context, addresses: evmAddresses,
+                                            existing: existing) }
         added += ensAdded ?? 0
         // …and the Solana arm (prd §86), which lands its own things off its own
         // two calls. Inside the running guard like everything above.
-        let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
-                                      existing: existing, heldPriced: heldPriced)
+        let solana = await perf.rider("solanaSync") { await solanaSync(context: context, addresses: solanaOnly(addresses),
+                                      existing: existing, heldPriced: heldPriced) }
         added += solana.added
         // …and Bitcoin (2026-07-27) — its own address family, its own read
         // (Esplora, not RPC), landing sends/receives, settlement alerts, the
@@ -944,47 +984,39 @@ enum WalletIngest {
         // "Bitcoin" source would mint a phantom chip beside Wallet for what
         // is the same wallet. `bitcoinAdded` is nil exactly when BOTH
         // Esplora hosts were unreachable for every watched BTC address.
-        let bitcoinAdded = await BitcoinBridge.sync(context: context,
+        let bitcoinAdded = await perf.rider("BitcoinBridge.sync") { await BitcoinBridge.sync(context: context,
                                                     addresses: bitcoinOnly(addresses),
-                                                    existing: existing)
+                                                    existing: existing) }
         added += bitcoinAdded ?? 0
-        // EIP-7702 delegation watch (2026-07-20) rides the same pass — one
-        // eth_getCode per wallet per active EVM chain, landing a thing only
-        // when the delegate CHANGES. Inside the running guard like everything
-        // above.
-        let delegationAdded = await WalletSafety.sync(context: context,
-                                                      addresses: evmAddresses,
-                                                      existing: existing)
-        added += delegationAdded
         // Aave health-factor risk watch (2026-07-20) rides the same pass —
         // one getUserAccountData read per wallet per Aave-supported chain,
         // landing a thing only on a NEW crossing into risk. Inside the
         // running guard like everything above.
-        let defiAdded = await WalletDeFi.sync(context: context,
+        let defiAdded = await perf.rider("WalletDeFi.sync") { await WalletDeFi.sync(context: context,
                                               addresses: evmAddresses,
-                                              existing: existing)
+                                              existing: existing) }
         added += defiAdded
         // Morpho rides the same pass (2026-07-21) — the risk-crossing alert
         // (the Aave rule, per chain on the wallet's worst market) plus the
         // settled-activity sweep (the Peer cursor shape, timestamps not
         // blocks). Both keyless via Morpho's own API; inside the running
         // guard like everything above.
-        let morphoRiskAdded = await MorphoDeFi.sync(context: context,
+        let morphoRiskAdded = await perf.rider("MorphoDeFi.sync") { await MorphoDeFi.sync(context: context,
                                                     addresses: evmAddresses,
-                                                    existing: existing)
+                                                    existing: existing) }
         added += morphoRiskAdded
-        let morphoActivityAdded = await MorphoDeFi.syncActivity(context: context,
+        let morphoActivityAdded = await perf.rider("MorphoDeFi.syncActivity") { await MorphoDeFi.syncActivity(context: context,
                                                                 addresses: evmAddresses,
-                                                                existing: existing)
+                                                                existing: existing) }
         added += morphoActivityAdded ?? 0
         // Vault delight (2026-07-30) rides the same pass — a reallocation
         // alert when a held vault's collateral mix shifts materially, plus
         // a one-time toast when the vault's own rate falls meaningfully
         // behind Aave's for the same asset. Shares `sync()`'s own `book`
         // read rather than fetching a third time.
-        let morphoVaultAdded = await MorphoDeFi.syncVaultDelight(context: context,
+        let morphoVaultAdded = await perf.rider("MorphoDeFi.syncVaultDelight") { await MorphoDeFi.syncVaultDelight(context: context,
                                                                  addresses: evmAddresses,
-                                                                 existing: existing)
+                                                                 existing: existing) }
         added += morphoVaultAdded
         // Hyperliquid (2026-07-30) rides the same pass — position-transition
         // events (opened/closed, never individual fills — see the file's own
@@ -992,28 +1024,28 @@ enum WalletIngest {
         // then the staked-HYPE unlock's reconciling dueAt row. Both keyless
         // via Hyperliquid's own public info endpoint; inside the running
         // guard like everything above.
-        let hyperliquidAdded = await HyperliquidDeFi.sync(context: context,
+        let hyperliquidAdded = await perf.rider("HyperliquidDeFi.sync") { await HyperliquidDeFi.sync(context: context,
                                                           addresses: evmAddresses,
-                                                          existing: existing)
+                                                          existing: existing) }
         added += hyperliquidAdded ?? 0
-        let hyperliquidUnlockAdded = await HyperliquidDeFi.syncUnlocks(context: context,
+        let hyperliquidUnlockAdded = await perf.rider("HyperliquidDeFi.syncUnlocks") { await HyperliquidDeFi.syncUnlocks(context: context,
                                                                        addresses: evmAddresses,
-                                                                       existing: existing)
+                                                                       existing: existing) }
         added += hyperliquidUnlockAdded ?? 0
         // Aerodrome (2026-07-30) rides the same pass — the weekly vote-
         // deadline row and the lock-expiry row for any watched wallet's
         // veAERO locks on Base, both reconciling dueAt (the ENSExpiry
         // shape). Keyless via public Base RPC (WalletApprovals' shared host
         // pool); inside the running guard like everything above.
-        let aerodromeAdded = await AerodromeDeFi.syncEvents(context: context,
+        let aerodromeAdded = await perf.rider("AerodromeDeFi.syncEvents") { await AerodromeDeFi.syncEvents(context: context,
                                                             addresses: evmAddresses,
-                                                            existing: existing)
+                                                            existing: existing) }
         added += aerodromeAdded ?? 0
         // World ID grants (prd §795): the next grant's opening date and amount,
         // for watched wallets that have received a grant before.
-        let worldAppGrantAdded = await WorldAppDeFi.syncGrantEvents(context: context,
+        let worldAppGrantAdded = await perf.rider("WorldAppDeFi.syncGrantEvents") { await WorldAppDeFi.syncGrantEvents(context: context,
                                                                     addresses: evmAddresses,
-                                                                    existing: existing)
+                                                                    existing: existing) }
         added += worldAppGrantAdded ?? 0
         // Uniswap V3 liquidity positions (2026-07-30) ride the same pass —
         // the range-crossing alert (both directions, unlike a liquidation
@@ -1021,28 +1053,14 @@ enum WalletIngest {
         // the WalletApprovals cursor shape — blocks, not Morpho's
         // timestamps, since this rides raw RPC not a timestamp-filtered
         // API). Inside the running guard like everything above.
-        let uniswapRangeAdded = await UniswapLiquidity.sync(context: context,
+        let uniswapRangeAdded = await perf.rider("UniswapLiquidity.sync") { await UniswapLiquidity.sync(context: context,
                                                             addresses: evmAddresses,
-                                                            existing: existing)
+                                                            existing: existing) }
         added += uniswapRangeAdded
-        let uniswapActivityAdded = await UniswapLiquidity.syncActivity(context: context,
+        let uniswapActivityAdded = await perf.rider("UniswapLiquidity.syncActivity") { await UniswapLiquidity.syncActivity(context: context,
                                                                        addresses: evmAddresses,
-                                                                       existing: existing)
+                                                                       existing: existing) }
         added += uniswapActivityAdded ?? 0
-        // Safe multisig pending-queue watch (2026-07-20) rides the same
-        // pass — detection + queue read per wallet per active EVM chain,
-        // landing a thing for every newly seen pending transaction. Inside
-        // the running guard like everything above.
-        //
-        // Safe lands under its OWN source now (2026-08-11, `SafeBridge.sourceName`
-        // — see that file's top-of-file doc), so it needs its own existing-refs
-        // set rather than the shared `source: "Wallet"` one every sub-bridge
-        // above still reads.
-        let safeAdded = await SafeBridge.sync(context: context,
-                                              addresses: evmAddresses,
-                                              existing: IngestSupport.existingSourceRefs(
-                                                  context, source: SafeBridge.sourceName))
-        added += safeAdded
 
         // `reachedAny` speaks only for the EVM TRANSFER sync, which a
         // Solana-only watch list never runs — left alone it is vacuously false
@@ -1063,7 +1081,9 @@ enum WalletIngest {
             || hyperliquidAdded != nil || hyperliquidUnlockAdded != nil
             || aerodromeAdded != nil
             || (evmAddresses.isEmpty && heldPriced != nil)
-        return reached ? added : nil
+        let result = reached ? added : nil
+        perf.end(added: result)
+        return result
     }
 
     /// One transfer leg in flight through a refresh pass — the raw Alchemy
@@ -2287,7 +2307,25 @@ enum WalletIngest {
             // Cut by section, as the live read is (prd §1698).
             return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false, readAt: nil)
         }
+        let perfStart = WalletPerf.counts()
+        let perfT0 = Date()
+        // **THE EXTRAS START WITH THE HOLDINGS (docs/wallet-perf-spec.md A2).**
+        // None of them reads another, or the holdings: each was awaited in a
+        // row after the holdings returned, so the total waited for their sum.
+        // Started here, it waits for the slowest. The number is still drawn
+        // once, whole; each is used below exactly where it was before.
+        let yours = address.map(YourAccountDemo.isYours) ?? false
+        let privatelyOn = combined || yours
+        let lentAccount: String? = privatelyOn && AaveLend.on ? YourAccountDemo.shownAddress : nil
+        async let exchangeRead = combined ? await ExchangeBridge.pricedBalances() : []
+        async let validatorsRead = combined ? (await EthValidatorRead.totalUSD() ?? 0) : 0
+        async let cashRead = Self.cashIfCombined(combined)
+        async let pooledRead = privatelyOn ? await PrivateMoneyStore.shared.walletHolding() : []
+        async let railgunRead = privatelyOn ? await RailgunHoldings.shared.walletHolding() : []
+        async let aztecRead = privatelyOn ? await AztecAccountStore.shared.walletHolding() : []
+        async let lentRead = Self.lentIfAsked(lentAccount)
         let read = await holdingsByWallet()
+        let perfHoldings = Date()
         var groups = read.groups
         // **A WALLET WE COULDN'T REACH STANDS ON ITS LAST READING, NOT ON
         // NOTHING (prd §825).** A pass where the chains answered nothing left
@@ -2333,16 +2371,14 @@ enum WalletIngest {
         // Connected exchanges merge into the COMBINED read only (prd §163). A
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
-        let exchange = combined ? await ExchangeBridge.pricedBalances() : []
+        let exchange = await exchangeRead
         // Watched validators merge into the COMBINED read only, same reasoning
         // as exchanges above — they aren't scoped to any one address.
-        let validatorsUSD = combined ? (await EthValidatorRead.totalUSD() ?? 0) : 0
+        let validatorsUSD = await validatorsRead
         // Cash at a bank — Wise and Apple Wallet's asset accounts — joins the
         // COMBINED read, as the exchanges do (prd §1048, user: "top number
         // should include cash and exchange balances").
-        var cash: [(symbol: String, usd: Double, holderID: String, label: String)] = []
-        var unpricedCash: [String] = []
-        if combined { (cash, unpricedCash) = await WalletCash.priced() }
+        let (cash, unpricedCash) = await cashRead
         // **PRIVY IS IN THIS NUMBER AGAIN, AND NEVER ALONE (prd §1048, user:
         // "you need to include privy with wallet"; reverses §826).** §826 took
         // it out because it was the one STORED reading beside live ones, and a
@@ -2365,26 +2401,21 @@ enum WalletIngest {
         // may stand alone only where no wallet went unread. It is your Casberi
         // account's, so Yours counts it as All does (prd §1590, user:
         // "shouldn't my private balance number be part of my Yours?").
-        let yours = address.map(YourAccountDemo.isYours) ?? false
         // Your Aztec account counts the same way, its own block (prd §1700e).
         // Railgun's tokens join Privacy Pools' in the one Private block
         // (prd §1713 item 1, §1721): the same symbol, summed.
-        let privately = combined || yours
-            ? (await PrivateMoneyStore.shared.walletHolding()) + (await RailgunHoldings.shared.walletHolding())
-                + (await AztecAccountStore.shared.walletHolding()) : []
+        let privately = privatelyOn ? (await pooledRead) + (await railgunRead) + (await aztecRead) : []
         // What your account has lent on Aave, Round-ups included (prd §1695):
         // counted where Private is, the same way, so Tokens, Lent and Private
         // add up to this number. Zerion leaves the aTokens out and
         // `collectCandidates` drops them from Alchemy's read: never twice.
         // A missed Aave read stands on Lent's last reading, and dates the
         // number (prd §1697): a dated number may be shown, never as current.
-        var lent: [(symbol: String, usd: Double, holderID: String, label: String)] = []
-        var lentAsOf: Date?
-        if combined || yours, AaveLend.on, let account = YourAccountDemo.shownAddress {
-            let lentRead = await LendMove.holdings.walletHolding(account: account)
-            lent = lentRead.venues
-            lentAsOf = lentRead.asOf
-        }
+        let (lent, lentAsOf) = await lentRead
+        WalletPerf.current(ms: Date().timeIntervalSince(perfT0) * 1000,
+                           holdingsMs: perfHoldings.timeIntervalSince(perfT0) * 1000,
+                           extrasMs: Date().timeIntervalSince(perfHoldings) * 1000,
+                           combined: combined, counts: WalletPerf.since(perfStart))
         guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty || ((!privately.isEmpty || !lent.isEmpty) && read.unreached == 0) else { return (read: nil, failed: read.unreached > 0, readAt: nil) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
@@ -2450,6 +2481,21 @@ enum WalletIngest {
             doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
         return (read: (doc: doc, portfolio: portfolio), failed: false, readAt: readAt)
+    }
+
+    /// Cash at a bank, for the combined read only (`portfolioReading`).
+    private static func cashIfCombined(_ combined: Bool) async
+        -> (priced: [(symbol: String, usd: Double, holderID: String, label: String)], unpriced: [String]) {
+        guard combined else { return ([], []) }
+        let read = await WalletCash.priced()
+        return (read.0, read.1)
+    }
+
+    /// What your account has lent on Aave, when the read asks for it.
+    private static func lentIfAsked(_ account: String?) async
+        -> (venues: [(symbol: String, usd: Double, holderID: String, label: String)], asOf: Date?) {
+        guard let account else { return ([], nil) }
+        return await LendMove.holdings.walletHolding(account: account)
     }
 
     /// One map over a whole portfolio — the combined read's, and an app's
@@ -3126,6 +3172,26 @@ enum WalletIngest {
     /// crown can date a windowed figure.
     private static func fetchHeldTokensDated(addresses: [String]) async -> (tokens: [HeldToken], at: Date)? {
         guard !addresses.isEmpty else { return nil }
+        // **SEVERAL WALLETS ARE THEIR OWN READS, MERGED (docs/wallet-perf-spec.md
+        // A1).** The room asks one wallet at a time (`walletGroupOutcome`) and
+        // the sweep asked all of them at once, and the window keyed the two
+        // differently, so every wallet's `/positions` went out twice a pass.
+        // Each wallet now rides its own entry, which the room's read already
+        // filled or is filling (the in-flight map joins the two). nil only
+        // when no wallet answered, as the one batched read was; a wallet that
+        // did not answer is absent, as it was from a partial batched read. The
+        // oldest wallet's time dates the whole.
+        let unique = Array(Set(addresses))
+        if unique.count > 1 {
+            let reads = await withTaskGroup(of: (tokens: [HeldToken], at: Date)?.self) { group in
+                for address in unique { group.addTask { await fetchHeldTokensDated(addresses: [address]) } }
+                var out: [(tokens: [HeldToken], at: Date)] = []
+                for await read in group { if let read { out.append(read) } }
+                return out
+            }
+            guard let at = reads.map(\.at).min() else { return nil }
+            return (tokens: reads.flatMap(\.tokens), at: at)
+        }
         // Key on the ROUTED request, not the bare addresses: a chain toggled
         // off changes `networks(for:)`, and the key must move with it so a
         // config change can't be served a pre-toggle read from the cache.

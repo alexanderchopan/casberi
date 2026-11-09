@@ -536,12 +536,35 @@ final class WalletStore {
         }
     }
 
+    /// **DECODED ONCE PER WRITE, NOT ONCE PER BODY PASS (docs/wallet-perf-spec.md
+    /// B1).** The Wallet's crown asked for these on every body evaluation, twice
+    /// (the line and the face chips), and each ask decoded up to a thousand
+    /// samples, each carrying a holdings map, per wallet. The memo is keyed on
+    /// the stored BYTES, not on a revision a writer must remember to bump: the
+    /// demo seed, its re-stamp and a probe write this key from outside this
+    /// type, and each is seen the moment its bytes differ. Comparing two
+    /// `Data` is a length check and a memcmp; the decode it saves is the cost.
+    /// Positive and negative alike are safe for the same reason.
     func valueSamples(forAddress address: String) -> [ValueSample] {
-        guard let data = ScratchDefaults.standard.data(forKey: Self.historyKey(address)),
-              let samples = try? JSONDecoder().decode([ValueSample].self, from: data)
-        else { return [] }
+        let key = Self.historyKey(address)
+        guard let data = ScratchDefaults.standard.data(forKey: key) else { return [] }
+        sampleMemoLock.lock()
+        if let hit = sampleMemo[key], hit.data == data {
+            sampleMemoLock.unlock()
+            return hit.samples
+        }
+        sampleMemoLock.unlock()
+        WalletPerf.countSampleDecode()
+        let samples = (try? JSONDecoder().decode([ValueSample].self, from: data)) ?? []
+        sampleMemoLock.lock()
+        sampleMemo[key] = (data, samples)
+        sampleMemoLock.unlock()
         return samples
     }
+
+    @ObservationIgnored private let sampleMemoLock = NSLock()
+    @ObservationIgnored nonisolated(unsafe) private var sampleMemo: [String: (data: Data, samples: [ValueSample])] = [:]
+    @ObservationIgnored nonisolated(unsafe) private var combinedMemo: (lines: [[ValueSample]], value: [ValueSample])?
 
     /// Every watched wallet's value line merged into ONE portfolio net-worth
     /// series (2026-07-15) — the combined "bundle" line. At each sampled moment
@@ -563,15 +586,43 @@ final class WalletStore {
             .filter { a in only.map { $0.contains { WalletWatch.sameAddress($0, a.address) } } ?? true }
             .map { valueSamples(forAddress: $0.address) }
             .filter { !$0.isEmpty }
+        // The merge is a pure function of the lines, so the last answer stands
+        // while they are the same lines (B1). Equal arrays compare element by
+        // element, which is the size of the input, never of the merge.
+        sampleMemoLock.lock()
+        if let hit = combinedMemo, hit.lines == lines {
+            sampleMemoLock.unlock()
+            return hit.value
+        }
+        sampleMemoLock.unlock()
+        let value = Self.merged(lines)
+        sampleMemoLock.lock()
+        combinedMemo = (lines, value)
+        sampleMemoLock.unlock()
+        return value
+    }
+
+    /// The combined line: at each moment from the aligned start, each line's
+    /// last value at or before it, summed. One forward pass per line (the
+    /// moments and every line are in time order), where it was a backward
+    /// search per line per moment.
+    static func merged(_ lines: [[ValueSample]]) -> [ValueSample] {
         guard !lines.isEmpty, let start = lines.compactMap({ $0.first?.at }).max()
         else { return [] }
         let moments = Set(lines.flatMap { $0.map(\.at) })
             .filter { $0 >= start }
             .sorted()
         guard moments.count >= 2 else { return [] }
+        // Sorted copies: the stored lines are appended in time order, but the
+        // forward pass must not depend on that.
+        let sortedLines = lines.map { $0.sorted { $0.at < $1.at } }
+        var cursor = Array(repeating: -1, count: sortedLines.count)
         return moments.map { moment in
-            let total = lines.reduce(0.0) { sum, samples in
-                sum + (samples.last(where: { $0.at <= moment })?.usd ?? 0)
+            var total = 0.0
+            for i in sortedLines.indices {
+                let line = sortedLines[i]
+                while cursor[i] + 1 < line.count, line[cursor[i] + 1].at <= moment { cursor[i] += 1 }
+                if cursor[i] >= 0 { total += line[cursor[i]].usd }
             }
             return ValueSample(at: moment, usd: total)
         }

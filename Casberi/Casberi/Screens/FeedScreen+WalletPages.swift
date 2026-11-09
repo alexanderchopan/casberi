@@ -336,7 +336,18 @@ extension FeedScreen {
         // pane keeps the balance; a page opens in the list column.
         // The cards' asks need the Spending reading, which starts here
         // whatever Home shows (it did under the deleted Spending list).
-        .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
+        // After the open has drawn and the hand is still: the reading is two
+        // months of rows, fetched on the main actor, and Home draws without it
+        // (docs/wallet-perf-spec.md B4).
+        .task(id: walletSpendingKey) {
+            await GestureGate.idle()
+            guard !Task.isCancelled else { return }
+            // Subscriptions first, as Spending's page does: a plan tracked by
+            // hand counts on its renewal day from that reading, and once this
+            // key has run, the page's own refresh leaves.
+            await SubscriptionsReading.shared.refresh(modelContext, key: walletSubscriptionsKey)
+            await SpendingReading.shared.refresh(modelContext, key: walletSpendingKey)
+        }
         // **THE LAST ASK CLEARED IS A MOMENT (prd §1587).** Needs you going
         // to nothing on the same account plays one success beat and says so;
         // a scope switch that changes the count is not one.
