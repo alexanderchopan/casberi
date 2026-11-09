@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1894 of 1966 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1895 of 1967 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2109,6 +2109,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used (amended by §1700t)
 - §1700t — Your Aztec account shows once you have it: on an iPhone, from the moment there is Your account, never waiting for fir…
 - §1700u — An app that turned your account down, with no co-signer to sign in with, says so and offers Add a co-signer
+- §1700v — Your Aztec account's engine starts before it is asked: the app coming back or the Wallet opening starts it and reads…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)
 - §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the f…

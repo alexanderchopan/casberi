@@ -293,6 +293,24 @@ final class AztecAccountStore {
         }
     }
 
+    /// **THE ENGINE STARTS BEFORE IT IS ASKED (prd §1700v, user, 2026-11-09:
+    /// "start engine early: ok, lets do that").** A cold engine took 51 s to
+    /// name the account (measured 2026-11-08 on the simulator), so the row,
+    /// Move's Aztec line and an Aztec app in the browser waited on it. The app
+    /// coming back, or the Wallet opening (`MoveWarm`, at most once a minute),
+    /// starts it and reads the account once the launch has drawn and no finger
+    /// is down. Only on an iPhone with Your account (the prover; §1700t's
+    /// "have it"), never in the demo; a read under way is joined, not doubled.
+    func warm() {
+        guard YourAccountKey.address != nil, AztecProver.isAvailable, !DemoMode.isActive, !reading else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            await GestureGate.idle()
+            guard !DemoMode.isActive else { return }
+            await refresh()
+        }
+    }
+
     /// **A PULL ON THE WALLET ASKS THE ACCOUNT** (user, 2026-11-07: the rain
     /// "should also show the Aztec icon, not just safe"). Reads the holdings
     /// again and their prices, whatever the last reading's age, and says

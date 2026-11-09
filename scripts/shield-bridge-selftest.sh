@@ -258,6 +258,11 @@ grep -q 'YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.i
 grep -q 'shown.used || (YourAccountKey.address != nil && AztecProver.isAvailable)' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
   && grep -q 'guard isShown, shown.used || addressKnown else { return false }' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
   || { echo "✗ the Aztec account waits for first use to show, or a pull starts the engine for someone who never opened Aztec"; exit 1; }
+# The engine starts before it is asked, after the launch draws and with no finger down (prd §1700v).
+grep -q 'AztecAccountStore.shared.warm()' Casberi/Casberi/Model/MoveWarm.swift \
+  && awk '/func warm\(\)/,/^    }/' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift | grep -q 'await GestureGate.idle()' \
+  && awk '/func warm\(\)/,/^    }/' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift | grep -q 'AztecProver.isAvailable, !DemoMode.isActive' \
+  || { echo "✗ Your Aztec account's engine starts only when asked (a 51 s cold start), or starts under a finger, in the demo or on the Mac"; exit 1; }
 # An app that refused your account, and no co-signer: say so and offer to add one (prd §1700u).
 grep -q 'return reconnecting && coSigner == nil && addCoSigner != nil' Casberi/Casberi/Screens/AztecBrowser.swift \
   && grep -q 'chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)' Casberi/Casberi/Screens/AztecBrowser.swift \

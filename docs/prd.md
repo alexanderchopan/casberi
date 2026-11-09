@@ -71347,6 +71347,15 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** None: the browser stands on the iPhone only.
 
+## §1700v — Your Aztec account's engine starts before it is asked: the app coming back or the Wallet opening starts it and reads the account, once the launch has drawn and no finger is down (extends §1700t; amends §1700a item 1's "the engine starts only when Aztec is used") (user, 2026-11-09, of five ways to make Aztec better: "start endinge early: ok, lets do that") — BUILT
+
+1. **Why.** A cold engine took 51 s to name the account (the simulator, 2026-11-08). Everything that needs the address waited on it: the account's row, Receive's "Your private balance · Aztec" (it lists only a known address), Move's Aztec line, and an Aztec app opened in the browser.
+2. **When.** `MoveWarm.start()` (the app coming back, the Wallet opening; once a minute at most) calls `AztecAccountStore.warm()`, which waits 3 s, then for a still hand (`GestureGate.idle`), then `refresh()`: the engine starts, the account is named and its holdings read and kept. A read under way is joined, never doubled.
+3. **Who.** Only on an iPhone (`AztecProver.isAvailable`) with Your account, never in the demo: §1700t's "once you have it". The Mac never starts an engine.
+4. **Not built:** the engine reporting its steps while it proves (`design/mockups/aztec-proving-inline.html`, awaiting a ruling).
+
+**Checks.** `shield-bridge-selftest.sh`: `MoveWarm` calls `warm()`, and `warm()` waits for a still hand and is gated on the prover and the demo; removing the wait fails it.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

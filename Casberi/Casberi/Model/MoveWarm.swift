@@ -23,6 +23,9 @@ enum MoveWarm {
             Task { _ = await YourAccountTokens.readShared(account, on: net) }
             Task { await YourAccountChain.readAhead(account, on: net) }
         }
+        // Your Aztec account's engine too (prd §1700v): Move's Aztec line,
+        // the row and the browser no longer wait out a cold start.
+        AztecAccountStore.shared.warm()
     }
 }
 
