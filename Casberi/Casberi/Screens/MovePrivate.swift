@@ -567,7 +567,9 @@ struct MovePrivateSentence<Head: View>: View {
 
 /// How the private sentence is left: the switch turned off, or the
 /// recipient word tapped to pick someone else.
-enum MovePrivateLeave { case switchOff, pickRecipient }
+/// Where a private sentence hands Move back: the switch off, the recipient
+/// list, or (under Railgun's $10, prd §1728 item 2) Receive or Swap.
+enum MovePrivateLeave { case switchOff, pickRecipient, receive, swap }
 
 /// **THE PRIVATE SWITCH (prd §1554).** Under Send's sentence: the eye-slash,
 /// "Private", an iOS switch. Off by default and never remembered on: each

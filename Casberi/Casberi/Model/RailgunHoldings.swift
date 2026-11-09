@@ -96,6 +96,26 @@ final class RailgunHoldings {
         return NSDecimalNumber(decimal: whole).doubleValue.formatted(.number.precision(.significantDigits(1...4)))
     }
 
+    /// **THE WALLET SYNCS BEFORE MOVE ASKS (prd §1728 item 3, after §1700v).**
+    /// A first sync took 61 s on a phone (§1713), and a send to someone
+    /// else waited it out under "Finding a broadcaster…". The Wallet opening
+    /// or the app coming back (`MoveWarm`, at most once a minute) syncs it
+    /// once the launch has drawn and no finger is down; a quote asked
+    /// meanwhile joins that sync (`RailgunPocket.sync`). Only where a
+    /// Railgun wallet already exists (no root made to look), never in the
+    /// demo. The first warm of a launch syncs whatever the reading's age,
+    /// because the engine is cold even when the last reading is not.
+    func warm() {
+        guard shows, RailgunPocket.hasWallet, !DemoMode.isActive, !syncing else { return }
+        let cold = !RailgunEngine.shared.isOpen
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            await GestureGate.idle()
+            guard !DemoMode.isActive else { return }
+            await refresh(force: cold)
+        }
+    }
+
     /// Reads the wallet when its reading is old (never in the demo), then
     /// the prices.
     func refresh(force: Bool = false) async {
@@ -133,7 +153,8 @@ final class RailgunHoldings {
         }
     }
 
-    private func readPrices() async {
+    /// Move reads them too, for its dollars (prd §1728), without a sync.
+    func readPrices() async {
         let symbols = Set(shown.map { $0.symbol.lowercased() })
         guard !symbols.isEmpty else { return }
         let found = await MainnetPrices.prices(for: Array(symbols))

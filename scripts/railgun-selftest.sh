@@ -169,5 +169,22 @@ use "$FRESH" 'PrivateMoney.decimal(hex: prepared.amount) == held,' "the shield i
 use "$FRESH" 'guard estimate > 0, estimate <= FreshTx.railgunShieldGas else { throw FreshFailure.gas(estimate) }' "a shield over its gas budget is refused"
 use "$FRESH" 'guard interactive, spendable >= cost else {' "private ETH pays the gas only while you look"
 
+# §1728: dollars, under the floor, ready early, one cost.
+MOVEF="Casberi/Casberi/Screens/MoveRailgunPrivate.swift"
+HOLD="Casberi/Casberi/Model/RailgunHoldings.swift"
+use "Casberi/Casberi/Model/MoveWarm.swift" 'RailgunHoldings.shared.warm()' "the Wallet opening syncs your Railgun wallet"
+warm=$(awk '/func warm\(\) \{/{on=1} on{print} on && /^    }$/{exit}' "$HOLD")
+if [[ -z "$warm" ]] || ! printf '%s' "$warm" | grep -q 'await GestureGate.idle()' \
+   || ! printf '%s' "$warm" | grep -q 'RailgunPocket.hasWallet' || ! printf '%s' "$warm" | grep -q 'DemoMode.isActive'; then
+  echo "  ✗ the warm sync does not wait for a still hand, or runs with no wallet or in the demo (§1728 item 3)"; fail=1
+else
+  echo "  ✓ the warm sync waits for a still hand, needs a wallet, never runs in the demo"
+fi
+use "$POCKET" 'if let running { return try await running.value }' "a quote joins a sync already running, never a second"
+use "$MOVEF" 'NSDecimalRound(&up, &tokens, min(h.decimals, 6), .up)' "the \$10 chip rounds up, so it never falls short of the floor"
+use "$MOVEF" 'if usd >= 0.01, usd > (underFloor?.usd ?? 0) { underFloor = Short(symbol: h.token.symbol, usd: usd) }' "under the floor, the sentence names the token worth the most"
+use "$MOVEF" 'guard let gas = gasUSD(RailgunPocket.unshieldGas, plus: RailgunPocket.lastRelayerFeeWei ?? 0) else { return nil }' "a fresh sender's cost counts the relayer's fee"
+use "$MOVEF" 'guard let feeWords, let feeUSD = broadcasterFeeUSD else { return nil }' "a broadcaster's cost is its quoted fee, priced"
+
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

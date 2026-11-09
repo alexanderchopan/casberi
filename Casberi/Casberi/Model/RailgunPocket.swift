@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// **YOUR RAILGUN POCKET (prd §1713).** The private balance for any token
 /// on Ethereum other than ETH and USDC: a Railgun wallet that belongs to your
@@ -127,11 +128,47 @@ enum RailgunPocket {
 
     /// Reads the pool and your wallet, every root checked. Throws `untrusted`
     /// when a root does not match: the balance it read is not shown as yours.
+    ///
+    /// **One sync at a time, joined (prd §1728 item 3).** The Wallet opening
+    /// starts one (`RailgunHoldings.warm`); a quote asked while it runs
+    /// waits for that one instead of starting a second, and `RailgunSync`
+    /// says how long it has run, for Move's line.
     static func sync() async throws -> RailgunEngineWire.Synced {
-        let synced = try await RailgunEngine.shared.sync()
-        guard RailgunEngineWire.trusted(synced) else { throw Failure.untrusted }
-        return synced
+        if let running { return try await running.value }
+        let task = Task { @MainActor () throws -> RailgunEngineWire.Synced in
+            let synced = try await RailgunEngine.shared.sync()
+            guard RailgunEngineWire.trusted(synced) else { throw Failure.untrusted }
+            return synced
+        }
+        running = task
+        RailgunSync.shared.since = .now
+        defer {
+            running = nil
+            RailgunSync.shared.since = nil
+        }
+        return try await task.value
     }
+
+    private static var running: Task<RailgunEngineWire.Synced, Error>?
+
+    // MARK: - What a move costs (prd §1728 item 6)
+
+    /// Gas your account pays to move a token in (approve and shield, one
+    /// Safe transaction): 793,342 measured on mainnet (§1713), rounded up.
+    static let shieldGas = 800_000
+    /// Gas a plain unshield takes: 516,069 measured (§1713 item 8), rounded
+    /// up. A fresh sender's send is the same call (§1726).
+    static let unshieldGas = 520_000
+
+    /// Ethereum's gas price now, in wei; nil when the node does not answer.
+    static func gasPriceWei() async -> Decimal? {
+        guard let hex = try? await YourAccountChain.rpc(accountNetwork, "eth_gasPrice", []) as? String else { return nil }
+        return Decimal(string: PrivateMoney.decimal(hex: hex))
+    }
+
+    /// What Privacy Pools' relayer took to bring a fresh sender its gas, as
+    /// `privateGasCovers` last asked it, in wei.
+    static var lastRelayerFeeWei: Decimal?
 
     // MARK: - In
 
@@ -255,6 +292,7 @@ enum RailgunPocket {
         let store = PrivateMoneyStore.shared
         await store.readYield()
         let fee = Decimal(string: await PrivateMove.relayerFee(ethPool, network: network, to: sender.address) ?? "") ?? 0
+        lastRelayerFeeWei = fee > 0 ? fee : nil
         let spendable = Decimal(string: store.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0
         return fee > 0 && spendable >= need + fee
     }
@@ -351,4 +389,14 @@ enum RailgunPocket {
         case .pending, .dryRun: nil
         }
     }
+}
+
+/// **WHEN THE RAILGUN WALLET IS SYNCING (prd §1728 item 3).** Set while
+/// `RailgunPocket.sync` runs, so Move can say "Getting your private balance
+/// ready · 12 s" in real seconds instead of a word that never changes.
+@MainActor
+@Observable
+final class RailgunSync {
+    static let shared = RailgunSync()
+    var since: Date?
 }

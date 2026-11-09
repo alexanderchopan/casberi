@@ -26,6 +26,8 @@ enum MoveWarm {
         // Your Aztec account's engine too (prd §1700v): Move's Aztec line,
         // the row and the browser no longer wait out a cold start.
         AztecAccountStore.shared.warm()
+        // Your Railgun wallet's sync too (prd §1728 item 3).
+        RailgunHoldings.shared.warm()
     }
 }
 

@@ -96,6 +96,14 @@ final class RailgunMove {
     /// in), and your private ETH pays a fresh sender's gas (prd §1726).
     private(set) var viaFresh = false
 
+    /// The token you hold on Ethereum worth the most, when none reaches the
+    /// $10 floor: the sentence names it (prd §1728 item 2).
+    struct Short: Equatable { let symbol: String; let usd: Double }
+    private(set) var underFloor: Short?
+    /// Gas now (wei) and ETH's price, for the cost line (prd §1728 item 6).
+    private var gasPriceWei: Decimal?
+    private var ethUSD: Double?
+
     /// A send to someone else: a broadcaster sends it, never your account.
     var toSomeoneElse: Bool {
         guard mode == .takeBack, let recipient, PrivateMoney.isAddress(recipient) else { return false }
@@ -169,14 +177,29 @@ final class RailgunMove {
         stage = .reading
         quoteTask?.cancel()
         quote = nil
-        feeBps = await Self.readFee(mode == .deposit ? "shieldFee()" : "unshieldFee()")
+        // The demo reads nothing: 0.05 gwei and $3,000 an ETH.
+        let demo = DemoMode.isActive
+        let signature = mode == .deposit ? "shieldFee()" : "unshieldFee()"
+        async let fee = Self.readFee(signature)
+        async let gas: Decimal? = demo ? Decimal(50_000_000) : RailgunPocket.gasPriceWei()
+        async let eth: Double? = demo ? 3_000 : Self.ethPrice()
+        feeBps = await fee
+        gasPriceWei = await gas
+        ethUSD = await eth
+        underFloor = nil
         var found: [Holding] = []
         switch mode {
         case .deposit where DemoMode.isActive:
             // The demo's account holds only ETH and USDC on Ethereum; its
             // sentence shows DAI moving in, at $1, and sends nothing.
-            found = [Holding(contract: RailgunHoldings.demo[0].contract, symbol: "DAI", decimals: 18,
-                             units: "120000000000000000000", price: 1)]
+            // `-railgunDemoUnder YES` holds $7.52 of it, under the floor.
+            let under = UserDefaults.standard.bool(forKey: "railgunDemoUnder")
+            if under {
+                underFloor = Short(symbol: "DAI", usd: 7.52)
+            } else {
+                found = [Holding(contract: RailgunHoldings.demo[0].contract, symbol: "DAI", decimals: 18,
+                                 units: "120000000000000000000", price: 1)]
+            }
         case .deposit:
             guard let account = YourAccountKey.address else {
                 stage = .nothing; return
@@ -186,14 +209,19 @@ final class RailgunMove {
             for h in await YourAccountTokens.held(account, on: net) {
                 guard let contract = h.token.contract, contract.lowercased() != dollar,
                       RailgunRouting.goesToRailgun(symbol: h.token.symbol, contract: contract, chainId: net.chainId),
-                      let price = h.price, price > 0,
-                      RailgunRouting.meetsFloor(units: h.units, decimals: h.token.decimals, price: price, floorUSD: Self.floorUSD)
-                else { continue }
+                      let price = h.price, price > 0 else { continue }
+                guard RailgunRouting.meetsFloor(units: h.units, decimals: h.token.decimals, price: price, floorUSD: Self.floorUSD) else {
+                    let usd = YourAccountOp.dollars(h.units, decimals: h.token.decimals, price: price)
+                    if usd >= 0.01, usd > (underFloor?.usd ?? 0) { underFloor = Short(symbol: h.token.symbol, usd: usd) }
+                    continue
+                }
                 found.append(Holding(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
                                      units: h.units, price: price))
             }
         case .takeBack:
             let store = RailgunHoldings.shared
+            // Prices for the dollars and the cost, never a sync (prd §1728).
+            await store.readPrices()
             found = store.spendableShown.map {
                 Holding(contract: $0.contract, symbol: $0.symbol, decimals: $0.decimals,
                         units: $0.spendable, price: store.prices[$0.symbol.uppercased()])
@@ -234,6 +262,13 @@ final class RailgunMove {
             } else {
                 feeToken = nil
             }
+            // Its price, for the cost in dollars (prd §1728 item 6); WETH
+            // reads ETH's.
+            feePriceUSD = nil
+            if let symbol = feeToken?.symbol.lowercased(), symbol != "weth" {
+                let prices = await MainnetPrices.prices(for: [symbol])
+                feePriceUSD = prices[symbol] ?? prices[symbol.uppercased()]
+            }
             guard self.picked == picked else { return }
             quote = q
             stage = feeToken == nil ? .failed(String(localized: "Railgun did not answer. Nothing was sent.")) : .ready
@@ -252,6 +287,134 @@ final class RailgunMove {
             stage = .failed(Self.words(error))
         }
     }
+
+    // MARK: - In dollars (prd §1728 items 1 and 6)
+
+    static func ethPrice() async -> Double? {
+        let prices = await MainnetPrices.prices(for: ["eth"])
+        return prices["eth"] ?? prices["ETH"]
+    }
+
+    /// "$10": the floor, as the sentence says it.
+    static var floorText: String {
+        floorUSD.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+    }
+
+    /// "$25.00": the one way this sentence writes dollars.
+    static func usd(_ value: Double) -> String {
+        value.formatted(.currency(code: "USD").precision(.fractionLength(2)))
+    }
+
+    /// A token amount in base units, written whole and exact ("7.525").
+    static func plain(_ units: Decimal, decimals: Int) -> String {
+        var whole = units / pow(10, decimals), cut = Decimal()
+        NSDecimalRound(&cut, &whole, decimals, .down)
+        return NSDecimalNumber(decimal: cut).stringValue
+    }
+
+    /// The typed amount in dollars, where the token has a price.
+    var amountUSD: Double? {
+        guard let h = holding, let price = h.price, let units, (Decimal(string: units) ?? 0) > 0 else { return nil }
+        return YourAccountOp.dollars(units, decimals: h.decimals, price: price)
+    }
+
+    /// The line under the sentence: "$25.00 · from $10 · you have $120.00".
+    /// No price: what you have, in the token.
+    var amountLine: String? {
+        guard let h = holding else { return nil }
+        let have: String = h.price.map { String(localized: "you have \(Self.usd(YourAccountOp.dollars(h.units, decimals: h.decimals, price: $0)))") }
+            ?? String(localized: "you have \(RailgunHoldings.figure(h.units, decimals: h.decimals) + " " + h.symbol)")
+        var parts: [String] = []
+        if let amountUSD { parts.append(Self.usd(amountUSD)) }
+        if mode == .deposit { parts.append(String(localized: "\(Self.floorText) or more")) }
+        parts.append(have)
+        return parts.joined(separator: " · ")
+    }
+
+    /// The amounts a chip types: $10 worth (moving in only, where the token
+    /// has a price), half, all. Exact, in the token's own places.
+    enum Pick: CaseIterable { case floor, half, all }
+
+    func amount(for pick: Pick) -> String? {
+        guard let h = holding, let held = Decimal(string: h.units), held > 0 else { return nil }
+        switch pick {
+        case .floor:
+            guard mode == .deposit, let price = h.price, price > 0 else { return nil }
+            // $10 worth, rounded UP at six places so it never falls short.
+            var tokens = Decimal(Self.floorUSD) / Decimal(price), up = Decimal()
+            NSDecimalRound(&up, &tokens, min(h.decimals, 6), .up)
+            guard up * pow(10, h.decimals) <= held else { return nil }
+            return NSDecimalNumber(decimal: up).stringValue
+        case .half:
+            var half = held / 2, down = Decimal()
+            NSDecimalRound(&down, &half, 0, .down)
+            guard down > 0 else { return nil }
+            // Half under the floor is no choice moving in (§83).
+            if mode == .deposit, !RailgunRouting.meetsFloor(units: NSDecimalNumber(decimal: down).stringValue,
+                                                            decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) { return nil }
+            return Self.plain(down, decimals: h.decimals)
+        case .all:
+            return Self.plain(held, decimals: h.decimals)
+        }
+    }
+
+    /// What this move costs, in dollars and in its parts (prd §1728 item 6):
+    /// Railgun's cut of the amount, then whoever pays the gas — your
+    /// account, a broadcaster in its fee token, or your private ETH for a
+    /// fresh sender. nil where a price is missing: the line then says
+    /// Railgun's percentage, as before.
+    struct Cost: Equatable {
+        struct Part: Equatable, Hashable { let words: String; let figure: String }
+        let usd: Double
+        let parts: [Part]
+    }
+
+    var cost: Cost? {
+        guard let picked, let h = holding, let price = h.price, let bps = feeBps,
+              let units = Decimal(string: picked.units) else { return nil }
+        var cutUnits = units * Decimal(bps) / 10_000, cut = Decimal()
+        NSDecimalRound(&cut, &cutUnits, 0, .down)
+        let cutText = NSDecimalNumber(decimal: cut).stringValue
+        var usd = YourAccountOp.dollars(cutText, decimals: h.decimals, price: price)
+        var parts = [Cost.Part(words: String(localized: "Railgun"),
+                               figure: RailgunHoldings.figure(cutText, decimals: h.decimals) + " " + h.symbol)]
+        func gasUSD(_ gas: Int, plus extraWei: Decimal = 0) -> Double? {
+            guard let gasPriceWei, let ethUSD else { return nil }
+            let wei = Decimal(gas) * gasPriceWei + extraWei
+            return NSDecimalNumber(decimal: wei / pow(10, 18)).doubleValue * ethUSD
+        }
+        switch mode {
+        case .deposit:
+            guard let gas = gasUSD(RailgunPocket.shieldGas) else { return nil }
+            usd += gas
+            parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gas))")))
+        case .takeBack where toSomeoneElse && viaFresh:
+            guard let gas = gasUSD(RailgunPocket.unshieldGas, plus: RailgunPocket.lastRelayerFeeWei ?? 0) else { return nil }
+            usd += gas
+            parts.append(.init(words: String(localized: "A new address of yours sends it, its gas from your private ETH"),
+                               figure: String(localized: "about \(Self.usd(gas))")))
+        case .takeBack where toSomeoneElse:
+            guard let feeWords, let feeUSD = broadcasterFeeUSD else { return nil }
+            usd += feeUSD
+            parts.append(.init(words: String(localized: "A Railgun broadcaster sends it"), figure: feeWords))
+        case .takeBack:
+            guard let gas = gasUSD(RailgunPocket.unshieldGas) else { return nil }
+            usd += gas
+            parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gas))")))
+        }
+        return Cost(usd: usd, parts: parts)
+    }
+
+    /// The broadcaster's fee in dollars: WETH at ETH's price, any other fee
+    /// token at its own (`feePriceUSD`, read with the quote).
+    private var broadcasterFeeUSD: Double? {
+        if DemoMode.isActive, toSomeoneElse { return 0.14 }
+        guard let q = quote, let feeToken else { return nil }
+        let price = feeToken.symbol.uppercased() == "WETH" ? ethUSD : feePriceUSD
+        guard let price else { return nil }
+        return YourAccountOp.dollars(PrivateMoney.decimal(hex: q.fee), decimals: feeToken.decimals, price: price)
+    }
+    private var feePriceUSD: Double?
 
     /// The broadcaster's fee as the line says it: "0.14 USDC".
     var feeWords: String? {
@@ -378,6 +541,8 @@ struct MoveRailgunSentence<Head: View>: View {
 
     /// The token list is open.
     @State private var open = false
+    /// The cost's parts are showing.
+    @State private var showParts = false
     @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
@@ -442,9 +607,15 @@ struct MoveRailgunSentence<Head: View>: View {
         case .reading:
             MovePhrase(String(localized: "Reading…"), ink: DS.textSecondary)
         case .nothing:
-            MovePhrase(move.mode == .deposit
-                       ? String(localized: "Moving to your private balance takes $10 or more.")
-                       : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
+            if move.mode == .deposit, let short = move.underFloor {
+                // Your real number, said once (prd §1728 item 2).
+                MovePhrase(String(localized: "Moving in starts at \(RailgunMove.floorText)."), ink: DS.textSecondary)
+                MovePhrase(String(localized: "Your \(short.symbol) is \(RailgunMove.usd(short.usd))."), ink: DS.textSecondary)
+            } else {
+                MovePhrase(move.mode == .deposit
+                           ? String(localized: "Moving to your private balance takes $10 or more.")
+                           : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
+            }
         default:
             if !isDone { head() }
             if picking {
@@ -494,9 +665,28 @@ struct MoveRailgunSentence<Head: View>: View {
         case .ready where move.amountProblem != nil:
             Text(verbatim: problemLine).dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
-        case .ready, .working, .quoting:
-            Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+        case .ready, .quoting:
+            // The amount in dollars, the floor beside it, and three choices
+            // (prd §1728 item 1).
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                if let words = move.amountLine {
+                    Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                chips
+            }
+        case .working(let words):
+            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+        case .nothing where move.mode == .deposit && move.underFloor != nil:
+            // Get more of it (prd §1728 item 2): Receive, or Swap.
+            if let short = move.underFloor {
+                VStack(alignment: .leading, spacing: 0) {
+                    DSDoorRow(icon: "arrow.down.to.line", title: Text("Receive more \(short.symbol)")) { leave(.receive) }
+                    DSDoorRow(icon: "arrow.left.arrow.right", title: Text("Swap for more \(short.symbol)")) { leave(.swap) }
+                }
+            }
         case .failed(let words):
             Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
@@ -512,11 +702,85 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
-    /// Only what this move costs (§1713 item 6): the in fee going in, the
-    /// out fee coming back.
+    // MARK: - The cost (prd §1728 item 6)
+
+    /// Above the verb: one cost in dollars and what it buys you, the parts
+    /// one tap down. While a send to someone else is quoted, what it waits
+    /// on, in real seconds: the wallet syncing, then the broadcasters.
+    @ViewBuilder private var costLine: some View {
+        if move.stage == .quoting {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner(size: .small)
+                    Text(verbatim: quotingWords(at: context.date)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+            }
+        } else if let cost = move.cost {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    withAnimation(DS.Motion.standard) { showParts.toggle() }
+                    DSHaptic.selection()
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(verbatim: costWords(cost)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        Image(systemName: showParts ? "chevron.up" : "chevron.down")
+                            .dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)
+                    }
+                    .frame(minHeight: DS.Hit.min)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text(showParts ? "Hides what it costs" : "Shows what it costs"))
+                if showParts {
+                    ForEach(cost.parts, id: \.self) { part in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            Text(verbatim: part.words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(verbatim: part.figure).dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                        }
+                        .frame(minHeight: 32)
+                        .accessibilityElement(children: .combine)
+                    }
+                    .transition(.opacity)
+                }
+            }
+        } else {
+            Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// "Getting your private balance ready · 12 s", then "Finding a
+    /// broadcaster · 4 s": real seconds, never a percentage (as §1700w).
+    private func quotingWords(at now: Date) -> String {
+        if let since = RailgunSync.shared.since {
+            let s = max(0, Int(now.timeIntervalSince(since).rounded()))
+            return String(localized: "Getting your private balance ready · \(s) s")
+        }
+        return String(localized: "Finding a broadcaster…")
+    }
+
+    /// "Costs about $0.39 · your account isn't on it".
+    private func costWords(_ cost: RailgunMove.Cost) -> String {
+        let figure = cost.usd < 0.01 ? String(localized: "Costs under $0.01")
+            : String(localized: "Costs about \(RailgunMove.usd(cost.usd))")
+        let tail: String? = switch move.mode {
+        case .deposit: String(localized: "private in about an hour")
+        case .takeBack where move.toSomeoneElse: String(localized: "your account isn't on it")
+        case .takeBack: nil
+        }
+        return [figure, tail].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// Where no price makes a dollar cost: Railgun's percentage and who
+    /// pays the gas (§1713 item 6).
     private var readyLine: String {
-        if case .working(let words) = move.stage { return words }
-        if move.stage == .quoting { return String(localized: "Finding a broadcaster…") }
         let fee = move.feeBps.map { String(localized: "Railgun takes \(RailgunPocket.percent(bps: $0))") }
         switch move.mode {
         case .deposit:
@@ -573,6 +837,37 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
+    /// $10 · Half · All (prd §1728 item 1): each types its amount, exact;
+    /// a choice that would be under the floor, or more than you have, is
+    /// not drawn (§83).
+    @ViewBuilder private var chips: some View {
+        let picks = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
+        if !picks.isEmpty, !open {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(picks, id: \.pick) { item in
+                    let on = move.amount == item.value
+                    Button {
+                        typing = false
+                        move.amount = item.value
+                        DSHaptic.selection()
+                    } label: {
+                        Chip(text: chipWord(item.pick), selected: on)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
+                }
+            }
+        }
+    }
+
+    private func chipWord(_ pick: RailgunMove.Pick) -> String {
+        switch pick {
+        case .floor: RailgunMove.floorText
+        case .half: String(localized: "Half")
+        case .all: String(localized: "All")
+        }
+    }
+
     private var tokens: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(move.holdings) { h in
@@ -606,8 +901,19 @@ struct MoveRailgunSentence<Head: View>: View {
             && (!move.toSomeoneElse || move.viaFresh || (move.quote != nil && move.feeWords != nil))
     }
 
+    /// The cost stands over the verb while there is something to cost.
+    private var showsCost: Bool {
+        move.stage == .quoting || (move.stage == .ready && move.amountOK)
+    }
+
     private var foot: some View {
         VStack(spacing: 0) {
+            if showsCost {
+                costLine
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s1)
+                    .transition(.opacity)
+            }
             HStack(alignment: .firstTextBaseline) {
                 Spacer(minLength: 0)
                 switch move.stage {

@@ -1035,8 +1035,14 @@ struct MoveSentence: View {
                 MoveRailgunSentence(move: railgunMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
                         railgunOpen = false
-                        open = why == .pickRecipient ? .to : .with
-                        if why == .pickRecipient { search = "" }
+                        switch why {
+                        // Under $10: get more of it (prd §1728 item 2).
+                        case .receive: verb = .receive
+                        case .swap: verb = .swap
+                        case .pickRecipient, .switchOff:
+                            open = why == .pickRecipient ? .to : .with
+                            if why == .pickRecipient { search = "" }
+                        }
                     }
                 }) { verbWord(title(.send)) }
                 .transition(.opacity)
