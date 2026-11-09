@@ -88,7 +88,7 @@ struct MoveTrayPresenter: ViewModifier {
             NSLog("[Casberi] moveRailgun: raised %@", how)
             // `send`: out to someone else, a broadcaster's send (§1721 item 3).
             chrome.moveRailgun = .init(contract: nil, takeBack: how != "in",
-                                       recipient: how == "send" ? "0x8ba1f109551bD432803012645Ac136ddd64DBA72" : nil)
+                                       recipient: how == "send" ? "0x8ba1f109551bd432803012645ac136ddd64dba72" : nil)
             chrome.moveTray = true
         }
         // `-moveToAztec YES` raises Send onto your private account on Aztec,
