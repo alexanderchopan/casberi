@@ -1148,6 +1148,18 @@ python3 "$ROOT/scripts/wallet-row-audit.py" \
   || fail "a Wallet row stands off the one pitch — use walletListRow() / walletStackRow() / walletRowPitch() (prd §1482)"
 print -P "%F{green}✓ wallet row audit%f"
 
+# The Wallet's waits stay cut (prd §1732, docs/wallet-perf-spec.md). Static,
+# no build. It fails the balance history decoded per read, a second holdings
+# read per wallet in a pass, the total's extras or the filters' reads waiting
+# behind the holdings, a rider or the pass run untimed, and the scope
+# resolved per row: each compiles and draws right, only slower.
+step "Wallet perf audit"
+python3 "$ROOT/scripts/wallet-perf-audit.py" --self-test >/dev/null \
+  || fail "the wallet perf audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/wallet-perf-audit.py" \
+  || fail "a Wallet wait came back — see the output above (prd §1732)"
+print -P "%F{green}✓ wallet perf audit%f"
+
 # Every row in the APP at one pitch (prd §1496), the Wallet audit's rule
 # carried everywhere. Static, no build. Asked to sweep the app, 52 rows drawn
 # by hand outside the templates were found, 33 off the 2pt title gap and

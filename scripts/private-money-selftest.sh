@@ -147,9 +147,13 @@ use "tools/privacy-pools-engine/src/engine.js" 'const r = await s.relayWithdraw(
 use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped bundle cannot relay — rebuild with tools/privacy-pools-engine/build.mjs"
 use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "private money no longer counts in the Wallet's total"
-use "Casberi/Casberi/Model/WalletIngest.swift" 'let privately = combined || yours' "Yours no longer counts your private balance; only All does (prd §1590)"
-use "Casberi/Casberi/Model/WalletIngest.swift" '? (await PrivateMoneyStore.shared.walletHolding()) + (await RailgunHoldings.shared.walletHolding())' "the private balance (0xBow, Railgun since §1721) no longer reaches Yours and All"
-use "Casberi/Casberi/Model/WalletIngest.swift" '+ (await AztecAccountStore.shared.walletHolding()) : []' "your Aztec account (§1700e) no longer reaches Yours and All"
+# The three reads run beside the holdings since prd §1732, so each is its own
+# `async let` behind the one switch, and the sum is what the total takes.
+use "Casberi/Casberi/Model/WalletIngest.swift" 'let privatelyOn = combined || yours' "Yours no longer counts your private balance; only All does (prd §1590)"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'async let pooledRead = privatelyOn ? await PrivateMoneyStore.shared.walletHolding() : []' "the 0xBow private balance no longer reaches Yours and All"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'async let railgunRead = privatelyOn ? await RailgunHoldings.shared.walletHolding() : []' "the Railgun private balance (§1721) no longer reaches Yours and All"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'async let aztecRead = privatelyOn ? await AztecAccountStore.shared.walletHolding() : []' "your Aztec account (§1700e) no longer reaches Yours and All"
+use "Casberi/Casberi/Model/WalletIngest.swift" 'let privately = privatelyOn ? (await pooledRead) + (await railgunRead) + (await aztecRead) : []' "the private reads are made and not all summed into the total (prd §1732)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'if address == nil || !privately.isEmpty || !lent.isEmpty, groups.count' "Yours with private money draws one wallet's map and drops the Private block (prd §1590)"
 use "$HOLD" 'if selectedSeat == nil || poolsPick, !walletOnFollowing,' "the Private section shows under Following again (prd §1590)"
 use "$HOLD" 'let poolsPick = selectedSeat?.source == PrivacyPoolsBridge.sourceName' "a picked app other than 0xBow shows the Private section (prd §1702 opened it for 0xBow's pick only)"

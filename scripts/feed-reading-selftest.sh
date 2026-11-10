@@ -259,8 +259,12 @@ grep -q 'dsText(fit.ledeRung)' "$TMP/lede.nocomment" \
   || { echo "✗ the cover's lede no longer takes the fit's rung (prd §905)"; exit 1; }
 grep -q 'rows: fit.castRows' "$TMP/lede.nocomment" \
   || { echo "✗ the cast shelf no longer takes the fit's rows (prd §905)"; exit 1; }
-grep -q 'tier == .large ? .heading28 : .heading24' "$TMP/lede.nocomment" \
-  || { echo "✗ the fit's statement rung is not the two-rung switch on the tier (prd §905, §762, §1006)"; exit 1; }
+# Three rungs since prd §1734: a short thing alone in the box takes the screen
+# name's `heading34` (the poster tier), never larger (§1006).
+grep -q 'case .poster: .heading34' "$TMP/lede.nocomment" \
+  && grep -q 'case .large: .heading28' "$TMP/lede.nocomment" \
+  && grep -q 'case .mid, .regular: .heading24' "$TMP/lede.nocomment" \
+  || { echo "✗ the fit's statement rung is not the three-rung switch on the tier (prd §905, §762, §1006, §1734)"; exit 1; }
 grep -q 'tier == .regular ? 1 : 2' "$TMP/lede.nocomment" \
   || { echo "✗ the shelf's rows are not the tier's — mid and large both grow it (prd §905a)"; exit 1; }
 # `heading28` (was `heading40` until prd §1006) is the LADDER's rung and lives only in the tier switch. `body17`
@@ -268,7 +272,7 @@ grep -q 'tier == .regular ? 1 : 2' "$TMP/lede.nocomment" \
 # cast's caption, the media scrim's line), so it is not fenced here.
 # Outside the switch exactly ONE line spells it: WORK B's state word (prd §908),
 # a face's own statement at the large rung. A second is the ladder leaking.
-[ "$(grep -E 'heading28' "$TMP/lede.nocomment" | grep -vcE 'tier == ')" -eq 1 ] \
+[ "$(grep -E 'heading28' "$TMP/lede.nocomment" | grep -vcE 'tier == |case \.large:')" -eq 1 ] \
   || { echo "✗ the large words rung is spelled outside the fit's tier switch more than the"; \
        echo "  one place §908 allows (the state word) — the ladder is leaking (prd §905)"; exit 1; }
 # The tiers are tried LARGE, then MID, then REGULAR, two spellings each for the
@@ -370,7 +374,7 @@ grep -q 'if let coverThing { Section { ledeListRow(coverThing) } }' "$FEED" \
   || { echo "✗ groupedSections no longer draws a shaped room's cover above the days (prd §906)"; exit 1; }
 # Home draws its cover through `homeLead` since prd §1136i (today's cover, else
 # the newest thing kept), still as the first Section above the day dividers.
-grep -q 'homeLead(homeCover, heroShown: heroShown)' "$FEED" && grep -q 'Section { ledeListRow(ledeThing) }' "$FEED" \
+grep -q 'homeLead(homeCover, heroShown: heroShown)' "$FEED" && grep -q 'Section { ledeListRow(ledeThing, label: ' "$FEED" \
   || { echo "✗ the All feed no longer draws its cover above the first divider (prd §906)"; exit 1; }
 # A hero holds Home's box (a live stream, §591b): the empty day may not stand
 # under it as a second box ("Friday" under a live stream, 2026-10-09).

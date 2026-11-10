@@ -202,7 +202,7 @@ extension FeedScreen {
 
     /// A section's name (prd §1208c, §1208l): a chapter's title in the pink
     /// every title wears, its category's glyph before it and what is new
-    /// since your last visit after it (counting down as the dots fade).
+    /// since your last visit after it (counting down as you read past).
     /// Nothing to press: the sections do not fold (§1208c), and nothing in
     /// the Feed opens a screen of its own (§1208a). As it reaches the top it
     /// shrinks into the pill that names where you are.
@@ -242,7 +242,7 @@ extension FeedScreen {
     static let handoffSpan: CGFloat = 56
 
     /// The pinned header's foot (prd §1386): a row whose bottom has passed it
-    /// is under the header, out of sight (`NewDot` marks it seen there). The
+    /// is under the header, out of sight (`NewSeenMark` notes it read there). The
     /// demo's band moves the header down, so the line moves with it (§1297).
     static var whereLine: CGFloat { topInset + pinnedHeaderHeight + DSDemoMark.screenClearance }
 
@@ -524,37 +524,31 @@ struct SectionPanel: View {
     static let fill = Color.adaptive(dark: "#111113", light: "#F2F2F7")
 }
 
-/// NEW SINCE YOU LOOKED (prd §1208d, user: "only if scrolling past it
-/// removes the dot"): a dot by a row that came after you last left, gone
-/// once the row has scrolled past the top, for the rest of the visit.
-/// What scrolled past this visit, observed, so a section's "N new" counts
-/// down as its dots fade (prd §1208l); a later visit's line moves anyway.
+/// NEW SINCE YOU LOOKED (prd §1208d, §1208l): what scrolled past this
+/// visit, observed, so a section's "N new" counts down as you read; a later
+/// visit's line moves anyway.
 @MainActor @Observable final class NewSeen {
     static let shared = NewSeen()
     var ids: Set<UUID> = []
 }
 
-struct NewDot: View {
+/// **NO DOT ON A ROW (prd §1735, user: "why do we need the red indicator
+/// dots? if this is a feed of notification they will always be there").**
+/// The dot §1208d drew by every row that came since you left is deleted: in
+/// a feed of what arrived, nearly every row wore one. The section's "N new"
+/// says it once. This draws nothing; it only notes the row as read once it
+/// has scrolled past the top, which is what counts that number down.
+struct NewSeenMark: View {
     let id: UUID
-    @State private var gone: Bool
-
-    init(id: UUID) {
-        self.id = id
-        _gone = State(initialValue: NewSeen.shared.ids.contains(id))
-    }
 
     var body: some View {
-        Circle()
-            .fill(DS.pickInk)
-            .frame(width: 8, height: 8)
-            .opacity(gone ? 0 : 1)
+        Color.clear
+            .frame(width: 1, height: 1)
             .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < FeedScreen.whereLine - 40 } action: { past in
-                guard past, !gone else { return }
+                guard past, !NewSeen.shared.ids.contains(id) else { return }
                 NewSeen.shared.ids.insert(id)
-                withAnimation(DS.Motion.standard) { gone = true }
             }
-            .accessibilityLabel(Text("New"))
-            .accessibilityHidden(gone)
+            .accessibilityHidden(true)
     }
 }
 

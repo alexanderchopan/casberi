@@ -34,7 +34,7 @@ struct LibrarySearch: View {
     /// A result's mark: the Feed row's own lead (prd §1733, retiring §1094's
     /// 44pt disc). A hit is a row like any other, in the rows' column; the
     /// row is still hit across its whole 52pt pitch.
-    static let icon: CGFloat = DS.Mark.row
+    static let icon: CGFloat = DS.Face.row
 
     /// What the field holds (prd §1133e); cleared when the search lets go.
     @State private var query = ""

@@ -353,10 +353,11 @@ extension FeedScreen {
             }
             .buttonStyle(RowPress())
         }
-        // New since you last looked (prd §1208d), on the Feed only.
+        // New since you last looked, on the Feed only: no dot (prd §1735),
+        // only the note that counts the section's "N new" down.
         .overlay(alignment: .leading) {
             if source == "All", let since = newSince, thing.capturedAt > since {
-                NewDot(id: thing.id).offset(x: -DS.Space.s3)
+                NewSeenMark(id: thing.id)
             }
         }
         .modifier(rowEntrance(index))

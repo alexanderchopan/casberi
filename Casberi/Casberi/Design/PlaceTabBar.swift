@@ -102,9 +102,8 @@ enum PlaceTab: String, Identifiable, CaseIterable {
 
 /// The bar itself: three places in one glass capsule and Move a circle beside
 /// it at the trailing edge (prd §1715, amending §1640's Search circle). Read
-/// down, it folds into one circle for the tab you are on
-/// (`ShellChrome.minimized`, the scroll fold the band already had); that
-/// circle, or a scroll back up, unfolds it.
+/// down, the places fold into Move's circle (`ShellChrome.minimized`, the
+/// scroll fold the band already had; prd §1735); a scroll back up unfolds it.
 struct PlaceTabBar: View {
     @Environment(ShellChrome.self) private var chrome
     let current: PlaceTab?
@@ -123,17 +122,20 @@ struct PlaceTabBar: View {
     static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
     var body: some View {
-        // MOVE STAYS (prd §1735): read down, the places fold to the one
-        // circle on the leading side and the act keeps its seat at the
-        // trailing edge, so it is one tap from anywhere on the page.
+        // THE BAR FOLDS INTO MOVE (prd §1735): read down, the places draw
+        // into the act's circle at the trailing edge and Move stands alone,
+        // one tap from anywhere on the page. A scroll back up brings the
+        // places out again; no circle is left on the leading side.
         HStack(spacing: DS.Space.s2) {
             if folded {
-                foldedCircle
                 Spacer(minLength: 0)
             } else {
                 tabs
+                    .transition(.scale(scale: 0.2, anchor: .trailing).combined(with: .opacity))
             }
             moveCircle
+                // Folded, the capture flight lands on the one thing left.
+                .background { if folded { FeedTabFrame() } }
         }
         .animation(DS.Motion.standard, value: folded)
     }
@@ -144,7 +146,7 @@ struct PlaceTabBar: View {
     /// (Library at the right as the App Library is) and Move is its own
     /// circle at the trailing edge, the shape iOS gives a search tab, here
     /// given to the one control that is an act. Read down, the places fold
-    /// into the one circle they always did and Move stays (prd §1735).
+    /// into Move's circle and Move stands alone (prd §1735).
     private var tabs: some View {
         HStack(spacing: 0) {
             ForEach(PlaceTab.allCases.filter { $0 != .move }) { tab in
@@ -208,24 +210,6 @@ struct PlaceTabBar: View {
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(verbatim: PlaceTab.move.label))
         .accessibilityHint(Text("Swap, send or receive money"))
-    }
-
-    /// The tab you are on, alone: a tap unfolds the bar.
-    private var foldedCircle: some View {
-        let tab = current ?? .feed
-        return Button {
-            DSHaptic.selection()
-            chrome.unfold()
-        } label: {
-            mark(tab, on: true, glyphSize: .body)
-                .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
-                .dsTapTarget(Circle())
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: tab.label))
-        .accessibilityHint(Text("Shows every place"))
-        .background { if tab == .feed { FeedTabFrame() } }
     }
 
     @ViewBuilder
