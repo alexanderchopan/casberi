@@ -71901,3 +71901,15 @@ Verifying §1741 on the simulator found the door shut: while "Finish setup" stoo
 1. Closing the walk by any means (Done, Receive, Later, a swipe) clears the pending mark (`MoveTrayPresenter`'s `onDismiss`, `YourAccountFirstOpen.walked`). The door is Your account again and its word says what is still missing.
 2. "Finish setup" is drawn once: on a new account, until the walk has been opened and closed.
 3. Mac half: the same sheet and the same dismissal; nothing of its own.
+
+## §1742 — The website says why there is a wallet: life and money spread across accounts, the day spent switching apps, an inbox and a wallet to keep it all moving (amends the website's hero, title, description and tagline; the App Store text and the cover are unchanged) (user, 2026-11-10: "what's not clear is sort of how wallets fit in"; "we don't have a card so user can't spend"; "we don't overtake their other wallets"; "they aren't coming to us for personal finance, they are staying for that"; of the last line, "i want one unifying solution. an inbox and wallet to what", then "maybe then it is to keep your day moving"; "cool i think we got it"; later, of that ending, "'it all' feels better"; "i think we can change website but app store is fine for now"; "i think onboarding is fine too"; of the title, "is it keep up and keep moving or just keep it all moving") — WRITTEN; rendered at 1280 and 390 wide, not deployed
+
+1. **The copy is three sentences**: "Your life and money are spread across accounts. You spend the day switching between apps to get anything done. Casberi gives you an inbox and a wallet to keep it all moving, privately." The first is the situation, the second the problem, the third one job for both halves.
+2. **The hero** (`website/index.html`) sets the first two as the small line and the third as the headline. The meta and Open Graph descriptions, the showreel's label, `llms.txt` and `llms-full.txt` carry the same words.
+3. **The tagline is "Keep it moving, privately."**, and the title is "Casberi — Keep it moving, privately" (user: "keep it moving, privately?", "i like it"; the sentence keeps "it all", which gathers life and money; the descriptor "An inbox and a wallet for all your accounts." stands beside it; "Keep up and keep moving" was weighed: with no object it tells the reader to hurry; "keep your day moving" was written first and dropped, user: "now i thik 'day' may be bad", "'it all' feels better"), and the foot's tagline on the home and docs pages is "An inbox and a wallet to keep it all moving." The docs page's headline says the same.
+4. **What the copy may not say**: that you spend from Casberi (there is no card), that it acts on an app that is not a wallet, or that its wallet replaces another. "Move" is the wallet's verb.
+5. **"Inbox" is the website's word and "Feed" is the tab's.** The mismatch stands.
+
+**Not changed.** `docs/store-copy.md` and the App Store listing; the cover's "An inbox and a wallet for all your accounts. Kept private." (§1741); `styles.css` and `app.js`, so no `?v=` moved.
+
+**Mac half (§1402).** None: the website only.

@@ -1,6 +1,6 @@
 # Casberi — Full documentation
 
-> Your life and money are scattered across apps. Casberi gives you an inbox and a wallet for all your accounts: connect your apps and everything lands in one private feed on your device, beside one balance for every account you have and follow. Free on iPhone, iPad and Mac, with no Casberi account, ever.
+> Your life and money are spread across accounts. You spend the day switching between apps to get anything done. Casberi gives you an inbox and a wallet to keep it all moving, privately: connect your apps and everything lands in one private feed on your device, beside one balance for every account you have and follow. Free on iPhone, iPad and Mac, with no Casberi account, ever.
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
