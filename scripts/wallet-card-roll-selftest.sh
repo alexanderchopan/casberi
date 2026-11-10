@@ -73,7 +73,10 @@ mutate() {
   if "$work/m" >/dev/null 2>&1; then fail "mutation SURVIVED — $why"; fi
   print "  ok   catches  $why"
 }
-mutate "the most spent leads over what asks" 's/case \(_\?, nil\): return true/case (_?, nil): return false/'
+# Both arms flip together: flipping one alone leaves the comparator
+# inconsistent, and `sorted` then returns the Dictionary's per-process order,
+# so the mutation survived about one run in six (#484).
+mutate "the most spent leads over what asks" 's/case \(_\?, nil\): return true\n(\s*)case \(nil, _\?\): return false/case (_?, nil): return false\n$1case (nil, _?): return true/'
 mutate "every month counts" 's/if let month, spend\.at >= month\.start, spend\.at <= now \{/if true {/'
 mutate "a refund counts as a purchase" 's/if spend\.usd > 0 \{ c\.purchases \+= 1 \}/c.purchases += 1/'
 mutate "a past offer is offered" 's/if let ends = offer\.expires, ends < now \{ continue \}//'
