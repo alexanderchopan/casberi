@@ -458,8 +458,6 @@ struct MoveSentence: View {
     /// Bumped to shake the To word once: an address that imitates a book entry.
     @State private var shake = 0
     @FocusState private var focus: Field?
-    /// The verbs have been shown once (prd §1681).
-    @AppStorage("move.verbsSeen") private var verbsSeen = false
 
     /// The sentence in the past tense, and how it went.
     struct Receipt: Equatable {
@@ -1142,11 +1140,16 @@ struct MoveSentence: View {
             focus = nil
             withAnimation(DS.Motion.standard) { open = nil }
         }
-        // The first Move opens on the verbs, so every one is seen once; the
-        // verb word is how they are reached after (prd §1681).
+        // EVERY Move opens on the verbs (prd §1736, amending §1681 item 4's
+        // "once"): the menu of what Move does is seen each time, Swap's
+        // sentence live above it, so a tap on a blank still goes straight on.
+        // Only a plain open from the tab: a verb asked for, an arrival or a
+        // private move has its verb already, and so has a draft carried in
+        // or a sentence left half-filled in the last five minutes
+        // (`pickUpDraft`, which runs after this and takes the same draft).
         .onAppear {
-            guard !verbsSeen, receipt == nil, !fresh || arrived, stage == nil else { return }
-            verbsSeen = true
+            guard picksUpDraft, receipt == nil, stage == nil else { return }
+            if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60 { return }
             open = .verb
         }
         .onDisappear { chrome.moveDraft = keptDraft }

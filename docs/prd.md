@@ -71766,3 +71766,14 @@ Measured before building (2026-11-08, read-only, nothing sent; one launch of six
 **Checks.** Built and looked at on the simulator over the demo, dark: the bar at rest, folded to Move alone, and unfolded by a scroll back up, on the Feed. Light, the Wallet and Library folded, and Catalyst were not seen.
 
 Canvas: https://claude.ai/artifact/AqgEFLcjvWceQprDa1ieJi
+
+## §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once (amends §1681 item 4's "the first Move opens on the verbs … after that it opens at rest"; declines your tokens under the verbs) (user, 2026-11-09: "it is important for users to see the menu of options, but i also like how we have it now. makes me wonder if the tokens in holdings should be on this screen and below the list when move is first clicked"; on the canvas "Move's first screen", of Now · A (the verbs, every time) · B (your tokens under the verbs): "A, verbs every time") — BUILT
+
+1. **Every plain open from the tab opens the verbs** under the sentence, Swap pink, the sheet whole (§1681b). The sentence above is live, so a tap on a blank goes straight on and the list gives way to that word's choices: it costs a returning swapper no tap. `move.verbsSeen` is deleted.
+2. **Not when the verb is already chosen:** a verb asked for (a token's Swap, a row's Send), an arrival, a private move or Lend opens on its own sentence, and so does a sentence left half-filled in the last five minutes (the kept draft, `pickUpDraft`).
+3. **Declined: your tokens under the verbs.** Two lists answering two words at once make a token tap ambiguous; tokens fit four of the seven verbs, so the sheet would jump between them; and a held token's own sheet already sends and swaps it (§1684).
+4. **Mac half (§1402).** The same view at Catalyst's one height: the verbs open there too.
+
+**Checks.** Built; the open on the verbs with `move.verbsSeen` already set was looked at on the simulator over the demo. A kept draft, a carried draft and Catalyst were not seen.
+
+Canvas: https://claude.ai/artifact/Nj8LPGWiuPhdgRUJ5AH1tR
