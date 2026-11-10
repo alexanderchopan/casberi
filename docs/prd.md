@@ -71893,3 +71893,11 @@ Canvases: https://claude.ai/artifact/FhG1Y8doCc4c2Si1gj5Xbc · https://claude.ai
 **Not built.** Translations of the new strings.
 
 **Mac half (§1402).** Shared code. Not built or run on the Mac.
+
+## §1741b — A walk put away is a walk seen: the Account page opens once the setup walk closes (amends §1741 item 4's "Finish setup until the walk has been taken") (user, 2026-11-10, to "Make the Account page reachable while setup is unfinished?": "Yes, fix it") — BUILT
+
+Verifying §1741 on the simulator found the door shut: while "Finish setup" stood, the Account door opened only the walk, and swiping the walk away left it standing, so keys, Tor and export were unreachable to anyone who declined the walk.
+
+1. Closing the walk by any means (Done, Receive, Later, a swipe) clears the pending mark (`MoveTrayPresenter`'s `onDismiss`, `YourAccountFirstOpen.walked`). The door is Your account again and its word says what is still missing.
+2. "Finish setup" is drawn once: on a new account, until the walk has been opened and closed.
+3. Mac half: the same sheet and the same dismissal; nothing of its own.

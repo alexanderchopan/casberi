@@ -50,7 +50,15 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
+                      onDismiss: {
+                          // A walk put away is a walk seen: the door is Your
+                          // account again, or its page (keys, Tor, export)
+                          // stays shut behind a walk you declined (prd §1741b).
+                          if chrome.moveWalk, let yours = YourAccountKey.address {
+                              YourAccountFirstOpen.walked(yours)
+                              chrome.walkClosed += 1
+                          }
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)

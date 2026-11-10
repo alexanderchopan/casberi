@@ -59,7 +59,9 @@ enum YourAccountFirstOpen {
         UserDefaults.standard.bool(forKey: pendingKey(account))
     }
 
-    /// The walk ended, on Done or on Receive: the door is Your account again.
+    /// The walk ended, on Done or on Receive, or was put away unfinished
+    /// (prd §1741b): the door is Your account again, and its word says what
+    /// is still missing.
     static func walked(_ account: String) {
         UserDefaults.standard.removeObject(forKey: pendingKey(account))
     }

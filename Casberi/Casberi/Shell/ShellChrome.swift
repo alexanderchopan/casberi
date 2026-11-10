@@ -233,6 +233,9 @@ final class ShellChrome {
     /// for an account made on the Wallet's first open. Cleared when the walk
     /// ends or the tray leaves.
     var moveWalk = false
+    /// Bumped when the setup walk closes, so Home's Account door re-reads
+    /// `YourAccountFirstOpen.setupPending` (a defaults key no view observes).
+    var walkClosed = 0
     /// Move opens on Send, privately (prd §1554): Holdings' Private header
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.

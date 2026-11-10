@@ -250,10 +250,12 @@ extension FeedScreen {
         // One account with nothing on Home (prd §1492's quiet state).
         let quiet = !onAll && !walletOnFollowing && !(yours != nil && yoursPicked)
             && needs == 0 && permissions == 0 && counts.flagged == 0
+        // The walk's close re-reads the pending mark below (prd §1741b).
+        let walkClosed = chrome.walkClosed
         walletDoorsSection {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
-            if let yours, YourAccountFirstOpen.setupPending(yours), onAll || yoursPicked {
+            if let yours, walkClosed >= 0, YourAccountFirstOpen.setupPending(yours), onAll || yoursPicked {
                 // **MADE FOR YOU, THE WALK BEHIND THE DOOR (prd §1741, user:
                 // "i don't like … that it says no recovery key bc there is
                 // more in there for a user like roundups").** One word for
