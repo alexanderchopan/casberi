@@ -28,7 +28,6 @@ enum WalletCash {
         Held(currency: "USD", amount: 1_240.50, holderID: holderPrefix + "wise", label: "Wise"),
         Held(currency: "EUR", amount: 620, holderID: holderPrefix + "wise", label: "Wise"),
         Held(currency: "USD", amount: 42.80, holderID: holderPrefix + "bitrefill", label: "Bitrefill"),
-        Held(currency: "BTC", amount: 0.00214, holderID: holderPrefix + "lightning", label: "Lightning"),
         Held(currency: "USD", amount: 86.50, holderID: holderPrefix + "applewallet:Apple Cash", label: "Apple Cash"),
         Held(currency: "USD", amount: 2_410.18, holderID: holderPrefix + "applewallet:Savings", label: "Savings"),
         // SimpleFIN's two bank accounts (prd §1663), under the holder its
@@ -42,9 +41,6 @@ enum WalletCash {
              holderID: SimpleFINShape.holderID(conn: "demo", account: "savings"),
              label: "Chase · Savings"),
     ]
-
-    /// The demo's bitcoin price, beside `demoRates`' fiat (it reaches nothing, §483).
-    static let demoBitcoinUSD = 68_000.0
 
 
     /// Every card balance owed, in words ("$812 owed on Apple Card"), for the
@@ -73,8 +69,8 @@ enum WalletCash {
     /// Every cash balance the seats hold right now. Off main: it reads the
     /// Keychain (`WiseAuth.configured`).
     static func held() -> [Held] {
-        // **THE DEMO'S CASH (prd §1618 item 7):** its Wise, Lightning,
-        // Bitrefill and Apple Wallet seats say they hold balances, so the
+        // **THE DEMO'S CASH (prd §1618 item 7):** its Wise, Bitrefill and
+        // Apple Wallet seats say they hold balances, so the
         // demo holds them, where those seats' own reads put them.
         if DemoMode.isActive { return demoHeld }
         var out: [Held] = []
@@ -103,13 +99,6 @@ enum WalletCash {
            balance.amount > 0, balance.currency.count == 3 {
             out.append(Held(currency: balance.currency, amount: balance.amount,
                             holderID: holderPrefix + "bitrefill", label: "Bitrefill"))
-        }
-        // A Lightning wallet's balance (prd §1098), in bitcoin, priced by
-        // `rates` off the same source the on-chain balance uses.
-        if LightningAuth.configured, let sats = LightningState.balanceSats, sats > 0 {
-            out.append(Held(currency: "BTC", amount: Double(sats) / 100_000_000,
-                            holderID: holderPrefix + "lightning", label: "Lightning",
-                            readAt: LightningState.readAt))
         }
         if AppleWalletBridge.connected {
             for (name, balance) in AppleWalletBridge.cash.sorted(by: { $0.key < $1.key }) {
@@ -141,19 +130,15 @@ enum WalletCash {
     /// Kraken's mid price for each priceable code, as USD per unit (a USDXXX
     /// quote is inverted).
     static func rates(for currencies: Set<String>) async -> [String: Double] {
-        // Bitcoin (a Lightning balance, prd §1098) is priced where the
-        // on-chain balance is, never by Kraken's fiat pairs.
-        var bitcoin: [String: Double] = [:]
-        if currencies.contains("BTC"), let price = await BitcoinBridge.priceUSD() { bitcoin["BTC"] = price }
         let wanted = currencies.filter { quotedOverUSD.contains($0) || quotedUnderUSD.contains($0) }
-        guard !wanted.isEmpty else { return bitcoin }
+        guard !wanted.isEmpty else { return [:] }
         let pairs = wanted.sorted()
             .map { quotedOverUSD.contains($0) ? $0 + "USD" : "USD" + $0 }
             .joined(separator: ",")
         guard let url = URL(string: "https://api.kraken.com/0/public/Ticker?pair=\(pairs)"),
               let root = await IngestSupport.getJSON(url) as? [String: Any],
               let result = root["result"] as? [String: Any]
-        else { return bitcoin }
+        else { return [:] }
         var out: [String: Double] = [:]
         for code in wanted {
             // Kraken answers under its own names (ZEURZUSD, ZUSDZCAD, AUDUSD),
@@ -165,7 +150,7 @@ enum WalletCash {
             let mid = (ask + bid) / 2
             out[code] = quotedOverUSD.contains(code) ? mid : 1 / mid
         }
-        return out.merging(bitcoin) { a, _ in a }
+        return out
     }
 
     /// `rates(for:)`, remembered for ten minutes per code, so a figure that

@@ -225,7 +225,6 @@ enum BridgeGlyph {
         case "wise":      return "arrow.left.arrow.right.circle"
         // The mark's own idea — a field of dots — without drawing the mark.
         case "splits":    return "circle.hexagongrid"
-        case "lightning": return "bolt.fill"
         // A bank: what SimpleFIN reads is your banks, not a brand's mark.
         case "simplefin": return "building.columns"
         // The three finance seats of §780b/§780c. Acorns invests spare change,

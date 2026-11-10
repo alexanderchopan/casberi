@@ -2797,7 +2797,7 @@ struct MainSurface: View {
         guard RoomAccounts.mergedRooms.contains(room) else { return [] }
         let seats = RoomAccounts.connected(in: room, names: names)
             .filter(chrome.seatShows)
-            .filter { !$0.ownScreen }
+            .filter { !$0.ownScreen && $0.picks }
         guard seats.count > 1 else { return [] }
         return seats
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

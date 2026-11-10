@@ -245,11 +245,6 @@ enum BridgeCatalog {
         // balances into the Wallet's total, shop charges into Spending.
         Offer(name: "SimpleFIN",   tagline: "Your banks and cards", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 11, 2)),
-        // Lightning (prd §1098, 2026-10-03) — any Lightning wallet over Nostr
-        // Wallet Connect: the balance into the total, settled payments as
-        // rows, and a connection that can pay refused on save.
-        Offer(name: "Lightning",   tagline: "", group: "Wallet", connectable: true,
-              needsSetup: true, added: day(2026, 10, 3)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you

@@ -248,9 +248,6 @@ enum DemoSeedAll {
                               // Splits (prd §820) — the real seat's ref
                               // shapes, so the same teardown reasoning.
                               "splits:account:demo", "splits:tx:demo",
-                              // Lightning (prd §1098) — the real seat's
-                              // `lightning:` ref family, same reasoning.
-                              "lightning:demo",
                               // SimpleFIN (prd §1663) — the real seat's
                               // escaped ref shape with "demo" as the bank.
                               "simplefin:txn:demo",
@@ -3845,27 +3842,6 @@ enum DemoSeedAll {
             }
         }
 
-        // Lightning (prd §1098). Three settled payments as the seat lands them:
-        // titled by memo, or by direction when there is none, with the amount
-        // in sats in the trailing slot. No content, as a real one has none
-        // since prd §1341: the ref drawn as the body was the sheet's whole
-        // card (user: "this is terrible").
-        let lightning: [(String, String, String, Double, Double)] = [
-            ("Coffee for Ana", "21,000 sats", "received", 18.9, 0.2),
-            ("Paid over Lightning", "4,200 sats", "sent", 3.8, 2),
-            ("Podcast boost", "1,000 sats", "sent", 0.9, 6),
-        ]
-        out += lightning.enumerated().map { i, x in
-            row(.transaction, x.0, source: "Lightning", ref: "lightning:demo:\(i)",
-                days: x.4, hour: 11) { t in
-                t.transferDirection = x.2
-                t.transferAmount = x.1
-                t.transferVenue = String(localized: "Lightning")
-                t.priceValue = x.3
-                t.priceCurrency = "USD"
-            }
-        }
-
         // Privy (prd §803g) — the apps that made a wallet, dated when each was
         // made, and what moved in two of them. The room's own head reads
         // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
@@ -5613,8 +5589,6 @@ enum DemoSeedAll {
         ("Wise", "2 balances", "Reads your balances and transfers."),
         // Splits (prd §820): what `SplitsWatch.proof` composes — never a total.
         ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
-        // Lightning (prd §1098): what `LightningWatch` composes.
-        ("Lightning", "Connected", "Reads your Lightning balance and payments."),
         // SimpleFIN (prd §1663): the banks `SimpleFINWatch` names.
         ("SimpleFIN", "Chase", "Reads your banks' balances and transactions."),
         // Privy (prd §803g) — how many apps made a wallet and how many are

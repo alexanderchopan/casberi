@@ -21,7 +21,6 @@ import Foundation
 enum KeyShape {
     /// (prefix, the catalogue name of the service that issues it).
     static let prefixes: [(prefix: String, service: String)] = [
-        ("nostr+walletconnect://", "Lightning"),
         ("github_pat_", "GitHub"), ("ghp_", "GitHub"), ("gho_", "GitHub"),
         ("ghu_", "GitHub"), ("ghs_", "GitHub"),
         ("sk_live_", "Stripe"), ("sk_test_", "Stripe"), ("rk_live_", "Stripe"),

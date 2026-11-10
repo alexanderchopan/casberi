@@ -23,8 +23,6 @@ enum ProbeHooks {
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
         "-byokKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
-        // A Nostr Wallet Connect string carries its client secret (prd §1098).
-        "-lightningConnect",
         // A Setup Token claims a bank connection; an Access URL IS one (prd §1663).
         "-simplefinConnect",
         // Safe's API key — a JWT over our own developer account's quota
@@ -4756,28 +4754,6 @@ enum ProbeHooks {
         // insights' verdicts. Pair with `-walletAddress <a BTC address>` to
         // also exercise the watched-wallet path (holdings fold, per-wallet
         // card) rather than just the sweep itself.
-        // `-lightningConnect "<nostr+walletconnect://…>"|forget` (prd §1098)
-        // runs the account page's own check — keep it only if it cannot pay —
-        // then one sync, and NSLogs the outcome, the balance and the landed
-        // count. Never logs the string: it is the credential.
-        Hook(key: "lightningConnect") { spec, context in
-            Task { @MainActor in
-                if spec == "forget" {
-                    LightningAuth.clear()
-                    NSLog("[Casberi] lightning| forgotten")
-                    return
-                }
-                let outcome = await LightningAuth.connect(spec)
-                NSLog("[Casberi] lightning| connect: %@", outcome == .kept ? "kept"
-                      : (LightningAuth.sentence(outcome) ?? "?"))
-                guard outcome == .kept else { return }
-                let added = await LightningIngest.refresh(context: context)
-                NSLog("[Casberi] lightning| balance %@ sats · %@ landed · %@",
-                      LightningState.balanceSats.map(String.init) ?? "UNREAD",
-                      added.map(String.init) ?? "FAILED",
-                      LightningIngest.lastPassFailure ?? "no failure")
-            }
-        },
         // `-simplefinConnect "<setup token | access URL>"|forget` (prd §1663)
         // — the page's own connect (`SimpleFINConnect.connect`), then the one
         // forced first read. The bridge's developer page hands out a demo

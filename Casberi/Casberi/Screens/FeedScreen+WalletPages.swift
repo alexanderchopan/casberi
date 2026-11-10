@@ -172,8 +172,6 @@ extension FeedScreen {
     /// your account picked, never on another account's or Following's.
     var walletShowsPrivate: Bool {
         if walletOnAll { return true }
-        // Privacy Pools' pick is your private balance (prd §1614).
-        if selectedSeat?.source == PrivacyPoolsBridge.sourceName { return true }
         guard let yours = YourAccountDemo.shownAddress, let scope = chrome.walletScope else { return false }
         return WalletWatch.sameAddress(scope, yours)
     }
@@ -251,7 +249,7 @@ extension FeedScreen {
         let permissions = counts.delegations + counts.approvals
         // One account with nothing on Home (prd §1492's quiet state).
         let quiet = !onAll && !walletOnFollowing && !(yours != nil && yoursPicked)
-            && !walletPickHasOwnSection && needs == 0 && permissions == 0 && counts.flagged == 0
+            && needs == 0 && permissions == 0 && counts.flagged == 0
         walletDoorsSection {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
@@ -278,8 +276,7 @@ extension FeedScreen {
             // **EVERY APP NAMES ITS ACCOUNT (prd §1618 item 1, user: "you would
             // think all of them have an account row naming the account too").**
             // The line its own account page states; the row opens that page.
-            // Safe and 0xBow name theirs in their own section (§1614).
-            if let seat = selectedSeat, !walletPickHasOwnSection {
+            if let seat = selectedSeat {
                 walletDoor(.yourAccount, name: seat.name,
                            word: bridges.bridges.first { seat.owns($0.name) }?.statusLine,
                            act: { openAppPage(seat.name) })

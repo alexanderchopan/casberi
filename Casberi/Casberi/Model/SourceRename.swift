@@ -175,7 +175,7 @@ enum SourceRename {
         "cloudflare": "Cloudflare", "dodopayments": "Dodo Payments",
         "duolingo": "Duolingo", "ethvalidators": "ETH Validators",
         "geminiExchange": "Gemini Exchange", "l2beat": "ETHBEAT",
-        "lightning": "Lightning", "pagerduty": "PagerDuty", "polar": "Polar",
+        "pagerduty": "PagerDuty", "polar": "Polar",
         "posthog": "PostHog", "pypi": "PyPI", "sentry": "Sentry",
         "slack": "Slack", "splits": "Splits", "spotify": "Spotify",
         "stripe": "Stripe", "vercel": "Vercel", "walletbeat": "Walletbeat",
@@ -279,7 +279,7 @@ enum SourceRename {
     /// Deals, Shopify and Cursor joined them the same day (prd §1049): the two
     /// shopping seats followed someone else's catalogue and nobody would use
     /// them, and Cursor went with them. Nostr joined them 2026-10-05 (user:
-    /// "remove nostr"); Lightning keeps the relay client it reads through.
+    /// "remove nostr"); its relay client went with Lightning, below.
     /// Farcaster joined them the same day (prd §1110, user: "remove
     /// farcaster"): the seat, its casts, channels, likes and signer grants.
     /// Hegotá Frames joined them 2026-10-08 (prd §1206, user: "the reality is
@@ -289,6 +289,11 @@ enum SourceRename {
     /// Gnosis Pay joined them 2026-10-15 (prd §1318, user: "they are
     /// deprecating it"): the seat record and its card spends
     /// (`gnosispay:spend:` refs, all under the source "Gnosis Pay").
+    /// Lightning joined them 2026-11-09 (user: "we can get rid of
+    /// Lightning"): the seat record, its settled payments (`lightning:` refs
+    /// under the source "Lightning"), its balance defaults and the Nostr
+    /// Wallet Connect string in the vault. Bitcoin on chain is the Wallet's
+    /// and stays.
     static let droppedSources: Set<String> = [
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
@@ -303,6 +308,8 @@ enum SourceRename {
         // Aztec's testnet room (prd §1688): its seat record and the
         // sequencer rows it landed. Mainnet staking's rows are the Wallet's.
         "Aztec",
+        // Lightning (2026-11-09): its seat record and settled payments.
+        "Lightning",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
@@ -335,6 +342,9 @@ enum SourceRename {
         "aztec.readAt.", "aztec.resetSeen.", "aztec.followsNetwork.", "aztec.accounts.",
         "aztec.feeJuice.", "aztec.stakes.", "aztec.schedule.", "aztec.stakeSymbol.",
         "aztec.signer.", "room.value.history.Aztec",
+        // Lightning (2026-11-09): the last balance read and its time
+        // (`lightning.balance.msats`, `lightning.balance.at`).
+        "lightning.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money
@@ -351,15 +361,17 @@ enum SourceRename {
     /// Cursor's API key, in the shared token vault (`TokenBridge.tokenKey`,
     /// "token.<seat id>") rather than a service of its own. Unlike the devnet
     /// keys above, this one could spend money and write code, so it must not
-    /// outlive the seat that was its only reader.
-    private static let droppedVaultKeys = ["token.cursor"]
+    /// outlive the seat that was its only reader. Lightning's Nostr Wallet
+    /// Connect string (2026-11-09) the same way: read-only by the seat's own
+    /// check on save, and still a secret with no reader.
+    private static let droppedVaultKeys = ["token.cursor", "token.lightning"]
 
     /// `.v2` since prd §1049 added three seats, `.v3` since Nostr joined,
     /// `.v4` since Farcaster joined (prd §1110), `.v5` since Hegotá Frames
-    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318), `.v7` since Markets joined (prd §1529), `.v8` since Aztec's testnet room joined (prd §1688): a device that ran the earlier pass would otherwise
+    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318), `.v7` since Markets joined (prd §1529), `.v8` since Aztec's testnet room joined (prd §1688), `.v9` since Lightning joined (2026-11-09): a device that ran the earlier pass would otherwise
     /// never clear the new seats' defaults. The work it repeats is idempotent
     /// — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v8"
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v9"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a
@@ -409,6 +421,10 @@ enum SourceRename {
                 SecItemDelete(query as CFDictionary)
             }
             for key in droppedVaultKeys { TokenVault.delete(key) }
+            // Lightning's health record, under its seat id (pre-§1163) and
+            // its catalog name: the seat record may already be gone, so the
+            // by-name forget above cannot be relied on.
+            ["lightning", "Lightning"].forEach(BridgeHealth.forget)
             UserDefaults.standard.set(true, forKey: droppedLocalKey)
         }
         var dropped: [Thing] = []

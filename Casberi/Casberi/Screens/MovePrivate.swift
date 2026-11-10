@@ -45,6 +45,11 @@ struct MovePrivateSentence<Head: View>: View {
     @State private var open: Blank?
     @State private var copied = false
     @State private var typed = ""
+    /// How hidden a send from this money is; nil where nothing was read.
+    @State private var hidden: HiddenWords?
+    #if DEBUG
+    @State private var hiddenPreview = false
+    #endif
     @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var context
     @Environment(ShellChrome.self) private var chrome
@@ -91,9 +96,15 @@ struct MovePrivateSentence<Head: View>: View {
         .onChange(of: chrome.moveTall) { _, tall in
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
         }
+        // How hidden the money is, read off the main body (prd §628, §1738).
+        .task(id: move.symbol) {
+            await PrivacyPoolsCrowd.refresh()
+            hidden = hiddenWords()
+        }
         .task(id: move.mode) {
             move.context = context
             await move.read()
+            hidden = hiddenWords()
             #if DEBUG
             if let amount = UserDefaults.standard.string(forKey: "movePrivateAmount"), move.choices.contains(amount) {
                 move.amount = amount
@@ -462,6 +473,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// where there is a second thing to do.
     private var foot: some View {
         VStack(spacing: 0) {
+        if move.stage == .ready, let hidden { hiddenLine(hidden) }
+        #if DEBUG
+        if hiddenPreview, move.stage != .ready, let hidden { hiddenLine(hidden) }
+        #endif
         HStack(alignment: .firstTextBaseline) {
             switch move.stage {
             case .needsFunds(let address):
@@ -504,6 +519,62 @@ struct MovePrivateSentence<Head: View>: View {
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+    }
+
+    /// **HOW HIDDEN, WHERE YOU SEND (prd §1738; was a section on the Privacy
+    /// Pools pick, §1614).** The deposits this money sits among, or "Wait a
+    /// day" while its newest deposit is under a day old and a send from it is
+    /// easy to tie back. It advises and never blocks. Nothing where 0xBow
+    /// publishes no count (off Ethereum) and nothing was just deposited.
+    struct HiddenWords: Equatable {
+        let text: String
+        let soon: Bool
+    }
+
+    private func hiddenWords() -> HiddenWords? {
+        guard move.mode == .send else { return nil }
+        #if DEBUG
+        // `-moveHiddenPreview soon|<count>`: the line drawn with no private
+        // money to read, which a simulator never has (NSLogs `moveHidden:`).
+        if let raw = UserDefaults.standard.string(forKey: "moveHiddenPreview"), !raw.isEmpty {
+            hiddenPreview = true
+            NSLog("[Casberi] moveHidden: preview %@", raw)
+            if let count = Int(raw) {
+                return HiddenWords(text: String(localized: "Hidden among \(count.formatted()) deposits"), soon: false)
+            }
+            return HiddenWords(text: String(localized: "Wait a day"), soon: true)
+        }
+        #endif
+        let chain = move.network.chainId
+        let notes = store.shownNotes.filter {
+            $0.symbol == move.symbol && $0.chainId == chain && PrivateMoney.kind($0.status) != .refused
+        }
+        if PrivacyPoolsCrowd.tooSoon(newest: notes.map(\.at).max()) {
+            return HiddenWords(text: String(localized: "Wait a day"), soon: true)
+        }
+        let counts = PrivacyPoolsCrowd.counts()
+        // The smallest crowd any of its notes is in: the honest one.
+        guard let crowd = notes.compactMap({
+            PrivacyPoolsCrowd.crowd(symbol: move.symbol, chainId: chain, share: $0.share,
+                                    plain: $0.share == nil, counts: counts)
+        }).min() else { return nil }
+        return HiddenWords(text: String(localized: "Hidden among \(crowd.formatted()) deposits"), soon: false)
+    }
+
+    private func hiddenLine(_ hidden: HiddenWords) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: hidden.text)
+                .dsText(.body17)
+                .foregroundStyle(hidden.soon ? DS.attentionInk : DS.textSecondary)
+            if hidden.soon {
+                Text("Your newest deposit is under a day old, so a send is easy to tie to it.")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, DS.Space.s2)
+        .accessibilityElement(children: .combine)
     }
 
     /// **POWERED BY 0XBOW (prd §1685):** the protocol that does the move signs

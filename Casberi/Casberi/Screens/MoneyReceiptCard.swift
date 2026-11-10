@@ -67,9 +67,9 @@ struct MoneySubjectDisc: View {
         case .asset(let symbol):
             AssetMark(name: symbol, size: size)
         case .named(let name):
-            // An app the catalogue carries wears its own mark (Lightning's
-            // bolt drew as an "LI" disc, prd §1341); a merchant or a rail
-            // keeps the asset rule.
+            // An app the catalogue carries wears its own mark, never its
+            // initials on a disc (prd §1341); a merchant or a rail keeps the
+            // asset rule.
             if BridgeIcon.hasMark(name) {
                 BridgeIcon(name: name, size: size, circular: true)
             } else {
@@ -682,8 +682,7 @@ struct MoneySheetHead: View {
     @ViewBuilder private var line: some View {
         let lead = lineLead.flatMap { $0.isEmpty ? nil : $0 }
         // A figure's worth joins the clock on one line; a SENTENCE (a Safe's
-        // "Waiting on one more signature, yours", a Lightning payment's
-        // "worth about $18.90 when it landed") stands on its own line over
+        // "Waiting on one more signature, yours") stands on its own line over
         // it, wrapping, never cut beside the clock.
         let sentence = lead.map { $0.count > Self.leadOnLineCap } ?? false
         VStack(spacing: DS.Space.s1) {

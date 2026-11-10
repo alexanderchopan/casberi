@@ -382,6 +382,13 @@ final class ShellChrome {
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String? {
         didSet {
+            // An app with no pick is never a scope (prd §1738): a hook or an
+            // old door that names it reads as All, or the Wallet stood on a
+            // pick no menu row and no rows could honour (seen: an empty box).
+            if let seat = RoomAccounts.seat(walletScope, in: CategoryFold.walletRoom), !seat.picks {
+                walletScope = nil
+                return
+            }
             if walletScope != oldValue {
                 walletPickLanding = walletScope != nil
                 walletScopeChangedAt = .now
@@ -409,8 +416,34 @@ final class ShellChrome {
         room == CategoryFold.walletRoom ? walletScope : mergedScope[room]
     }
 
+    /// Holdings' Private head, as a scroll request (`walletScrollRequest`).
+    static let privateAnchor = "wallet.holdings.private"
+
     /// A door that named a folded app lands in its merged room, scoped to it.
+    /// An app with no pick (prd §1738) lands on the Wallet section that
+    /// already holds its money, on All.
     func pickSeat(_ seat: RoomAccounts.Seat, in room: String) {
+        switch seat.landing {
+        case .pick: break
+        case .privateHoldings:
+            walletScope = nil
+            walletSection = .holdings
+            walletScrollRequest = Self.privateAnchor
+            // The head takes the request as it appears; where no Private
+            // head is drawn (nothing private, a build that cannot move),
+            // it lapses rather than scroll some later visit.
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                if self?.walletScrollRequest == Self.privateAnchor { self?.walletScrollRequest = nil }
+            }
+            return
+        case .yourAccount:
+            walletScope = nil
+            // Your account's page where there is one; else the Wallet's Home,
+            // whose Needs you holds a watched Safe's queue.
+            walletSection = YourAccountDemo.shownAddress == nil ? .home : .yourAccount
+            return
+        }
         let id = RoomAccounts.scopeID(seat)
         if room == CategoryFold.walletRoom {
             walletScope = id

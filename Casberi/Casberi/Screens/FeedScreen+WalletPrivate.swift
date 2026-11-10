@@ -23,11 +23,10 @@ extension FeedScreen {
         let store = PrivateMoneyStore.shared
         let rows = store.rows
         // Yours and All only (prd §1590): private money is your Casberi
-        // account's, never a followed wallet's — and Privacy Pools'
-        // on its pick, the pool that holds it (prd §1702).
-        let poolsPick = selectedSeat?.source == PrivacyPoolsBridge.sourceName
-        if selectedSeat == nil || poolsPick, !walletOnFollowing,
-           poolsPick || selectedWallet.map(YourAccountDemo.isYours) ?? true,
+        // account's, never a followed wallet's or an app's pick. Privacy
+        // Pools has no pick (prd §1738): its tile lands here.
+        if selectedSeat == nil, !walletOnFollowing,
+           selectedWallet.map(YourAccountDemo.isYours) ?? true,
            PrivateMove.available || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
@@ -265,6 +264,14 @@ extension FeedScreen {
         .accessibilityLabel(Text(verbatim: [String(localized: "Private"), total].compactMap { $0 }.joined(separator: ". ")))
         .accessibilityHint(Text("Sends to your private balance"))
         .walletListRow()
+        // Where Privacy Pools' and Railgun's Library tiles land (prd §1738).
+        .id(ShellChrome.privateAnchor)
+        .task(id: chrome.walletScrollRequest) {
+            guard chrome.walletScrollRequest == ShellChrome.privateAnchor else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            cardScrollTarget = ShellChrome.privateAnchor
+            chrome.walletScrollRequest = nil
+        }
     }
 
     /// One token in one state on one network: the preview row's anatomy

@@ -27,6 +27,23 @@ enum RoomAccounts {
         /// rather than narrowing the room's (prd §1050k): a testnet's tiles,
         /// verbs and accounts are its own, and no view adds two networks.
         var ownScreen = false
+        /// Where a door that names the app lands (prd §1738). `.pick` narrows
+        /// the room to it and lists it in the room's menu. The others have no
+        /// pick: their money is already a section of the Wallet, so the door
+        /// lands on that section and the menu never lists them. Their rows
+        /// still ride the room (`host(ofSource:)`).
+        var landing: Landing = .pick
+
+        enum Landing: Equatable {
+            case pick
+            /// Holdings, at Private: Privacy Pools and Railgun.
+            case privateHoldings
+            /// Your account, where its keys and signers are: Safe.
+            case yourAccount
+        }
+
+        /// Whether the room's menu lists it and a scope may name it.
+        var picks: Bool { landing == .pick }
 
         /// Whether a row of `source` is this app's: its own source, its
         /// catalogue name, or a name it was renamed from (`Corpus.renamedSources`).
@@ -267,11 +284,9 @@ enum RoomAccounts {
     /// are Reading's (§1051a), not the Wallet's.
     private static let wallet: [Seat] = [
         Seat(name: "Safe", source: SafeBridge.sourceName,
-             holder: nil, group: safes, mark: "Safe"),
+             holder: nil, group: safes, mark: "Safe", landing: .yourAccount),
         Seat(name: "Privy", source: PrivyHomeFeed.source,
              holder: WalletPortfolio.privyHolderPrefix, group: appWallets, mark: "Privy"),
-        Seat(name: "Lightning", source: LightningIngest.source,
-             holder: WalletCash.holderPrefix + "lightning", group: appWallets, mark: "Lightning"),
         Seat(name: ExchangeBridge.Venue.coinbase.display, source: nil,
              holder: ExchangeBridge.Venue.coinbase.rawValue, group: exchanges, mark: "Coinbase"),
         Seat(name: ExchangeBridge.Venue.kraken.display, source: nil,
@@ -308,9 +323,9 @@ enum RoomAccounts {
         Seat(name: "Peer", source: PeerBridge.sourceName,
              holder: nil, group: trades, mark: "Peer"),
         Seat(name: "Privacy Pools", source: PrivacyPoolsBridge.sourceName,
-             holder: nil, group: trades, mark: "Privacy Pools"),
+             holder: nil, group: trades, mark: "Privacy Pools", landing: .privateHoldings),
         Seat(name: "Railgun", source: RailgunBridge.sourceName,
-             holder: nil, group: trades, mark: "Railgun"),
+             holder: nil, group: trades, mark: "Railgun", landing: .privateHoldings),
         Seat(name: "ENS", source: ENSWatch.source,
              holder: nil, group: names, mark: "ENS"),
         Seat(name: "Splits", source: SplitsShape.source,

@@ -84,6 +84,9 @@ extension FeedScreen {
                         chrome.walletScrollRequest = nil
                     }
             }
+            // Your Safes and what moves each without a signature (prd §1738,
+            // was the Safe pick's): nothing while you hold a key to none.
+            WalletUnsignedSection(onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
             // Where each network is read from (prd §1517), under the Keys card.
             // The recovery check's page is Needs you's door (§1515): the Keys
             // card already has a Recovery key row.

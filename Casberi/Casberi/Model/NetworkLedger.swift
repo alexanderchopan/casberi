@@ -21,8 +21,8 @@ import Foundation
 ///    typed thought off the device), `LinkTitle`, and the ~27 bridges that
 ///    hold their own `URLSession` (RSS, Spotify, Dropbox, the
 ///    exchanges, and the rest). NOT covered: images loaded straight into rows
-///    as you scroll, the two WebSocket paths (`NostrRelay`,
-///    `WalletConnectSocket`), and the WalletConnect SDK's own hosts, which
+///    as you scroll, the WebSocket path (`WalletConnectSocket`), and the
+///    WalletConnect SDK's own hosts, which
 ///    live in a vendored dependency and are invisible to source-level
 ///    instrumentation. Those are named in the registry and again on the
 ///    screen.

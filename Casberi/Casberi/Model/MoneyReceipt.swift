@@ -322,9 +322,9 @@ struct MoneyReceipt: Equatable {
         "Wallet", "Apple Wallet", "ether.fi", "Privacy.com",
         "Peer", "Privacy Pools", "Railgun", "Safe", "Wise",
         // EVERY MONEY ROW IN THE WALLET OPENS THE RECEIPT (prd §1341, user,
-        // of a Lightning payment and an Acorns account in Home's
-        // Transactions: "this is terrible", "they all look like that").
-        "Lightning", "Privy", "Splits", "MetaMask Card", "Plasma One",
+        // of an Acorns account in Home's Transactions: "they all look like
+        // that").
+        "Privy", "Splits", "MetaMask Card", "Plasma One",
         "Acorns", "Rocket Money", "SimpleFIN",
     ]
 
@@ -406,7 +406,6 @@ struct MoneyReceipt: Equatable {
         case "Railgun":                      return railgun(f)
         case "Safe":                         return safe(f)
         case "Wise":                         return wise(f)
-        case "Lightning":                    return lightning(f)
         case "Privy":                        return privy(f)
         case "Splits":                       return splits(f)
         case "SimpleFIN":                    return bank(f)
@@ -755,36 +754,6 @@ struct MoneyReceipt: Equatable {
             stamp: stuck ? .yourTurn : pending ? .pending : returned ? .refund : .settled,
             finality: stuck || pending ? .open : .torn,
             hue: .neutral)
-    }
-
-    // MARK: Lightning (prd §1341)
-
-    /// A settled Lightning payment, as `LightningIngest` lands it: the memo
-    /// as the title (or the direction's own words when there is none), the
-    /// sats stamped on `transferAmount`, and the dollars the bridge priced it
-    /// at when it landed. Only settled payments land, so it is always final.
-    private static func lightning(_ f: Facts) -> MoneyReceipt {
-        let received = f.direction == "received"
-        let lead = received ? String(localized: "Received over Lightning")
-                            : String(localized: "Paid over Lightning")
-        let parts = split(f.amount)
-        // With no memo the bridge titles the row with these same words, so
-        // the memo is the party only when it is a memo.
-        let memo = f.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return MoneyReceipt(
-            subject: .named("Lightning"),
-            mine: nil,
-            lead: lead,
-            party: memo.isEmpty || memo == lead ? nil : memo,
-            titleFallback: parts.number.isEmpty ? f.title : nil,
-            amount: parts.number.isEmpty ? nil
-                : Amount(number: (received ? "+" : "−") + parts.number,
-                         unit: parts.unit, tone: received ? .gain : .plain),
-            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),
-            sentence: String(localized: "Settled \(dayPhrase(f.capturedAt))."),
-            stamp: .settled,
-            finality: .torn,
-            hue: .bitcoin)
     }
 
     // MARK: Privy (prd §1341)

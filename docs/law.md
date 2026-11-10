@@ -135,7 +135,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Holdings is a true-area treemap: the total alone, grey tiles showing mark and share, the tail as Other, blue when pressed (§939). A tile's mark is 0.3 of its shorter side, 16–56pt (§957).
 - The Wallet has no Accounts or Activity tile: the menu under the tiles picks the account, and Home's list is only what happened, one row per move in time, with no in/out blocks (§942, §1039). What's ahead leads Home since Coming up became Subscriptions: Needs you, then the dated rows under their days, soonest first, then what happened (§1111). The connections reading is deleted with its model (§1041).
 - The Wallet's tiles are Home · Holdings · Security · Subscriptions (§1107, §1111). Subscriptions tracks subscriptions and nothing else: "$X a month", the count and the year, the renewals on its calendar, then Track a subscription first and every plan (§1111, the verb since §1117). Holdings is Tokens (each worth 5% of the whole, five at most, the rest one "N more tokens" row opening every token), then Positions (lending closest to liquidation first, a borrow saying how far it can fall), then NFTs (§1048a, §1107). Security's box is a checkup of six counts and nothing over them (Signatures · Delegations · Approvals over Address poisoning · Fake tokens · Fake transfers), each a door to its section; amber only for what waits on you, has no limit, or is trying to fool you; a fake token wears `xmark.seal.fill`, a fake transfer `arrow.down.circle.dotted` (§1107, §1107a). Watch a wallet is the Accounts pill's first row, never a tile (§1107).
-- The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
+- The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (a card's spending), inside the box's own well (§1048d). An app keeps a pick only when its money is not already a section of the Wallet: Safe, Privacy Pools and Railgun have none; Library's tiles for Privacy Pools and Railgun land on Holdings at Private and Safe's on Your account, where Your Safes and Without a signature stand; how hidden a private balance is, is said in a private send's foot; Aztec's tile is its directory; Lightning is deleted (§1738).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
 - Testnets (Logos, `flask`) is its own category, never inside Wallet (§1050, §1050a). Aztec's testnet room is deleted; Aztec lives in the Wallet as its mainnet staking (§1688).
 - Aztec mainnet is the Wallet's, never Testnets': its contracts are named, and AZTEC staked is a Positions row per sequencer, in AZTEC, never priced. A stake is found by its withdrawer (the wallet, or its token vault's staker) and read on the Registry's canonical Rollup, never the one that queued it. Its line says its health and the wallet's share of unclaimed rewards. Withdrawable money and a stopped sequencer notify; an Aztec vote is a quiet row (§1277, §1279).
@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1909 of 1981 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1909 of 1982 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1401,9 +1401,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1047 — The ask is deleted: the on-device model reads and no longer answers, and the composer keeps Find and the agents you c…
 - §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and… (amended by §1049, §1050, §1051a, §1078, §1105)
 - §1048a — One Wallet, step 2: Cards takes NFTs' tile, NFTs read under Holdings, and the Wallet's query carries the card seats (part superseded by §1078)
-- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e, §1504)
+- §1048b — One Wallet, step 3: the account menu lists the apps the Wallet folded in, an app pick narrows the room to that app, a… (amended by §1050e, §1504, §1738)
 - §1048c — One Wallet, step 4: the folded apps stop being rooms; Home and Coming up merge; a merged room's tray header is a door… (amended by §1050f; part superseded by §1050e)
-- §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room… (amended by §1614)
+- §1048d — One Wallet: an app pick shows that app's own head in the box, and §1050e–§1050f are built (no marks for a merged room… (amended by §1614, §1738)
 - §1048f — One Wallet: Rocket Money's next charges and Peer's settling sales reach Coming up; Bitrefill folds in
 - §1049 — The categories, past Wallet: Shopping dissolves, Life splits into Life and Day, Notes goes, Splits joins the Wallet m… (amended by §1050, §1050a, §1050b, §1051a, §1111, §1118, §1612; part superseded by §1050e)
 - §1050 — Every tray entry is a category: Markets is its own category, and Hegotá Frames and Logos become one, Testnets (amended by §1050a, §1151)
@@ -1469,7 +1469,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1095a — The Logos page says how to pair, and an Observer's address is never watched as a node (a Logos tester, 2026-10-04: "n…
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
 - §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
-- §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
 - §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127, §1136, §1171)
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
@@ -1994,8 +1993,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1611 — Data: the box shows its evidence, Privacy becomes two sections, Export is two rows, every row's words on one edge
 - §1612 — Library has no box: its title and the folders; Contacts moves to Social, and Contacts and Calendar open their lists (… (amended by §1615)
 - §1613 — Licenses is one row per library, each opening its page
-- §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i…
-- §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes…
+- §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i… (amended by §1738)
+- §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes… (amended by §1738)
 - §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with,…
 - §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th…
 - §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and… (amended by §1665)
@@ -2122,7 +2121,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704, §1705)
 - §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…
-- §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance
+- §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance (amended by §1738)
 - §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list…
 - §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is
 - §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i… (amended by §1711) [+1 sub-entries]
@@ -2155,12 +2154,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at…
 - §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once
 - §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
+- §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle…
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1138→§1612 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1314→§1612 · §1317→§1612 · §1362→§1367 · §1366→§1367
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1098→§1738 · §1138→§1612 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1314→§1612 · §1317→§1612 · §1362→§1367 · §1366→§1367
 
 ## Renumbered (generated)
 

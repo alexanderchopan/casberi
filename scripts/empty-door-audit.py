@@ -51,9 +51,6 @@ ALLOWED = {
     "AcornsLive.swift": (1, "an unmeasured seat behind a sign-in (§780b): no per-record page is "
                             "known, and a guessed one is a wrong door"),
     "RocketMoneyLive.swift": (1, "the same seat shape as Acorns (§780b)"),
-    "LightningBridge.swift": (1, "a Lightning payment is private to the two wallets: no "
-                                 "explorer has a page for it, and its hash drawn as the body "
-                                 "was the sheet's whole card (prd §1341)"),
     "SafeSigner.swift": (1, "a signature made on this phone; the transaction's own row "
                             "carries the Safe page"),
     "LogosBridge.swift": (1, "your node's state change: its only page would be the node's "

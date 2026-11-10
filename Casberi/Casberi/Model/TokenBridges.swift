@@ -28,11 +28,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// PROPOSAL whose status moves after it lands, and its screen checks the
     /// key's scopes before keeping it. See `SplitsAuth`.
     case splits   = "Splits"
-    /// Lightning (2026-10-03, prd §1098) — any Lightning wallet, over the
-    /// Nostr Wallet Connect string it hands out. Its sweep is its own (the
-    /// reads are relay requests, not HTTPS), and its screen checks the
-    /// connection cannot pay before keeping it. See `LightningAuth`.
-    case lightning = "Lightning"
     /// SimpleFIN (2026-11-02, prd §1663) — the person's banks and cards,
     /// through a SimpleFIN Bridge subscription they pay for themselves. The
     /// "token" is a one-time Setup Token the screen CLAIMS for an Access URL,
@@ -93,7 +88,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "privacy"
         case .wise:     "wise"
         case .splits:   "splits"
-        case .lightning: "lightning"
         case .simplefin: "simplefin"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
@@ -166,9 +160,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .wise:      URL(string: "https://wise.com/settings/")
         // The API-keys page itself: the step below only has to name the scope.
         case .splits:    URL(string: "https://app.splits.org/settings/team/api-keys/")
-        // No door: the connection is made inside whichever wallet holds the
-        // money, and there is no one page to send anybody to.
-        case .lightning: nil
         // The bridge's own "create" page: where a Setup Token is made, and
         // where a person with no subscription is asked for one first.
         case .simplefin: URL(string: SimpleFINShape.createURL)
@@ -268,7 +259,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             String(localized: "Get your API key")
         case .wise:      String(localized: "Get your API token")
         case .splits:    String(localized: "Get your API key")
-        case .lightning: String(localized: "Make a connection")
         case .simplefin: String(localized: "Get a Setup Token")
         case .aws:
             // "IAM" dropped to fit the 26-char door-label budget — the address
@@ -332,11 +322,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // save (`SplitsShape.isReadOnly`), so saying so first saves a trip.
         case .splits: [
             "Create a key with the Read scope only"]
-        // The permissions are the whole step: a connection that can pay is
-        // refused on save, so saying so first saves a trip.
-        case .lightning: [
-            "In your wallet, add a Nostr Wallet Connect app",
-            "Allow only Read balance and Read transactions"]
         // The subscription is named because it is the person's to pay
         // (prd §1663), and the order because a token made before any bank
         // is connected reads nothing.
@@ -454,7 +439,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .wise:     "API token"
         case .splits:   "sk_…"
-        case .lightning: "nostr+walletconnect://…"
         case .simplefin: "Setup Token"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
@@ -515,7 +499,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .wise:     "API token"
         case .splits:   "API key"
-        case .lightning: "connection"
         case .simplefin: "Setup Token"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
@@ -548,7 +531,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "purchases"
         case .wise:     "transfers"
         case .splits:   "transactions"
-        case .lightning: "payments"
         case .simplefin: "transactions"
         case .posthog:  "updates"
         case .stripe:   "updates"
@@ -728,9 +710,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // contacts must not inherit the old one's.
         case .splits:
             SplitsState.clear()
-        // A fresh connection may be a different wallet.
-        case .lightning:
-            LightningState.clear()
         // A fresh token may reach different banks.
         case .simplefin:
             SimpleFINState.clear()
@@ -1140,9 +1119,6 @@ enum TokenIngest {
         // Splits owns its pass for Wise's reason: a proposal's status moves
         // after it lands, and the balances are a state written beside it.
         if bridge == .splits { return await SplitsIngest.refresh(context: context) }
-        // Lightning owns its pass: its reads are Nostr relay requests, and the
-        // balance is a state written beside the rows.
-        if bridge == .lightning { return await LightningIngest.refresh(context: context) }
         // SimpleFIN owns its pass: the Access URL is checked before it reads,
         // and the bridge's daily rate gates every read (`readGap`).
         if bridge == .simplefin { return await SimpleFINIngest.refresh(context: context) }
@@ -1254,7 +1230,6 @@ enum TokenIngest {
         case .aws:      ownSweepUnreachable(.aws)
         case .wise:     ownSweepUnreachable(.wise)
         case .splits:   ownSweepUnreachable(.splits)
-        case .lightning: ownSweepUnreachable(.lightning)
         case .simplefin: ownSweepUnreachable(.simplefin)
         case .jira:     await jira(token)
         }

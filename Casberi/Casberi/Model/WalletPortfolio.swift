@@ -367,8 +367,7 @@ struct WalletPortfolio: Equatable, Codable {
             // rooms don't show (§837), at the demo's own fixed rates: it
             // reaches nothing (§483), and `WalletCash.isSampleRate` says so.
             let cash = WalletCash.held().compactMap { held -> (symbol: String, usd: Double, holderID: String, label: String)? in
-                let rate = held.currency == "USD" ? 1
-                    : held.currency == "BTC" ? WalletCash.demoBitcoinUSD : WalletCash.demoRates[held.currency]
+                let rate = held.currency == "USD" ? 1 : WalletCash.demoRates[held.currency]
                 return rate.map { (symbol: held.currency, usd: held.amount * $0, holderID: held.holderID, label: held.label) }
             }
             for holding in cash + privy where holding.usd > 0 {

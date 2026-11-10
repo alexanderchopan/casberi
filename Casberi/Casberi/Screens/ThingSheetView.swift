@@ -3789,7 +3789,7 @@ struct ThingSheetView: View {
     /// disc that really does open something is a small lie with no symptom.
     private var walletVerbs: [Verb] {
         var out: [Verb] = []
-        // A page on the web, or nothing: a Lightning payment's hash is no
+        // A page on the web, or nothing: a payment's bare hash is no
         // page, and a "Copy link" that copied it, or the title when there
         // was no content, named a link that was never there (prd §1341).
         let page = Capture.detectURL(in: thing.content)

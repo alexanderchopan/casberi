@@ -200,17 +200,9 @@ extension FeedScreen {
                         if slot.isShowing(crownScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
-                            // Safe and Privacy Pools are your account's
-                            // own (prd §1614): who signs and what waits, and
-                            // what is private and how hidden.
-                            if selectedSeat?.source == SafeBridge.sourceName {
-                                WalletSafeBox(total: walletBoxTotal, onOpen: { ref in
-                                    openBySourceRef(ref, in: visible)
-                                }, onOpenSafe: walletOpenSafe,
-                                   queueKey: Self.safeQueueKey(visible))
-                            } else if selectedSeat?.source == PrivacyPoolsBridge.sourceName {
-                                walletPoolsBox
-                            } else if let seat = selectedSeat, seatKeepsLine(seat),
+                            // Safe, Privacy Pools and Railgun are no pick
+                            // (prd §1738): the Wallet already shows them.
+                            if let seat = selectedSeat, seatKeepsLine(seat),
                                !walletScopeIsEmpty(.holdings) {
                                 // An app that keeps its own line (Privy, prd
                                 // §1194, user: "the landing needs to be balance
@@ -360,8 +352,11 @@ extension FeedScreen {
         // own only once an app stands beside them; alone, the menu reads as
         // it always did.
         // In the demo, only an app with rows or money (prd §1064, §1065).
+        // Only an app whose money is not already a section of the Wallet
+        // (prd §1738): Safe, Privacy Pools and Railgun are never listed.
         let seats = RoomAccounts.connected(in: source, names: connectedSeatNames)
             .filter(chrome.seatShows)
+            .filter(\.picks)
         let addresses = watched.map { addr in
             DSAccountSlot(
                 id: addr.address,
@@ -408,7 +403,8 @@ extension FeedScreen {
         } else if let action = warning.action, let url = URL(string: action.url) {
             openExternal(url)
         } else {
-            chrome.walletScope = RoomAccounts.seatPrefix + SafeBridge.sourceName
+            // Your account, where your Safes and who signs them stand (prd §1738).
+            chrome.walletSection = .yourAccount
         }
     }
 

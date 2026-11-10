@@ -171,6 +171,9 @@ enum Corpus {
         // Aztec's testnet room the same way (prd §1688, user: "ok delete the
         // testnet room"); Aztec mainnet's rows are the Wallet's.
         "Aztec",
+        // Lightning the same way (2026-11-09, user: "we can get rid of
+        // Lightning"); Bitcoin on chain is the Wallet's and stays.
+        "Lightning",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now

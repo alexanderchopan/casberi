@@ -257,7 +257,8 @@ for f in "$ACTATTR" "$ACTVIEW"; do
 done
 
 # --- every Wallet app opens a receipt (prd §1341) ---------------------------
-# "they all look like that" (user, 2026-10-16): a Lightning payment and an
+# "they all look like that" (user, 2026-10-16): a Lightning payment (the seat
+# is deleted since 2026-11-09) and an
 # Acorns account under Home's Transactions opened the GENERIC sheet, because
 # `MoneyReceipt.sources` was a hand list nothing held to the Wallet's apps.
 # The Wallet's apps are read out of `RoomAccounts.wallet` (each seat's
@@ -305,12 +306,13 @@ print(f"  every Wallet app opens a receipt or says where it opens ({len(wallet)}
 PY
 }
 coverage_check "$RECEIPT" || exit 1
-# The check bites: a copy without Lightning's entry must fail it.
-sed 's/"Lightning", "Privy",/"Privy",/' "$RECEIPT" > "$TMP/no-lightning.swift"
-grep -q '"Lightning"' "$TMP/no-lightning.swift" && ! grep -q '"Lightning", "Privy"' "$TMP/no-lightning.swift" \
+# The check bites: a copy without Privy's entry must fail it. (Lightning's
+# entry was the one mutated until its seat was deleted, 2026-11-09.)
+sed 's/"Privy", "Splits",/"Splits",/' "$RECEIPT" > "$TMP/no-privy.swift"
+grep -q '"Privy"' "$TMP/no-privy.swift" && ! grep -q '"Privy", "Splits"' "$TMP/no-privy.swift" \
   || { echo "✗ the coverage mutation did not apply"; exit 1; }
-if coverage_check "$TMP/no-lightning.swift" > /dev/null 2>&1; then
-  echo "✗ the coverage check passed with Lightning's arm gone — it checks nothing"; exit 1
+if coverage_check "$TMP/no-privy.swift" > /dev/null 2>&1; then
+  echo "✗ the coverage check passed with Privy's entry gone — it checks nothing"; exit 1
 fi
 
 # The literals `MoneyReceipt` (Foundation-only, compiled alone) spells for
@@ -338,9 +340,6 @@ grep -q 'let moves = Self.walletMoves(all)' "Casberi/Casberi/Screens/FeedScreen+
 # They stand on Holdings › Apps since prd §1503 (§1480 put them behind a door).
 grep -q 'walletAccountsSection(appAccounts, nextEventID: nextEventID)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
   || { echo "✗ Holdings no longer lists the accounts Transactions left out — they would vanish"; exit 1; }
-# No Lightning row's content is its hash, the demo's included.
-! grep -q 'content: "lightning:' "Casberi/Casberi/Model/LightningBridge.swift" "Casberi/Casberi/Model/DemoSeedAll.swift" \
-  || { echo "✗ a Lightning row's content is its ref again — the sheet draws it as the card"; exit 1; }
 
 # --- the harness ------------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'
@@ -988,30 +987,6 @@ do {
 // MARK: every Wallet app (prd §1341)
 
 do {
-    // Lightning, as `LightningIngest` lands it: the memo, sats, dollars.
-    var ln = MoneyReceipt.Facts(source: "Lightning", title: "Coffee for Ana")
-    ln.capturedAt = realAt(0)
-    ln.direction = "received"
-    ln.amount = "21,000 sats"
-    ln.priceValue = 18.9
-    ln.priceCurrency = "USD"
-    guard let l = MoneyReceipt.compose(ln) else {
-        print("  ✗ a Lightning payment composes nothing"); failures += 1; exit(1)
-    }
-    check(l.form == .record, "a payment is a record")
-    check(l.party == "Coffee for Ana", "the memo names it")
-    check(l.amount?.number == "+21,000" && l.amount?.unit == "sats", "the sats, signed, the unit beside")
-    check(l.amount?.tone == .gain, "a payment received is a gain")
-    check(l.secondary?.contains("18.90") == true, "worth the dollars it landed at")
-    check(l.finality == .torn && l.stamp == .settled, "only settled payments land, so final")
-    ln.direction = "sent"
-    ln.title = "Paid over Lightning"
-    let paid = MoneyReceipt.compose(ln)
-    check(paid?.amount?.number == "−21,000", "a payment sent wears a minus")
-    check(paid?.party == nil, "no memo: the direction's words are the lead, never the party")
-    ln.priceCurrency = "EUR"
-    check(MoneyReceipt.compose(ln)?.secondary == nil, "a figure in no dollars states no dollar worth")
-
     // Privy: what moved in an app's wallet.
     var pv = MoneyReceipt.Facts(source: "Privy", title: "Received 0.6974 ZORA")
     pv.capturedAt = realAt(2)
@@ -1123,7 +1098,6 @@ do {
     check(!MoneyReceipt.isState(source: "Splits", ref: "splits:tx:1"), "a Splits transaction is not")
     check(MoneyReceipt.isState(source: "Privy", ref: "privy:app:zora"), "an app that made you a wallet is a state")
     check(!MoneyReceipt.isState(source: "Privy", ref: "privy:tx:zora:0x1:in:eth"), "what moved in it is not")
-    check(!MoneyReceipt.isState(source: "Lightning", ref: "lightning:w:h"), "a payment is not")
     check(!MoneyReceipt.isState(source: "Rocket Money", ref: "rocketmoney:1"),
           "a Rocket Money plan stays listed until it has another place")
 }
@@ -1324,15 +1298,6 @@ mutate "the roll's value is filled even when the figure isn't that Double" recei
 
 # --- prd §1341's own mutations ----------------------------------------------
 echo ""
-
-# A Lightning payment received drawn as money that left.
-mutate "a Lightning receive wears a minus" receipt \
-  'number: (received ? "+" : "−") + parts.number,
-                         unit: parts.unit, tone: received ? .gain : .plain),
-            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),' \
-  'number: (received ? "−" : "+") + parts.number,
-                         unit: parts.unit, tone: received ? .gain : .plain),
-            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),'
 
 # A balance drawn as a record: tiles, history and a status over a state.
 mutate "a reading is composed as a record" receipt \
