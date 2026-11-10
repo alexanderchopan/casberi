@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1907 of 1979 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1908 of 1980 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1484,7 +1484,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
 - §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468, §1480, §1591)
-- §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
+- §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs (amended by §1737)
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
@@ -1766,7 +1766,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
 - §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446)
-- §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links
+- §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links (amended by §1737)
 - §1386 — The seams of the audit week: one More row, one Add, one section gap, a pinned header for the pill, one row in Day, th…
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
 - §1388 — Where no name stands beside it, a wallet's face says who; the counts box takes one gutter and a card gets its add (am… (amended by §1487, §1588)
@@ -1843,7 +1843,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480, §1570)
-- §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero (amended by §1587)
+- §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero (amended by §1587, §1737)
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479, §1494, §1586; part superseded by §1501)
@@ -1876,7 +1876,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f)
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
-- §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570, §1661)
+- §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570, §1661, §1737)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
@@ -2153,6 +2153,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
 - §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at…
 - §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once
+- §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
 
 ## Dead rulings → what replaced them (generated)
 

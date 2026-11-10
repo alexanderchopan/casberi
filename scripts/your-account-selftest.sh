@@ -503,8 +503,9 @@ grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/
 # The co-signer row is its name, address and switch (prd §1700f item 7: "it's just on or off").
 ! grep -q 'Every send and swap needs approval in' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the co-signer row grew its line back (prd §1700f item 7)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
-# The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink, grey when nothing does (prd §1618).
-grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: needs > 0 ? DS.pickInk : DS.textSecondary' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1496)"; exit 1; }
+# A count on Home's doors is white (prd §1737, amending §1463 and §1496 for the doors): no pink, amber or red figure, grey when nothing waits (prd §1618).
+grep -q 'figureTone: needs > 0 ? DS.textPrimary : DS.textSecondary' "$FIG" || { echo "✗ Needs you's count is no longer white, grey at none (prd §1737, §1618)"; exit 1; }
+! grep -qE 'figureTone: (DS\.destructiveInk|DS\.pickInk|DS\.attentionInk|counts\.unlimited)' "$FIG" || { echo "✗ a count on Home's doors wears a state's colour again (prd §1737)"; exit 1; }
 # Red until seen (prd §1587 amends §1463): a seen threat greys and leaves Home's count.
 grep -q 'needsYouRow(glyph: kind.glyph, critical: !seen,' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a fake transfer's row is no longer red with the other threats until seen (prd §1463, §1587)"; exit 1; }
 awk '/case .threat: return DS.destructive/{a=1}/case .wants: return DS.attention$/{b=1}/case .on: return DS.confirm$/{c=1}END{exit !(a&&b&&c)}' Casberi/Casberi/Design/DSCountTile.swift || { echo "✗ DSCountTile's tones no longer map threat→destructive, wants→attention, on→confirm (prd §1463)"; exit 1; }

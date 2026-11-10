@@ -468,9 +468,10 @@ guard FeedScreen.swift "case .holdings, .holdingAccounts, .positions, .apps, .nf
 guard FeedScreen.swift "return blockStream.els.isEmpty" \
   "holdings' empty gate no longer reads the treemap's own doc — figure and empty state drift, and the slot shows both or neither"
 # Permissions and Threats count off the checkup's own reads (prd §1480).
-guard FeedScreen.swift "figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary" \
+# The counts are white since prd §1737, so the guard reads the figure itself.
+guard FeedScreen.swift 'walletDoor[(][.]permissions, figure: permissions > 0' \
   "the Permissions door no longer reads the checkup's counts — its line and its page could disagree (prd §1480)"
-guard FeedScreen.swift "figureTone: DS.destructiveInk" \
+guard FeedScreen.swift 'walletDoor[(][.]threats, figure: unseen > 0' \
   "the Threats door no longer reads the checkup's counts (prd §1480)"
 guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
   "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"

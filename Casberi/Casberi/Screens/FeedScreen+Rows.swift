@@ -698,10 +698,11 @@ extension FeedScreen {
                             live: isLive(thing),
                             // The Notes room has no day dividers, so the
                             // row carries its own time (prd §969).
-                            // The Feed's Notes section draws the same row
-                            // (prd §1347).
-                            stamp: !timed && (Pinboard.isPinnedRoom(source) || (source == "All" && Pinboard.inRoom(thing)))
-                                ? thing.capturedAt : nil,
+                            // NOT ON THE FEED (prd §1737, amending §1347's
+                            // "the same row"): its Notes rows were the only
+                            // ones in the Feed with an age at the right; no
+                            // other section's rows carry one (§902).
+                            stamp: !timed && Pinboard.isPinnedRoom(source) ? thing.capturedAt : nil,
                             // What a note of yours says (prd §983).
                             notePreview: (Pinboard.isPinnedRoom(source) || source == "All") && Pinboard.isNote(thing),
                             imageOnly: imageOnly,

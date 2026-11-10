@@ -2299,7 +2299,8 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(offeredVerbs, id: \.self) { v in
                 listRow(title(v), symbol: glyph(v),
-                        picked: v == verb && privateMode == nil && !freshReceive) { pickVerb(v) }
+                        picked: v == verb && privateMode == nil && !freshReceive,
+                        bareSymbol: true) { pickVerb(v) }
             }
         }
     }
@@ -3255,7 +3256,7 @@ struct MoveSentence: View {
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
                          mark: String? = nil, image: String? = nil, brand: String? = nil,
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
-                         picked: Bool = false,
+                         picked: Bool = false, bareSymbol: Bool = false,
                          act: @escaping () -> Void) -> some View {
         // A choice is a word a step under the sentence (prd §1681): the
         // mark, the word and its line under it, the figure trailing. The current
@@ -3286,6 +3287,15 @@ struct MoveSentence: View {
                     // the letters until it lands (prd §1534).
                     RemoteAssetMark(urlString: remote, size: Self.listMark,
                                     monogram: String((mark ?? title).prefix(2)).uppercased())
+                } else if let symbol, bareSymbol {
+                    // A VERB'S GLYPH STANDS BARE (prd §1737): in the glyph's
+                    // pink in the mark's column, as a Wallet door's and a
+                    // Feed section's does. The grey disc was the one plate
+                    // under a glyph in the app.
+                    Image(systemName: symbol).dsGlyph(.title, weight: .semibold)
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: Self.listMark, height: Self.listMark)
+                        .accessibilityHidden(true)
                 } else if let symbol {
                     // A glyph for what has no logo of its own (Buy's
                     // categories, a person with no face, prd §1534).

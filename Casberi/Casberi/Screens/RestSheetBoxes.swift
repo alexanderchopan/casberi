@@ -178,40 +178,6 @@ struct PassageBox: View {
     static func cuts(_ passage: String) -> Bool { passage.count > 220 }
 }
 
-// MARK: - A vault note
-
-struct VaultNoteBox: View {
-    let thing: Thing
-    let tags: [String]
-
-    var body: some View {
-        if thing.isLive {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: thing.source, size: DS.Face.row, circular: true,
-                               symbol: BridgeIcon.noteSymbol(for: thing))
-                    Text(verbatim: thing.source)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                Text(String(localized: "Edited \(FeedScreen.dayWord(thing.capturedAt))"))
-                    .dsText(.heading24)
-                    .foregroundStyle(DS.textPrimary)
-                Text(verbatim: thing.capturedAt.formatted(date: .omitted, time: .shortened))
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
-                Spacer(minLength: 0)
-                if !tags.isEmpty {
-                    HStack(spacing: DS.Space.s2) {
-                        ForEach(tags.prefix(3), id: \.self) { DSStamp(word: $0) }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-}
-
 // MARK: - What the box drew
 
 /// WHAT A SHEET'S BOX ALREADY DREW, handed to the body under the tiles so the

@@ -2293,9 +2293,12 @@ struct ThingSheetView: View {
                     noteDial
                 }
             case .note:
-                // A VAULT NOTE IN THE ROOM'S FRAME (prd §1191): its name is the
-                // title, the box where it lives, when it was edited and its
-                // tags, then the tiles and the words.
+                // A VAULT NOTE SAYS ITS APP AND ITS DAY ONCE (prd §1737): the
+                // centred head is the app's mark, the note's name, the app
+                // and the day with its clock. `VaultNoteBox` under the tiles
+                // drew the mark, the app, "Edited <day>" and the clock again
+                // and is deleted; its tags stand under the words, as every
+                // other note's do.
                 SheetPartyHead(name: TitleSeam.name(thing.title), day: thing.capturedAt,
                                line: BridgeCatalog.seatName(forSource: thing.source)) {
                     BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true,
@@ -2303,9 +2306,6 @@ struct ThingSheetView: View {
                 }
                     .padding(.top, DS.Space.s6)
                 noteDial
-                VaultNoteBox(thing: thing, tags: tags)
-                    .padding(.horizontal, DSRoomChassis.inset)
-                    .padding(.top, DS.Space.s6)
                 // A vault note's body opens with its own title line; the head
                 // just set it, so the prose starts after it (prd §893).
                 noteProse(text: Self.droppingTitleLine(NoteSheetSource.prose(for: thing).text,
@@ -2345,8 +2345,7 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                 }
             }
-            // A vault note's tags stand in its box (prd §1191).
-            if !tags.isEmpty, shape != .note {
+            if !tags.isEmpty {
                 NoteTagRow(tags: tags)
                     .padding(.horizontal, DSRoomChassis.leadInset)
                     .padding(.top, DS.Space.s4)
@@ -2593,10 +2592,12 @@ struct ThingSheetView: View {
                      ?? String(localized: "Removed from folder"))
     }
 
-    /// The dial, under a note's head (prd §893).
+    /// The dial, under a note's head (prd §893), centred under the centred
+    /// head as every other frame's is (prd §1397, §1737): packed to the
+    /// left under a centred head it stood on an edge of its own.
     @ViewBuilder private var noteDial: some View {
         VerbDial(thing: thing, verbs: sheetVerbs,
-                 onVerb: runVerb, onName: nil, keep: sheetKeep)
+                 onVerb: runVerb, onName: nil, keep: sheetKeep, centered: true)
             .padding(.top, DS.Space.s6)
         dialResult
     }

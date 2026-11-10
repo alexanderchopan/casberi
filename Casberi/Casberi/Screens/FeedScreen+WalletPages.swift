@@ -285,9 +285,12 @@ extension FeedScreen {
                            act: { openAppPage(seat.name) })
             }
             // **NEEDS YOU STANDS AT 0 (prd §1618 item 1 on an app, §1729
-            // everywhere, user: "Yes, build A").** What waits on you is the
-            // pick's ink (§1385: pink says state); none is grey.
-            walletDoor(.needsYou, figure: "\(needs)", figureTone: needs > 0 ? DS.pickInk : DS.textSecondary)
+            // everywhere, user: "Yes, build A").** A COUNT IS WHITE (prd
+            // §1737, user: "we can just make them all white. b/c it is really
+            // subjective isn't it?"): pink, amber and red stood on three doors
+            // in a row and which count earned which was a judgement. The door
+            // says what it counts; none is grey.
+            walletDoor(.needsYou, figure: "\(needs)", figureTone: needs > 0 ? DS.textPrimary : DS.textSecondary)
             // **PERMISSIONS AND THREATS STAND WHILE EMPTY (prd §1729, user:
             // "they wouldn't see … that they can use something like nymis").**
             // A door that leaves while empty hides the page behind it: a fresh
@@ -299,13 +302,15 @@ extension FeedScreen {
             // anchor crossfade as the counts land (seen: "None" under "5").
             let appPicked = selectedSeat != nil
             if permissions > 0 || !appPicked {
-                // A grant with no limit wants you (prd §1107a).
+                // The count is white (prd §1737); a grant with no limit is
+                // said on its own row inside (prd §1107a).
                 walletDoor(.permissions, figure: permissions > 0 ? "\(permissions)" : nil,
-                           figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary,
+                           figureTone: DS.textPrimary,
                            word: permissions > 0 ? nil : String(localized: "None"))
             }
             if counts.flagged > 0 || !appPicked {
-                // Every threat is red (prd §1463); the count is what you have
+                // Every threat is red on its own row (prd §1463); the door's
+                // count is white (prd §1737). The count is what you have
                 // not seen yet, and none left says so (prd §1587). No threat
                 // found, and the word says whether Nymis has looked (§1729
                 // item 2): "Unscanned" while an account in scope has never
@@ -316,7 +321,7 @@ extension FeedScreen {
                     : (walletPrivacySlots.contains { NymisScans.shared.reading($0.id) == nil }
                        ? String(localized: "Unscanned") : String(localized: "None"))
                 walletDoor(.threats, figure: unseen > 0 ? "\(unseen)" : nil,
-                           figureTone: DS.destructiveInk, word: word)
+                           figureTone: DS.textPrimary, word: word)
             }
             // §1492's quiet state ("Nothing needs you on Railgun") is deleted
             // (prd §1729): the doors standing at 0 and None say it, and an app
