@@ -89,6 +89,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 
 ### 6. Thing sheets
 - Each kind has its own head: an article leads with its picture and puts the dial under the head (§882). A post leads with the person (§884), a screenshot with the picture big and no Zoom (§885), money with the party and the amount at the head rung (§887). Notes, chats and mail use the shared head (§892–§894), and media leads with its art (§897).
+- Money is centred, reading is left: the Feed's sheets lead from the rows' edge with the name at `heading24`; a money sheet, a purchase, a chart and a review keep the centred head. On every sheet the order is head, tiles, then everything else. The name is the thing, never its app or its card, and a state is said once (§1740).
 - A sheet opens at its content's height (§886).
 - The sheet draws the words the app holds (`enrichedText`), never anything a model wrote (§645; see Conflicts).
 - Nothing under a thing is a guess: no similarity shelf, no "Ask about this", no "Copy as context" (§632).
@@ -244,7 +245,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1911 of 1984 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1912 of 1985 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1777,8 +1778,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
 - §1395 — Deleting a price alert clears its Went off rows, and a Went off row deletes from its long press (amends §1081's Alert…
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
-- §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n… (amended by §1636)
-- §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic…
+- §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n… (amended by §1636, §1740)
+- §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic… (amended by §1740)
 - §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (amended by §1581)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
 - §1401 — The connect and setup screens stand bare too (completes §1393)
@@ -2157,6 +2158,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle… (amended by §1738a)
 - §1738a — The three retired picks' model is deleted: the Railgun and Privacy Pools heads, the Safe card, their probes and the p…
 - §1739 — Move's circle is glass with a pink glyph; your face stays on Library
+- §1740 — Money is centred, reading is left: the Feed's sheets lead from the rows' edge, the tiles stand under the head on ever…
 
 ## Dead rulings → what replaced them (generated)
 

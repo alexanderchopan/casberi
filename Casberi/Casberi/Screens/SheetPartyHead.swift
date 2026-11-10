@@ -14,9 +14,73 @@ struct SheetPartyHead<Face: View>: View {
     let line: String?
     /// The clock beside the day (prd §1397); off where the day is the fact.
     var clock: Bool = true
+    /// **MONEY IS CENTRED, READING IS LEFT (prd §1740, amends §1397).** A
+    /// purchase, a chart and a review keep the centred head the money sheets
+    /// wear; everything read in the Feed leads from the rows' left edge, as a
+    /// post, a song and a video already do (§1650, §1651).
+    var centered: Bool = false
     /// The face's door, where it has one (a person's profile, a room).
     var onFace: (() -> Void)? = nil
     @ViewBuilder let face: () -> Face
+
+    var body: some View {
+        if centered { centredBody } else { leadingBody }
+    }
+
+    /// The face at the row's size beside what it is and when; the name
+    /// under them at the title rung, whole, on the rows' left edge.
+    private var leadingBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                faceDoor
+                if line?.isEmpty == false || day != nil {
+                    lineRow
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            Text(verbatim: name)
+                .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, DSRoomChassis.leadInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var faceDoor: some View {
+        if let onFace {
+            Button {
+                DSHaptic.tap()
+                onFace()
+            } label: { face() }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text(verbatim: name))
+            .dsHover()
+        } else {
+            face()
+        }
+    }
+
+    /// What it is and when: the day in the divider's ink, the clock beside it.
+    private var lineRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+            if let line, !line.isEmpty {
+                Text(verbatim: day == nil ? line : line + " ·")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+            }
+            if let day {
+                Text(FeedScreen.dayWord(day))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.headInk)
+                if clock {
+                    Text(verbatim: day.formatted(date: .omitted, time: .shortened))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+            }
+        }
+        .lineLimit(1)
+    }
 
     /// **CENTRED, THREE THINGS (prd §1397, user: "give mail, post, event,
     /// contact and the other thing sheets the same centred head").** The
@@ -24,41 +88,16 @@ struct SheetPartyHead<Face: View>: View {
     /// what it is and when, the day in the divider's ink with the clock
     /// beside it — as the money sheet's head stands (§1396). The title row
     /// and the box that stood over every other kind said the name twice.
-    var body: some View {
+    private var centredBody: some View {
         VStack(spacing: DS.Space.s3) {
-            if let onFace {
-                Button {
-                    DSHaptic.tap()
-                    onFace()
-                } label: { face() }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(verbatim: name))
-                .dsHover()
-            } else {
-                face()
-            }
+            faceDoor
             VStack(spacing: DS.Space.s1) {
             Text(verbatim: name)
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
             if line?.isEmpty == false || day != nil {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
-                    if let line, !line.isEmpty {
-                        Text(verbatim: day == nil ? line : line + " ·")
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    }
-                    if let day {
-                        Text(FeedScreen.dayWord(day))
-                            .dsText(.body17)
-                            .foregroundStyle(DS.headInk)
-                        if clock {
-                            Text(verbatim: day.formatted(date: .omitted, time: .shortened))
-                                .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        }
-                    }
-                }
-                .lineLimit(1)
+                lineRow
             }
             }
         }

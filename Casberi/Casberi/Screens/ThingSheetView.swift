@@ -800,7 +800,7 @@ struct ThingSheetView: View {
                         // merchant, the app with the day; the tiles; the
                         // receipt at the box's size under them.
                         SheetPartyHead(name: purchaseReading.subject, day: thing.capturedAt,
-                                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+                                       line: BridgeCatalog.seatName(forSource: thing.source), centered: true) {
                             BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
                         }
                             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
@@ -849,11 +849,11 @@ struct ThingSheetView: View {
                     SheetPartyHead(name: workHead.title ?? workMoneyTitle ?? workReading.subject,
                                    day: thing.capturedAt,
                                    line: BridgeCatalog.seatName(forSource: thing.source)) {
-                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                        BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
                     }
                         .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
                         .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: false)
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
                     dialResult
@@ -908,7 +908,7 @@ struct ThingSheetView: View {
                     // name, the app with the day; the content boxes the price
                     // and seats the tiles (§1188).
                     SheetPartyHead(name: Self.chartParts(thing.title).name, day: thing.capturedAt,
-                                   line: BridgeCatalog.seatName(forSource: thing.source)) {
+                                   line: BridgeCatalog.seatName(forSource: thing.source), centered: true) {
                         AssetMark(name: Self.chartParts(thing.title).name, size: DS.Face.sheet)
                     }
                         .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
@@ -931,22 +931,24 @@ struct ThingSheetView: View {
                     // under the head at the box's height; the tiles.
                     SheetPartyHead(name: TitleSeam.split(thing.title).name, day: nil,
                                    line: momentSourceLine) {
-                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                        BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
                     }
                         .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
                         .settleIn(delay: 0.06)
+                    // HEAD, TILES, THEN THE THING (prd §1740): the tiles stand
+                    // under the head on every sheet; the hours came between.
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: false)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.07)
+                    dialResult
                     EventDaySlice(start: start, end: thing.endAt,
                                   allDay: thing.factList.contains { $0.action == .allDay },
                                   blocks: dayBlocks)
                         .frame(height: DSRoomChassis.leadBox)
                         .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, DS.Space.s4)
-                        .settleIn(delay: 0.07)
-                        .task(id: thing.id) { readDayBlocks(around: start) }
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
-                    dialResult
+                        .task(id: thing.id) { readDayBlocks(around: start) }
                     let rows = MomentSheetBlock(start: start, end: thing.endAt,
                                                 facts: thing.factList, part: .rows)
                     if rows.hasRows {
@@ -963,11 +965,22 @@ struct ThingSheetView: View {
                     // name, then the clock in the middle, then the tiles.
                     SheetPartyHead(name: MomentSheetBlock.title(TitleSeam.split(thing.title).name,
                                                                 facts: thing.factList),
-                                   day: nil, line: momentSourceLine) {
-                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                                   // A chain's deadline is the Wallet's: centred (§1740).
+                                   day: nil, line: momentSourceLine, centered: isWalletMoment) {
+                        if isWalletMoment {
+                            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                        } else {
+                            BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
+                        }
                     }
                         .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
                         .settleIn(delay: 0.06)
+                    // HEAD, TILES, THEN THE THING (prd §1740).
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
+                             centered: isWalletMoment)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.07)
+                    dialResult
                     if let start = momentStart {
                         MomentSheetBlock(start: start, end: thing.endAt,
                                          overdue: (thing.kind == .reminder || isWalletMoment)
@@ -976,15 +989,11 @@ struct ThingSheetView: View {
                                          facts: momentFacts, part: .box,
                                          dueWord: thing.source == "CardPointers" ? .ends
                                             : isWalletMoment ? .on : .due,
-                                         centered: true)
+                                         centered: isWalletMoment)
                             .padding(.horizontal, DSRoomChassis.leadInset)
-                            .padding(.top, DS.Space.s4)
-                            .settleIn(delay: 0.07)
+                            .padding(.top, DSRoomChassis.leadGap)
+                            .settleIn(delay: 0.08)
                     }
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
                     if let start = momentStart {
                         let rows = MomentSheetBlock(start: start, end: thing.endAt,
                                                     isReminder: thing.kind == .reminder,
@@ -1184,7 +1193,7 @@ struct ThingSheetView: View {
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, keep: sheetKeep, centered: transcriptHead)
+                             onVerb: runVerb, onName: nil, keep: sheetKeep, centered: false)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
                     dialResult
@@ -2135,7 +2144,7 @@ struct ThingSheetView: View {
         // the wallet, the reviewer with the day; the tiles; the news at the
         // box's size under them.
         SheetPartyHead(name: title, day: thing.capturedAt,
-                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+                       line: BridgeCatalog.seatName(forSource: thing.source), centered: true) {
             BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
         }
             .padding(.top, DS.Space.s6)
@@ -2209,7 +2218,7 @@ struct ThingSheetView: View {
                 // box under it.
                 SheetPartyHead(name: split.first ?? TitleSeam.name(thing.title), day: thing.capturedAt,
                                line: BridgeCatalog.seatName(forSource: thing.source)) {
-                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true,
+                    BridgeIcon(name: thing.source, size: DS.Face.row, circular: true,
                                symbol: BridgeIcon.noteSymbol(for: thing))
                 }
                     .padding(.top, DS.Space.s6)
@@ -2235,7 +2244,7 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.bottom, DS.Space.s6)
                 }
-                SheetPartyHead(name: thing.source, day: thing.capturedAt, line: entryLine,
+                SheetPartyHead(name: thing.source, day: thing.capturedAt, line: entryLine, centered: true,
                                onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
                     BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
                                symbol: BridgeIcon.noteSymbol(for: thing))
@@ -2301,7 +2310,7 @@ struct ThingSheetView: View {
                 // other note's do.
                 SheetPartyHead(name: TitleSeam.name(thing.title), day: thing.capturedAt,
                                line: BridgeCatalog.seatName(forSource: thing.source)) {
-                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true,
+                    BridgeIcon(name: thing.source, size: DS.Face.row, circular: true,
                                symbol: BridgeIcon.noteSymbol(for: thing))
                 }
                     .padding(.top, DS.Space.s6)
@@ -2328,7 +2337,7 @@ struct ThingSheetView: View {
                 SheetPartyHead(name: cite.work, day: thing.capturedAt,
                                line: [cite.author, locator.count <= 24 && !locator.isEmpty ? locator : nil]
                                    .compactMap { $0 }.joined(separator: " · ")) {
-                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                    BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
                 }
                     .padding(.top, DS.Space.s6)
                 noteDial
@@ -2597,7 +2606,10 @@ struct ThingSheetView: View {
     /// left under a centred head it stood on an edge of its own.
     @ViewBuilder private var noteDial: some View {
         VerbDial(thing: thing, verbs: sheetVerbs,
-                 onVerb: runVerb, onName: nil, keep: sheetKeep, centered: true)
+                 onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 // Centred only under the one head that still is: a note of
+                 // yours, a voice note, a locked one (prd §1740).
+                 centered: pagedNote || thing.kind == .voice || NoteLock.isLocked(thing))
             .padding(.top, DS.Space.s6)
         dialResult
     }
@@ -3984,7 +3996,7 @@ struct ThingSheetView: View {
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
-                 keep: sheetKeep, centered: true)
+                 keep: sheetKeep, centered: false)
             .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.08)
         dialResult
@@ -4005,12 +4017,12 @@ struct ThingSheetView: View {
         // name, the app with the day; the tiles; the opening turns under them.
         SheetPartyHead(name: reading.hero, day: thing.capturedAt,
                        line: BridgeCatalog.seatName(forSource: thing.source)) {
-            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+            BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
-                 keep: continueKeep(reading), centered: true)
+                 keep: continueKeep(reading), centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
@@ -4036,9 +4048,9 @@ struct ThingSheetView: View {
                        day: LiveMessagesLanding.sentTimes(thing).isEmpty ? thing.capturedAt : nil,
                        line: Self.chatLine(thing)) {
             if ChatFace.isPersonChat(thing) {
-                ChatFaceMark(thing: thing, size: DS.Face.sheet, badge: true)
+                ChatFaceMark(thing: thing, size: DS.Face.row, badge: true)
             } else {
-                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
             }
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
@@ -4059,18 +4071,17 @@ struct ThingSheetView: View {
         // the name, the app and the day; then the tiles; then what the box
         // drew — its picture, its statement, its words — under them.
         SheetPartyHead(name: ThingSheetBox.frameTitle(thing), day: thing.capturedAt,
-                       line: ThingSheetBox.carriesTitle(thing) ? nil
-                           : BridgeCatalog.seatName(forSource: thing.source)) {
+                       line: BridgeCatalog.seatName(forSource: thing.source)) {
             if thing.kind == .contact {
-                PersonFace(name: thing.title, photo: thing.previewImageData, size: DS.Face.sheet)
+                PersonFace(name: thing.title, photo: thing.previewImageData, size: DS.Face.row)
             } else {
-                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
             }
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: plainVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
+                 centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
@@ -4096,7 +4107,7 @@ struct ThingSheetView: View {
         SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
                        line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
                        onFace: facesAreDoors ? openAuthorProfile : nil) {
-            PostSheetBox.face(thing)
+            PostSheetBox.rowFace(thing)
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
@@ -4113,7 +4124,7 @@ struct ThingSheetView: View {
             .padding(.top, DS.Space.s3)
             .settleIn(delay: 0.1)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
+                 centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.12)
         dialResult
@@ -4240,7 +4251,7 @@ struct ThingSheetView: View {
                 .settleIn(delay: 0.12)
         }
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
+                 centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.14)
         dialResult
@@ -4273,15 +4284,15 @@ struct ThingSheetView: View {
                        // app beside it ran the line off the clock.
                        line: sender.flatMap(Self.mailAddress) ?? thing.source) {
             if let sender {
-                SenderInitial(sender: sender, size: DS.Face.sheet)
+                SenderInitial(sender: sender, size: DS.Face.row)
             } else {
-                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
             }
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: mailKeep,
-                 centered: true)
+                 centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
@@ -4316,14 +4327,16 @@ struct ThingSheetView: View {
     private var articleFrame: some View {
         // THE CENTRED HEAD (prd §1397): the publication, then the tiles,
         // then the picture, the headline and the words.
-        SheetPartyHead(name: ArticleSheetBox.publication(thing), day: thing.capturedAt,
-                       line: ArticleSheetHead.readingMinutes(thing).map { String(localized: "\($0) min read") }) {
-            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        // THE NAME IS THE THING (prd §1740): the headline leads, the
+        // publication is its line; the box under the tiles is the picture.
+        SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
+                       line: ArticleSheetBox.publication(thing)) {
+            BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
-                 centered: true)
+                 centered: false)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
@@ -4362,7 +4375,7 @@ struct ThingSheetView: View {
         .dsTooltip(String(localized: "Opens the photo full screen"))
         .settleIn(delay: 0.1)
         VerbDial(thing: thing, verbs: sheetVerbs,
-                 onVerb: runVerb, onName: nil, centered: true)
+                 onVerb: runVerb, onName: nil, centered: false)
             .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.12)
         dialResult
@@ -4378,7 +4391,7 @@ struct ThingSheetView: View {
             .padding(.top, [.video, .vertical].contains(MediaSheetLead.kind(of: thing)) ? 0 : (onBack == nil ? DS.Space.s2 : 0))
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
-                 keep: mediaKeep, centered: true)
+                 keep: mediaKeep, centered: false)
             .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.08)
             .task(id: thing.id) { readMediaMore() }

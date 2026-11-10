@@ -62,6 +62,16 @@ import SwiftUI
             BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
         }
     }
+
+    /// The same face beside the left head's line (prd §1740), at the row's
+    /// tier; spelled out so the face-ramp audit reads the tier.
+    @ViewBuilder static func rowFace(_ thing: Thing) -> some View {
+        if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+            RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source, circular: true)
+        } else {
+            BridgeIcon(name: thing.source, size: DS.Face.row, circular: true)
+        }
+    }
 }
 
 // MARK: - A mail
@@ -91,12 +101,15 @@ struct ArticleSheetBox: View {
                         .clipShape(RoundedRectangle(cornerRadius: headed ? DS.Radius.widget : DS.Radius.widget / 2,
                                                     style: .continuous))
                 }
-                Text(verbatim: TitleSeam.split(thing.title).name)
-                    .dsText(ArticleSheetHead.hasArt(thing) && !headed ? .heading20 : .heading24)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(headed ? 4 : ArticleSheetHead.hasArt(thing) ? 2 : 4)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Under the head the headline is the head's (prd §1740).
+                if !headed {
+                    Text(verbatim: TitleSeam.split(thing.title).name)
+                        .dsText(ArticleSheetHead.hasArt(thing) ? .heading20 : .heading24)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(ArticleSheetHead.hasArt(thing) ? 2 : 4)
+                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if !headed {
                     Spacer(minLength: 0)
                     Text(verbatim: metaLine)
@@ -128,8 +141,10 @@ struct ArticleSheetBox: View {
             PhotoWell(thing: thing)
         } else if let url = thing.previewImageURL, !url.isEmpty {
             GeometryReader { geo in
+                // The frame's own height: drawn at the box's 96 inside the
+                // sheet's taller frame it left dead air under the picture.
                 RemoteArt(urlString: url, width: geo.size.width,
-                          height: Self.artHeight, cornerRadius: 0)
+                          height: geo.size.height, cornerRadius: 0)
             }
         }
     }

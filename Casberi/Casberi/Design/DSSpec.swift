@@ -81,6 +81,11 @@ struct DSSpecRow: View {
                 .frame(minHeight: DS.Hit.min)
                 .gridColumnAlignment(.leading)
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                // THE VALUE STANDS AT THE TRAILING EDGE (prd §1740): packed
+                // against its label it read as one grey-and-white phrase,
+                // beside list rows whose figures already trail. The spacer
+                // still gives a tappable row its whole width.
+                Spacer(minLength: 0)
                 value
                     .dsText(.body17)
                     // Applied only when a caller really wants a DIFFERENT
@@ -89,7 +94,7 @@ struct DSSpecRow: View {
                     .fontWeight(weight)
                     .foregroundStyle(tint)
                     .lineLimit(lineLimit)
-                    .multilineTextAlignment(.leading)
+                    .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: lineLimit == nil)
                 if let glyph {
                     Image(systemName: glyph)
@@ -97,10 +102,6 @@ struct DSSpecRow: View {
                         .dsGlyph(.caption, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
                 }
-                // The value cell takes the rest of the width, so the label
-                // column is the only one sized to content — and so a tappable
-                // row's target reaches the trailing edge.
-                Spacer(minLength: 0)
             }
             .frame(minHeight: DS.Hit.min)
         }

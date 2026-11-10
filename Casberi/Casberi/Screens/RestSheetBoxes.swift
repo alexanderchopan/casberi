@@ -338,7 +338,9 @@ struct ThingSheetBox: View {
     /// carries the name) the app it is from.
     static func frameTitle(_ thing: Thing) -> String {
         if thing.kind == .file { return thing.title }
-        if carriesTitle(thing) { return BridgeCatalog.seatName(forSource: thing.source) }
+        // THE NAME IS THE THING (prd §1740): a row with nothing but its
+        // title was headed by its app's name ("GitHub") with the title in
+        // the box; the left head sets a title whole, so it leads.
         return TitleSeam.split(thing.title).name
     }
 
@@ -496,7 +498,9 @@ struct ThingSheetBox: View {
             }
             // The row's own sentence at the headline rung: the title's line
             // half, else (nothing else to say) the title itself. Never a host.
-            if let headline = statement ?? (carries ? TitleSeam.split(thing.title).name : nil) {
+            // Under the head the title is the head's (prd §1740): the box
+            // carries it only where it stands alone.
+            if let headline = statement ?? (carries && !headed ? TitleSeam.split(thing.title).name : nil) {
                 Text(verbatim: headline)
                     .dsText(pictured ? .heading20 : .heading24)
                     .foregroundStyle(DS.textPrimary)
@@ -506,7 +510,9 @@ struct ThingSheetBox: View {
             }
             if let words {
                 Text(verbatim: words)
-                    .dsText(statement == nil && !pictured ? .body17 : .subhead12)
+                    // Under the head these are the sheet's words, not a
+                    // caption in a box: the body rung (prd §1740).
+                    .dsText(headed || (statement == nil && !pictured) ? .body17 : .subhead12)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(statement == nil ? 4 : 2)
                     .fixedSize(horizontal: false, vertical: true)

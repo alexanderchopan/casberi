@@ -128,13 +128,18 @@ struct MoneyCommentaryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(verbatim: commentary.headline)
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let sub = subline {
-                Text(verbatim: sub)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            // A LADDER SAYS ITS OWN STATE (prd §1740): the head's state word
+            // and the lit rung already say "Clear to withdraw"; a headline
+            // and a subline over the ladder said it a third and fourth time.
+            if !isLadder {
+                Text(verbatim: commentary.headline)
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
+                if let sub = subline {
+                    Text(verbatim: sub)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             evidence
         }
@@ -142,6 +147,11 @@ struct MoneyCommentaryCard: View {
         // receipt's own column under the dial, the words above the evidence.
         .padding(.horizontal, DS.Space.s3)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var isLadder: Bool {
+        if case .ladder = commentary { return true }
+        return false
     }
 
     private var subline: String? {
@@ -161,7 +171,7 @@ struct MoneyCommentaryCard: View {
             ReceiptBars(values: values, title: head)
                 .padding(.top, DS.Space.s3)
         case .ladder(_, _, let rung, let since):
-            ReceiptLadder(rung: rung, since: since).padding(.top, DS.Space.s3)
+            ReceiptLadder(rung: rung, since: since)
         case .rate, .note:
             EmptyView()
         }
@@ -528,7 +538,7 @@ struct MoneySheetHead: View {
             // place as the bridge reads it again.
             if receipt.finality == .open, receipt.stamp == .settling {
                 steps.padding(.top, DS.Space.s3)
-            } else if let note {
+            } else if let note, !lineSaysState {
                 Text(verbatim: note.word)
                     .dsText(.heading17)
                     .foregroundStyle(note.ink)
@@ -630,9 +640,52 @@ struct MoneySheetHead: View {
             let inName = s.inApp ? s.inAmount : (into.unit ?? s.inAmount)
             return String(localized: "\(outName) for \(inName)")
         }
-        if let c = card { return c.last4.map { "\(c.name) ••\($0)" } ?? c.name }
+        if let c = card { return cardShop ?? Self.cardLabel(c) }
         if unnamed { return String(localized: "Tap to name") }
-        return Self.title(receipt)
+        return Self.nameWithoutFigure(Self.title(receipt), amount: receipt.amount)
+    }
+
+    /// **THE NAME IS THE THING (prd §1740, amends §1182's "the card its
+    /// name").** A charge at a shop is named for the shop and its line says
+    /// the card; a Blue Bottle charge read "Chase · Sapphire" over "on Chase ·
+    /// Sapphire" and never said Blue Bottle. A card whose chain carries no
+    /// shop (§222) keeps the card as its name.
+    private var cardShop: String? {
+        guard let c = card, let shop = receipt.party?.trimmingCharacters(in: .whitespaces),
+              !shop.isEmpty, shop != c.source, shop != c.name else { return nil }
+        return shop
+    }
+
+    static func cardLabel(_ c: Card) -> String {
+        c.last4.map { "\(c.name) ••\($0)" } ?? c.name
+    }
+
+    /// A row's sentence without the amount the figure under it states: "Put
+    /// 0.0400 ETH into Privacy Pools" over "0.0400 ETH" said it twice (prd
+    /// §1739). Only when what is left is still a phrase.
+    static func nameWithoutFigure(_ title: String, amount: MoneyReceipt.Amount?) -> String {
+        guard let amount else { return title }
+        let bare = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
+        guard !bare.isEmpty else { return title }
+        let figure = [bare, amount.unit ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
+        for cut in [figure + " ", bare + " "] {
+            guard let r = title.range(of: cut) else { continue }
+            let rest = title.replacingCharacters(in: r, with: "")
+            if rest.split(separator: " ").count >= 2 { return rest }
+        }
+        return title
+    }
+
+    /// The line already says the state ("Waiting on 2 more signatures" over
+    /// an amber "Waiting"): it takes the state's ink and the word is not
+    /// drawn again (prd §1740).
+    private var lineSaysState: Bool {
+        guard let note, let lead = lineLead else { return false }
+        return lead.localizedCaseInsensitiveContains(note.word)
+    }
+
+    private var lineInk: Color {
+        lineSaysState ? (note?.ink ?? DS.textSecondary) : DS.textSecondary
     }
 
     /// The address the head opens, where there is one.
@@ -690,7 +743,7 @@ struct MoneySheetHead: View {
                 Text(verbatim: lead)
                     .dsText(.body17)
                     .monospacedDigit()
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(lineInk)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -700,7 +753,7 @@ struct MoneySheetHead: View {
                     Text(verbatim: lead + (hidesDay ? "" : " ·"))
                         .dsText(.body17)
                         .monospacedDigit()
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(lineInk)
                 }
                 if !hidesDay {
                     Text(FeedScreen.dayWord(landed))
@@ -738,6 +791,12 @@ struct MoneySheetHead: View {
         if let t = transfer {
             guard let usd = t.usd, usd > 0 else { return nil }
             return usd.formatted(.currency(code: "USD"))
+        }
+        if let c = card {
+            // Named for the shop, the line says the card; named for the
+            // card, an "on <card>" line would say it twice (prd §1740).
+            if cardShop != nil { return Self.cardLabel(c) }
+            if let said = receipt.secondary, said.localizedCaseInsensitiveContains(c.name) { return nil }
         }
         return receipt.secondary
     }
