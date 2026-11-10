@@ -120,7 +120,6 @@ EXEMPT = {
     # ── Owned elsewhere on 2026-09-15: left untouched by §746, tightened as
     #    those sessions land.
     "Screens/ShapedRows.swift": (2, "feed rows — being rewritten by another session"),
-    "Screens/PrivacyPoolsRoomCard.swift": (1, "a room head — being migrated by another session"),
     "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
     # ── A real pill, kept on a stated reason and OWED.
     "Screens/WalletFeedTiles.swift": (1, "the wallet crown's face chips — a choice, but each carries a face, a value and a delta "
@@ -152,7 +151,6 @@ EXEMPT_TINT = {
     "Screens/WalletRow.swift": (1, "the sparkline's dots"),
     "Design/DSChatBubble.swift": (1, "your message's fill, as Messages draws it (prd §1615): a side "
                                      "of the conversation, not a pick, a state or a verb"),
-    "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
     "Screens/WalletThreatsFigure.swift": (1, "Threats' weekly bars, a chart (prd §1633)"),
     "Screens/WalletPermissionsFigure.swift": (1, "Permissions' disc, a chart: a capped grant's fill (prd §1656, §1710)"),
     "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),

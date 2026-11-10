@@ -1404,34 +1404,12 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
-        Hook(key: "privacyPoolsRoomProbe") { _, context in
-            let source = PrivacyPoolsRoomSource.source
-            var descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source })
-            descriptor.fetchLimit = 500
-            let rows = (try? context.fetch(descriptor)) ?? []
-            for line in PrivacyPoolsRoomSource.probeLines(things: rows) {
-                NSLog("[Casberi] %@", line)
-            }
-        },
-        // The fourth wallet-riding room head (2026-08-11) — pair with
-        // `-railgunProbe` to land moves first.
-        Hook(key: "railgunRoomProbe") { _, context in
-            let source = RailgunRoomSource.source
-            var descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source })
-            descriptor.fetchLimit = 500
-            let rows = (try? context.fetch(descriptor)) ?? []
-            for line in RailgunRoomSource.probeLines(things: rows) {
-                NSLog("[Casberi] %@", line)
-            }
-        },
-        // The fifth wallet-riding room head (2026-08-11) — its subject is
-        // mostly `SafeBridge`'s own tracking state, the `ASCRoomSource` shape.
-        // It reads rows for ONE thing (2026-08-17): the ref a module-only card
-        // opens, which is the whole reason that card stopped being a dead
-        // control. Pair with `-approvalProbe`/`-safeProbe` to land a pending
-        // queue first.
+        // `-privacyPoolsRoomProbe` and `-railgunRoomProbe` are deleted with
+        // their heads (prd §1738).
+        // Safe's reading (2026-08-11) — its subject is mostly `SafeBridge`'s
+        // own tracking state. No head draws it since prd §1738; `SafeAsk`
+        // still reads the composition, which is what this logs. Pair with
+        // `-approvalProbe`/`-safeProbe` to land a pending queue first.
         Hook(key: "safeRoomProbe") { _, context in
             let source = SafeRoomSource.source
             var descriptor = FetchDescriptor<Thing>(
@@ -7630,18 +7608,15 @@ enum ProbeHooks {
              ? CardPointersRoomSource.compose(things: things).map {
                 "\($0.headline) · \($0.deadlines.count) deadlines"
              } : nil)
-        // The three wallet-riding heads (2026-08-10, prd §349). Like
-        // `cursorHead` these read `things` — the fills, the deposits
-        // and the spends ARE the subject — so each `compose` would
-        // already answer nil for another room's rows on its own. Gated
-        // anyway, so every line in this block reads the same way.
+        // The wallet-riding heads (2026-08-10, prd §349). Like
+        // `cursorHead` these read `things` — the fills and the spends ARE
+        // the subject — so each `compose` would already answer nil for
+        // another room's rows on its own. Gated anyway, so every line in
+        // this block reads the same way. `privacyPoolsHead`, `railgunHead`
+        // and `safeHead` are deleted with their heads (prd §1738).
         note("peerHead", source == PeerRoomSource.source
              ? PeerRoomSource.compose(things: things).map {
                 "\(PeerRoom.headline($0)) · \($0.rails.count) rails"
-             } : nil)
-        note("privacyPoolsHead", source == PrivacyPoolsRoomSource.source
-             ? PrivacyPoolsRoomSource.compose(things: things).map {
-                "\(PrivacyPoolsRoom.headline($0)) · \($0.deposits) deposits"
              } : nil)
         // The shared onchain-card head (prd §858). Censused per seat on
         // purpose: they share a TYPE, so a single row would go green off
@@ -7659,22 +7634,6 @@ enum ProbeHooks {
              ? { let r = PrivyHomeStore.shared.room
                  return r.appCount > 0 ? "\(r.appCount) apps · \(r.readCount) read · \(r.fundedCount) funded" : nil }()
              : nil)
-        // The fourth wallet-riding head (2026-08-11).
-        note("railgunHead", source == RailgunRoomSource.source
-             ? RailgunRoomSource.compose(things: things).map {
-                "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
-             } : nil)
-        // The fifth (2026-08-11). The three counts are printed apart
-        // because they are three different states that render as one
-        // number in `pendingCount` alone: a fully-signed transaction
-        // needs an execution, not a signature, and a contested pair
-        // needs neither from whoever loses.
-        note("safeHead", source == SafeRoomSource.source
-             ? SafeRoomSource.compose(things: things).map {
-                "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
-                + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
-                + " · \($0.contestedCount) contested"
-             } : nil)
         // `cursorHead`, `radicleHead`, `appleWallet` and `appStoreConnect` are
         // deleted with their models (2026-10-01): no view had drawn them since
         // §749/§751, and those rooms lead with their newest thing.

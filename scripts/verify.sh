@@ -3679,6 +3679,10 @@ xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 # read that as a gap, which is exactly the conversation worth having in the
 # commit that adds it rather than in a nightly three weeks later.
 #
+# `privacyPoolsHead`, `railgunHead` and `safeHead` left with their heads (prd
+# §1738): Safe, Privacy Pools and Railgun are no pick in the Wallet's menu, so
+# no box draws a head for them and there is nothing here to cover.
+#
 # The (name, source) pairs mirror `ProbeHooks.swift`'s `roomInsightProbe`
 # hook and `FeedScreen.sourceHead(_:)`'s switch — change one, change all
 # three (the same acknowledged fragility that hook's own header already
@@ -3740,10 +3744,7 @@ else
     dodoHead          "Dodo Payments"
     posthogHead       "PostHog"
     peerHead          "Peer"
-    privacyPoolsHead  "Privacy Pools"
     metamaskCardHead  "MetaMask Card"
-    railgunHead       "Railgun"
-    safeHead          "Safe"
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"
 

@@ -284,9 +284,9 @@ enum PrivacyPoolsBridge {
 
     /// What a DEPOSIT row's `sourceRef` begins with. One constant because the
     /// landing and the status poll's `retag` must agree on it and, from §311
-    /// until 2026-08-10, silently did not — see `retag`. `PrivacyPoolsRoomSource`
-    /// reads it too, so the room's own count of deposits can never drift from
-    /// what the bridge actually lands.
+    /// until 2026-08-10, silently did not — see `retag`. `WalletNeedsYou`
+    /// reads the same constant, so what needs you can never drift from what
+    /// the bridge actually lands.
     static let depositRefPrefix = PrivacyPoolsRoom.depositPrefix
 
     /// The `Thing.source` every row here lands under — see
@@ -351,41 +351,12 @@ enum PrivacyPoolsBridge {
 
     /// "3,900" from 3,947, "12" from 12 — two significant figures, taken from
     /// `PrivacyPoolsRoom` rather than spelled again (2026-08-17, prd §397).
-    /// The room's cover line and this sentence state the same pool's set size
-    /// on two surfaces, and rounding them separately is how the sheet and the
-    /// card end up disagreeing by a hundred deposits about the same number —
-    /// the `depositRefPrefix` lesson, applied before it could be earned twice.
+    ///
+    /// The once-a-day cover refresh and its store (`PrivacyPoolsCover`, prd
+    /// §397) are deleted with the head that read them (prd §1738): the set
+    /// size is said where you send, off `PrivacyPoolsCrowd`.
     private static func roundedSet(_ n: Int) -> String {
         PrivacyPoolsRoom.roundedSet(n)
-    }
-
-    // MARK: - Cover refresh (prd §397)
-
-    /// Re-reads every pool's accepted-deposit count at most once a day and
-    /// keeps it as a NUMBER, so the room can state the anonymity set as it is
-    /// NOW rather than as it was when each deposit landed (`PrivacyPoolsCover`
-    /// has the whole argument).
-    ///
-    /// Gated on `evidence`, not on a watch: most watched wallets have never
-    /// touched Privacy Pools, and buying a request a day for all of them would
-    /// spend it on people who will never see a cover line. Costs one keyless
-    /// GET, reuses this pass's memo when a deposit already bought it, and
-    /// writes nothing when the host is unreachable.
-    @MainActor
-    private static func refreshCoverIfDue() async {
-        guard !evidence.isEmpty, PrivacyPoolsCover.needsRefresh() else { return }
-        let readings = await cover()
-        guard !readings.isEmpty else { return }
-        // Keyed by OUR table's symbol, never the API's `tokenSymbol` — the
-        // room joins cover to holdings through `Thing.priceCurrency`, which is
-        // stamped from `Pool.symbol`. See `PrivacyPoolsCover`.
-        var bySymbol: [String: Int] = [:]
-        for pool in pools.values {
-            if let reading = readings[pool.scope], reading.count > 0 {
-                bySymbol[pool.symbol] = reading.count
-            }
-        }
-        PrivacyPoolsCover.save(current: bySymbol)
     }
 
     // MARK: - Sync
@@ -502,22 +473,15 @@ enum PrivacyPoolsBridge {
         healReclaimed(context: context)
         // …and the direction stamp, for rows that landed before 2026-08-26.
         healDirections(context: context)
-        // At most one keyless GET a day, and only for a wallet that has
-        // actually deposited (prd §397).
-        await refreshCoverIfDue()
         return added
     }
 
     /// The one-time repair for reclaims that landed before 2026-08-17
     /// (prd §397).
     ///
-    /// `PrivacyPoolsRoom` does this join itself and treats the ragequit ROW as
-    /// the authority, so the CARD is right on every device the moment this
-    /// ships, with or without this function. What this fixes is the stored
-    /// TAG, which is what search, the §308 facets and the row's own chrome
-    /// read — without it a deposit reclaimed last month keeps saying
-    /// "Declined" everywhere except the card, and a card disagreeing with the
-    /// row beneath it is worse than either being wrong alone.
+    /// What this fixes is the stored TAG, which is what search, the §308
+    /// facets and the row's own chrome read — without it a deposit reclaimed
+    /// last month keeps saying "Declined".
     ///
     /// Forward-only sweeps cannot reach these rows: the cursor has long since
     /// passed the block the ragequit was in, so nothing re-reads it. Keyed by
@@ -711,12 +675,6 @@ enum PrivacyPoolsBridge {
             // reads bare when pools-stats is unreachable.
             if let pool, let c = (await cover())[pool.scope], c.count > 0 {
                 thing.enrichedText = coverLine(symbol: pool.symbol, count: c.count)
-                // …and the same count as a NUMBER, so the room can later say
-                // the set GREW (prd §397). Written once per label and never
-                // overwritten — see `PrivacyPoolsCover.snapshot`.
-                if let label {
-                    PrivacyPoolsCover.snapshot(label: label, count: c.count)
-                }
             }
             out.append(thing)
 

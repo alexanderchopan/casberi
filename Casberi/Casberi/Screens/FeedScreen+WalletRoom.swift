@@ -972,31 +972,14 @@ extension FeedScreen {
         return out
     }
 
-    /// **WHAT AN APP HOLDS THAT NO ROW CARRIES (prd §1702, §1703).** 0xBow
-    /// Privacy Pools' private money, one tile per token, as Holdings' Private
-    /// section reads it; every other app's own holdings (`walletSeatItems`).
-    /// On that app's pick only, and never added to anything: the private
-    /// money is already in the Wallet's number once
-    /// (`PrivateMoneyStore.walletHolding`), and the rest is either already in
-    /// it (a card's wallet, a Cash safe) or in no total by rule
-    /// (`wallet-total-audit.py`, §1702, §1703).
+    /// **WHAT AN APP HOLDS THAT NO ROW CARRIES (prd §1702, §1703).** The
+    /// picked app's own holdings (`walletSeatItems`). On that app's pick
+    /// only, and never added to anything: it is either already in the
+    /// Wallet's number (a card's wallet, a Cash safe) or in no total by rule
+    /// (`wallet-total-audit.py`, §1702, §1703). Privacy Pools' private money
+    /// is Holdings' Private section's, never a pick's (prd §1738).
     func walletSeatOwnHeld(_ things: [Thing]) -> [HoldingsTreemap.Holding] {
-        if selectedSeat?.source == PrivacyPoolsBridge.sourceName {
-            let store = PrivateMoneyStore.shared
-            var bySymbol: [(symbol: String, usd: Double, figure: String)] = []
-            for row in store.rows where row.kind == .held {
-                let usd = PrivateMoney.rowUSD(row, prices: store.shownPrices) ?? 0
-                if let i = bySymbol.firstIndex(where: { $0.symbol == row.symbol }) {
-                    bySymbol[i].usd += usd
-                } else {
-                    bySymbol.append((row.symbol, usd,
-                                     PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)))
-                }
-            }
-            return bySymbol.map { .init(id: $0.symbol, usd: $0.usd, route: nil,
-                                        display: $0.usd > 0 ? nil : $0.figure) }
-        }
-        return walletSeatItems(things).map {
+        walletSeatItems(things).map {
             .init(id: $0.name, usd: $0.usd, route: nil, display: $0.usd > 0 ? nil : $0.figure)
         }
     }
@@ -1004,8 +987,8 @@ extension FeedScreen {
     /// The app picked's own holdings, as its read left them (prd §1702,
     /// §1703; `SeatHoldings`): Plasma One's card, ENS's names, CardPointers'
     /// cards, MetaMask Card's "Can spend", Privacy.com's limits, ether.fi's
-    /// Cash accounts, Peer's escrow, Rocket Money's accounts (§1704), Railgun's
-    /// doors (§1705). Empty for every other app.
+    /// Cash accounts, Peer's escrow, Rocket Money's accounts (§1704). Empty
+    /// for every other app.
     func walletSeatItems(_ things: [Thing]) -> [SeatHoldings.Item] {
         guard let source = selectedSeat?.source else { return [] }
         switch source {
@@ -1025,12 +1008,7 @@ extension FeedScreen {
         case EtherFiCash.source:          return SeatHoldingsStore.items(.etherFi)
         case PeerBridge.sourceName:       return SeatHoldingsStore.items(.peer)
         case RocketMoneyLive.source:      return SeatHoldingsStore.items(.rocketMoney)
-        case RailgunBridge.sourceName:
-            // The public doors only, per token (prd §1705): never the pool's
-            // private balance, which this app does not read.
-            return SeatHoldings.railgun(things.filter { $0.source == source }
-                .map { (ref: $0.sourceRef, symbol: $0.priceCurrency, amount: $0.priceValue, live: $0.isLive) })
-        default:                          return []
+        default:                         return []
         }
     }
 
@@ -1052,8 +1030,6 @@ extension FeedScreen {
             return { $0 == 1 ? String(localized: "deposit") : String(localized: "deposits") }
         case MetaMaskCardBridge.source?:
             return { $0 == 1 ? String(localized: "card") : String(localized: "cards") }
-        case RailgunBridge.sourceName?:
-            return { $0 == 1 ? String(localized: "token shielded") : String(localized: "tokens shielded") }
         default:
             return { $0 == 1 ? String(localized: "token") : String(localized: "tokens") }
         }

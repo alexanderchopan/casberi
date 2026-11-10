@@ -1,15 +1,23 @@
 #!/bin/zsh
-# Casberi wallet-room self-test — the SHIPPED pure judgement behind the FIVE
-# WALLET-RIDING feed-room heads (prd §349, 2026-08-10; Railgun added §350,
-# Safe added §349's own amendment, both 2026-08-11):
+# Casberi wallet-room self-test — the SHIPPED pure judgement behind the
+# wallet-riding seats (prd §349, 2026-08-10):
 #
-#   Casberi/Casberi/Model/PeerRoom.swift
-#   Casberi/Casberi/Model/PrivacyPoolsRoom.swift
-#   Casberi/Casberi/Model/CardSpendRoom.swift
-#   Casberi/Casberi/Model/RailgunRoom.swift
-#   Casberi/Casberi/Model/SafeRoom.swift
+#   Casberi/Casberi/Model/PeerRoom.swift          the Peer head
+#   Casberi/Casberi/Model/CardSpendRoom.swift     the onchain cards' head
+#   Casberi/Casberi/Model/PrivacyPoolsRoom.swift  Privacy Pools' vocabulary
+#   Casberi/Casberi/Model/SafeRoom.swift          the Safe queue's reading
 #
-# All five are Foundation-only BY DESIGN, so all five are compiled WHOLE AND
+# prd §1738 made Safe, Privacy Pools and Railgun no pick in the Wallet's menu,
+# so no box draws their heads: the Railgun head (`RailgunRoom`, its source and
+# card), the Privacy Pools head (its composition, card, source and cover
+# store) and the Safe card are DELETED, and this file's sections, guards and
+# mutations for them went with them. What is left of those two files is what
+# still ships: the refs and tags the Privacy Pools bridge, Needs you and the
+# demo share, and the Safe queue's rules that `SafeBridge`'s rows, `SafeAsk`
+# and `-safeRoomProbe` read. The last drift guards below fail if a deleted
+# head comes back.
+#
+# All four are Foundation-only BY DESIGN, so all four are compiled WHOLE AND
 # UNMODIFIED rather than extracted — the strongest form of "the harness ran the
 # shipped logic". Everything that touches `Thing`/`SafeBridge` lives in the
 # `…RoomSource.swift` half, which no harness can compile and which contains no
@@ -17,8 +25,8 @@
 #
 # WHY A HARNESS AND NOT A LIVE CHECK. These four seats ride the WATCHED
 # WALLETS: there is no key to mint, no account to open, and nothing on this host
-# can make a Peer fill settle, a 0xBow screener rule, an onchain card get
-# swiped, or a Railgun shield land. A room's numbers can only ever be checked by
+# can make a Peer fill settle, a 0xBow screener rule, or an onchain card get
+# swiped. A room's numbers can only ever be checked by
 # somebody who already has the history — and every failure mode here is a
 # SILENT WRONG ANSWER that renders perfectly:
 #
@@ -36,9 +44,6 @@
 #   · EUR added to GBP and printed as one figure
 #   · "up 400%" against a window the room was never watching
 #   · a spend whose amount could not be read folded into a total as zero
-#   · a shield with no readable token bucketed under an invented "Unknown"
-#   · a token's shielded amount presented as complete when one shield in it
-#     carried no readable amount at all
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
@@ -84,28 +89,20 @@ PEER="Casberi/Casberi/Model/PeerRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 CARDSPEND="Casberi/Casberi/Model/CardSpendRoom.swift"
-RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
 SAFE="Casberi/Casberi/Model/SafeRoom.swift"
-# (The Privacy Pools room's scope enum, `PrivacyPoolsSection`, left with its
-# tiles, prd §1060: the head draws every reading.)
-for f in "$PEER" "$POOLS" "$CARDSPEND" "$RAILGUN" "$SAFE"; do
+for f in "$PEER" "$POOLS" "$CARDSPEND" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
 SRC_PEER="Casberi/Casberi/Model/PeerRoomSource.swift"
-SRC_POOLS="Casberi/Casberi/Model/PrivacyPoolsRoomSource.swift"
 SRC_METAMASK="Casberi/Casberi/Model/MetaMaskCardRoomSource.swift"
-SRC_RAILGUN="Casberi/Casberi/Model/RailgunRoomSource.swift"
 SRC_SAFE="Casberi/Casberi/Model/SafeRoomSource.swift"
 BR_PEER="Casberi/Casberi/Model/PeerBridge.swift"
 BR_POOLS="Casberi/Casberi/Model/PrivacyPoolsBridge.swift"
 BR_METAMASK="Casberi/Casberi/Model/MetaMaskCardBridge.swift"
 BR_RAILGUN="Casberi/Casberi/Model/RailgunBridge.swift"
 CARD_PEER="Casberi/Casberi/Screens/PeerRoomCard.swift"
-CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
 CARD_SPEND="Casberi/Casberi/Screens/CardSpendRoomCard.swift"
-CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
-CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
@@ -149,7 +146,7 @@ for line in open(sys.argv[1]):
     if line.lstrip().startswith("//"): continue
     sys.stdout.write(line)' "$1"
 }
-for f in "$BR_POOLS" "$POOLS" "$SRC_POOLS"; do
+for f in "$BR_POOLS" "$POOLS"; do
   strip_comments "$f" > "$TMP/stripped.swift"
   if grep -q 'privacypools:deposit:' "$TMP/stripped.swift"; then
     echo "✗ the dead 'privacypools:deposit:' spelling is back in $f — deposits land under 'privacypools:dep:'"; exit 1
@@ -167,143 +164,46 @@ grep -q 'thing.priceValue = value' "$BR_METAMASK" \
 grep -q 'thing.priceCurrency = currency' "$BR_METAMASK" \
   || { echo "✗ MetaMaskCardBridge no longer stamps priceCurrency — spends would drop out of every total with nothing on screen to say so"; exit 1; }
 grep -q 'tags: \["Shielded", "Pending"\]' "$BR_POOLS" \
-  || { echo "✗ a Privacy Pools deposit no longer lands wearing a state tag — every deposit would compose as untagged"; exit 1; }
+  || { echo "✗ a Privacy Pools deposit no longer lands wearing a state tag — Needs you could never find the one that needs proof"; exit 1; }
 
 # --- prd §397 (2026-08-17) --------------------------------------------------
-# The money the room states. Without BOTH halves every deposit is `unpriced`,
-# the holdings line never draws, and the cover line has no asset to join
-# against — three readings gone while the card still renders a full standing.
+# The money a deposit's row states (the ledger column, the receipt). Without
+# BOTH halves the row keeps its figure inside its sentence.
 grep -q 'thing.priceValue = value' "$BR_POOLS" \
-  || { echo "✗ PrivacyPoolsBridge no longer stamps priceValue — the room could state no money at all, and §349's refusal would be back"; exit 1; }
-# One helper stamps both versions' deposits (2026-10-21); v1 must hand it OUR
-# pool symbol, since the cover joins on `priceCurrency` (`PrivacyPoolsCover`).
+  || { echo "✗ PrivacyPoolsBridge no longer stamps priceValue — a deposit's row could state no money"; exit 1; }
+# One helper stamps both versions' deposits (2026-10-21); v1 hands it OUR pool
+# symbol, never the API's.
 grep -q 'thing.priceCurrency = symbol' "$BR_POOLS" \
-  || { echo "✗ PrivacyPoolsBridge no longer stamps priceCurrency — deposits would drop out of every holding with nothing on screen to say so"; exit 1; }
+  || { echo "✗ PrivacyPoolsBridge no longer stamps priceCurrency — a deposit's row would not say which asset it is"; exit 1; }
 grep -q 'symbol: pool?.symbol,' "$BR_POOLS" \
-  || { echo "✗ a v1 deposit no longer stamps its pool's own symbol — the cover line would stop joining its holding"; exit 1; }
+  || { echo "✗ a v1 deposit no longer stamps its pool's own symbol"; exit 1; }
 # THE LOOP. Without this the deposit a ragequit undoes keeps its `Declined`
-# tag, so the row and the card disagree about the same deposit forever. (The
-# CARD is still right — `PrivacyPoolsRoom` does the join itself — so this
-# failing is invisible everywhere except search and the row's own chrome,
-# which is exactly why it is mechanical.)
+# tag for life — invisible everywhere except search and the row's own chrome,
+# which is exactly why it is mechanical.
 grep -q 'retag(label: exit.label, to: PrivacyPoolsRoom.State.reclaimed.rawValue' "$BR_POOLS" \
   || { echo "✗ a ragequit no longer moves its own deposit's state tag — the row would keep saying Declined after the money came back"; exit 1; }
 # Both halves of the join must build the ref from ONE constant, the
 # `depositRefPrefix` lesson applied to the exit.
 grep -q 'let ref = PrivacyPoolsRoom.reclaimedPrefix + exit.label' "$BR_POOLS" \
-  || { echo "✗ the ragequit ref is spelled by hand again — the room's reclaim join keys on PrivacyPoolsRoom.reclaimedPrefix and would silently match nothing"; exit 1; }
-# One rounding for one number. The card's cover line and the sheet's §228
-# sentence state the same pool's set size on two surfaces; rounding them
-# separately is how they end up a hundred deposits apart.
+  || { echo "✗ the ragequit ref is spelled by hand again — the reclaim join keys on PrivacyPoolsRoom.reclaimedPrefix and would silently match nothing"; exit 1; }
+# One rounding for the sheet's §228 sentence, the shipped one this file tests.
 grep -q 'PrivacyPoolsRoom.roundedSet(n)' "$BR_POOLS" \
-  || { echo "✗ PrivacyPoolsBridge rounds the anonymity set itself again — the card and the thing sheet can now disagree about the same pool"; exit 1; }
-# The cover store is written by the SWEEP, not by drawing. A card that fetched
-# its own reading would spend a request per open on the one head whose contract
-# says it spends nothing per open.
-grep -q 'PrivacyPoolsCover.save(current: bySymbol)' "$BR_POOLS" \
-  || { echo "✗ nothing writes the live anonymity sets any more — the cover line would be permanently absent"; exit 1; }
-grep -q 'PrivacyPoolsCover.snapshot(label: label, count: c.count)' "$BR_POOLS" \
-  || { echo "✗ the set size at landing is no longer snapshotted — cover could never be shown to have GROWN, the one good reading this seat has"; exit 1; }
-if grep -q 'URLSession\|IngestSupport\|getJSON' "$SRC_POOLS" "$CARD_POOLS"; then
-  echo "✗ the Privacy Pools room head reaches the network — it composes from landed rows and stored numbers only"; exit 1
-fi
-# §374: a room that states figures must be able to hide them.
-# `withheld`, not `hidden` (amended 2026-08-28). §501 renamed the gate the
-# cards read: `hidden` is the stored preference, `withheld` is `hidden &&
-# !peeking` — the STRICTER answer, and the only correct one on a card, since a
-# card reading the bare preference stays masked through the peek gesture. The
-# guard demands the current gate rather than accepting either.
-grep -q 'BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil' "$CARD_POOLS" \
-  || { echo "✗ the Privacy Pools card no longer honours hide-balances — §374 figures would stay on screen on the most stood-next-to surface this app has"; exit 1; }
-grep -q 'PrivacyPoolsRoom.holdingsLine(room, mask: mask)' "$CARD_POOLS" \
-  || { echo "✗ the card no longer draws what's in the pools, or draws it unmasked"; exit 1; }
-grep -q 'PrivacyPoolsRoom.coverLine(room.cover)' "$CARD_POOLS" \
-  || { echo "✗ the card no longer draws the anonymity set"; exit 1; }
-# The door exists only for the state that needs a person, and opens 0xBow and
-# nowhere else — capture-only means the honest affordance is a hand-off.
-grep -q 'if room.needsYou != nil {' "$CARD_POOLS" \
-  || { echo "✗ the 0xBow door is no longer gated on the one state that needs you — it would be chrome on every other room state"; exit 1; }
-grep -q 'respondURL = URL(string: "https://privacypools.com")' "$CARD_POOLS" \
-  || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
+  || { echo "✗ PrivacyPoolsBridge rounds the anonymity set itself again — the tested rounding is no longer the one the sheet's sentence uses"; exit 1; }
+# NEEDS YOU reads the same table (prd §1738: a deposit that needs your proof
+# is Needs you's, the head that led with it is deleted). Two spellings of the
+# deposit prefix or the tag is §311's bug, one file over.
+NEEDS="Casberi/Casberi/Model/WalletNeedsYou.swift"
+grep -q 'ref.hasPrefix(PrivacyPoolsRoom.depositPrefix)' "$NEEDS" \
+  || { echo "✗ Needs you no longer finds a Privacy Pools deposit by the bridge's own prefix"; exit 1; }
+grep -q 'PrivacyPoolsRoom.state(tags: tags) == .needsProof' "$NEEDS" \
+  || { echo "✗ Needs you no longer reads a deposit's state off the shipped tag table — a deposit waiting on your proof would ask nobody"; exit 1; }
 
-# --- prd §486's three readings, one head since prd §1060 ---------------------
-# The scope tiles never drew once Privacy Pools folded into the Wallet (whose
-# tiles stand under the head), so the head draws every reading. A tile strip
-# coming back would stand a second row of tiles under the Wallet's.
-CARD_STRIPPED="$TMP/poolscard.swift"
-strip_comments "$CARD_POOLS" > "$CARD_STRIPPED"
-grep -q 'DSScopeTiles(' "$CARD_STRIPPED" \
-  && { echo "✗ the Privacy Pools card draws scope tiles again — under the Wallet's own, a second row (§1060)"; exit 1; }
-grep -q 'if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }' "$CARD_STRIPPED" \
-  || { echo "✗ the head no longer draws the Shielded reading — what is in the pools is on no screen (§1060)"; exit 1; }
-grep -q 'if reviewHasContent { DSRoomChassis.Block { reviewBody } }' "$CARD_STRIPPED" \
-  || { echo "✗ the head no longer draws the Review reading — where each deposit stands is on no screen (§1060)"; exit 1; }
-# THE RESPOND DOOR LEADS THE BLOCKS (prd §1072). The box is one fixed size, so
-# anything after the readings clips — and this is the one thing to tap on the
-# day a deposit needs your proof.
-_respond=$(grep -n 'if room.needsYou != nil { DSRoomChassis.Block { respondRow } }' "$CARD_STRIPPED" | cut -d: -f1)
-_shielded=$(grep -n 'if shieldedHasContent { DSRoomChassis.Block { shieldedBody } }' "$CARD_STRIPPED" | cut -d: -f1)
-[[ -n "$_respond" && -n "$_shielded" && "$_respond" -lt "$_shielded" ]] \
-  || { echo "✗ Respond on 0xBow no longer stands under the headline, ahead of the readings — the box clips it (§1072)"; exit 1; }
-[[ $(grep -c 'respondRow' "$CARD_STRIPPED") -eq 2 ]] \
-  || { echo "✗ the respond door is drawn in more than one place, or nowhere (§1072)"; exit 1; }
-# PRESENCE AND RENDERING ARE ONE QUESTION, spelled the same way in both files.
-# §483 shipped a Risk chip that opened an empty page because they were spelled
-# differently two files apart; these are the same two expressions.
-grep -q 'private var shieldedHasContent: Bool { !room.holdings.isEmpty }' "$CARD_STRIPPED" \
-  || { echo "✗ the shielded scope's render gate moved — it must stay identical to the presence flag FeedScreen passes"; exit 1; }
-grep -q '!room.segments.isEmpty || room.untagged > 0' "$CARD_STRIPPED" \
-  || { echo "✗ the review scope's render gate moved — a room of untagged deposits would offer a chip its card then declines to fill"; exit 1; }
-# THE HEADLINE BELONGS TO NO SCOPE. Scoped away, the room could be opened
-# without being told the one thing §349 exists to say.
-grep -q 'lead: .sentence(PrivacyPoolsRoom.headline(room))' "$CARD_STRIPPED" \
-  || { echo "✗ the headline is no longer the head's lead, above the tiles — a scope could hide the room's own standing (§763)"; exit 1; }
-# THE GAP IN THE BAR AND ITS LEGEND DOT ARE THE SAME COLOUR, which is the whole
-# of that row's correctness: the untagged deposits ARE the track showing
-# through. `mark.opacity(0.35)` there would file them with the resolved states,
-# which is a claim — an untagged review is not over, it is unrecorded.
-grep -q 'case .unknown:          return DS.fillFaint' "$CARD_STRIPPED" \
-  || { echo "✗ the unknown legend dot no longer takes the bar's own track colour — the gap stops being self-explaining"; exit 1; }
-grep -q 'Capsule(style: .continuous).fill(DS.fillFaint)' "$CARD_STRIPPED" \
-  || { echo "✗ the split bar's track is no longer DS.fillFaint — it and the unknown legend dot must be one colour"; exit 1; }
-grep -q 'DSRoomChassis.Rows(items: PrivacyPoolsRoom.legendRows(room))' "$CARD_STRIPPED" \
-  || { echo "✗ the legend iterates segments again — the untagged deposits would lose the row that explains the bar's gap"; exit 1; }
-# The note is the SPLIT'S caption now, not a second sentence under the
-# headline. Drawn in the review body or it is a fact with no home. Re-pointed
-# for prd §745: the line is drawn by the head template's `LineText` now, so the
-# guard follows the call rather than the `Text(` it used to be wrapped in.
-grep -q 'text: PrivacyPoolsRoom.note(room)' "$CARD_STRIPPED" \
-  || { echo "✗ the card no longer draws the note — the split bar loses the sentence that says what it shows"; exit 1; }
-grep -q 'PrivacyPoolsRoom.shieldedNote(room)' "$CARD_STRIPPED" \
-  || { echo "✗ the money line lost its caveats — deposits it could not price would be silently missing from the figure"; exit 1; }
-grep -q 'PrivacyPoolsRoom.activityNote(room)' "$CARD_STRIPPED" \
-  || { echo "✗ the room's own events lost their caption — the observed review time and the idle clause would be computed and never said"; exit 1; }
-# ONE GESTURE, ONE ANSWER. The card-wide tap retired with §486: the readings
-# are individually tappable rows inside their own cards now, and a whole-card
-# target over them is a second answer to the same gesture.
-if grep -q 'onTapGesture' "$CARD_STRIPPED"; then
-  echo "✗ the Privacy Pools card has a whole-card tap again, over rows that are already buttons"; exit 1
-fi
-# The room's rows gate (`privacyPoolsShowsRows`) left with the room: Privacy
-# Pools folded into the Wallet (prd §1048), whose list is its own (prd §1059).
-# The probe is the only way to see a reading that did not draw, and an empty
-# one has causes that are invisible from outside.
-grep -q 'privacyPoolsReadings|' "$SRC_POOLS" \
-  || { echo "✗ -privacyPoolsRoomProbe no longer reports which readings are empty — a head missing a block has several causes and only one is a bug"; exit 1; }
-grep -q 'privacyPoolsLegend|' "$SRC_POOLS" \
-  || { echo "✗ -privacyPoolsRoomProbe no longer reports the legend as drawn — the untagged row's wording could only be checked by screenshot"; exit 1; }
-
-# Demo parity (the standing ship step): every reading above must COMPOSE over
-# the seeded corpus, or the demo shows a card the real room would not.
-grep -q 'PrivacyPoolsCover.save(current:' "$DEMO" \
-  || { echo "✗ the demo no longer seeds the anonymity sets — the cover line would be silently absent from every demo"; exit 1; }
+# Demo parity (the standing ship step): the reclaim pair must be seeded under
+# the real prefixes, or the demo shows a deposit the bridge would have retagged.
 grep -q 'PrivacyPoolsRoom.reclaimedPrefix + "demo6"' "$DEMO" \
   || { echo "✗ the demo no longer seeds a ragequit joined to a deposit — the §397 loop would ship unexercised"; exit 1; }
 grep -q '"privacypools:ragequit:demo"' "$DEMO" \
   || { echo "✗ the demo's ragequit ref prefix is missing from refPrefixes — the exit row would outlive the demo and go on joining to a deposit that is real"; exit 1; }
-grep -q 'PrivacyPoolsCover.forget(labels:' "$DEMO" \
-  || { echo "✗ demo teardown no longer removes the seeded cover snapshots by label — a blanket wipe would destroy a real depositor's own, which cannot be re-read"; exit 1; }
-
 # The source name each room filters on, still the one the bridge lands under.
 # The constants exist so the two agree; these check they still describe reality.
 grep -q 'static let sourceName = "Peer"' "$BR_PEER" \
@@ -322,16 +222,16 @@ grep -q 'static let sourceName = "Railgun"' "$BR_RAILGUN" \
   || { echo "✗ RailgunBridge.sourceName changed"; exit 1; }
 
 # The move as DATA, still stamped by the bridge that lands it (prd §350) —
-# without this the Railgun head composes perfectly over nothing.
+# without this a Railgun row's ledger column and receipt have no figure.
 grep -q 'thing.priceValue = move.raw / pow(10, Double(decimals))' "$BR_RAILGUN" \
   || { echo "✗ RailgunBridge no longer stamps priceValue on a move — every shield/unshield would be unpriced"; exit 1; }
 grep -q 'thing.priceCurrency = symbol' "$BR_RAILGUN" \
-  || { echo "✗ RailgunBridge no longer stamps priceCurrency — moves would drop out of every token grouping"; exit 1; }
+  || { echo "✗ RailgunBridge no longer stamps priceCurrency — a move would not say which token it is"; exit 1; }
 
 # Corollary 4 — filtered live at the boundary, before any stored property is
 # read. The caller hands these a debounced snapshot and the foreground sweep
 # deletes rows while it is held.
-for f in "$SRC_PEER" "$SRC_POOLS" "$SRC_METAMASK" "$SRC_RAILGUN"; do
+for f in "$SRC_PEER" "$SRC_METAMASK"; do
   grep -q 'things.live' "$f" \
     || { echo "✗ $f no longer filters live at the boundary (corollary 4)"; exit 1; }
 done
@@ -340,22 +240,45 @@ done
 # roster, which spent weeks that way.
 grep -q 'case .peer(let room)' "$FEED" \
   || { echo "✗ the Peer head is no longer rendered from the sourceHead chain"; exit 1; }
-grep -q 'case .privacyPools(let room)' "$FEED" \
-  || { echo "✗ the Privacy Pools head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .cardSpend(let room, let seat)' "$FEED" \
   || { echo "✗ the onchain-card head is no longer rendered from the sourceHead chain"; exit 1; }
-grep -q 'case .railgun(let room)' "$FEED" \
-  || { echo "✗ the Railgun head is no longer rendered from the sourceHead chain"; exit 1; }
-grep -q 'case .safe(let room)' "$FEED" \
-  || { echo "✗ the Safe head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case PeerRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Peer room"; exit 1; }
-grep -q 'case PrivacyPoolsRoomSource.source:' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Privacy Pools room"; exit 1; }
-grep -q 'case RailgunRoomSource.source:' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Railgun room"; exit 1; }
-grep -q 'case SafeRoomSource.source:' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Safe room"; exit 1; }
+
+# --- prd §1738: the three retired heads stay retired --------------------------
+# Safe, Privacy Pools and Railgun are no pick in the Wallet's menu, so a head
+# for one of them is a card no box can draw (§723: deleted from the surface,
+# deleted from the model). A file or a case coming back is that dead model
+# returning. Read off COMMENT-STRIPPED copies: the code explains the deletion
+# by naming what was deleted.
+for gone in Model/RailgunRoom.swift Model/RailgunRoomSource.swift Screens/RailgunRoomCard.swift \
+            Model/PrivacyPoolsRoomSource.swift Model/PrivacyPoolsCover.swift \
+            Screens/PrivacyPoolsRoomCard.swift Screens/SafeRoomCard.swift; do
+  [[ ! -e "Casberi/Casberi/$gone" ]] \
+    || { echo "✗ $gone is back — its pick was retired by prd §1738, so nothing can draw it"; exit 1; }
+done
+strip_comments "$FEED" > "$TMP/feed.nocomment"
+strip_comments "$PROBES" > "$TMP/probes.nocomment"
+for dead in 'case privacyPools(' 'case railgun(' 'case safe(SafeRoom)' \
+            'RailgunRoomSource' 'PrivacyPoolsRoomSource' 'SafeRoomSource.source:' \
+            'SeatHoldings.railgun' 'PrivacyPoolsBridge.sourceName {'; do
+  if grep -qF "$dead" "$TMP/feed.nocomment"; then
+    echo "✗ FeedScreen names '$dead' again — a head or a pick branch for a seat that is no pick (§1738)"; exit 1
+  fi
+done
+for dead in 'privacyPoolsRoomProbe' 'railgunRoomProbe' 'note("privacyPoolsHead"' \
+            'note("railgunHead"' 'note("safeHead"'; do
+  if grep -qF "$dead" "$TMP/probes.nocomment"; then
+    echo "✗ ProbeHooks carries '$dead' again — a probe for a head that no longer exists (§1738)"; exit 1
+  fi
+done
+# The seats themselves must still say where their door lands, or the deletion
+# above orphans three Library tiles.
+ACCOUNTS="Casberi/Casberi/Model/RoomAccounts.swift"
+[[ $(grep -c 'landing: .privateHoldings' "$ACCOUNTS") -eq 2 ]] \
+  || { echo "✗ Privacy Pools and Railgun no longer both land on Holdings › Private (§1738)"; exit 1; }
+grep -q 'landing: .yourAccount' "$ACCOUNTS" \
+  || { echo "✗ Safe no longer lands on Your account (§1738)"; exit 1; }
 
 # The cards draw through the SHIPPED arithmetic and honour the row caps, so a
 # card cannot quietly re-rank or over-draw what the room composed.
@@ -432,29 +355,6 @@ fi
 # with a total that silently left a card out.
 grep -qF '"MetaMask Card", "ether.fi"' "Casberi/Shared/Thing.swift" \
   || { echo "✗ Corpus.cardSpendSources no longer holds every onchain card — a spend answer would omit one (§868)"; exit 1; }
-grep -q 'room.tokens.prefix(RailgunRoomSource.rowCap)' "$CARD_RAILGUN" \
-  || { echo "✗ the Railgun card no longer honours the token cap"; exit 1; }
-
-# --- prd §485 (2026-08-26): the Railgun room's restraint pass ---------------
-# The card draws through the SHIPPED pair, and the pair is its only drawing —
-# without it a row carries two figures and no picture, which is the state this
-# pass replaced (a bar measuring move count under a line stating an amount).
-grep -q 'RailgunRoom.pair(token)' "$CARD_RAILGUN" \
-  || { echo "✗ the Railgun card no longer draws through the shipped pair() — its rows would carry figures and no drawing"; exit 1; }
-# EVERY drawn token gets a row, the lead included. Before this the lead was
-# named inside the prose headline and drew a bar with no label of its own, two
-# lines below the words it belonged to.
-grep -q 'DSRoomChassis.Rows(items: drawn)' "$CARD_RAILGUN" \
-  || { echo "✗ the Railgun card no longer gives every drawn token a row — a lead with a bar and no label is what this pass removed"; exit 1; }
-# The negative half, on a COMMENT-STRIPPED copy: both files explain this pass by
-# NAMING the deleted function, so a guard grepping raw source fires on the prose
-# explaining the fix (the Obsidian/Cursor lesson).
-for f in "$RAILGUN" "$CARD_RAILGUN" "$SRC_RAILGUN"; do
-  strip_comments "$f" > "$TMP/stripped.swift"
-  if grep -q 'RailgunRoom.note\|static func note(\|RailgunRoom.share(\|static func share(' "$TMP/stripped.swift"; then
-    echo "✗ the Railgun subline or its move-count bar is back in $f — the card would restate its own rows' totals above them, and measure a count under a line stating an amount"; exit 1
-  fi
-done
 # The rooms whose every row is a transfer read as a LEDGER, not as prose: the
 # amount leaves the sentence for a right-aligned figure (`BandRow.moneyColumn`,
 # §158's reading). Both had no `Shape` case at all until this pass, so both drew
@@ -485,8 +385,6 @@ grep -q 't.transferAmount = p.amount' "$DEMO" \
   || { echo "✗ the Privacy Pools demo no longer stamps the amount it put in its own title"; exit 1; }
 grep -q 't.transferAmount = r.amount' "$DEMO" \
   || { echo "✗ the Railgun demo no longer stamps transferAmount — every seeded move would keep its figure in its sentence and the ledger column would draw on no row at all"; exit 1; }
-grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer honours the entry cap"; exit 1; }
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
 # A head outranks the generic registries, so a head that draws less than the
 # card it displaced is a regression wearing a new feature.
@@ -499,38 +397,23 @@ grep -q 'CardSpendRoom.monthShare(total: month.total, of: top)' "$CARD_SPEND" \
 # same chain every other room does — to a distribution, a mosaic, its heatmap,
 # or to no head and the newest thing as a card. Nothing to assert here that
 # `FeedInsight` still owns.
-grep -q 'case "Privacy Pools": return shieldedReview' "Casberi/Casberi/Model/FeedInsight.swift" \
-  || { echo "✗ FeedInsight's §311 distribution for Privacy Pools is gone — it is the head's fallback"; exit 1; }
-grep -q 'PrivacyPoolsRoom.share(count: segment.count,' "$CARD_POOLS" \
-  || { echo "✗ the Privacy Pools split no longer sizes its segments through the shipped share()"; exit 1; }
-grep -q 'of: room.deposits' "$CARD_POOLS" \
-  || { echo "✗ the Privacy Pools split no longer divides through EVERY deposit — untagged ones would vanish and partial knowledge would draw as complete"; exit 1; }
-grep -q 'state.resolved ? Self.mark.opacity' "$CARD_POOLS" \
-  || { echo "✗ the Privacy Pools split no longer encodes open-vs-resolved — its two weights are the card's only reading"; exit 1; }
-
 # The §219 failure inverted — see `-roomInsightProbe`'s own comment. A head in
 # `shapedSections` with no line here makes the probe confidently report that a
 # room "leads with NOTHING" when it leads with a card.
 grep -q 'note("peerHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Peer head"; exit 1; }
-grep -q 'note("privacyPoolsHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe no longer mirrors the Privacy Pools head"; exit 1; }
 grep -q 'note("metamaskCardHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the MetaMask Card head"; exit 1; }
-grep -q 'note("railgunHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe no longer mirrors the Railgun head"; exit 1; }
-grep -q 'note("safeHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe no longer mirrors the Safe head"; exit 1; }
-# Each head gets its own probe, because for these five seats an empty room is
+# Each reading gets its own probe, because for these seats an empty room is
 # usually the HEALTHY answer and only one or two causes per room are bugs.
-for key in peerRoomProbe privacyPoolsRoomProbe metamaskCardRoomProbe railgunRoomProbe safeRoomProbe; do
+for key in peerRoomProbe metamaskCardRoomProbe safeRoomProbe; do
   grep -q "Hook(key: \"$key\")" "$PROBES" \
     || { echo "✗ -$key is gone — an empty head's several causes would be indistinguishable"; exit 1; }
 done
 
 # Safe's own `sourceName` — the 2026-08-11 re-source (SafeBridge's top-of-file
-# doc, amendment 8). Change it here and the room head silently stops
-# composing over a corpus whose rows still carry the OLD source string.
+# doc, amendment 8). Change it here and the Wallet stops hosting a corpus
+# whose rows still carry the OLD source string.
 grep -q 'static let sourceName = "Safe"' "Casberi/Casberi/Model/SafeBridge.swift" \
   || { echo "✗ SafeBridge.sourceName changed"; exit 1; }
 
@@ -559,86 +442,20 @@ grep -q 'if entry.awaitsYou {' "Casberi/Casberi/Model/SafeBridge.swift" \
 grep -q 'nonce: tx\["nonce"\] as? Int' "Casberi/Casberi/Model/SafeBridge.swift" \
   || { echo "✗ SafeBridge no longer stamps the queue nonce — same-nonce rivals become undetectable"; exit 1; }
 
-# THE DEAD CONTROL. `compose` returns a card on module risk ALONE, and both of
-# the card's tap paths used to resolve through `room.lead` — so that exact card
-# announced "Opens this Safe" and did nothing.
-grep -q 'room.lead?.ref ?? fallbackRef' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer falls back to a real destination — a module-only card would announce a door it does not have"; exit 1; }
-grep -q 'SafeRoomSource.fallbackRef(things:' "$FEED" \
-  || { echo "✗ FeedScreen no longer hands the Safe card its fallback ref"; exit 1; }
-# ...and when there is no destination at all, BOTH the gesture and the
-# accessibility action must be withheld rather than left announcing one.
-grep -q 'if let destination {' "$CARD_SAFE" \
-  || { echo "✗ the Safe card's tap is no longer gated on having somewhere to go"; exit 1; }
-# The card must draw the state line, or a nonce collision is computed and never
-# said — the one fact nothing else in this app surfaces.
-# THE TINT AND THE WORDS MUST AGREE (2026-09-07, prd §652). A fully-signed
-# transaction behind two earlier ones cannot be sent, and painting it
-# confirm-green says "all good" in colour while the sentence beside it says the
-# opposite — the encoding-versus-words failure `stateLabel`'s own doc exists to
-# prevent, arriving from the other direction. Green is for what can be acted on.
-# The pick ink since prd §1385 (pink: state and verb; confirm green for executable).
-grep -q 'entry.awaitsYou ? DS.pickInk : entry.isExecutable ? DS.confirmInk' "$CARD_SAFE" \
-  || { echo "✗ the Safe row's state tint no longer keys on isExecutable — a blocked transaction would read as green while its own words say it cannot be sent"; exit 1; }
-grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer draws the state note — rival transactions would be detected and never mentioned"; exit 1; }
-grep -q 'room.isContested(entry)' "$CARD_SAFE" \
-  || { echo "✗ the Safe card no longer marks WHICH rings collide — the sentence says two of these contest and nothing says which"; exit 1; }
-
-# --- 2026-08-24: rows, not a rail (prd §464) --------------------------------
-# THE CLIP. The rings were a horizontal ScrollView of 60pt cells, and `rowCap`
-# is 3 — so it could never scroll, spent ~150pt of a ~330pt card on emptiness,
-# and clipped in three places for want of the width it was throwing away. A
-# card that goes back to a fixed-width cell goes straight back to truncating
-# `waitLabel` with no ellipsis, invisibly at the default size and for every
-# accessibility size and most non-English.
-strip_comments "$CARD_SAFE" > "$TMP/safecard.swift"
-if grep -q 'ScrollView(.horizontal' "$TMP/safecard.swift"; then
-  echo "✗ the Safe card's entries are back in a horizontal rail — three items cannot scroll, and the cell is what clipped"; exit 1
-fi
-if grep -qE 'frame\(width: [0-9]+\)' "$TMP/safecard.swift"; then
-  echo "✗ the Safe card has a fixed-width text box again — nothing on a row may carry a hardcoded width"; exit 1
-fi
-# The subject was cached on every entry and drawn ONLY in the VoiceOver label,
-# so a sighted reader got strictly less than a VoiceOver one. Both readers go
-# through the same function now, and this is what keeps them from drifting
-# apart again.
-grep -q 'DSFeedRow(name: SafeRoom.subject(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer draws the transaction's subject — the row would say 2/3 and a wait and never what it is about"; exit 1; }
-grep -q 'var parts = \[SafeRoom.subject(entry)\]' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card's VoiceOver label no longer shares the row's own subject — the spoken card and the drawn one can drift"; exit 1; }
-# STATE IS A WORD BEFORE IT IS A COLOUR. Without this the row's three states are
-# one row in greyscale, in a PDF export, and to a red-green viewer.
-grep -q 'SafeRoom.stateLabel(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer says the state — it would be carried by tint alone, which §83 forbids"; exit 1; }
-# The rival pair, said. It was a 9pt glyph offset off a ring's corner: the
-# smallest mark on the card carrying its highest-stakes fact, unlabelled.
-grep -q 'SafeRoom.positionLabel(entry)' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer names the contested queue position — the pairing is drawn adjacent and never explained"; exit 1; }
-# THE DISC'S OWN CLIP, and its two halves. The frame was a frozen 44 holding a
-# `label12`, which goes through `dsText` and grows with the text setting — so
-# "10/12" outgrew the inner circle and met its own stroke. Scaling the frame is
-# half the fix; the count STEPPING OUT above accessibilityMedium is the other,
-# because a label that scales inside a frame that also scales still collides at
-# the top of the range. The card must then carry the fraction in words, or it
-# is simply lost.
-QUEUE="Casberi/Casberi/Screens/SafeQueueCard.swift"
-strip_comments "$QUEUE" > "$TMP/safequeue.swift"
-grep -q 'UIFontMetrics(forTextStyle: .caption1).scaledValue(for: size)' "$TMP/safequeue.swift" \
-  || { echo "✗ SafeSignatureDisc's frame is frozen again — its own scaling label will outgrow it at an accessibility size"; exit 1; }
-grep -q 'frame(width: scaled, height: scaled)' "$TMP/safequeue.swift" \
-  || { echo "✗ SafeSignatureDisc computes a scaled size and no longer uses it"; exit 1; }
-grep -q 'showsCount && !sizeCategory.isAccessibilityCategory' "$TMP/safequeue.swift" \
-  || { echo "✗ SafeSignatureDisc no longer steps its count out of the ring at an accessibility size"; exit 1; }
-grep -q 'sizeCategory.isAccessibilityCategory, entry.required > 0' "$TMP/safecard.swift" \
-  || { echo "✗ the Safe card no longer carries the fraction when the ring stops drawing it — the count would be lost at an accessibility size"; exit 1; }
+# `SafeAsk` reads the composition this file tests (prd §1738: no head draws
+# it). If the ask stops reading it, the Safe sections below test a model with
+# no reader.
+grep -q 'SafeRoomSource.compose()' "Casberi/Casberi/Model/SafeAsk.swift" \
+  || { echo "✗ SafeAsk no longer reads SafeRoomSource.compose — the Safe queue's rules below would have no reader but a probe"; exit 1; }
+grep -q 'SafeRoom.stateLabel(lead)' "Casberi/Casberi/Model/SafeAsk.swift" \
+  || { echo "✗ SafeAsk no longer says the lead's state through SafeRoom.stateLabel"; exit 1; }
 
 # The widget half (the Today tile's Safe call) and the brief's stuck-signature
 # rung went with the ask (2026-10-01). `SafeRoom.stuckLine` stays, read by
 # `-safeRoomProbe`; its logic is still pinned below.
 
 # The demo has to be able to SHOW all three states, or they ship unseen — the
-# standing demo-parity rule, and what verify.sh's room-head check reads.
+# standing demo-parity rule.
 grep -q 'wallet:safe:eth:demo3' "Casberi/Casberi/Model/DemoSeedAll.swift" \
   || { echo "✗ the demo no longer seeds a rival pair / fully-signed Safe queue — the three states would ship unseen"; exit 1; }
 
@@ -788,364 +605,47 @@ check("fall-throughs alone do not earn a card",
 
 // ===========================================================================
 print("")
-print("Privacy Pools — reading a row")
+print("Privacy Pools — the vocabulary the bridge, Needs you and the demo share")
 // ===========================================================================
 
-func pp(_ ref: String, _ tags: [String] = [], at: Date = t0) -> PrivacyPoolsRoom.Sighting {
-    PrivacyPoolsRoom.Sighting(ref: ref, tags: tags, at: at)
-}
-
-// The mirror the whole card rests on: these raw values ARE the tag strings
+// The mirror everything rests on: these raw values ARE the tag strings
 // `PrivacyPoolsBridge.retag` writes.
 check("the tag vocabulary is the bridge's",
       PrivacyPoolsRoom.states == ["Pending", "Cleared", "Declined", "Needs proof", "Reclaimed"])
 check("a state is read off the tag", PrivacyPoolsRoom.state(tags: ["Shielded", "Cleared"]) == .cleared)
+check("the state that needs you is read off its tag",
+      PrivacyPoolsRoom.state(tags: ["Shielded", "Needs proof"]) == .needsProof)
 check("the shielded marker is not a state", PrivacyPoolsRoom.state(tags: ["Shielded"]) == nil)
 // Defaulting to pending is a claim about the screener made with no evidence —
 // a deposit that cleared two months ago reported as still waiting.
 check("no state tag is nil, never pending", PrivacyPoolsRoom.state(tags: []) == nil)
-check("only proof needs YOU", PrivacyPoolsRoom.State.needsProof.needsYou)
-check("a decline is a decision already made", PrivacyPoolsRoom.State.declined.needsYou == false)
-check("cleared and declined are both over",
-      PrivacyPoolsRoom.State.cleared.resolved && PrivacyPoolsRoom.State.declined.resolved)
-check("pending is not resolved", PrivacyPoolsRoom.State.pending.resolved == false)
 
 print("")
-print("Privacy Pools — composing")
-let pools = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:1", ["Shielded", "Pending"], at: day(-2)),
-    pp("privacypools:dep:2", ["Shielded", "Pending"], at: day(-4)),
-    pp("privacypools:dep:3", ["Shielded", "Cleared"], at: day(-9)),
-    pp("privacypools:dep:4", ["Shielded", "Needs proof"], at: day(-6)),
-    pp("privacypools:dep:5", ["Shielded"], at: day(-20)),          // pre-§311
-    pp("privacypools:ragequit:6", at: day(-1)),
-    // The announcement of deposit 3 clearing. Counting it would report that
-    // deposit twice — once as itself, once as its own news.
-    pp("privacypools:status:3", at: day(-9)),
-    pp("privacypools:poi:4", at: day(-6)),
-])
-check("deposits are counted", pools.deposits == 5)
-check("an untagged deposit is counted apart", pools.untagged == 1)
-check("an alert is NOT a deposit", pools.deposits == 5 && pools.segments.reduce(0) { $0 + $1.count } == 4)
-// Ragequit 6 has no deposit 6 in this room, so it stays an orphan rather than
-// resolving anything — see the loop-closing block below for the joined case.
-check("a reclaim with no deposit here is counted apart", pools.unattachedReclaims == 1)
-check("what is still open is counted", pools.waiting == 3)
-check("a reclaim never dates the room", pools.newest == day(-2))
+print("Privacy Pools — one label joins a deposit, its alert and its ragequit")
+// §311's bug was two spellings of one prefix. The prefixes are asserted as
+// LITERALS on purpose: every device's landed rows carry these exact strings.
+check("a deposit lands under dep:", PrivacyPoolsRoom.depositPrefix == "privacypools:dep:")
+check("a ragequit lands under ragequit:", PrivacyPoolsRoom.reclaimedPrefix == "privacypools:ragequit:")
+check("a deposit's label is its ref's suffix",
+      PrivacyPoolsRoom.label(ref: PrivacyPoolsRoom.depositPrefix + "42") == "42")
+check("its ragequit carries the same label",
+      PrivacyPoolsRoom.label(ref: PrivacyPoolsRoom.reclaimedPrefix + "42") == "42")
+check("its status alert carries the same label",
+      PrivacyPoolsRoom.label(ref: "privacypools:status:42") == "42")
+check("a ref no prefix names has no label", PrivacyPoolsRoom.label(ref: "peer:42") == nil)
+check("no ref has no label", PrivacyPoolsRoom.label(ref: nil) == nil)
 
 print("")
-print("Privacy Pools — the ranking that matters")
-// One stuck deposit outranks forty that cleared: the forty need nothing from
-// anybody, and the one is the entire reason to look.
-check("proof-required leads everything", pools.lead?.state == .needsProof)
-check("the stuck deposit is found", pools.needsYou?.count == 1)
-check("a decline outranks a pending", PrivacyPoolsRoom.rank(.declined) > PrivacyPoolsRoom.rank(.pending))
-check("a pending outranks a cleared", PrivacyPoolsRoom.rank(.pending) > PrivacyPoolsRoom.rank(.cleared))
-let lopsided = PrivacyPoolsRoom.compose(rows:
-    (0..<40).map { pp("privacypools:dep:c\($0)", ["Cleared"]) }
-    + [pp("privacypools:dep:stuck", ["Needs proof"])])
-check("one stuck deposit still leads forty cleared ones", lopsided.lead?.state == .needsProof)
-check("and the headline says so",
-      PrivacyPoolsRoom.headline(lopsided, now: t0) == "A deposit needs your proof")
-
-print("")
-print("Privacy Pools — oldest-in-state and observed review time")
-let staleRoom = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:old", ["Pending"], at: day(-10)),
-])
-check("the headline names the wait once it clears the floor",
-      PrivacyPoolsRoom.headline(staleRoom, now: t0).contains("10 days"))
-let freshRoom = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:new", ["Pending"], at: day(-1)),
-])
-check("a wait under the floor says nothing extra",
-      PrivacyPoolsRoom.headline(freshRoom, now: t0) == "1 deposit is still in review")
-
-// A deposit and its own status alert share the SAME label suffix — that is
-// what lets the room pair "when it landed" to "when we saw it resolve" with
-// no new field and no new read.
-let reviewed = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:r1", ["Cleared"], at: day(-9)),
-    pp("privacypools:status:r1", [], at: day(-4)),
-])
-check("a deposit paired with its own status alert yields a real review time",
-      reviewed.reviewDays == 5)
-let unresolved = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:r2", ["Pending"], at: day(-9)),
-])
-check("no observed resolution means no review-time claim", unresolved.reviewDays == nil)
-let reversed = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:r3", ["Cleared"], at: day(-1)),
-    pp("privacypools:status:r3", [], at: day(-9)),
-])
-check("a resolution dated before its own deposit is never used", reversed.reviewDays == nil)
-check("median, not mean, over several observed reviews",
-      PrivacyPoolsRoom.medianDays([1, 3, 100]) == 3)
-
-print("")
-print("Privacy Pools — the split")
-// The denominator is EVERY deposit, so the drawn segments legitimately fall
-// short and the gap is the unknown. Dividing through the tagged count alone
-// would present partial knowledge as complete.
-check("the split divides through every deposit including untagged ones",
-      abs(PrivacyPoolsRoom.share(count: 1, of: pools.deposits) - 0.2) < 0.0001)
-check("the drawn segments deliberately do not fill the bar",
-      abs(pools.segments.reduce(0.0) {
-          $0 + PrivacyPoolsRoom.share(count: $1.count, of: pools.deposits) } - 0.8) < 0.0001)
-check("a zero denominator can't divide by zero", PrivacyPoolsRoom.share(count: 2, of: 0) == 0)
-
-print("")
-print("Privacy Pools — words")
-check("a state's line says what it MEANS, not just the verdict",
-      PrivacyPoolsRoom.meaning(.declined) == "reclaim to your account")
-check("cleared says what you can now do",
-      PrivacyPoolsRoom.meaning(.cleared) == "ready to withdraw privately")
-check("the note carries the shape of the rest",
-      PrivacyPoolsRoom.note(pools) == "3 of 5 still waiting on the screener")
-check("an all-resolved room says so",
-      PrivacyPoolsRoom.note(PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1", ["Cleared"])]))
-        == "Every review is finished")
-check("a wholly unruled room says so",
-      PrivacyPoolsRoom.note(PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1", ["Pending"])]))
-        == "None of them have been ruled on yet")
-// §486 split the old single `footnote` into two scope captions and moved the
-// untagged clause into the legend. Nothing was dropped — these check that.
-check("untagged deposits are named in the legend, beside the gap they are",
-      PrivacyPoolsRoom.legendRows(pools).contains {
-          if case .unknown = $0.slice { return true }; return false })
-check("the unknown row says what it is",
-      PrivacyPoolsRoom.unknownLine(1) == "1 deposit's status is unknown")
-check("the unknown row pluralises",
-      PrivacyPoolsRoom.unknownLine(3) == "3 deposits' status is unknown")
-check("unknown is the LAST legend row, never ranked among the verdicts",
-      PrivacyPoolsRoom.legendRows(pools).last.map {
-          if case .unknown = $0.slice { return true }; return false } == true)
-check("a room with everything tagged grows no unknown row",
-      PrivacyPoolsRoom.legendRows(
-          PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1", ["Cleared"])])).count == 1)
-check("the legend forwards a state row to the segment wording",
-      PrivacyPoolsRoom.legendLine(
-          .init(slice: .state(.pending), count: 1, oldestAt: nil), now: t0) == "1 in review")
-check("a slice's id is stable enough to key a ForEach",
-      PrivacyPoolsRoom.Slice.state(.cleared).id == "Cleared"
-        && PrivacyPoolsRoom.Slice.unknown.id == "Unknown")
-check("the unknown row is NAMED, not left blank",
-      PrivacyPoolsRoom.name(.unknown) == "Unknown")
-let ppAct = PrivacyPoolsRoom.activityNote(pools, now: t0) ?? ""
-check("orphan reclaims are named", ppAct.contains("1 reclaimed before you followed"))
-check("a room of pre-tag deposits gets an honest headline",
-      PrivacyPoolsRoom.headline(PrivacyPoolsRoom.compose(rows: [
-          pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
-        == "2 deposits in Privacy Pools")
-check("a fully reclaimed room still draws",
-      !PrivacyPoolsRoom.compose(rows: [pp("privacypools:ragequit:1")]).isEmpty)
-check("an alert on its own is no card",
-      PrivacyPoolsRoom.compose(rows: [pp("privacypools:status:1")]).isEmpty)
-
-print("")
-print("Privacy Pools — the loop closes (prd §397)")
-// THE BUG THIS EXISTS FOR: before the join, a deposit that was declined and
-// then reclaimed kept its `Declined` tag for life, so `rank` went on putting
-// it at the top of the card telling the person to reclaim it — permanently,
-// on the one card whose whole job is to say what still needs them.
-let closed = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:x", ["Shielded", "Declined"], at: day(-30)),
-    pp("privacypools:ragequit:x", at: day(-25)),
-])
-check("a reclaimed deposit stops being declined", closed.lead?.state == .reclaimed)
-check("and the headline stops asking for a reclaim already done",
-      PrivacyPoolsRoom.headline(closed, now: t0) == "Your deposit is back in your account")
-// The double-count the whole room is careful about everywhere else: the
-// ragequit resolved a deposit, so it is reported once, as that deposit.
-check("a joined ragequit is not ALSO counted as its own thing",
-      closed.deposits == 1 && closed.unattachedReclaims == 0)
-check("nothing is left in the pools", closed.inPools == 0)
-check("and the note says that, not that reviews finished",
-      PrivacyPoolsRoom.note(closed) == "All of it has been taken back out")
-// Evidence beats the record: the stored tag is untouched and still reads
-// `Declined`. The card is right because it joined, not because anything
-// rewrote history.
-check("the stale tag itself still says declined",
-      PrivacyPoolsRoom.state(tags: ["Shielded", "Declined"]) == .declined)
-// A reclaim is over, so it must never outrank something still open.
-check("a reclaim ranks below everything still open",
-      PrivacyPoolsRoom.rank(.reclaimed) < PrivacyPoolsRoom.rank(.cleared))
-check("a reclaim is resolved and out of the pool",
-      PrivacyPoolsRoom.State.reclaimed.resolved
-        && PrivacyPoolsRoom.State.reclaimed.inPool == false)
-// A DECLINE is not an exit — the money sits there until it is reclaimed,
-// which is the entire reason these are two states.
-check("a decline is still in the pool", PrivacyPoolsRoom.State.declined.inPool)
-// Only the deposit the evidence names moves. Getting this wrong the other way
-// — every declined deposit going quiet because one was reclaimed — is the
-// same bug with the sign flipped.
-let mixedReclaims = PrivacyPoolsRoom.compose(rows: [
-    pp("privacypools:dep:a", ["Declined"], at: day(-30)),
-    pp("privacypools:dep:b", ["Declined"], at: day(-20)),
-    pp("privacypools:ragequit:a", at: day(-25)),
-])
-check("only the deposit the ragequit names moves",
-      mixedReclaims.lead?.state == .declined && mixedReclaims.lead?.count == 1)
-check("and the reclaimed one is reported exactly once",
-      mixedReclaims.segments.first { $0.state == .reclaimed }?.count == 1)
-check("a ragequit sorted BEFORE its own deposit still joins",
-      PrivacyPoolsRoom.compose(rows: [
-          pp("privacypools:ragequit:z", at: day(-25)),
-          pp("privacypools:dep:z", ["Declined"], at: day(-30)),
-      ]).lead?.state == .reclaimed)
-
-print("")
-print("Privacy Pools — what's in the pools (prd §397)")
-func ppa(_ ref: String, _ tags: [String], _ asset: String?, _ amount: Double?,
-         at: Date = t0) -> PrivacyPoolsRoom.Sighting {
-    PrivacyPoolsRoom.Sighting(ref: ref, tags: tags, asset: asset, amount: amount, at: at)
-}
-let held = PrivacyPoolsRoom.compose(rows: [
-    ppa("privacypools:dep:h1", ["Pending"], "ETH", 0.07, at: day(-2)),
-    ppa("privacypools:dep:h2", ["Cleared"], "ETH", 0.25, at: day(-5)),
-    ppa("privacypools:dep:h3", ["Cleared"], "USDC", 250, at: day(-6)),
-    // Declined AND reclaimed — its 0.15 must not be counted as shielded.
-    ppa("privacypools:dep:h4", ["Declined"], "ETH", 0.15, at: day(-9)),
-    pp("privacypools:ragequit:h4", at: day(-8)),
-    // Landed before the bridge stamped the pair: counted, never bucketed.
-    ppa("privacypools:dep:h5", ["Pending"], nil, nil, at: day(-3)),
-])
-check("assets are separate holdings", held.holdings.count == 2)
-check("the leading asset is the one with the most deposits",
-      held.leadHolding?.symbol == "ETH")
-check("money already taken back out is not counted as still in there",
-      abs((held.leadHolding?.amount ?? 0) - 0.32) < 0.0001)
-check("an unpriced deposit is counted, never dropped", held.unpriced == 1)
-check("an unpriced deposit is not bucketed under a guessed symbol",
-      held.holdings.map(\.symbol).sorted() == ["ETH", "USDC"])
-check("open deposits are counted per asset", held.leadHolding?.waiting == 1)
-// The one arithmetic this room must never do.
-check("assets are never summed",
-      PrivacyPoolsRoom.holdingsLine(held) == "0.32 ETH · 250 USDC in the pools")
-// A partial sum presented as a total is the failure this stays silent for.
-let partial = PrivacyPoolsRoom.compose(rows: [
-    ppa("privacypools:dep:p1", ["Pending"], "ETH", 0.07),
-    ppa("privacypools:dep:p2", ["Pending"], "ETH", nil),
-])
-check("a sum missing one of its parts is never stated",
-      partial.leadHolding?.amount == nil)
-check("and it falls back to a count, which is not a balance",
-      PrivacyPoolsRoom.holdingText(partial.leadHolding!) == "2 ETH deposits")
-// §374 rule 3: figures go, shapes stay.
-check("hide-balances masks the figure and keeps the asset",
-      PrivacyPoolsRoom.holdingText(held.leadHolding!, mask: "••••") == "•••• ETH")
-check("a room with nothing in it has no holdings line",
-      PrivacyPoolsRoom.holdingsLine(closed) == nil)
-// Amounts in different tokens do not compare, so ranking by them would imply
-// a conversion this room refuses to make.
-check("holdings rank by deposit count, never by amount",
-      PrivacyPoolsRoom.orderedHoldings([
-          .init(symbol: "USDC", deposits: 1, waiting: 0, amount: 250),
-          .init(symbol: "ETH", deposits: 2, waiting: 0, amount: 0.32),
-      ]).first?.symbol == "ETH")
-// Without the last tiebreak the order comes off a dictionary and the card
-// reshuffles between opens over identical data.
-check("equal counts fall back to a stable name order",
-      PrivacyPoolsRoom.orderedHoldings([
-          .init(symbol: "USDC", deposits: 1, waiting: 0, amount: 250),
-          .init(symbol: "DAI", deposits: 1, waiting: 0, amount: 10),
-      ]).first?.symbol == "DAI")
-
-print("")
-print("Privacy Pools — cover (prd §397)")
-check("no reading, no line", PrivacyPoolsRoom.coverLine(nil) == nil)
-check("an empty set is not a reading",
-      PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 0, atLanding: nil)) == nil)
-check("the current set is stated on its own",
-      PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3947, atLanding: nil))
-        == "Your ETH hides among about 3,900 accepted deposits.")
-check("growth is stated when the rounded figures differ",
-      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3947, atLanding: 2410)) ?? "")
-        .contains("up from 2,400"))
-// At two significant figures 3,947 → 3,961 renders as "up from 3,900 to
-// 3,900", which reads as a broken sentence rather than the honest "no
-// material change" it is.
-check("growth inside the rounding is not narrated",
-      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3961, atLanding: 3947)) ?? "")
-        .contains("up from") == false)
-// A shrinking set is real but alarming, and this reading does not know why.
-check("a set that shrank is never narrated",
-      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3000, atLanding: 4000)) ?? "")
-        .contains("up from") == false)
+print("Privacy Pools — the set size's rounding (prd §228's sentence)")
 // Locale-independent: the grouping separator differs by region, the digits do
 // not.
 check("two significant figures, rounded down",
       PrivacyPoolsRoom.roundedSet(3947).filter(\.isNumber) == "3900")
+check("five digits keep two figures too",
+      PrivacyPoolsRoom.roundedSet(12_345).filter(\.isNumber) == "12000")
 check("a small set is stated exactly", PrivacyPoolsRoom.roundedSet(12) == "12")
-// One asset, deliberately: several cover lines would stack separate pools'
-// set sizes into something that reads as one aggregate privacy figure.
-let covered = PrivacyPoolsRoom.compose(rows: [
-    ppa("privacypools:dep:c1", ["Pending"], "ETH", 0.07),
-    ppa("privacypools:dep:c2", ["Cleared"], "ETH", 0.25),
-    ppa("privacypools:dep:c3", ["Cleared"], "USDC", 250),
-], covers: [.init(symbol: "USDC", current: 700, atLanding: nil),
-            .init(symbol: "ETH", current: 4000, atLanding: 3000)])
-check("cover follows the leading asset and no other", covered.cover?.symbol == "ETH")
-check("a pool we have no reading for gets no line",
-      PrivacyPoolsRoom.cover(for: covered.leadHolding,
-                             in: [.init(symbol: "DAI", current: 9, atLanding: nil)]) == nil)
-
-print("")
-print("Privacy Pools — the legend's wait (prd §397)")
-let waitingSeg = staleRoom.lead!
-check("the legend names how long the oldest has waited",
-      PrivacyPoolsRoom.legendLine(waitingSeg, now: t0).contains("oldest 10 days"))
-// A cleared or reclaimed deposit finished waiting; saying how long it took is
-// not the fact that matters once it has.
-check("a resolved state says nothing about waiting",
-      PrivacyPoolsRoom.legendLine(
-          .init(state: .cleared, count: 2, oldestAt: day(-40)), now: t0)
-        == PrivacyPoolsRoom.segmentLine(.init(state: .cleared, count: 2, oldestAt: day(-40))))
-check("a wait under the floor is not worth naming",
-      PrivacyPoolsRoom.legendLine(
-          .init(state: .pending, count: 1, oldestAt: day(-1)), now: t0)
-        == "1 in review")
-
-print("")
-print("Privacy Pools — the head's readings (prd §486, one head since §1060)")
-// Presence and rendering are one question. The card draws the shielded reading
-// on exactly `holdingsLine != nil`, and the review reading on segments-or-
-// untagged; a block drawn over nothing is §83's empty drawing.
-check("shielded presence is exactly the money line's own gate",
-      (PrivacyPoolsRoom.holdingsLine(held) != nil) == !held.holdings.isEmpty)
-check("a room of only untagged deposits still earns Review — the legend has a row",
-      { let bare = PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1")])
-        return bare.segments.isEmpty && bare.untagged > 0
-      }())
-
-print("")
-print("Privacy Pools — the two scope captions (prd §486)")
-check("the shielded caption names deposits it could not price",
-      (PrivacyPoolsRoom.shieldedNote(PrivacyPoolsRoom.compose(rows: [
-          ppa("privacypools:dep:1", ["Pending"], "ETH", 0.07),
-          pp("privacypools:dep:2", ["Pending"]),
-      ])) ?? "").contains("1 deposit's size is unknown"))
-check("a room with nothing to qualify says nothing",
-      PrivacyPoolsRoom.shieldedNote(PrivacyPoolsRoom.compose(rows: [
-          ppa("privacypools:dep:1", ["Pending"], "ETH", 0.07)])) == nil)
-// The clauses went to the scope each is ABOUT. A review time and an idle gap
-// are facts about what happened; an unreadable size is a caveat on a figure.
-check("the activity caption carries the observed review time, not the money one",
-      (PrivacyPoolsRoom.activityNote(pools, now: t0) ?? "").contains("review has taken")
-        && !(PrivacyPoolsRoom.shieldedNote(pools) ?? "").contains("review has taken"))
-check("a room with nothing to add says nothing",
-      PrivacyPoolsRoom.activityNote(PrivacyPoolsRoom.compose(rows: [
-          pp("privacypools:dep:1", ["Pending"], at: day(-1))]), now: t0) == nil)
-
-// THE NOTE MUST NOT CLAIM A REVIEW FINISHED THAT WAS NEVER RECORDED. `waiting`
-// counts SEGMENTS, and a room of pre-§311 deposits has none — so the
-// `waiting == 0` branch fired and announced "Every review is finished" over
-// deposits whose standing is entirely unknown, one line under a headline that
-// had just correctly declined to say it (found and fixed 2026-08-26).
-check("a wholly untagged room says its standing isn't recorded",
-      PrivacyPoolsRoom.note(PrivacyPoolsRoom.compose(rows: [
-          pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
-        == "Where these stand isn't recorded")
+check("a three-digit set is rounded as well", PrivacyPoolsRoom.roundedSet(742) == "740")
+check("ninety-nine is still exact", PrivacyPoolsRoom.roundedSet(99) == "99")
 
 // ===========================================================================
 print("")
@@ -1330,116 +830,6 @@ check("a card used inside the window is never called unused",
 check("a room with no spends at all is no card", CardSpendRoom.compose(spends: [], now: t0).isEmpty)
 
 print("")
-print("Railgun — reading a row")
-check("a shield is read from its ref", RailgunRoom.direction(ref: "railgun:shield:0xabc:0") == .shield)
-check("an unshield is read from its ref", RailgunRoom.direction(ref: "railgun:unshield:0xabc:0") == .unshield)
-check("a ref this build doesn't know is nil, never guessed",
-      RailgunRoom.direction(ref: "railgun:0xabc") == nil)
-check("no ref at all is nil", RailgunRoom.direction(ref: nil) == nil)
-
-func move(_ ref: String, token: String? = nil, amount: Double? = nil, at: Date = t0) -> RailgunRoom.Sighting {
-    RailgunRoom.Sighting(ref: ref, token: token, amount: amount, at: at)
-}
-
-print("")
-print("Railgun — composing")
-let railgun = RailgunRoom.compose(moves: [
-    move("railgun:shield:1:0", token: "ETH", amount: 1.0, at: day(-1)),
-    move("railgun:shield:2:0", token: "ETH", amount: 2.0, at: day(-3)),
-    move("railgun:unshield:3:0", token: "ETH", amount: 0.5, at: day(-5)),
-    move("railgun:shield:4:0", token: "USDC", amount: 100, at: day(-2)),
-    move("railgun:shield:5:0", at: day(-6)),                    // no token at all
-    move("railgun:shield:6:0", token: "WBTC", at: day(-1)),     // token known, amount not
-])
-check("shields are counted", railgun.shields == 5)
-check("unshields are counted apart", railgun.unshields == 1)
-// Counted as a shield AND as unplaced: the move is real, the token is not known.
-check("a move with no readable token is counted, not bucketed", railgun.unplaced == 1)
-check("no 'Unknown' token was invented", railgun.tokens.allSatisfy { $0.symbol != "Unknown" })
-check("three real tokens", railgun.tokens.count == 3)
-check("the busiest token leads", railgun.lead?.symbol == "ETH")
-check("a token counts both directions", railgun.lead?.moves == 3)
-check("the newest move dates the room, regardless of token", railgun.newest == day(-1))
-
-print("")
-print("Railgun — token amounts")
-let eth = railgun.tokens.first { $0.symbol == "ETH" }!
-check("a token's shielded amount sums only its shields", eth.shieldedAmount == 3.0)
-check("a token's unshielded amount sums only its unshields", eth.unshieldedAmount == 0.5)
-let wbtc = railgun.tokens.first { $0.symbol == "WBTC" }!
-check("a token with an unknown amount states no total at all, never a partial one",
-      wbtc.shieldedAmount == nil)
-
-print("")
-print("Railgun — ranking is total")
-func rgToken(_ s: String, shields: Int, unshields: Int = 0, at: Date = t0) -> RailgunRoom.Token {
-    RailgunRoom.Token(symbol: s, shields: shields, unshields: unshields,
-                      shieldedAmount: nil, unshieldedAmount: nil, newest: at)
-}
-check("more moves wins",
-      RailgunRoom.ordered([rgToken("A", shields: 1), rgToken("B", shields: 9)]).first?.symbol == "B")
-check("more moves wins even against a fresher runner-up",
-      RailgunRoom.ordered([rgToken("A", shields: 9, at: day(-9)),
-                           rgToken("B", shields: 1, at: day(-1))]).first?.symbol == "A")
-check("a tie on moves breaks on recency",
-      RailgunRoom.ordered([rgToken("A", shields: 2, at: day(-9)),
-                           rgToken("B", shields: 2, at: day(-1))]).first?.symbol == "B")
-check("a full tie breaks on symbol",
-      RailgunRoom.ordered([rgToken("B", shields: 2, at: t0),
-                           rgToken("A", shields: 2, at: t0)]).first?.symbol == "A")
-
-print("")
-print("Railgun — words")
-check("the headline names the leading token", RailgunRoom.headline(railgun).contains("ETH"))
-// One token means one row labelled with it, so a headline naming it too said
-// the same word twice within fourteen points (2026-08-26).
-check("a single-token room does not name that token in the headline as well",
-      RailgunRoom.headline(RailgunRoom.compose(moves: [
-        move("railgun:shield:a:0", token: "ETH", amount: 1),
-        move("railgun:shield:b:0", token: "ETH", amount: 2),
-      ])) == "2 moves through Railgun")
-check("a card with no moves at all says so",
-      RailgunRoom.headline(RailgunRoom.compose(moves: [])) == "Nothing has moved yet")
-let rgFoot = RailgunRoom.footnote(railgun, drawn: 3, now: t0) ?? ""
-check("unplaced moves are named — a move missing from every token bucket above",
-      rgFoot.contains("1 move has no readable token"))
-check("a room with no moves at all is no card", RailgunRoom.compose(moves: []).isEmpty)
-
-print("")
-print("Railgun — the direction pair (2026-08-26)")
-// The drawing that REPLACED `share`, which was a fraction of the busiest
-// token's MOVE COUNT sitting under a line of text stating an AMOUNT — a bar
-// that read as a picture of the number printed beside it. This one is scaled
-// to the token's OWN maximum, because no two tokens here share a unit.
-func rgFull(_ s: String, shields: Int, unshields: Int,
-            shielded: Double?, back: Double?) -> RailgunRoom.Token {
-    RailgunRoom.Token(symbol: s, shields: shields, unshields: unshields,
-                      shieldedAmount: shielded, unshieldedAmount: back, newest: t0)
-}
-let ethPair = RailgunRoom.pair(eth)          // 3.0 shielded, 0.5 back
-check("the bigger side fills the row", ethPair?.into == 1)
-check("the other side is drawn against it, on this token's own scale",
-      abs((ethPair?.back ?? 0) - 0.5 / 3.0) < 0.0001)
-check("a side whose amount could not be read draws NOTHING — half a pair is not a comparison",
-      RailgunRoom.pair(wbtc) == nil)
-// A direction with no moves is a real zero, and telling that apart from an
-// unknown is the whole reason `pair` reads the COUNT before the amount: a
-// token nothing ever came back from must draw its one line, not vanish.
-let rgBackOnly = rgFull("BACK", shields: 0, unshields: 1, shielded: nil, back: 2)
-check("a direction with no moves is a real zero, never an unknown",
-      RailgunRoom.pair(rgBackOnly)?.into == 0)
-check("…and the side that did move fills the row", RailgunRoom.pair(rgBackOnly)?.back == 1)
-// MORE CAME BACK THAN WENT IN is the COMMON case here, not a corner:
-// `RailgunBridge`'s own ceiling is that only about half of shields are
-// attributable at all, so the in-side is routinely the short one.
-let rgMoreBack = rgFull("MORE", shields: 1, unshields: 1, shielded: 1, back: 4)
-check("more back than in still fits inside the row", RailgunRoom.pair(rgMoreBack)?.back == 1)
-check("…and the shorter side is drawn against the longer one",
-      RailgunRoom.pair(rgMoreBack)?.into == 0.25)
-check("a token that moved nothing on either side draws nothing",
-      RailgunRoom.pair(rgFull("ZERO", shields: 0, unshields: 0, shielded: nil, back: nil)) == nil)
-
-print("")
 print("Safe — ranking is your-turn first, then ready, then oldest first")
 func safeEntry(_ ref: String, have: Int = 1, required: Int = 3, yourTurn: Bool = false,
                submittedAt: Date? = nil, nonce: Int? = nil,
@@ -1567,8 +957,6 @@ check("…and the plural agrees with itself",
         entries: [safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42),
                   safeEntry("b", have: 2, required: 2, nonce: 45, safeNonce: 42)],
         safeCount: 1)).contains("waiting their turn"))
-check("…and the lede caption agrees with the headline above it",
-      SafeRoom.lede(safeBlockedRoom)?.caption == "fully signed, waiting their turn")
 check("…while a front-of-queue one still promises it",
       SafeRoom.headline(SafeRoom.compose(
         entries: [safeEntry("a", have: 3, required: 3, nonce: 42, safeNonce: 42)],
@@ -1665,10 +1053,6 @@ check("today reads as 'today', not '0 days'",
       SafeRoom.waitLabel(safeEntry("a", submittedAt: t0), now: t0) == "today")
 check("a nil submittedAt reads as 'waiting', never a fabricated duration",
       SafeRoom.waitLabel(safeEntry("a", submittedAt: nil), now: t0) == "waiting")
-let safeFoot = SafeRoom.footnote(SafeRoom.compose(entries: [safeEntry("a"), safeEntry("b"), safeEntry("c"), safeEntry("d")],
-                                                  safeCount: 1), drawn: 3)
-check("entries beyond the row cap are counted in the footnote, never silently dropped",
-      safeFoot == "1 more pending")
 
 print("")
 print("Safe — the row's own words (2026-08-24, prd §464)")
@@ -1708,18 +1092,6 @@ check("the row is about what the transaction IS",
 check("a description the bridge never cached falls back to a noun, not to nothing",
       SafeRoom.subject(safeEntry("a", description: "")) == "Pending transaction")
 
-// The queue position, for the pair the card used to mark with a 9pt glyph in a
-// ring's corner. THE NONCE IS AN IDENTIFIER, NOT A QUANTITY: interpolating an
-// Int into String(localized:) groups it, so position 1042 renders as
-// "position 1,042" — §375's own defect (a year set as "2,019") in a second
-// place, and one that renders perfectly.
-check("a queue position is printed as a slot, never grouped as a quantity",
-      SafeRoom.positionLabel(safeEntry("a", nonce: 1042)) == "position 1042")
-check("a small nonce is unaffected either way",
-      SafeRoom.positionLabel(safeEntry("a", nonce: 7)) == "position 7")
-check("a nonce the wire never carried names no position rather than inventing one",
-      SafeRoom.positionLabel(safeEntry("a", nonce: nil)) == nil)
-
 print("")
 print("Safe — the stuck-signature line (the brief and the widget read it until 2026-10-01)")
 // A your-turn signature notifies ONCE at landing and §306's 36-hour news
@@ -1755,7 +1127,7 @@ if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all assertions passed")
 SWIFT
 
-echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE and unmodified…"
+echo "wallet-rooms-selftest: compiling the four models WHOLE and unmodified…"
 # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
 # and it bought nothing an assertion can see — measured 9.2x faster here
 # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
@@ -1771,7 +1143,7 @@ cat > "$TMP/build.zsh" <<'BUILDSH'
 MW="$1"
 swiftc -Onone -o "$MW/run" \
   "$MW/PeerRoom.swift" "$MW/PrivacyPoolsRoom.swift" "$MW/CardSpendRoom.swift" \
-  "$MW/RailgunRoom.swift" "$MW/SafeRoom.swift" \
+  "$MW/SafeRoom.swift" \
   "$MW/RoomLede.swift" "$MW/main.swift" 2>/dev/null
 BUILDSH
 
@@ -1793,7 +1165,6 @@ mkdir -p "$TMP/base"
 cp "$PEER"    "$TMP/base/PeerRoom.swift"
 cp "$POOLS"   "$TMP/base/PrivacyPoolsRoom.swift"
 cp "$CARDSPEND"  "$TMP/base/CardSpendRoom.swift"
-cp "$RAILGUN" "$TMP/base/RailgunRoom.swift"
 cp "$SAFE"    "$TMP/base/SafeRoom.swift"
 cp "$LEDE"    "$TMP/base/RoomLede.swift"
 cp "$TMP/main.swift" "$TMP/base/main.swift"
@@ -1832,7 +1203,6 @@ mutate() {
     peer)    file=PeerRoom.swift ;;
     pools)   file=PrivacyPoolsRoom.swift ;;
     card)    file=CardSpendRoom.swift ;;
-    railgun) file=RailgunRoom.swift ;;
     safe)    file=SafeRoom.swift ;;
     *)       echo "✗ mutation '$name' names no known file: $which"; exit 1 ;;
   esac
@@ -1907,136 +1277,34 @@ mutate "an untagged deposit defaults to pending" pools \
         }
         return .pending
     }'
-# A cleared deposit counted twice — once as itself, once as its own alert.
-mutate "an alert is counted as a second deposit" pools \
-  'if ref.hasPrefix(statusPrefix) || ref.hasPrefix(poiPrefix) { return .alert }' \
-  'if ref.hasPrefix(statusPrefix) || ref.hasPrefix(poiPrefix) { return .deposit(state(tags: tags)) }'
-# One deposit stuck on proof, buried under forty that cleared — exactly on the
-# accounts that use this seat most.
-mutate "proof-required stops outranking everything" pools \
-  'case .needsProof: return 4' \
-  'case .needsProof: return 0'
-# Partial knowledge drawn as complete: the bar fills, and the deposits nobody
-# could place vanish out of the denominator.
-mutate "untagged deposits drop out of the split's denominator" pools \
-  'var deposits: Int { segments.reduce(0) { $0 + $1.count } + untagged }' \
-  'var deposits: Int { segments.reduce(0) { $0 + $1.count } }'
-# The mirror the whole card rests on. A raw value that stops matching the tag
-# `retag` writes reads every deposit as untagged.
+# The mirror. A raw value that stops matching the tag `retag` writes reads a
+# deposit waiting on your proof as untagged, and Needs you never asks.
 mutate "a state's raw value stops mirroring the bridge's tag" pools \
   'case needsProof   = "Needs proof"' \
   'case needsProof   = "NeedsProof"'
-# A resolution dated before its own deposit is not evidence of anything, and
-# using it anyway would let a clock oddity invent a negative — or worse, a
-# fabricated positive — review time.
-mutate "a review-time pair no longer checks the resolution came after the deposit" pools \
-  'guard let resolved = resolvedAt[label], resolved >= landed else { return nil }' \
-  'guard let resolved = resolvedAt[label] else { return nil }'
-
-# --- prd §397: the loop, the money, the cover ------------------------------
-# THE BUG THIS PASS EXISTS FOR. Without the join a deposit that was declined
-# and then reclaimed keeps its `Declined` tag for life, so the card goes on
-# telling the person to reclaim money already in their wallet — forever, in the
-# largest type on the room whose whole job is to say what still needs them.
-mutate "a reclaimed deposit is no longer joined to its own ragequit" pools \
-  'let out = label.map { reclaimed.contains($0) } ?? false' \
-  'let out = false'
-# The other direction: a ragequit that resolved a deposit is reported once, as
-# that deposit. Counting it again is the same double-count the alert exclusion
-# already refuses one line up.
-mutate "a joined ragequit is counted a second time as an orphan" pools \
-  'unattachedReclaims: max(reclaimRows - attachedReclaims, 0),' \
-  'unattachedReclaims: reclaimRows,'
-# A decline is NOT an exit — the money sits in the pool until it is reclaimed,
-# which is the entire reason the two are separate states.
-mutate "a reclaimed deposit is treated as still inside the pool" pools \
-  'var inPool: Bool { self != .reclaimed }' \
-  'var inPool: Bool { true }'
-# Money already back in the wallet, counted as still shielded: a balance
-# overstated by exactly the amount that left.
-mutate "money taken back out is still counted as in the pools" pools \
-  '                guard state?.inPool ?? true else { continue }' \
-  '                guard true else { continue }'
-# The note has to say "taken back out" BEFORE it says "every review is
-# finished" — once it is all out, whether the reviews finished is not the fact.
-mutate "an emptied room reports finished reviews instead of an empty pool" pools \
-  'if room.inPools == 0 {' \
-  'if room.inPools < 0 {'
-# A partial sum presented as a total, which renders as a confident balance.
-mutate "a sum missing one of its parts is presented as a total" pools \
-  'amount: $0.value.complete ? $0.value.sum : nil' \
-  'amount: $0.value.sum'
-# An asset nobody named, invented and then ranked beside the real ones — the
-# `PeerRoom` "Unknown rail" mutation, one room over.
-mutate "an unpriced deposit is bucketed under an invented symbol" pools \
-  '                guard let asset = sighting.asset, !asset.isEmpty else {
-                    unpriced += 1
-                    continue
-                }' \
-  '                let asset = sighting.asset ?? "Unknown"'
-# Ranking assets by amount implies a conversion between them that this room
-# refuses to make: it would put 500 USDC above 0.4 ETH on no basis at all.
-mutate "holdings are ranked by amount across different tokens" pools \
-  'if a.deposits != b.deposits { return a.deposits > b.deposits }' \
-  'if (a.amount ?? 0) != (b.amount ?? 0) { return (a.amount ?? 0) > (b.amount ?? 0) }'
-# Without the last tiebreak the order comes off a dictionary and the card
-# reshuffles between opens over identical data.
-mutate "the holdings order stops being total" pools \
-  'return a.symbol < b.symbol' \
-  'return a.symbol > b.symbol'
-# At two significant figures a set that moved 3,947 → 3,961 renders as "up from
-# 3,900 to 3,900" — a sentence that reads as broken rather than as the honest
-# "no material change" it is.
-mutate "growth is claimed when both figures round to the same number" pools \
-  'guard let landed = cover.atLanding, landed > 0, cover.current > landed,
-              roundedSet(landed) != now else {' \
-  'guard let landed = cover.atLanding, landed > 0, cover.current > landed else {'
-# A set that SHRANK narrated as growth — the one cover claim that would be
-# flatly false rather than merely unhelpful.
-mutate "a shrinking anonymity set is narrated as growth" pools \
-  'guard let landed = cover.atLanding, landed > 0, cover.current > landed,' \
-  'guard let landed = cover.atLanding, landed > 0, cover.current != landed,'
-# Cover belongs to ONE pool. Joined to whatever reading came first, the card
-# states some other pool'"'"'s set size as the cover for your asset.
-mutate "cover is joined to whatever pool answered first" pools \
-  'return covers.first { $0.symbol == holding.symbol }' \
-  'return covers.first'
-# A cleared deposit finished waiting; how long it took is not the fact that
-# matters once it has, and stating it makes every legend row look urgent.
-mutate "a resolved state reports how long it waited" pools \
-  'guard !segment.state.resolved, let oldestAt = segment.oldestAt else { return nil }' \
-  'guard let oldestAt = segment.oldestAt else { return nil }'
-
-# --- prd §486: the scopes, and the legend row that replaced the footnote -----
-# A room whose every deposit's standing is unrecorded announcing "Every review
-# is finished" — a claim about the screener made with no evidence, one line
-# under a headline that had just correctly declined to make it.
-mutate "an unrecorded standing is reported as a finished review" pools \
-  'if room.segments.isEmpty {' \
-  'if false, room.segments.isEmpty {'
-# The untagged deposits ARE the gap in the split bar. Drop their legend row and
-# the one unlabelled part of the drawing goes back to being undecodable — the
-# §486 complaint restored, with the card still rendering perfectly.
-mutate "the untagged deposits lose their legend row" pools \
-  'if room.untagged > 0 {' \
-  'if false, room.untagged > 0 {'
-# Unknown is not a verdict, so it trails them. Ranked among them it would
-# assert where "we do not know" sits relative to a decline.
-mutate "unknown leads the legend instead of trailing it" pools \
-  'rows.append(LegendRow(slice: .unknown, count: room.untagged, oldestAt: nil))' \
-  'rows.insert(LegendRow(slice: .unknown, count: room.untagged, oldestAt: nil), at: 0)'
-# The old single footnote became two captions, and each clause went to the
-# reading it qualifies. Lose the review time and the Activity scope has nothing
-# to say about what has actually happened here.
-mutate "the observed review time drops out of the activity caption" pools \
-  'if let reviewDays = room.reviewDays {' \
-  'if false, let reviewDays = room.reviewDays {'
-# A figure the card could not read, unsaid — the money line then presents
-# partial knowledge as complete, which is the rule this room applies
-# everywhere else.
-mutate "an unreadable deposit size is no longer named beside the figure" pools \
-  'if room.unpriced > 0 {' \
-  'if false, room.unpriced > 0 {'
+# §311's bug itself: the deposit prefix spelled the way it was looked up, not
+# the way it lands. Every landed row stops matching.
+mutate "the deposit prefix goes back to the spelling nothing lands under" pools \
+  'static let depositPrefix   = "privacypools:dep:"' \
+  'static let depositPrefix   = "privacypools:deposit:"'
+# A ragequit that no longer yields its deposit's label retags nothing, so the
+# deposit it undid says Declined for life.
+mutate "a ragequit ref no longer yields its deposit's label" pools \
+  'for prefix in [depositPrefix, statusPrefix, reclaimedPrefix]' \
+  'for prefix in [depositPrefix, statusPrefix]'
+# The label is the SUFFIX. Returning the whole ref joins nothing to anything.
+mutate "a label keeps its prefix" pools \
+  'return String(ref.dropFirst(prefix.count))' \
+  'return ref'
+# Three significant figures states a precision the sentence says it does not have.
+mutate "the set size is rounded to three figures instead of two" pools \
+  'let unit = Int(pow(10.0, Double(digits - 2)))' \
+  'let unit = Int(pow(10.0, Double(digits - 3)))'
+# The floor moves up a digit, so a pool of 742 is stated to the deposit: the
+# exact count the sentence says is noise.
+mutate "a three-digit set is stated exactly" pools \
+  'guard n >= 100 else { return "\(n)" }' \
+  'guard n >= 1000 else { return "\(n)" }'
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" card \
   'var bucket = buckets[code] ?? (total: 0, spends: 0, newest: sighting.at)' \
@@ -2085,37 +1353,6 @@ mutate "spends in another currency are folded into the strip" card \
 mutate "currencies are ranked by amount instead of count" card \
   'if a.spends != b.spends { return a.spends > b.spends }' \
   'if a.total != b.total { return a.total > b.total }'
-
-# A partial sum presented as complete — the failure `PeerRoom.Token` and
-# `RailgunRoom.Token` both exist to refuse. One shield with an unreadable
-# amount would otherwise silently understate the token's real total rather
-# than say nothing.
-mutate "a token's shielded amount is shown even when one shield's amount is unknown" railgun \
-  'shieldedAmount: (b.shields > 0 && b.shieldedKnown) ? b.shieldedAmount : nil,' \
-  'shieldedAmount: (b.shields > 0) ? b.shieldedAmount : nil,'
-# Reordering the rank so recency beats volume — the same class of bug
-# `PeerRoom.ordered` and `CardSpendRoom.ordered` are both mutation-tested
-# against: a token with nine moves losing to one with a single, fresher move.
-mutate "tokens are ranked by recency before move count" railgun \
-  'if a.moves != b.moves { return a.moves > b.moves }
-            if a.newest != b.newest { return a.newest > b.newest }' \
-  'if a.newest != b.newest { return a.newest > b.newest }
-            if a.moves != b.moves { return a.moves > b.moves }'
-
-# THE PAIR SCALED TO WHAT WENT IN, instead of to the bigger of the two. It
-# renders perfectly and is wrong exactly where this seat is weakest: only about
-# half of Railgun's shields are attributable, so a token that received more than
-# we ever saw shielded is ordinary — and against an in-side scale both its lines
-# draw full, which says "all of it came back" over any ratio at all.
-mutate "the pair is scaled to what went in rather than to the bigger side" railgun \
-  'let top = max(into, back)' \
-  'let top = into'
-# A direction with NO moves reading as an unknown rather than as zero. The pair
-# then goes nil for every token that has only ever been shielded — which is most
-# of them — so the card's drawing silently disappears from the common case.
-mutate "a direction with no moves reads as unknown instead of zero" railgun \
-  'let into: Double? = token.shields == 0 ? 0 : token.shieldedAmount' \
-  'let into: Double? = token.shieldedAmount'
 
 # A signature request only YOU can unblock loses its priority — the exact bug
 # that would make the room's own reason for existing (surfacing what's
@@ -2208,13 +1445,6 @@ mutate "an unread threshold states a shortfall anyway" safe \
 mutate "a missing description leaves the row with no subject at all" safe \
   'entry.descriptionText.isEmpty' \
   'false'
-# THE GROUPING BUG. `String(localized: "position \(n)")` over an Int renders
-# 1042 as "position 1,042" — a queue slot printed as a quantity, on the one row
-# where the number IS the identity of the collision. §375's year-as-quantity
-# defect in a second place, and it renders perfectly.
-mutate "the queue position is grouped like a quantity" safe \
-  'let plain = String(nonce)' \
-  'let plain = nonce.formatted(.number.grouping(.automatic))'
 mutate "the module warning stops naming which Safe it means" safe \
   'guard room.safeCount > 1, let only = carriers.first else {' \
   'guard false, let only = carriers.first else {'

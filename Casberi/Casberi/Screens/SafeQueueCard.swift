@@ -64,8 +64,8 @@ struct SafeQueueCard: View {
     }
 
     /// The figure beside the name: the fraction while it collects, else the
-    /// state word. The disc that carried the fraction is the room's
-    /// (`SafeRoomCard`), not the sheet's, since §1409.
+    /// state word. The disc that carried the fraction left the sheet in §1409
+    /// and was deleted with the Safe head (prd §1738).
     private var trailing: String? {
         switch check.status {
         case .pending(let have, let required):
@@ -162,110 +162,6 @@ struct SafeQueueCard: View {
 
     // `doorRow` was HERE and is `DSDoorRow` (prd §560, 2026-09-01) — this
     // file's copy is the one the shared component was drawn from.
-}
-
-/// The signature ring — `MetricDisc`'s doctrine applied to a multisig: a
-/// generic glyph names nothing, so this one is segmented by the Safe's OWN
-/// owner count and fills per signature collected. A 2-of-3 and a 4-of-7 draw
-/// visibly different marks because they ARE different, and the count sits in
-/// the middle so the disc states the whole fact alone.
-struct SafeSignatureDisc: View {
-    let have: Int
-    let required: Int
-    var size: CGFloat = 44
-    /// Whether the fraction is drawn INSIDE the ring (2026-08-24). False at an
-    /// accessibility text size, where the caller states it in the sentence
-    /// beside the disc instead — see `scaled`.
-    var showsCount = true
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    // Reading the size category invalidates the disc when the setting changes.
-    @Environment(\.sizeCategory) private var sizeCategory
-    /// **The signatures land one at a time** (2026-08-04, prd §298), in the
-    /// order they were collected. The disc's whole claim is that this is a
-    /// COUNT toward a threshold, so counting them in is the claim drawn; a
-    /// ring that faded in whole would state the same fraction and none of the
-    /// accumulation. Segments that are still missing appear immediately —
-    /// they're the track, not the reading.
-    @State private var landed = false
-
-    private var met: Bool { required > 0 && have >= required }
-
-    /// **The frame scales with the label it contains** (2026-08-24).
-    ///
-    /// It was a frozen `44` holding a `label12`, which goes through `dsText`
-    /// and therefore grows with the person's text setting — so at an
-    /// accessibility size "10/12" outgrew the 38pt inner circle and collided
-    /// with its own stroke. Same defect `dsGlyph` was written for, one shape
-    /// over: a fixed dimension beside scaling text.
-    ///
-    /// Anchored to `.caption1` because that is `label12`'s own anchor, so the
-    /// circle and the fraction ride one curve. CAPPED, unlike `dsGlyph`: a
-    /// mark that tracked the full accessibility range unbounded would be a
-    /// 100pt disc leading a row, which is a tile.
-    private var scaled: CGFloat {
-        min(UIFontMetrics(forTextStyle: .caption1).scaledValue(for: size), size * 1.35)
-    }
-
-    /// The count steps OUT of the ring above `.accessibilityMedium` — the
-    /// actual fix for the collision above, since a label that scales inside a
-    /// frame that also scales still meets it at the top of the range. The
-    /// ring is then a pure meter, which is all it can honestly be at that
-    /// size, and the caller carries the fraction in words.
-    private var drawsCount: Bool {
-        showsCount && !sizeCategory.isAccessibilityCategory
-    }
-
-    var body: some View {
-        ZStack {
-            Circle().fill(DS.fillFaint)
-            // One segment per required signature, with a hairline gap — the
-            // ring counts, it doesn't just fill. Drawn as trims rather than a
-            // dashed stroke so the gaps stay even at any `required`.
-            if required > 0 {
-                ForEach(0..<required, id: \.self) { i in
-                    let span = 1.0 / Double(required)
-                    let gap = min(0.02, span * 0.18)
-                    Circle()
-                        .trim(from: Double(i) * span + gap / 2,
-                              to: Double(i + 1) * span - gap / 2)
-                        .stroke(i < have ? (met ? DS.confirm : DS.tint) : DS.textTertiary.opacity(0.28),
-                                // Proportional, so a scaled ring keeps its
-                                // weight instead of thinning into a hairline.
-                                style: StrokeStyle(lineWidth: 3 * scaled / size,
-                                                   lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        // A collected signature counts itself in; an empty
-                        // segment is the track and is simply there.
-                        .opacity(i < have && !landed ? 0 : 1)
-                        .animation(reduceMotion ? nil
-                                   : ChartEntrance.arrive(index: i), value: landed)
-                }
-            }
-            if drawsCount {
-                Text(verbatim: required > 0 ? "\(have)/\(required)" : "\(have)")
-                    .dsText(.label12)
-                    .monospacedDigit()
-                    .foregroundStyle(met ? DS.confirmInk : DS.textPrimary)
-            }
-        }
-        .frame(width: scaled, height: scaled)
-        // Still animates when a signature actually LANDS later — what this
-        // modifier was here for.
-        .animation(DS.Motion.standard, value: have)
-        .onAppear { landed = true }
-        .accessibilityElement()
-        .accessibilityLabel(required > 0
-                            ? Text("\(have) of \(required) signatures collected")
-                            : Text("\(have) signatures collected"))
-        // Tooltip but no hover, deliberately: the ring is a readout, not a
-        // control, and a pointer lift on something a click can't act on is the
-        // dead affordance the honesty rule bans. Naming a wordless mark is
-        // exactly what `dsTooltip` is for — same sentence VoiceOver reads.
-        .dsTooltip(required > 0
-                   ? String(localized: "\(have) of \(required) signatures collected")
-                   : String(localized: "\(have) signatures collected"))
-    }
 }
 
 // MARK: - Signing, when this phone is an owner (prd §425)

@@ -346,7 +346,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298
 - **The note THING SHEETS, past §366** → docs/hooks/rooms.md · prd §399
 - **The journals' three shipped defects, fixed in the same pass** → docs/hooks/imports.md · prd §398
-- `-peerRoomProbe` `-privacyPoolsRoomProbe` — the WALLET-RIDING room heads, line by line (prd §349, 2026-08-10; one NSLog per fill/row/spend → docs/hooks/wallet.md · prd §349
+- `-peerRoomProbe` `-safeRoomProbe` — the wallet-riding readings; the Privacy Pools, Railgun and Safe heads are deleted (§1738) → docs/hooks/wallet.md · prd §349
 - **The onchain card head is SHARED (prd §858, 2026-09-20): `CardSpendRoom` serves every onchain card, drawn by one `CardSpendRoomCard(room:seat:)` behind one `FeedScreen` case `.cardSpend(_, seat:)`.** → docs/hooks/wallet.md · prd §858
 - **`CardSpendSeat` is the ONE rule for which rows in a card's room are SPENDS (prd §868, `-etherfiCashRoomProbe`), read by all three sources and the door under the card** → docs/hooks/wallet.md · prd §868 · §858
 - `-instagramImport` `-xArchiveImport` `-xFaces` `-xReplyContext` are DELETED with the X and Instagram importers (prd §1579); X and Instagram are their live sign-ins → docs/hooks/imports.md · prd §1579

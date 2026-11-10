@@ -345,6 +345,10 @@ enum SourceRename {
         // Lightning (2026-11-09): the last balance read and its time
         // (`lightning.balance.msats`, `lightning.balance.at`).
         "lightning.",
+        // Privacy Pools' cover store (prd §397), deleted with the head that
+        // read it (prd §1738): the live set sizes and the landing snapshots.
+        // The seat's cursors and watchlist (`privacypools.` otherwise) stay.
+        "privacypools.cover.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money

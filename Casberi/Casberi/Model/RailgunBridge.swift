@@ -76,10 +76,9 @@ import SwiftData
 /// never wrong.
 enum RailgunBridge {
 
-    /// The `Thing.source` every row here lands under. Named so
-    /// `RailgunRoomSource` filters on a constant rather than a literal of its
-    /// own — the `PeerBridge.sourceName` reasoning, added 2026-08-11 when
-    /// this seat got a room head of its own.
+    /// The `Thing.source` every row here lands under. Named so its readers
+    /// (`RoomAccounts`, the receipt) filter on a constant rather than a
+    /// literal of their own — the `PeerBridge.sourceName` reasoning.
     static let sourceName = "Railgun"
 
     /// Mainnet only for now. Railgun also runs on BSC, Polygon and Arbitrum;

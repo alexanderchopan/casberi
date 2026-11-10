@@ -54,9 +54,9 @@ WALLET_VIEWS = (
     # `GnosisPayRoomCard.swift` became `CardSpendRoomCard.swift` in prd §858
     # (and the Gnosis Pay seat itself went in prd §1318);
     # `WalletRosterSection.swift` (§511) and `AddressConnectionsCard.swift`
-    # are deleted, so their entries named nothing (2026-10-01).
-    "CardSpendRoomCard.swift", "RailgunRoomCard.swift", "PeerRoomCard.swift",
-    "PrivacyPoolsRoomCard.swift", "SafeRoomCard.swift", "SafeQueueCard.swift",
+    # are deleted, so their entries named nothing (2026-10-01). The Railgun,
+    # Privacy Pools and Safe head cards went with their picks (prd §1738).
+    "CardSpendRoomCard.swift", "PeerRoomCard.swift", "SafeQueueCard.swift",
     "TokenQuickSheet.swift", "EthValidatorScreen.swift", "WalletRow.swift",
     "ApprovalPrepareCard.swift",
 )

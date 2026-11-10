@@ -444,7 +444,7 @@ def audit(texts: dict) -> list:
     # §1703 — every other app's own holdings (MetaMask Card's "Can spend",
     # Privacy.com's limits, ether.fi's Cash accounts, Peer's escrow, ENS's
     # names, CardPointers' cards, §1704's Rocket Money accounts, whose banks
-    # may already be in through SimpleFIN, and Railgun's doors, §1705) stand in Holdings on the pick and NEVER in
+    # may already be in through SimpleFIN) stand in Holdings on the pick and NEVER in
     # the Wallet's number: a card's wallet and a Cash safe are already in it,
     # a limit and a name are no money, and escrow is in no total by rule.
     for name in ("WalletIngest", "WalletPortfolio", "WalletCash"):
@@ -453,9 +453,19 @@ def audit(texts: dict) -> list:
                        "Holdings on its pick and are never counted (prd §1703)")
     for seat in ("MetaMaskCardBridge.source", "WalletCards.privacySource", "EtherFiCash.source",
                  "PeerBridge.sourceName", "ENSWatch.source", "CardPointersIngest.source",
-                 "RocketMoneyLive.source", "RailgunBridge.sourceName"):
+                 "RocketMoneyLive.source"):
         if f"case {seat}" not in own:
             bad.append(f"{seat}'s holdings no longer stand in its Holdings (prd §1703)")
+
+    # §1738 — Safe, Privacy Pools and Railgun are no pick: their money is a
+    # section of the Wallet already (Holdings' Private, Your account), counted
+    # there once. A pick-holdings branch for one of them is a second place
+    # the same money could be drawn, behind a pick no menu offers (§723).
+    held = own + body(code["FeedScreen"], "func walletSeatOwnHeld(")
+    for seat in ("RailgunBridge.sourceName", "PrivacyPoolsBridge.sourceName", "SafeBridge.sourceName"):
+        if seat in held:
+            bad.append(f"{seat} has a pick-holdings branch again — it is no pick, its money "
+                       "is already a section of the Wallet (prd §1738)")
     return bad
 
 
@@ -604,8 +614,14 @@ def self_test() -> int:
          lambda t: t + "\nlet _leak = SeatHoldingsStore.items(.etherFi)\n"),
         ("Peer's escrow leaves its Holdings", "FeedScreen",
          lambda t: t.replace("case PeerBridge.sourceName:", "case \"none\":", 1)),
-        ("Railgun's doors leave its Holdings", "FeedScreen",
-         lambda t: t.replace("case RailgunBridge.sourceName:", "case \"none\":", 1)),
+        ("Railgun's doors come back as a pick's holdings", "FeedScreen",
+         lambda t: t.replace("case PeerBridge.sourceName:       return SeatHoldingsStore.items(.peer)",
+                             "case PeerBridge.sourceName:       return SeatHoldingsStore.items(.peer)\n"
+                             "        case RailgunBridge.sourceName:    return []", 1)),
+        ("Privacy Pools' private money comes back as a pick's holdings", "FeedScreen",
+         lambda t: t.replace("        walletSeatItems(things).map {",
+                             "        if selectedSeat?.source == PrivacyPoolsBridge.sourceName { return [] }\n"
+                             "        return walletSeatItems(things).map {", 1)),
         ("Plasma One's card leaves its Holdings", "FeedScreen",
          lambda t: t.replace("case PlasmaOneCard.source:", "case \"none\":", 1)),
         ("the flat $1.99 floor comes back", "WalletIngest",

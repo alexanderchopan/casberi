@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1910 of 1983 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1911 of 1984 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -703,7 +703,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §395 — Instagram becomes a photo app: the room gets a shape, the saves get their pictures, and the export's other four files… (part superseded by §821)
 - §396 — The archive's other half: what it can act as you with, who you talked to, and the posts that were never pictures
 - §396a — A post reads as a post: the X room's rows get their card back, and the whole tweet
-- §397 — Privacy Pools states what is in the pools, closes the reclaim loop, and turns cover into a number
+- §397 — Privacy Pools states what is in the pools, closes the reclaim loop, and turns cover into a number (part superseded by §1738a)
 - §398 — The notes rooms stop being a list of days
 - §399 — A note sheet reads like a note
 - §400 — Radicle: possible, keyless, and read-only with no credential to be read-only about
@@ -789,7 +789,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §483 — The wallet room becomes six scopes, and every card lands in exactly one (amended by §747)
 - §484 — Every catalog category is walked, and the demo's nine missing seats are the ones that never landed a row
 - §485 — The Railgun room stops talking over itself, and two money rooms become ledgers
-- §486 — The 0xBow room becomes three scopes, and the gap in the bar gets a name (part superseded by §763)
+- §486 — The 0xBow room becomes three scopes, and the gap in the bar gets a name (part superseded by §763, §1738a)
 - §487 — The CardPointers room had no shape, so the head said everything and the rows said nothing
 - §489 — Eight social rooms were eight different rooms, and one switch statement was why (amended by §1109)
 - §490 — Permissions gets the reading a dollar ranking cannot make
@@ -2118,10 +2118,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1701b — Nymis's reading is its scan page's again: the API runs the scan, the finished scan's page gives the summary and the f…
 - §1701c — Nymis is read through its Partner API in public client mode only: the API's two summaries and its findings, never its…
 - §1701d — Nymis's facts come back from its API: the label/value rows §1701 ruled, read from `facts`, the selected related addre…
-- §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo…
+- §1702 — An app picked in the Wallet shows what it holds: SimpleFIN's demo bank is Chase, wearing Chase's mark; 0xBow shows yo… (part superseded by §1738a)
 - §1703 — Every Wallet app picked shows something in Holdings: ENS's names, CardPointers' cards, MetaMask Card's "Can spend", P… (amended by §1704, §1705)
 - §1704 — Rocket Money, picked in the Wallet, lists the accounts it tracks under Holdings, each with its balance, a card's or l…
-- §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance (amended by §1738)
+- §1705 — Railgun, picked, shows its two doors under Holdings: per token, what you shielded and what reached you, never a balance (amended by §1738; part superseded by §1738a)
 - §1706 — Three journeys to their target: Calendar asks iOS as it lands when the phone is the only way in, Track a mailing list…
 - §1707 — The mailing-list tray is titled "Track a mailing list", as the row that opens it is
 - §1708 — The app icon is a cursive C: the arm's exit stroke runs off the tile into an "a" you never see, its tip spirals in, i… (amended by §1711) [+1 sub-entries]
@@ -2154,7 +2154,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at… (amended by §1739)
 - §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once
 - §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
-- §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle…
+- §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle… (amended by §1738a)
+- §1738a — The three retired picks' model is deleted: the Railgun and Privacy Pools heads, the Safe card, their probes and the p…
 - §1739 — Move's circle is glass with a pink glyph; your face stays on Library
 
 ## Dead rulings → what replaced them (generated)

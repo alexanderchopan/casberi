@@ -1,7 +1,13 @@
 import Foundation
 
-/// THE SAFE ROOM'S HEAD (2026-08-11, prd §349 amendment) — the signature
-/// queue as rings, ranked by who it's actually waiting on.
+/// THE SAFE QUEUE'S READING (2026-08-11, prd §349 amendment) — the signature
+/// queue ranked by who it's actually waiting on.
+///
+/// **No head draws this since prd §1738** (Safe is no pick in the Wallet's
+/// menu; the card, its lede, row cap and footnote are deleted). It stays as
+/// the one definition of ready / awaits you / contested that `SafeBridge`'s
+/// rows, `SafeAsk`'s sentence and `-safeRoomProbe` read. "Card" below is the
+/// history of why each rule exists.
 ///
 /// Safe is the only wallet-riding seat where OTHER PEOPLE act on your behalf
 /// and you wait on them (`SafeQueueCard`'s own framing, one screen deeper).
@@ -341,33 +347,6 @@ struct SafeRoom: Equatable {
         return .quiet
     }
 
-    /// THE LEDE (prd §585) — how many transactions are waiting, and on whom.
-    ///
-    /// Nil on the quiet state deliberately: "0" at the head rung on a Safe is
-    /// a figure that reads as an alarm about nothing.
-    static func lede(_ room: SafeRoom) -> RoomLede? {
-        switch lead(room) {
-        case .awaitsYou(let n):
-            return RoomLede(figure: n.formatted(),
-                            caption: String(localized: "waiting on your signature"),
-                            numeric: Double(n))
-        case .ready(let n):
-            // Same rule as the headline: the caption may only promise an
-            // action for transactions that are actually at the front.
-            return RoomLede(figure: n.formatted(),
-                            caption: room.executableCount > 0
-                                ? String(localized: "fully signed, ready to execute")
-                                : String(localized: "fully signed, waiting their turn"),
-                            numeric: Double(n))
-        case .pending(let n):
-            return RoomLede(figure: n.formatted(),
-                            caption: String(localized: "pending, waiting on others"),
-                            numeric: Double(n))
-        case .quiet:
-            return nil
-        }
-    }
-
     static func headline(_ room: SafeRoom) -> String {
         switch lead(room) {
         case .awaitsYou(let n):
@@ -554,20 +533,6 @@ struct SafeRoom: Equatable {
         return String(localized: "Waiting on \(first) and \(others) others")
     }
 
-    /// The queue POSITION, for a row that contests one — the pairing the card
-    /// used to make with a 9pt glyph in a ring's corner, said instead.
-    ///
-    /// **The nonce is never grouped.** `String(localized: "position \(n)")`
-    /// over an `Int` renders 1042 as "position 1,042" — a queue slot printed
-    /// as a quantity, which is §375's own defect (a year set as "2,019") in a
-    /// second place. Interpolating the already-formatted string is what keeps
-    /// the separator out.
-    static func positionLabel(_ entry: Entry) -> String? {
-        guard let nonce = entry.nonce else { return nil }
-        let plain = String(nonce)
-        return String(localized: "position \(plain)")
-    }
-
     /// "today" / "1 day" / "N days" — how long a pending entry has waited,
     /// off Safe's own `submissionDate`. "waiting" when the wire carried none
     /// — never a fabricated duration.
@@ -577,18 +542,6 @@ struct SafeRoom: Equatable {
         if days == 0 { return String(localized: "today") }
         if days == 1 { return String(localized: "1 day") }
         return String(localized: "\(days) days")
-    }
-
-    /// The card draws at most this many entries; the rest are counted in
-    /// the footnote rather than silently dropped.
-    static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)
-
-    /// The quiet line at the foot: pending entries not drawn.
-    static func footnote(_ room: SafeRoom, drawn: Int) -> String? {
-        let hidden = room.entries.count - drawn
-        guard hidden > 0 else { return nil }
-        return hidden == 1 ? String(localized: "1 more pending")
-                           : String(localized: "\(hidden) more pending")
     }
 
     // MARK: - Elsewhere

@@ -982,33 +982,6 @@ extension FeedScreen {
                     thing.authorHandle == rail.name
                 }
             }
-        case .privacyPools(let room):
-            // Drawn in the Wallet's box when its menu picks 0xBow (prd
-            // §1048d), every reading at once: the Wallet's tiles are the ones
-            // under it (prd §1060).
-            PrivacyPoolsRoomCard(room: room) { slice in
-                // Matched on the DEPOSIT ref as well as the tag: an
-                // alert row about a cleared deposit carries no state
-                // tag, but a future one might, and landing on the
-                // announcement instead of the deposit it announces
-                // is the wrong row by one hop.
-                //
-                // The UNKNOWN slice is the same match with the test
-                // inverted — a deposit wearing none of the bridge's
-                // state tags (prd §486). It is a real door rather
-                // than a label for the same reason every other
-                // legend row is one: these are deposits you can go
-                // and look at, and the one thing this card cannot
-                // say about them is on the row itself.
-                openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
-                    guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
-                    else { return false }
-                    switch slice {
-                    case .state(let state): return thing.tags.contains(state.rawValue)
-                    case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
-                    }
-                }
-            }
         case .cardSpend(let room, let seat):
             CardSpendRoomCard(room: room, seat: seat) { currency in
                 // A currency owns many spends, so the honest landing is
@@ -1025,28 +998,6 @@ extension FeedScreen {
             }
         case .privy(let room):
             PrivyRoomCard(room: room) { ref in
-                openBySourceRef(ref, in: visible)
-            }
-        case .railgun(let room):
-            RailgunRoomCard(room: room) { token in
-                // A token owns many moves, so the honest landing is
-                // its most recent one, matched on the same
-                // `priceCurrency` field the room groups by (the
-                // Gnosis Pay currency rule, one field over).
-                openNewest(source: RailgunRoomSource.source, in: visible) { thing in
-                    thing.priceCurrency == token.symbol
-                }
-            }
-        case .safe(let room):
-            // `fallbackRef` is what the card opens when nothing is
-            // pending and only a module warning stands — without it
-            // that card announced a door and had none (2026-08-17).
-            SafeRoomCard(room: room,
-                         fallbackRef: SafeRoomSource.fallbackRef(things: visible)) { ref in
-                // Unlike its siblings, a Safe entry OWNS a single row
-                // — the tracking snapshot is keyed by the pending
-                // thing's own `sourceRef` — so this is a direct
-                // lookup, not a newest-of-many match.
                 openBySourceRef(ref, in: visible)
             }
         }

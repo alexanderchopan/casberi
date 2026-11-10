@@ -499,27 +499,18 @@ extension FeedScreen {
         // `source: "Wallet"` and have no room of their own to head; their
         // readings are the Wallet room's balance card, DeFi tiles and
         // composition strip, which is where they belong.
+        // Privacy Pools, Railgun and Safe have NO case since prd §1738: they
+        // are no pick in the Wallet's menu, so no box could draw their head.
         case peer(PeerRoom)
-        case privacyPools(PrivacyPoolsRoom)
         // ONE case for every onchain card (prd §858). The
         // seat rides along because `CardSpendRoomCard` needs it for the mark
         // and `openNewest` needs it for the lookup — the room itself is
         // seat-agnostic and must stay that way.
         case cardSpend(CardSpendRoom, seat: String)
-        // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
-        // than by rail, since Railgun has no funding platform to rank.
-        case railgun(RailgunRoom)
         // Privy (prd §803c) — the apps that made you a wallet, and what the
         // chain says is in them. Composed from `PrivyHomeStore`, because a
         // balance is chain state and lands no row.
         case privy(PrivyHomeFeed.Room)
-        // Safe (2026-08-11) — the fifth, and the one that earned its own
-        // source rather than joining the fold at "Wallet" (`SafeBridge`'s
-        // top-of-file doc, amendment (8)). Ranked by "your turn" rather than
-        // a proportion — a Safe has no lead-token/lead-rail shape. Its kind
-        // tiles ride the head's scopes slot (prd §816, reversing §815's
-        // deletion: "keep the safe head the way it was").
-        case safe(SafeRoom)
         // X (2026-08-13, prd §375) — the first head over an IMPORT rather than
         // a live bridge, and the first that displaces a card the room already
         // drew (`FeedInsight.topicMap`). It declines under `XRoom`'s floors so
@@ -554,19 +545,12 @@ extension FeedScreen {
                 return room.deadlines.isEmpty ? room.headline : nil
             case .peer(let room):
                 return room.rails.count <= 1 ? PeerRoom.headline(room) : nil
-            case .railgun(let room):
-                return room.tokens.isEmpty ? RailgunRoom.headline(room) : nil
             case .privy(let room):
                 return room.funded.isEmpty && room.readCount == 0 ? PrivyHomeFeed.headline(room) : nil
-            case .safe(let room):
-                // A module is a fact about money that keeps the card.
-                return room.entries.isEmpty && SafeRoom.note(room) == nil
-                    && SafeRoom.stateNote(room) == nil
-                    ? SafeRoom.headline(room) : nil
             case .cardSpend(let room, _):
                 return room.months.isEmpty && room.currencies.count <= 1
                     ? CardSpendRoom.headline(room, mask: mask) : nil
-            case .posthog, .walletbeat, .l2beat, .privacyPools:
+            case .posthog, .walletbeat, .l2beat:
                 return nil
             }
         }
@@ -620,8 +604,6 @@ extension FeedScreen {
             return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
-        case PrivacyPoolsRoomSource.source:
-            return PrivacyPoolsRoomSource.compose(things: visible).map { .privacyPools($0) }
         // The onchain cards (prd §858). Same head, same judgements — the
         // only thing that differs is which rows it reads and whose mark it
         // wears.
@@ -640,13 +622,9 @@ extension FeedScreen {
         case PlasmaOneRoomSource.source:
             return PlasmaOneRoomSource.compose(things: visible)
                 .map { .cardSpend($0, seat: PlasmaOneRoomSource.source) }
-        case RailgunRoomSource.source:
-            return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case PrivyHomeFeed.source:
             let room = PrivyHomeStore.shared.room
             return room.appCount > 0 ? .privy(room) : nil
-        case SafeRoomSource.source:
-            return SafeRoomSource.compose(things: visible).map { .safe($0) }
         default:
             return nil
         }

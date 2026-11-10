@@ -93,16 +93,10 @@ extension FeedScreen {
         seatKeepsLine(seat) ? PrivyHomeStore.shared.valueSamples : []
     }
 
-    /// An app's share of the Wallet's money. A Safe is an account (prd
-    /// §1069): its money is what its addresses hold, which no holder prefix
-    /// names.
+    /// An app's share of the Wallet's money. Safe is no pick (prd §1738): a
+    /// Safe's money is its address's, picked as any account is.
     static func slice(_ whole: WalletPortfolio, for seat: RoomAccounts.Seat) -> WalletPortfolio {
-        // Your account is a Safe (prd §1614): its money is the Safe pick's
-        // too, as its line leads the pick's box.
-        seat.source == SafeBridge.sourceName
-            ? whole.scoped(toAddresses: SafeBridge.detectedAddresses()
-                .union(YourAccountDemo.shownAddress.map { [$0.lowercased()] } ?? []))
-            : whole.scoped(to: seat)
+        whole.scoped(to: seat)
     }
 
     /// The catalogue names of every connected or attention-needing seat.

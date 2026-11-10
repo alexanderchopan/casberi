@@ -817,15 +817,6 @@ enum DemoSeedAll {
         // evidence for the same protocol at a real address, and this is the
         // one demo mark that governs whether a seat exists at all.
         for evidence in walletSeatEvidence { evidence.forget(demoWallet) }
-        // The seeded anonymity sets (prd §397). Scoped BY LABEL, unlike the
-        // PostHog/Cloudflare stores above, and that is not fussiness: the
-        // live sizes are global and re-bought within a day, but a landing
-        // snapshot is the size of a set at a moment that has passed and can
-        // never be re-read — so a real depositor who walked the demo would
-        // permanently lose the growth half of their cover line to a blanket
-        // wipe. Demo labels are `demo…`, a real one is a decimal uint256.
-        PrivacyPoolsCover.forgetCurrent()
-        PrivacyPoolsCover.forget(labels: ["demo2", "demo7"])
         // Same shape as PostHog above, and the same accepted risk: one
         // global cache, no per-account key, so this can't tell a demo
         // estate from a real one it might have overwritten — exactly what
@@ -3410,12 +3401,9 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
-        // Railgun ranks by token, read as DATA off `priceValue`/`priceCurrency`
-        // — never parsed back out of the title. Ref must carry the real
-        // `"railgun:shield:"`/`"railgun:unshield:"` prefix (`RailgunRoom
-        // .direction(ref:)`'s exact match) or the move is dropped before
-        // it's even counted, the same `"demo:"`-prefix miss as Peer/Privacy
-        // Pools above.
+        // Railgun's moves carry `priceValue`/`priceCurrency` as DATA and the
+        // bridge's own `"railgun:shield:"`/`"railgun:unshield:"` ref prefix,
+        // as a real move lands.
         // `amount` is ONE string spent twice — see the Privacy Pools seed
         // above for why the title and the stamp have to be the same
         // characters rather than the same number.
@@ -5352,30 +5340,9 @@ enum DemoSeedAll {
         // never a read.
         LogosStore.shared.add(demoLogosAccount)
         LogosStore.shared.rememberBalances([demoLogosAccount: 110], at: .now)
-        // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
-        // `wallet()` (prd §397). Two numbers, and the pair is the point: the
-        // CURRENT set, plus the set at the moment the oldest deposit in each
-        // pool landed, which is the only way the card can say cover has GROWN.
-        // Without this the room head still draws and the cover line is simply
-        // absent — the silent-gap shape `verify.sh`'s room-head coverage step
-        // exists to catch, one reading down.
-        //
-        // Symbols must match the `priceCurrency` those rows are stamped with
-        // (`PrivacyPoolsCover`'s own rule); a mismatch unjoins the line with
-        // nothing on screen to say so. Labels are the deposit refs minus their
-        // prefix: `demo7` is the oldest ETH deposit, `demo2` the only USDC one.
-        //
-        // Deliberately NOT preceded by a wipe: `save(current:)` replaces the
-        // live sizes wholesale anyway, and `snapshot` never overwrites, so a
-        // real depositor's own landing snapshots — which cannot be re-bought,
-        // being the size of a set at a moment that has passed — survive
-        // entering the demo untouched.
-        PrivacyPoolsCover.save(current: ["ETH": 4_180, "USDC": 742])
-        PrivacyPoolsCover.snapshot(label: "demo7", count: 3_240)
-        PrivacyPoolsCover.snapshot(label: "demo2", count: 690)
-        // 6 · Safe's room head (2026-08-11) reads `SafeBridge`'s own bridge
-        // state, not the seeded `.transaction` things above (`SafeRoomSource`'s
-        // own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
+        // 6 · Safe's reading (2026-08-11; `SafeAsk` since prd §1738 deleted
+        // the head) reads `SafeBridge`'s own bridge state, not the seeded
+        // `.transaction` things above (`SafeRoomSource`'s own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
         // exactly, so a tap on either ring opens the real seeded thing.
         // Nonces are the point of the last two: 44 twice is a real rival pair,
         // so the head draws them adjacent, marks both rings and says only one

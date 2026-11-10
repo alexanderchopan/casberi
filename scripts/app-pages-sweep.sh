@@ -130,15 +130,25 @@ WAIT="${APP_PAGES_WAIT:-16}"
 # and hold no money in the demo: no page to land on (Library pushes their own
 # screens), so they are not swept. The exchanges are in that set too, but
 # their balances make them a Wallet pick, so they stay.
-TARGETS=("${(@f)$(python3 - "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" "$ROOT/Casberi/Casberi/Model/LiveRoomSources.swift" <<'EOF'
+# A Wallet app that is NO PICK (prd §1738: Safe, Privacy Pools, Railgun, whose
+# doors land on Holdings › Private or Your account) has no page of its own:
+# `-walletScope seat:<name>` reads as All for it, so sweeping it would judge
+# the Wallet four times under another name. Read off `RoomAccounts`, never a
+# list kept here.
+TARGETS=("${(@f)$(python3 - "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" "$ROOT/Casberi/Casberi/Model/LiveRoomSources.swift" "$ROOT/Casberi/Casberi/Model/RoomAccounts.swift" <<'EOF'
 import re, sys
 s = open(sys.argv[1]).read()
 live = open(sys.argv[2]).read()
+no_pick = set(re.findall(r'Seat\(name: "([^"]+)"[^)]*?landing: \.(?!pick)\w+\)', open(sys.argv[3]).read(), re.S))
+if not no_pick:
+    sys.exit("app-pages: found no seat without a pick in RoomAccounts.swift; the reader has drifted")
 nothing = set(re.findall(r'"([^"]+)"', re.search(r'landsNothing: Set<String> = \[(.*?)\]', live, re.S).group(1)))
 for name, group in re.findall(r'Offer\(name: "([^"]+)",\s*tagline: "[^"]*",\s*group: "([^"]+)"', s):
     if name in ("Wallet", "Contacts"):
         continue
     if name in nothing and name in ("Apple Intelligence", "ETH Validators"):
+        continue
+    if name in no_pick:
         continue
     if group == "Wallet":
         for tile in ("home", "holdings", "activity", "spending"):

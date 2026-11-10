@@ -42,59 +42,12 @@ enum FeedInsight {
     static func distribution(source: String, things: [Thing]) -> Distribution? {
         switch source {
         case "Linear":     return linearWorkload(things)
-        case "Privacy Pools": return shieldedReview(things)
         default: return nil
         }
     }
 
-    /// Where your shielded deposits sit in 0xBow's review (2026-08-05,
-    /// prd §311) — the room's standing question, and the only one it has.
-    ///
-    /// A Privacy Pools room is deposits and status flips, and the flip is the
-    /// whole product: a deposit is not spendable privately until the ASP
-    /// clears it. Until now that state existed only inside an alert's title
-    /// text and a UserDefaults watchlist, so the room could not answer "how
-    /// much is still waiting" — the one thing a person with money in a pool
-    /// wants to know at a glance.
-    ///
-    /// Reads the state TAG `PrivacyPoolsBridge.retag` maintains, never the
-    /// title's words. A deposit carries exactly one state tag at a time, so a
-    /// deposit that cleared can't be counted twice.
-    ///
-    /// COUNTS, not amounts. The room's rows carry their amounts as text in a
-    /// dozen different tokens, and summing across ETH and USDC to make a
-    /// segment longer would be arithmetic nobody asked for (§83). How many
-    /// deposits are in each state is a fact; their total is not one number.
-    private static func shieldedReview(_ things: [Thing]) -> Distribution? {
-        var counts: [String: Int] = [:]
-        for thing in things where thing.tags.contains("Shielded") {
-            for state in ["Pending", "Cleared", "Declined", "Needs proof"]
-            where thing.tags.contains(state) {
-                counts[state, default: 0] += 1
-            }
-        }
-        let total = counts.values.reduce(0, +)
-        guard total >= 2 else { return nil }
-        // Fixed order, so the bar reads as a JOURNEY (waiting → cleared) and
-        // doesn't reshuffle itself every time one deposit changes state.
-        // The tones carry the meaning: waiting is neutral, needing you is the
-        // one that should catch an eye, cleared is the good outcome.
-        let order: [(state: String, tone: Tone)] = [
-            ("Pending", .neutral), ("Needs proof", .negative),
-            ("Cleared", .positive), ("Declined", .alt1),
-        ]
-        let segments = order.compactMap { entry -> Segment? in
-            guard let n = counts[entry.state], n > 0 else { return nil }
-            return Segment(label: entry.state, count: n, tone: entry.tone)
-        }
-        guard segments.count >= 2 else { return nil }
-        let waiting = (counts["Pending"] ?? 0) + (counts["Needs proof"] ?? 0)
-        let subtitle = waiting > 0
-            ? String(localized: "\(waiting) of \(total) still waiting to clear")
-            : String(localized: "\(total) deposits, all reviewed")
-        return Distribution(title: "Where your deposits stand",
-                            subtitle: subtitle, segments: segments)
-    }
+    // Privacy Pools' `shieldedReview` (prd §311) is deleted with the head it
+    // fell back from (prd §1738): no room carries that source.
 
     /// Where your assigned Linear work sits — the tracker's standing question
     /// (prd §164's "mood" tier; 2026-07-22). Deliberately NOT the GitHub
