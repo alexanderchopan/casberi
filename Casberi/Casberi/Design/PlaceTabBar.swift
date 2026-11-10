@@ -189,10 +189,12 @@ struct PlaceTabBar: View {
     /// the Move tray over wherever you stand (prd §1442), through the one
     /// door every tab press takes.
     ///
-    /// **THE ACT WEARS INK (prd §1735).** On the places' own glass, in the
-    /// places' own ink and with no word, the circle read as a fourth place.
-    /// It is a solid disc in the primary ink with the glyph in the page's:
-    /// never the pick's pink, which on this bar means the tab you are on.
+    /// **GLASS, WITH A PINK GLYPH (user, 2026-11-09, of the canvas "Move
+    /// button: white or glass with pink": "lets make move glass w/ pink";
+    /// amends prd §1735 item 2's solid ink disc).** The circle is the bar's
+    /// own glass and its glyph wears the verb's pink (`DS.pickInk`), always:
+    /// the places wear pink only while picked, so Move is told apart by
+    /// being pink at rest, with no word under it.
     private var moveCircle: some View {
         Button {
             taps[.move, default: 0] &+= 1
@@ -201,10 +203,10 @@ struct PlaceTabBar: View {
         } label: {
             Image(systemName: PlaceTab.move.glyph)
                 .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(DS.page)
+                .foregroundStyle(DS.pickInk)
                 .symbolEffect(.bounce, value: taps[.move] ?? 0)
                 .frame(width: size, height: size)
-                .background(DS.textPrimary, in: Circle())
+                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())

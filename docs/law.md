@@ -244,7 +244,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1909 of 1982 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1910 of 1983 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2151,10 +2151,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1732 — The Wallet waits less: one holdings read per wallet a pass, the total's extras beside it, Tor on activation, the door…
 - §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder'…
 - §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
-- §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at…
+- §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at… (amended by §1739)
 - §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once
 - §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
 - §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle…
+- §1739 — Move's circle is glass with a pink glyph; your face stays on Library
 
 ## Dead rulings → what replaced them (generated)
 

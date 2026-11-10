@@ -71817,3 +71817,15 @@ Canvas: https://claude.ai/artifact/XGAaQsrA3achsnedw8YEkZ
 **Not built / not seen.** The models the picks leave unreachable are still in the tree and still guarded (§723 owes their deletion): the Railgun and Privacy Pools room heads and cards, their probes, `SeatHoldings.railgun`, the Privacy Pools arm of `walletSeatOwnHeld`, the Safe head, and the three targets in `app-pages-sweep.sh`, with `wallet-rooms-selftest.sh`, `seat-holdings-selftest.sh` and `room-heads-selftest.sh` to follow. The foot's line beside a real Send (the simulator holds no private money; the preview draws it over an empty sentence). Railgun's door (the same landing as Privacy Pools'). The website is edited and not deployed. Lightning's unused strings stay in the catalog.
 
 Canvas: https://claude.ai/artifact/EZ4EuKWNG9MhDub4Hcrt3f
+
+## §1739 — Move's circle is glass with a pink glyph; your face stays on Library (amends §1735 item 2's solid ink disc and its "never the pick's pink") (user, 2026-11-09, of the canvas "Move button: white or glass with pink": "the fab is white, but i'm not sure if it woudl instead look better glass w/ pink", then "lets make move glass w/ pink"; of the canvas "Your face: on Library or on Move": "definitely not C", "ok leave face on library") — BUILT; seen on the simulator
+
+1. **Move is the bar's own glass, its glyph pink.** The circle takes the places' glass (`dsGlass`, the same lens) and its glyph wears `DS.pickInk`, always (`PlaceTabBar.moveCircle`). §1735 made it a solid ink disc because on glass, in the places' ink, it read as a fourth place; pink at rest tells it apart instead, since a place wears pink only while it is the pick. Offered and declined: the white disc kept, and a solid pink disc.
+2. **Your face stays on Library.** Move as your face was drawn two ways (the face alone, the face with Move's glyph as a badge) and declined: a face says "mine", which is Library, and says nothing of sending or swapping. With no face set, the place is Casberi's octopus (user: "'empty' when a person doesn't put their avatar there, then it is our octopus icon"); not checked against what `YouFace` draws today.
+3. **Known cost, accepted:** with a place picked, two pinks stand on the bar, the pick's and Move's.
+
+**Seen** on the iPhone 17 simulator (iOS 27.2, the demo): the bar at rest and folded in dark, at rest in light. Not seen: folded in light, the Mac.
+
+**Mac half (§1402).** The rail's Move tile carries its word and is unchanged; the face is Library's tile there too.
+
+Canvases: https://claude.ai/artifact/FhG1Y8doCc4c2Si1gj5Xbc · https://claude.ai/artifact/GCHMzjSyzqzVpuBgjNAcEb
