@@ -168366,6 +168366,34 @@
         }
       }
     },
+    "Sending on Base" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando en Base"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Baseで送信中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base에서 보내는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 Base 上发送"
+          }
+        }
+      }
+    },
     "Sending on Ethereum" : {
       "localizations" : {
         "es" : {
@@ -169052,6 +169080,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同时使用 %@ 个 nonce 密钥发送。"
+          }
+        }
+      }
+    },
+    "Sent on Base" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado en Base"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Baseで送信済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base에서 보냄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 Base 上发送"
           }
         }
       }
@@ -230586,6 +230642,34 @@
         }
       }
     },
+    "back in your account at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "vuelve a tu cuenta al instante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すぐにアカウントに戻ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "즉시 계정으로 돌아옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即回到你的账户"
+          }
+        }
+      }
+    },
     "back in your wallet" : {
       "localizations" : {
         "es" : {
@@ -232331,6 +232415,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "赚得 %1$@%2$@"
+          }
+        }
+      }
+    },
+    "earns %@ today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "gana %@ hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の利回り %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 %@ 수익"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日收益 %@"
           }
         }
       }

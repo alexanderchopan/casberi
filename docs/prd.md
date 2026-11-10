@@ -71389,6 +71389,15 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Checks.** `CasberiTests/AztecMoveCostTests` (five: a send's gas at the node's fee, an exit adding Shield's 0.5%, a move-in adding Ethereum gas and 30 AZTEC, no price no dollars, Half and All exact with Shield's cap hiding All).
 
+## §1700z — Lend takes Move's one foot: the amount in dollars with Half · All under the sentence, one cost over the act, the step rows while it works and after; Earn, its token list and Olla are parked (extends §1700x, §1700y to §1674's Lend) (user, 2026-11-09, of renaming Lend to Earn with Olla once an Aztec-ecosystem friend said Olla is "still early for integration": told the rename buys nothing with one place to earn, "ok do it", for the foot alone) — BUILT
+
+1. **Under the sentence:** "$100.00 · you have $250.00" (take back: "$100.00 · $500.00 lent"), then Half · All; the amount's ladder stays in its own choices. Aave's rate leaves this line for the cost line.
+2. **Over the act, one thing at a time** (§1700y): "Costs about $0.02 · earns 5.1% today" (take back: "· back in your account at once"), its one part "Gas, from your account" a tap down: the network's gas price × 250K (a lend of ETH with the account's own calls measured 246K, the reserve's own figure). Aave takes nothing to lend or take back.
+3. **The step rows** (§1700x): Checking · Signing · Sent on Base (or on Ethereum), off Your account's stages; Face ID is inside Signing, so no "Confirmed" row. The act reads "Confirm with Face ID" while it asks and "Sending…" otherwise. A failure stays on its step; done keeps the rows checked under "View on Basescan".
+4. **Parked, not built:** Earn (Lend renamed), its first screen listing what can earn, and Olla (liquid staking, any amount of AZTEC). The canvas "Aztec staking and apps" holds the design. Reopen when Olla is ready (an Aztec-ecosystem view, 2026-11-09: "still early").
+
+**Checks.** `aave-lend-selftest.sh`, `round-ups-pot-selftest.sh` and the shared step tests pass; seen on the simulator in the demo (`-moveLend lend`).
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

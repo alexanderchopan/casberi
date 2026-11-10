@@ -28,12 +28,13 @@ final class PrivateSendSteps {
 
     /// Where the money lands, said by the last step.
     enum Place: Equatable {
-        case aztec, ethereum
+        case aztec, ethereum, base
 
         var sending: String {
             switch self {
             case .aztec: String(localized: "Sending to Aztec")
             case .ethereum: String(localized: "Sending on Ethereum")
+            case .base: String(localized: "Sending on Base")
             }
         }
 
@@ -41,6 +42,7 @@ final class PrivateSendSteps {
             switch self {
             case .aztec: String(localized: "Sent to Aztec")
             case .ethereum: String(localized: "Sent on Ethereum")
+            case .base: String(localized: "Sent on Base")
             }
         }
     }

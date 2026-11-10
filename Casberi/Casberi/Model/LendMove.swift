@@ -53,6 +53,8 @@ final class LendMove {
     private(set) var refused: Set<String> = []
     /// ETH kept back for the operation's fee, per network (base units).
     private(set) var reserve: [Int: String] = [:]
+    /// Each network's gas price, wei, for the cost line (prd §1700z).
+    private(set) var gasPriceWei: [Int: Decimal] = [:]
 
     /// Opened from a lent row (`opens`): its market, once.
     init(mode: Mode = .lend, opens: Bool = false) {
@@ -194,6 +196,56 @@ final class LendMove {
         self.all = all
     }
 
+    // MARK: - In dollars, as every Move sentence says them (prd §1700z)
+
+    /// A market's token amount, base units, in dollars.
+    func dollars(_ units: String, in m: Market) -> Double? {
+        guard let price = prices[m.symbol.lowercased()], let u = Decimal(string: units) else { return nil }
+        return NSDecimalNumber(decimal: u / pow(10, m.decimals)).doubleValue * price
+    }
+
+    static func usd(_ value: Double) -> String {
+        value.formatted(.currency(code: "USD").precision(.fractionLength(2)))
+    }
+
+    /// Under the sentence: "$100.00 · you have $250.00" (lend) or
+    /// "$100.00 · $500.00 lent" (take back); no price, the token.
+    var amountLine: String? {
+        guard let m = market, let have = available(m) else { return nil }
+        var parts: [String] = []
+        if let units, let usd = dollars(units, in: m) { parts.append(Self.usd(usd)) }
+        let haveText = dollars(have, in: m).map(Self.usd) ?? PrivateMoney.figure(have, decimals: m.decimals, symbol: m.symbol)
+        parts.append(mode == .lend ? String(localized: "you have \(haveText)") : String(localized: "\(haveText) lent"))
+        return parts.joined(separator: " · ")
+    }
+
+    /// Half of what is available, in the token's own places, rounded down;
+    /// nil when there is nothing to halve.
+    var half: String? {
+        guard let m = market, let have = available(m).flatMap({ Decimal(string: $0) }), have > 1 else { return nil }
+        var raw = have / 2 / pow(10, m.decimals), cut = Decimal()
+        NSDecimalRound(&cut, &raw, min(m.decimals, 6), .down)
+        return cut > 0 ? NSDecimalNumber(decimal: cut).stringValue : nil
+    }
+
+    /// A lend's gas with the account's own calls around it: 246K measured
+    /// for ETH (the reserve's own figure, above), rounded.
+    static let gas = 250_000
+
+    /// What it costs: the network's gas from your account. Aave takes
+    /// nothing to lend or take back. nil without the gas price or ETH's.
+    var cost: PrivateCost? {
+        guard units != nil, let price = gasPriceWei[chainId], let eth = prices["eth"] else { return nil }
+        let usd = NSDecimalNumber(decimal: Decimal(Self.gas) * price / pow(10, 18)).doubleValue * eth
+        return PrivateCost(usd: usd, parts: [.init(words: String(localized: "Gas, from your account"),
+                                                   figure: String(localized: "about \(Self.usd(usd))"))])
+    }
+
+    /// The step rows' plan: signed, sent on this network (prd §1700z).
+    var plan: PrivateSendSteps.Plan {
+        .signed(chainId == 1 ? .ethereum : .base)
+    }
+
     /// Any market where something is lent: Holdings' rows, and whether Take
     /// back has anything to say.
     var anyLent: Bool { lent.values.contains { (Decimal(string: $0) ?? 0) > 0 } }
@@ -240,6 +292,7 @@ final class LendMove {
         lentAnswered = true
         rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145]
         reserve = [8453: "100000000000000", 1: "1000000000000000"]
+        gasPriceWei = [8453: 6_000_000, 1: 400_000_000]
     }
 
     private func readChain(account: String) async {
@@ -292,6 +345,7 @@ final class LendMove {
             // Twice today's price for the most a lend of ETH has taken with
             // the account's own calls around it (246k measured, 600k kept).
             reserve[id] = Self.digits(price * 600_000 * 2)
+            gasPriceWei[id] = price
         }
     }
 
@@ -324,20 +378,32 @@ final class LendMove {
             return
         }
         let reason = mode == .lend ? String(localized: "Lend \(figure) on Aave") : String(localized: "Take back \(figure) from Aave")
+        // The rows in the foot, as every Move sentence has (prd §1700z).
+        let steps = PrivateSendSteps.shared
+        steps.begin(.move, plan: plan)
         stage = .working(.preparing)
         do {
             let sent = try await YourAccountChain.lendCalls(calls.map { ($0.to, $0.data, $0.value) }, on: net, reason: reason) { s in
-                await MainActor.run { self.stage = .working(s) }
+                await MainActor.run {
+                    self.stage = .working(s)
+                    switch s {
+                    case .signing, .cosigning: steps.mark(.signing)
+                    case .sending, .landing: steps.mark(.sent)
+                    case .preparing: break
+                    }
+                }
             }
             switch sent.outcome {
-            case .landed(let tx, _): stage = .done(tx ?? "")
+            case .landed(let tx, _): steps.finish(); stage = .done(tx ?? "")
             // Taken and not seen yet: done, with no transaction to name.
-            case .pending: stage = .done("")
-            case .dryRun: stage = .ready
+            case .pending: steps.finish(); stage = .done("")
+            case .dryRun: steps.clear(); stage = .ready
             }
         } catch let failure as YourAccountChain.Failure {
+            steps.fail(failure.message)
             stage = .failed(failure.message)
         } catch {
+            steps.fail(error.localizedDescription)
             stage = .failed(error.localizedDescription)
         }
     }

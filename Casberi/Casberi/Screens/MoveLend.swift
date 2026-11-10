@@ -116,17 +116,17 @@ struct MoveLendSentence<Head: View>: View {
     @ViewBuilder private var line: some View {
         switch move.stage {
         case .ready, .working:
+            // The sentence stands alone while the steps run in the foot (prd §1700z).
+            if stepsRun == nil {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let market {
-                    let have = move.available(market).map { PrivateMoney.figure($0, decimals: market.decimals, symbol: market.symbol) }
-                    let first: String? = switch move.mode {
-                    case .lend: have.map { String(localized: "of \($0) in your account") }
-                    case .takeBack: have.map { String(localized: "\($0) lent") }
-                    }
-                    let today = rateLine.map { String(localized: "\($0) today") }
-                    Text(verbatim: [first, today].compactMap { $0 }.joined(separator: " · "))
+                    // In dollars, as every Move sentence says them, Half · All
+                    // under it; Aave's rate is the cost line's (prd §1700z).
+                    Text(verbatim: move.amountLine ?? "")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
                         .fixedSize(horizontal: false, vertical: true)
+                    if live { chips }
                     if move.units == nil {
                         Text(move.mode == .lend ? String(localized: "No \(market.symbol) on \(market.network) to lend")
                              : String(localized: "Nothing lent on \(market.network)"))
@@ -135,10 +135,14 @@ struct MoveLendSentence<Head: View>: View {
                 }
                 if live { switchMode }
             }
+            }
         case .failed(let words):
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
-                    .fixedSize(horizontal: false, vertical: true)
+            // A failure the rows carry is said once, on its step.
+            if stepsRun == nil {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         case .done(let hash):
             if hash.isEmpty {
@@ -151,6 +155,28 @@ struct MoveLendSentence<Head: View>: View {
             }
         case .reading:
             EmptyView()
+        }
+    }
+
+    /// Half · All (prd §1700z), as Aztec's and Railgun's sentences: each
+    /// picks its amount; the ladder stays in the amount's own choices.
+    @ViewBuilder private var chips: some View {
+        let half = move.half
+        HStack(spacing: DS.Space.s2) {
+            if let half {
+                Button {
+                    move.pick(half, all: false)
+                    DSHaptic.selection()
+                } label: { Chip(text: String(localized: "Half"), selected: !move.all && move.amount == half) }
+                .buttonStyle(PressSpring())
+            }
+            if let m = market, (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 {
+                Button {
+                    move.pick(nil, all: true)
+                    DSHaptic.selection()
+                } label: { Chip(text: String(localized: "All"), selected: move.all) }
+                .buttonStyle(PressSpring())
+            }
         }
     }
 
@@ -279,8 +305,31 @@ struct MoveLendSentence<Head: View>: View {
 
     // MARK: - The foot
 
+    /// This sentence's own send, while it works, failed or done (prd §1700z).
+    private var stepsRun: PrivateSendSteps.Run? {
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move, run.plan == move.plan else { return nil }
+        switch move.stage {
+        case .working: return run
+        case .failed: return run.ok == false ? run : nil
+        case .done: return run.ok == true ? run : nil
+        default: return nil
+        }
+    }
+
     private var foot: some View {
         VStack(spacing: 0) {
+        // ONE THING AT A TIME over the act, as every Move sentence (prd
+        // §1700y, §1700z): the steps while it works and after, the cost while ready.
+        if let run = stepsRun {
+            PrivateStepRows(run: run)
+                .padding(.bottom, DS.Space.s3)
+                .transition(.opacity)
+        } else if live, move.units != nil {
+            PrivateCostLine(cost: move.cost, tail: costTail, fallback: costTail ?? "")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s1)
+                .transition(.opacity)
+        }
         HStack(alignment: .firstTextBaseline) {
             Spacer(minLength: 0)
             switch move.stage {
@@ -319,12 +368,21 @@ struct MoveLendSentence<Head: View>: View {
         .padding(.top, DS.Space.s1)
     }
 
+    /// What the cost line says after the dollars.
+    private var costTail: String? {
+        switch move.mode {
+        case .lend: market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
+            .map { String(localized: "earns \($0) today") }
+        case .takeBack: String(localized: "back in your account at once")
+        }
+    }
+
     private var footVerb: String {
         switch move.stage {
-        case .working(.preparing): String(localized: "Checking…")
+        // The rows say each step; the act waits, as Aztec's and Railgun's do.
         case .working(.signing): String(localized: "Confirm with Face ID")
         case .working(.cosigning): String(localized: "Waiting for your Signer…")
-        case .working(.sending), .working(.landing): String(localized: "Waiting for \(move.network?.name ?? "")…")
+        case .working: String(localized: "Sending…")
         default: move.mode == .lend ? String(localized: "Lend") : String(localized: "Take back")
         }
     }
