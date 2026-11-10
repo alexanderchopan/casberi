@@ -1,0 +1,48 @@
+# Publishes `website/` to GitHub Pages on every push to main that touches it.
+#
+# WHY THIS EXISTS. The site was deployed by zipping `website/` and uploading it
+# through cPanel, so anyone holding the hosting password could swap the App
+# Store link for another download. Deployed from here, the only way to change
+# the site is a commit to this repo, and every change is in git history.
+#
+# It publishes what the cPanel zip published: `website/` without `mock-*.html`
+# and without any stray `.zip` (docs/website.md).
+#
+# Pages must be switched on once in the repo settings (Settings > Pages >
+# Source: GitHub Actions); until then the deploy job fails and nothing is
+# published. The custom domain is set there too, not by a CNAME file.
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push waits for the one in flight to finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage the site
+        run: rsync -a --exclude 'mock-*.html' --exclude '*.zip' --exclude '.DS_Store' website/ _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
