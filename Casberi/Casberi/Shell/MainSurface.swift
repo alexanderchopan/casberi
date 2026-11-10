@@ -3648,7 +3648,7 @@ private struct PagerCover: View {
                     // the Wallet's tile since prd §1337). Library is a tab too
                     // (prd §1327): named, never "Feed".
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
-                         : HomeScope.Place(source: label) == .settings ? String(localized: "Library")
+                         : HomeScope.Place(source: label) == .settings ? String(localized: "Apps")
                          : HomeScope.Place(source: label) == .move ? String(localized: "Move")
                          : String(localized: "Feed"))
                         .dsText(.heading40).foregroundStyle(DS.headInk)

@@ -33,9 +33,11 @@ struct PlaceRail: View {
 
     var body: some View {
         VStack(spacing: DS.Space.s2) {
-            tile(.library)
+            // The bar's order (prd §1741): Apps led the rail only while it
+            // wore your face.
             tile(.feed)
             tile(.wallet)
+            tile(.library)
             // Move stands apart at the end, as the phone's circle does
             // beside its three places (prd §1715).
             tile(.move)
@@ -118,11 +120,12 @@ struct PlaceRail: View {
         }
     }
 
+    /// Apps wears the grid and Move wears your face once you have picked one,
+    /// as the phone's bar does (prd §1741, the Mac half of the same ruling).
     @ViewBuilder
     private func mark(_ tab: PlaceTab, on: Bool, taps: Int) -> some View {
-        if tab == .library {
-            YouFace(size: 26)
-                .modifier(DoorSpin(trigger: chrome.refreshPulse, tension: chrome.pullTension))
+        if tab == .move, ProfileStore.shared.avatar != nil {
+            MoveMark(size: 26, taps: taps, inset: 0)
         } else {
             Image(systemName: tab.glyph)
                 .dsGlyph(.body, weight: on ? .semibold : .regular)

@@ -154,29 +154,54 @@ private struct SourcesStateMark: ViewModifier {
 /// Library's row over the folders (prd §1733): up to five apps at the seat
 /// size, each one tap from its room, or from its way in while it wears the
 /// plus.
-private struct SourcesQuickRow: View {
+///
+/// **THE EMPTY FEED DRAWS THIS ROW TOO (prd §1741).** Its box is the same
+/// six apps with their names under them (`named`), so the Feed and Apps offer
+/// one list in one drawing. The way-in row holds every starter; its gaps
+/// give way on a narrow phone before an icon does.
+struct SourcesQuickRow: View {
     let title: String
     let apps: [String]
     let adds: Bool
+    /// The app's name under its icon: the empty Feed's box, where the icons
+    /// are the whole screen and a mark alone does not say what it adds.
+    var named = false
     let needs: (String) -> Bool
     let settings: (String) -> (() -> Void)?
     let open: (String) -> Void
+
+    private var shown: [String] {
+        Array(apps.prefix(adds ? LibraryRecents.starts.count : LibraryRecents.keep))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(verbatim: title)
                 .dsText(.label12).foregroundStyle(DS.textSecondary)
                 .accessibilityAddTraits(.isHeader)
-            HStack(spacing: DS.Space.s4) {
-                ForEach(apps.prefix(LibraryRecents.keep), id: \.self) { name in
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(shown.enumerated()), id: \.element) { index, name in
+                    if index > 0 {
+                        Spacer(minLength: DS.Space.s1).frame(maxWidth: DS.Space.s4)
+                    }
                     Button {
                         DSHaptic.selection()
                         open(name)
                     } label: {
-                        BridgeIcon(name: name, size: DS.Face.seat)
-                            .sourcesState(yours: true, needsYou: needs(name), size: 12, ring: DS.page)
-                            .sourcesAddBadge(adds)
-                            .contentShape(Rectangle())
+                        VStack(spacing: DS.Space.s1) {
+                            BridgeIcon(name: name, size: DS.Face.seat)
+                                .sourcesState(yours: true, needsYou: needs(name), size: 12, ring: DS.page)
+                                .sourcesAddBadge(adds)
+                            if named {
+                                Text(verbatim: name)
+                                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                    // Its own width, centred under the icon,
+                                    // so a long name never widens the row.
+                                    .lineLimit(1).fixedSize()
+                                    .frame(width: DS.Face.seat)
+                            }
+                        }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(PressSpring())
                     .contextMenu {
@@ -186,6 +211,36 @@ private struct SourcesQuickRow: View {
                 }
             }
         }
+    }
+}
+
+/// **THE EMPTY FEED'S BOX (prd §1741, user: "connect apps and their content
+/// shows up here"; of a connect row under it: "i think its better without").**
+/// One sentence saying what the Feed is, and the six apps a first run can
+/// start with, drawn by Library's own row. No demo, no category tiles and no
+/// second door: the Apps tab is the way to every other app. The box keeps
+/// the lead's one size (the top-card rule).
+struct FeedStartBox: View {
+    let open: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            Text("Connect apps and their content shows up here.")
+                .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            SourcesQuickRow(title: String(localized: "Start with any of these"),
+                            apps: LibraryRecents.starts.filter { name in
+                                BridgeCatalog.offers.contains { $0.name == name }
+                            },
+                            adds: true, named: true,
+                            needs: { _ in false }, settings: { _ in nil }, open: open)
+        }
+        // Under the title's own edge (seen on the simulator: at the box's
+        // usual inset the sentence stood left of "Feed").
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.vertical, DS.Space.s2)
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
+               maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
     }
 }
 

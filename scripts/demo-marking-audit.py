@@ -29,13 +29,14 @@ so its `.opacity(` may read only its own entrance (`settled`), and neither
 `DemoLead` nor its flag (`demoLeadVisible`) may come back into the model
 (§723: a feature deleted from the surface is deleted from the model).
 
-THREE · **THE COVER SAYS "DEMO" IN WORDS, IN ONE LOCALIZED SENTENCE (§1083).**
-§864 spelled the word in four falling letter tiles beside a `Here's a`
-lead-in, and §1028 moved them into its line; twice a person still read the
-cover as "Here's a" and nothing after it. The cover now draws one
-`Text("…demo…")` literal, so the word is on the first frame, translated with
-the sentence around it. A lead-in split from its word, a `verbatim:` word
-that skips the catalog, or the tiles' return all fail this.
+THREE · **THE COVER BEGINS NO DEMO AND PROMISES NONE (§1741, amending
+§1083).** The cover said "Here's a demo." and began one for every new person;
+a tester found that demo "too crowded" and could not say what the app was
+for. The cover now lifts into the person's own empty Feed. A cover that calls
+`DemoMode.begin(`, or draws a sentence with the word in it, fails this: the
+first puts a person in a demo they never asked for, the second promises one
+that does not follow. (A demo already running still pours under the cover,
+so `pourIfNeeded` is allowed.)
 
 FOUR · **THE MARKING ANSWERS THE CAPTURE DOOR, THROUGH ONE DEFINITION.**
 `-hideDemoBanner YES` (2026-09-08) takes the demo's marking out of an App Store
@@ -228,14 +229,20 @@ def audit(root: Path):
                 "screenshots."
             )
 
-    # THREE — the cover says "demo" in one localized sentence.
+    # THREE — the cover begins no demo and promises none (§1741, amending
+    # §1083: the cover lifts into the person's own empty Feed).
     cover = strip_comments(read(COVER))
-    if not re.search(r'Text\(\s*"[^"\n]*\bdemo\b[^"\n]*"', cover):
+    if "DemoMode.begin(" in cover:
         findings.append(
-            f"{COVER} draws no `Text(\"…demo…\")` sentence — the first-launch "
-            "cover must say the word in words, in one catalog string, on the "
-            "first frame (§1083: a lead-in waiting on letter tiles read as "
-            "\"Here's a\" and nothing after it, twice)."
+            f"{COVER} calls `DemoMode.begin(` — the first-launch cover begins "
+            "no demo since §1741 (a tester found the demo after it \"too "
+            "crowded\" and could not say what the app was for). A person who "
+            "never asked for a demo must not land in one."
+        )
+    if re.search(r'Text\(\s*(?:verbatim:\s*)?"[^"\n]*\bdemo\b[^"\n]*"', cover, re.I):
+        findings.append(
+            f"{COVER} draws a `Text(\"…demo…\")` sentence — the cover would "
+            "promise a demo that no longer follows it (§1741)."
         )
 
     return findings
@@ -279,7 +286,8 @@ FIXTURE_COVER = '''
 import SwiftUI
 
 struct IntroCover: View {
-    var body: some View { Text("Here's a demo.", comment: "Second line.") }
+    var body: some View { Text("Kept private.", comment: "Second line.") }
+    func lift() async { await DemoMode.pourIfNeeded(context: modelContext) }
 }
 '''
 
@@ -385,26 +393,26 @@ def self_test() -> int:
             'UserDefaults.standard.string(forKey: "hideDemoBanner") != nil',
             "a second definition of the capture door was not reported",
         )
-        # 7 · the lead-in is split from its word again (the tiles' shape).
+        # 7 · the cover begins the demo again.
         mutate(
             COVER,
-            'Text("Here\'s a demo."',
-            'Text("Here\'s a"',
-            "a lead-in without its word was not reported",
+            "await DemoMode.pourIfNeeded(context: modelContext)",
+            "DemoMode.begin(store: store); await DemoMode.pourIfNeeded(context: modelContext)",
+            "a cover that begins the demo was not reported",
         )
-        # 8 · the word skips the catalog.
+        # 8 · the cover promises a demo in its sentence.
         mutate(
             COVER,
+            'Text("Kept private.", comment: "Second line.")',
             'Text("Here\'s a demo.", comment: "Second line.")',
-            'Text(verbatim: "Here\'s a demo.")',
-            "an untranslated cover sentence was not reported",
+            "a cover sentence promising a demo was not reported",
         )
-        # 9 · the sentence survives only in a comment.
+        # 9 · the promise skips the catalog and is still a promise.
         mutate(
             COVER,
-            'var body: some View { Text("Here\'s a demo.", comment: "Second line.") }',
-            '// Text("Here\'s a demo.")\n    var body: some View { Text("Here\'s a") }',
-            "a sentence that lives only in a comment was not reported",
+            'Text("Kept private.", comment: "Second line.")',
+            'Text(verbatim: "Here\'s a demo.")',
+            "a verbatim cover sentence promising a demo was not reported",
         )
 
     if failures:

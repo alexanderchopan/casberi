@@ -25,7 +25,11 @@ enum LibraryRecents {
         return out
     }
 
-    /// Where a first run starts (prd §1733): five apps across the
-    /// categories, A–Z so none is the first step (§1314's rule).
-    static let starts = ["Bluesky", "Calendar", "GitHub", "Gmail", "Photos"]
+    /// Where a first run starts (prd §1733, the six of §1741): apps across
+    /// the categories that are quick to add, A–Z so none is the first step
+    /// (§1314's rule). Two take one permission tap (Calendar, Photos), Files
+    /// is the folder picker, and GitHub left because it is harder to add
+    /// (user, 2026-11-09). The empty Feed's box and Library's row both read
+    /// this list.
+    static let starts = ["Calendar", "Files", "Photos", "Spotify", "Telegram", "X"]
 }

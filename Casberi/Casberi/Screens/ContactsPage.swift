@@ -59,7 +59,7 @@ struct ContactsPage: View {
         .environment(\.dsInPane, true)
         // Pushed beside Library on the phone (prd §1321): "Library · Contacts".
         .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
-                     ? DSTitleBack(word: String(localized: "Library"), action: { route.goBack() }) : nil)
+                     ? DSTitleBack(word: String(localized: "Apps"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear { if typed.isEmpty { typed = query } }
         // One sheet at a time (prd §1238): inside a sheet these push.

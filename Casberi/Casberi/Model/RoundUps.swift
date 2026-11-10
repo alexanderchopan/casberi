@@ -80,9 +80,15 @@ enum RoundUps {
         /// the step and the token are no longer choices. A setting kept by
         /// an older build reads this way too. It saves with your sends only,
         /// in USDC, ETH swapped to USDC where the dollar is short (prd §1578).
+        ///
+        /// **THE STEP IS A CHOICE AGAIN, OF TWO (prd §1741, amending §1572;
+        /// user: "should we give option of 1 or 5$? … is 1$ enough?").** At
+        /// the next dollar a send saves about 50¢, so reaching the $10 that
+        /// makes it private took some twenty sends; at $5 it takes about
+        /// four. Any other kept step still reads as 1.
         var simple: Setting {
             var s = self
-            s.step = 1
+            s.step = s.step == 5 ? 5 : 1
             s.toPrivate = true
             return s
         }

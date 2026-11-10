@@ -131,7 +131,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .following:       return String(localized: "Following")
         case .needsYou:        return String(localized: "Needs you")
         case .permissions:     return String(localized: "Permissions")
-        case .threats:         return String(localized: "Threats")
+        case .threats:         return String(localized: "Risks")
         case .watchlist:       return String(localized: "Watchlist")
         // The title names the token itself (`FeedScreen+RoomTitle`).
         case .watchedToken:    return String(localized: "Token")
@@ -196,7 +196,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .following:       return String(localized: "Nothing followed")
         case .needsYou:        return String(localized: "Nothing waiting")
         case .permissions:     return String(localized: "No permissions")
-        case .threats:         return String(localized: "No threats")
+        case .threats:         return String(localized: "No risks")
         case .watchlist:       return String(localized: "Nothing watched")
         case .watchedToken:    return String(localized: "No price yet")
         case .holdingAccounts: return String(localized: "No wallets you follow")

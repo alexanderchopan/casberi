@@ -108,7 +108,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Library is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
+- Library is named Apps on the tab, its title and every way back; the tab wears the grid and Move wears your face once you pick one (§1741). It is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library (Contacts and Calendar open their pages, §1612); one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564). L2BEAT is "ETHBEAT", host ethbeat.org (§1699).
 - Markets is deleted (§1529): its tile, seat, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions. A watchlist came back as a Wallet Home door (§1632), not as Markets.
@@ -157,7 +157,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
 - Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before the key signs (Face ID itself is asked at the tap, §1687). The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
-- Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every send's change to the next dollar goes to Round-ups (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
+- Round-ups round to the next $1 or $5, picked in the walk and the tray; the walk says "Save your change, earn interest, privately." (§1741). Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every send's change to the next dollar goes to Round-ups (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
 - WETH and ETH swap one for one on their network, no pool and no new verb (§1559): ETH for WETH is WETH's `deposit()`; WETH for ETH goes to the pinned SwapRouter02 and its `unwrapWETH9` pays the account in full (WETH's own `withdraw` pays 2,300 gas, which a Safe refuses); checked and simulated as every swap; the foot "Unwraps WETH · no fee", no ≈; Face ID only.
 - Face ID is asked the moment Send or Swap is tapped, beside preparing's reads (§1687): the operation's first signature takes the context it passed, a later one asks again; turned down, the reads stop and it says "Not sent"; once passed the foot never asks for Face ID. Nothing is signed before the bytes are built and the module agrees on them.
 
@@ -196,7 +196,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 ### 15. Demo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
 - Every demo picture is its own drawn asset (§890). The demo is one person's life in Berlin, and their app is Quillmark, never Casberi (§1026).
-- The cover says "Here's a demo." in words; no letter tiles (§1083). The demo's Exit lands on the catalogue (§863).
+- The cover says "An inbox and a wallet for all your accounts. Kept private." and begins no demo; it lifts into your own empty Feed, one sentence and six apps (Calendar, Files, Photos, Spotify, Telegram, X); the demo is `-demoEnter` only (§1741). The demo's Exit lands on the catalogue (§863).
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
 ### 16. Agents and the composer
@@ -245,13 +245,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1912 of 1985 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1914 of 1987 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
-- §6 — How it works today — Alice (amended by §1113, §1568, §1719)
+- §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
 - §9 — Problems (amended by §1556, §1567, §1568)
@@ -498,7 +498,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §212 — The wallet room's Cash App pass — six surfaces become two, and one row shape
 - §215 — Find gets a door, the widget stops counting, and the dead-Thing rule stops being remembered (amended by §1047)
 - §216 — The holdings read gets a freshness window — and the news does not (amended by §1592)
-- §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (amended by §424, §527)
+- §217 — Onboarding forks — "Try it", then three verbs instead of forty apps (amended by §424, §527, §1741)
 - §218 — The All feed says what things are (amended by §1132)
 - §218b — Connect stops being a page you read on the way to the page you use
 - §219 — The media feeds stop being squares (amended by §1132; part superseded by §832)
@@ -1453,7 +1453,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082, §1177)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the… (amended by §1480)
-- §1083 — The cover says "Here's a demo." in words
+- §1083 — The cover says "Here's a demo." in words (amended by §1741)
 - §1084 — Logos: tokens named, Holdings, Create and Send from this phone, and a stopped node or a reset notifies
 - §1085 — Reading gets its tiles: All · Highlights · Follow · Search; the box keeps the newest thing (amended by §1118)
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
@@ -2159,6 +2159,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1738a — The three retired picks' model is deleted: the Railgun and Privacy Pools heads, the Safe card, their probes and the p…
 - §1739 — Move's circle is glass with a pink glyph; your face stays on Library
 - §1740 — Money is centred, reading is left: the Feed's sheets lead from the rows' edge, the tiles stand under the head on ever…
+- §1741 — The first run begins no demo: the cover says both halves, the empty Feed is one sentence and six apps, Library is nam… (amended by §1741a)
+- §1741a — The setup walk opens on what the wallet holds, recommends the co-signer, picks round-ups with one control and ends on…
 
 ## Dead rulings → what replaced them (generated)
 

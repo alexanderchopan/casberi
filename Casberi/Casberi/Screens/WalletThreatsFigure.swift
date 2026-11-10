@@ -83,7 +83,7 @@ struct WalletThreatsFigure: View {
         }
         .frame(minHeight: 24, maxHeight: 72)
         .accessibilityElement()
-        .accessibilityLabel(Text("Threats each week, the last twelve weeks"))
+        .accessibilityLabel(Text("Risks each week, the last twelve weeks"))
         .accessibilityValue(Text(verbatim: trend.weeks.map(String.init).joined(separator: ", ")))
     }
 

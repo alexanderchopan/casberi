@@ -19,7 +19,9 @@ struct MoveKeysWalk: View {
     enum Ending { case close, receive }
     let done: (Ending) -> Void
 
-    enum Step: Int { case recovery = 1, signer, limit, roundUps, created }
+    /// `intro` opens the walk and is no step (prd §1741a): it says what the
+    /// wallet holds, has nothing to choose, and wears no counter.
+    enum Step: Int { case intro = 0, recovery, signer, limit, roundUps, created }
     typealias Period = MoveSecurity.LimitPeriod
 
     @State private var step: Step
@@ -30,7 +32,7 @@ struct MoveKeysWalk: View {
     @State private var said: String?
     @State private var roundUps = RoundUps.Setting(on: true)
 
-    init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery,
+    init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .intro,
          done: @escaping (Ending) -> Void) {
         self.account = account
         self.inTray = inTray
@@ -59,8 +61,8 @@ struct MoveKeysWalk: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // Created is the account, not a step: no counter.
-                if step != .created {
+                // The opening page and the end are not steps: no counter.
+                if step != .created, step != .intro {
                     Text("\(stepNumber) of \(stepCount)")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .padding(.bottom, DS.Space.s6)
@@ -101,6 +103,25 @@ struct MoveKeysWalk: View {
         // Each step is one running sentence at Move's one size (§1501), the
         // pick pink, and one line of small print at most.
         switch step {
+        case .intro:
+            // **WHAT YOU HAVE, BEFORE WHAT TO SET (prd §1741a, user: "it
+            // likely isn't clear they have private balance that is railgun
+            // and privacy pools or what aztec is for").** The walk never said
+            // the wallet has a private side. Three places, each under its
+            // app's own mark, in the names §1700g settled.
+            MoveFlow {
+                MoveWord(String(localized: "Your wallet,"))
+                MoveWord(String(localized: "privately."), ink: DS.pickInk)
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                place(["Safe"], String(localized: "Public account"),
+                      String(localized: "A public multi-sig Safe on Base, Ethereum and Robinhood."))
+                place(["Privacy Pools", "Railgun"], String(localized: "Private balances"),
+                      String(localized: "On Ethereum. Move funds in from your public account. Send and receive at fresh addresses, and your balance stays hidden."))
+                place(["Aztec"], String(localized: "Private account"),
+                      String(localized: "On Aztec, a privacy network on Ethereum. For using private apps."))
+            }
+            .padding(.top, DS.Space.s6)
         case .recovery:
             MoveFlow {
                 MoveWord(String(localized: "A recovery key"))
@@ -115,26 +136,49 @@ struct MoveKeysWalk: View {
                 MoveWord(String(localized: "A co-signer"))
                 MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "another wallet."), ink: DS.pickInk) }
             }
-            // Its own job, never the recovery key's; and when it lands —
-            // connecting signs nothing (prd §1499).
-            small(String(localized: "Once required, it approves every send and swap. Activates on your first move."))
+            // **RECOMMENDED, AND WHY (prd §1741a, user: "it really makes
+            // aztec easier to use. how can we somehow say its good to turn
+            // on"; "i like recommended. and say use another wallet to approve
+            // every send and swap. i think the aztec line comes after").**
+            // The word leads in the primary ink; when it lands moved to the
+            // next step, where it is required (§1499).
+            Text(Self.signerWords)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s4)
         case .limit:
             // One switch, never an amount (prd §1570): required or not.
             MoveFlow {
                 MoveWord(String(localized: "Require your co-signer"))
                 MoveClause(glue: String(localized: "for")) { MoveWord(String(localized: "every send and swap."), ink: DS.pickInk) }
             }
-            small(String(localized: "You can turn it off later in Account. Getting your account back needs it too."))
+            small(String(localized: "Activates on your first move. You can turn it off later in Account. Getting your account back needs it too."))
         case .roundUps:
-            // One switch (prd §1572); set aside as you go, then private (prd §1690).
+            // **THE PAYOFF, NOT THE MECHANISM (prd §1741, user: "save change,
+            // earn interest, privately works. i mean it moves to private
+            // balance").** A tester met "Round up your sends into Round-ups."
+            // and asked whether privacy was the point. The line under it says
+            // when the change turns private and that it earns at both stages;
+            // the step is $1 or $5, and the example follows the pick.
             MoveFlow {
-                MoveWord(String(localized: "Round up your sends"))
-                MoveClause(glue: String(localized: "into")) { MoveWord(String(localized: "Round-ups."), ink: DS.pickInk) }
+                MoveWord(String(localized: "Save your change,"))
+                MoveWord(String(localized: "earn interest,"))
+                MoveWord(String(localized: "privately."), ink: DS.pickInk)
             }
-            small(MoveSecurity.roundUpsSentence)
+            // One control under the headline, then one paragraph in one size
+            // that follows the pick (prd §1741a, user, of the pick beside the
+            // foot's acts: "ugly and weird"; of four pieces in three sizes:
+            // "this looks messy").
+            MoveSecurity.RoundUpStepPick(setting: $roundUps)
+                .padding(.top, DS.Space.s6)
+            // Two set lines (seen on the simulator: run together, the
+            // paragraph ended on "earning." alone).
+            small(MoveSecurity.roundUpsExample(roundUps) + "\n" + MoveSecurity.roundUpsMoves)
         case .created:
             MoveFlow {
-                MoveWord(String(localized: "Created"), ink: DS.textSecondary)
+                // "Ready", not "Created" (prd §1741a): the account exists
+                // before the walk starts since §1741.
+                MoveWord(String(localized: "Ready"), ink: DS.textSecondary)
                 // Pink is a tap (§1385); the tap copies, naming the networks
                 // the address works on (prd §1501).
                 Button { copyAddress() } label: { MoveWord(YourAccount.short(account), ink: DS.pickInk) }
@@ -171,6 +215,38 @@ struct MoveKeysWalk: View {
         }
     }
 
+    /// "Recommended." in the primary ink, the rest in the small print's.
+    private static var signerWords: AttributedString {
+        var lead = AttributedString(String(localized: "Recommended."))
+        lead.foregroundColor = DS.textPrimary
+        return lead + AttributedString(" " + String(localized: "Use another wallet to approve every send and swap. It also serves as the external wallet Aztec requires."))
+    }
+
+    /// One place on the opening page: its app's mark (two for the private
+    /// balances), its name at the section rung, one line under it.
+    private func place(_ apps: [String], _ name: String, _ words: String) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s4) {
+            ZStack {
+                if apps.count == 1 {
+                    BridgeIcon(name: apps[0], size: DS.Mark.tile)
+                } else {
+                    BridgeIcon(name: apps[0], size: DS.Mark.row)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    BridgeIcon(name: apps[1], size: DS.Mark.row)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                }
+            }
+            .frame(width: DS.Mark.tile, height: DS.Mark.tile)
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: name).dsText(.heading24).foregroundStyle(DS.headInk)
+                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private func small(_ words: String) -> some View {
         Text(verbatim: words)
             .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -182,12 +258,15 @@ struct MoveKeysWalk: View {
 
     private var foot: some View {
         HStack(alignment: .firstTextBaseline) {
-            Button { step == .created ? done(.receive) : advance() } label: {
-                Text(step == .created ? String(localized: "Receive") : String(localized: "Later"))
-                    .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+            // The opening page has nothing to put off: Next alone.
+            if step != .intro {
+                Button { step == .created ? done(.receive) : advance() } label: {
+                    Text(step == .created ? String(localized: "Receive") : String(localized: "Later"))
+                        .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+                }
+                .buttonStyle(RowPress())
+                .disabled(connecting)
             }
-            .buttonStyle(RowPress())
-            .disabled(connecting)
             Spacer(minLength: DS.Space.s3)
             Button { act() } label: {
                 Text(verbatim: verb)
@@ -207,6 +286,7 @@ struct MoveKeysWalk: View {
 
     private var verb: String {
         switch step {
+        case .intro: String(localized: "Next")
         case .recovery: String(localized: "Add")
         case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
         case .limit: String(localized: "Require")
@@ -226,6 +306,8 @@ struct MoveKeysWalk: View {
     private func act() {
         note = nil
         switch step {
+        case .intro:
+            advance()
         case .recovery:
             if !inert {
                 do {
@@ -282,6 +364,7 @@ struct MoveKeysWalk: View {
         if !inert { YourAccountSetup.save(choice, for: account) }
         let next: Step
         switch step {
+        case .intro: next = .recovery
         case .recovery: next = .signer
         case .signer: next = choice.signer == nil ? .roundUps : .limit
         case .limit: next = .roundUps

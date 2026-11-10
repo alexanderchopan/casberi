@@ -64,7 +64,7 @@ struct CalendarsPage: View {
         .environment(\.dsInPane, true)
         // Pushed beside Library on the phone (prd §1321): "Library · Calendars".
         .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
-                     ? DSTitleBack(word: String(localized: "Library"), action: { route.goBack() }) : nil)
+                     ? DSTitleBack(word: String(localized: "Apps"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .task {
             await read()

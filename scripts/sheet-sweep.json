@@ -14,7 +14,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "tap": "button:^Social, "
@@ -42,7 +42,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "tap": "button:^Social, "
@@ -154,7 +154,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -187,7 +187,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -224,7 +224,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -258,7 +258,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -295,7 +295,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -331,7 +331,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -367,7 +367,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "swipeUp": 1
@@ -721,7 +721,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "focus": "field:?Search"
@@ -772,7 +772,7 @@
      "wait": 2
     },
     {
-     "tap": "button:=Library"
+     "tap": "button:=Apps"
     },
     {
      "focus": "field:?Search"

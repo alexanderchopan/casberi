@@ -41,7 +41,7 @@ final class JourneyTests: XCTestCase {
         // Calendar's page in Day's folder (prd §1612 item 3), not the empty
         // Feed's box: the simulator's Keychain outlives an uninstall, so a
         // session left there fills the Feed and hides its ways in.
-        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
+        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Day"), "Day folder")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Calendar"), "Calendar")
         // The phone is the only way in, so the page asks iOS as it lands
@@ -338,14 +338,14 @@ final class JourneyTests: XCTestCase {
     @MainActor private func leaveDemo(_ w: Walk) {
         // The intro cover is one button and lifts by itself after the demo
         // pour; a person who taps it skips the wait.
-        w.maybe(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), within: 8, "intro cover")
+        w.maybe(w.el(.button, "label BEGINSWITH %@", "An inbox and a wallet"), within: 8, "intro cover")
         // The band's "Exit demo" (prd §1322).
         w.maybe(w.el(.button, "label == %@", "Exit demo"), within: 8, "band, Exit demo")
         // On Sources once Exit lands there. Casberi's folder is the test: it
         // stands only in Sources' library (prd §1316, §1321).
         let casberi = w.el(.button, "label == %@", "Casberi, Settings")
         if !casberi.waitForExistence(timeout: 6) {
-            w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
+            w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
         }
         w.see(casberi, "Sources")
         w.begin()

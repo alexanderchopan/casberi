@@ -41,6 +41,8 @@ final class FirstRun {
             && MailSubscriptionsReading.shared.items.isEmpty
             && people == 0
             && SubscriptionsReading.shared.items.isEmpty
-            && WalletStore.shared.addresses.isEmpty
+            // Your own account is made on the Wallet's first open (prd
+            // §1741), so it is not something you added: the Feed's box stays.
+            && WalletStore.shared.addresses.allSatisfy { YourAccountDemo.isYours($0.address) }
     }
 }

@@ -354,6 +354,9 @@ struct MoveSecurity: View {
                 Text(verbatim: Self.roundUpsExample(roundUps))
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                // $1 or $5 (prd §1741): the walk's pick, changed here after.
+                RoundUpStepPick(setting: Binding(get: { roundUps },
+                                                 set: { picked in saveRoundUps { $0 = picked } }))
                 HStack {
                     Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
                     Spacer()
@@ -390,7 +393,43 @@ struct MoveSecurity: View {
     /// A worked send, because "the next $1" read as a $1 round-up: what a
     /// $3.40 send sets aside. Security and the keys walk say it the same way.
     static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
-        String(localized: "Spend $3.40 and 60¢ goes to Round-ups.")
+        setting.step == 5 ? String(localized: "Spend $3.40, save $1.60.")
+                          : String(localized: "Spend $3.40, save 60¢.")
+    }
+
+    /// The walk's and the tray's one line under the headline (prd §1741,
+    /// user: "we need to say 'once it reaches 10$ moves to your private
+    /// balance'" and that it earns "at both steps"): the headline says
+    /// interest, this says when it turns private and that it keeps earning.
+    @MainActor static var roundUpsMoves: String {
+        String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to your private balance and keeps earning.")
+    }
+
+    /// **$1 OR $5 (prd §1741, its shape §1741a).** The one choice round-ups
+    /// has, as one two-part control: the walk draws it under the headline
+    /// and the tray under its sentence. Each half says what it does, so no
+    /// label stands beside it (user, of a label, two small chips and an
+    /// example in three sizes: "this looks messy").
+    struct RoundUpStepPick: View {
+        @Binding var setting: RoundUps.Setting
+
+        private var picked: Int { setting.step == 5 ? 5 : 1 }
+
+        var body: some View {
+            HStack(spacing: DS.Space.s1) {
+                ForEach([1, 5], id: \.self) { step in
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { setting.step = step }
+                    } label: {
+                        Chip(text: String(localized: "To the next $\(step)"), selected: picked == step, fills: true)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Round up to the next $\(step)"))
+                    .accessibilityAddTraits(picked == step ? [.isButton, .isSelected] : .isButton)
+                }
+            }
+        }
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,

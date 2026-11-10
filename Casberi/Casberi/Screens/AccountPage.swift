@@ -369,7 +369,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 if backToLibrary {
                     let chrome = chrome, route = route
                     chrome.flash(String(localized: "\(name) is connected"),
-                                 action: ShellChrome.ToastAction(label: String(localized: "Library")) {
+                                 action: ShellChrome.ToastAction(label: String(localized: "Apps")) {
                         // A Feed section's app rises as a sheet over Library:
                         // closing it is the way back.
                         chrome.appSheet = nil
@@ -419,7 +419,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 DSRoomTitleRow(title: name, pick: String(localized: "Settings"),
                                onTitle: { route.goBack() })
             } else {
-                DSRoomTitleRow(title: String(localized: "Library"))
+                DSRoomTitleRow(title: String(localized: "Apps"))
             }
         }
             .padding(.horizontal, DSRoomChassis.inset)

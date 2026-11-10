@@ -1,6 +1,14 @@
 import SwiftUI
 import SwiftData
 
+/// **THE COVER NO LONGER BEGINS A DEMO (prd §1741, 2026-11-09, user: "i think
+/// we want this as minimal and simple as possible").** A tester called the
+/// demo after this screen "too crowded" and could not say what the app was
+/// for. The cover now says both halves ("An inbox and a wallet for all your
+/// accounts. Kept private.") and lifts into the person's own empty Feed. What
+/// follows is the record of the demo-first cut, kept for its measurements:
+/// the fall, the floor and the lift are unchanged.
+///
 /// The first screen, and it rides ON the demo (2026-09-05, user: "immediately
 /// go from the intro page into the demo … the intro page doesn't even have a
 /// button").
@@ -330,8 +338,8 @@ struct IntroCover: View {
     /// form drifts from a drawn one. Every piece here is already in the
     /// catalog with all four translations, so composing costs nothing.
     private var coverSpoken: String {
-        [String(localized: "One inbox for all your apps."),
-         String(localized: "Here's a demo.")]
+        [String(localized: "An inbox and a wallet for all your accounts."),
+         String(localized: "Kept private.")]
             .joined(separator: " ")
     }
 
@@ -374,16 +382,21 @@ struct IntroCover: View {
                     // noun and fit a notes app, a launcher or a bank equally.
                     // Both strings were already in the catalog, so the swap
                     // carried no translation debt.
-                    DSProse.text("One inbox for all your apps.")
+                    // BOTH HALVES, AND NO DEMO (prd §1741, user: "an inbox and
+                    // wallet for all your accounts, privately"; of the demo:
+                    // "should we just kill it?"). A tester read "One inbox for
+                    // all your apps", met a wallet, and could not say what the
+                    // app was for. "Accounts" covers an app and an address in
+                    // one word.
+                    DSProse.text("An inbox and a wallet for all your accounts.")
                         .dsText(.heading40)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
-                    // THE DEMO IS SAID HERE (user, 2026-09-20: a person
-                    // landed in the demo and did not realise). In words,
-                    // whole, from the first frame (prd §1083).
-                    Text("Here's a demo.", comment: "Second line on the first-launch cover, under the headline: what follows is a demo, not the person's own things.")
+                    // The property, as its own beat. The cover lifts into the
+                    // person's own empty app, so nothing here says "demo".
+                    Text("Kept private.", comment: "Second line on the first-launch cover, under the headline: what the app keeps stays on the person's own devices.")
                         .dsText(.heading24)
-                        .foregroundStyle(DS.textPrimary)
+                        .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s6)
                     .padding(.bottom, DS.Space.s2)
@@ -454,7 +467,7 @@ struct IntroCover: View {
         .accessibilityLabel(Text(coverSpoken))
         // What activating DOES, not how — VoiceOver already says how on each
         // platform, and "double-tap" would be wrong under a pointer.
-        .accessibilityHint(Text("Starts the demo now"))
+        .accessibilityHint(Text("Opens Casberi now"))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { start() }
         .onAppear {
@@ -495,29 +508,32 @@ struct IntroCover: View {
                 onStart()
                 return
             }
-            if !DemoMode.isActive { DemoMode.begin(store: store) }
+            // **NO DEMO BEGINS HERE (prd §1741).** The cover lifts into the
+            // person's own empty Feed, which says what to do next. A demo
+            // already running (`-demoEnter`, or one begun before this build)
+            // still pours under the cover, so the page behind is full.
             let mounted = Date.timeIntervalSinceReferenceDate
-            // Wait for the first painted frame (the tiles' first deal), then
-            // one more beat so the commit that carried it is on screen; a
-            // ceiling so a layer that never deals (Reduce Motion places the
-            // tiles at rest and still deals — but belt and braces) cannot
-            // hold the demo forever.
-            var waited = 0
-            while !dealt && waited < 40 {
-                try? await Task.sleep(for: .milliseconds(50))
-                waited += 1
+            if DemoMode.isActive {
+                // Wait for the first painted frame (the tiles' first deal),
+                // then one more beat so the commit that carried it is on
+                // screen, with a ceiling so a layer that never deals cannot
+                // hold the cover forever.
+                var waited = 0
+                while !dealt && waited < 40 {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    waited += 1
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+                await DemoMode.pourIfNeeded(context: modelContext)
+                // "Returned" is not "landed": another caller may hold the
+                // pour, and the feed's query takes a beat to show the rows.
+                var settling = 0
+                while DemoMode.pourOutstanding && settling < 600 {
+                    try? await Task.sleep(for: .milliseconds(50))
+                    settling += 1
+                }
+                try? await Task.sleep(for: .milliseconds(400))
             }
-            try? await Task.sleep(for: .milliseconds(250))
-            await DemoMode.pourIfNeeded(context: modelContext)
-            // "Returned" is not "landed": another caller may hold the pour
-            // (`pourIfNeeded` yields at once to it), and the feed's own
-            // query takes a beat to show the rows after the last insert.
-            var settling = 0
-            while DemoMode.pourOutstanding && settling < 600 {
-                try? await Task.sleep(for: .milliseconds(50))
-                settling += 1
-            }
-            try? await Task.sleep(for: .milliseconds(400))
             let hold = reduceMotion ? 2.0 : Self.autoLift
             let remaining = hold - (Date.timeIntervalSinceReferenceDate - mounted)
             if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }

@@ -229,6 +229,10 @@ final class ShellChrome {
     /// Move's sheet is whole (prd §1681): a word's choices or the keys are
     /// open, or an account is being made. Short at rest.
     var moveTall = false
+    /// Move raised onto the setup walk (prd §1741): Home's "Finish setup",
+    /// for an account made on the Wallet's first open. Cleared when the walk
+    /// ends or the tray leaves.
+    var moveWalk = false
     /// Move opens on Send, privately (prd §1554): Holdings' Private header
     /// sends to your private balance, a private row sends from it with the
     /// switch on. Cleared when the tray closes.

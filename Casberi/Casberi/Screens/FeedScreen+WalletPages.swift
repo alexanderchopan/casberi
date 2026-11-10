@@ -253,7 +253,17 @@ extension FeedScreen {
         walletDoorsSection {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
-            if yours != nil, onAll || yoursPicked {
+            if let yours, YourAccountFirstOpen.setupPending(yours), onAll || yoursPicked {
+                // **MADE FOR YOU, THE WALK BEHIND THE DOOR (prd §1741, user:
+                // "i don't like … that it says no recovery key bc there is
+                // more in there for a user like roundups").** One word for
+                // everything the walk holds; the tap opens the walk.
+                walletDoor(.yourAccount, word: String(localized: "Finish setup"), wordTone: DS.attentionInk,
+                           act: {
+                               chrome.moveWalk = true
+                               chrome.moveTray = true
+                           })
+            } else if yours != nil, onAll || yoursPicked {
                 walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)
                     // Read when Home stands, never in a body (prd §1515): the
                     // demo, and a launch before the first foreground sweep.
@@ -262,6 +272,9 @@ extension FeedScreen {
                 // **NONE YET: THE VERB (prd §1480 item 2).** Move makes it.
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
                            act: { chrome.moveTray = true })
+                    // The first open of an empty Wallet makes it (prd §1741);
+                    // in a task, never a body (a Keychain read, prd §628).
+                    .task { YourAccountFirstOpen.makeIfFresh() }
             }
             // **FOLLOWING IS THE ROOM'S, NOT AN ACCOUNT'S (prd §1491, user: "i
             // am on railgun and see 'markets' why is that?"):** with one

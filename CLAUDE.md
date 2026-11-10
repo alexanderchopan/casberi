@@ -147,7 +147,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Fees is Spending's third row (prd §1476): Zerion's fee on the sent leg as a rowless `.fee` fact, one per transaction, by network, apart from the total; "Fees · from <day>" while a window holds an unstamped send (`spending-selftest.sh`)** → prd §1476
 - **Swap to another network is Across's: the phone writes the deposit, ETH via its handler, one Activity row (`WalletAcross`, `across-swap-selftest.sh`, `-acrossSample`)** → docs/hooks/wallet.md · prd §1555
 - **Swap asks Uniswap v4 on all three networks: standard keys for every pair, measured keys for their own (`scripts/uniswap-v4-pools.py`; `--check` nightly in `live-integrations.sh`, `--self-test` in verify); a swap moving the price ≥1% says "Moves the price N%" in the foot (`-swapImpactSample 0.064` on the demo)** → prd §1678 · §1680 · §1682
-- **Wallet (prd §1480, supersedes §1107/§1232/§1468's tiles): Home · Holdings · Activity · Spending, drawn in that order, not A–Z (`keepsOrder`, §1686); Home is the balance and six doors (Your account, Following, Needs you, Permissions, Threats, Markets), every list behind a door, Security, Cards and the category index dissolved; `-openSection home|activity|holdings|spending`** → prd §1480
+- **Wallet (prd §1480, supersedes §1107/§1232/§1468's tiles): Home · Holdings · Activity · Spending, drawn in that order, not A–Z (`keepsOrder`, §1686); Home is the balance and six doors (Your account, Following, Needs you, Permissions, Risks, Markets), every list behind a door, Security, Cards and the category index dissolved; `-openSection home|activity|holdings|spending`** → prd §1480
 - **Holdings is Public · Private, lines network · fact · place (`walletPlaceRow`, `-moveToAztec YES`)** → prd §1718
 - **Your private balance is one place, told apart by network; no Private switch (`MoveAztecReceive`)** → prd §1719
 - **Railgun, every build: your account sends only to you, a broadcaster to anyone else (`railgun-selftest.sh`, `-moveRailgun in|back|send`); Move says dollars and one cost, the wallet syncs on the Wallet's open (`-railgunDemoUnder YES`: under $10)** → prd §1721 · §1723 · §1728
@@ -265,7 +265,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A room swipe: TRAVEL follows the finger, CARDNESS follows the TURN (§648), and the card is dealt on the BRAND GROUND (§898)** → docs/hooks/design.md · prd §648 · §898
 - **The page is not clipped at rest and the bottom band paints no plate** (`dock-selftest.sh`) → docs/hooks/design.md · prd §677
 - **The dock's folder touches the dock, a face rail sits above it, and the band's scrim ramps over a fixed 24pt** → docs/hooks/design.md · prd §649
-- **The furnished demo is a MODE you enter and leave, not a dev-only seed** → docs/hooks/system.md · prd §217
+- **First run (prd §1741): the cover begins NO demo and lifts into your own empty Feed (`FeedStartBox`: one sentence, `LibraryRecents.starts`' six apps); the demo is `-demoEnter` only; the Wallet's first open makes your account (`YourAccountFirstOpen`) and "Finish setup" opens the walk; round-ups: $1 or $5** → prd §1741
 - `-findProbe` — with `-openComposer YES` (it fires only once the composer is open), fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (its field and foot); -composerDraft "<text>" → docs/hooks/agent.md
 - `-openNote YES` — raise the note sheet at mount (prd §969, `Shell/NoteCaptureSheet.swift`; NSLogs `openNote:`); pair with `-openRoom "Your notes"` for the room (`Pinboard.room`, NOT the drawn word — "Notes" is a catalog category). Dismiss KEEPS a non-empty note under `You` → docs/hooks/system.md · prd §969
@@ -330,7 +330,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-wipeAccessProbe YES` — run the Data tray's Delete access internals and log before/after credential counts.
 - `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
 - **An account marked `mine` lands its OWN replies (2026-09-17)** → docs/hooks/social.md · prd §804
-- **Farcaster is DELETED (prd §1110, user: "remove farcaster")**: the seat, its ingest, signers, starter pack, channels, the `-fc*` probes, its hosts, the person room's onchain half and Farcaster as an identity in Addresses (`fc:` keys and `@names` parse to nobody; web3.bio's Farcaster rows are dropped). Its rows, defaults (`farcaster.`) and seat record go through `SourceRename.sweepRetiredSeats` → prd §1110
+- **Farcaster is DELETED (prd §1110)**: seat, ingest, probes, hosts and its identity in Addresses (`fc:` keys parse to nobody); its rows and `farcaster.` defaults go through `SourceRename.sweepRetiredSeats` → prd §1110
 - Social enrichment (2026-07-16, prd 81) — both networks, one pass through Model/SocialBridge.swift. → docs/hooks/social.md
 - `-likersProbe` — Who liked your post (2026-08-07, prd §330, Model/SocialLikers.swift, -likersProbe YES) → docs/hooks/social.md · prd §330
 - `-followsProbe` — Follow import (2026-07-16, prd 87) → docs/hooks/social.md
@@ -383,7 +383,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-bitcoinProbe <address | xpub/zpub/descriptor>` — one Bitcoin address or a whole WALLET (prd §1097): the gap-limit walk, change counted home, dust tagged, reuse reconciled, a waiting send stamped; a pasted `xprv` is refused and never stored. A host gets 20s of wall clock per page (mempool.space trickles busy addresses) → prd §1097 · §226 · §227
 - `-torProbe YES|fail` — iOS wallet reads via Tor, a circuit per wallet, watched while it runs (`tor-health-selftest.sh`) → docs/hooks/wallet.md · prd §1495 · §1546
 - `-simplefinConnect "<token|URL>"|forget` `-simplefinProbe` `-simplefinIconProbe` — SimpleFIN: banks, no server, an hour between reads → prd §1663
-- `-nymisSample YES|<0x…>` `-nymisScan <0x…>` — Privacy on Wallet › Threats, by Nymis: a tap asks Nymis's Partner API in public client mode (address in the body, token in memory only, a 429 drawn as "busy until"), its findings, facts and summaries kept on the phone, polled 30 s then 60 s, no score anywhere, never its web report or a legacy endpoint (`nymis-selftest.sh`) → prd §1701 · §1701c · §1701d
+- `-nymisSample YES|<0x…>` `-nymisScan <0x…>` — Privacy on Wallet › Risks (§1741), by Nymis: a tap asks Nymis's Partner API in public client mode (address in the body, token in memory only, a 429 drawn as "busy until"), its findings, facts and summaries kept on the phone, polled 30 s then 60 s, no score anywhere, never its web report or a legacy endpoint (`nymis-selftest.sh`) → prd §1701 · §1701c · §1701d
 - `-solNameProbe` `-solActivityProbe` — Wallet/Solana (2026-07-16, prd §85/§86) → docs/hooks/wallet.md · prd §85
 - **Solana reads forward from a cursor, takes v1 transactions (`maxSupportedTransactionVersion: 1`; 0 dropped 18% of mainnet), lands SPL delegates as `wallet:sol-approval:` grants (still standing, never `WalletPrepare`'s), and resolves `.sol` through web3.bio (Bonfida's proxy is dead) (prd §1096)** → prd §1096
 - **Wei / Gwei names, and the router the six copies became** (`-weiNameProbe`) → docs/hooks/wallet.md · prd §597
@@ -557,7 +557,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 
 ## Mac (Catalyst)
 
-- **Every shell ruling names its Mac half before it ships (RULE, prd §1402).** The rail is the tab bar — Feed · Wallet · Library, Move, your face as Library's tile (`Shell/PlaceRail.swift`); ⌘1–⌘4 open them, ⌘F focuses Library's field (§1715); never a sidebar (§875).
+- **Every shell ruling names its Mac half before it ships (RULE, prd §1402).** The rail is the tab bar — Feed · Wallet · Apps (`.library` in code, §1741), Move wearing your face once you pick one (`Shell/PlaceRail.swift`, `MoveMark`); ⌘1–⌘4 open them, ⌘F focuses Apps' field (§1715); never a sidebar (§875).
 
 ## Website (casberi.app)
 

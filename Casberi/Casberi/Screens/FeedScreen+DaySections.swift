@@ -300,7 +300,10 @@ extension FeedScreen {
         // THE FEED'S ROW IS ITS CATEGORIES (prd §1328): the places' row went
         // to the tab bar (§1327), and the slot under the box holds the
         // sections below it, a tap landing on one.
-        if source == "All" { feedCategoryRow }
+        // Not on a first run (prd §1741, user: "they only show depending on
+        // what a person picks"): with nothing added there is no section to
+        // land on, and the box's six apps are the whole screen.
+        if source == "All", !feedStarts { feedCategoryRow }
         // What stopped working, named, before anything that arrived (prd §1162).
         if source == "All" { reconnectSection }
         // **NO SECOND NEWEST (prd §1734, retiring §1256's card and the
@@ -444,13 +447,16 @@ extension FeedScreen {
             Section { ledeListRow(ledeThing, label: source == "All" ? String(localized: "Newest") : nil) }
         } else if source == "All", !heroShown {
             Section {
-                // **THE WAYS IN, IN THE FEED'S BOX (prd §1365, user: "ok", of
-                // the mockup).** With nothing added, the box is Library's own "Start with any of these" under the
-                // day: "Connect apps in Library." named a door it did not
-                // draw. The first one done gives the box back to the day.
+                // **THE EMPTY FEED IS ONE SENTENCE AND SIX APPS (prd §1741,
+                // amending §1365's five ways in).** With nothing added, the
+                // box says what the Feed is and offers the apps Library's own
+                // "Start with any of these" row offers; a tap opens that
+                // app's way in. The first one done gives the box back to the
+                // day.
                 if feedStarts {
-                    StartWaysIn(dated: Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))) {
-                        startWay($0)
+                    FeedStartBox { name in
+                        DSHaptic.selection()
+                        route.openSetup(forOffer: name)
                     }
                     .dsRoomLeadListRow()
                 } else {

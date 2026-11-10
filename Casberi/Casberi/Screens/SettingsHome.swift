@@ -82,7 +82,7 @@ struct SettingsHome: View {
             // stood in the content because §752 kept the top clear.
             // LIBRARY IS A TAB (prd §1327 items 2, 5): its name alone, as
             // every tab's page reads; the bar says where the others are.
-            DSRoomTitleRow(title: String(localized: "Library"))
+            DSRoomTitleRow(title: String(localized: "Apps"))
                 .demoTagOnTitle()
                 .dsRoomTitleListRow(inSheet: route.sheet != nil)
             // The places' row is gone (prd §1327 item 1): they are tabs.

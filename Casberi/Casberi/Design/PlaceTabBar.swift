@@ -35,7 +35,7 @@ enum PlaceTab: String, Identifiable, CaseIterable {
         switch self {
         case .feed:    String(localized: "Feed")
         case .wallet:  String(localized: "Wallet")
-        case .library: String(localized: "Library")
+        case .library: String(localized: "Apps")
         case .move:    String(localized: "Move")
         }
     }
@@ -51,8 +51,8 @@ enum PlaceTab: String, Identifiable, CaseIterable {
         }
     }
 
-    /// The glyph the place has always worn on its tile; Library's is your
-    /// face, drawn by the bar.
+    /// The glyph the place has always worn on its tile; Apps wears the grid
+    /// (prd §1741, retiring your face on this tab).
     @MainActor var glyph: String {
         switch self {
         case .feed:    ScopeTileGlyph.feed
@@ -201,10 +201,7 @@ struct PlaceTabBar: View {
             DSHaptic.tap()
             open(.move)
         } label: {
-            Image(systemName: PlaceTab.move.glyph)
-                .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(DS.pickInk)
-                .symbolEffect(.bounce, value: taps[.move] ?? 0)
+            MoveMark(size: size, taps: taps[.move] ?? 0)
                 .frame(width: size, height: size)
                 .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
@@ -214,14 +211,39 @@ struct PlaceTabBar: View {
         .accessibilityHint(Text("Swap, send or receive money"))
     }
 
-    @ViewBuilder
+    /// Every place wears its glyph (prd §1741): Apps is the grid, and your
+    /// face left the tab for Move's circle (`MoveMark`).
     private func mark(_ tab: PlaceTab, on: Bool, glyphSize: DSGlyph, taps: Int = 0) -> some View {
-        if tab == .library {
-            LibraryFace()
+        Image(systemName: tab.glyph)
+            .dsGlyph(glyphSize, weight: on ? .semibold : .regular)
+            .foregroundStyle(on ? DS.brandInk : DS.textPrimary)
+            .symbolEffect(.bounce, value: taps)
+    }
+}
+
+/// **MOVE IS THE DOLLAR UNTIL YOU PICK AN AVATAR, THEN IT IS YOUR FACE (prd
+/// §1741, user: "people like to see their avatar and it is their money"; "if
+/// user selects avatar it turns the dollar sign into their face. not face w/
+/// dollar sign").** The octopus never stands on the bar: unchosen, it read as
+/// a stranger's mark on Library and would on the money button too. A chosen
+/// face fills the circle and keeps the pull's spin the tab's face had
+/// (`DoorSpin`). The phone's bar and the Mac's rail both draw this.
+struct MoveMark: View {
+    @Environment(ShellChrome.self) private var chrome
+    /// The circle's side on the bar; the rail's mark is its glyph height.
+    let size: CGFloat
+    let taps: Int
+    /// The face's inset from the circle's edge, so the glass still rims it.
+    var inset: CGFloat = DS.Space.s1
+
+    var body: some View {
+        if ProfileStore.shared.avatar != nil {
+            YouFace(size: size - 2 * inset)
+                .modifier(DoorSpin(trigger: chrome.refreshPulse, tension: chrome.pullTension))
         } else {
-            Image(systemName: tab.glyph)
-                .dsGlyph(glyphSize, weight: on ? .semibold : .regular)
-                .foregroundStyle(on ? DS.brandInk : DS.textPrimary)
+            Image(systemName: PlaceTab.move.glyph)
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(DS.pickInk)
                 .symbolEffect(.bounce, value: taps)
         }
     }
@@ -241,14 +263,3 @@ struct FeedTabFrame: View {
     }
 }
 
-/// Your face on Library's tab, and the pull-to-refresh spin it always did
-/// (`DoorSpin`, prd §1327 item 10): the pull winds it, the refresh turns it
-/// once. A leaf, so the pull's every frame redraws the face and not the bar.
-private struct LibraryFace: View {
-    @Environment(ShellChrome.self) private var chrome
-
-    var body: some View {
-        YouFace(size: 26)
-            .modifier(DoorSpin(trigger: chrome.refreshPulse, tension: chrome.pullTension))
-    }
-}

@@ -50,7 +50,7 @@ struct MoveTrayPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
-                      onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false }) {
+                      onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -202,9 +202,13 @@ struct MoveScreen: View {
 
     @ViewBuilder private var shown: some View {
         Group {
-            if let address, walking || walkAgainNow {
+            // The walk: just created, or raised by Home's "Finish setup" for
+            // an account made on the Wallet's first open (prd §1741).
+            if let address, walking || walkAgainNow || chrome.moveWalk {
                 MoveKeysWalk(account: address, inTray: inTray, step: walkStep) { ending in
                     walkAgainDone = true
+                    chrome.moveWalk = false
+                    YourAccountFirstOpen.walked(address)
                     // Done closes Move — it rose over wherever you were —
                     // and Receive opens it there (prd §1501).
                     opening = ending == .receive ? .receive : nil
@@ -258,7 +262,8 @@ struct MoveScreen: View {
         #if DEBUG
         if walkAgainNow { return MoveKeysWalk.Step(rawValue: UserDefaults.standard.integer(forKey: "keysStep")) ?? .recovery }
         #endif
-        return .recovery
+        // The walk opens on what the wallet holds (prd §1741a).
+        return .intro
     }
 
     // MARK: Before the account exists

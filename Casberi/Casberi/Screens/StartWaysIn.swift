@@ -15,10 +15,9 @@ import SwiftUI
 struct StartWaysIn: View {
     enum Way { case app, calendar, card, subscription, wallet }
 
-    /// The day, on the Feed, where the box stood for the day before.
-    var dated: Text? = nil
-    /// The ways this host offers, drawn A–Z as given. Library and the Feed
-    /// offer four; the Wallet's Spending three (prd §1469).
+    /// The ways this host offers, drawn A–Z as given. The Wallet's Spending
+    /// offers three (prd §1469); the empty Feed's box is `FeedStartBox`
+    /// since prd §1741.
     var ways: [Way] = [.app, .calendar, .subscription, .wallet]
     /// A fixed row height, the rows standing at the box's top (user, of three
     /// rows stretched over the box: "you have a lot of extra spacing"). Nil:
@@ -32,12 +31,8 @@ struct StartWaysIn: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            if let dated {
-                dated.dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .padding([.top, .horizontal], DS.Space.s2)
-            }
             Text("Start with any of these").dsText(.heading20).foregroundStyle(DS.textPrimary)
-                .padding(dated == nil ? [.top, .horizontal] : [.horizontal], inset)
+                .padding([.top, .horizontal], inset)
             // Settings' row grammar (user: "what would apple do"): a glyph in
             // one column, the name, a grey value, the plus. A–Z, as every
             // room's tiles read, so no row is the first step. The rows share

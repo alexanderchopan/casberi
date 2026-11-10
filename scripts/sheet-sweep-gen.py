@@ -22,7 +22,7 @@ import json, subprocess, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 D = "demo"
 # Sources is the Library tab (prd §1327, §1347); the Feed has no Sources tile.
-SRC = [{"wait": 2}, {"tap": "button:=Library"}]
+SRC = [{"wait": 2}, {"tap": "button:=Apps"}]
 APPS = "button:~, Apps"                    # Sources' Apps count: on the Sources page under every sheet it raises
 SEARCH = "button:=Move"                    # the band's Move circle (prd §1715): takes a touch whenever no sheet covers it
 BACK = "button:=Back"
@@ -61,7 +61,7 @@ TS = "Screens/ThingSheetView.swift:"
 def section(room, item):
     return [{"tap": f"button:=Add to {room}"}, {"tap": f"button:^{item}"}]
 MARKETS = WALLET+[{"tap": "button:^Markets, What"}]
-PIVOT = [{"wait": 2}, {"tap": "button:=Library"}, {"focus": "field:?Search"}, {"type": "Telegram"}, {"tap": "button:^Everything from Telegram"}]
+PIVOT = [{"wait": 2}, {"tap": "button:=Apps"}, {"focus": "field:?Search"}, {"type": "Telegram"}, {"tap": "button:^Everything from Telegram"}]
 HISTORY = WALLET+[{"tap": "button:^Home, The line"}, {"swipeUp": 5}, {"tap": "button:^See all "}]
 ENTRIES = [
   # ---- Library, a page (prd §1321). Its counts box and the lists and trays it

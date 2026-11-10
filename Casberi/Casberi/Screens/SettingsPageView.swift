@@ -27,7 +27,7 @@ struct SettingsPageView: View {
         .environment(\.dsInPane, true)
         // Pushed beside Sources on the phone (prd §1321): "Sources · Data".
         .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
-                     ? DSTitleBack(word: String(localized: "Library"), action: { route.goBack() }) : nil)
+                     ? DSTitleBack(word: String(localized: "Apps"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

@@ -811,7 +811,7 @@ enum NetworkReach {
         // status polled by scan id. Its web report is never fetched.
         Endpoint(service: "Nymis",
                  reach: .always,
-                 purpose: "Only when you tap Scan on an address in Wallet › Threats: sends that address to Nymis, which reads what its public activity gives away by looking it up with blockchain providers and, for names tied to it, search services. Casberi then reads Nymis's findings, facts and summaries once the scan is done. The reading is kept on this phone.",
+                 purpose: "Only when you tap Scan on an address in Wallet › Risks: sends that address to Nymis, which reads what its public activity gives away by looking it up with blockchain providers and, for names tied to it, search services. Casberi then reads Nymis's findings, facts and summaries once the scan is done. The reading is kept on this phone.",
                  hosts: ["nymis.io"]),
         // SimpleFIN (2026-11-02, prd §1663) — the claim host is whatever the
         // pasted Setup Token names and the read host whatever the claim hands
