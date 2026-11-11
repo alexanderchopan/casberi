@@ -415,6 +415,13 @@ extension FeedScreen {
                 walletScopeChromeSection(section, visible: visible,
                                          upcoming: upcoming, inert: inert,
                                          streamTotal: all.count)
+                // THE PANE IS THE ROOM'S SECOND COLUMN (prd §1742): under the
+                // box, the newest activity. Activity's own page lists it in
+                // the list column, so its pane keeps the box alone.
+                if roomBoxPlace == .paneBox, section != .activity {
+                    walletPaneActivity(all, nextEventID: nextEventID)
+                        .environment(\.dsPaneBoxRow, true)
+                }
                 // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
                 // Renamed to short nouns and split twice — NFTs out of "What you
                 // hold", and "What it's doing" into Positions and Risk — so the

@@ -108,6 +108,15 @@ enum PadLayout {
         max(total - railWidth - listColumnWidth, 400)
     }
 
+    /// **THE PANE'S MEASURE (prd §1742).** What the pane draws at rest, and a
+    /// page it opens, stops at this width and stands at the pane's leading
+    /// edge. The pane takes every point past the list (§873), so at a 1440pt
+    /// window its rows ran 792pt, a week strip spread across all of it and a
+    /// row's trailing fact stood half a screen from its title, wider with
+    /// every point the window grew. A thing open in the pane keeps the whole
+    /// column: its own reading rung caps the line, and a picture earns the width.
+    static let paneMeasure: CGFloat = 620
+
     /// The reading column — a single file of rows or form fields (Settings,
     /// every bridge setup screen, the feed itself). This is the value
     /// `dsAdaptiveContentWidth()` uses by default. It was 900, which is why

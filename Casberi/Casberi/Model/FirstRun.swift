@@ -33,7 +33,13 @@ final class FirstRun {
     /// calendar, nothing followed, no mail list, nobody, no subscription, no
     /// address.
     func isEmpty(bridges: BridgeStore) -> Bool {
-        bridges.bridges.allSatisfy {
+        #if DEBUG
+        // `-firstRunPreview YES`: draw the first run on a machine that has
+        // apps connected (bridges live in defaults, which no scratch store
+        // empties), so the Mac's start box can be seen (prd §1742).
+        if UserDefaults.standard.bool(forKey: "firstRunPreview") { return true }
+        #endif
+        return bridges.bridges.allSatisfy {
             $0.status == .paused || BridgeCatalog.category(forSource: $0.name) == HomeScope.markets
         }
             && phoneCalendars.isEmpty && CalendarSubscriptionStore.shared.calendars.isEmpty

@@ -127,21 +127,34 @@ struct DSTextStyle {
     /// rows at 12, under it.
     static let macScale: CGFloat = 0.76
 
+    /// **NOTHING DRAWS UNDER 11pt ON THE MAC (prd §1742).** 0.76 was chosen
+    /// for the title and the rows (34→26, 17→13) and took the 12pt rungs to
+    /// 9: the app's name over every Feed row, every time, the rail's words.
+    /// macOS's own smallest label is 10–11pt, and Figtree at 9 beside it read
+    /// as fine print. A rung under the floor on the phone keeps its own size.
+    static let macFloor: CGFloat = 11
+
     /// This rung's point size on THIS platform, before Dynamic Type. Rounded
     /// to a whole point: fractional sizes render, but the ramp's own rungs are
     /// integers everywhere else and a half point buys nothing.
     var platformSize: CGFloat {
         #if targetEnvironment(macCatalyst)
-        macScales ? (size * DSTextStyle.macScale).rounded() : size
+        macScales ? Self.macSize(size) : size
         #else
         size
         #endif
     }
 
+    /// A phone size on the Mac: scaled, never under the floor, never over
+    /// the phone's own.
+    static func macSize(_ size: CGFloat) -> CGFloat {
+        min(size, max(macFloor, (size * macScale).rounded()))
+    }
+
     /// The line box, scaled with the size so leading stays proportional.
     var platformLineHeight: CGFloat {
         #if targetEnvironment(macCatalyst)
-        macScales ? (lineHeight * DSTextStyle.macScale).rounded() : lineHeight
+        macScales ? (lineHeight * Self.macSize(size) / size).rounded() : lineHeight
         #else
         lineHeight
         #endif

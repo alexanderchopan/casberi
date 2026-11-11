@@ -557,6 +557,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 
 ## Mac (Catalyst)
 
+- **The pane is the room's second column (prd §1742): Wallet activity under the box (`walletPaneActivity`), a 620pt measure (`PadLayout.paneMeasure`), an 11pt floor (`macFloor`), the start box in the list on a first run; `-firstRunPreview YES`**
 - **Every shell ruling names its Mac half before it ships (RULE, prd §1402).** The rail is the tab bar — Feed · Wallet · Apps (`.library` in code, §1741), Move wearing your face once you pick one (`Shell/PlaceRail.swift`, `MoveMark`); ⌘1–⌘4 open them, ⌘F focuses Apps' field (§1715); never a sidebar (§875).
 
 ## Website (casberi.app)

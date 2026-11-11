@@ -217,6 +217,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - The Mac takes its own type scale (`macScale` 0.88). A walked row can be taken with ⌘C, Space or drag (§631).
 - The rail is the app's own; no sidebar. Where the rail shows, the dock seat is only the way back (§875).
 - A wider window widens the detail pane, not the list (560pt) (§873). Apps and Settings open in the pane (§876).
+- The pane is the room's second column (§1742): the Wallet's lists its newest activity under the balance; what the pane draws at rest stops at 620pt at its leading edge; nothing draws under 11pt on the Mac; a first run keeps its start box in the Feed's list column and the pane rests on the mark.
 - Every sheet that Settings raises carries the shell's environment, because Catalyst sheets don't inherit it (§872). The Mac honours the app's Theme (§874).
 
 ### 19. Engineering
@@ -245,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1917 of 1990 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1918 of 1991 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2164,6 +2165,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1741 — The first run begins no demo: the cover says both halves, the empty Feed is one sentence and six apps, Library is nam… (amended by §1741a, §1741b)
 - §1741a — The setup walk opens on what the wallet holds, recommends the co-signer, picks round-ups with one control and ends on…
 - §1741b — A walk put away is a walk seen: the Account page opens once the setup walk closes
+- §1742 — The Mac's pane is the room's second column: the Wallet lists its newest activity under the balance, the pane holds a…
 
 ## Dead rulings → what replaced them (generated)
 

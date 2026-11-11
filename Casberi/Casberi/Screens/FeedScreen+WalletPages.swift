@@ -1076,6 +1076,32 @@ extension FeedScreen {
             walletSeeAllSection(older: all.count >= min(Self.sourceRoomFetchLimit, rowBudget ?? .max) || selectedWallet != nil || selectedSeat != nil)
         }
     }
+
+    /// The rows the pane's Activity holds before its door.
+    static let walletPaneRows = 8
+
+    /// **THE PANE'S ACTIVITY (prd §1742).** Beside a pane the Wallet's box
+    /// stood over an empty column: the phone keeps every list behind a door
+    /// (§1480) because it has one column, and the Mac has two. Under the box
+    /// the pane lists the newest moves by day, then the door to Activity,
+    /// which opens in the list column as every Wallet page does. Nothing
+    /// while there are no moves: the box stands alone, as it did.
+    @ViewBuilder
+    func walletPaneActivity(_ all: [Thing], nextEventID: UUID?) -> some View {
+        let moves = Self.walletMoves(all)
+        let stream = walletStream(moves, cap: Self.walletPaneRows)
+        if !stream.rows.isEmpty {
+            walletCard(WalletSection.activity.label, glyph: WalletSection.activity.glyph) {
+                walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
+                if moves.count > Self.walletPaneRows {
+                    DSMoreRow(title: Text("All activity")) {
+                        withAnimation(DS.Motion.standard) { chrome.walletSection = .activity }
+                    }
+                    .walletListRow()
+                }
+            }
+        }
+    }
 }
 
 /// **YOUR ACCOUNT'S BOX (prd §1480 item 6):** who it is — the face, the name,

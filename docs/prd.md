@@ -71929,3 +71929,17 @@ Verifying §1741 on the simulator found the door shut: while "Finish setup" stoo
 1. Closing the walk by any means (Done, Receive, Later, a swipe) clears the pending mark (`MoveTrayPresenter`'s `onDismiss`, `YourAccountFirstOpen.walked`). The door is Your account again and its word says what is still missing.
 2. "Finish setup" is drawn once: on a new account, until the walk has been opened and closed.
 3. Mac half: the same sheet and the same dismissal; nothing of its own.
+
+## §1742 — The Mac's pane is the room's second column: the Wallet lists its newest activity under the balance, the pane holds a 620pt measure, nothing draws under 11pt, and a first run keeps its start box (amends §1403's box-only pane for the Wallet, §1480 item 11's "the pane keeps the balance", §873's full-width pane content, §1406's 0.76 for the smallest rungs, §248's sentence under the mark; keeps §875's rail and §873's 560pt list) (user, 2026-11-10: "spec out how you would radically improve the mac so it's on par with our wonderful ios experience", then "when you are done, make the decisions and implement"; the canvas https://claude.ai/artifact/JFSxSDgn5z4mwSVrkjF7y3) — BUILT; seen on the Mac build (the demo, 1440×900 and 1120×760)
+
+Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five doors and a balance and left about four fifths of the window black; the pane's rows ran its whole 792pt, the week strip spread across all of it; the 12pt rungs drew at 9pt; and a Mac with nothing added showed the word "Feed", a faint mark and "Pick something to open.", because the start box (§1741) is the pane's beside a pane and the pane hosted it only once something had landed.
+
+1. **The Wallet's pane lists the newest activity under its box** (`walletPaneActivity`, eight moves by day, then "All activity", which opens Activity in the list column as every Wallet page does). On every Wallet page but Activity itself. The phone keeps every list behind a door (§1480) because it has one column.
+2. **The pane's measure is 620pt** (`PadLayout.paneMeasure`): the box and its lists at rest, and a page Apps opens in the pane, stop there and stand at the pane's leading edge. A thing open in the pane keeps the whole column.
+3. **Nothing draws under 11pt on the Mac** (`DSTextStyle.macFloor`, `macSize`): the 12pt and 13pt rungs draw at 11 where 0.76 took them to 9 and 10. The title and the rows are unchanged (26, 13).
+4. **A first run keeps its start box in the Feed's list column** (`MainSurface.feedFirstRun`), and the pane rests on the mark alone; "Pick something to open." is deleted.
+5. `-firstRunPreview YES` (DEBUG) draws the first run on a machine with apps connected.
+
+**iPad half.** The same code: a regular iPad with a pane takes items 1, 2 and 4; item 3 is the Mac's.
+
+**Not built.** Move beside the Wallet in the pane (still a tray over the window); a menu bar extra; Translate and the scanner on the Mac. **Not seen:** the start box itself on a Mac with nothing added (this machine has an app connected; the preview hook shows the box in the list column holding the newest thing, and the mark in the pane). The demo's balance line does not draw in the Mac's pane, before and after this pass; not diagnosed. Translation of "All activity". The full verify pass was not run.

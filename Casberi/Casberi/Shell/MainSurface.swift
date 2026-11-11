@@ -763,11 +763,13 @@ struct MainSurface: View {
                 leafRoom(node)
                     .id(node)
                     .transition(.opacity)
+                    // The pane's measure (prd §1742).
+                    .frame(maxWidth: PadLayout.paneMeasure)
             } else {
                 Color.clear
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DS.inkGround.ignoresSafeArea())
     }
 
@@ -1851,6 +1853,10 @@ struct MainSurface: View {
                 leafRoom(node)
                     .id(node)
                     .transition(.opacity)
+                    // The pane's measure (prd §1742).
+                    .frame(maxWidth: PadLayout.paneMeasure)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background(DS.inkGround.ignoresSafeArea())
             } else {
                 // The pane is ink at rest as it is with a thing open (prd
                 // §1407): no seam at its top, no change when a row opens.
@@ -1858,7 +1864,7 @@ struct MainSurface: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .dsInk()
             }
-        } else if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {
+        } else if latestArrival != nil, HomeScope.Place(source: filter.source) == nil, !feedFirstRun {
             if Pinboard.isPinnedRoom(filter.source) {
                 if let note = things.first(where: { $0.isLive && Pinboard.inRoom($0) }) {
                     ThingSheetView(thing: note, inlineRest: true)
@@ -1873,22 +1879,34 @@ struct MainSurface: View {
                     .equatable()
                     .environment(\.dsRoomBoxPlace, .paneBox)
                     .id("paneBox:" + filter.source)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    // The pane's measure (prd §1742): the box and its lists
+                    // stop at a reading width, at the pane's leading edge.
+                    .frame(maxWidth: PadLayout.paneMeasure)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     // Ink at rest as with a thing open (prd §1407): the box
                     // column paints from its top edge, no seam.
                     .dsInk()
             }
         } else {
-            VStack(spacing: DS.Space.s3) {
-                CasberiMark(size: 44)
-                    .opacity(0.32)
-                Text("Pick something to open.")
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(DS.Space.s6)
+            // Nothing landed, or nothing added yet (prd §1742): the mark
+            // alone. The sentence that stood under it described the layout
+            // (§248), and on a first run the start box in the list column
+            // is the invitation.
+            CasberiMark(size: 44)
+                .opacity(0.32)
+                .accessibilityHidden(true)
+                .padding(DS.Space.s6)
         }
+    }
+
+    /// **THE FIRST RUN DRAWS ITS START BOX ON THE MAC (prd §1742).** The
+    /// Feed's box is the pane's beside a pane (§1403), and the pane hosts it
+    /// only once something has landed, so a new Mac saw the word "Feed", a
+    /// faint mark and nothing to press: the start box (§1741), the whole
+    /// first run on the phone, drew nowhere. With nothing added the Feed's
+    /// list column keeps its box and the pane rests on the mark.
+    private var feedFirstRun: Bool {
+        filter.source == "All" && FirstRun.shared.isEmpty(bridges: store)
     }
 
     var body: some View {
@@ -2948,7 +2966,9 @@ struct MainSurface: View {
                             // WHERE THE BOX DRAWS (prd §1403): beside a pane
                             // this column is title, tiles, sections, rows; the
                             // box is the pane's at rest (`paneRest`).
-                            .environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)
+                            // A first run keeps its start box here (prd §1742).
+                            .environment(\.dsRoomBoxPlace,
+                                         showsPane && !(shownRoom == "All" && feedFirstRun) ? .listWithoutBox : .list)
                     }
                 }
                     // A pick that changes the screen a merged room shows
