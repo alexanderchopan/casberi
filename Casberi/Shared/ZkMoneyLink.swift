@@ -50,15 +50,21 @@ enum ZkMoneyLink {
     }
 
     /// The request codec's fields, by integer key (front-core
-    /// `requestInlineCodec.ts`, formats 1–3): 3 tag, 4 amount (big-endian
+    /// `requestInlineCodec.ts`, formats 1–4): 3 tag, 4 amount (big-endian
     /// bytes), 5 symbol, 6 note, 7 expiry (epoch ms), 9 decimals.
+    ///
+    /// **Format 4 (measured 2026-11-11 off a real request, prd §1746):** a
+    /// 16-byte request id, an 8-byte field 11 this reader does not use, and
+    /// NO symbol: the amount is dollars, as zk.money's own page draws it
+    /// ("$0.01"). It is what `zk.money/r#<id>` expands to; the short link
+    /// itself holds only the id, looked up on Aztec, and is not read here.
     static func requestPacket(_ fragment: String) -> Link? {
         guard fragment.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
         var b64 = fragment.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         while b64.count % 4 != 0 { b64 += "=" }
         guard let data = Data(base64Encoded: b64), data.count <= 2048,
               case .map(let map)? = CBOR.decode([UInt8](data)),
-              case .uint(let format)? = map[1], (1...3).contains(format),
+              case .uint(let format)? = map[1], (1...4).contains(format),
               case .text(let tag)? = map[3] else { return nil }
         var amount: Decimal?
         if case .bytes(let raw)? = map[4] {
@@ -79,15 +85,25 @@ enum ZkMoneyLink {
         return .request(tag: tag.lowercased(), amount: amount, symbol: symbol, note: note, expires: expires)
     }
 
+    /// How every request row's title begins: the cheap gate before a row's
+    /// link is read again for Pay (prd §1745; `verbs(for:)` runs per row).
+    static let requestTitleLead = "Payment request — "
+
     /// A kept link's title.
     static func title(_ link: Link) -> String {
         switch link {
         case .payment:
             return "zk.money payment link"
         case .request(let tag, let amount, let symbol, _, _):
-            let what = amount.map { "\(plain($0)) \(symbol ?? "")".trimmingCharacters(in: .whitespaces) }
-            return "Payment request — " + (what.map { "\($0) to " } ?? "to ") + display(tag)
+            // A request that names no token asks in dollars (format 4).
+            let what = amount.map { a in symbol.map { s in "\(plain(a)) \(s)" } ?? "$\(plain(a))" }
+            return requestTitleLead + (what.map { "\($0) to " } ?? "to ") + display(tag)
         }
+    }
+
+    /// The line a request's body gains once Pay's send is taken (prd §1745).
+    static func paidNote(on day: Date) -> String {
+        "Paid \(day.formatted(.dateTime.month(.abbreviated).day()))"
     }
 
     static func plain(_ amount: Decimal) -> String {

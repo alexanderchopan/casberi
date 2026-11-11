@@ -646,6 +646,27 @@ case $v4rc in
   *) warn "Uniswap v4 — the pool list could not be checked (GeckoTerminal or the nodes did not answer)" ;;
 esac
 
+# ── zk.money's resolver (prd §1746) ──────────────────────────────────────────
+# Move's Send pays a tag through the resolver ENS names for zk.money, pinned in
+# ZkMoneyWire.swift. zk.money moved it once (2026-11-03's pin was refused by the
+# gateway eight days later, found by hand on 2026-11-11): every tag then read
+# "zk.money's resolver didn't answer" and nothing said why. This asks ENS's
+# registry each night whether the pinned one is still the one it names.
+print -P "%Bzk.money's resolver%b  (ENS registry · resolver(namehash(zk.money)))"
+zkpin=$(grep -oE 'static let resolver = "0x[0-9a-f]{40}"' "${0:A:h}/../Casberi/Casberi/Model/ZkMoneyWire.swift" | grep -oE '0x[0-9a-f]{40}')
+zkens=$(curl -s --max-time "$TIMEOUT" -X POST "https://ethereum-rpc.publicnode.com" -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e","data":"0x0178b8bff605999a299a7229da9f2a3c65acf5cb829ae965cfe467f053e1b97c50b0eec2"},"latest"]}' 2>/dev/null \
+  | grep -oE '"result":"0x[0-9a-f]{64}"' | grep -oE '[0-9a-f]{40}"$' | tr -d '"')
+if [[ -z "$zkpin" ]]; then
+  fail "zk.money — no resolver is pinned in ZkMoneyWire.swift (the line this reads moved)"
+elif [[ -z "$zkens" ]]; then
+  warn "zk.money — ENS's registry did not answer; the pinned resolver was not checked"
+elif [[ "0x$zkens" == "$zkpin" ]]; then
+  pass "zk.money — ENS still names the pinned resolver ($zkpin)"
+else
+  fail "zk.money — ENS names 0x$zkens, ZkMoneyWire.swift pins $zkpin: paying a tag fails until it is re-pinned and its fixtures recaptured"
+fi
+
 hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"

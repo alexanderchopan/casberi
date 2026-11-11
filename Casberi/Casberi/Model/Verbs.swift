@@ -31,6 +31,10 @@ struct Verb: Identifiable {
         /// `.openURL`, because the secret must not sit in a derived verb: it
         /// is read from this device's Keychain on tap (`ZkMoneyClaims`).
         case claimZkMoney
+        /// Pay a saved zk.money request (prd §1745): Move rises with Send
+        /// written — the tag, the token, the amount asked plus the fee.
+        /// In-app, like `.sendTo`; nothing moves before Face ID there.
+        case payZkMoney
         /// Send to the other side of a transfer (prd §1587): Move rises with
         /// Send and this address in To. In-app, like `.openAddress`.
         case sendTo(String)
@@ -59,6 +63,7 @@ struct Verb: Identifiable {
         case .openAddress:    return "Wallet"
         case .edit:           return "Edit"
         case .claimZkMoney:   return "Claim"
+        case .payZkMoney:     return "Pay"
         case .sendTo:         return "Send"
         }
     }
@@ -147,6 +152,11 @@ enum VerbDerivation {
             // here, never the Keychain (prd §628).
             if ZkMoneyClaims.has(thing.id) {
                 out.append(Verb(label: "Claim in zk.money", icon: "arrow.down.circle", action: .claimZkMoney))
+            }
+            // A zk.money request still open, with an account here to pay it
+            // from (prd §1745): Pay leads and opens Send already written.
+            if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {
+                out.append(Verb(label: String(localized: "Pay"), icon: "paperplane", action: .payZkMoney))
             }
             // Music rows open the exact track in their app — the stored content
             // is a music.apple.com / open.spotify.com universal link. Named and

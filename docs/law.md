@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1922 of 1995 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1925 of 1998 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -957,7 +957,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §642b — The gate asked the wrong object and blanked the Mac: `applicationState` is `.background` on EVERY launch of a scene-b…
 - §643 — The inbox frame reaches the screen everyone reads, and the store description is halved [+2 sub-entries]
 - §644 — The app does not compete for the lock screen: two of three notification classes were riding in on a grant given for t… (part superseded by §770)
-- §645 — The sheet draws the words the app holds: `enrichedText` stops being retrieval-only, and the four carve-outs stop bein… [+7 sub-entries]
+- §645 — The sheet draws the words the app holds: `enrichedText` stops being retrieval-only, and the four carve-outs stop bein… (amended by §1747) [+7 sub-entries]
 - §646 — The room materialised its own query four times a body pass, and the fourth of the watchdog family died on the first o…
 - §647 — A renamed seat's old rows had no seat at all, and a one-shot migration could never have caught them (amended by §650)
 - §648 — The card's whole vocabulary was keyed to a distance the swipe never travels (amended by §1207)
@@ -1766,7 +1766,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
-- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446)
+- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446, §1745, §1746)
 - §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links (amended by §1737)
 - §1386 — The seams of the audit week: one More row, one Add, one section gap, a pinned header for the pill, one row in Day, th…
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
@@ -2080,7 +2080,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1689 — A row lead flips to its APP's mark, and to its category's glyph only when it already wears the app's mark (amended by §1691)
 - §1690 — Round-ups are set aside as you go: every send puts its change in Round-ups (Aave on Base), and at $10 the next send m…
 - §1691 — The cycle turns where a landing is SEEN: the Feed's cover disc and Newest's app icon
-- §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f…
+- §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f… (amended by §1746)
 - §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (amended by §1694)
 - §1694 — Move to private's USDC starts at the pool's minimum, to the cent
 - §1695 — Holdings' parts add up: Tokens, Lent and Private each carry their dollars, Lent counts in the Wallet's number, an aTo… (amended by §1718)
@@ -2170,6 +2170,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1743 — A Nymis scan says how long it takes: the footnote says a few minutes before the tap, the row says it while the scan r…
 - §1744 — Nymis scans on its own, once per address: a wallet when you follow it, your account when its first transaction lands,…
 - §1744a — Only your account scans on its own; a wallet you follow scans on a tap (amends §1744 items 1 and 5) (Nymis, relayed b…
+- §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid…
+- §1746 — zk.money's resolver is re-pinned, checked nightly against ENS, and the reader takes the request format zk.money write…
+- §1747 — Listen stands only over a body of forty words or more
 
 ## Dead rulings → what replaced them (generated)
 

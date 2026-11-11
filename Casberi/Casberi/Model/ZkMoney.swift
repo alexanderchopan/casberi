@@ -166,3 +166,20 @@ enum ZkMoney {
         }
     }
 }
+
+// MARK: - Paying a saved request (prd §1745)
+
+extension ZkMoney {
+    /// What Pay would write into Send for `thing`, when it is a zk.money
+    /// request still open: not expired, not already paid. nil otherwise, so
+    /// no Pay is drawn (§83). The title's first words gate the read: this
+    /// runs for every visible row (`VerbDerivation.verbs`), and only a
+    /// request row parses its link again.
+    static func payableRequest(_ thing: Thing, now: Date = .now) -> (pay: ZkMoneyWire.RequestPayment, symbol: String?)? {
+        guard thing.kind == .link, thing.mark != .done, thing.title.hasPrefix(ZkMoneyLink.requestTitleLead),
+              let url = Capture.detectURL(in: thing.content),
+              case .request(let tag, let amount, let symbol, _, let expires)? = ZkMoneyLink.link(url.absoluteString),
+              ZkMoneyWire.requestOpen(expires: expires, now: now) else { return nil }
+        return (ZkMoneyWire.requestPayment(tag: tag, amount: amount, symbol: symbol), symbol)
+    }
+}

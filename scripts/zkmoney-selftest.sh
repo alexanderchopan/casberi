@@ -28,7 +28,7 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 LINK="Casberi/Shared/ZkMoneyLink.swift"
 FIX="scripts/fixtures/zkmoney"
 for f in "$WIRE" "$KECCAK" "$LINK" "$FIX/ownerof-zac.json" "$FIX/userrecord-zac.json" "$FIX/code-deposit.json" \
-         "$FIX/code-portal-head.json" "$FIX/portal-dai.json" "$FIX/request-link.txt" "$FIX/request-link-v3.txt" \
+         "$FIX/code-portal-head.json" "$FIX/portal-dai.json" "$FIX/request-link.txt" "$FIX/request-link-v3.txt" "$FIX/request-link-v4.txt" \
          "$FIX/code-swap-escrow.json" "$FIX/code-swap-escrow-v2.json" "$FIX/code-savings-escrow.json" \
          "$FIX/code-deposit-aztec-v6.json" "$FIX/code-registration-aztec-v6.json" "$FIX/resolve-call-zac.txt" \
          "$FIX/lookup-zac.txt" "$FIX/lookup-charlie.txt" "$FIX/lookup-unclaimed.txt" "$FIX/gateway-zac.json" \
@@ -175,7 +175,9 @@ print("paying a tag (Aztec V6)")
 func text(_ name: String) -> String {
     (try! String(contentsOfFile: fix + "/" + name, encoding: .utf8)).trimmingCharacters(in: .whitespacesAndNewlines)
 }
-// Every vector below was produced by viem against mainnet, 2026-11-03.
+// Every vector below was produced by viem against mainnet: the call on
+// 2026-11-03, the lookup, gateway reply and proof again on 2026-11-11 from
+// the resolver ENS names since (prd §1746).
 check(ZkMoneyWire.resolveCall(tag: "zac") == text("resolve-call-zac.txt"), "resolve(dnsName, addr(node)) as viem encodes it")
 guard case .offchain(let lookup) = ZkMoneyWire.lookup(revert: text("lookup-zac.txt")) else {
     print("  ✗ a V6 tag's OffchainLookup did not decode"); exit(1)
@@ -190,13 +192,13 @@ check(ZkMoneyWire.gatewayURL(elsewhere) == nil, "a gateway on any other host is 
 let gateway = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: fix + "/gateway-zac.json")))
 guard let response = ZkMoneyWire.gatewayData(gateway) else { print("  ✗ the gateway's data did not read"); exit(1) }
 check(ZkMoneyWire.callbackCall(lookup, response: response) == text("callback-call-zac.txt"), "resolveWithProof(response, extraData) as viem encodes it")
-check(ZkMoneyWire.depositAddress(callbackResult: text("callback-zac.txt")) == "0x72b68e65538aa7664544c7390f7cb9aa191352ca",
+check(ZkMoneyWire.depositAddress(callbackResult: text("callback-zac.txt")) == "0xf29c42fc19059af433cc7f83a082d367356cf33d",
       "the proven deposit address")
 check(ZkMoneyWire.lookup(revert: text("lookup-charlie.txt")) == .notOnV6, "a tag still on Alpha V5 is refused by the resolver itself")
 check(ZkMoneyWire.lookup(revert: text("lookup-unclaimed.txt")) == .unclaimed, "an unclaimed tag")
 check(ZkMoneyWire.lookup(revert: "0x08c379a0") == .unreadable && ZkMoneyWire.lookup(revert: nil) == .unreadable, "any other revert reads nothing")
 var forged = text("lookup-zac.txt")
-forged = forged.replacingOccurrences(of: "c329a74542688a3c4948b7d46f204d3d7e5dd525", with: "1111111111111111111111111111111111111111")
+forged = forged.replacingOccurrences(of: "3dc71762063d7b87b3f79b3b98e03f0051b00a6e", with: "1111111111111111111111111111111111111111")
 check(ZkMoneyWire.lookup(revert: forged) == .unreadable, "a lookup from any other contract is refused")
 check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 20) == nil, "20 DAI on Ethereum pays")
 check(ZkMoneyWire.payRefusal(chainId: 1, token: "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eB48", usd: 20) == nil, "…and USDC, checksummed")
@@ -205,6 +207,39 @@ check(ZkMoneyWire.payRefusal(chainId: 1, token: nil, usd: 20) != nil, "not ETH")
 check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 0.35) != nil, "not the fee or less")
 check(ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.dai, usd: 5_000) != nil, "not $5,000 or more")
 check(ZkMoneyWire.dnsName(String(repeating: "a", count: 64)) == nil, "a label DNS cannot carry")
+
+// Paying a request (prd §1745): the amount asked plus the deposit's fee, in
+// the token asked for; anything a deposit does not take is left to you.
+let payDai = ZkMoneyWire.requestPayment(tag: "zac", amount: Decimal(string: "20.5"), symbol: "DAI")
+check(payDai == ZkMoneyWire.RequestPayment(to: "zac.zk.money", amount: "20.85", asked: "20.5", token: ZkMoneyWire.dai),
+      "20.5 DAI asked is written as 20.85 DAI to zac.zk.money")
+check(ZkMoneyWire.requestPayment(tag: "zac", amount: 100, symbol: "usdc").amount == "100.35"
+      && ZkMoneyWire.requestPayment(tag: "zac", amount: 100, symbol: "usdc").token == ZkMoneyWire.usdc, "USDC, however its symbol is cased")
+check(ZkMoneyWire.requestPayment(tag: "zac", amount: 5, symbol: "USDT").token == ZkMoneyWire.usdt, "USDT")
+// Format 4 (prd §1746): the shape of a real request of 2026-11-11, with a made-up tag and id.
+let v4 = text("request-link-v4.txt")
+guard case .request(let tag4, let amount4, let symbol4, let note4, let expires4)? = ZkMoneyLink.link(v4) else {
+    print("  ✗ a format-4 request did not read"); exit(1)
+}
+check(tag4 == "zac" && amount4 == Decimal(string: "0.01") && symbol4 == nil && note4 == "dinner" && expires4.map { Int($0.timeIntervalSince1970) } == 1_814_364_000,
+      "format 4: a 16-byte id, no token, the amount, note and expiry")
+check(ZkMoneyLink.title(ZkMoneyLink.link(v4)!) == "Payment request — $0.01 to zac.zk.money", "a request that names no token is titled in dollars")
+check(ZkMoneyLink.link("https://zk.money/r#AhAREhMUFRYXGBkaGxwdHh8") == nil, "a short /r link holds only an id: nothing is read from it")
+let payDollars = ZkMoneyWire.requestPayment(tag: "zac", amount: amount4, symbol: nil)
+check(payDollars == ZkMoneyWire.RequestPayment(to: "zac.zk.money", amount: "0.36", asked: "0.01", token: nil),
+      "no token named: the fee is added in dollars and the token is yours to pick")
+let payOther = ZkMoneyWire.requestPayment(tag: "zac", amount: 5, symbol: "sUSDS")
+check(payOther.amount.isEmpty && payOther.token == nil && payOther.asked == nil, "a token a deposit does not take is left to you: no amount, no fee guessed")
+let payOpen = ZkMoneyWire.requestPayment(tag: "zac", amount: nil, symbol: "DAI")
+check(payOpen.amount.isEmpty && payOpen.asked == nil && payOpen.token == ZkMoneyWire.dai, "a request with no amount writes none")
+check(ZkMoneyWire.plainAmount(Decimal(string: "1234567.891")! ) == "1234567.891", "an amount is plain digits: no grouping, no exponent")
+check(ZkMoneyWire.plainAmount(Decimal(string: "0.1234567")!) == "0.123457", "…and at most six places")
+let payNow = Date(timeIntervalSince1970: 1_800_000_000)
+check(ZkMoneyWire.requestOpen(expires: payNow.addingTimeInterval(60), now: payNow), "a request is open until its expiry")
+check(!ZkMoneyWire.requestOpen(expires: payNow.addingTimeInterval(-60), now: payNow) && !ZkMoneyWire.requestOpen(expires: payNow, now: payNow), "…and shut from it on")
+check(ZkMoneyWire.requestOpen(expires: nil, now: payNow), "one with no expiry stays open")
+check(ZkMoneyLink.title(.request(tag: "zac", amount: 20.5, symbol: "DAI", note: nil, expires: nil)).hasPrefix(ZkMoneyLink.requestTitleLead),
+      "every request's title begins with the words Pay's gate reads")
 
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
@@ -315,5 +350,51 @@ mutate "the cbor-x tag not unwrapped" \
         case 7 where info == 27:' \
   'return nil
         case 7 where info == 27:'
+
+mutate "a request paid without the fee" \
+  'amount: plainAmount(amount + fee), asked' \
+  'amount: plainAmount(amount), asked'
+mutate "a request's USDC paid in DAI" \
+  'case "USDC": usdc' \
+  'case "USDC": dai'
+mutate "a fee added to a token a deposit does not take" \
+  'guard let amount, amount > 0, symbol == nil || token != nil, let fee' \
+  'guard let amount, amount > 0, let fee'
+mutate "a format-4 request refused" \
+  '(1...4).contains(format),' \
+  '(1...3).contains(format),'
+mutate "a request with no token titled without its dollars" \
+  '?? "$\(plain(a))" }' \
+  '?? plain(a) }'
+mutate "an expired request still open" \
+  'expires.map { $0 > now } ?? true' \
+  'expires.map { _ in true } ?? true'
+mutate "a request's title losing the words Pay reads" \
+  'return requestTitleLead + (what.map' \
+  'return "Request — " + (what.map'
+
+# Pay a request, read (prd §1745): what a screen cannot show. Pay drawn with no
+# account to pay from, or on a row already paid, is a dead control; a row
+# marked paid by a send to someone else, or by a dry run, is a false status.
+VERBS="Casberi/Casberi/Model/Verbs.swift"
+ZK="Casberi/Casberi/Model/ZkMoney.swift"
+SEND="Casberi/Casberi/Screens/MoveSentence.swift"
+grep -q 'if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {' "$VERBS" \
+  || { echo "✗ Pay is drawn with no account to pay from, or on a row that is not an open request"; exit 1; }
+grep -q 'guard thing.kind == .link, thing.mark != .done, thing.title.hasPrefix(ZkMoneyLink.requestTitleLead),' "$ZK" \
+  && grep -q 'ZkMoneyWire.requestOpen(expires: expires, now: now) else { return nil }' "$ZK" \
+  || { echo "✗ Pay stands on a request already paid or expired, or every row parses its link (the title gate is gone)"; exit 1; }
+[[ $(grep -c 'MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)' Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Screens/FeedScreen+Actions.swift | awk -F: '{n+=$2} END{print n}') -eq 2 ]] \
+  || { echo "✗ Pay no longer opens Send written for the request from the sheet and the row"; exit 1; }
+awk '/private func settleRequest\(/,/^    }/' "$SEND" > "$TMP/settle.txt"
+grep -q 'guard let request = payingRequest, outcome != .dryRun else { return }' "$TMP/settle.txt" \
+  && grep -q 'requestDeposits.contains(p.to.lowercased())' "$TMP/settle.txt" \
+  && awk '/guard paid else \{ return \}/{g=NR} /thing.mark = .done/{m=NR} END{exit !(g && m && g<m)}' "$TMP/settle.txt" \
+  || { echo "✗ a request is marked paid by a dry run, or by a send that did not pay its tag"; exit 1; }
+grep -q 'if text.lowercased() == payingRequest?.to { requestDeposits.insert(address.lowercased()) }' "$SEND" \
+  && grep -q 'settleRequest(batch, outcome: sent.outcome)' "$SEND" \
+  || { echo "✗ a paid request is never marked: no address is kept for its tag, or the landing no longer settles it"; exit 1; }
+grep -q 'amount == request.amount, to.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == request.to else { return nil }' "$SEND" \
+  || { echo "✗ the line says the fee was added after the amount or the tag was changed"; exit 1; }
 
 echo "✓ zk.money self-test passed"

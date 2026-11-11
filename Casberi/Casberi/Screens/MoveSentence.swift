@@ -541,19 +541,47 @@ struct MoveSentence: View {
         let buyOn: Op.Network?
         let to: String
         let at: Date
+        /// The zk.money request Pay wrote this draft for (prd §1745).
+        var request: PayingRequest? = nil
+    }
+
+    /// **PAY A zk.money REQUEST (prd §1745).** The saved row Pay opened Send
+    /// for: its tag in To, the amount asked plus the deposit's fee, the
+    /// token asked for. The line says the fee was added while the amount
+    /// and To still stand as written; the row is marked paid when a send
+    /// to an address resolved for that tag is taken (`settleRequest`).
+    struct PayingRequest: Equatable {
+        let thing: UUID
+        let to: String
+        let amount: String
+        /// "20.5 DAI"; nil when the request named no amount, so nothing was added.
+        let asked: String?
+    }
+
+    /// Send written for a request: on Ethereum, in the token's own units.
+    static func payDraft(_ pay: ZkMoneyWire.RequestPayment, symbol: String?, thing: UUID) -> Draft {
+        // "20.5 DAI", or "$0.01" for a request that names no token: that
+        // one is written in dollars and you pick which token pays.
+        let asked = pay.asked.map { a in symbol.map { "\(a) \($0.uppercased())" } ?? "$\(a)" }
+        return Draft(verb: .send, network: Op.ethereum, networkPicked: true, amount: pay.amount, inDollars: pay.token == nil,
+                     withID: pay.token, buy: nil, buyOn: nil, to: pay.to, at: Date(),
+                     request: PayingRequest(thing: thing, to: pay.to, amount: pay.amount, asked: asked))
     }
 
     /// Opened plainly, from the tab: no arrival, no private mode, no verb
     /// asked for. Only such an open picks a draft up.
     private let picksUpDraft: Bool
     @State private var draftWithID: String?
+    @State private var payingRequest: PayingRequest?
+    /// The deposit addresses resolved for the request's tag this visit.
+    @State private var requestDeposits: Set<String> = []
 
     private var keptDraft: Draft? {
         guard receipt == nil, stage == nil, privateMode == nil, !freshReceive, !fresh else { return nil }
         let filled = !amount.isEmpty || with != nil || buy != nil || !to.isEmpty
         guard filled || verb != .swap else { return nil }
         return Draft(verb: verb, network: network, networkPicked: networkPicked, amount: amount, inDollars: inDollars,
-                     withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date())
+                     withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date(), request: payingRequest)
     }
 
     /// A Send with To filled, for "Send" on a transfer's sheet (prd §1587).
@@ -625,6 +653,36 @@ struct MoveSentence: View {
         buyOn = d.buyOn
         amount = d.amount
         to = d.to
+        payingRequest = d.request
+    }
+
+    /// "20.5 DAI asked, plus zk.money's $0.35 fee": said while the sentence
+    /// still pays the request as Pay wrote it (prd §1745).
+    private var requestPrint: String? {
+        guard verb == .send, let request = payingRequest, let asked = request.asked,
+              amount == request.amount, to.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == request.to else { return nil }
+        return String(localized: "\(asked) asked, plus zk.money's $0.35 fee")
+    }
+
+    /// A request Pay wrote this send for is paid once a send to an address
+    /// resolved for its tag is taken (prd §1745): landed, or taken and not
+    /// yet seen, never a dry run. Its row is marked done and undated, so Pay
+    /// leaves it and it leaves what's ahead, and its body says the day.
+    private func settleRequest(_ lines: [Chain.Item], outcome: Chain.Sent.Outcome) {
+        guard let request = payingRequest, outcome != .dryRun else { return }
+        let paid = lines.contains { item in
+            if case .send(let p) = item { return requestDeposits.contains(p.to.lowercased()) }
+            return false
+        }
+        guard paid else { return }
+        payingRequest = nil
+        let id = request.thing
+        guard let thing = try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })).first else { return }
+        thing.mark = .done
+        thing.dueAt = nil
+        thing.enrichedText = [thing.enrichedText, ZkMoneyLink.paidNote(on: .now)].compactMap { $0 }.joined(separator: "\n")
+        context.saveHonestly()
+        NSLog("zkMoneyPay| request paid | %@", thing.title)
     }
 
     // MARK: - What the sentence says
@@ -2801,7 +2859,7 @@ struct MoveSentence: View {
                 // when this swap also buys with it (user: "some of this
                 // message is below the fold").
                 case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 } + (roundUpStep?.moves == true ? roundUpPrint : [])
-                case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
+                case .send: [soldPrint, requestPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                     + [sendFeePrint].compactMap { $0 }
                 case .receive, .sweep, .deposit, .lend: []
                 // A card paid by a swap rounds nothing up (prd §1666 item 5).
@@ -5018,6 +5076,7 @@ struct MoveSentence: View {
                 if case .landed = sent.outcome {
                     for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
                 }
+                settleRequest(batch, outcome: sent.outcome)
                 spendZkMoney(batch)
                 withAnimation(DS.Motion.standard) {
                     if sweeping {
@@ -5672,6 +5731,8 @@ struct MoveSentence: View {
                 switch paid {
                 case .address(let address):
                     zkMoneyDeposits.insert(address.lowercased())
+                    // An address proven for the request's own tag pays it (prd §1745).
+                    if text.lowercased() == payingRequest?.to { requestDeposits.insert(address.lowercased()) }
                     lookup = nil
                     resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
                 case .notOnV6:

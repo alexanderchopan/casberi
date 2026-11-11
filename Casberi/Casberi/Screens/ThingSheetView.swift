@@ -5301,6 +5301,18 @@ struct ThingSheetView: View {
             chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
             raisesMove = true
             dismiss()
+        case .payZkMoney:
+            // Move rises with Send written for this request (prd §1745);
+            // a request that closed since the sheet drew says so.
+            if let found = ZkMoney.payableRequest(thing) {
+                verbResult = nil
+                chrome.moveDraft = MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)
+                raisesMove = true
+                dismiss()
+            } else {
+                verbResult = String(localized: "This request is no longer open.")
+                verbResultIsError = true
+            }
         case .claimZkMoney:
             // The whole link, read from this device's Keychain now, opened in
             // Safari where the person's zk.money wallet lives (prd §1384).

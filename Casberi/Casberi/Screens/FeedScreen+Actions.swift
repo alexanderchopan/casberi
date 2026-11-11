@@ -177,6 +177,14 @@ extension FeedScreen {
         case .sendTo(let address):
             chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
             chrome.moveTray = true
+        case .payZkMoney:
+            // Send written for this request (prd §1745).
+            if let found = ZkMoney.payableRequest(thing) {
+                chrome.moveDraft = MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)
+                chrome.moveTray = true
+            } else {
+                chrome.flash(String(localized: "This request is no longer open."), tone: .failure)
+            }
         case .claimZkMoney:
             // The whole link, read from this device's Keychain on tap (prd §1384).
             if let url = ZkMoneyClaims.link(for: thing.id) { UIApplication.shared.open(url) }

@@ -58,7 +58,11 @@ struct ArticleBody: View {
             || body == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !body.isEmpty, !dupe {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ArticleListenButton(id: thing.id.uuidString, text: body)
+                // Only over something to listen to (prd §1747): a request's
+                // two lines, a caption, a one-line note get no Listen.
+                if ArticleSpeech.worthListening(body) {
+                    ArticleListenButton(id: thing.id.uuidString, text: body)
+                }
                 // Defaults, unlike the generic branch: on an article the body
                 // IS the thing (§366's own test), so it is set at `reading17`
                 // in primary ink rather than as a footnote under a fact.
@@ -257,5 +261,26 @@ private final class SpeechCoordinator: NSObject, AVSpeechSynthesizerDelegate {
                            didCancel utterance: AVSpeechUtterance) {
         let end = onEnd
         Task { @MainActor in end?() }
+    }
+}
+
+extension ArticleSpeech {
+    /// **LISTEN IS FOR SOMETHING TO LISTEN TO (prd §1747; user, 2026-11-11, of
+    /// "Listen" over a payment request's two lines: "wtf is this").** Every
+    /// link sheet with any body drew the read-aloud row, so a note of three
+    /// words offered to be read to you. It stands only over a body of forty
+    /// words or more: about two sentences past a caption.
+    static let leastWords = 40
+
+    /// Whether `text` holds at least `leastWords` words, by the system's own
+    /// word breaks (so Japanese and Chinese count as they read); the count
+    /// stops there, since this runs with the sheet's body.
+    nonisolated static func worthListening(_ text: String) -> Bool {
+        var words = 0
+        text.enumerateSubstrings(in: text.startIndex..., options: [.byWords, .substringNotRequired]) { _, _, _, stop in
+            words += 1
+            if words >= leastWords { stop = true }
+        }
+        return words >= leastWords
     }
 }

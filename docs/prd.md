@@ -71995,3 +71995,47 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 3. **Your account stands as §1744 item 2 ruled**: one scan on its own, when its first transaction lands. `NetworkReach`'s Nymis line says that and the tap, nothing else.
 
 **Checks.** `nymis-selftest.sh` fails if `scanOnFollow` appears anywhere in the app.
+
+## §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid when the send is taken (amends §1384, which read a request and offered no verb; builds on §1692's Pay a tag) (user, 2026-11-11: "pay a request is neat. how would the user flow be"; asked whether Pay should add zk.money's fee or send exactly what was asked: "add the fee") — BUILT; seen on the simulator (the demo, a real request link): Pay leading the sheet, Send written with the fee; the row marked paid NOT SEEN (the demo's Send takes nothing); nothing sent
+
+**Why.** A request link lands as "Payment request — 20.5 DAI to zac.zk.money" with the requester's note and its expiry (§1273, §1384), and §1692 lets Send pay a tag. Nothing joined the two: you read the amount off the row and typed it into Send.
+
+1. **Pay leads the row's verbs**, where "Claim in zk.money" leads a payment link's. Only on a request that is still open (not past its expiry, not already paid) and only with an account on this phone to pay from (§83). The title's first words gate the read, so no other row parses anything (`ZkMoney.payableRequest`).
+2. **Send opens written**: the tag in To, on Ethereum, the token asked for, the amount in that token's own units. To resolves the tag to a fresh deposit address and the deposit's limits are checked, as for a typed tag (§1692). Nothing moves before Face ID there.
+3. **The fee is added on top** (`ZkMoneyWire.requestPayment`): a deposit costs $0.35, taken from what is sent, so 20.5 DAI asked is written as 20.85. The line under the sentence says so, "20.5 DAI asked, plus zk.money's $0.35 fee", while the amount and To stand as Pay wrote them. The three tokens a deposit takes are dollars, so the fee is added for one of them, and for a request that names no token (§1746's format 4 asks in dollars: Send is written in dollars and you pick which of the three pays); a request in any other token, or with no amount, leaves the amount to you.
+4. **Paid.** When a send to an address resolved for the request's own tag is taken (landed, or taken and not yet seen; never a dry run), the row is marked done, loses its date so it leaves what's ahead, and its body gains "Paid Nov 11" (`MoveSentence.settleRequest`). Pay then leaves the row.
+5. **What it does not do.** zk.money's own wallet matches a payment to a request by the request's id, and a deposit from Ethereum carries none: the money arrives as an ordinary deposit and the request probably stays open on their side (read from §1384's finding, not measured). USDC and USDT are swapped to DAI on the way in, so what arrives can differ by the swap. Paying is public on your side, as every tag payment is (§1692).
+
+**Mac half (§1402).** The same verb and sentence; nothing here is phone-only.
+
+**Checks.** `zkmoney-selftest.sh`: the amount with the fee for DAI, USDC and USDT; a token a deposit does not take and a request with no amount write none; plain digits; open until the expiry; the title's gate; five mutations. Read: Pay's gate, the two doors to Send, a row marked only by a send to its tag and never by a dry run, the line gone once the amount or tag changes.
+
+**Unverified.** A real payment of a real request, and what the requester's wallet then shows.
+
+## §1746 — zk.money's resolver is re-pinned, checked nightly against ENS, and the reader takes the request format zk.money writes today (amends §1692's pinned resolver and §1384's formats 1–3) (user, 2026-11-11, of a real request from their own zk.money account, `zk.money/r#…`; shown that the shipped Pay a tag fails and that the link does not read: "Yes, fix both") — BUILT; the format seen on the simulator (the user's own request, long form: titled, dated, Pay written in dollars); the re-pinned lookup run from a script, not from the app; nothing sent
+
+**Measured 2026-11-11**, off the user's own request link and mainnet:
+- **The resolver moved.** ENS's registry names `0x3dc71762063d7b87b3f79b3b98e03f0051b00a6e` for zk.money. The gateway answers 400 to a lookup whose sender is the resolver pinned on 2026-11-03 (`0xc329…d525`), so in every shipped build a tag read "zk.money's resolver didn't answer. Try again in a minute." Nothing was sent: the lookup fails before any address exists. The new resolver answers the same `OffchainLookup`, the same gateway host, the same callback and the same two refusals (run against `zac`, `charlie`, `money` and an unclaimed tag); the whole lookup returned a proven deposit address.
+- **A request link is short now.** zk.money's Share gives `zk.money/r#<17 bytes>`: a format byte and a 16-byte id. The page looks the id up through a contract on Aztec (`linkLocator`, published when the link is first shared) and rewrites itself to `wallet.zk.money/request#<packet>`.
+- **That packet is format 4**: the 16-byte request id, an 8-byte field 11, the tag, the amount, its decimals, the note and the expiry, and no token. zk.money's own page draws the amount in dollars and offers "Pay with zk.money" (free, private) and "Pay with a wallet" (a fee, public).
+
+1. **Re-pinned** (`ZkMoneyWire.resolver`), its lookup, gateway reply and proof recaptured from the new resolver as the self-test's fixtures. Still a pin: a lookup from any other contract is refused.
+2. **Asked every night.** `live-integrations.sh` asks ENS's registry for zk.money's resolver and fails its row when it is not the pinned one, naming both. Warn-only like every row there; it turns eight silent days into one.
+3. **Format 4 reads** (`ZkMoneyLink.requestPacket`). A request that names no token is titled in dollars, "Payment request — $0.01 to zac.zk.money", and Pay (§1745) writes Send in dollars with the fee added and the token left to you.
+4. **Not built: the short link.** `zk.money/r#…` holds only an id, so Casberi reads nothing from it and saves it as a plain link, with no Pay. Reading it needs the Aztec lookup, which is not worked out. Until then a request is payable in Casberi only from its long form.
+
+**Mac half (§1402).** Nothing here is phone-only.
+
+**Checks.** `zkmoney-selftest.sh`: the recaptured lookup names the new resolver and proves its address; a forged sender is still refused; a format-4 link in the real one's shape (made-up tag and id) reads, is titled in dollars and pays with the fee in dollars; a short link reads nothing; two new mutations.
+
+**Unverified.** The app's own lookup against the new resolver (the same calls ran from a script against mainnet). Whether zk.money marks a request paid when it is paid this way.
+
+
+## §1747 — Listen stands only over a body of forty words or more (amends §645's read-aloud row, which any body drew) (user, 2026-11-11, of "Listen" on a payment request's sheet: "wtf is this"; asked whether to hide it under 40 words: "Yes, hide it") — BUILT; seen on the simulator
+
+1. **The read-aloud row needs something to read.** `ArticleListenButton` is drawn only when the sheet's body holds forty words or more (`ArticleSpeech.worthListening`), counted by the system's own word breaks so Japanese and Chinese count as they read. A request's note, a caption, a one-line body draw none.
+2. **Nothing else changes.** An article keeps Listen where it was, over its body; the body itself draws as before.
+
+**Mac half (§1402).** The same rule; the row is the same view.
+
+**Checks.** `reading-draw-selftest.sh` check 9: the row sits on the line behind the test, and the floor is forty.

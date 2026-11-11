@@ -3394,6 +3394,34 @@
         }
       }
     },
+    "%@ asked, plus zk.money's $0.35 fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ solicitados, más la comisión de $0.35 de zk.money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "請求額 %@ に zk.money の $0.35 の手数料を加算"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "요청액 %@에 zk.money의 $0.35 수수료 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请求 %@，另加 zk.money 的 $0.35 费用"
+          }
+        }
+      }
+    },
     "%@ asks most, at %lld%% of every request. %@" : {
       "localizations" : {
         "en" : {
@@ -144922,6 +144950,34 @@
         }
       }
     },
+    "Pay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支付"
+          }
+        }
+      }
+    },
     "Pay %@ USDC to Bitrefill for a %@ %@ %@" : {
       "localizations" : {
         "es" : {
@@ -196228,6 +196284,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此请求针对的是更早的一轮（模块当前 nonce 为 %lld），因此模块会拒绝它。"
+          }
+        }
+      }
+    },
+    "This request is no longer open." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta solicitud ya no está abierta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この請求はもう受け付けていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 요청은 더 이상 열려 있지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此请求已不再开放。"
           }
         }
       }

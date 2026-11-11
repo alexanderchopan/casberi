@@ -292,7 +292,15 @@ enum ZkMoneyWire {
     /// rollup than its operator's (`Resolver__RollupVersionMismatch`):
     /// measured on `charlie` and `money`, both still on Alpha V5. That is
     /// the guard against paying into the rollup Aztec left.
-    static let resolver = "0xc329a74542688a3c4948b7d46f204d3d7e5dd525"
+    ///
+    /// **THE RESOLVER MOVED (prd §1746, measured 2026-11-11).** ENS's
+    /// registry now names `0x3dc7…0a6e` for zk.money; the gateway answers
+    /// 400 to a lookup from the one pinned on 2026-11-03 (`0xc329…d525`),
+    /// so every tag read "zk.money's resolver didn't answer" and nothing
+    /// was sent. Same gateway, callback and errors (measured against `zac`,
+    /// `charlie`, `money` and an unclaimed tag). The nightly asks ENS
+    /// whether this is still the one it names (`live-integrations.sh`).
+    static let resolver = "0x3dc71762063d7b87b3f79b3b98e03f0051b00a6e"
     /// The operator's gateway, as `OffchainLookup` names it
     /// (`https://rop-v6.v6-prod.oxide.zk.money/{sender}/{data}.json`,
     /// measured; the manifest's `resolverGatewayUrl`). Any other host is
@@ -319,6 +327,53 @@ enum ZkMoneyWire {
         if usd <= payFeeUSD { return String(localized: "zk.money's $0.35 fee would take all of it") }
         if usd >= payCapUSD { return String(localized: "zk.money takes under $5,000 at a time") }
         return nil
+    }
+
+    // MARK: - Paying a request (prd §1745)
+
+    /// What Pay writes into Send for a saved request link: the tag in To,
+    /// the token it asks for, and the amount asked PLUS the deposit's fee,
+    /// so what was asked is what the fee leaves (user, 2026-11-11: "add
+    /// the fee"). The fee is in dollars and the three tokens a deposit
+    /// takes are dollars, so it is added for one of them, and for a request
+    /// that names no token at all (format 4 asks in dollars: `token` nil,
+    /// you pick which of the three pays); a request in any other token, or
+    /// with no amount, leaves the amount to you.
+    struct RequestPayment: Equatable {
+        /// "zac.zk.money": Send's To resolves it to a fresh deposit address.
+        let to: String
+        /// "20.85": the amount field's text, token units; "" when left to you.
+        let amount: String
+        /// The amount asked alone ("20.5"), for the line that says the fee was added.
+        let asked: String?
+        /// The token's contract on Ethereum, lowercased (`Tokens.Held.id`).
+        let token: String?
+    }
+
+    static func requestPayment(tag: String, amount: Decimal?, symbol: String?) -> RequestPayment {
+        let token: String? = switch symbol?.uppercased() {
+        case "DAI": dai
+        case "USDC": usdc
+        case "USDT": usdt
+        default: nil
+        }
+        guard let amount, amount > 0, symbol == nil || token != nil, let fee = Decimal(string: "\(payFeeUSD)") else {
+            return RequestPayment(to: "\(tag).zk.money", amount: "", asked: nil, token: token)
+        }
+        return RequestPayment(to: "\(tag).zk.money", amount: plainAmount(amount + fee), asked: plainAmount(amount), token: token)
+    }
+
+    /// A request can be paid until its expiry; one with none stays open.
+    static func requestOpen(expires: Date?, now: Date) -> Bool {
+        expires.map { $0 > now } ?? true
+    }
+
+    /// An amount as the amount field takes it: plain digits and a point, up
+    /// to six places, no grouping ("20.85", never "20,85" or "2.085e1").
+    static func plainAmount(_ value: Decimal) -> String {
+        var v = value, rounded = Decimal()
+        NSDecimalRound(&rounded, &v, 6, .plain)
+        return NSDecimalNumber(decimal: rounded).description(withLocale: Locale(identifier: "en_US_POSIX"))
     }
 
     enum Selector3668 {

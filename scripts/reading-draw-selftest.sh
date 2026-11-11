@@ -380,5 +380,12 @@ mutate "the fetch's source membership dropped" FeedArticleText.swift \
   'guard sources.contains(thing.source),' \
   'guard true,'
 
+# 9. Listen stands only over something to listen to (prd §1747): the row sits
+#    behind the forty-word test, on the line before it. Any body, however
+#    short, used to draw it (a payment request's two lines offered to be read).
+awk '/if ArticleSpeech.worthListening\(body\) \{/{g=NR} /ArticleListenButton\(id: thing.id.uuidString, text: body\)/{b=NR} END{exit !(g && b && b==g+1)}' "$BODY" \
+  && grep -q 'static let leastWords = 40' "$BODY" && grep -q 'return words >= leastWords' "$BODY" \
+  || { echo "✗ Listen is drawn over any body again, however short (prd §1747)"; exit 1; }
+
 echo
 echo "✓ reading-draw self-test: guards and mutations all passed"
