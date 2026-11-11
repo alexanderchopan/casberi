@@ -1899,20 +1899,20 @@ body { overflow-x: clip; }
   font-weight: 700; letter-spacing: -.01em; line-height: 1.45; color: #7c8492;
   max-width: 540px; margin: 46px auto 0; }
 .hero-prob b { color: var(--ink); font-weight: 750; }
-.hero .hero-pay { font-size: clamp(28px, 3.4vw, 36px); font-weight: 900;
-  letter-spacing: -.045em; line-height: 1.08; margin: 10px auto 0; max-width: 700px; }
+.hero .hero-pay { font-size: clamp(32px, 4vw, 44px); font-weight: 900;
+  letter-spacing: -.045em; line-height: 1.08; margin: 40px auto 0; max-width: 700px; }
 .hero .hero-pay em { font-style: normal; }
 .hero h1 em.brandink, .brandink { background: none; -webkit-background-clip: initial; background-clip: initial;
   color: var(--brand-pink); font-style: normal; font-weight: inherit; }
 .hero-keep em.brandink { font-weight: 750; }
 @media (max-width: 600px) {
   .hero-creature { display: none; }   /* the rain alone on a phone, so the headline clears the fold */
-  .hero-prob { margin-top: 26px; }
-  .hero-keep { font-size: 16px; margin-top: 10px; }
+  .hero .hero-pay { margin-top: 26px; }
+  .hero-keep { font-size: 15.5px; margin-top: 10px; }
 }
 .hero-verbs { justify-content: center; gap: 8px; margin: 20px auto 0; }
-.hero-keep { font-family: 'Figtree', -apple-system, sans-serif; font-size: 18px; font-weight: 650;
-  letter-spacing: -.01em; color: #c9ced8; max-width: 540px; margin: 16px auto 0; }
+.hero-keep { font-family: 'Figtree', -apple-system, sans-serif; font-size: 17px; font-weight: 600;
+  letter-spacing: -.01em; line-height: 1.5; color: #9aa3b2; max-width: 620px; margin: 14px auto 0; }
 .hero-verbs span { font-size: 13px; font-weight: 650; padding: 9px 15px; }
 .hero-facts { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
 .hero-facts span { font-size: 11px; font-weight: 650; color: var(--faint);
