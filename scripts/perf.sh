@@ -102,7 +102,9 @@ done
 # bounded window of its own rather than folding it into the answer wait. An
 # absent line is reported below as "not captured", never treated as a pass.
 for i in {1..20}; do
-  grep -q 'sweepPass|' "$LOG" 2>/dev/null && break
+  # The trailing space is the real line's: `log stream`'s filter header echoes
+  # the predicate, whose literal is `sweepPass|"`, the answerProbe trap above.
+  grep -q 'sweepPass| ' "$LOG" 2>/dev/null && break
   sleep 1
 done
 kill $LOGPID 2>/dev/null || true
@@ -163,7 +165,7 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
   # (a corpus fetch upstream of the composer, and another one sitting above
   # the paint). `firstPaint=never` is a finding, not a gap: it means that ask
   # shows nothing at all until it is completely finished.
-  if grep -q 'askPerf|' "$LOG" 2>/dev/null; then
+  if grep -q 'askPerf| ' "$LOG" 2>/dev/null; then
     print -r -- ""
     print -r -- "ask spans (DEBUG markers, not gated):"
     grep -o 'askPerf| [^"]*' "$LOG" | sed 's/^askPerf| //' | sort -u | while read -r span; do
@@ -202,7 +204,7 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
   # in flight, i.e. a cost this instrument doesn't cover. The three numbers
   # the history tracks read clean through every real regression on record;
   # this is the reading that would not have.
-  if grep -q 'sweepPass|' "$LOG" 2>/dev/null; then
+  if grep -q 'sweepPass| ' "$LOG" 2>/dev/null; then
     print -r -- ""
     print -r -- "foreground sweep (not gated):"
     grep -o 'sweepPass| .*' "$LOG" | sed 's/^sweepPass| /  /' | tail -1
@@ -212,7 +214,7 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
     print -r -- "foreground sweep: not captured (no sweepPass| line within the window)"
   fi
   for marker in risePhase swipePerf; do
-    if grep -q "$marker|" "$LOG" 2>/dev/null; then
+    if grep -q "$marker| " "$LOG" 2>/dev/null; then
       print -r -- ""
       print -r -- "$marker (DEBUG markers, not gated):"
       grep -o "$marker| [^\"]*" "$LOG" | sed "s/^$marker| //" | while read -r span; do
