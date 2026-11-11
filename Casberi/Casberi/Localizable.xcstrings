@@ -58963,6 +58963,34 @@
         }
       }
     },
+    "Aztec's gas, bought with your %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas de Aztec, comprado con tu %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で購入したAztecのガス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@(으)로 구매한 Aztec 가스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用你的 %@ 购买的 Aztec gas"
+          }
+        }
+      }
+    },
     "Aztec's gas, for your account there" : {
       "localizations" : {
         "es" : {
@@ -97920,6 +97948,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas 低于 %@"
+          }
+        }
+      }
+    },
+    "Gas for Aztec could not be bought just now. Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo comprar gas para Aztec en este momento. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在Aztecのガスを購入できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금은 Aztec 가스를 구매할 수 없습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前无法购买 Aztec 的 gas。请重试。"
+          }
+        }
+      }
+    },
+    "Gas for Aztec could not be priced just now. Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo obtener el precio del gas para Aztec en este momento. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在Aztecのガスの価格を取得できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금은 Aztec 가스 가격을 확인할 수 없습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前无法获取 Aztec 的 gas 价格。请重试。"
           }
         }
       }
@@ -169812,6 +169896,34 @@
         }
       }
     },
+    "Sent privately. Its gas was paid by your account, in the open." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado de forma privada. Su gas lo pagó tu cuenta, de forma pública."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベートに送信しました。ガス代はあなたのアカウントから公開で支払われました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 보냈습니다. 가스비는 내 계정에서 공개적으로 지불되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已私密发送。其 gas 由你的账户公开支付。"
+          }
+        }
+      }
+    },
     "Sent to" : {
       "localizations" : {
         "es" : {
@@ -202209,6 +202321,34 @@
         }
       }
     },
+    "Up to %@: a little buys gas for Aztec." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta %@: una pequeña parte compra gas para Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最大%@：少額はAztecのガスの購入に使われます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최대 %@: 소액은 Aztec 가스 구매에 사용됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最多 %@：其中一小部分用于购买 Aztec 的 gas。"
+          }
+        }
+      }
+    },
     "Up to date" : {
       "localizations" : {
         "es" : {
@@ -221445,6 +221585,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户尚未在 %@ 上。请先发送一次"
+          }
+        }
+      }
+    },
+    "Your account needs a little %@ of its own to buy gas for Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta necesita tener un poco de %@ propio para comprar gas para Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecのガスを購入するには、アカウント自体に少額の%@が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 가스를 구매하려면 계정에 %@이(가) 조금 있어야 합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户需要持有少量 %@ 才能购买 Aztec 的 gas"
+          }
+        }
+      }
+    },
+    "Your account needs a little USDC on Ethereum to buy gas for Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta necesita un poco de USDC en Ethereum para comprar gas para Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecのガスを購入するには、アカウントにEthereum上の少額のUSDCが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 가스를 구매하려면 계정에 Ethereum의 USDC가 조금 있어야 합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户需要在 Ethereum 上持有少量 USDC 才能购买 Aztec 的 gas"
           }
         }
       }
