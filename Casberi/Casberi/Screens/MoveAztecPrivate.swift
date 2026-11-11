@@ -496,16 +496,11 @@ final class AztecMove {
         return try await AztecGas.plan(selling: sell, units: sale, account: safe)
     }
 
-    /// Claims what Aztec has carried, gas first (a claim pays from gas).
-    func settle() async {
-        await AztecGas.settle()
-        await ShieldBridge.settle()
-    }
+    /// Claims what Aztec has carried (`AztecArrivals`: the Wallet's open and
+    /// Holdings ask too, one pass at a time, prd §1700ac).
+    func settle() async { await AztecArrivals.settle() }
 
-    var waiting: Bool {
-        let s = AztecAccountStore.shared.snapshot
-        return (s.gas ?? []).contains { !$0.claimed } || (s.shield ?? []).contains { !$0.claimed }
-    }
+    var waiting: Bool { AztecArrivals.waiting }
 }
 
 struct MoveAztecPrivateSentence<Head: View>: View {

@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1921 of 1994 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1922 of 1995 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2092,10 +2092,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it (amended by §1700t)
 - §1700aa — Gas on Aztec is private and is bought with what you move: it goes to the ecosystem's shared private fee contract, the…
 - §1700ab — Half · All is one control, as Round-ups' is: its halves share the row's width, never two small pills on the left (ame…
+- §1700ac — A deposit into Aztec arrives on its own: it is claimed on the Wallet's open, stands in Holdings › Private as a grey r…
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
-- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700k, §1720)
+- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700ac, §1700k, §1720)
 - §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720)
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec

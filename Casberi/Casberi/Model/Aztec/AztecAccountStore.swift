@@ -214,7 +214,10 @@ final class AztecAccountStore {
     /// folded into 0xBow's Private (§1700 item 4).
     func walletHolding() async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
         guard isShown else { return [] }
+        // What is on its way in is priced too, for its row (prd §1700ac);
+        // the total below counts only what the account holds.
         let coins = shown.holdings.filter(\.isHeld).compactMap { Self.priced[$0.address.lowercased()] }
+            + arriving.map { $0.symbol.lowercased() }.filter { Self.priced.values.contains($0) }
         guard !coins.isEmpty else { return [] }
         let found = await MainnetPrices.prices(for: coins)
         if found != prices { prices = found }
@@ -255,17 +258,42 @@ final class AztecAccountStore {
         DemoMode.isActive ? [] : (snapshot.exits ?? []).filter { !$0.withdrawn }
     }
 
+    /// Shield deposits Aztec has not handed over yet: Holdings' grey rows
+    /// (prd §1700ac). Only what this phone sent, since only it holds the
+    /// record a claim needs; none in the demo.
+    var arriving: [ShieldDeposit] {
+        #if DEBUG
+        // `-aztecArrivingSample YES`: one deposit on its way, to draw the row.
+        if UserDefaults.standard.bool(forKey: "aztecArrivingSample") {
+            return [ShieldDeposit(nonce: 1, symbol: "USDC", amountUnits: "25000000", transaction: "0x", messageHash: "0x",
+                                  leafIndex: "0", claimed: false, at: Date().addingTimeInterval(-240))]
+        }
+        #endif
+        return DemoMode.isActive ? [] : (snapshot.shield ?? []).filter { !$0.claimed }
+    }
+
+    /// Shield's tokens are USDC (6 places) and WETH (18).
+    private static func decimals(_ symbol: String) -> Int { symbol == "USDC" ? 6 : 18 }
+
     /// "25 USDC": an exit's amount in its token.
     static func figure(_ exit: ShieldExit) -> String {
-        let decimals = exit.symbol == "USDC" ? 6 : 18
-        return PrivateMoney.figure(exit.amountUnits, decimals: decimals, symbol: exit.symbol)
+        PrivateMoney.figure(exit.amountUnits, decimals: decimals(exit.symbol), symbol: exit.symbol)
+    }
+
+    /// "25 USDC": what a deposit brings, after Shield's fee.
+    static func figure(_ deposit: ShieldDeposit) -> String {
+        PrivateMoney.figure(deposit.amountUnits, decimals: decimals(deposit.symbol), symbol: deposit.symbol)
     }
 
     /// An exit's worth in dollars at the last read price, or nil.
-    func usd(_ exit: ShieldExit) -> Double? {
-        guard let price = prices[exit.symbol.lowercased()],
-              let units = Decimal(string: exit.amountUnits) else { return nil }
-        return NSDecimalNumber(decimal: units / pow(10, exit.symbol == "USDC" ? 6 : 18)).doubleValue * price
+    func usd(_ exit: ShieldExit) -> Double? { usd(symbol: exit.symbol, units: exit.amountUnits) }
+
+    /// A deposit's worth in dollars at the last read price, or nil.
+    func usd(_ deposit: ShieldDeposit) -> Double? { usd(symbol: deposit.symbol, units: deposit.amountUnits) }
+
+    private func usd(symbol: String, units: String) -> Double? {
+        guard let price = prices[symbol.lowercased()], let units = Decimal(string: units) else { return nil }
+        return NSDecimalNumber(decimal: units / pow(10, Self.decimals(symbol))).doubleValue * price
     }
 
     func addExit(_ exit: ShieldExit) {
@@ -324,6 +352,9 @@ final class AztecAccountStore {
             await GestureGate.idle()
             guard !DemoMode.isActive else { return }
             await refresh()
+            // A deposit Aztec has carried is claimed here, without Move
+            // being opened for it (prd §1700ac).
+            await AztecArrivals.settle()
         }
     }
 

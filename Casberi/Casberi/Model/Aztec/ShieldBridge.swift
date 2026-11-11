@@ -283,6 +283,7 @@ extension ShieldBridge {
     }
 
     /// Claims every Shield deposit Aztec has carried, privately, to your account.
+    /// Asked only through `AztecArrivals.settle()`: one pass at a time.
     @MainActor
     static func settle() async {
         for d in AztecAccountStore.shared.snapshot.shield ?? [] where !d.claimed {
@@ -293,6 +294,13 @@ extension ShieldBridge {
                 let out = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex, AztecGas.unminted]) as? [String: Any]
                 AztecGas.spent(by: out)
                 AztecAccountStore.shared.markShieldClaimed(d.nonce)
+                // It arrived: one Activity row by the deposit's transaction,
+                // Etherscan its door (prd §1700ac).
+                if let context = SharedStore.live?.mainContext {
+                    PrivateActivity.land(hash: d.transaction,
+                                         title: PrivateMoney.activityTitle(figure: AztecAccountStore.figure(d), to: nil),
+                                         chainId: PrivacyNetwork.ethereum.chainId, context: context)
+                }
                 await AztecAccountStore.shared.refresh()
             } catch {
                 NSLog("aztecEngine| shield | claim waits: %@", error.localizedDescription)

@@ -71426,6 +71426,23 @@ Library is the App Library: every tile shows its app's icon, so the Casberi fold
 
 **Mac half (§1402).** The same row on Catalyst.
 
+## §1700ac — A deposit into Aztec arrives on its own: it is claimed on the Wallet's open, stands in Holdings › Private as a grey row while it is on its way, and lands one Activity row when it arrives; never Needs you (amends §1700e, whose claim ran only inside Move) (user, 2026-11-10, on build 977 with a deposit under way: "how will i know when it arrives?", "i don't think it has claimed yet"; 2026-11-11: "lets do the needs you and activity. well, needs you may not even be a fit would it, b/c what is needed from the user?") — BUILT; the row seen on the simulator (`-aztecArrivingSample YES`); a real arrival NOT SEEN
+
+**Why.** A move into Aztec waits for Aztec to carry its message (minutes) and is then claimed, proved on this iPhone. That claim ran only while Move's Aztec sentence stood (`MoveAztecPrivateSentence`'s task), so a deposit you walked away from sat unclaimed until you came back to that sentence, and nothing in the Wallet said it was on its way.
+
+1. **One door for the claim** (`AztecArrivals.settle()`): gas first, then Shield's deposits, one pass at a time whoever asks, only where there is a prover, never in the demo. It is asked by the Wallet's open and the app's return (`AztecAccountStore.warm`, after its read: at most once a minute, the hand still), by the waiting row every half minute while it stands, and by Move's sentence as before.
+2. **On its way, in Holdings › Private.** One row per deposit this phone sent that Aztec has not handed over (`AztecAccountStore.arriving`): the grey clock, the token, "Aztec · On its way", the figure grey, in dollars where the token is priced. Railgun's unlisted money set the rule (§1713 item 5): a state, nobody waiting on you, never amber. The empty place row yields to it.
+3. **Not Needs you.** Needs you holds what ends in a step of yours: an exit's Finish (§1700e), a deposit to take back (§1561). A deposit in asks nothing of you.
+4. **Arrived, in Activity.** When the claim stands, one row by the deposit's Ethereum transaction (`private:<hash>`, `PrivateActivity.land`): "25 USDC to your private balance", Etherscan its door, dated when it arrived. Nothing new is written at the send: that is already a transaction of your account's.
+5. **No new words.** "On its way" and "%@ to your private balance" are in the catalogue in all four languages.
+6. **What it does not cover.** A deposit made anywhere else (Shield's own site): Casberi holds no record a claim needs. A payment from another Aztec account has no waiting stage, and lands no row yet. The Wallet's total does not count money on its way: it left your account and Aztec does not hold it yet.
+
+**Mac half (§1402).** The row is this iPhone's own record, so the Mac draws none; no claim runs there (no prover).
+
+**Checks.** `shield-bridge-selftest.sh`: the two settles have one caller; a pass is one at a time, gas first; the three askers go through it; the Activity row lands after the claim is marked and before the re-read; the row is drawn and the empty place yields; none in the demo; the sample only in DEBUG.
+
+**Unverified.** A real deposit arriving with Move shut. A claim that landed but whose answer was lost would be offered again and refused, its row standing: `settle()`'s existing risk, now visible.
+
 ## §1711 — Every share card's foot wears the app icon, not the arm (amends §1708 item 4 for the share card; the social spec's foot) (user, 2026-11-07: "our share cards need our new logo") — BUILT, NOT COMPILED, NOT SEEN
 
 **Why.** The card is the one thing about Casberi the person on the other end sees. Its foot drew `CasberiMark`, §1638's arm, which §1708 kept for the in-app mark; the icon they would look for on the App Store is §1708's cursive C on its black tile.

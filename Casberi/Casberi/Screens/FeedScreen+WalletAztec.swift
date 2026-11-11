@@ -40,10 +40,19 @@ extension FeedScreen {
                          mark: holding.name, tone: DS.textPrimary)
             }
             .background { aztecReading }
+            // On its way in (prd §1700ac): one grey row per deposit Aztec has
+            // not handed over, behind a clock, as Railgun's unlisted money is
+            // (§1713 item 5) — a state, nobody waiting on you, never amber.
+            ForEach(store.arriving) { deposit in
+                aztecRow(title: deposit.symbol, line: "Aztec · " + String(localized: "On its way"),
+                         figure: mask ?? store.usd(deposit).map(WalletValue.money) ?? AztecAccountStore.figure(deposit),
+                         mark: nil, tone: DS.textSecondary, arriving: true)
+            }
+            .background { aztecArriving }
             // Empty, the place stands where its rows will (prd §1718, §769):
             // Aztec, saying what it takes, its tap Move's sentence to your
             // private account on Aztec.
-            if store.privateHeld.isEmpty {
+            if store.privateHeld.isEmpty, store.arriving.isEmpty {
                 walletPlaceRow(String(localized: "Your private balance"), line: "Aztec", mark: nil,
                                hint: String(localized: "Sends to your private balance on Aztec")) {
                     chrome.moveAztec = .deposit
@@ -96,6 +105,17 @@ extension FeedScreen {
         }
     }
 
+    /// What Aztec has carried is claimed while its row stands, asked again
+    /// every half minute (prd §1700ac); the row leaves with the claim.
+    private var aztecArriving: some View {
+        Color.clear.task {
+            while !AztecAccountStore.shared.arriving.isEmpty, !Task.isCancelled {
+                await AztecArrivals.settle()
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
+    }
+
     /// The amount alone, at most two places (the row's title already names
     /// the token; user, 2026-11-04: "it shouldn't say it where the balance of
     /// it is. i also don't like all the decimals"): "28.54". Less than a
@@ -112,10 +132,17 @@ extension FeedScreen {
 
     /// Holdings' row anatomy (`walletPrivateRow`), with no act: nothing opens
     /// until Aztec has its sends (§1700 step 4), so it is not a button.
-    private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color) -> some View {
+    private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
+                          arriving: Bool = false) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             Group {
-                if let mark { AssetMark(name: mark, size: DS.Mark.badge) } else { ProtocolInlineMark(mark: "aztec") }
+                if arriving {
+                    Image(systemName: "clock").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textSecondary)
+                } else if let mark {
+                    AssetMark(name: mark, size: DS.Mark.badge)
+                } else {
+                    ProtocolInlineMark(mark: "aztec")
+                }
             }
             .frame(width: DSRoomChassis.headGlyph)
             .accessibilityHidden(true)
