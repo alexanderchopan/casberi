@@ -131,7 +131,7 @@ use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no
 # private balance" opens Send's networks.
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'onDismiss: { chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
+use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
