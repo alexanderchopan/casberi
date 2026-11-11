@@ -50,12 +50,13 @@ done
 callers=$(grep -rlF 'NymisScans.shared.scan(' Casberi/Casberi | sort | tr '\n' ' ')
 [[ "$callers" == "Casberi/Casberi/Screens/FeedScreen+WalletPrivacy.swift Casberi/Casberi/Screens/NymisReadingSheet.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ a scan starts from somewhere other than the Scan control: $callers"; exit 1; }
-# A scan on its own (§1744): a follow, from WalletStore's one add, and your
-# account's first landed transaction, from WalletIngest; nowhere else, once
-# per address, never in the demo, and in DEBUG only with -liveChains YES.
-followers=$(grep -rlF 'NymisScans.shared.scanOnFollow(' Casberi/Casberi | sort | tr '\n' ' ')
-[[ "$followers" == "Casberi/Casberi/Model/WalletStore.swift " ]] \
-  || { echo "✗ a scan on follow starts from somewhere other than WalletStore's add: $followers"; exit 1; }
+# A scan on its own (§1744, §1744a): your account's first landed
+# transaction, from WalletIngest; nowhere else, once, never in the demo, and
+# in DEBUG only with -liveChains YES. A followed wallet scans only on a tap:
+# Nymis's public API allows 50 fresh scans a day globally and 3 per IP.
+if grep -rnF 'scanOnFollow' Casberi/Casberi; then
+  echo "✗ a followed wallet scans on its own: Nymis asked for taps only (§1744a)"; exit 1
+fi
 landers=$(grep -rlF 'NymisScans.shared.scanOnActivity(' Casberi/Casberi | sort | tr '\n' ' ')
 [[ "$landers" == "Casberi/Casberi/Model/WalletIngest.swift " ]] \
   || { echo "✗ a scan on activity starts from somewhere other than WalletIngest: $landers"; exit 1; }

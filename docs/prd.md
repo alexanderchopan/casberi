@@ -71968,3 +71968,13 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Checks.** `nymis-selftest.sh`: `scanOnFollow` is called from `WalletStore.swift` only, `scanOnActivity` from `WalletIngest.swift` only, and the scan-on-its-own path keeps its demo, DEBUG, once-only and no-reading guards.
 
 **Not built.** Scanning wallets followed before this ruling: they wait for a tap.
+
+## §1744a — Only your account scans on its own; a wallet you follow scans on a tap (amends §1744 items 1 and 5) (Nymis, relayed by the user 2026-11-11: "automatically scan the user's main wallet only, but keep scans of followed wallets manual. Our public API has shared capacity limits (50 fresh scans/day globally, 3 per IP), so scanning every followed wallet automatically could exhaust the quota") — BUILT; compiled NOWHERE yet (the build session had no Swift toolchain)
+
+**Why.** Nymis's public API allows 50 fresh scans a day across every client and 3 per IP. Five follows on one phone would spend that phone's day, and a few hundred people following wallets would spend everyone's.
+
+1. **`scanOnFollow` is deleted**, with its call in `WalletStore.outcome(ofAdding:)`. A followed wallet scans when its row is tapped, as §1701 ruled.
+2. **The follow tray's sentence is deleted** ("Following also scans the address with Nymis for privacy leaks."): a follow no longer reaches Nymis.
+3. **Your account stands as §1744 item 2 ruled**: one scan on its own, when its first transaction lands. `NetworkReach`'s Nymis line says that and the tap, nothing else.
+
+**Checks.** `nymis-selftest.sh` fails if `scanOnFollow` appears anywhere in the app.

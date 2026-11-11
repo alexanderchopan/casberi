@@ -16,12 +16,12 @@ import Observation
 /// idempotency key, which Nymis answers with the same scan for 30 minutes.
 ///
 /// A scan starts from a tap (`scan(_:)`: the Scan control, Scan again and
-/// the `-nymisScan` probe) or on its own, ONCE per address (prd §1744,
-/// amending §1701 item 6): when you follow a wallet (`scanOnFollow`, from
-/// `WalletStore`'s one add) and when your own account's first transaction
-/// lands (`scanOnActivity`, from `WalletIngest`), never when the account is
-/// made, because a new address has nothing to find. `nymis-selftest.sh`
-/// holds both caller lists.
+/// the `-nymisScan` probe) or on its own ONCE, for your own account only,
+/// when its first transaction lands (`scanOnActivity`, from `WalletIngest`;
+/// prd §1744, §1744a), never when the account is made, because a new address
+/// has nothing to find. A wallet you follow is scanned only on a tap: Nymis's
+/// public API allows 50 fresh scans a day across everyone and 3 per IP.
+/// `nymis-selftest.sh` holds both caller lists.
 @MainActor @Observable
 final class NymisScans {
     static let shared = NymisScans()
@@ -78,7 +78,8 @@ final class NymisScans {
     /// Nymis: while summaries are pending, every 5 seconds for at most 30.
     static let summaryEvery: Duration = .seconds(5)
     static let summaryPolls = 6
-    /// The addresses a scan has started on its own for (§1744): never again
+    /// The address a scan has started on its own for (§1744a: your account
+    /// only): never again
     /// on its own, whatever it read; a tap scans again.
     static let autoKey = "nymis.auto.v1"
     private(set) var autoAsked: Set<String> = []
@@ -131,13 +132,6 @@ final class NymisScans {
         running[key] = Running(started: .now, idempotencyKey: UUID().uuidString.lowercased())
         saveRunning()
         follow()
-    }
-
-    /// A wallet you just followed (§1744). Your own account waits for its
-    /// first transaction (`scanOnActivity`).
-    func scanOnFollow(_ address: String) {
-        guard !WalletWatch.sameAddress(YourAccountKey.address ?? "", address) else { return }
-        scanOnItsOwn(address)
     }
 
     /// The wallets a transfer or swap just landed at (§1744): your own
