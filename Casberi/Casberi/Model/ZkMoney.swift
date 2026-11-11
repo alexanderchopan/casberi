@@ -144,9 +144,17 @@ enum ZkMoney {
     /// (it is asked through Tor, as every Your account request is).
     static func depositAddress(tag: String) async -> PayAnswer {
         guard !DemoMode.isActive, let call = ZkMoneyWire.resolveCall(tag: tag) else { return .unreachable }
+        // The resolver ENS names for zk.money now (prd §1750); the pinned
+        // one only when the registry cannot be reached.
+        var resolver = ZkMoneyWire.resolver
+        if case .result(let word) = await WalletApprovals.ethCallKeepingRevert(network: network, to: ZkMoneyWire.ensRegistry,
+                                                                              data: ZkMoneyWire.ensResolverCall),
+           let named = ZkMoneyWire.namedResolver(result: word) {
+            resolver = named
+        }
         let lookup: ZkMoneyWire.Lookup
-        switch await WalletApprovals.ethCallKeepingRevert(network: network, to: ZkMoneyWire.resolver, data: call) {
-        case .reverted(let data): lookup = ZkMoneyWire.lookup(revert: data)
+        switch await WalletApprovals.ethCallKeepingRevert(network: network, to: resolver, data: call) {
+        case .reverted(let data): lookup = ZkMoneyWire.lookup(revert: data, from: resolver)
         case .result, .unreachable: return .unreachable
         }
         switch lookup {

@@ -72059,3 +72059,27 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** The same To; a short link needs the Aztec engine.
 
 **Checks.** `zkmoney-selftest.sh`: a record sealed as zk.money's wallet seals one (noble's HKDF, AES-CTR, Ed25519) opens to its packet and reads as the request; another key under the link's tag, the link's key over another signature, a changed field, fourteen fields, a wide field and another seed all open to nothing; a short payment link loses its fragment and a short request keeps it; To reads a link before an address; six mutations. `aztec-connect-selftest.sh`: the locator is its class's address, the tag's vectors, what counts as a record, five mutations. Probe: `-zkMoneyProbe "short=<link>"`.
+
+## §1749 — A pasted request picks its token and keeps its amount (amends §1748 item 1, which left the token to you and lost the amount) (user, 2026-11-11, on TestFlight 980 with a real request: "when i paste it it doens't show the token just the address resolved"; "after i selected dai it still didn't say how much so how would i know how much to pay"; "it should have the fee on top of it") — BUILT; seen on the simulator (the demo: Send open on Base with USDC and 5 typed, a short link pasted, rewritten to "Send 20.85 USDC to zac.zk.money on Ethereum."); the user's own paste not seen again yet
+
+**What went wrong on 980.** A request is paid on Ethereum, but the sentence kept the token Send already held for another network (Base's, by default), so it named a recipient and no usable token. And picking a deposit token by hand cleared the amount: DAI has no price in the holdings read, so the dollars went with it, and one token's units never carry to the next. The simulator runs had both hidden: its draft named Ethereum and USDC up front.
+
+1. **The token is picked.** The one the request asks for when you hold it on Ethereum; for a request in dollars (§1746's format 4), the deposit token you hold there, USDC first, then DAI, then USDT (`ZkMoneyWire.payOrder`). A token held for another network is never left in the sentence.
+2. **The amount stands.** Each token a deposit takes is a dollar, so with one picked the amount is its own units ("Send 1.35 DAI"), and it is in dollars only while none is picked. Changing among the three keeps it, while it is still the amount Pay wrote (`MoveSentence.choose`).
+3. **The fee is on top**, as §1745 item 3 ruled: 1 asked is written as 1.35.
+
+**Mac half (§1402).** The same sentence.
+
+**Checks.** `zkmoney-selftest.sh`: the pick's order is within the tokens a deposit takes; the read sets the pick and its units; a token pick keeps a request's amount.
+
+## §1750 — Paying a zk.money tag asks ENS for the resolver each time; the pin is the fallback (amends §1746 item 1's pin and §1692's pinned resolver) (zk.money's team, asked whether integrators should read the resolver from ENS, 2026-11-11: "yes ENS will be accurate. We are working on adding more visibility here/ better trust assumptions on the resolver"; user: "Yes, build both") — BUILT; NOT SEEN on a phone
+
+1. **Asked at pay time.** Before each lookup the app asks ENS's registry for zk.money's resolver (`resolver(namehash("zk.money"))`, one `eth_call` on the host the lookup already uses) and resolves through that contract. The lookup must come from it: any other contract's is refused, the pinned one included once ENS names another.
+2. **The pin is the fallback**, used only when the registry cannot be reached or names none. The gateway's host stays pinned and disclosed, and `resolveWithProof` still rebuilds the address on chain, so the gateway can be slow or down, never wrong.
+3. **Whom this trusts.** Whoever holds the ENS name zk.money, which is zk.money: the same party the pin trusted, without the wait for a Casberi update when they redeploy.
+4. **The nightly row is a warning now**: a pin ENS no longer names does not stop paying; it says to re-pin so the fallback and the self-test's fixtures match.
+5. **Not built yet, the other half of the same answers.** A request that carries its own deposit address is paid at that address by zk.money's own page, which is how a payment is matched to a request. The link is unsigned, so Casberi will pay such an address only once it can be checked against the active deployment and the tag, and will name the address when it cannot. The deposit fee is read from the chain there; Casberi still writes $0.35.
+
+**Mac half (§1402).** Nothing here is phone-only.
+
+**Checks.** `zkmoney-selftest.sh`: the registry's answer read as an address; none, no answer and a malformed word read as none; a lookup from the pin refused once ENS names another, and one from the named resolver read; the order in `depositAddress` (ENS, then the call, then the lookup held to it); two mutations.

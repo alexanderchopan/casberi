@@ -197,6 +197,19 @@ check(ZkMoneyWire.depositAddress(callbackResult: text("callback-zac.txt")) == "0
 check(ZkMoneyWire.lookup(revert: text("lookup-charlie.txt")) == .notOnV6, "a tag still on Alpha V5 is refused by the resolver itself")
 check(ZkMoneyWire.lookup(revert: text("lookup-unclaimed.txt")) == .unclaimed, "an unclaimed tag")
 check(ZkMoneyWire.lookup(revert: "0x08c379a0") == .unreadable && ZkMoneyWire.lookup(revert: nil) == .unreadable, "any other revert reads nothing")
+// The resolver is ENS's, asked at pay time (prd §1750).
+let namedWord = "0x000000000000000000000000" + "3DC71762063D7B87B3F79B3B98E03F0051B00A6E"
+check(ZkMoneyWire.namedResolver(result: namedWord) == "0x3dc71762063d7b87b3f79b3b98e03f0051b00a6e", "the registry's answer, as an address")
+check(ZkMoneyWire.namedResolver(result: "0x" + String(repeating: "0", count: 64)) == nil && ZkMoneyWire.namedResolver(result: nil) == nil
+      && ZkMoneyWire.namedResolver(result: "0x1234") == nil && ZkMoneyWire.namedResolver(result: "0x01" + String(repeating: "0", count: 62)) == nil,
+      "no resolver set, no answer, and anything that is not an address name none")
+check(ZkMoneyWire.ensResolverCall == "0x0178b8bff605999a299a7229da9f2a3c65acf5cb829ae965cfe467f053e1b97c50b0eec2", "resolver(namehash(zk.money)), as viem encodes it")
+let moved = "0x1111111111111111111111111111111111111111"
+check(ZkMoneyWire.lookup(revert: text("lookup-zac.txt"), from: moved) == .unreadable, "a lookup from the pinned resolver is refused once ENS names another")
+var relabel = text("lookup-zac.txt")
+relabel = relabel.replacingOccurrences(of: "3dc71762063d7b87b3f79b3b98e03f0051b00a6e", with: "1111111111111111111111111111111111111111")
+if case .offchain(let fromMoved) = ZkMoneyWire.lookup(revert: relabel, from: moved) { check(fromMoved.sender == moved, "…and one from the resolver ENS names is read") }
+else { check(false, "a lookup from the resolver ENS names did not read") }
 var forged = text("lookup-zac.txt")
 forged = forged.replacingOccurrences(of: "3dc71762063d7b87b3f79b3b98e03f0051b00a6e", with: "1111111111111111111111111111111111111111")
 check(ZkMoneyWire.lookup(revert: forged) == .unreadable, "a lookup from any other contract is refused")
@@ -258,6 +271,8 @@ check(shortKept?.title == "Payment request — zk.money" && shortKept?.content =
 let payDollars = ZkMoneyWire.requestPayment(tag: "zac", amount: amount4, symbol: nil)
 check(payDollars == ZkMoneyWire.RequestPayment(to: "zac.zk.money", amount: "0.36", asked: "0.01", token: nil),
       "no token named: the fee is added in dollars and the token is yours to pick")
+check(ZkMoneyWire.payOrder == [ZkMoneyWire.usdc, ZkMoneyWire.dai, ZkMoneyWire.usdt] && ZkMoneyWire.payOrder.allSatisfy(ZkMoneyWire.payTokens.contains),
+      "a request in dollars picks among the tokens a deposit takes, USDC first")
 let payOther = ZkMoneyWire.requestPayment(tag: "zac", amount: 5, symbol: "sUSDS")
 check(payOther.amount.isEmpty && payOther.token == nil && payOther.asked == nil, "a token a deposit does not take is left to you: no amount, no fee guessed")
 let payOpen = ZkMoneyWire.requestPayment(tag: "zac", amount: nil, symbol: "DAI")
@@ -316,7 +331,7 @@ PY
 }
 
 mutate "a lookup trusted from any contract" \
-  'sender == resolver,' \
+  'sender == expected.lowercased(),' \
   'sender.count == 42,'
 mutate "a gateway on any host" \
   'url.scheme == "https", url.host == gatewayHost else { return nil }' \
@@ -414,6 +429,12 @@ mutate "a short request scrubbed of the fragment that is the request" \
 mutate "a request's record opened with a payment link's key" \
   'info: Data("zk.money link cipher".utf8) + [1, short.kind], outputByteCount: 32)' \
   'info: Data("zk.money link cipher".utf8) + [1, 1], outputByteCount: 32)'
+mutate "a lookup held to the pin, whatever ENS names" \
+  'sender == expected.lowercased(),' \
+  'sender == resolver,'
+mutate "no resolver read as one" \
+  'b[12...].contains(where: { $0 != 0 }) else { return nil }' \
+  'b.count == 32 else { return nil }'
 mutate "a request's title losing the words Pay reads" \
   'return requestTitleLead + (what.map' \
   'return "Request — " + (what.map'
@@ -456,5 +477,22 @@ grep -q 'guard let id = request.thing else { return }' "$SEND" \
   || { echo "✗ a link pasted into To, which has no row, reaches the row fetch"; exit 1; }
 grep -q 'if DemoMode.isActive { return demoRequest }' "$ZK" \
   || { echo "✗ the demo asks Aztec for a short link's record: the demo reads no chain"; exit 1; }
+
+# The token and the amount of a pasted request (prd §1749), read. On build 980
+# a request pasted while Send held Base's token kept that token under
+# Ethereum, and DAI picked by hand cleared the amount: the sentence named who
+# and never how much.
+grep -q 'with = pick' "$TMP/take.txt" && grep -q 'inDollars = pick == nil' "$TMP/take.txt" \
+  && grep -q 'let wanted = (pay.token.map { \[$0\] } ?? \[\]) + ZkMoneyWire.payOrder' "$TMP/take.txt" \
+  || { echo "✗ a pasted request keeps another network's token, or picks none of the tokens you hold"; exit 1; }
+awk '/private func choose\(_ h: Tokens.Held\) \{/,/^    }/' "$SEND" \
+  | grep -q 'if let request = payingRequest, amount == request.amount, ZkMoneyWire.payTokens.contains(h.id) {' \
+  || { echo "✗ picking a deposit token clears the amount a request asked for"; exit 1; }
+
+# The resolver is asked of ENS before each lookup (prd §1750), and the lookup
+# must come from the one it names: the pin alone went stale in eight days.
+awk '/static func depositAddress\(tag: String\) async -> PayAnswer \{/,/^    }/' "$ZK" > "$TMP/deposit.txt"
+awk '/to: ZkMoneyWire.ensRegistry/{e=NR} /resolver = named/{n=NR} /to: resolver, data: call/{c=NR} /ZkMoneyWire.lookup\(revert: data, from: resolver\)/{l=NR} END{exit !(e && n && c && l && e<n && n<c && c<l)}' "$TMP/deposit.txt" \
+  || { echo "✗ paying a tag no longer asks ENS for the resolver first, or reads a lookup from another contract"; exit 1; }
 
 echo "✓ zk.money self-test passed"

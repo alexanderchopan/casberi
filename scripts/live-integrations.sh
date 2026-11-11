@@ -664,7 +664,7 @@ elif [[ -z "$zkens" ]]; then
 elif [[ "0x$zkens" == "$zkpin" ]]; then
   pass "zk.money — ENS still names the pinned resolver ($zkpin)"
 else
-  fail "zk.money — ENS names 0x$zkens, ZkMoneyWire.swift pins $zkpin: paying a tag fails until it is re-pinned and its fixtures recaptured"
+  warn "zk.money — ENS names 0x$zkens, ZkMoneyWire.swift pins $zkpin: paying follows ENS (prd §1750); re-pin and recapture the fixtures so the fallback and the self-test match"
 fi
 
 hr

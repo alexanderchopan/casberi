@@ -607,18 +607,38 @@ struct MoveSentence: View {
             return true
         }
         let pay = ZkMoneyWire.requestPayment(tag: tag, amount: asked, symbol: symbol)
+        // **THE TOKEN IS PICKED, AND NEVER LEFT FROM ANOTHER NETWORK (prd
+        // §1749; user, on build 980, of a request pasted with Base's token
+        // still picked: "it doesn't show the token just the address
+        // resolved", then, DAI picked by hand, "it still didn't say how
+        // much").** The request is paid on Ethereum, so the token Send held
+        // for another network goes; the one asked for is picked when you
+        // hold it there, and a request in dollars takes the deposit token
+        // you hold (USDC, then DAI, then USDT). Each of the three is a
+        // dollar, so with one picked the amount is its own units, and it is
+        // in dollars only while none is.
+        let onEthereum = heldBy[Op.ethereum.chainId] ?? []
+        // The token asked for first; holding none of it, another a deposit
+        // takes (zk.money swaps USDC and USDT to DAI on the way in).
+        let wanted = (pay.token.map { [$0] } ?? []) + ZkMoneyWire.payOrder
+        let pick = wanted.lazy.compactMap { id in onEthereum.first { $0.id == id && left($0) != "0" } }.first
         withAnimation(DS.Motion.standard) {
             lookup = nil
-            network = Op.ethereum
+            if network != Op.ethereum {
+                network = Op.ethereum
+                buy = nil
+                buyOn = nil
+                quote = nil
+            }
             networkPicked = true
-            inDollars = pay.token == nil
+            with = pick
+            inDollars = pick == nil
             if !pay.amount.isEmpty { amount = pay.amount }
-            if let token = pay.token, let held = heldBy[Op.ethereum.chainId]?.first(where: { $0.id == token }) { with = held }
             payingRequest = Self.paying(pay, symbol: symbol, thing: payingRequest?.thing)
             // The tag in To is resolved as a typed one is (prd §1692).
             to = pay.to
         }
-        NSLog("zkMoneyPay| link read | %@ | %@", pay.to, pay.amount.isEmpty ? "-" : pay.amount)
+        NSLog("zkMoneyPay| link read | %@ | %@ | %@", pay.to, pay.amount.isEmpty ? "-" : pay.amount, pick?.token.symbol ?? "no token picked")
         return true
     }
 
@@ -3954,7 +3974,14 @@ struct MoveSentence: View {
     /// an amount in another token's units does not carry over.
     private func choose(_ h: Tokens.Held) {
         if with?.id != h.id {
-            if inDollars, h.price != nil {
+            if let request = payingRequest, amount == request.amount, ZkMoneyWire.payTokens.contains(h.id) {
+                // Paying a request (prd §1749): each token a deposit takes
+                // is a dollar, so the amount asked stands in whichever is
+                // picked. It was cleared: an unpriced DAI took the dollars
+                // with it, and one deposit token's units never carried to
+                // the next.
+                inDollars = false
+            } else if inDollars, h.price != nil {
                 // The dollars stand.
             } else if inDollars {
                 inDollars = false

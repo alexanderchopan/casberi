@@ -311,6 +311,9 @@ enum ZkMoneyWire {
     /// What a deposit address takes: DAI, USDC or USDT on Ethereum (the
     /// docs' Limits; USDC and USDT are swapped to DAI on the way in).
     static let payTokens: Set<String> = [dai, usdc, usdt]
+    /// The order a request in dollars picks among them (prd §1749): the one
+    /// you hold, USDC first.
+    static let payOrder = [usdc, dai, usdt]
     /// A deposit costs $0.35 (the docs, 2026-11-03), so an amount at or
     /// under it is marked recoverable and never arrives; each must stay
     /// below $5,000.
@@ -422,7 +425,28 @@ enum ZkMoneyWire {
         let extraData: [UInt8]
     }
 
-    static func lookup(revert: String?) -> Lookup {
+    /// **THE RESOLVER IS THE ONE ENS NAMES, ASKED AT PAY TIME (prd §1750;
+    /// zk.money, 2026-11-11: "yes ENS will be accurate").** A pin went
+    /// stale in eight days (§1746) and every tag stopped paying. ENS's
+    /// registry is asked for zk.money's resolver before each lookup, and the
+    /// lookup must come from that contract; the pin above stands in only
+    /// when the registry cannot be reached. The gateway's host stays pinned,
+    /// and `resolveWithProof` still rebuilds the address on chain.
+    static let ensRegistry = "0x00000000000c2e074ec69a0dfb2997ba6c7d2e1e"
+    /// `resolver(bytes32)` of namehash("zk.money") (viem's, 2026-11-11).
+    static let ensResolverCall = "0x0178b8bf" + "f605999a299a7229da9f2a3c65acf5cb829ae965cfe467f053e1b97c50b0eec2"
+
+    /// The address in the registry's answer, lowercased; nil for none set
+    /// (a zero word) and for anything that is not one word holding an address.
+    static func namedResolver(result: String?) -> String? {
+        guard let result, let b = hexBytes(result), b.count == 32, b[..<12].allSatisfy({ $0 == 0 }),
+              b[12...].contains(where: { $0 != 0 }) else { return nil }
+        return "0x" + Keccak256.hexString(Array(b[12...]))
+    }
+
+    /// `expected`: the resolver the lookup must come from; any other
+    /// contract's is refused.
+    static func lookup(revert: String?, from expected: String = resolver) -> Lookup {
         guard let revert, let b = hexBytes(revert), b.count >= 4 else { return .unreadable }
         let selector = Keccak256.hexString(Array(b[0..<4]))
         if selector == Selector3668.rollupMismatch { return .notOnV6 }
@@ -430,7 +454,7 @@ enum ZkMoneyWire {
         guard selector == Selector3668.offchainLookup else { return .unreadable }
         let body = Array(b[4...])
         guard let sender = word(body, 0).map({ "0x" + Keccak256.hexString(Array($0[12...])) }),
-              sender == resolver,
+              sender == expected.lowercased(),
               let urlsAt = offset(body, 1), let callAt = offset(body, 2),
               let cb = word(body, 3), let extraAt = offset(body, 4),
               let callData = dynamicBytes(body, at: callAt), let extraData = dynamicBytes(body, at: extraAt),
