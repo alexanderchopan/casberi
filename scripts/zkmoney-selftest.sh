@@ -286,6 +286,28 @@ check(ZkMoneyWire.requestOpen(expires: nil, now: payNow), "one with no expiry st
 check(ZkMoneyLink.title(.request(tag: "zac", amount: 20.5, symbol: "DAI", note: nil, expires: nil)).hasPrefix(ZkMoneyLink.requestTitleLead),
       "every request's title begins with the words Pay's gate reads")
 
+// A format-3 request as zk.money's wallet writes one (made-up ids, the real
+// packet's shape, prd §1751): its token is named as it stands on Aztec.
+let oxLink = "https://zk.money/pay/zac#2QEDqQEDAlggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcDY3phYwRQAAAAAAAAAAAAI4byb8EAAAh4KjB4MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMQpYICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiCRIFZU9YREFJBmZjb2ZmZWU"
+if case .request(let tag, let amount, let symbol, _, _)? = ZkMoneyLink.link(oxLink) {
+    let pay = ZkMoneyWire.requestPayment(tag: tag, amount: amount, symbol: symbol)
+    check(symbol == "DAI" && pay == ZkMoneyWire.RequestPayment(to: "zac.zk.money", amount: "0.36", asked: "0.01", token: ZkMoneyWire.dai),
+          "a request in oxDAI is one in DAI: the amount and the fee are written")
+    check(ZkMoneyLink.title(.request(tag: tag, amount: amount, symbol: symbol, note: nil, expires: nil)) == "Payment request — 0.01 DAI to zac.zk.money",
+          "…and its row says DAI")
+} else { check(false, "a format-3 request in oxDAI is read") }
+check(ZkMoneyLink.dollarName("oxDAI") == "DAI" && ZkMoneyLink.dollarName("OXDAI") == "DAI" && ZkMoneyLink.dollarName("USDC") == "USDC" && ZkMoneyLink.dollarName("oxETH") == "oxETH",
+      "only zk.money's dollar is renamed")
+// A legacy link names no decimals: its amount is six places, as the codec says.
+if case .request(_, let amount, _, _, _)? = ZkMoneyLink.link("https://zk.money/pay/zac#2QEDpgECAlggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcDY3phYwRCJxAFY0RBSQZmY29mZmVl") {
+    check(amount == Decimal(string: "0.01"), "a link with no decimals is read at six places")
+} else { check(false, "a legacy request is read") }
+
+check(ZkMoneyLink.spellsLink(" https://zk.money/r#AmW2BnPW7YhL8BwsIi2CraA ") && ZkMoneyLink.spellsLink("https://wallet.zk.money/pay/zac#2QED") && ZkMoneyLink.spellsLink("HTTPS://zk.money/r#A"),
+      "a zk.money link is known by its address, read or not")
+check(!ZkMoneyLink.spellsLink("zac.zk.money") && !ZkMoneyLink.spellsLink("https://zk.money.example.com/r#A") && !ZkMoneyLink.spellsLink("https://example.com/zk.money") && !ZkMoneyLink.spellsLink("0x6b175474e89094c44da98b954eedeac495271d0f") && !ZkMoneyLink.spellsLink(""),
+      "…and a tag, another site and an address are not one")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
@@ -333,6 +355,15 @@ PY
 mutate "a lookup trusted from any contract" \
   'sender == expected.lowercased(),' \
   'sender.count == 42,'
+mutate "a request in oxDAI left with no amount" \
+  '== .orderedSame ? "DAI" : symbol' \
+  '== .orderedSame ? symbol : symbol'
+mutate "a legacy amount read at eighteen places" \
+  'static let legacyDecimals = 6' \
+  'static let legacyDecimals = 18'
+mutate "any site's link named a zk.money request" \
+  'return isZkMoneyHost(url.host)' \
+  'return url.host != nil'
 mutate "a gateway on any host" \
   'url.scheme == "https", url.host == gatewayHost else { return nil }' \
   'url.scheme == "https" else { return nil }'
@@ -488,6 +519,11 @@ grep -q 'with = pick' "$TMP/take.txt" && grep -q 'inDollars = pick == nil' "$TMP
 awk '/private func choose\(_ h: Tokens.Held\) \{/,/^    }/' "$SEND" \
   | grep -q 'if let request = payingRequest, amount == request.amount, ZkMoneyWire.payTokens.contains(h.id) {' \
   || { echo "✗ picking a deposit token clears the amount a request asked for"; exit 1; }
+
+# A link in To is named while it is read, never spelled (prd §1751).
+awk '/private var toWord: some View \{/,/^    }/' "$SEND" \
+  | grep -q 'ZkMoneyLink.spellsLink(to) ? String(localized: "zk.money request")' \
+  || { echo "✗ To spells a request link out while it is looked up"; exit 1; }
 
 # The resolver is asked of ENS before each lookup (prd §1750), and the lookup
 # must come from the one it names: the pin alone went stale in eight days.

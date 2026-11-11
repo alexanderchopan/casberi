@@ -251865,6 +251865,34 @@
         }
       }
     },
+    "zk.money request" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "solicitud de zk.money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money のリクエスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 요청"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 请求"
+          }
+        }
+      }
+    },
     "zk.money takes DAI, USDC or USDT on Ethereum" : {
       "localizations" : {
         "es" : {

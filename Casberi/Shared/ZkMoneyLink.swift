@@ -66,6 +66,15 @@ enum ZkMoneyLink {
         return host == "zk.money" || host.hasSuffix(".zk.money")
     }
 
+    /// A zk.money link by its address alone, read or not: what To holds
+    /// while a request is looked up, which the sentence names and never
+    /// spells (prd §1751). A tag (`zac.zk.money`) has no scheme and is not one.
+    static func spellsLink(_ raw: String) -> Bool {
+        guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.lowercased().hasPrefix("http") == true else { return false }
+        return isZkMoneyHost(url.host)
+    }
+
     static func link(_ raw: String) -> Link? {
         guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
               isZkMoneyHost(url.host), let fragment = url.fragment, !fragment.isEmpty else { return nil }
@@ -108,18 +117,32 @@ enum ZkMoneyLink {
             var value = Decimal(0)
             for byte in raw { value = value * 256 + Decimal(byte) }
             if value > 0 {
-                var decimals = 18
+                // A link that names no decimals is a legacy one, whose
+                // amounts were six places (the codec's own rule).
+                var decimals = legacyDecimals
                 if case .uint(let d)? = map[9] { decimals = Int(d) }
                 amount = value / pow(10, decimals)
             }
         }
         var symbol: String?
-        if case .text(let s)? = map[5] { symbol = s }
+        if case .text(let s)? = map[5] { symbol = dollarName(s) }
         var note: String?
         if case .text(let n)? = map[6], !n.isEmpty { note = n }
         var expires: Date?
         if case .uint(let ms)? = map[7] { expires = Date(timeIntervalSince1970: TimeInterval(ms) / 1000) }
         return .request(tag: tag.lowercased(), amount: amount, symbol: symbol, note: note, expires: expires)
+    }
+
+    static let legacyDecimals = 6
+
+    /// **A REQUEST NAMES ITS TOKEN ON AZTEC (prd §1751, measured 2026-11-11
+    /// off a real format-3 request; user: "it read the address but not the
+    /// amount").** zk.money's dollar there is `oxDAI`, what a deposit of DAI
+    /// becomes, and its own payer never reads the symbol: it sends the
+    /// amount, plus the fee, in DAI (`accountlessRequest.ts`). Read as DAI
+    /// here, so the row, the amount and the fee say what will be sent.
+    static func dollarName(_ symbol: String) -> String {
+        symbol.caseInsensitiveCompare("oxDAI") == .orderedSame ? "DAI" : symbol
     }
 
     /// How every request row's title begins: the cheap gate before a row's

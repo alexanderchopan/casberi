@@ -72083,3 +72083,19 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** Nothing here is phone-only.
 
 **Checks.** `zkmoney-selftest.sh`: the registry's answer read as an address; none, no answer and a malformed word read as none; a lookup from the pin refused once ENS names another, and one from the named resolver read; the order in `depositAddress` (ENS, then the call, then the lookup held to it); two mutations.
+
+## §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled (amends §1745's "a token a deposit does not take is left to you" for zk.money's own dollar, and §1746's reader) (user, on build 981, of a real request pasted into Send's To: "doesn't say accountless says the https address", then "it read the address but not the amount"; "the link was for .01 dai tho maybe that is why", 2026-11-11) — BUILT; seen on the simulator, NOT SEEN on a phone
+
+**What was measured.** The user's request (`zk.money/r#…`, read off Aztec with the app's own steps) is a format-3 packet: tag, amount 0.01 at 18 decimals, an embedded deposit address, and token symbol `OXDAI`. That is the token's name on Aztec, what a deposit of DAI becomes. §1745 wrote an amount only for a request naming DAI, USDC, USDT or no token, so this one filled To and nothing else. The small amount was not the cause: a 1-cent request in dollars writes 0.36.
+
+**What zk.money's own payer does** (`accountlessRequest.ts`, its public repo): it never reads the symbol. It sends the packet's amount plus the deposit fee in the deployment's deposit token, DAI, and refuses a link whose decimals are not that token's. A link naming no decimals is read at six places.
+
+1. **oxDAI reads as DAI** (`ZkMoneyLink.dollarName`, at the reader, so the row's title, the amount, the fee and the token pick all follow): "Send 0.36 DAI to accountless.zk.money on Ethereum", DAI picked when you hold it there, else USDC, then USDT. Any other token name still writes no amount: a fee in dollars added to a token that is not a dollar would be a guess.
+2. **A link with no decimals is six places** (`ZkMoneyLink.legacyDecimals`), the codec's rule; it was eighteen, which read a legacy 0.01 as nothing.
+3. **While a link is read, To says "zk.money request"** (`ZkMoneyLink.spellsLink`), with "Looking up this request" under it. It spelled the whole https address for the minute a short link takes over Tor, which read as a failure.
+
+**Not built.** Paying the request's own embedded deposit address (§1750 item 5 stands), the fee read from the chain, and a faster short-link read.
+
+**Mac half (§1402).** Nothing here is phone-only.
+
+**Checks.** `zkmoney-selftest.sh`: a made-up format-3 request in the real packet's shape reads as 0.01 DAI and pays 0.36 with DAI named; only zk.money's dollar is renamed; a link with no decimals reads at six places; a zk.money link is known by its address and a tag, another site and an address are not; To's word is wired; three mutations.

@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1928 of 2001 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1929 of 2002 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2170,12 +2170,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1743 — A Nymis scan says how long it takes: the footnote says a few minutes before the tap, the row says it while the scan r…
 - §1744 — Nymis scans on its own, once per address: a wallet when you follow it, your account when its first transaction lands,…
 - §1744a — Only your account scans on its own; a wallet you follow scans on a tap (amends §1744 items 1 and 5) (Nymis, relayed b…
-- §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid…
+- §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid… (amended by §1751)
 - §1746 — zk.money's resolver is re-pinned, checked nightly against ENS, and the reader takes the request format zk.money write… (amended by §1750)
 - §1747 — Listen stands only over a body of forty words or more
 - §1748 — A zk.money request link pasted into Send's To writes the sentence, and the short link zk.money's Share gives is read… (amended by §1749)
 - §1749 — A pasted request picks its token and keeps its amount
 - §1750 — Paying a zk.money tag asks ENS for the resolver each time; the pin is the fallback
+- §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 
 ## Dead rulings → what replaced them (generated)
 

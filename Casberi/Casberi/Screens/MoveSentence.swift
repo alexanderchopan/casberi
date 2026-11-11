@@ -2551,8 +2551,12 @@ struct MoveSentence: View {
     }
 
     private var toWord: some View {
+        // A request link being read is named, never spelled (prd §1751;
+        // user, of a short link's minute on Aztec: "doesn't say accountless
+        // says the https address").
         let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
             ?? (to.isEmpty ? String(localized: "address")
+                : ZkMoneyLink.spellsLink(to) ? String(localized: "zk.money request")
                 : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
         let missing: Bool = { if case .missing = lookup { true } else { false } }()
         return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : MoveSentence.settledInk),
