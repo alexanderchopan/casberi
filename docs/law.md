@@ -2094,8 +2094,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
-- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700aa, §1700k, §1720)
-- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700aa, §1700g, §1700h, §1700q, §1700r, §1719, §1720)
+- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700k, §1720)
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720)
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k, §1700p)
@@ -2114,7 +2114,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700v — Your Aztec account's engine starts before it is asked: the app coming back or the Wallet opening starts it and reads…
 - §1700w — A private send on Aztec says its steps where it was started: Move draws three rows under the sentence (Checked · Prov…
 - §1700x — One model and one set of rows for every private send, Aztec's and Railgun's: a send's plan is its ordered steps, the…
-- §1700y — Aztec's Move says dollars and holds one thing at a time in its foot, as Railgun's does: the amount in dollars with Ha… (amended by §1700aa)
+- §1700y — Aztec's Move says dollars and holds one thing at a time in its foot, as Railgun's does: the amount in dollars with Ha…
 - §1700z — Lend takes Move's one foot: the amount in dollars with Half · All under the sentence, one cost over the act, the step…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber…
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)

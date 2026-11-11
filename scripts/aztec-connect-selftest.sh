@@ -115,5 +115,8 @@ fees_mutant "a private payment is measured past the balance" "s/await estimate\(
 fees_mutant "a send that reached Aztec is sent again" 's/    if \(reached\(\) !== before\) throw first;[^\n]*\n//'
 fees_mutant "the second failure hides the first" 's/    \} catch \{\n      throw first;/    } catch (second) {\n      throw second;/'
 fees_mutant "the pinned address is not the one the bytecode derives" 's/0x0516ebb4/0x0516ebb5/'
+fees_mutant "two sends choose how to pay at once" 's/    const mine = last\.then\(run\);/    const mine = Promise.resolve().then(run);/'
+grep -q "return ownTurn(() => sendPaying({" $MAIN \
+  || { echo "✗ Casberi's sends no longer take turns: a claim and a send can be offered the same gas deposit"; exit 1; }
 
 echo "aztec connect self-test: ok"

@@ -44,7 +44,7 @@ import { FPCFeePaymentMethod, PrivateMintAndPayFeePaymentMethod } from '@alejoam
 import { estimateGasSettings, maxFeesPerGasFromBaseFees, maxGasCostFor } from '@alejoamiras/private-fee-juice/utils';
 import { WALLET_ICON } from './icon.js';
 import { watched, sendsReached } from './steps.js';
-import { PRIVATE_FEES, choose, sendPaying } from './private-fees.js';
+import { PRIVATE_FEES, choose, sendPaying, inTurn } from './private-fees.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -282,16 +282,18 @@ async function feeFor(wallet, interaction, gasJSON) {
   return { ...picked, options: { additionalScopes: [fpc.address], fee: { paymentMethod: await method(picked.how, picked.item), gasSettings } } };
 }
 
-// One of Casberi's own sends, paid privately when it can be.
-async function sendOwn(wallet, interaction, gasJSON) {
+// One of Casberi's own sends, paid privately when it can be, in its turn:
+// it chooses how to pay only once the send before it has landed.
+const ownTurn = inTurn();
+function sendOwn(wallet, interaction, gasJSON) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
-  return sendPaying({
+  return ownTurn(() => sendPaying({
     pay: () => feeFor(wallet, interaction, gasJSON),
     send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
     reached: sendsReached,
     log,
-  });
+  }));
 }
 
 // --- Casberi's own calls -----------------------------------------------------------

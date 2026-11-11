@@ -7,7 +7,7 @@
 //   SKIP_ADDRESS=1 node test/...                the logic alone (no hashing)
 //
 // Exit 0 when every check holds, 1 otherwise.
-const { PRIVATE_FEES, choose, sendPaying } = await import(process.env.FEES ?? '../src/private-fees.js');
+const { PRIVATE_FEES, choose, sendPaying, inTurn } = await import(process.env.FEES ?? '../src/private-fees.js');
 
 let failures = 0;
 const check = (ok, what) => { if (!ok) { failures++; console.log('✗ ' + what); } };
@@ -102,6 +102,25 @@ check(s.error?.message === 'timed out' && s.calls.length === 1, 'a send that rea
 
 s = await run({ paid: privately, sends: [new Error('first'), new Error('second')] });
 check(s.error?.message === 'first' && s.calls.length === 2, 'when the account cannot pay either, the first failure is the one read');
+
+// --- one send at a time -----------------------------------------------------------
+// A claim and a send started together: the send chooses how to pay only after
+// the claim has landed (the first real run paid in the open for want of this).
+{
+  const turn = inTurn();
+  const seen = [];
+  let landClaim;
+  const claim = turn(async () => { seen.push('claim starts'); await new Promise(r => (landClaim = r)); seen.push('claim lands'); return 'C'; });
+  const send = turn(async () => { seen.push('send chooses'); return 'S'; });
+  await new Promise(r => setTimeout(r, 20));
+  check(seen.join(',') === 'claim starts', `a send does not choose while a claim is still in flight (got ${seen.join(',')})`);
+  landClaim();
+  check((await claim) === 'C' && (await send) === 'S', 'each send answers with its own result');
+  check(seen.join(',') === 'claim starts,claim lands,send chooses', `the send chooses after the claim lands (got ${seen.join(',')})`);
+  const failed = turn(async () => { throw new Error('boom'); });
+  const after = turn(async () => 'ok');
+  check((await failed.catch(e => e.message)) === 'boom' && (await after) === 'ok', 'a failed send does not hold the next one');
+}
 
 // --- the pinned address ---------------------------------------------------------
 check(PRIVATE_FEES.salt === 1n, 'the shared salt is 1: every wallet derives one address');

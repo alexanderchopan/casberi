@@ -55,6 +55,21 @@ export async function choose({ balance, ceiling, pending, estimate }) {
   return { how: 'own' };
 }
 
+// ONE SEND AT A TIME (prd §1700aa, the first real run, 2026-11-10). Opening
+// Move starts a waiting deposit's claim; a send tapped while that claim was
+// still proving was offered the same gas deposit, lost it to the claim, and
+// went out paid by the account, in the open. Each of Casberi's sends now
+// waits for the one before it, so it chooses how to pay from what that one
+// left: the gas the claim just minted. A failure does not hold the next.
+export function inTurn() {
+  let last = Promise.resolve();
+  return run => {
+    const mine = last.then(run);
+    last = mine.catch(() => {});
+    return mine;
+  };
+}
+
 // Sends one transaction, privately paid when it can be. `pay` answers how
 // (`choose`'s answer with its send options), `send(options)` sends, and
 // `reached()` counts what has been handed to Aztec's node. A privately paid
