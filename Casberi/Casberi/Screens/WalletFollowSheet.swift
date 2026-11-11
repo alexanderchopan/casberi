@@ -125,6 +125,15 @@ struct WalletFollowSheet: View {
                 row(address: s.address, name: s.name, line: line(for: s))
             }
         }
+        if wallet.canWatchMore, connectNote == nil { nymisNote }
+    }
+
+    /// A follow sends the address to Nymis once (prd §1744), so the tray
+    /// says so where the follow is made. Not in the demo, which scans nothing.
+    @ViewBuilder private var nymisNote: some View {
+        if NymisScans.scansOnItsOwn {
+            footnote(Text("Following also scans the address with Nymis for privacy leaks."))
+        }
     }
 
     private func line(for s: WalletFollowSuggest.Suggestion) -> String {
@@ -153,6 +162,7 @@ struct WalletFollowSheet: View {
                 row(address: target.address,
                     name: known?.name ?? target.worldAppName ?? (target.label.isEmpty ? nil : target.label),
                     line: line, target: target)
+                if wallet.canWatchMore { nymisNote }
             case .missed(let note):
                 footnote(Text(verbatim: note))
             }

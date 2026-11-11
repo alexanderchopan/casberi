@@ -834,6 +834,9 @@ enum WalletIngest {
         // The balance behind a landed transfer is not the one the window
         // holds (prd §1722): drop it, and the room reads again.
         if saved, !touched.isEmpty { await invalidateHoldings(addresses: Array(touched)) }
+        // Your account's first transaction has landed: Nymis scans it once,
+        // on its own (prd §1744).
+        if saved, !touched.isEmpty { NymisScans.shared.scanOnActivity(touched) }
         // Then the already-landed legs this pass re-read (2026-08-02): backfill
         // the price the row may predate, and flag the fictions among them.
         // Separate save — a heal must never be able to lose a landing.

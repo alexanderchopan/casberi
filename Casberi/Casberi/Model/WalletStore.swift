@@ -1085,6 +1085,12 @@ final class WalletStore {
         // resolved this launch and `ENS.avatar` caches misses too, so this
         // costs exactly one lookup for the wallet just added.
         Task { @MainActor in await loadAvatars() }
+        // A wallet followed is scanned by Nymis once, on its own (prd §1744);
+        // a name that has not resolved to hex yet is not.
+        if !isYourAccount(addr) {
+            let hex = ENS.isHexAddress(addr) ? addr : resolvedForm(of: addr)
+            if let hex { Task { @MainActor in NymisScans.shared.scanOnFollow(hex) } }
+        }
         return .added
     }
 

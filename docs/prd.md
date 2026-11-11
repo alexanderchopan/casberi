@@ -71953,3 +71953,18 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 3. **No timer.** The poll writes the scan's request count every 30 to 60 seconds, which redraws the row, so the line turns on the next poll after five minutes (`NymisScans.started`).
 
 **Not decided.** Scanning on its own when an account is made or a wallet is followed (asked the same day): §1701 item 6 stands until ruled.
+
+## §1744 — Nymis scans on its own, once per address: a wallet when you follow it, your account when its first transaction lands, never when the account is made (amends §1701 item 6's "nothing scans on its own" and its `NetworkReach` line) (user, 2026-11-11: "could we run a scan in the background automatically when person creates account or follows wallet?"; told a new account has nothing to find and that a follow would send someone else's address to Nymis untapped, recommended scanning on follow with the tray saying so and scanning your account after its first transaction: "yes re scanning too as you recommend") — BUILT; compiled NOWHERE yet (the build session had no Swift toolchain), NOT measured, NOT seen
+
+**Why.** Risks says "Unscanned" until a person finds the Privacy rows and taps Scan, and most never reach the page (§1729). A scan run where the address enters the Wallet means the reading is there when they arrive.
+
+1. **A follow scans the wallet once** (`NymisScans.scanOnFollow`), called from `WalletStore.outcome(ofAdding:)`, the one add every door goes through (the tray, a name, WalletConnect, the book). A name that has not resolved to hex is not scanned. Your own account is never scanned on follow.
+2. **Your account scans once its first transaction lands** (`scanOnActivity`), from `WalletIngest.refresh` after the save, off the pass's `touched` wallets. Never when the account is made (§1741): a new address has nothing to find, and the reading would be out of date at the first move.
+3. **Once per address** (`nymis.auto.v1`, device-only): never over a reading or a running scan, never again on its own whatever it read; a tap still scans again. Past a Nymis refusal (429) nothing starts on its own and no row is marked busy; a tap waits as before. Scans still run one at a time, so several follows queue ("Waiting for another scan").
+4. **Quiet.** A scan nobody tapped for ends with no haptic. The row shows it running ("Scanning, takes a few minutes", §1743) like any other. The poll runs while the app is open; a scan a past launch started is picked up when the Privacy rows are drawn, within Nymis's 30 minutes.
+5. **Said where it happens.** The follow tray says "Following also scans the address with Nymis for privacy leaks." under its rows, while there is room to follow and no connect note. `NetworkReach`'s Nymis line says when Nymis is reached on its own.
+6. **Not in the demo, and in DEBUG only with `-liveChains YES`** (`NymisScans.scansOnItsOwn`), so a probe that follows a wallet spends none of Nymis's public quota.
+
+**Checks.** `nymis-selftest.sh`: `scanOnFollow` is called from `WalletStore.swift` only, `scanOnActivity` from `WalletIngest.swift` only, and the scan-on-its-own path keeps its demo, DEBUG, once-only and no-reading guards.
+
+**Not built.** Scanning wallets followed before this ruling: they wait for a tap.

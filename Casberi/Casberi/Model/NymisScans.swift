@@ -15,9 +15,13 @@ import Observation
 /// past launch started is picked up by asking again with the SAME
 /// idempotency key, which Nymis answers with the same scan for 30 minutes.
 ///
-/// Nothing here starts a scan on its own. `scan(_:)` is called from the
-/// Scan control and the `-nymisScan` probe, nowhere else
-/// (`nymis-selftest.sh` holds that).
+/// A scan starts from a tap (`scan(_:)`: the Scan control, Scan again and
+/// the `-nymisScan` probe) or on its own, ONCE per address (prd §1744,
+/// amending §1701 item 6): when you follow a wallet (`scanOnFollow`, from
+/// `WalletStore`'s one add) and when your own account's first transaction
+/// lands (`scanOnActivity`, from `WalletIngest`), never when the account is
+/// made, because a new address has nothing to find. `nymis-selftest.sh`
+/// holds both caller lists.
 @MainActor @Observable
 final class NymisScans {
     static let shared = NymisScans()
@@ -52,6 +56,8 @@ final class NymisScans {
         /// Requests spent on this scan, retries included (Nymis's budget is
         /// 30). Optional so a scan saved before §1701d still decodes.
         var requests: Int?
+        /// Started on its own (§1744), not by a tap: its end does not buzz.
+        var auto: Bool?
     }
 
     /// Address key → scan token. Memory only (Nymis: keep it out of logs,
@@ -72,6 +78,10 @@ final class NymisScans {
     /// Nymis: while summaries are pending, every 5 seconds for at most 30.
     static let summaryEvery: Duration = .seconds(5)
     static let summaryPolls = 6
+    /// The addresses a scan has started on its own for (§1744): never again
+    /// on its own, whatever it read; a tap scans again.
+    static let autoKey = "nymis.auto.v1"
+    private(set) var autoAsked: Set<String> = []
 
     private init() {
         let defaults = UserDefaults.standard
@@ -85,6 +95,10 @@ final class NymisScans {
         if let data = defaults.data(forKey: Self.runningKey),
            let saved = try? JSONDecoder().decode([String: Running].self, from: data) {
             running = saved.filter { Date.now.timeIntervalSince($0.value.started) < Self.giveUp }
+        }
+        if let data = defaults.data(forKey: Self.autoKey),
+           let saved = try? JSONDecoder().decode([String].self, from: data) {
+            autoAsked = Set(saved)
         }
     }
 
@@ -117,6 +131,51 @@ final class NymisScans {
         running[key] = Running(started: .now, idempotencyKey: UUID().uuidString.lowercased())
         saveRunning()
         follow()
+    }
+
+    /// A wallet you just followed (§1744). Your own account waits for its
+    /// first transaction (`scanOnActivity`).
+    func scanOnFollow(_ address: String) {
+        guard !WalletWatch.sameAddress(YourAccountKey.address ?? "", address) else { return }
+        scanOnItsOwn(address)
+    }
+
+    /// The wallets a transfer or swap just landed at (§1744): your own
+    /// account's first one scans it.
+    func scanOnActivity(_ addresses: Set<String>) {
+        guard let mine = YourAccountKey.address,
+              addresses.contains(where: { WalletWatch.sameAddress($0, mine) }) else { return }
+        scanOnItsOwn(mine)
+    }
+
+    /// Once per address, never over a reading or a running scan, never past
+    /// Nymis's limit (a refusal waits for a tap, and marks no row), never in
+    /// the demo, and in DEBUG only with `-liveChains YES`, so a probe that
+    /// follows a wallet spends none of Nymis's public quota.
+    private func scanOnItsOwn(_ address: String) {
+        guard Self.scansOnItsOwn, NymisScan.isEVMAddress(address) else { return }
+        let key = NymisScan.key(address)
+        guard readings[key] == nil, running[key] == nil, !autoAsked.contains(key) else { return }
+        if let until = busyUntil, until > .now { return }
+        autoAsked.insert(key)
+        if let data = try? JSONEncoder().encode(autoAsked.sorted()) { DefaultsWrite.set(data, forKey: Self.autoKey) }
+        failed.remove(key)
+        busy.remove(key)
+        running[key] = Running(started: .now, idempotencyKey: UUID().uuidString.lowercased(), auto: true)
+        saveRunning()
+        #if DEBUG
+        NSLog("nymis| %@ | on its own", key)
+        #endif
+        follow()
+    }
+
+    static var scansOnItsOwn: Bool {
+        if DemoMode.isActive { return false }
+        #if DEBUG
+        return !ChainReadsOff.isOn
+        #else
+        return true
+        #endif
     }
 
     /// Picks up scans a past launch started, when Threats is on screen.
@@ -266,6 +325,7 @@ final class NymisScans {
     }
 
     private func finish(_ key: String, _ reading: NymisScan.Reading?) {
+        let auto = running[key]?.auto == true
         running[key] = nil
         tokens[key] = nil
         saveRunning()
@@ -273,7 +333,8 @@ final class NymisScans {
             readings[key] = reading
             failed.remove(key)
             saveReadings()
-            DSHaptic.success()
+            // A scan nobody tapped for lands quietly (§1744).
+            if !auto { DSHaptic.success() }
         } else {
             failed.insert(key)
         }

@@ -46,10 +46,22 @@ for f in "$SHAPE" "$SCANS" "$ROWS" "$SHEET"; do
 done
 
 # ── Drift guards ────────────────────────────────────────────────────────────
-# Only the Scan control, Scan again and the probe start a scan.
+# A tap starts a scan: the Scan control, Scan again and the probe.
 callers=$(grep -rlF 'NymisScans.shared.scan(' Casberi/Casberi | sort | tr '\n' ' ')
 [[ "$callers" == "Casberi/Casberi/Screens/FeedScreen+WalletPrivacy.swift Casberi/Casberi/Screens/NymisReadingSheet.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ a scan starts from somewhere other than the Scan control: $callers"; exit 1; }
+# A scan on its own (§1744): a follow, from WalletStore's one add, and your
+# account's first landed transaction, from WalletIngest; nowhere else, once
+# per address, never in the demo, and in DEBUG only with -liveChains YES.
+followers=$(grep -rlF 'NymisScans.shared.scanOnFollow(' Casberi/Casberi | sort | tr '\n' ' ')
+[[ "$followers" == "Casberi/Casberi/Model/WalletStore.swift " ]] \
+  || { echo "✗ a scan on follow starts from somewhere other than WalletStore's add: $followers"; exit 1; }
+landers=$(grep -rlF 'NymisScans.shared.scanOnActivity(' Casberi/Casberi | sort | tr '\n' ' ')
+[[ "$landers" == "Casberi/Casberi/Model/WalletIngest.swift " ]] \
+  || { echo "✗ a scan on activity starts from somewhere other than WalletIngest: $landers"; exit 1; }
+for guard in 'DemoMode.isActive' 'ChainReadsOff.isOn' 'autoAsked.contains(key)' 'readings[key] == nil, running[key] == nil'; do
+  grep -qF "$guard" "$SCANS" || { echo "✗ a scan on its own lost its guard: $guard"; exit 1; }
+done
 # No score, grade or points on screen, and the reading never reads them.
 if grep -nEi 'score|grade|percentile' "$ROWS" "$SHEET" | grep -vE '^\S+:[0-9]+:\s*///'; then
   echo "✗ a score, grade or percentile is drawn"; exit 1

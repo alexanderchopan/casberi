@@ -589,6 +589,34 @@
         }
       }
     },
+    "Following also scans the address with Nymis for privacy leaks." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir también analiza la dirección con Nymis en busca de filtraciones de privacidad."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローすると、Nymis がアドレスのプライバシー漏洩もスキャンします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하면 Nymis가 주소의 개인정보 노출도 스캔합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注后，Nymis 也会扫描该地址的隐私泄露。"
+          }
+        }
+      }
+    },
     "The address is analyzed by Nymis, which examines public onchain data to identify potential privacy leaks." : {
       "localizations" : {
         "es" : {
