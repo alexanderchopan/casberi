@@ -1902,6 +1902,14 @@ body { overflow-x: clip; }
 .hero .hero-pay { font-size: clamp(28px, 3.4vw, 36px); font-weight: 900;
   letter-spacing: -.045em; line-height: 1.08; margin: 10px auto 0; max-width: 700px; }
 .hero .hero-pay em { font-style: normal; }
+.hero h1 em.brandink, .brandink { background: none; -webkit-background-clip: initial; background-clip: initial;
+  color: var(--brand-pink); font-style: normal; font-weight: inherit; }
+.hero-keep em.brandink { font-weight: 750; }
+@media (max-width: 600px) {
+  .hero-creature { display: none; }   /* the rain alone on a phone, so the headline clears the fold */
+  .hero-prob { margin-top: 26px; }
+  .hero-keep { font-size: 16px; margin-top: 10px; }
+}
 .hero-verbs { justify-content: center; gap: 8px; margin: 20px auto 0; }
 .hero-keep { font-family: 'Figtree', -apple-system, sans-serif; font-size: 18px; font-weight: 650;
   letter-spacing: -.01em; color: #c9ced8; max-width: 540px; margin: 16px auto 0; }
