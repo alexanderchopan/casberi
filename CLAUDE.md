@@ -330,7 +330,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-wipeAccessProbe YES` — run the Data tray's Delete access internals and log before/after credential counts.
 - `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
 - **An account marked `mine` lands its OWN replies (2026-09-17)** → docs/hooks/social.md · prd §804
-- **Farcaster is DELETED (prd §1110)**: seat, ingest, probes, hosts and its identity in Addresses (`fc:` keys parse to nobody); its rows and `farcaster.` defaults go through `SourceRename.sweepRetiredSeats` → prd §1110
 - Social enrichment (2026-07-16, prd 81) — both networks, one pass through Model/SocialBridge.swift. → docs/hooks/social.md
 - `-likersProbe` — Who liked your post (2026-08-07, prd §330, Model/SocialLikers.swift, -likersProbe YES) → docs/hooks/social.md · prd §330
 - `-followsProbe` — Follow import (2026-07-16, prd 87) → docs/hooks/social.md
@@ -349,7 +348,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-peerRoomProbe` `-safeRoomProbe` — the wallet-riding readings; the Privacy Pools, Railgun and Safe heads are deleted (§1738) → docs/hooks/wallet.md · prd §349
 - **The onchain card head is SHARED (prd §858, 2026-09-20): `CardSpendRoom` serves every onchain card, drawn by one `CardSpendRoomCard(room:seat:)` behind one `FeedScreen` case `.cardSpend(_, seat:)`.** → docs/hooks/wallet.md · prd §858
 - **`CardSpendSeat` is the ONE rule for which rows in a card's room are SPENDS (prd §868, `-etherfiCashRoomProbe`), read by all three sources and the door under the card** → docs/hooks/wallet.md · prd §868 · §858
-- `-instagramImport` `-xArchiveImport` `-xFaces` `-xReplyContext` are DELETED with the X and Instagram importers (prd §1579); X and Instagram are their live sign-ins → docs/hooks/imports.md · prd §1579
 - `-tiktokImport` `-tiktokFaces` — import a TikTok export (the user_data_tiktok.json file itself, or a folder holding it), -tiktokFaces <limit|YES> → docs/hooks/imports.md · prd §279
 - **X joined OEmbed.endpoints on 2026-08-02, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
 - `-xLiveProbe YES` — X's live-notifications door, read with the person's own browser-session cookies via an in-app sign-in, not the paid public API §280 declined → docs/hooks/bridges.md · prd §701 · §737 · §772
@@ -378,7 +376,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - Apple Wallet (2026-08-06, prd §313 + §317, Model/AppleWalletBridge.swift / AppleWalletRoom.swift / → docs/hooks/bridges.md · prd §313
 - Peer (2026-07-17, prd 113; connect model superseded by §207, 2026-07-25) — the fiat↔crypto onramp → docs/hooks/wallet.md · prd §207
 - Privacy Pools (2026-07-21, prd §162) — 0xBow's compliant-privacy pools, the second seat → docs/hooks/wallet.md · prd §162
-- **Gnosis Pay is deleted (prd §1318)**; Gnosis Chain stays (`GnosisChainRPC`)
 - `-metamaskCardProbe` `-plasmaOneProbe` — MetaMask Card (§857b, §860) and Plasma One, settled once a day so a row is a DAY → docs/hooks/wallet.md · prd §857 · §1311 · §222
 - `-bitcoinProbe <address | xpub/zpub/descriptor>` — one Bitcoin address or a whole WALLET (prd §1097): the gap-limit walk, change counted home, dust tagged, reuse reconciled, a waiting send stamped; a pasted `xprv` is refused and never stored. A host gets 20s of wall clock per page (mempool.space trickles busy addresses) → prd §1097 · §226 · §227
 - `-torProbe YES|fail` — iOS wallet reads via Tor, a circuit per wallet, watched while it runs (`tor-health-selftest.sh`) → docs/hooks/wallet.md · prd §1495 · §1546
