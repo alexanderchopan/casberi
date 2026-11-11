@@ -99,6 +99,10 @@ final class NymisScans {
 
     func reading(_ address: String) -> NymisScan.Reading? { readings[NymisScan.key(address)] }
 
+    /// When the running scan of this address was asked for; the row's line
+    /// says how long it takes from this.
+    func started(_ address: String) -> Date? { running[NymisScan.key(address)]?.started }
+
     /// The Scan control: ask Nymis for a scan of this address and follow it.
     func scan(_ address: String) {
         guard NymisScan.isEVMAddress(address) else { return }

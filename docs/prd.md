@@ -71943,3 +71943,13 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **iPad half.** The same code: a regular iPad with a pane takes items 1, 2 and 4; item 3 is the Mac's.
 
 **Not built.** Move beside the Wallet in the pane (still a tray over the window); a menu bar extra; Translate and the scanner on the Mac. **Not seen:** the start box itself on a Mac with nothing added (this machine has an app connected; the preview hook shows the box in the list column holding the newest thing, and the mark in the pane). The demo's balance line does not draw in the Mac's pane, before and after this pass; not diagnosed. Translation of "All activity". The full verify pass was not run.
+
+## §1743 — A Nymis scan says how long it takes: the footnote says a few minutes before the tap, the row says it while the scan runs, and past five minutes says a busy wallet takes longer (amends §1701's "Scanning" line and its footnote) (user, 2026-11-11: "nymis scan should say how long the scan is bc user won't know") — BUILT; compiled NOWHERE yet (the build session had no Swift toolchain), NOT seen
+
+**Why.** The row said "Scanning" over a spinner and nothing else. A scan runs minutes, not seconds (one measured at 270 s, §1701 item 5; Nymis: "a heavy wallet can take several minutes", §1701d), so a person who tapped had no way to tell a slow scan from a stuck one.
+
+1. **The footnote says it before the tap**, in its one sentence (§748): "A scan takes a few minutes and sends the address to Nymis, which looks it up with blockchain providers and search services."
+2. **The row says it while the scan runs**: "Scanning, takes a few minutes" for the first five minutes (`NymisScan.fewMinutes`, Nymis's own fast-poll window), then "Still scanning, a busy wallet takes longer" until the scan reads, fails or meets the 25-minute cap. "Waiting for another scan" stands. No minute count and no progress bar: Nymis reports no progress, and a number would be made up (§83).
+3. **No timer.** The poll writes the scan's request count every 30 to 60 seconds, which redraws the row, so the line turns on the next poll after five minutes (`NymisScans.started`).
+
+**Not decided.** Scanning on its own when an account is made or a wallet is followed (asked the same day): §1701 item 6 stands until ruled.

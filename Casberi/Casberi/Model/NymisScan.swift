@@ -138,6 +138,10 @@ enum NymisScan {
     /// nothing past 25 minutes from the first ask (its token lasts about 30).
     static let requestBudget = 30
     static let maxAge: TimeInterval = 25 * 60
+    /// What the row promises while a scan runs ("takes a few minutes"); past
+    /// it, the line says a busy wallet takes longer. Nymis's own fast-poll
+    /// window, and one measured scan ended at 270 s (§1701 item 5).
+    static let fewMinutes: TimeInterval = 5 * 60
 
     /// `Retry-After` in seconds or as an HTTP date; a minute when it is
     /// missing or unreadable, never less than ten seconds, never more than a

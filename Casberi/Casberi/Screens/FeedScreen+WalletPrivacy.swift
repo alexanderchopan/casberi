@@ -28,7 +28,7 @@ extension FeedScreen {
         if !slots.isEmpty {
             walletCard(String(localized: "Privacy"), glyph: "", mark: "Nymis") {
                 ForEach(slots) { slot in walletPrivacyRow(slot) }
-                DSFootnote("Scanning sends the address to Nymis, which looks it up with blockchain providers and search services.")
+                DSFootnote("A scan takes a few minutes and sends the address to Nymis, which looks it up with blockchain providers and search services.")
                     .padding(.leading, DSRoomChassis.headGlyph + DSRoomChassis.headGap)
                     .walletListRow()
             }
@@ -51,7 +51,8 @@ extension FeedScreen {
                 break
             }
         } label: {
-            DSFeedRow(name: slot.name, line: Self.privacyLine(state, slot: slot),
+            DSFeedRow(name: slot.name, line: Self.privacyLine(state, slot: slot,
+                                                         started: NymisScans.shared.started(slot.id)),
                       trailingBesideLine: true) {
                 WalletFace(address: slot.id, size: DS.Face.row, circular: true)
             } trailing: {
@@ -81,12 +82,18 @@ extension FeedScreen {
 
     /// Under the name: what gives the address away, where the scan stands,
     /// or the address itself before a scan.
-    static func privacyLine(_ state: NymisScans.State, slot: DSAccountSlot) -> Text? {
+    static func privacyLine(_ state: NymisScans.State, slot: DSAccountSlot, started: Date?) -> Text? {
         switch state {
         case .done(let reading):
             return Text(verbatim: NymisScan.rowLine(reading) ?? String(localized: "Nothing found"))
+        // How long, because a spinner alone says nothing (user, 2026-11-11):
+        // Nymis says a few minutes, a heavy wallet longer (§1701d). The poll
+        // writes `running` every 30–60 s, so the line turns without a timer.
         case .scanning(let waiting):
-            return waiting ? Text("Waiting for another scan") : Text("Scanning")
+            if waiting { return Text("Waiting for another scan") }
+            let age = started.map { Date.now.timeIntervalSince($0) } ?? 0
+            return age < NymisScan.fewMinutes ? Text("Scanning, takes a few minutes")
+                : Text("Still scanning, a busy wallet takes longer")
         // Nymis's limits: the time it said to come back.
         case .busy(let until, _):
             return Text("Nymis is busy until \(busyTime(until))").foregroundStyle(DS.attentionInk)

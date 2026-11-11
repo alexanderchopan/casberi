@@ -589,6 +589,90 @@
         }
       }
     },
+    "A scan takes a few minutes and sends the address to Nymis, which looks it up with blockchain providers and search services." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un análisis tarda unos minutos y envía la dirección a Nymis, que la consulta con proveedores de blockchain y servicios de búsqueda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャンには数分かかり、アドレスが Nymis に送信され、Nymis はブロックチェーンのプロバイダと検索サービスで照会します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔은 몇 분 걸리며, 주소가 Nymis로 전송되고 Nymis는 블록체인 제공업체와 검색 서비스로 이를 조회합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "扫描需要几分钟，会将地址发送给 Nymis，Nymis 会通过区块链服务商和搜索服务查询它。"
+          }
+        }
+      }
+    },
+    "Scanning, takes a few minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Analizando, tarda unos minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャン中、数分かかります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스캔 중, 몇 분 걸립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在扫描，需要几分钟"
+          }
+        }
+      }
+    },
+    "Still scanning, a busy wallet takes longer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue analizando, una cartera con mucha actividad tarda más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スキャン中、取引の多いウォレットは時間がかかります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 스캔 중, 거래가 많은 지갑은 더 오래 걸립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍在扫描，交易多的钱包需要更久"
+          }
+        }
+      }
+    },
     "\"Ask Bankr\" now appears when you type." : {
       "localizations" : {
         "es" : {
@@ -166354,62 +166438,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已扫描"
-          }
-        }
-      }
-    },
-    "Scanning" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Analizando"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "スキャン中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스캔 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在扫描"
-          }
-        }
-      }
-    },
-    "Scanning sends the address to Nymis, which looks it up with blockchain providers and search services." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Analizar envía la dirección a Nymis, que la consulta con proveedores de blockchain y servicios de búsqueda."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "スキャンするとアドレスが Nymis に送信され、Nymis はブロックチェーンのプロバイダと検索サービスで照会します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스캔하면 주소가 Nymis로 전송되며, Nymis는 블록체인 제공업체와 검색 서비스로 이를 조회합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "扫描会将地址发送给 Nymis，Nymis 会通过区块链服务商和搜索服务查询它。"
           }
         }
       }
