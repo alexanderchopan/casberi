@@ -7,7 +7,7 @@
 // Exit 0 when every check holds, 1 otherwise.
 const posted = [];
 globalThis.webkit = { messageHandlers: { engineStep: { postMessage: s => posted.push(JSON.parse(s)) } } };
-const { watched, sawProof, sawSendTx, isSendTx } = await import(process.env.STEPS ?? '../src/steps.js');
+const { watched, sawProof, sawSendTx, isSendTx, sendsReached } = await import(process.env.STEPS ?? '../src/steps.js');
 
 let failures = 0;
 const check = (ok, what) => { if (!ok) { failures++; console.log('✗ ' + what); } };
@@ -45,6 +45,14 @@ check(isSendTx(enc.buffer), 'an ArrayBuffer body is a send');
 check(isSendTx(JSON.stringify([{ jsonrpc: '2.0', id: 1, method: 'node_sendTx', params: [] }])), 'a batch holding node_sendTx is a send');
 check(!isSendTx(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'node_getBlock', params: [1] })), 'a read is not a send');
 check(!isSendTx(undefined), 'no body is not a send');
+
+// Every transaction handed to Aztec is counted, watched or not (prd §1700aa):
+// a failed send is tried another way only when this has not moved.
+const before = sendsReached();
+sawSendTx();
+check(sendsReached() === before + 1, 'a send nobody watches is still counted as having reached Aztec');
+await watched('move', async () => { sawSendTx(); sawSendTx(); });
+check(sendsReached() === before + 3, 'every send is counted, not only the first of a watched one');
 
 if (failures) { console.log(`✗ ${failures} step check(s) failed`); process.exit(1); }
 console.log('✓ steps: checking, proving, sent, done in order, once each; nothing unwatched; node_sendTx read in every body shape');

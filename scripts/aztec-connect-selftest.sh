@@ -24,7 +24,9 @@ GATE_SRC=$ENGINE/src/connect-gate.js
 MAIN=$ENGINE/src/main.js
 TEST=$ENGINE/test/connect-gate.test.mjs
 for f in $GATE_SRC $MAIN $TEST; do [[ -f $f ]] || { echo "✗ $f not found"; exit 1; }; done
-[[ -d $ENGINE/node_modules/@aztec-labs/wallet-sdk ]] || (cd $ENGINE && npm ci --no-audit --no-fund >/dev/null)
+[[ -d $ENGINE/node_modules/@aztec-labs/wallet-sdk && -d $ENGINE/node_modules/@alejoamiras/private-fee-juice ]] \
+  || (cd $ENGINE && npm ci --no-audit --no-fund >/dev/null \
+        && shasum -a 256 package-lock.json | cut -c1-16 > node_modules/.lock-stamp) # aztec-engine.sh's stamp: no second install
 
 # ── The engine goes through the gate, read ─────────────────────────────
 grep -q "import { connectGate } from './connect-gate.js';" $MAIN \
@@ -78,5 +80,40 @@ steps_mutant "proving posted on every proof" 's/  if (!watching || watching.prov
 steps_mutant "a claim's proof posts with nothing watched" 's/  if (!watching || watching.sent) return;/  if (watching?.sent) return;/'
 steps_mutant "a failure reads as done" "s/ok ? 'done' : 'failed'/'done'/"
 steps_mutant "only a string body is a send" 's/  else if (ArrayBuffer.isView(body))/  else if (false)/'
+steps_mutant "an unwatched send is not counted" 's/^  reached++;$/  if (watching) reached++;/'
+
+# ── Private gas (prd §1700aa) ───────────────────────────────────────────
+# The shared private fee contract: used only on its rollup and at the address
+# its own bytecode derives, never asked for more than is there, and a send
+# that reached Aztec never sent twice. Each a failure that loses gas or sends
+# money twice, and none of them shows on a screen.
+FEES_SRC=$ENGINE/src/private-fees.js
+grep -q "if (version !== PRIVATE_FEES.rollupVersion) {" $MAIN \
+  || { echo "✗ main.js uses the private fee contract on a rollup it is not pinned to"; exit 1; }
+grep -q "if (!derived.equals(AztecAddress.fromStringUnsafe(PRIVATE_FEES.address))) {" $MAIN \
+  || { echo "✗ main.js registers the private fee contract without checking the address its bytecode derives"; exit 1; }
+grep -q "additionalScopes: \[fpc.address\], maxAcceptableGasCost: cap," $MAIN \
+  || { echo "✗ a private payment is measured with no ceiling: the contract keeps the whole declared limit"; exit 1; }
+grep -q "    reached: sendsReached," $MAIN \
+  || { echo "✗ a failed private send no longer asks whether it reached Aztec before it is tried again"; exit 1; }
+(( $(grep -c "await sendOwn(wallet, " $MAIN) == 3 )) \
+  || { echo "✗ Casberi's three sends (a claim, a private send, an exit) no longer all pay through sendOwn"; exit 1; }
+(( $(grep -c "\.send({ from: me" $MAIN) == 2 )) \
+  || { echo "✗ a send in main.js goes around sendOwn (two are allowed: sendOwn's own, and the legacy gas claim)"; exit 1; }
+(cd $ENGINE && node test/private-fees.test.mjs) || { echo "✗ the private gas checks failed"; exit 1; }
+fees_mutant() { # name, perl expression
+  perl -0pe "$2" $FEES_SRC > $TMP/private-fees.js
+  cmp -s $FEES_SRC $TMP/private-fees.js && { echo "✗ mutation '$1' changed nothing"; exit 1; }
+  if (cd $ENGINE && FEES=$TMP/private-fees.js node test/private-fees.test.mjs >/dev/null 2>&1); then
+    echo "✗ mutation '$1' passed: the private gas checks cannot see it"; exit 1
+  fi
+  echo "✓ mutation '$1' fails the private gas checks"
+}
+fees_mutant "a deposit Aztec has not carried is minted" 's/    if \(!item\.ready\) continue;\n//'
+fees_mutant "a mint that failed its measure is sent at the fixed limits" 's/UNMEASURED\.test\(words\(e\)\) && item\.amount >= ceiling/item.amount >= ceiling/'
+fees_mutant "a private payment is measured past the balance" "s/await estimate\('private', balance\)/await estimate('private', ceiling)/"
+fees_mutant "a send that reached Aztec is sent again" 's/    if \(reached\(\) !== before\) throw first;[^\n]*\n//'
+fees_mutant "the second failure hides the first" 's/    \} catch \{\n      throw first;/    } catch (second) {\n      throw second;/'
+fees_mutant "the pinned address is not the one the bytecode derives" 's/0x0516ebb4/0x0516ebb5/'
 
 echo "aztec connect self-test: ok"

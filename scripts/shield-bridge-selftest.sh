@@ -48,7 +48,7 @@ grep -q 'shield.human.tech' Casberi/Casberi/Model/NetworkReach.swift \
 if grep -n 'attestation/poch\|cleanHands"\]\s*=' "$APP" "$WIRE" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
   echo "✗ Shield's Proof of Clean Hands (government ID) is asked for: Passport only (prd §1700e)"; exit 1
 fi
-grep -q '"shieldExit", \[asset.symbol, units, recipient, text\]' "$APP" \
+grep -q '"shieldExit", \[asset.symbol, units, recipient, text, AztecGas.unminted\]' "$APP" \
   && grep -q 'recipient: recipient, transaction: transaction' "$APP" \
   || { echo "✗ an exit no longer pays exactly the address in its sentence, or keeps another"; exit 1; }
 grep -q 'try await AztecCoSign.approve(' "$APP" \
@@ -59,6 +59,30 @@ grep -q "Buffer.from('69328dec', 'hex')" "$ENGINE" \
   || { echo "✗ the exit's content is no longer withdraw(address,uint256,address)'s: it could never be finished"; exit 1; }
 grep -q "proxyClass: '0x18fa95a66c31125278bf4d07166e30fff3ad7e12b232710bf7e376f36f2d4b8a'" "$ENGINE" \
   || { echo "✗ the minter proxy's class is no longer pinned"; exit 1; }
+
+# ── Private gas, read (prd §1700aa) ─────────────────────────────────────
+# Gas goes to the shared private fee contract and the next send mints it.
+# Each line below is a wiring a screen cannot show: a send that never offers
+# its waiting deposit pays in public; one that never records what it minted
+# offers a spent deposit for ever; a private deposit claimed on its own would
+# name the account as that claim's payer.
+GAS="Casberi/Casberi/Model/Aztec/AztecGas.swift"
+MOVE="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
+(( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.unminted\]) as? \[String: Any\]') == 3 )) \
+  || { echo "✗ one of the three sends (a claim, a private send, an exit) no longer offers the waiting gas deposits"; exit 1; }
+(( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.spent(by: out)') == 3 )) \
+  || { echo "✗ one of the three sends no longer records the gas deposit it minted"; exit 1; }
+grep -q 'where !deposit.claimed && !deposit.isPrivate {' "$GAS" \
+  || { echo "✗ a private gas deposit is claimed on its own: that claim names the account as its payer"; exit 1; }
+grep -q 'plan\["kind"\] as? String ?? "own"' "$GAS" && grep -q 'kind: plan.kind)' "$GAS" \
+  || { echo "✗ a gas deposit no longer keeps where the engine sent it"; exit 1; }
+if grep -q 'needs 30 AZTEC' "$MOVE"; then
+  echo "✗ a move-in is stopped again for want of AZTEC: gas is bought with what is moved (prd §1700aa)"; exit 1
+fi
+grep -q 'YourAccountSwap.checked(quote, sell: sell, amount: units, chainId: net.chainId)' "$GAS" \
+  || { echo "✗ gas is bought through calls Swap's own check has not read"; exit 1; }
+grep -q 'bought >= leastBought' "$GAS" \
+  || { echo "✗ a gas sale that buys almost nothing is sent anyway"; exit 1; }
 
 # ── The wire, run ──────────────────────────────────────────────────────
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT

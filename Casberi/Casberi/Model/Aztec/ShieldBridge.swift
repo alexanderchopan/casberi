@@ -289,7 +289,9 @@ extension ShieldBridge {
             guard let ready = try? await AztecEngine.shared.call("messageReady", [d.messageHash]) as? [String: Any],
                   ready["ready"] as? Bool == true else { continue }
             do {
-                _ = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex])
+                // The claim mints a waiting gas deposit and pays from it (prd §1700aa).
+                let out = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex, AztecGas.unminted]) as? [String: Any]
+                AztecGas.spent(by: out)
                 AztecAccountStore.shared.markShieldClaimed(d.nonce)
                 await AztecAccountStore.shared.refresh()
             } catch {
@@ -348,10 +350,11 @@ extension ShieldBridge {
         }
         try await PrivateRootKey.unlock(reason: String(localized: "Send \(asset.symbol) out of your private account on Aztec"))
         try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: asset.decimals, symbol: asset.symbol)) from Aztec to \(recipient)"))
-        guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, recipient, text]) as? [String: Any],
+        guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, recipient, text, AztecGas.unminted]) as? [String: Any],
               let transaction = out["tx"] as? String, let message = out["message"] as? String else {
             throw Failure(message: String(localized: "Aztec did not take this move"))
         }
+        AztecGas.spent(by: out)
         let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: recipient, transaction: transaction,
                                                 message: message, outbox: out["outbox"] as? String, withdrawal: nil, at: .now)
         AztecAccountStore.shared.addExit(exit)

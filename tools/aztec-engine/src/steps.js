@@ -24,7 +24,13 @@ export function sawProof() {
   post({ step: 'proving', kind: watching.kind });
 }
 
+// Every transaction handed to Aztec's node, watched or not: a send that
+// failed is tried again another way only when this has not moved (prd §1700aa).
+let reached = 0;
+export const sendsReached = () => reached;
+
 export function sawSendTx() {
+  reached++;
   if (!watching || watching.sent) return;
   watching.sent = true;
   post({ step: 'sent', kind: watching.kind });

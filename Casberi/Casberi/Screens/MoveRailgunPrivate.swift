@@ -911,18 +911,22 @@ struct MoveRailgunSentence<Head: View>: View {
     /// $10 · Half · All (prd §1728 item 1): each types its amount, exact;
     /// a choice that would be under the floor, or more than you have, is
     /// not drawn (§83).
+    /// **ONE CONTROL, AS ROUND-UPS' (user, 2026-11-10: "the design needs to
+    /// match how we do roundups").** Its halves share the row's width, 4 pt
+    /// apart, each a `Chip` that fills, the pick crossfading
+    /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
     @ViewBuilder private var chips: some View {
         let picks = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
         if !picks.isEmpty, !open {
-            HStack(spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s1) {
                 ForEach(picks, id: \.pick) { item in
                     let on = move.amount == item.value
                     Button {
                         typing = false
-                        move.amount = item.value
                         DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { move.amount = item.value }
                     } label: {
-                        Chip(text: chipWord(item.pick), selected: on)
+                        Chip(text: chipWord(item.pick), selected: on, fills: true)
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityAddTraits(on ? [.isSelected] : [])

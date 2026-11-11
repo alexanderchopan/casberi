@@ -65,12 +65,15 @@ extension FeedScreen {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             ForEach(store.publicHeld) { holding in
                 let gas = holding.kind == .feeJuice
+                // Gas is one figure wherever it is kept (prd §1700aa): the
+                // account's own and what it holds in the private fee contract.
+                let units = gas ? NSDecimalNumber(decimal: holding.gasUnits).stringValue : holding.publicUnits
                 // Network · fact (prd §1718): "Aztec · Gas"; a public token,
                 // "Aztec" alone, as the Tokens rows above it name theirs.
                 aztecRow(title: holding.name,
                          line: gas ? String(localized: "Aztec · Gas") : "Aztec",
-                         figure: mask ?? (gas ? nil : store.usd(holding, units: holding.publicUnits).map(WalletValue.money))
-                             ?? Self.aztecFigure(holding, units: holding.publicUnits),
+                         figure: mask ?? (gas ? nil : store.usd(holding, units: units).map(WalletValue.money))
+                             ?? Self.aztecFigure(holding, units: units),
                          // Grey, as every Tokens row's figure is.
                          mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary)
             }

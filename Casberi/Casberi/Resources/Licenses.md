@@ -211,6 +211,38 @@ The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25
 
 The licence notices of each are kept at the end of railgun-engine.js. Its exact sources and build are in tools/railgun-engine in Casberi's source.
 
+# Aztec engine
+
+The app's Aztec engine (the page in AztecEngine, and Aztec's prover) bundles, unmodified:
+
+- Aztec's wallet, private execution and client libraries (@aztec-labs/aztec.js, wallets, wallet-sdk, accounts, pxe, stdlib, foundation, constants and protocol-contracts 6.0.0), by Aztec Labs and the Aztec Foundation. Licensed under the Apache License, Version 2.0, below.
+- Barretenberg, Aztec's prover (the v6.0.0 static libraries), by Aztec Labs. Licensed under the Apache License, Version 2.0, below. Its JavaScript package (@aztec-foundation/bb.js 6.0.0), MIT License.
+- Private fee payment contract and client (@alejoamiras/private-fee-juice 6.0.0), by Wonderland. MIT License, below.
+
+Its exact sources and build are in tools/aztec-engine in Casberi's source.
+
+MIT License
+
+Copyright (c) 2025 Wonderland
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 # ERC-7730 clear-signing registry
 
 The Ethereum Foundation's registry of how contract calls read, bundled in the app. Dedicated to the public domain under CC0 1.0.

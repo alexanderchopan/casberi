@@ -46,6 +46,13 @@ final class AztecAccountStore {
         var isHeld: Bool {
             [privateUnits, publicUnits].contains { ($0.flatMap { Decimal(string: $0) } ?? 0) > 0 }
         }
+
+        /// **GAS, BOTH PLACES (prd §1700aa).** Fee Juice the account can spend:
+        /// its own (public on Aztec) and what it keeps inside the private fee
+        /// contract (`privateUnits`, read by the engine), base units together.
+        var gasUnits: Decimal {
+            [privateUnits, publicUnits].compactMap { $0.flatMap { Decimal(string: $0) } }.reduce(0, +)
+        }
     }
 
     /// One gas deposit (prd §1700e item 2): the Safe's AZTEC into Aztec's
@@ -61,7 +68,12 @@ final class AztecAccountStore {
         let leafIndex: String
         var claimed: Bool
         let at: Date
+        /// Where it went (prd §1700aa): `"private"`, to the shared private fee
+        /// contract, minted by the next send; nil or `"own"` (every deposit
+        /// before §1700aa), to the account itself, claimed on its own.
+        var kind: String?
         var id: UInt64 { nonce }
+        var isPrivate: Bool { kind == "private" }
     }
 
     /// One Shield deposit (prd §1700e): USDC or WETH from the Safe through
@@ -182,14 +194,18 @@ final class AztecAccountStore {
         return NSDecimalNumber(decimal: amount).doubleValue * price
     }
 
-    /// What is private on Aztec, and what is public there (Fee Juice is
-    /// always public: Aztec keeps gas balances in the open, by design).
+    /// What is private on Aztec, and what stands under Tokens. Gas is one row
+    /// there wherever it is kept (prd §1700aa): the account's own Fee Juice,
+    /// public on Aztec by design, and what it keeps in the private fee
+    /// contract, which no one else can read.
     var privateHeld: [Holding] {
         shown.holdings.filter { h in h.kind == .token && (h.privateUnits.flatMap { Decimal(string: $0) } ?? 0) > 0 }
     }
     var publicHeld: [Holding] {
-        shown.holdings.filter { h in (h.publicUnits.flatMap { Decimal(string: $0) } ?? 0) > 0 }
-            .sorted { a, _ in a.kind == .feeJuice }
+        shown.holdings.filter { h in
+            h.kind == .feeJuice ? h.gasUnits > 0 : (h.publicUnits.flatMap { Decimal(string: $0) } ?? 0) > 0
+        }
+        .sorted { a, _ in a.kind == .feeJuice }
     }
 
     /// **AZTEC COUNTS IN THE WALLET** as private money does

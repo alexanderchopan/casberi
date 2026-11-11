@@ -160,21 +160,25 @@ struct MoveLendSentence<Head: View>: View {
 
     /// Half · All (prd §1700z), as Aztec's and Railgun's sentences: each
     /// picks its amount; the ladder stays in the amount's own choices.
+    /// **ONE CONTROL, AS ROUND-UPS' (user, 2026-11-10: "the design needs to
+    /// match how we do roundups").** Its halves share the row's width, 4 pt
+    /// apart, each a `Chip` that fills, the pick crossfading
+    /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
     @ViewBuilder private var chips: some View {
         let half = move.half
-        HStack(spacing: DS.Space.s2) {
+        HStack(spacing: DS.Space.s1) {
             if let half {
                 Button {
-                    move.pick(half, all: false)
                     DSHaptic.selection()
-                } label: { Chip(text: String(localized: "Half"), selected: !move.all && move.amount == half) }
+                    withAnimation(DS.Motion.standard) { move.pick(half, all: false) }
+                } label: { Chip(text: String(localized: "Half"), selected: !move.all && move.amount == half, fills: true) }
                 .buttonStyle(PressSpring())
             }
             if let m = market, (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 {
                 Button {
-                    move.pick(nil, all: true)
                     DSHaptic.selection()
-                } label: { Chip(text: String(localized: "All"), selected: move.all) }
+                    withAnimation(DS.Motion.standard) { move.pick(nil, all: true) }
+                } label: { Chip(text: String(localized: "All"), selected: move.all, fills: true) }
                 .buttonStyle(PressSpring())
             }
         }

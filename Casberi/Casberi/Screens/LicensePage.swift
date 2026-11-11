@@ -17,6 +17,7 @@ enum Licenses {
     /// Each library's second line: its license, then who holds it. A section
     /// with no line here draws its name alone (`licenses-audit.py` fails one).
     static let lines: [String: String] = [
+        "Aztec engine": "Apache 2.0 and MIT · Aztec, Wonderland",
         "Coinbase Wallet Mobile SDK": "Apache 2.0 · Coinbase",
         "ERC-7730 clear-signing registry": "Public domain · Ethereum Foundation",
         "Privacy Pools engine": "MIT and GPL 3 · 0xbow, iden3, wevm",
@@ -30,7 +31,7 @@ enum Licenses {
 
     /// The libraries under Apache 2.0, whose page carries its text after
     /// their own notice.
-    static let underApache: Set<String> = ["Coinbase Wallet Mobile SDK", "Yttrium"]
+    static let underApache: Set<String> = ["Aztec engine", "Coinbase Wallet Mobile SDK", "Yttrium"]
 
     static let source = URL(string: "https://github.com/alexanderchopan/casberi")!
     /// The GPL as the repository holds it, the README's section 7

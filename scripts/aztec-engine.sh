@@ -17,7 +17,10 @@ ENGINE=Casberi/AztecEngine
 SRC=tools/aztec-engine
 
 stamp() { # what the engine build is made from
-  { cat $SRC/package-lock.json $SRC/vite.config.js $SRC/index.html; cat $SRC/src/*.js; cat $SRC/shield/*.json 2>/dev/null; } | shasum -a 256 | cut -c1-16
+  # Shield's interfaces are there only once fetched: no match is no input,
+  # never zsh's "no matches found" (which failed the self-test's bare copy).
+  local shield=($SRC/shield/*.json(N))
+  { cat $SRC/package-lock.json $SRC/vite.config.js $SRC/index.html; cat $SRC/src/*.js; (( $#shield )) && cat $shield; true; } | shasum -a 256 | cut -c1-16
 }
 
 ensure_prover() {
@@ -35,15 +38,27 @@ ensure_prover() {
   done
 }
 
+lock_stamp() { shasum -a 256 $SRC/package-lock.json | cut -c1-16; }
+
+# The packages the lockfile names, installed again whenever it changes: a
+# checkout that already had `node_modules` would otherwise build against the
+# old set and fail on a package added since (prd §1700aa added one).
+ensure_packages() {
+  local want; want=$(lock_stamp)
+  [[ -d $SRC/node_modules && "$(cat $SRC/node_modules/.lock-stamp 2>/dev/null)" == $want ]] && return
+  print -u2 "aztec-engine: installing the engine's packages"
+  (cd $SRC && npm ci --no-audit --no-fund >/dev/null)
+  print $want > $SRC/node_modules/.lock-stamp
+}
+
 ensure_engine() {
   # Shield's Aztec interfaces, fetched from its own site and pinned to the
   # classes mainnet runs (prd §1700d); kept once fetched.
-  [[ -d $SRC/node_modules ]] || (cd $SRC && npm ci --no-audit --no-fund >/dev/null)
+  ensure_packages
   (cd $SRC && node fetch-shield.mjs) || { print -u2 "aztec-engine: Shield's interfaces could not be fetched and pinned"; exit 1; }
   local want; want=$(stamp)
   [[ -f $ENGINE/index.html && "$(cat $ENGINE/.stamp 2>/dev/null)" == $want ]] && return
   print -u2 "aztec-engine: building the engine page"
-  [[ -d $SRC/node_modules ]] || (cd $SRC && npm ci --no-audit --no-fund >/dev/null)
   (cd $SRC && npx vite build >/dev/null)
   # The page relay: Aztec's content-script half, one classic script the app
   # adds to an Aztec app's page in an isolated world (AztecBrowser).

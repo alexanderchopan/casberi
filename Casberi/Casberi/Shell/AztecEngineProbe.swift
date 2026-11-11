@@ -4,7 +4,8 @@ import Foundation
 /// `-aztecEngineProbe YES` — starts your Aztec account's engine (prd §1700)
 /// headless: serve and load the page, start Aztec's wallet on mainnet, make or
 /// find the root in iCloud Keychain, derive the account, and NSLog
-/// `aztecEngine| probe | <step> | <ms> | <detail>` for each. Reads only.
+/// `aztecEngine| probe | <step> | <ms> | <detail>` for each, private gas
+/// (prd §1700aa) among them. Reads only.
 enum AztecEngineProbe {
     @MainActor
     static func run(_ raw: String) {
@@ -24,6 +25,14 @@ enum AztecEngineProbe {
                 say("account", AddressTail.short(address))
                 let chain = try await AztecEngine.shared.call("chain") as? [String: Any]
                 say("chain", "\(chain?["chainId"] ?? "?") / \(chain?["version"] ?? "?")")
+                // Private gas (prd §1700aa): whether the shared fee contract is
+                // this rollup's, what the account keeps in it, and where a gas
+                // deposit would go. Reads and a derivation; nothing is sent.
+                let fees = try await AztecEngine.shared.call("privateFees") as? [String: Any]
+                say("privateFees", fees?["on"] as? Bool == true
+                    ? "on · \(AddressTail.short(fees?["address"] as? String ?? "")) · holds \(fees?["balance"] ?? "?")" : "off")
+                let plan = try await AztecEngine.shared.call("feeJuicePlan", ["1"]) as? [String: Any]
+                say("gasPlan", "\(plan?["kind"] ?? "?") · to \(AddressTail.short(plan?["to"] as? String ?? ""))")
                 if raw == "used" {
                     AztecAccountStore.shared.markUsed(address: address)
                     let read = await AztecAccountStore.shared.refresh()

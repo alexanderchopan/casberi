@@ -56,8 +56,26 @@ final class AztecMove {
     private(set) var holdings: [Holding] = []
     /// What the Safe holds on Ethereum, base units, by symbol.
     private(set) var safeHeld: [String: String] = [:]
+    /// What your account alone holds, before a co-signer's is counted in
+    /// `safeHeld` (prd §1720): a gas sale is your account's own.
+    private var ownHeld: [String: String] = [:]
     /// Whether a deposit brings gas along (the account is short of it).
     private(set) var bringsGas = false
+    /// The last private send was paid from the account's own Fee Juice, in
+    /// the open (prd §1700aa): the done line says so, never a quiet downgrade.
+    private(set) var paidInTheOpen = false
+    /// **GAS BOUGHT WITH WHAT YOU MOVE (prd §1700aa).** Gas rides along and
+    /// your account holds too little AZTEC for it: a little of the token
+    /// being moved is sold for it in the same operation.
+    var buysGas: Bool {
+        bringsGas && (Decimal(string: safeHeld["AZTEC"] ?? "0") ?? 0) < (Decimal(string: AztecGas.rideAlong) ?? 0)
+    }
+    /// What that sale takes of the picked token, base units; nil when gas is
+    /// not bought, or while a price is still being read.
+    var gasSale: String? {
+        guard mode == .deposit, buysGas else { return nil }
+        return AztecGas.saleUnits(sellPrice: prices[symbol], aztecPrice: prices["AZTEC"], decimals: decimals)
+    }
     private(set) var maxUSD: Double?
     /// Your co-signer, when Shield scores it and not your account: the
     /// deposit is then the co-signer's own (prd §1720).
@@ -88,6 +106,9 @@ final class AztecMove {
     /// portal's deposit and approve.
     static let depositGas = 350_000
     static let gasAlongGas = 150_000
+    /// Buying that gas first (prd §1700aa): a hand-over and one swap through
+    /// two Uniswap v4 pools. An estimate, not measured from a move of ours.
+    static let gasBuyGas = 250_000
 
     static func usd(_ value: Double) -> String {
         value.formatted(.currency(code: "USD").precision(.fractionLength(2)))
@@ -123,7 +144,11 @@ final class AztecMove {
             var half = held / 2, down = Decimal()
             NSDecimalRound(&down, &half, 0, .down)
             value = down
-        case .all: value = held
+        // All leaves what gas is bought with (prd §1700aa), and is not
+        // offered until that is priced: it would be a figure that fails.
+        case .all:
+            if mode == .deposit, buysGas, gasSale == nil { return nil }
+            value = held - (gasSale.flatMap { Decimal(string: $0) } ?? 0)
         }
         guard value > 0 else { return nil }
         if mode == .deposit, symbol == "USDC", let maxUSD, value > Decimal(maxUSD) * 1_000_000 { return nil }
@@ -158,11 +183,17 @@ final class AztecMove {
         switch mode {
         case .deposit:
             guard shieldCut(), let gasPriceWei, let eth = prices["WETH"] else { return nil }
-            let gas = Decimal(Self.depositGas + (bringsGas ? Self.gasAlongGas : 0)) * gasPriceWei / pow(10, 18)
+            let gas = Decimal(Self.depositGas + (bringsGas ? Self.gasAlongGas : 0) + (buysGas ? Self.gasBuyGas : 0)) * gasPriceWei / pow(10, 18)
             let gasUSD = NSDecimalNumber(decimal: gas).doubleValue * eth
             usd += gasUSD
             parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gasUSD))")))
-            if bringsGas {
+            if buysGas {
+                // Bought with a little of what you move (prd §1700aa).
+                guard let sale = gasSale, let along = dollars(sale, symbol: symbol) else { return nil }
+                usd += along
+                parts.append(.init(words: String(localized: "Aztec's gas, bought with your \(symbol)"),
+                                   figure: PrivateMoney.figure(sale, decimals: decimals, symbol: symbol)))
+            } else if bringsGas {
                 guard let along = dollars(AztecGas.rideAlong, symbol: "AZTEC") else { return nil }
                 usd += along
                 parts.append(.init(words: String(localized: "Aztec's gas, for your account there"), figure: "30 AZTEC"))
@@ -192,9 +223,10 @@ final class AztecMove {
     /// For `CasberiTests`: a sentence's inputs, no network (prd §1700y).
     func seedForTests(mode: Mode, symbol: String, held: String, amount: String, recipient: String? = nil,
                       prices: [String: Double], feePerL2Gas: Decimal?, gasPriceWei: Decimal?,
-                      maxUSD: Double? = nil, bringsGas: Bool = false) {
+                      maxUSD: Double? = nil, bringsGas: Bool = false, safeAZTEC: String = AztecGas.rideAlong) {
         self.mode = mode
         self.symbol = symbol
+        self.safeHeld = ["AZTEC": safeAZTEC]
         self.holdings = [Holding(symbol: symbol, units: held)]
         self.amount = amount
         self.recipient = recipient
@@ -249,12 +281,19 @@ final class AztecMove {
     /// hold, or more than Shield moves for your score.
     enum AmountProblem: Equatable {
         case moreThanHeld(String)
+        /// You hold it, but not with what buys gas beside it (prd §1700aa):
+        /// the most that leaves room.
+        case leavesNoGas(String)
         case overShieldCap(Int)
     }
     var amountProblem: AmountProblem? {
         guard let units, let want = Decimal(string: units), want > 0 else { return nil }
         if let available, let have = Decimal(string: available), want > have {
             return .moreThanHeld(PrivateMoney.figure(available, decimals: decimals, symbol: symbol))
+        }
+        if let available, let have = Decimal(string: available), let sale = gasSale.flatMap({ Decimal(string: $0) }), want + sale > have {
+            let most = max(have - sale, 0)
+            return .leavesNoGas(PrivateMoney.figure(NSDecimalNumber(decimal: most).stringValue, decimals: decimals, symbol: symbol))
         }
         // Shield's cap is in dollars: USDC is read as dollars; WETH's is
         // Shield's to refuse, as there is no price here to read it by.
@@ -305,7 +344,8 @@ final class AztecMove {
             var held: [String: String] = [:]
             for asset in ShieldBridge.assets { held[asset.symbol] = await Self.balance(of: asset.ethToken, at: safe) }
             held["AZTEC"] = await Self.balance(of: AztecGas.token, at: safe)
-            bringsGas = AztecProver.isAvailable && AztecGas.needed
+            ownHeld = held
+            bringsGas = AztecProver.isAvailable && AztecGas.ridesAlong
             guard var standing = await safeStanding else { stage = .failed(String(localized: "Shield did not answer")); return }
             // **YOUR CO-SIGNER, WHEN SHIELD SCORES IT (prd §1720).** A Safe
             // cannot link accounts on Human Passport's page; your co-signer
@@ -330,8 +370,8 @@ final class AztecMove {
                 stage = .shieldNo(score: Int(standing.score), threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
                 return
             }
-            let gasShort = bringsGas && (Decimal(string: held["AZTEC"] ?? "0") ?? 0) < (Decimal(string: AztecGas.rideAlong) ?? 0)
-            if holdings.isEmpty || gasShort { stage = .needsFunds(address: safe); return }
+            // Holding no AZTEC stops nobody: gas is bought with what you move (prd §1700aa).
+            if holdings.isEmpty { stage = .needsFunds(address: safe); return }
             keepPick()
             stage = .ready
         case .send:
@@ -397,7 +437,7 @@ final class AztecMove {
                 // A move-in is signed on Ethereum, not proved (prd §1700x), as
                 // Railgun's is: Checking · Signing · Sent on Ethereum.
                 steps.begin(.move, plan: .signed(.ethereum))
-                let gas = bringsGas ? try await AztecGas.plan(units: AztecGas.rideAlong) : nil
+                let gas = try await gasPlan(asset)
                 if let coSigner = viaCoSigner {
                     let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
                         self.stage = .working(words)
@@ -418,7 +458,9 @@ final class AztecMove {
                     // has said anything (prd §1700w).
                     steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
-                    let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units]) as? [String: Any]
+                    let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units, AztecGas.unminted]) as? [String: Any]
+                    AztecGas.spent(by: out)
+                    paidInTheOpen = (out?["paid"] as? String) == "own"
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
                     steps.begin(.move, plan: .send(.aztec))
@@ -434,6 +476,24 @@ final class AztecMove {
             steps.fail(AztecEngine.words(error))
             stage = .failed(AztecEngine.words(error))
         }
+    }
+
+    /// The gas a move-in brings along, when it brings any (prd §1700aa): the
+    /// AZTEC your account holds, or, holding too little, bought with a little
+    /// of the token being moved.
+    private func gasPlan(_ asset: ShieldBridge.Asset) async throws -> AztecGas.Plan? {
+        guard bringsGas else { return nil }
+        guard buysGas else { return try await AztecGas.plan(units: AztecGas.rideAlong) }
+        guard let safe = YourAccountKey.address, let sale = gasSale else {
+            throw AztecGas.Failure(message: String(localized: "Gas for Aztec could not be priced just now. Try again."))
+        }
+        // The sale is your account's own, even when your co-signer deposits
+        // (prd §1720): it must hold that much itself.
+        guard (Decimal(string: ownHeld[asset.symbol] ?? "0") ?? 0) >= (Decimal(string: sale) ?? 0) else {
+            throw AztecGas.Failure(message: String(localized: "Your account needs a little \(asset.symbol) of its own to buy gas for Aztec"))
+        }
+        let sell = YourAccountOp.Token(symbol: asset.symbol, decimals: asset.decimals, contract: asset.ethToken)
+        return try await AztecGas.plan(selling: sell, units: sale, account: safe)
     }
 
     /// Claims what Aztec has carried, gas first (a claim pays from gas).
@@ -692,16 +752,15 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     private func problemLine(_ problem: AztecMove.AmountProblem) -> String {
         switch problem {
         case .moreThanHeld(let have): String(localized: "You have \(have).")
+        case .leavesNoGas(let most): String(localized: "Up to \(most): a little buys gas for Aztec.")
         case .overShieldCap(let cap): String(localized: "Shield moves up to $\(cap) at a time for your score.")
         }
     }
 
+    /// Gas is bought with what you move (prd §1700aa), so holding no AZTEC
+    /// stops nobody here: only holding nothing Shield moves does.
     private var fundsLine: String {
-        let gasShort = move.bringsGas && (Decimal(string: move.safeHeld["AZTEC"] ?? "0") ?? 0) < (Decimal(string: AztecGas.rideAlong) ?? 0)
-        if gasShort, !(move.holdings.isEmpty) {
-            return String(localized: "Your Aztec account needs 30 AZTEC as gas the first time.")
-        }
-        return String(localized: "Shield moves USDC or WETH from your account on Ethereum.")
+        String(localized: "Shield moves USDC or WETH from your account on Ethereum.")
     }
 
     /// How long the send took, tap to block, so the next wait feels known (prd §1700w).
@@ -715,6 +774,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .deposit: String(localized: "On its way: Aztec carries it in minutes, then it is yours.")
         case .send:
             move.toEthereum ? String(localized: "Proved. In about an hour Needs you offers Finish on Ethereum.")
+                : move.paidInTheOpen ? String(localized: "Sent privately. Its gas was paid by your account, in the open.")
                 : sentTotal.map { String(localized: "Sent privately · \($0) s") } ?? String(localized: "Sent privately.")
         }
     }
@@ -894,7 +954,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     footButton(String(localized: "Add gas"), on: !DemoMode.isActive) {
                         Task {
                             move.stage = .working(String(localized: "Confirm with Face ID"))
-                            do { _ = try await AztecGas.send(units: AztecGas.rideAlong) { _ in }; move.stage = .done("") }
+                            do { _ = try await AztecGas.topUp { _ in }; move.stage = .done("") }
                             catch { move.stage = .failed(AztecEngine.words(error)) }
                         }
                     }
@@ -927,18 +987,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     /// Half · All (prd §1700y): each types its amount, exact; one Shield
     /// would refuse, or nothing to halve, is not drawn (§83).
+    /// **ONE CONTROL, AS ROUND-UPS' (user, 2026-11-10: "the design needs to
+    /// match how we do roundups").** Its halves share the row's width, 4 pt
+    /// apart, each a `Chip` that fills, the pick crossfading
+    /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
     @ViewBuilder private var chips: some View {
         let picks = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
         if !picks.isEmpty {
-            HStack(spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s1) {
                 ForEach(picks, id: \.pick) { item in
                     let on = move.amount == item.value
                     Button {
                         typing = false
-                        move.amount = item.value
                         DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { move.amount = item.value }
                     } label: {
-                        Chip(text: item.pick == .half ? String(localized: "Half") : String(localized: "All"), selected: on)
+                        Chip(text: item.pick == .half ? String(localized: "Half") : String(localized: "All"), selected: on, fills: true)
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityAddTraits(on ? [.isSelected] : [])

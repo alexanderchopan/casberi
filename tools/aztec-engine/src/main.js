@@ -33,8 +33,18 @@ import { computeL2ToL1MessageHash } from '@aztec-labs/stdlib/hash';
 import { sha256ToField } from '@aztec-labs/foundation/crypto/sha256';
 import { jsonStringify } from '@aztec-labs/foundation/json-rpc';
 import { getSchemaParameters, parseWithOptionals, schemaHasMethod } from '@aztec-labs/foundation/schemas';
+import { poseidon2HashWithSeparator } from '@aztec-labs/foundation/crypto/poseidon';
+import { Gas, GasFees } from '@aztec-labs/stdlib/gas';
+import { siloNullifier } from '@aztec-labs/stdlib/hash';
+import { MerkleTreeId } from '@aztec-labs/stdlib/trees';
+import { DomainSeparator } from '@aztec-labs/constants';
+import { ProtocolContractAddress } from '@aztec-labs/protocol-contracts';
+import { PrivateFPCContract } from '@alejoamiras/private-fee-juice/artifacts/private';
+import { FPCFeePaymentMethod, PrivateMintAndPayFeePaymentMethod } from '@alejoamiras/private-fee-juice/fee-payment-methods';
+import { estimateGasSettings, maxFeesPerGasFromBaseFees, maxGasCostFor } from '@alejoamiras/private-fee-juice/utils';
 import { WALLET_ICON } from './icon.js';
-import { watched } from './steps.js';
+import { watched, sendsReached } from './steps.js';
+import { PRIVATE_FEES, choose, sendPaying } from './private-fees.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -92,6 +102,9 @@ function getWallet() {
     const manager = await wallet.createSchnorrInitializerlessAccount(secret, Fr.ZERO, signingKey, 'Casberi');
     accountAddress = manager.address.toString();
     log('accountReady', { address: accountAddress });
+    // The fee contract registers while the first balances are read, not in
+    // front of them (prd §1700aa: it took ten seconds on a cold engine).
+    privateFpc(wallet).catch(() => {});
     return wallet;
   })();
   walletPromise.catch(() => (walletPromise = null)); // a failed start can be tried again
@@ -160,6 +173,127 @@ async function derivedSecret(label) {
   return Fr.fromBufferReduce(Buffer.from(await crypto.subtle.digest('SHA-512', input)));
 }
 
+// --- private gas (prd §1700aa; private-fees.js says why) ---------------------------
+// The shared PrivateFPC, registered with this wallet — never deployed, it has
+// no public half — only on the rollup it was compiled for and only when the
+// address its bytecode derives is the pinned one. Null anywhere else, and the
+// account pays from its own Fee Juice as before.
+let privateFpcPromise = null;
+function privateFpc(wallet) {
+  privateFpcPromise ??= (async () => {
+    const chain = await wallet.getChainInfo();
+    const version = chain.version.toBigInt();
+    if (version !== PRIVATE_FEES.rollupVersion) {
+      log('privateFeesOff', { why: 'rollup', version: version.toString() });
+      return null;
+    }
+    const deploy = PrivateFPCContract.deploy(wallet, { salt: new Fr(PRIVATE_FEES.salt), universalDeploy: true });
+    const derived = (await deploy.getInstance()).address;
+    if (!derived.equals(AztecAddress.fromStringUnsafe(PRIVATE_FEES.address))) {
+      log('privateFeesOff', { why: 'address', derived: derived.toString() });
+      return null;
+    }
+    const fpc = await deploy.register();
+    log('privateFeesReady', { address: fpc.address.toString() });
+    return fpc;
+  })();
+  privateFpcPromise.catch(() => (privateFpcPromise = null));
+  return privateFpcPromise;
+}
+
+// A private gas deposit's two values: its salt, from the root and the
+// deposit's nonce (a new phone can still mint it), and the claim secret the
+// contract derives from that salt and THIS account, so only this account can
+// mint it. Shield's own client derives it the same way (read 2026-11-10).
+async function gasSecret(nonce) {
+  const salt = await derivedSecret(`fpc/${nonce}`);
+  const secret = await poseidon2HashWithSeparator([salt, Fr.fromString(accountAddress)], PRIVATE_FEES.bridgeSeparator);
+  return { salt, secret };
+}
+
+// Whether a private gas deposit was already claimed (and so minted: the two
+// happen in one transaction's setup). Read from the chain, never the app's
+// memory, which loses a send that finished while the app was away. The claim's
+// nullifier is Aztec's own: the message hash and the secret under
+// MESSAGE_NULLIFIER, siloed by the Fee Juice contract. A wrong answer can only
+// be "not yet" — then the mint is measured, fails, and the next way is tried.
+async function gasMinted(wallet, item) {
+  try {
+    const { secret } = await gasSecret(item.nonce);
+    const inner = await poseidon2HashWithSeparator([Fr.fromString(item.messageHash), secret], DomainSeparator.MESSAGE_NULLIFIER);
+    const siloed = await siloNullifier(ProtocolContractAddress.FeeJuice, inner);
+    const [found] = await wallet.aztecNode.findLeavesIndexes('latest', MerkleTreeId.NULLIFIER_TREE, [siloed]);
+    return found !== undefined;
+  } catch (e) {
+    log('gasMintedUnread', { error: String(e?.message ?? e).slice(0, 160) });
+    return false;
+  }
+}
+
+// What the account holds inside the contract, base units; zero when unread.
+async function privateGasBalance(fpc, me) {
+  try {
+    const { result } = await fpc.methods.balance_of(me).simulate({ from: me });
+    return BigInt(result.toString());
+  } catch (e) {
+    log('privateGasUnread', { error: String(e?.message ?? e).slice(0, 160) });
+    return 0n;
+  }
+}
+
+// How `interaction` pays (private-fees.js `choose`), with the options its
+// send takes. `gasJSON` is the app's list of private gas deposits nobody has
+// minted yet: [{ nonce, amount, leafIndex, messageHash }].
+async function feeFor(wallet, interaction, gasJSON) {
+  const fpc = await privateFpc(wallet);
+  if (!fpc) return { how: 'own' };
+  const me = AztecAddress.fromStringUnsafe(accountAddress);
+  const maxFeesPerGas = maxFeesPerGasFromBaseFees(await wallet.aztecNode.getCurrentMinFees());
+  const limits = Gas.from(PRIVATE_FEES.limits);
+  const pending = [];
+  for (const g of JSON.parse(gasJSON || '[]')) {
+    const item = { nonce: String(g.nonce), amount: BigInt(g.amount), leafIndex: BigInt(g.leafIndex), messageHash: g.messageHash };
+    if (await gasMinted(wallet, item)) continue; // spent by an earlier send
+    item.ready = await isL1ToL2MessageReady(wallet.aztecNode, Fr.fromString(g.messageHash)).catch(() => false);
+    pending.push(item);
+  }
+  const method = async (how, item) => {
+    if (how === 'private') return new FPCFeePaymentMethod(fpc.address);
+    const { salt, secret } = await gasSecret(item.nonce);
+    return new PrivateMintAndPayFeePaymentMethod(fpc.address, item.amount, secret, salt, new Fr(item.leafIndex));
+  };
+  const picked = await choose({
+    balance: await privateGasBalance(fpc, me),
+    ceiling: maxGasCostFor(maxFeesPerGas, limits),
+    pending,
+    // Measured first, and never above what is there: the contract keeps the
+    // whole declared limit, so a node that overstates the fee is refused.
+    estimate: async (how, cap, item) => estimateGasSettings(interaction, {
+      aztecNode: wallet.aztecNode, from: me, paymentMethod: await method(how, item),
+      additionalScopes: [fpc.address], maxAcceptableGasCost: cap,
+    }),
+  });
+  if (picked.how === 'own') return picked;
+  const gasSettings = picked.settings ?? {
+    gasLimits: limits, teardownGasLimits: Gas.from({ l2Gas: 0, daGas: 0 }),
+    maxFeesPerGas, maxPriorityFeesPerGas: GasFees.empty(),
+  };
+  log('privateFee', { how: picked.how, measured: picked.settings != null });
+  return { ...picked, options: { additionalScopes: [fpc.address], fee: { paymentMethod: await method(picked.how, picked.item), gasSettings } } };
+}
+
+// One of Casberi's own sends, paid privately when it can be.
+async function sendOwn(wallet, interaction, gasJSON) {
+  const me = AztecAddress.fromStringUnsafe(accountAddress);
+  const wait = { waitForStatus: 'proposed', timeout: 1800 };
+  return sendPaying({
+    pay: () => feeFor(wallet, interaction, gasJSON),
+    send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
+    reached: sendsReached,
+    log,
+  });
+}
+
 // --- Casberi's own calls -----------------------------------------------------------
 const own = {
   async account() {
@@ -190,8 +324,12 @@ const own = {
       await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
     }
     const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+    // Gas is the account's own Fee Juice (public) and what it keeps inside
+    // the private fee contract (prd §1700aa); the app adds the two.
+    const fpc = await privateFpc(wallet).catch(() => null);
     out.push({ kind: 'feeJuice', address: feeJuice.address.toString(), symbol: 'Fee Juice', decimals: 18,
-               public: await read(fj, 'balance_of_public'), private: null });
+               public: await read(fj, 'balance_of_public'),
+               private: fpc ? (await privateGasBalance(fpc, me)).toString() : null });
     for (const address of await wallet.pxe.getContracts()) {
       if (address.equals(feeJuice.address) || address.equals(me)) continue;
       try {
@@ -231,10 +369,18 @@ const own = {
   // GAS (prd §1700e item 2): your Safe deposits AZTEC into Aztec's own Fee
   // Juice portal for this account; the claim's secret is derived from the
   // root and the deposit's nonce, so a new phone can still claim it.
+  // Since prd §1700aa the deposit goes to the private fee contract, claimable
+  // by this account alone (`kind: 'private'`), so Ethereum never names the
+  // account; where that contract is not this rollup's, to the account itself
+  // as before (`kind: 'own'`).
   async feeJuicePlan(nonce) {
-    await getWallet();
+    const wallet = await getWallet();
+    if (await privateFpc(wallet).catch(() => null)) {
+      const { secret } = await gasSecret(nonce);
+      return { to: PRIVATE_FEES.address, secretHash: (await computeSecretHash(secret)).toString(), kind: 'private' };
+    }
     const secret = await depositSecret(nonce);
-    return { to: accountAddress, secretHash: (await computeSecretHash(secret)).toString() };
+    return { to: accountAddress, secretHash: (await computeSecretHash(secret)).toString(), kind: 'own' };
   },
   // Whether Aztec has the deposit's message yet (minutes after it lands).
   async feeJuiceReady(messageHash) {
@@ -269,33 +415,34 @@ const own = {
     const wallet = await getWallet();
     return { ready: await isL1ToL2MessageReady(wallet.aztecNode, Fr.fromString(messageHash)) };
   },
-  async shieldClaim(symbol, amount, nonce, leafIndex) {
+  // Each of the three sends below takes `gasJSON`, the private gas deposits
+  // nobody has minted yet, and answers how it paid (`paid`) and the deposit it
+  // minted (`gasNonce`), if any (prd §1700aa).
+  async shieldClaim(symbol, amount, nonce, leafIndex, gasJSON) {
     const wallet = await getWallet();
     await registerShield(wallet);
     const asset = SHIELD.assets.find(a => a.symbol === symbol);
     if (!asset) throw new Error(`no ${symbol} on Aztec`);
     const me = AztecAddress.fromStringUnsafe(accountAddress);
     const bridge = await Contract.at(AztecAddress.fromStringUnsafe(asset.bridge), shieldBridge, wallet);
-    const { receipt } = await bridge.methods
-      .claim_private(me, BigInt(amount), await derivedSecret(`shield/${nonce}`), BigInt(leafIndex))
-      .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
-    log('shieldClaimed', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+    const claim = bridge.methods.claim_private(me, BigInt(amount), await derivedSecret(`shield/${nonce}`), BigInt(leafIndex));
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, claim, gasJSON);
+    log('shieldClaimed', { tx: receipt.txHash.toString(), status: receipt.status, paid });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
   },
   // A private send inside Aztec (prd §1700e): Shield's token, account to
   // account, no one's permission; the app has asked Face ID before calling.
-  async sendPrivately(symbol, to, units) {
+  async sendPrivately(symbol, to, units, gasJSON) {
     const wallet = await getWallet();
     await registerShield(wallet);
     const asset = SHIELD.assets.find(a => a.symbol === symbol);
     if (!asset) throw new Error(`no ${symbol} on Aztec`);
     const me = AztecAddress.fromStringUnsafe(accountAddress);
     const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
-    const { receipt } = await token.methods
-      .transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n)
-      .send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
-    log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status });
-    return { tx: receipt.txHash.toString(), status: String(receipt.status) };
+    const send = token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, send, gasJSON);
+    log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status, paid });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
   },
   // SHIELD OUT OF AZTEC (prd §1700b, §1700d): read from Shield's own client.
   // The bridge checks Shield's signed Passport limit (an Aztec signature over
@@ -303,7 +450,7 @@ const own = {
   // tokens through its minter proxy, which this account authorises for
   // exactly this burn. Anyone may finish it on Ethereum (caller_on_l1 zero);
   // the money goes to `recipient` only.
-  async shieldExit(symbol, units, recipient, passportJSON) {
+  async shieldExit(symbol, units, recipient, passportJSON, gasJSON) {
     const wallet = await getWallet();
     await registerShield(wallet);
     const asset = SHIELD.assets.find(a => a.symbol === symbol);
@@ -323,7 +470,7 @@ const own = {
       { nonce: 0n, signature: Array(64).fill(0) },
       { max_amount: BigInt(p.maxAmount), nonce: BigInt(p.nonce), deadline: BigInt(p.deadline), signature: p.signature },
     ).with({ authWitnesses: [witness] });
-    const { receipt } = await exit.send({ from: me, wait: { waitForStatus: 'proposed', timeout: 1800 } });
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, exit, gasJSON);
     const info = await wallet.aztecNode.getNodeInfo();
     // The message the portal will consume: sha256 of withdraw(address,uint256,address)'s
     // selector, the recipient, the amount and caller_on_l1 (zero).
@@ -332,9 +479,9 @@ const own = {
       l2Sender: AztecAddress.fromStringUnsafe(asset.bridge), l1Recipient: EthAddress.fromString(asset.portal), content,
       rollupVersion: new Fr(BigInt(info.rollupVersion)), chainId: new Fr(BigInt(info.l1ChainId)),
     });
-    log('shieldExited', { tx: receipt.txHash.toString(), status: receipt.status });
+    log('shieldExited', { tx: receipt.txHash.toString(), status: receipt.status, paid });
     return { tx: receipt.txHash.toString(), block: String(receipt.blockNumber ?? ''), message: message.toString(),
-             outbox: info.l1ContractAddresses?.outboxAddress?.toString() ?? null };
+             outbox: info.l1ContractAddresses?.outboxAddress?.toString() ?? null, paid, gasNonce };
   },
   // Once the epoch holding the exit is proven on Ethereum: where its message
   // sits in the outbox, for the portal's withdraw. Null until then.
@@ -361,6 +508,25 @@ const own = {
   async minFees() {
     const f = await (await getWallet()).aztecNode.getCurrentMinFees();
     return { l2: f.feePerL2Gas.toString(), da: f.feePerDaGas.toString() };
+  },
+  // Which of the app's unminted private gas deposits a send has in fact
+  // spent (prd §1700aa): the app forgets them, however that send ended.
+  async gasSpent(gasJSON) {
+    const wallet = await getWallet();
+    const spent = [];
+    for (const g of JSON.parse(gasJSON || '[]')) {
+      if (await gasMinted(wallet, { nonce: String(g.nonce), messageHash: g.messageHash })) spent.push(String(g.nonce));
+    }
+    return { spent };
+  },
+  // Whether private gas is on for this rollup, and what the account keeps in
+  // the contract (prd §1700aa): the probe's line, and nothing sent.
+  async privateFees() {
+    const wallet = await getWallet();
+    const fpc = await privateFpc(wallet).catch(() => null);
+    if (!fpc) return { on: false };
+    const balance = await privateGasBalance(fpc, AztecAddress.fromStringUnsafe(accountAddress));
+    return { on: true, address: fpc.address.toString(), balance: balance.toString() };
   },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
