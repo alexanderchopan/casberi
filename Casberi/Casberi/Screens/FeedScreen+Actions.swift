@@ -180,7 +180,7 @@ extension FeedScreen {
         case .payZkMoney:
             // Send written for this request (prd §1745).
             if let found = ZkMoney.payableRequest(thing) {
-                chrome.moveDraft = MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)
+                chrome.moveDraft = MoveSentence.payDraft(found, thing: thing.id)
                 chrome.moveTray = true
             } else {
                 chrome.flash(String(localized: "This request is no longer open."), tone: .failure)

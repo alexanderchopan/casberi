@@ -196232,6 +196232,34 @@
         }
       }
     },
+    "This request has expired." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta solicitud ha caducado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この請求は期限切れです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 요청은 만료되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此请求已过期。"
+          }
+        }
+      }
+    },
     "This request has passed its deadline and can't be paid for now." : {
       "localizations" : {
         "es" : {
@@ -196312,6 +196340,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此请求已不再开放。"
+          }
+        }
+      }
+    },
+    "This request link could not be read. Open it in zk.money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer este enlace de solicitud. Ábrelo en zk.money."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この請求リンクを読み取れませんでした。zk.money で開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 요청 링크를 읽을 수 없습니다. zk.money에서 여세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取此请求链接。请在 zk.money 中打开。"
           }
         }
       }
@@ -247926,6 +247982,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@的此时"
+          }
+        }
+      }
+    },
+    "this request" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "esta solicitud"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この請求"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 요청"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此请求"
           }
         }
       }

@@ -1,4 +1,6 @@
 import Foundation
+import CryptoKit
+import CommonCrypto
 
 /// A zk.money link, read without fetching it (2026-10-11). Shared: the app's
 /// paste and the share extension both capture links, and BOTH must apply the
@@ -27,6 +29,36 @@ enum ZkMoneyLink {
         /// Holds money: its fragment is the claim secret. `kept` is the URL
         /// with the fragment REMOVED — the only form ever stored.
         case payment(kept: String)
+        /// A request as zk.money's Share writes it since (prd §1748):
+        /// `zk.money/r#…`, a kind byte and a 16-byte seed. It names nothing
+        /// by itself; the request is a record on Aztec the seed finds and
+        /// opens (`open(fields:short:)`).
+        case shortRequest(seed: [UInt8])
+    }
+
+    /// **A SHORT LINK (prd §1748, measured 2026-11-11).** `…/r#<17 bytes>`:
+    /// kind 1 is a PAYMENT link — its seed is the claim secret, a bearer
+    /// credential exactly as a long `/link#` fragment is — and kind 2 a
+    /// request, whose seed only reads what the requester chose to show.
+    struct Short: Equatable {
+        static let payment: UInt8 = 1, request: UInt8 = 2
+        let kind: UInt8
+        let seed: [UInt8]
+    }
+
+    static func short(_ raw: String) -> Short? {
+        guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              isZkMoneyHost(url.host), url.path.lowercased() == "/r",
+              let fragment = url.fragment, let bytes = base64url(fragment), bytes.count == 17,
+              bytes[0] == Short.payment || bytes[0] == Short.request else { return nil }
+        return Short(kind: bytes[0], seed: Array(bytes[1...]))
+    }
+
+    static func base64url(_ text: String) -> [UInt8]? {
+        guard !text.isEmpty, text.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
+        var b64 = text.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        return Data(base64Encoded: b64).map { [UInt8]($0) }
     }
 
     static func isZkMoneyHost(_ host: String?) -> Bool {
@@ -38,11 +70,13 @@ enum ZkMoneyLink {
         guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
               isZkMoneyHost(url.host), let fragment = url.fragment, !fragment.isEmpty else { return nil }
         let path = url.path.lowercased()
-        if path.hasSuffix("/link") || path.hasSuffix("/claim") {
+        let shortLink = short(raw)
+        if path.hasSuffix("/link") || path.hasSuffix("/claim") || shortLink?.kind == Short.payment {
             var parts = URLComponents(url: url, resolvingAgainstBaseURL: false)
             parts?.fragment = nil
             return .payment(kept: parts?.string ?? "https://\(url.host ?? "zk.money")\(url.path)")
         }
+        if let shortLink, shortLink.kind == Short.request { return .shortRequest(seed: shortLink.seed) }
         let isRequest = path.hasSuffix("/request")
             || (path.hasPrefix("/pay/") && path.split(separator: "/").count == 2)
         guard isRequest, let packet = requestPacket(fragment) else { return nil }
@@ -59,11 +93,14 @@ enum ZkMoneyLink {
     /// ("$0.01"). It is what `zk.money/r#<id>` expands to; the short link
     /// itself holds only the id, looked up on Aztec, and is not read here.
     static func requestPacket(_ fragment: String) -> Link? {
-        guard fragment.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == "_") }) else { return nil }
-        var b64 = fragment.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
-        while b64.count % 4 != 0 { b64 += "=" }
-        guard let data = Data(base64Encoded: b64), data.count <= 2048,
-              case .map(let map)? = CBOR.decode([UInt8](data)),
+        base64url(fragment).flatMap(requestPacket(bytes:))
+    }
+
+    /// The packet itself: a long link's fragment decoded, or what a short
+    /// link's record opens to.
+    static func requestPacket(bytes: [UInt8]) -> Link? {
+        guard bytes.count <= 2048,
+              case .map(let map)? = CBOR.decode(bytes),
               case .uint(let format)? = map[1], (1...4).contains(format),
               case .text(let tag)? = map[3] else { return nil }
         var amount: Decimal?
@@ -98,6 +135,9 @@ enum ZkMoneyLink {
             // A request that names no token asks in dollars (format 4).
             let what = amount.map { a in symbol.map { s in "\(plain(a)) \(s)" } ?? "$\(plain(a))" }
             return requestTitleLead + (what.map { "\($0) to " } ?? "to ") + display(tag)
+        case .shortRequest:
+            // Unread: the row names where it is from, and Pay reads the rest.
+            return requestTitleLead + "zk.money"
         }
     }
 
@@ -124,7 +164,7 @@ enum ZkMoneyLink {
     /// detected URL left the secret in the row, and a link after another URL
     /// was never looked at.
     static func scrub(_ text: String) -> (text: String, secrets: [String]) {
-        let pattern = #"(?i)\b((?:https?://)?(?:[a-z0-9-]+\.)*zk\.money(?:/[^\s#]*)?/(?:link|claim))#([^\s]+)"#
+        let pattern = #"(?i)\b((?:https?://)?(?:[a-z0-9-]+\.)*zk\.money(?:/[^\s#]*)?/(?:link|claim|r))#([^\s]+)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return (text, []) }
         let ns = text as NSString
         var secrets: [String] = []
@@ -133,7 +173,10 @@ enum ZkMoneyLink {
             let base = ns.substring(with: m.range(at: 1))
             let whole = ns.substring(with: m.range)
             let withScheme = base.lowercased().hasPrefix("http") ? whole : "https://" + whole
+            // A short REQUEST keeps its fragment: it is the request, and holds
+            // no money. A short PAYMENT link loses it, as a long one does.
             if case .payment? = link(withScheme) { secrets.insert(withScheme, at: 0) }
+            else if base.lowercased().hasSuffix("/r") { continue }
             out = (out as NSString).replacingCharacters(in: m.range, with: base)
         }
         return (out, secrets)
@@ -174,6 +217,9 @@ enum ZkMoneyLink {
             let clean = scrub(text)
             return Captured(content: clean.text, title: title(link), note: lines.isEmpty ? nil : lines.joined(separator: "\n"),
                             secret: clean.secrets.first, expires: expires)
+        case .shortRequest:
+            let clean = scrub(text)
+            return Captured(content: clean.text, title: title(link), note: nil, secret: clean.secrets.first, expires: nil)
         }
     }
 
@@ -182,6 +228,69 @@ enum ZkMoneyLink {
  kept
             ? "The claim secret is kept on the device it was saved on, never synced: Claim in zk.money opens it there."
             : "The claim secret after the # was not kept: whoever holds it can take the money, and this library syncs to iCloud. Claim it from where it was sent to you."
+    }
+}
+
+// MARK: - A short link's record (prd §1748)
+
+extension ZkMoneyLink {
+    /// Opens one record a short link's tag found on Aztec, as zk.money's own
+    /// wallet does (`unpack`, measured 2026-11-11), or nil for anything that
+    /// is not this link's: fifteen fields, each 31 bytes under a zero byte;
+    /// twelve bytes of nonce, then AES-256-CTR under a key HKDF-SHA256 draws
+    /// from the seed. Inside: the payload's length, an Ed25519 key whose
+    /// hash's first sixteen bytes ARE the seed, its signature over the
+    /// payload, the payload, zeros. So a record under the right tag written
+    /// by anyone who did not hold the link's secret key opens to nothing.
+    static func open(fields: [String], short: Short) -> [UInt8]? {
+        guard fields.count == 15, short.seed.count == 16 else { return nil }
+        var sealed: [UInt8] = []
+        for field in fields {
+            guard let bytes = fieldBytes(field), bytes[0] == 0 else { return nil }
+            sealed += bytes[1...]
+        }
+        let nonce = Array(sealed[..<12]), cipher = Array(sealed[12...])
+        let key = HKDF<SHA256>.deriveKey(inputKeyMaterial: SymmetricKey(data: Data(short.seed)),
+                                         info: Data("zk.money link cipher".utf8) + [1, short.kind], outputByteCount: 32)
+        guard let plain = aesCTR(cipher, key: key.withUnsafeBytes { [UInt8]($0) }, counter: nonce + [0, 0, 0, 0]),
+              plain.count == 453 else { return nil }
+        let length = Int(plain[0]) << 8 | Int(plain[1])
+        guard length <= 355, plain[(98 + length)...].allSatisfy({ $0 == 0 }) else { return nil }
+        let publicKey = Array(plain[2..<34]), signature = Array(plain[34..<98]), payload = Array(plain[98..<(98 + length)])
+        guard Array(SHA256.hash(data: Data(publicKey)).prefix(16)) == short.seed,
+              let signer = try? Curve25519.Signing.PublicKey(rawRepresentation: Data(publicKey)),
+              signer.isValidSignature(Data(signature), for: Data("zk.money link".utf8) + [1, short.kind] + payload) else { return nil }
+        return payload
+    }
+
+    /// A field as its 32 bytes, from the node's 0x-hex.
+    private static func fieldBytes(_ field: String) -> [UInt8]? {
+        var hex = field.lowercased().hasPrefix("0x") ? String(field.dropFirst(2)) : field
+        guard !hex.isEmpty, hex.count <= 64, hex.allSatisfy(\.isHexDigit) else { return nil }
+        hex = String(repeating: "0", count: 64 - hex.count) + hex
+        var out: [UInt8] = []
+        var i = hex.startIndex
+        while i < hex.endIndex {
+            let j = hex.index(i, offsetBy: 2)
+            guard let byte = UInt8(hex[i..<j], radix: 16) else { return nil }
+            out.append(byte)
+            i = j
+        }
+        return out
+    }
+
+    /// AES-256 in counter mode, the counter a 16-byte big-endian block.
+    private static func aesCTR(_ input: [UInt8], key: [UInt8], counter: [UInt8]) -> [UInt8]? {
+        guard key.count == kCCKeySizeAES256, counter.count == kCCBlockSizeAES128 else { return nil }
+        var cryptor: CCCryptorRef?
+        guard CCCryptorCreateWithMode(CCOperation(kCCEncrypt), CCMode(kCCModeCTR), CCAlgorithm(kCCAlgorithmAES), CCPadding(ccNoPadding),
+                                      counter, key, key.count, nil, 0, 0, CCModeOptions(kCCModeOptionCTR_BE), &cryptor) == kCCSuccess,
+              let cryptor else { return nil }
+        defer { CCCryptorRelease(cryptor) }
+        var out = [UInt8](repeating: 0, count: input.count)
+        var moved = 0
+        guard CCCryptorUpdate(cryptor, input, input.count, &out, out.count, &moved) == kCCSuccess, moved == input.count else { return nil }
+        return out
     }
 }
 

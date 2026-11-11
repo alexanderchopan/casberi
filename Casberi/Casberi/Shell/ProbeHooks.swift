@@ -2632,7 +2632,7 @@ enum ProbeHooks {
                 NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
             }
         },
-        // `-zkMoneyProbe "<tag.zk.money | zk.money link | deposit=<0x…> | portal>"`
+        // `-zkMoneyProbe "<tag.zk.money | zk.money link | short=<r# link> | deposit=<0x…> | portal>"`
         // — what the app reads about zk.money (2026-10-11), NSLogged as
         // `zkMoney:` lines: a tag's public record, a link as capture would
         // keep it (a payment link's secret must be GONE), whether an address
@@ -2642,6 +2642,17 @@ enum ProbeHooks {
             Task { @MainActor in
                 if spec == "portal" {
                     let total = await ZkMoney.portalTotal(); NSLog("zkMoney: portal | %@", total.map { "\($0) DAI" } ?? "UNREADABLE")
+                } else if spec.hasPrefix("short=") {
+                    // `short=<zk.money/r#… link>` (prd §1748): the request a
+                    // short link names, read as Send's To reads it — the
+                    // Aztec engine's one node read, opened with the seed.
+                    // Logs the request's title, never the record.
+                    let link = String(spec.dropFirst(6))
+                    guard let short = ZkMoneyLink.short(link) else { NSLog("zkMoney: short | not a short link"); return }
+                    let t0 = Date()
+                    let found = await ZkMoney.request(short: short)
+                    NSLog("zkMoney: short | kind %d | %@ | %.1fs%@", Int(short.kind), found.map(ZkMoneyLink.title) ?? "UNREAD",
+                          Date().timeIntervalSince(t0), DemoMode.isActive ? " | the demo's sample" : "")
                 } else if spec.hasPrefix("capture=") {
                     // `capture=<text>`: what a paste of `text` becomes, step by
                     // step, and whether this device's Keychain keeps a secret.

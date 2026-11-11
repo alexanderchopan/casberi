@@ -119,4 +119,30 @@ fees_mutant "two sends choose how to pay at once" 's/    const mine = last\.then
 grep -q "return ownTurn(() => sendPaying({" $MAIN \
   || { echo "✗ Casberi's sends no longer take turns: a claim and a send can be offered the same gas deposit"; exit 1; }
 
+# ── zk.money's short links (prd §1748) ──────────────────────────────────
+# The tag a link's record stands under, the locator's pinned address, and
+# what counts as a record in the node's reply. A wrong separator or address
+# finds nothing and reads as "this link could not be read" for every link.
+ZKLINK_SRC=$ENGINE/src/zk-link.js
+[[ -f $ZKLINK_SRC ]] || { echo "✗ $ZKLINK_SRC not found"; exit 1; }
+(cd $ENGINE && node test/zk-link.test.mjs) || { echo "✗ the short-link checks failed"; exit 1; }
+zklink_mutant() { # name, perl expression
+  perl -0pe "$2" $ZKLINK_SRC > $ENGINE/src/zz-zk-link-mutant.js
+  cmp -s $ZKLINK_SRC $ENGINE/src/zz-zk-link-mutant.js && { rm -f $ENGINE/src/zz-zk-link-mutant.js; echo "✗ mutation '$1' changed nothing"; exit 1; }
+  if (cd $ENGINE && ZKLINK=../src/zz-zk-link-mutant.js node test/zk-link.test.mjs >/dev/null 2>&1); then
+    rm -f $ENGINE/src/zz-zk-link-mutant.js; echo "✗ mutation '$1' passed: the short-link checks cannot see it"; exit 1
+  fi
+  rm -f $ENGINE/src/zz-zk-link-mutant.js
+  echo "✓ mutation '$1' fails the short-link checks"
+}
+zklink_mutant "the locator is not its class's address" 's/0x1335463038d5/0x1335463038d6/'
+zklink_mutant "the tag's second hash dropped" 's/const tag = await poseidon2HashWithSeparator\(\[pre\], ZK_LINK\.tagSeparator\);/const tag = pre;/'
+zklink_mutant "the kind left out of the tag" 's/\[new Fr\(BigInt\(kind\)\), new Fr/[new Fr(2n), new Fr/'
+zklink_mutant "any kind taken" 's/!\[1, 2\]\.includes\(kind\) \|\| //'
+zklink_mutant "the log's own tag handed back as the record's first field" 's/\.slice\(1, 1 \+ ZK_LINK\.fields\)/.slice(0, ZK_LINK.fields)/'
+grep -q "const tag = await siloedTag(Number(kind), String(seedHex));" $MAIN && grep -q "return { payloads: payloads(reply.result) };" $MAIN \
+  || { echo "✗ the engine no longer reads a short link's record by its tag"; exit 1; }
+awk '/async zkLinkLogs\(/,/^  },/' $MAIN | grep -q "getWallet" \
+  && { echo "✗ a short link's read starts the wallet: it needs no account"; exit 1; }
+
 echo "aztec connect self-test: ok"

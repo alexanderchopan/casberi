@@ -28,7 +28,7 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 LINK="Casberi/Shared/ZkMoneyLink.swift"
 FIX="scripts/fixtures/zkmoney"
 for f in "$WIRE" "$KECCAK" "$LINK" "$FIX/ownerof-zac.json" "$FIX/userrecord-zac.json" "$FIX/code-deposit.json" \
-         "$FIX/code-portal-head.json" "$FIX/portal-dai.json" "$FIX/request-link.txt" "$FIX/request-link-v3.txt" "$FIX/request-link-v4.txt" \
+         "$FIX/code-portal-head.json" "$FIX/portal-dai.json" "$FIX/request-link.txt" "$FIX/request-link-v3.txt" "$FIX/request-link-v4.txt" "$FIX/short-link-record.json" \
          "$FIX/code-swap-escrow.json" "$FIX/code-swap-escrow-v2.json" "$FIX/code-savings-escrow.json" \
          "$FIX/code-deposit-aztec-v6.json" "$FIX/code-registration-aztec-v6.json" "$FIX/resolve-call-zac.txt" \
          "$FIX/lookup-zac.txt" "$FIX/lookup-charlie.txt" "$FIX/lookup-unclaimed.txt" "$FIX/gateway-zac.json" \
@@ -224,7 +224,37 @@ guard case .request(let tag4, let amount4, let symbol4, let note4, let expires4)
 check(tag4 == "zac" && amount4 == Decimal(string: "0.01") && symbol4 == nil && note4 == "dinner" && expires4.map { Int($0.timeIntervalSince1970) } == 1_814_364_000,
       "format 4: a 16-byte id, no token, the amount, note and expiry")
 check(ZkMoneyLink.title(ZkMoneyLink.link(v4)!) == "Payment request — $0.01 to zac.zk.money", "a request that names no token is titled in dollars")
-check(ZkMoneyLink.link("https://zk.money/r#AhAREhMUFRYXGBkaGxwdHh8") == nil, "a short /r link holds only an id: nothing is read from it")
+// Short links (prd §1748): a record sealed as zk.money's wallet seals one
+// (noble's HKDF, AES-CTR and Ed25519, a made-up key and the format-4 packet above).
+let shortFix = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: fix + "/short-link-record.json"))) as! [String: Any]
+let shortURL = shortFix["link"] as! String, shortPay = shortFix["paymentLink"] as! String
+let shortFields = shortFix["fields"] as! [String]
+guard let short = ZkMoneyLink.short(shortURL), case .shortRequest(let shortSeed)? = ZkMoneyLink.link(shortURL) else {
+    print("  ✗ a short request link did not read"); exit(1)
+}
+check(short.kind == 2 && short.seed.count == 16 && short.seed == shortSeed, "a short link is a kind and a 16-byte seed")
+check(ZkMoneyLink.short("https://zk.money/r#AhAREhMUFRYXGBkaGxwdHh8g") == nil && ZkMoneyLink.short("https://zk.money/r#AxAREhMUFRYXGBkaGxwdHh8") == nil
+      && ZkMoneyLink.short("https://evil.example/r#" + shortURL.split(separator: "#")[1]) == nil, "not a short link: 17 bytes too many, an unknown kind, another host")
+let opened = ZkMoneyLink.open(fields: shortFields, short: short)
+check(opened.map { Data($0).base64EncodedString() } == ZkMoneyLink.base64url(shortFix["packet"] as! String).map { Data($0).base64EncodedString() },
+      "its record opens to the packet that was sealed")
+check(opened.flatMap(ZkMoneyLink.requestPacket(bytes:)) == ZkMoneyLink.link(v4), "…which is the request")
+check(ZkMoneyLink.open(fields: shortFix["forgedFields"] as! [String], short: short) == nil, "a record sealed by another key under the link's tag opens to nothing")
+check(ZkMoneyLink.open(fields: shortFix["unsignedFields"] as! [String], short: short) == nil, "the link's key over another signature opens to nothing")
+var bent = shortFields; bent[7] = "0x00" + String(repeating: "5a", count: 31)
+check(ZkMoneyLink.open(fields: bent, short: short) == nil, "a changed field opens to nothing")
+check(ZkMoneyLink.open(fields: Array(shortFields.dropLast()), short: short) == nil, "fourteen fields are not a record")
+var high = shortFields; high[0] = "0x01" + high[0].dropFirst(4)
+check(ZkMoneyLink.open(fields: high, short: short) == nil, "a field over 31 bytes is not a record's")
+check(ZkMoneyLink.open(fields: shortFields, short: ZkMoneyLink.Short(kind: 2, seed: Array(short.seed.reversed()))) == nil, "another link's seed opens nothing")
+// A short PAYMENT link holds money: its seed is the claim secret.
+check(ZkMoneyLink.link(shortPay) == .payment(kept: "https://zk.money/r"), "a short payment link is kept without its fragment")
+let shortMixed = ZkMoneyLink.scrub("pay me \(shortURL) or claim \(shortPay) thanks")
+check(shortMixed.text == "pay me \(shortURL) or claim https://zk.money/r thanks" && shortMixed.secrets == [shortPay],
+      "a short payment link loses its secret wherever it stands; a short request keeps its fragment")
+let shortKept = ZkMoneyLink.capture(url: URL(string: shortURL)!, text: shortURL)
+check(shortKept?.title == "Payment request — zk.money" && shortKept?.content == shortURL && shortKept?.secret == nil && shortKept?.title.hasPrefix(ZkMoneyLink.requestTitleLead) == true,
+      "a short request is kept whole, titled by where it is from")
 let payDollars = ZkMoneyWire.requestPayment(tag: "zac", amount: amount4, symbol: nil)
 check(payDollars == ZkMoneyWire.RequestPayment(to: "zac.zk.money", amount: "0.36", asked: "0.01", token: nil),
       "no token named: the fee is added in dollars and the token is yours to pick")
@@ -369,6 +399,21 @@ mutate "a request with no token titled without its dollars" \
 mutate "an expired request still open" \
   'expires.map { $0 > now } ?? true' \
   'expires.map { _ in true } ?? true'
+mutate "a short link's record opened without its key's commitment" \
+  'guard Array(SHA256.hash(data: Data(publicKey)).prefix(16)) == short.seed,' \
+  'guard true,'
+mutate "a short link's record opened without its signature" \
+  'signer.isValidSignature(Data(signature), for: Data("zk.money link".utf8) + [1, short.kind] + payload) else { return nil }' \
+  'signer.rawRepresentation.count == 32 else { return nil }'
+mutate "a short payment link kept with its secret" \
+  'if path.hasSuffix("/link") || path.hasSuffix("/claim") || shortLink?.kind == Short.payment {' \
+  'if path.hasSuffix("/link") || path.hasSuffix("/claim") {'
+mutate "a short request scrubbed of the fragment that is the request" \
+  'else if base.lowercased().hasSuffix("/r") { continue }' \
+  ''
+mutate "a request's record opened with a payment link's key" \
+  'info: Data("zk.money link cipher".utf8) + [1, short.kind], outputByteCount: 32)' \
+  'info: Data("zk.money link cipher".utf8) + [1, 1], outputByteCount: 32)'
 mutate "a request's title losing the words Pay reads" \
   'return requestTitleLead + (what.map' \
   'return "Request — " + (what.map'
@@ -382,9 +427,9 @@ SEND="Casberi/Casberi/Screens/MoveSentence.swift"
 grep -q 'if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {' "$VERBS" \
   || { echo "✗ Pay is drawn with no account to pay from, or on a row that is not an open request"; exit 1; }
 grep -q 'guard thing.kind == .link, thing.mark != .done, thing.title.hasPrefix(ZkMoneyLink.requestTitleLead),' "$ZK" \
-  && grep -q 'ZkMoneyWire.requestOpen(expires: expires, now: now) else { return nil }' "$ZK" \
+  && grep -q 'guard ZkMoneyWire.requestOpen(expires: expires, now: now) else { return nil }' "$ZK" \
   || { echo "✗ Pay stands on a request already paid or expired, or every row parses its link (the title gate is gone)"; exit 1; }
-[[ $(grep -c 'MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)' Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Screens/FeedScreen+Actions.swift | awk -F: '{n+=$2} END{print n}') -eq 2 ]] \
+[[ $(grep -c 'MoveSentence.payDraft(found, thing: thing.id)' Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Screens/FeedScreen+Actions.swift | awk -F: '{n+=$2} END{print n}') -eq 2 ]] \
   || { echo "✗ Pay no longer opens Send written for the request from the sheet and the row"; exit 1; }
 awk '/private func settleRequest\(/,/^    }/' "$SEND" > "$TMP/settle.txt"
 grep -q 'guard let request = payingRequest, outcome != .dryRun else { return }' "$TMP/settle.txt" \
@@ -396,5 +441,20 @@ grep -q 'if text.lowercased() == payingRequest?.to { requestDeposits.insert(addr
   || { echo "✗ a paid request is never marked: no address is kept for its tag, or the landing no longer settles it"; exit 1; }
 grep -q 'amount == request.amount, to.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == request.to else { return nil }' "$SEND" \
   || { echo "✗ the line says the fee was added after the amount or the tag was changed"; exit 1; }
+
+# A request link in To (prd §1748), read: To looks a link up before it reads
+# an address or a name; a short link nobody can read says so instead of
+# resolving to nothing; a pasted link has no row, so nothing is marked.
+awk '/private func resolve\(\) async \{/{r=NR} /if await takeRequestLink\(text\) \{ return \}/{t=NR} /if text.lowercased\(\).hasPrefix\("0x"\) \{/{if(!x) x=NR} END{exit !(r && t && x && r<t && t<x)}' "$SEND" \
+  || { echo "✗ Send's To no longer reads a request link before an address"; exit 1; }
+awk '/private func takeRequestLink\(/,/^    }/' "$SEND" > "$TMP/take.txt"
+grep -q 'link = await ZkMoney.request(short:' "$TMP/take.txt" \
+  && grep -q 'guard ZkMoneyWire.requestOpen(expires: expires, now: .now) else {' "$TMP/take.txt" \
+  && grep -q 'payingRequest = Self.paying(pay, symbol: symbol, thing: payingRequest?.thing)' "$TMP/take.txt" \
+  || { echo "✗ a pasted request link is not looked up, pays an expired request, or forgets the row Pay opened it from"; exit 1; }
+grep -q 'guard let id = request.thing else { return }' "$SEND" \
+  || { echo "✗ a link pasted into To, which has no row, reaches the row fetch"; exit 1; }
+grep -q 'if DemoMode.isActive { return demoRequest }' "$ZK" \
+  || { echo "✗ the demo asks Aztec for a short link's record: the demo reads no chain"; exit 1; }
 
 echo "✓ zk.money self-test passed"

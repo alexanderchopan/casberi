@@ -45,6 +45,7 @@ import { estimateGasSettings, maxFeesPerGasFromBaseFees, maxGasCostFor } from '@
 import { WALLET_ICON } from './icon.js';
 import { watched, sendsReached } from './steps.js';
 import { PRIVATE_FEES, choose, sendPaying, inTurn } from './private-fees.js';
+import { siloedTag, payloads } from './zk-link.js';
 
 const params = new URLSearchParams(location.search);
 // Aztec mainnet through dRPC's public node unless the person set their own.
@@ -298,6 +299,18 @@ function sendOwn(wallet, interaction, gasJSON) {
 
 // --- Casberi's own calls -----------------------------------------------------------
 const own = {
+  // A zk.money short link's record (prd §1748): the tag its seed derives, one
+  // keyless read from the node, the ciphertext handed back as it stands. No
+  // wallet and no account: this reads what anyone holding the link can read.
+  async zkLinkLogs(kind, seedHex) {
+    const tag = await siloedTag(Number(kind), String(seedHex));
+    const reply = await fetch(NODE_URL, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'node_getPrivateLogsByTags', params: [{ tags: [tag] }] }),
+    }).then(r => r.json());
+    if (reply.error) throw new Error(`the node refused the link's tag: ${String(reply.error.message ?? '').slice(0, 120)}`);
+    return { payloads: payloads(reply.result) };
+  },
   async account() {
     await getWallet();
     return { address: accountAddress };

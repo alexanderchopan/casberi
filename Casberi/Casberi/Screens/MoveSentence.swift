@@ -551,21 +551,75 @@ struct MoveSentence: View {
     /// and To still stand as written; the row is marked paid when a send
     /// to an address resolved for that tag is taken (`settleRequest`).
     struct PayingRequest: Equatable {
-        let thing: UUID
+        /// The saved row, when Pay opened this; nil for a link pasted into To.
+        let thing: UUID?
         let to: String
         let amount: String
         /// "20.5 DAI"; nil when the request named no amount, so nothing was added.
         let asked: String?
     }
 
-    /// Send written for a request: on Ethereum, in the token's own units.
-    static func payDraft(_ pay: ZkMoneyWire.RequestPayment, symbol: String?, thing: UUID) -> Draft {
-        // "20.5 DAI", or "$0.01" for a request that names no token: that
-        // one is written in dollars and you pick which token pays.
+    /// Send written for a saved request: on Ethereum, in the token's own
+    /// units. A short link's row hands its link to To, which reads it there
+    /// (prd §1748).
+    static func payDraft(_ payable: ZkMoney.Payable, thing: UUID) -> Draft {
+        switch payable {
+        case .written(let pay, let symbol):
+            return Draft(verb: .send, network: Op.ethereum, networkPicked: true, amount: pay.amount, inDollars: pay.token == nil,
+                         withID: pay.token, buy: nil, buyOn: nil, to: pay.to, at: Date(),
+                         request: paying(pay, symbol: symbol, thing: thing))
+        case .link(let url):
+            return Draft(verb: .send, network: Op.ethereum, networkPicked: true, amount: "", inDollars: true,
+                         withID: nil, buy: nil, buyOn: nil, to: url, at: Date(),
+                         request: PayingRequest(thing: thing, to: "", amount: "", asked: nil))
+        }
+    }
+
+    /// "20.5 DAI", or "$0.01" for a request that names no token: that one is
+    /// written in dollars and you pick which token pays.
+    static func paying(_ pay: ZkMoneyWire.RequestPayment, symbol: String?, thing: UUID?) -> PayingRequest {
         let asked = pay.asked.map { a in symbol.map { "\(a) \($0.uppercased())" } ?? "$\(a)" }
-        return Draft(verb: .send, network: Op.ethereum, networkPicked: true, amount: pay.amount, inDollars: pay.token == nil,
-                     withID: pay.token, buy: nil, buyOn: nil, to: pay.to, at: Date(),
-                     request: PayingRequest(thing: thing, to: pay.to, amount: pay.amount, asked: asked))
+        return PayingRequest(thing: thing, to: pay.to, amount: pay.amount, asked: asked)
+    }
+
+    /// **A REQUEST LINK IN To WRITES THE SENTENCE (prd §1748; user,
+    /// 2026-11-11: "we need to be able to paste it in to").** Pasted or
+    /// typed, long or short: the tag takes To, the amount asked plus the
+    /// deposit's fee takes the amount, the token is picked when you hold it.
+    /// A short link is looked up on Aztec first. True when `text` was a
+    /// request link, read or not: To then holds the tag (or says why not).
+    private func takeRequestLink(_ text: String) async -> Bool {
+        var link = ZkMoneyLink.link(text)
+        if case .shortRequest(let seed)? = link {
+            withAnimation(DS.Motion.standard) { lookup = .looking(String(localized: "this request")) }
+            link = await ZkMoney.request(short: ZkMoneyLink.Short(kind: ZkMoneyLink.Short.request, seed: seed))
+            guard !Task.isCancelled, text == to.trimmingCharacters(in: .whitespacesAndNewlines) else { return true }
+            if link == nil {
+                withAnimation(DS.Motion.standard) {
+                    lookup = .refused(String(localized: "This request link could not be read. Open it in zk.money."))
+                }
+                return true
+            }
+        }
+        guard case .request(let tag, let asked, let symbol, _, let expires)? = link else { return false }
+        guard ZkMoneyWire.requestOpen(expires: expires, now: .now) else {
+            withAnimation(DS.Motion.standard) { lookup = .refused(String(localized: "This request has expired.")) }
+            return true
+        }
+        let pay = ZkMoneyWire.requestPayment(tag: tag, amount: asked, symbol: symbol)
+        withAnimation(DS.Motion.standard) {
+            lookup = nil
+            network = Op.ethereum
+            networkPicked = true
+            inDollars = pay.token == nil
+            if !pay.amount.isEmpty { amount = pay.amount }
+            if let token = pay.token, let held = heldBy[Op.ethereum.chainId]?.first(where: { $0.id == token }) { with = held }
+            payingRequest = Self.paying(pay, symbol: symbol, thing: payingRequest?.thing)
+            // The tag in To is resolved as a typed one is (prd §1692).
+            to = pay.to
+        }
+        NSLog("zkMoneyPay| link read | %@ | %@", pay.to, pay.amount.isEmpty ? "-" : pay.amount)
+        return true
     }
 
     /// Opened plainly, from the tab: no arrival, no private mode, no verb
@@ -676,7 +730,8 @@ struct MoveSentence: View {
         }
         guard paid else { return }
         payingRequest = nil
-        let id = request.thing
+        // A link pasted into To has no row to mark.
+        guard let id = request.thing else { return }
         guard let thing = try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })).first else { return }
         thing.mark = .done
         thing.dueAt = nil
@@ -5686,6 +5741,8 @@ struct MoveSentence: View {
         malformed = false
         lookup = nil
         guard !text.isEmpty else { return }
+        // A zk.money request link writes the whole sentence (prd §1748).
+        if await takeRequestLink(text) { return }
         if text.lowercased().hasPrefix("0x") {
             guard ENS.isHexAddress(text), AddressSafety.checksum(text) != .failed else {
                 // Said once the typing pauses, so it never flickers mid-word.

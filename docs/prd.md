@@ -72022,7 +72022,7 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 1. **Re-pinned** (`ZkMoneyWire.resolver`), its lookup, gateway reply and proof recaptured from the new resolver as the self-test's fixtures. Still a pin: a lookup from any other contract is refused.
 2. **Asked every night.** `live-integrations.sh` asks ENS's registry for zk.money's resolver and fails its row when it is not the pinned one, naming both. Warn-only like every row there; it turns eight silent days into one.
 3. **Format 4 reads** (`ZkMoneyLink.requestPacket`). A request that names no token is titled in dollars, "Payment request — $0.01 to zac.zk.money", and Pay (§1745) writes Send in dollars with the fee added and the token left to you.
-4. **Not built: the short link.** `zk.money/r#…` holds only an id, so Casberi reads nothing from it and saves it as a plain link, with no Pay. Reading it needs the Aztec lookup, which is not worked out. Until then a request is payable in Casberi only from its long form.
+4. **Not built: the short link.** `zk.money/r#…` holds only an id, so Casberi reads nothing from it and saves it as a plain link, with no Pay. Reading it needs the Aztec lookup, which is not worked out. Until then a request is payable in Casberi only from its long form. **Built the same day: §1748.**
 
 **Mac half (§1402).** Nothing here is phone-only.
 
@@ -72039,3 +72039,23 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** The same rule; the row is the same view.
 
 **Checks.** `reading-draw-selftest.sh` check 9: the row sits on the line behind the test, and the floor is forty.
+
+## §1748 — A zk.money request link pasted into Send's To writes the sentence, and the short link zk.money's Share gives is read from Aztec (builds §1746 item 4; amends §1745, whose Pay stood only on a long link, and §1384's scrub, which did not know a short payment link) (user, 2026-11-11, told the link would arrive by Share or the paste chip and then be found and opened: "that is ridiculous. we need to be able to paste it in to") — BUILT; seen on the simulator: a short link in To wrote "Send 20.85 USDC to zac.zk.money on Ethereum." (the demo's sample), and the real read, in the app, opened the user's own short link to its request (`-zkMoneyProbe "short=…"`: 58 s on a cold engine over Tor, the node's answer 36 s of it, after two tries Tor's circuits did not answer); nothing sent
+
+**Measured 2026-11-11**, off zk.money's wallet code and the user's own request:
+- `zk.money/r#<17 bytes>` is a kind byte (1 a payment link, 2 a request) and a 16-byte seed. The request was announced once through zk.money's LinkLocator contract on Aztec as a private log of fifteen fields under a tag the seed derives: `poseidon2([kind, seed], 1280004933)`, hashed again with `1280005191`, siloed with the locator's address (`0x1335…a1e4`: its class id from zk.money's manifest, salt 0, no deployer, no initializer).
+- The fields are 12 bytes of nonce and AES-256-CTR under a key HKDF-SHA256 draws from the seed. Inside: the payload's length, an Ed25519 public key whose SHA-256's first sixteen bytes are the seed, its signature over the payload, the payload, zeros.
+- Run from a script against `aztec-mainnet.drpc.org` (the node the engine already asks): one keyless `node_getPrivateLogsByTags` returned one record, the key's commitment and the signature held, and the payload was byte for byte the format-4 packet the page expands the link to.
+
+1. **Paste it into To.** A request link typed or pasted into Send's To, long or short, writes the sentence: the tag takes To, the amount asked plus the deposit's fee takes the amount (§1745), the network is Ethereum and the token is picked when you hold it. To then resolves the tag as a typed one (§1692). An expired request says so; a short link nobody can read says "This request link could not be read. Open it in zk.money."
+2. **The short link is read in two halves.** The Aztec engine hashes the tag and asks the node once (`zkLinkLogs`, `tools/aztec-engine/src/zk-link.js`): no wallet, no account, nothing the holder of the link could not read. The app opens the record itself (`ZkMoneyLink.open`): a record under the right tag whose key the seed does not commit to, or whose signature does not hold, opens to nothing.
+3. **A short PAYMENT link holds money.** Kind 1's seed is the claim secret, exactly as a long `/link#` fragment is. It reads as a payment link: its fragment never reaches the row, the whole link goes to this device's Keychain, Claim leads its verbs (§1384). Before this a short payment link was saved whole, secret and all, into a row that syncs.
+4. **A saved short request** is kept whole (its seed only reads what the requester chose to show), titled "Payment request — zk.money", and Pay leads its verbs: Pay puts the link in To, which reads it there.
+5. **The demo reads no chain**: a short link there opens to a sample request.
+6. **Not built.** A row's title is not rewritten once its short link is read. The Mac reads short links only where the engine runs. Whether zk.money marks a request paid when it is paid this way is still unmeasured.
+
+**Disclosed.** The read goes to the Aztec node `NetworkReach` already names for your Aztec account, through the app as the engine's other reads do. The node sees a tag, which names nothing without the link.
+
+**Mac half (§1402).** The same To; a short link needs the Aztec engine.
+
+**Checks.** `zkmoney-selftest.sh`: a record sealed as zk.money's wallet seals one (noble's HKDF, AES-CTR, Ed25519) opens to its packet and reads as the request; another key under the link's tag, the link's key over another signature, a changed field, fourteen fields, a wide field and another seed all open to nothing; a short payment link loses its fragment and a short request keeps it; To reads a link before an address; six mutations. `aztec-connect-selftest.sh`: the locator is its class's address, the tag's vectors, what counts as a record, five mutations. Probe: `-zkMoneyProbe "short=<link>"`.

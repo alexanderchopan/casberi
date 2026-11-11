@@ -5306,7 +5306,7 @@ struct ThingSheetView: View {
             // a request that closed since the sheet drew says so.
             if let found = ZkMoney.payableRequest(thing) {
                 verbResult = nil
-                chrome.moveDraft = MoveSentence.payDraft(found.pay, symbol: found.symbol, thing: thing.id)
+                chrome.moveDraft = MoveSentence.payDraft(found, thing: thing.id)
                 raisesMove = true
                 dismiss()
             } else {
