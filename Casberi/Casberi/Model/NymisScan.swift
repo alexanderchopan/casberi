@@ -167,6 +167,55 @@ enum NymisScan {
         return f
     }()
 
+    // MARK: - A refusal, as Nymis said it
+
+    /// One 429 on one line, so it can be handed to Nymis as it came (Nymis,
+    /// relayed by the user 2026-11-11: "share the error code returned by
+    /// Nymis"): the body's code and message, `Retry-After`, every rate-limit
+    /// header and the request's id. Only those fields are read: the body's
+    /// other keys are dropped, and an address in any of them reads `0x…`.
+    static func refusalLine(phase: String, retryAfter: String?,
+                            headers: [AnyHashable: Any], body: Data?) -> String {
+        var parts = ["nymis| 429", phase]
+        if let body, let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] {
+            // Flat (`code`, `message`) or nested under `error`.
+            let nested = json["error"] as? [String: Any] ?? [:]
+            for key in ["code", "errorCode", "error", "message", "detail", "reason"] {
+                guard let value = refusalWord(json[key] ?? nested[key]) else { continue }
+                parts.append("\(key)=\(value)")
+            }
+        } else if let body, let text = String(data: body, encoding: .utf8), let value = refusalWord(text) {
+            parts.append("body=\(value)")
+        }
+        if let value = refusalWord(retryAfter) { parts.append("retry-after=\(value)") }
+        let named = headers.compactMap { pair -> (String, String)? in
+            guard let name = (pair.key as? String)?.lowercased(),
+                  name.contains("ratelimit") || name.contains("rate-limit") || refusalHeaders.contains(name),
+                  let word = refusalWord(pair.value) else { return nil }
+            return (name, word)
+        }
+        parts += named.sorted { $0.0 < $1.0 }.map { "\($0.0)=\($0.1)" }
+        return parts.joined(separator: " | ")
+    }
+
+    /// The headers that name the request to Nymis's own logs.
+    static let refusalHeaders: Set<String> = ["date", "x-request-id", "request-id", "cf-ray", "x-vercel-id"]
+
+    /// A string or a number, one line, at most 160 characters, no address.
+    private static func refusalWord(_ value: Any?) -> String? {
+        guard let value else { return nil }
+        let raw: String
+        switch value {
+        case let s as String: raw = s
+        case let n as NSNumber: raw = n.stringValue
+        default: return nil
+        }
+        let line = raw.replacingOccurrences(of: #"0x[0-9a-fA-F]{40}"#, with: "0x…", options: .regularExpression)
+            .replacingOccurrences(of: #"[\r\n|]+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+        return line.isEmpty ? nil : String(line.prefix(160))
+    }
+
     // MARK: - The reading
 
     struct Finding: Codable, Equatable, Hashable, Sendable {

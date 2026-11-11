@@ -234,6 +234,7 @@ final class NymisScans {
         }
         guard let request else { finish(key, nil); return nil }
         let reply = await IngestSupport.sendRequest(request)
+        Self.noteRefusal(reply, phase: polling ? "poll" : "create")
         let answer = NymisScan.answer(status: reply?.1.statusCode ?? 0,
                                       retryAfter: reply?.1.value(forHTTPHeaderField: "Retry-After"),
                                       body: reply?.0, address: key, now: .now)
@@ -278,6 +279,16 @@ final class NymisScans {
         }
     }
 
+    /// A 429 as Nymis said it, logged in EVERY build (Console.app, filter
+    /// `nymis| 429`), so its code can be handed back to Nymis: the line is
+    /// `NymisScan.refusalLine`'s, which reads no token and no address.
+    private static func noteRefusal(_ reply: (Data, HTTPURLResponse)?, phase: String) {
+        guard let reply, reply.1.statusCode == 429 else { return }
+        NSLog("[Casberi] %@", NymisScan.refusalLine(phase: phase,
+                                                   retryAfter: reply.1.value(forHTTPHeaderField: "Retry-After"),
+                                                   headers: reply.1.allHeaderFields, body: reply.0))
+    }
+
     /// Nymis writes its summaries after scoring (§1701c): the same scan is
     /// polled every 5 s for at most 30 s, stopping at `ready` or
     /// `unavailable`. Read-only, and never asks for another scan. The token
@@ -291,6 +302,7 @@ final class NymisScans {
                       self.readings[key]?.scannedAt == scannedAt,
                       let request = NymisScan.pollRequest(scanID: scanID, token: token) else { return }
                 let reply = await IngestSupport.sendRequest(request)
+                Self.noteRefusal(reply, phase: "summaries")
                 let answer = NymisScan.answer(status: reply?.1.statusCode ?? 0,
                                               retryAfter: reply?.1.value(forHTTPHeaderField: "Retry-After"),
                                               body: reply?.0, address: key, now: .now)
