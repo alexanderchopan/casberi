@@ -1345,7 +1345,7 @@
      "tap": "button:^Round-ups"
     }
    ],
-   "anchor": "text:=Spend $3.40 and 60¢ goes to Round-ups."
+   "anchor": "text:=Spend $3.40, save 60¢."
   },
   {
    "id": "your-account-co-signer",

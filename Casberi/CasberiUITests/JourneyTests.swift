@@ -58,7 +58,7 @@ final class JourneyTests: XCTestCase {
     /// explained" (`DemoSeedAll.swift`; the "Gerald" post it used is gone).
     @MainActor func testFind() {
         let w = Walk("find", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Search"), "band Search")
+        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
         w.tap(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
         w.type("hydration", "type hydration")
         // Not the "Everything that says …" row, which opens a page of results.
@@ -264,10 +264,10 @@ final class JourneyTests: XCTestCase {
         for name in names {
             let w = Walk("catalog-\(Walk.slug(name))", launch: fresh, test: self, quiet: true)
             // Settings opens on Sources with Casberi's folder up (prd §1321);
-            // the band's search finds every app.
+            // Library's field finds every app (prd §1715).
             w.maybe(w.el(.button, "label == %@", "Close Casberi"), within: 5, "close Casberi's folder")
             w.begin()
-            w.tap(w.el(.button, "label == %@", "Search"), "band Search")
+            w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
             w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
             w.type(name, "type the name")
             // The tray's top hit is a button named for the app alone, wearing
@@ -317,11 +317,11 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// An app by name, found as a person finds it: the band's search (prd
-    /// §1321: on the phone Sources has no field of its own), then its row
-    /// (counted: the band's Search, the field's focus and the row).
+    /// An app by name, found as a person finds it: Library's field (prd §1715;
+    /// the Search tab is deleted), then its row
+    /// (counted: the Library tab, the field's focus and the row).
     @MainActor private func openApp(_ w: Walk, _ name: String) {
-        w.tap(w.el(.button, "label == %@", "Search"), "band Search")
+        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
         w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
         w.type(name, "type \(name)")
         // The row as drawn, whatever element type the list gives it.
