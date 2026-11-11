@@ -28,7 +28,7 @@ extension FeedScreen {
         if !slots.isEmpty {
             walletCard(String(localized: "Privacy"), glyph: "", mark: "Nymis") {
                 ForEach(slots) { slot in walletPrivacyRow(slot) }
-                DSFootnote("A scan takes a few minutes and sends the address to Nymis, which looks it up with blockchain providers and search services.")
+                DSFootnote("The address is analyzed by Nymis, which examines public onchain data to identify potential privacy leaks.")
                     .padding(.leading, DSRoomChassis.headGlyph + DSRoomChassis.headGap)
                     .walletListRow()
             }

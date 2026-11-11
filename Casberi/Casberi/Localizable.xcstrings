@@ -589,30 +589,30 @@
         }
       }
     },
-    "A scan takes a few minutes and sends the address to Nymis, which looks it up with blockchain providers and search services." : {
+    "The address is analyzed by Nymis, which examines public onchain data to identify potential privacy leaks." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Un análisis tarda unos minutos y envía la dirección a Nymis, que la consulta con proveedores de blockchain y servicios de búsqueda."
+            "value" : "Nymis analiza la dirección y examina datos públicos onchain para identificar posibles filtraciones de privacidad."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "スキャンには数分かかり、アドレスが Nymis に送信され、Nymis はブロックチェーンのプロバイダと検索サービスで照会します。"
+            "value" : "アドレスは Nymis が分析し、公開されたオンチェーンデータを調べてプライバシー漏洩の可能性を特定します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "스캔은 몇 분 걸리며, 주소가 Nymis로 전송되고 Nymis는 블록체인 제공업체와 검색 서비스로 이를 조회합니다."
+            "value" : "주소는 Nymis가 분석하며, 공개 온체인 데이터를 검토해 잠재적인 개인정보 노출을 찾아냅니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "扫描需要几分钟，会将地址发送给 Nymis，Nymis 会通过区块链服务商和搜索服务查询它。"
+            "value" : "该地址由 Nymis 分析，Nymis 会检查公开的链上数据，以识别潜在的隐私泄露。"
           }
         }
       }
