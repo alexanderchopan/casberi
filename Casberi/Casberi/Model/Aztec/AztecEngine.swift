@@ -10,7 +10,8 @@ import WebKit
 /// proofs from Aztec's native prover (`AztecProver`), its network only through
 /// the app (`AztecEngineServer`'s `/net`, the hosts declared below). The
 /// account's keys derive from `AztecRoot` inside the page. Proved first in
-/// `tools/aztec-dapp-spike` (simulator and iPhone, 2026-11-04).
+/// `tools/aztec-dapp-spike` (simulator and iPhone, 2026-11-04; the spike
+/// is in the repository's history, removed 2026-11-11).
 ///
 /// Casberi's own reads go through `call`; Aztec apps in Casberi's browser
 /// reach the same wallet through Aztec's wallet-sdk handler in the page, and

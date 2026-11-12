@@ -20,6 +20,10 @@ way we always do.
    `docs/builds.md`. Commit `project.pbxproj` and `docs/builds.md` together,
    push, then run `scripts/build-record.sh tag <build>` to tag the commit
    `build-<n>` and push the tag.
+   **When a version reaches the App Store**, add its What's New to the top of
+   `CHANGELOG.md`, commit, and publish a GitHub Release from the build's tag:
+   `gh release create v<version> --target "$(git rev-list -n1 build-<n>)" --title "<version>" --notes-file <its What's New>`.
+   One release per store version, never per TestFlight build.
 2. **There is no public-beta step any more (user ruling 2026-10-28).** Most
    people sat on TestFlight builds instead of the App Store version, so every
    build was expired, the public link closed

@@ -7,7 +7,8 @@ import WebKit
 /// the relay's messages go to `AztecEngine`, which holds the session keys and
 /// the wallet, and this view names the page's origin itself — the page cannot
 /// claim one. Every connect, the emoji check and every transaction ask here,
-/// one sheet at a time (item 6). Proved first in `tools/aztec-dapp-spike`.
+/// one sheet at a time (item 6). Proved first in `tools/aztec-dapp-spike`
+/// (in the repository's history, removed 2026-11-11).
 /// Opened with `ethereum`, the page also gets your account as an Ethereum
 /// provider (`BrowserEthereum`): connect, then each message signed, asked
 /// here the same way. With `sends` (Apps on Aztec, prd §1700k) a page may
