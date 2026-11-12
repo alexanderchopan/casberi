@@ -66,7 +66,20 @@ check(log.started == Array(0..<8), "eight queued runs start in submission order,
 check(log.peak == ZerionLane.concurrent, "exactly \(ZerionLane.concurrent) were in flight at the peak, got \(log.peak)")
 check(took < 8 * 1.2 * 0.6, "three in flight finish the pack well inside one-at-a-time's \(8 * 1.2)s, took \(String(format: "%.1f", took))s")
 let gaps = zip(log.starts.dropFirst(), log.starts).map { $0.timeIntervalSince($1) }
-check(gaps.allSatisfy { $0 >= ZerionLane.spacing * 0.9 }, "consecutive starts are spaced ≥ \(ZerionLane.spacing)s, got \(gaps.map { String(format: "%.3f", $0) })")
+// SPACING, ASSERTED WHERE A BUSY MACHINE CANNOT BREAK IT (2026-11-11). The
+// lane spaces the SLOTS it reserves, and a start is never before its slot,
+// only late. So a gap falls short by however late the start before it was:
+// CI read 0.514 then 0.337 on correct code (one start 0.11s late, the next on
+// time), and "every gap ≥ 0.9 × spacing" failed most pushes for a property the
+// lane does not promise. What it promises is the rate, checked two ways that
+// lateness cannot fake: the first wave (nothing in flight, so only spacing
+// holds a start back, and the first of them never sleeps) spans its full
+// width, and no gap collapses. The three-a-second check below is the tier's.
+let firstWave = Array(log.starts.prefix(ZerionLane.concurrent))
+let waveSpan = (firstWave.last ?? began).timeIntervalSince(firstWave.first ?? began)
+check(waveSpan >= Double(ZerionLane.concurrent - 1) * ZerionLane.spacing * 0.9,
+      "the first \(ZerionLane.concurrent) starts span \(ZerionLane.concurrent - 1) spacings, got \(String(format: "%.3f", waveSpan))s")
+check(gaps.allSatisfy { $0 >= ZerionLane.spacing * 0.5 }, "no two starts collapse together, got \(gaps.map { String(format: "%.3f", $0) })")
 for (i, t) in log.starts.enumerated() {
     let withinSecond = log.starts.filter { $0 >= t && $0 < t.addingTimeInterval(1) }.count
     check(withinSecond <= 3, "no second sees more than three starts (from start \(i): \(withinSecond))")

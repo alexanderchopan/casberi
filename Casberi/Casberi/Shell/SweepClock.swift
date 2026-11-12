@@ -307,6 +307,13 @@ enum SweepClock {
         return compose()
     }
 
+    /// Whether one slot ranks above another: more time STALLED first, wall
+    /// time only to break a tie. Pure, so the self-test asserts it on fixed
+    /// numbers rather than on what a busy machine happened to measure.
+    static func outranks(_ a: (stalled: Double, wall: Double), _ b: (stalled: Double, wall: Double)) -> Bool {
+        (a.stalled, a.wall) > (b.stalled, b.wall)
+    }
+
     private static func compose() -> [String] {
         guard let passStart else { return ["sweepPass| none (nothing measured)"] }
         let wallMs = ms(ContinuousClock.now - passStart)
@@ -318,8 +325,8 @@ enum SweepClock {
         // whole answer. Ordered by time STALLED, not by wall time — a sweep
         // that waits on a socket for two seconds costs nobody anything, and
         // one that holds the actor for 300ms costs everybody the frame.
-        for label in order.sorted(by: { (entries[$0]?.hitchMs ?? 0, entries[$0]?.wallMs ?? 0)
-                                      > (entries[$1]?.hitchMs ?? 0, entries[$1]?.wallMs ?? 0) }) {
+        for label in order.sorted(by: { outranks((entries[$0]?.hitchMs ?? 0, entries[$0]?.wallMs ?? 0),
+                                                 (entries[$1]?.hitchMs ?? 0, entries[$1]?.wallMs ?? 0)) }) {
             guard let e = entries[label] else { continue }
             lines.append(String(format:
                 "sweepSlot| %@ calls=%d wall=%.0fms hitches=%d stalled=%.0fms",

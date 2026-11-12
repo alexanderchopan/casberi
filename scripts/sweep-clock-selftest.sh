@@ -236,6 +236,17 @@ check(waiterStalled < blockerStalled,
 // hammered runner alike, and the decoy's intent — `slow` has the longest WALL
 // and must not win on that — is carried by the mutation below, which flips the
 // sort key directly and is caught.
+//
+// AND ON FIXED NUMBERS (2026-11-11), because the measured order cannot carry
+// the mutation on a busy machine: there every awaiting sweep stalls in
+// proportion to its wall time, so wall order and stall order COINCIDE, the
+// wall-time mutation printed the same report, and CI marked most pushes red
+// with "NOT CAUGHT". The rule itself is a pure function; assert it directly.
+check(SweepClock.outranks((stalled: 300, wall: 400), (stalled: 0, wall: 2000))
+      && !SweepClock.outranks((stalled: 0, wall: 2000), (stalled: 300, wall: 400)),
+      "a short sweep that stalled outranks a long one that only waited")
+check(SweepClock.outranks((stalled: 300, wall: 900), (stalled: 300, wall: 400)),
+      "equal stalls fall to wall time")
 let slots = lines.filter { $0.contains("sweepSlot|") }
 let slotLabels = slots.map { $0.split(separator: " ").dropFirst().first.map(String.init) ?? "" }
 let slotStalls = slots.compactMap { value($0, "stalled") }
@@ -329,7 +340,7 @@ mutate "hitches no longer charged to the sweep in flight" \
 # Ranking by wall time puts the slowest network read at the top of a report
 # about jank.
 mutate "report ranks by wall time instead of stall" \
-  's|for label in order.sorted(by: { (entries\[\$0\]?.hitchMs ?? 0, entries\[\$0\]?.wallMs ?? 0)|for label in order.sorted(by: { (entries[$0]?.wallMs ?? 0, entries[$0]?.wallMs ?? 0)|'
+  's|(a.stalled, a.wall) > (b.stalled, b.wall)|(a.wall, a.wall) > (b.wall, b.wall)|'
 # A `holdPass` that returns before the dispatch window is over lets the pass
 # close in the gap the 2026-08-06 pacing opened, splitting one sweep into two
 # reports that each look small. Nothing else here would notice — the numbers in
