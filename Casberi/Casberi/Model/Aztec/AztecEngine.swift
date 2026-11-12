@@ -51,6 +51,7 @@ final class AztecEngine: NSObject {
     private var server: AztecEngineServer?
     private var webView: WKWebView?
     private var isReady = false
+    private var starting = false
     private var readyWaiters: [CheckedContinuation<Void, Error>] = []
     private var calls: [Int: CheckedContinuation<Any?, Error>] = [:]
     private var nextCall = 0
@@ -74,13 +75,25 @@ final class AztecEngine: NSObject {
     /// Serves the page and loads it; returns once the page says it is ready.
     func start() async throws {
         if isReady { return }
-        if webView == nil {
-            let server = try AztecEngineServer()
-            self.server = server
-            let listening: Bool = await withCheckedContinuation { done in
-                server.start { ok in done.resume(returning: ok) }
+        // One start makes the page; any other asked meanwhile waits for it.
+        if webView == nil, !starting {
+            starting = true
+            defer { starting = false }
+            // A recycled page keeps the server it had (`recycle`): a second
+            // one would find the port taken.
+            if server == nil {
+                let made = try AztecEngineServer()
+                let listening: Bool = await withCheckedContinuation { done in
+                    made.start { ok in done.resume(returning: ok) }
+                }
+                guard listening else {
+                    let failure = Failure(message: "the engine's port is taken")
+                    for waiter in readyWaiters { waiter.resume(throwing: failure) }
+                    readyWaiters = []
+                    throw failure
+                }
+                server = made
             }
-            guard listening else { throw Failure(message: "the engine's port is taken") }
             let config = WKWebViewConfiguration()
             let controller = config.userContentController
             let relay = AztecEngineMessages(engine: self)
@@ -118,13 +131,78 @@ final class AztecEngine: NSObject {
     }
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
-                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep"]
+                           "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep",
+                           "engineBroken"]
+
+    // MARK: - A store that stopped answering
+
+    /// **THE WALLET'S STORE CAN GO DEAD UNDER A RUNNING PAGE (seen on a
+    /// phone, 2026-11-12).** RavenHouse drew `SQLITE_IOERR … disk I/O error`
+    /// on the first call after Connect. The wallet keeps its notes in SQLite
+    /// over WebKit's private files, and a page whose files stopped answering
+    /// fails every later call the same way until the app is quit. So the
+    /// page is thrown away and a new one made: the keys are in the Keychain
+    /// and the notes are on disk, so nothing is lost but the app's session,
+    /// which connects again. WHY the files die is unmeasured (the likeliest
+    /// is the app sitting suspended); this heals whichever cause a fresh
+    /// page survives, and no other.
+    nonisolated static func storeFailed(_ message: String) -> Bool {
+        message.range(of: #"SQLITE_(IOERR|CANTOPEN|CORRUPT|NOTADB)|disk I/O error"#,
+                      options: [.regularExpression, .caseInsensitive]) != nil
+    }
+
+    private var lastRecycle: Date?
+
+    /// Throws the page away for a new one, once a minute at most: storage
+    /// that is really gone (a full disk) fails again and is said, never
+    /// looped on. True when it did.
+    @discardableResult
+    private func recycle(_ why: String) -> Bool {
+        guard lastRecycle.map({ Date().timeIntervalSince($0) > 60 }) ?? true else { return false }
+        lastRecycle = Date()
+        NSLog("aztecEngine| store | recycling the page | %@", String(why.prefix(200)))
+        isReady = false
+        let message = String(localized: "Your Aztec account restarted. Try again.")
+        for waiter in readyWaiters { waiter.resume(throwing: Failure(message: message)) }
+        readyWaiters = []
+        for (_, done) in calls { done.resume(throwing: Failure(message: message)) }
+        calls = [:]
+        // Off the window and released, so its process and its workers end
+        // and let go of the files.
+        webView?.stopLoading()
+        webView?.removeFromSuperview()
+        webView = nil
+        return true
+    }
 
     // MARK: - Casberi's own calls
 
     /// One of the engine's own calls (`account`, `chain`); the wallet starts on
-    /// the first (a PXE, a few seconds).
+    /// the first (a PXE, a few seconds). A call the store failed is asked
+    /// once more of a new page.
     func call(_ method: String, _ args: [Any] = []) async throws -> Any? {
+        do {
+            return try await ask(method, args)
+        } catch let failure as Failure where Self.storeFailed(failure.message) {
+            recycle(failure.message)
+            return try await ask(method, args)
+        }
+    }
+
+    #if DEBUG
+    /// `-aztecEngineProbe recycle`: the next call fails as a dead store does,
+    /// before the page is asked, so the restart and the second ask can be
+    /// watched on a simulator, whose store does not die by itself.
+    var failNextAsk = false
+    #endif
+
+    private func ask(_ method: String, _ args: [Any]) async throws -> Any? {
+        #if DEBUG
+        if failNextAsk {
+            failNextAsk = false
+            throw Failure(message: "SQLITE_IOERR: sqlite3 result code 10: disk I/O error")
+        }
+        #endif
         try await start()
         guard let webView else { throw Failure(message: "the engine stopped") }
         attachToWindow(webView)
@@ -175,6 +253,17 @@ final class AztecEngine: NSObject {
                 ?? (body["detail"]).flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed]) }
                     .map { String(decoding: $0, as: UTF8.self) } ?? ""
             NSLog("aztecEngine| %@ | %@", event, String(detail.prefix(600)))
+        case "engineBroken":
+            // An app's call found the store dead; the app has its answer,
+            // and the next page is made now.
+            // The app's page is loaded again once it is: an app may not let
+            // Casberi be picked twice.
+            if recycle(body["error"] as? String ?? "?") {
+                Task {
+                    try? await start()
+                    browser?.engineRestarted()
+                }
+            }
         case "engineStep":
             // A send's steps, for the screen that started it (prd §1700w).
             PrivateSendSteps.shared.received(body, plan: .send(.aztec))
@@ -254,6 +343,8 @@ final class AztecEngine: NSObject {
         readyWaiters = []
         for (_, done) in calls { done.resume(throwing: Failure(message: message)) }
         calls = [:]
+        // Off the window too: a view the window still holds keeps its page.
+        webView?.removeFromSuperview()
         webView = nil
         server?.stop()
         server = nil

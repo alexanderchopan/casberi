@@ -220585,6 +220585,34 @@
         }
       }
     },
+    "Your Aztec account restarted. Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Aztec se reinició. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントを再起動しました。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정이 다시 시작되었습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Aztec 账户已重新启动。请重试。"
+          }
+        }
+      }
+    },
     "Your Aztec address, %@" : {
       "localizations" : {
         "es" : {

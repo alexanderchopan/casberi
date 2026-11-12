@@ -11,7 +11,9 @@ enum AztecEngineProbe {
     static func run(_ raw: String) {
         // `used`: also mark the account used and read its holdings, so the
         // Wallet's row and Holdings › Private › Aztec show (prd §1700a).
-        guard raw == "YES" || raw == "1" || raw == "used" else { return }
+        // `recycle`: then fail one call as a dead store does, and read the
+        // account and the chain again from the page that replaces it.
+        guard raw == "YES" || raw == "1" || raw == "used" || raw == "recycle" else { return }
         Task { @MainActor in
             let start = Date()
             func say(_ step: String, _ detail: String) {
@@ -33,6 +35,13 @@ enum AztecEngineProbe {
                     ? "on · \(AddressTail.short(fees?["address"] as? String ?? "")) · holds \(fees?["balance"] ?? "?")" : "off")
                 let plan = try await AztecEngine.shared.call("feeJuicePlan", ["1"]) as? [String: Any]
                 say("gasPlan", "\(plan?["kind"] ?? "?") · to \(AddressTail.short(plan?["to"] as? String ?? ""))")
+                if raw == "recycle" {
+                    AztecEngine.shared.failNextAsk = true
+                    let again = try await AztecEngine.shared.accountAddress()
+                    say("recycled", again == address ? "same account from a new page" : "A DIFFERENT ACCOUNT")
+                    let after = try await AztecEngine.shared.call("chain") as? [String: Any]
+                    say("chainAfter", "\(after?["chainId"] ?? "?") / \(after?["version"] ?? "?")")
+                }
                 if raw == "used" {
                     AztecAccountStore.shared.markUsed(address: address)
                     let read = await AztecAccountStore.shared.refresh()

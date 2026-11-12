@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1930 of 2003 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1931 of 2004 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2088,7 +2088,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent) (amended by §1718)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
-- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j)
+- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j, §1753)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it (amended by §1700t)
 - §1700aa — Gas on Aztec is private and is bought with what you move: it goes to the ecosystem's shared private fee contract, the…
 - §1700ab — Half · All is one control, as Round-ups' is: its halves share the row's width, never two small pills on the left (ame…
@@ -2178,6 +2178,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1750 — Paying a zk.money tag asks ENS for the resolver each time; the pin is the fallback
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
+- §1753 — Your Aztec account's engine starts over when its store stops answering
 
 ## Dead rulings → what replaced them (generated)
 

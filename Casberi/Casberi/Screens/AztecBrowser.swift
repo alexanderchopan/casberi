@@ -523,6 +523,16 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         host = webView.url?.host(percentEncoded: false) ?? host
     }
 
+    /// The engine started over under this page (prd §1753): the page's
+    /// session with it is gone, and an app may not offer Casberi a second
+    /// time (RavenHouse, on a phone, 2026-11-12: its picker took no second
+    /// tap). So the page is loaded again and finds a wallet that answers.
+    func engineRestarted() {
+        ask = nil
+        queue.removeAll()
+        page.reload()
+    }
+
     // MARK: - Asking
 
     func enqueue(_ next: Request) {

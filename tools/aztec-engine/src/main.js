@@ -639,18 +639,31 @@ gate = connectGate({
 });
 background.initialize();
 
+// THE STORE CAN GO DEAD UNDER A RUNNING PAGE (seen on a phone, 2026-11-12:
+// RavenHouse drew {"message":"SQLITE_IOERR: sqlite3 result code 10: disk I/O
+// error"} on the first call after Connect). The wallet keeps its notes in
+// SQLite over the browser's private files, and a page whose files stopped
+// answering never heals by itself: every later call fails the same way. So
+// the page says so, and the shell starts a new one (`AztecEngine.recycle`).
+const storeBroken = e => /SQLITE_(IOERR|CANTOPEN|CORRUPT|NOTADB)|disk I\/O error/i.test(String(e?.message ?? e));
+const STORE_WORDS = "Casberi's Aztec wallet is restarting. Connect again.";
+
 async function answerApp(session, message) {
       const { messageId, type, args } = message;
       const started = ms();
       let result;
       let error;
+      let broken = null;
       try {
         result = await callForApp(type, args, session.origin);
       } catch (e) {
-        error = { message: String(e?.message ?? e).slice(0, 400) };
+        if (storeBroken(e)) broken = String(e?.message ?? e).slice(0, 200);
+        error = { message: broken ? STORE_WORDS : String(e?.message ?? e).slice(0, 400) };
       }
       log(error ? 'refused' : 'answered', { type, origin: session.origin, took: ms() - started });
       await background.sendResponse(session.sessionId ?? session.requestId, { messageId, result, error, walletId: WALLET.walletId });
+      // After the app has its answer: the restart ends this page.
+      if (broken) native('engineBroken', { error: broken });
 }
 
 // --- the shell's door ------------------------------------------------------------

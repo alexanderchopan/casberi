@@ -72115,3 +72115,22 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** Nothing here is phone-only; the Mac's clipboard answers the same pattern question.
 
 **Self-test** (`scripts/zkmoney-selftest.sh`): a cent asked warns at 35 times, a quarter at "more than", an amount the size of the fee or over says nothing; the paid title in its three shapes; Paste link takes only a request and never reads the clipboard before the tap; a row is retitled only where it is marked paid; Explorer only on a row paid from here; the fee warning ends with the request; Again goes by Send's own rule and only on a transfer this account sent; Recent is Send's own record and keeps a tag as a tag; three mutations.
+
+## §1753 — Your Aztec account's engine starts over when its store stops answering (amends §1700's engine; user, 2026-11-12, connecting RavenHouse in Casberi's browser on a phone, after "the emoji matches": the app drew `{"message":"SQLITE_IOERR: sqlite3 result code 10: disk I/O error"}`) — BUILT; the restart seen on the simulator with a faked failure; the phone's failure NOT reproduced and NOT cured by this: it survived a force-quit, which a restart of the page cannot beat. Its cause is UNMEASURED
+
+**What happened.** The error is Casberi's, not RavenHouse's. The wallet inside the engine's page keeps its notes in SQLite over WebKit's private files. After Connect and the emoji check, the app's first call reached the wallet, the store failed, and the engine handed the store's own words to the app, which printed them. RavenHouse's picker then took no second tap.
+
+**What was measured, and what was not.** On a simulator with a new wallet RavenHouse connected: Connect, the emoji check, `requestCapabilities` and `getContractMetadata` answered, and the app went on to its own "Verify your wallet". So nothing RavenHouse asks breaks a healthy store. On the phone the same error came back after the page was closed and after Casberi was force-quit, so the phone's stored wallet data, or the room it has, is the cause, and a new page does not cure it. No log was taken from the phone (the user: "Not now"). A balance showing in Holdings proves nothing here: it is the last one read. What follows heals the lesser case, a store that dies under a running page, and gives an app words instead of SQLite's.
+
+1. **A dead store restarts the page** (`AztecEngine.recycle`). When a call fails with the store's error (`storeFailed`: SQLite's I/O, can't-open, corrupt and not-a-database errors), the page is taken off the window and released, so its process and workers end and let go of the files, and a new page is made on the server already running. The keys are in the Keychain and the notes on disk: nothing is lost but an app's session.
+2. **Casberi's own calls ask again, once** (`call`): the Wallet's reads and Move's steps never see the failure when the new page answers.
+3. **An app is told in words** (`main.js`, `answerApp`): "Casberi's Aztec wallet is restarting. Connect again.", never SQLite's. The page tells the shell after the app has its answer (`engineBroken`), the new page is started at once, and the app's own page is loaded again when it is ready (`AztecBrowserModel.engineRestarted`): RavenHouse's picker took no second tap, so "connect again" had nowhere to be done. Anything typed into the app's page is lost with the reload, as it would be closing it.
+4. **Once a minute at most.** Storage that is really gone fails again and is said, never looped on.
+5. **A failed page leaves the window** (`pageFailed`): it nilled its view and left it under the window, where its page lived on.
+6. **One start at a time** (`starting`): two calls arriving together made two servers, and the second found the port taken.
+
+**Not built.** The cure for the phone's own case: reading its log to find the step that fails, then, if the store itself is the fault, wiping and re-reading it (Aztec's own code does that for an image SQLite calls corrupt, and for nothing else). A check on the app's return that would restart the page before anything is asked.
+
+**Mac half (§1402).** The same engine; nothing here is phone-only.
+
+**Hook.** `-aztecEngineProbe recycle` (in `docs/hooks/wallet.md`).
