@@ -619,6 +619,8 @@ const background = new BackgroundConnectionHandler(
     onSessionTerminated: requestId => {
       gate.terminated(requestId);
       log('terminated', { requestId });
+      // Its Connect or emoji check, if still on screen, asks about nothing now.
+      native('engineAskGone', { id: requestId });
     },
     onWalletMessage: async (session, message) => {
       const id = session.sessionId ?? session.requestId;

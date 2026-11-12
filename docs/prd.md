@@ -72162,3 +72162,20 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Not built.** The receipt's Done and Cancel order stay words; the private sentences (Aztec, Railgun, Privacy Pools, a fresh Receive) keep their own feet. Slide to send was not picked: the tap already asks Face ID (§1687), and a slide would confirm twice.
 
 **Mac half (§1402).** The same view draws in the Mac's Move.
+
+## §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view (amends §1700j's two sheets and §1700's browser; user, 2026-11-12, asking to "go through each app in the directory and make sure we have the best possible experience for using them, as a whole and individually", then, shown the walk's findings, "Yes, browser basics") — BUILT; see the end of this entry for what was seen
+
+**The walk it comes from.** Aztec's directory and seven apps were opened in Casberi's browser on a simulator. RavenHouse connects with your Aztec account and then asks for one transaction to verify the wallet. Olla lists Casberi and stops at its own terms box. Xochi, RollingChat and Private Inference are Ethereum sign-ins, list Casberi, and could not be tried on a simulator with no account. Nemi is a waitlist; Dark Forest is a desktop game behind its own terms screen. Most of what was wrong was the browser's.
+
+1. **One band under the page** (`AztecBrowserBand`): the site's name, a spinner while the page loads, Back while there is a page to go back to (§83), and Reload. Under the page, never over it and never at the top (§752). Before it a loading page was a blank sheet, a tapped link looked dead for seconds, the browser never said which site it was on, and an app that would not offer Casberi twice (RavenHouse) left no way to try again but closing.
+2. **"Starting your Aztec account"** stands in the band, in place of the site's name, from the wallet's start to its first answer (`AztecEngine.walletStarting`). A cold wallet took about 38 seconds on RavenHouse on a loaded simulator, with nothing on screen but the app's own "Not connecting? Make sure the Casberi extension is unlocked".
+3. **The emoji check is short** (`AztecAskSheet.emojiCheck`): "Do these match?", the nine, and the two answers on one foot, "They don't" in grey and "They match" in the pick's pink, no slab. The sheet stood over the site's own grid, three of its nine showing, so the comparison the check exists for could not be made.
+4. **A site's name breaks at its dots** (`AztecAskSheet.breaking`), in every ask's title: "Connect app.ravenhouse.xyz?" drew "app.ravenhouse.xy" over "z?". The whole name is still shown; no part is dropped.
+5. **The simulator's door opens what the phone opens** (`AztecBrowserProbe`): `-aztecAppEthereum` now gives the page your Aztec wallet as well as your account, as the directory's own door does, and every probe door is a sheet with its grabber. It had been a full-screen cover under a bar with Close, without the Aztec wallet: a first walk through it reported three apps finding no wallet and a white bar at the top, neither of which the phone has.
+
+6. **The wallet warms as an Aztec page opens** (`AztecBrowserModel.open`), so its start overlaps the page's loading; the band says "Starting your Aztec account" only once a connected app is waiting on it (`appWaitsOnWallet`), and shows the site's name until then.
+7. **An ask goes when its session does** (`engineAskGone`, `withdraw(session:)`). RavenHouse tries to connect by itself on a return visit and gives up on a slow wallet; its Connect and emoji sheets stayed up for a session that had ended, and the person answered both twice.
+
+**Not built.** Casberi's own short list of the apps that work, in place of Aztec's page (three taps and two pages to reach an app; the page lists other wallets, bridges and an explorer beside the apps): a design ruling still to be made. Sign-in on the three Ethereum apps, untested for want of an account on the simulator. The phone's own storage failure (§1753).
+
+**Mac half (§1402).** The browser is the same view on the Mac; the band stands there too.

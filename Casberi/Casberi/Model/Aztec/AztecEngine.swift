@@ -132,7 +132,7 @@ final class AztecEngine: NSObject {
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
                            "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep",
-                           "engineBroken"]
+                           "engineBroken", "engineAskGone"]
 
     // MARK: - A store that stopped answering
 
@@ -153,6 +153,14 @@ final class AztecEngine: NSObject {
 
     private var lastRecycle: Date?
 
+    /// The wallet inside the page is starting (a PXE, seconds on a phone)
+    /// while a connected app waits on it: the browser's band says so. A
+    /// wallet warming under a page nobody has connected says nothing.
+    private var walletStarting = false { didSet { tellBrowser() } }
+    private var appWaiting = false { didSet { tellBrowser() } }
+    var appWaitsOnWallet: Bool { walletStarting && appWaiting }
+    private func tellBrowser() { browser?.wallet(starting: appWaitsOnWallet) }
+
     /// Throws the page away for a new one, once a minute at most: storage
     /// that is really gone (a full disk) fails again and is said, never
     /// looped on. True when it did.
@@ -162,6 +170,8 @@ final class AztecEngine: NSObject {
         lastRecycle = Date()
         NSLog("aztecEngine| store | recycling the page | %@", String(why.prefix(200)))
         isReady = false
+        walletStarting = false
+        appWaiting = false
         let message = String(localized: "Your Aztec account restarted. Try again.")
         for waiter in readyWaiters { waiter.resume(throwing: Failure(message: message)) }
         readyWaiters = []
@@ -253,6 +263,20 @@ final class AztecEngine: NSObject {
                 ?? (body["detail"]).flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed]) }
                     .map { String(decoding: $0, as: UTF8.self) } ?? ""
             NSLog("aztecEngine| %@ | %@", event, String(detail.prefix(600)))
+            // The page's band says the wallet is starting until it has
+            // an account or has answered (prd §1756).
+            switch event {
+            case "walletStarting": walletStarting = true
+            case "accountReady": walletStarting = false
+            case "connected": appWaiting = true
+            case "answered", "refused": walletStarting = false; appWaiting = false
+            default: break
+            }
+        case "engineAskGone":
+            // The app ended the session its Connect or emoji check was for
+            // (RavenHouse gives up on a slow wallet and starts over): a
+            // sheet left standing asked about nothing (prd §1756).
+            if let id = body["id"] as? String { browser?.withdraw(session: id) }
         case "engineBroken":
             // An app's call found the store dead; the app has its answer,
             // and the next page is made now.
@@ -339,6 +363,8 @@ final class AztecEngine: NSObject {
     fileprivate func pageFailed(_ message: String) {
         NSLog("aztecEngine| page | %@", message)
         isReady = false
+        walletStarting = false
+        appWaiting = false
         for waiter in readyWaiters { waiter.resume(throwing: Failure(message: message)) }
         readyWaiters = []
         for (_, done) in calls { done.resume(throwing: Failure(message: message)) }

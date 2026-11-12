@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1933 of 2006 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1934 of 2007 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -2088,7 +2088,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1697 — Lent stands on its last reading, dated, as a wallet does (applies §825 to §1695's Lent) (amended by §1718)
 - §1698 — The Holdings box is cut as the list is: Tokens' tokens, one tile per app on All, Lent and Private
 - §1699 — L2BEAT is ETHBEAT
-- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j, §1753)
+- §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j, §1753, §1756)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it (amended by §1700t)
 - §1700aa — Gas on Aztec is private and is bought with what you move: it goes to the ecosystem's shared private fee contract, the…
 - §1700ab — Half · All is one control, as Round-ups' is: its halves share the row's width, never two small pills on the left (ame…
@@ -2101,7 +2101,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k, §1700p)
-- §1700j — An Aztec app finds Casberi at once; Connect and the emoji check are asked when you pick Casberi in the app, and hold…
+- §1700j — An Aztec app finds Casberi at once; Connect and the emoji check are asked when you pick Casberi in the app, and hold… (amended by §1756)
 - §1700k — An Ethereum app on Aztec's list finds your account and may send from it: one call at a time, said in words, run first… (amended by §1700l, §1700n)
 - §1700l — An app that takes only a plain key's signature can sign you in with your co-signer: a quiet line on Connect, its own… (amended by §1700u)
 - §1700m — Library's Wallet folder leads with Aztec's directory; the Wallet's Home keeps its door (extends §1700i) (amended by §1700p, §1700s)
@@ -2181,6 +2181,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1753 — Your Aztec account's engine starts over when its store stops answering
 - §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755)
 - §1755 — Move's act is a pink card
+- §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view
 
 ## Dead rulings → what replaced them (generated)
 

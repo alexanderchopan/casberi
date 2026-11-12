@@ -92,6 +92,17 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     private var askSheetGoneWaiters: [CheckedContinuation<Void, Never>] = []
     @Published var host: String
     @Published var failed: String?
+    /// The page is loading, and whether there is a page to go back to: the
+    /// band under the page says both (prd §1756).
+    @Published private(set) var loading = false
+    /// The engine is starting and the page is not asked for yet.
+    @Published private(set) var opening = true
+    @Published private(set) var canGoBack = false
+    /// Your Aztec account's wallet is starting for this page's first call:
+    /// a cold one takes long enough that an app can give up waiting, and
+    /// nothing on screen said Casberi was at work (RavenHouse, 2026-11-12).
+    @Published private(set) var walletStarting = false
+    private var watching: [NSKeyValueObservation] = []
     /// An app's transaction on its way, said under the page.
     @Published var sending: String?
     private var queue: [Request] = []
@@ -133,6 +144,44 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         if aztec { controller.add(self, contentWorld: Self.relayWorld, name: "casberiRelay") }
         if ethereum { controller.addScriptMessageHandler(self, contentWorld: .page, name: "casberiEthereum") }
         page.navigationDelegate = self
+        watching = [
+            page.observe(\.isLoading, options: [.initial, .new]) { [weak self] view, _ in
+                let now = view.isLoading
+                Task { @MainActor in self?.loading = now }
+            },
+            page.observe(\.canGoBack, options: [.initial, .new]) { [weak self] view, _ in
+                let now = view.canGoBack
+                Task { @MainActor in self?.canGoBack = now }
+            },
+        ]
+    }
+
+    func goBack() { page.goBack() }
+
+    /// The page again, from the network: the way to try a connect an app
+    /// will not offer twice.
+    func reload() {
+        ask = nil
+        queue.removeAll()
+        page.reload()
+    }
+
+    /// The engine says its wallet is starting, or has answered.
+    func wallet(starting: Bool) {
+        if walletStarting != starting { walletStarting = starting }
+    }
+
+    /// The app ended the session an ask was for: the ask goes with it.
+    func withdraw(session: String) {
+        func isFor(_ r: Request) -> Bool {
+            switch r {
+            case .connect(let id, _): id == session
+            case .emoji(let id, _, _): id == session
+            default: false
+            }
+        }
+        queue.removeAll(where: isFor)
+        if let ask, isFor(ask) { self.ask = nil }
     }
 
     /// Starts the engine first, so the relay's first message has somewhere to go.
@@ -148,10 +197,15 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
                 Task { coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first }
             }
         }
+        defer { opening = false }
         guard aztec else { page.load(URLRequest(url: start)); return }
         do {
             try await AztecEngine.shared.start()
             AztecEngine.shared.browser = self
+            wallet(starting: AztecEngine.shared.appWaitsOnWallet)
+            // The wallet warms while the page loads (prd §1756): a cold one
+            // outlasted an app's own wait for it.
+            Task { _ = try? await AztecEngine.shared.accountAddress() }
             page.load(URLRequest(url: start))
         } catch {
             failed = error.localizedDescription
@@ -528,9 +582,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     /// time (RavenHouse, on a phone, 2026-11-12: its picker took no second
     /// tap). So the page is loaded again and finds a wallet that answers.
     func engineRestarted() {
-        ask = nil
-        queue.removeAll()
-        page.reload()
+        reload()
     }
 
     // MARK: - Asking
@@ -579,6 +631,57 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     }
 }
 
+/// **THE BROWSER'S ONE BAND (prd §1756).** Under the page, never over it and
+/// never at the top (prd §752): which site this is, whether it or your
+/// Aztec account is still at work, the way back a page, and the page again.
+/// The browser had none of the four: a loading page was a blank sheet, a
+/// tapped link looked dead, and an app that would not offer Casberi twice
+/// left no way to try again but closing (seen walking Aztec's directory,
+/// 2026-11-12). Back stands only while there is a page to go back to (§83).
+private struct AztecBrowserBand: View {
+    @ObservedObject var model: AztecBrowserModel
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            if model.canGoBack {
+                Button { model.goBack() } label: {
+                    Image(systemName: "chevron.backward").dsGlyph(.body)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Back"))
+                .transition(.opacity)
+            }
+            HStack(spacing: DS.Space.s2) {
+                if model.opening || model.loading || model.walletStarting {
+                    DSSpinner(size: .small).transition(.opacity)
+                }
+                Text(verbatim: model.walletStarting ? String(localized: "Starting your Aztec account") : model.host)
+                    .dsText(.body17)
+                    .foregroundStyle(model.walletStarting ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+            }
+            .frame(maxWidth: .infinity, alignment: model.canGoBack ? .center : .leading)
+            Button { model.reload() } label: {
+                Image(systemName: "arrow.clockwise").dsGlyph(.body)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text("Reload"))
+        }
+        .padding(.leading, model.canGoBack ? DS.Space.s2 : DS.Space.s4)
+        .padding(.trailing, DS.Space.s2)
+        .frame(minHeight: 44)
+        .animation(DS.Motion.standard, value: model.canGoBack)
+        .animation(DS.Motion.standard, value: model.loading)
+        .animation(DS.Motion.standard, value: model.opening)
+        .animation(DS.Motion.standard, value: model.walletStarting)
+    }
+}
+
 struct AztecBrowserView: View {
     @StateObject private var model: AztecBrowserModel
     @Environment(\.dismiss) private var dismiss
@@ -589,6 +692,8 @@ struct AztecBrowserView: View {
     init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
         _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends))
     }
+
+    private var band: some View { AztecBrowserBand(model: model) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -603,6 +708,7 @@ struct AztecBrowserView: View {
             if let failed = model.failed {
                 Text(verbatim: failed).dsText(.subhead12).foregroundStyle(DS.destructiveInk).padding()
             }
+            band
         }
         .navigationTitle(Text(verbatim: model.host))
         .navigationBarTitleDisplayMode(.inline)
@@ -679,6 +785,7 @@ struct AztecAskSheet: View {
 
     var body: some View {
         DSTray(title: title, height: height, ink: true) {
+            if case .emoji = ask { emojiCheck } else {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 content
                 // ONE hero verb (hero-tint-audit): the co-signer leads when the
@@ -701,10 +808,42 @@ struct AztecAskSheet: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         // An app's ask is answered, never swiped away unanswered: the two
         // verbs are the way out (way-back-audit ALLOWED).
         .interactiveDismissDisabled()
+    }
+
+    /// **THE EMOJI CHECK LEAVES THE SITE IN VIEW (prd §1756).** The check is
+    /// a comparison, and the sheet stood over the site's own nine: three of
+    /// them showed above it (RavenHouse, 2026-11-12), so "They match" was a
+    /// guess. Now the nine and the two answers on one foot, no slab: short
+    /// enough that a grid in the middle of the page stays whole above it.
+    private var emojiCheck: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            content
+            HStack(alignment: .firstTextBaseline) {
+                Button { answer(false) } label: {
+                    Text(verbatim: declineWord).dsText(.heading24).foregroundStyle(DS.textSecondary)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+                Spacer(minLength: DS.Space.s4)
+                Button { answer(true) } label: {
+                    Text(verbatim: acceptWord).dsText(.heading24).foregroundStyle(DS.pickInk)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A site's name that breaks at its dots, never inside a word: "Connect
+    /// app.ravenhouse.xyz?" drew "app.ravenhouse.xy" over "z?" (prd §1756).
+    static func breaking(_ host: String) -> String {
+        host.replacingOccurrences(of: ".", with: ".\u{200B}")
     }
 
     @ViewBuilder private var content: some View {
@@ -716,7 +855,7 @@ struct AztecAskSheet: View {
         case .emoji(_, _, let emoji):
             // The nine in one row, the way they are read: left to right.
             Text(verbatim: emoji)
-                .dsText(.heading34)
+                .dsText(.heading24)
                 .lineLimit(1).minimumScaleFactor(0.5)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .send(_, _, let calls, let fee):
@@ -821,9 +960,9 @@ struct AztecAskSheet: View {
     }
 
     private var title: String {
-        switch ask {
+        switch named {
         case .connect(_, let host): String(localized: "Connect \(host)?")
-        case .emoji: String(localized: "Check the site shows")
+        case .emoji: String(localized: "Do these match?")
         case .send(_, let host, _, _): String(localized: "\(host) wants to send")
         case .ethConnect(_, let host): (leadsWithCoSigner || needsCoSigner) && reconnecting ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
                                      : leadsWithCoSigner ? String(localized: "Connect \(host) with your co-signer?")
@@ -838,8 +977,21 @@ struct AztecAskSheet: View {
         }
     }
 
+    /// The ask with its site's name made breakable at the dots, for a title.
+    private var named: AztecBrowserModel.Request {
+        switch ask {
+        case .connect(let r, let host): .connect(requestId: r, host: Self.breaking(host))
+        case .send(let id, let host, let calls, let fee): .send(id: id, host: Self.breaking(host), calls: calls, fee: fee)
+        case .ethConnect(let id, let host): .ethConnect(id: id, host: Self.breaking(host))
+        case .ethSign(let id, let host, let text): .ethSign(id: id, host: Self.breaking(host), text: text)
+        case .ethSend(let id, let host, let says, let lines, let unread):
+            .ethSend(id: id, host: Self.breaking(host), says: says, lines: lines, unread: unread)
+        case .emoji, .ethTopUp: ask
+        }
+    }
+
     private var height: CGFloat {
-        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner || needsCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 360; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner || needsCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 190; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
     }
 
     private var acceptWord: String {

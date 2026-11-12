@@ -81,14 +81,16 @@ enum AztecBrowserProbe {
                 .flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController else { return }
             var top = root
             while let next = top.presentedViewController { top = next }
-            let host = UIHostingController(rootView: NavigationStack {
-                AztecBrowserView(url: url, aztec: !ethereum, ethereum: ethereum, sends: sends).toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { top.presentedViewController?.dismiss(animated: true) }
-                    }
-                }
-            })
-            host.modalPresentationStyle = .fullScreen
+            // Presented as the real doors present it (`SettingsHome`, a
+            // thing's sheet): a sheet with its grabber, pulled down to
+            // close. It was a full-screen cover under a navigation bar with
+            // a Close button, so a walk on the simulator judged chrome the
+            // phone never draws (2026-11-12).
+            let host = UIHostingController(rootView:
+                AztecBrowserView(url: url, aztec: !ethereum || sends, ethereum: ethereum, sends: sends))
+            host.modalPresentationStyle = .pageSheet
+            host.sheetPresentationController?.detents = [.large()]
+            host.sheetPresentationController?.prefersGrabberVisible = true
             top.present(host, animated: true)
             NSLog("aztecEngine| probe | browser | %@", url.host ?? raw)
         }
