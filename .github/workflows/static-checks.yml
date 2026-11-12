@@ -29,12 +29,16 @@ on:
   push:
   pull_request:
 
+# Least privilege: this workflow only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   audits:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.11'
 
@@ -89,6 +93,9 @@ jobs:
           done
           for f in scripts/*-audit.sh; do [[ -e "$f" ]] && run bash "$f"; done
           run bash scripts/catalog-sync.sh
+          # The published host list (docs/hosts.md) must match the code it is
+          # generated from. Not named *-audit, so it is listed here by hand.
+          run python3 scripts/hosts-doc.py --check
           echo "— $ran checks run, ${#fails[@]} failed"
           if (( ${#fails[@]} )); then
             printf 'failed: %s\n' "${fails[*]}"

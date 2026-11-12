@@ -1,5 +1,8 @@
 # Casberi
 
+[![Static checks](https://github.com/alexanderchopan/casberi/actions/workflows/static-checks.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/static-checks.yml)
+[![Engine reproducibility](https://github.com/alexanderchopan/casberi/actions/workflows/engine-reproducibility.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/engine-reproducibility.yml)
+
 **Keep it Moving, Privately.**
 
 Your life and money are spread across accounts. You spend the day switching between apps to get anything done. Casberi gives you an inbox and a wallet to keep it all moving, privately.
@@ -41,6 +44,9 @@ Casberi holds keys and signs transactions. To report a vulnerability, see [`SECU
 | Every host the app may contact | `Model/NetworkReach.swift` (declared), `Model/NetworkLedger.swift` (recorded at runtime) |
 | Private-money engines | `tools/aztec-engine/`, `tools/privacy-pools-engine/`, `tools/railgun-engine/`, built into `Casberi/Casberi/Resources/*-engine.js` |
 | Start here | `docs/architecture.md`: what the app holds, what signs, what leaves the device, what it trusts |
+| Check the claims | [`docs/verify-it-yourself.md`](docs/verify-it-yourself.md): one command per claim, with the output to expect |
+| Every host contacted | [`docs/hosts.md`](docs/hosts.md): generated from the code |
+| Every dependency | [`docs/dependencies.md`](docs/dependencies.md): version, source and licence |
 | Specs | `docs/specs/signing-safety-spec.md`, `safe-wallet-spec.md`, `signer-spec.md`, `aztec-security-model.md` |
 
 The checks that guard these areas run on every pass and in CI. The ones to read first: `scripts/keychain-audit.py`, `scripts/network-reach-audit.sh`, `scripts/safe-signer-selftest.sh`, `scripts/clearsign-selftest.sh`, `scripts/secret-scan-selftest.py`, `scripts/redaction-coverage-audit.py`. `docs/verify.md` says what each one catches.

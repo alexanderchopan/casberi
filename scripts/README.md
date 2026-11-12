@@ -30,7 +30,7 @@ Every check has a `--self-test` proving it can fail. What each one catches is in
 | App Store Connect | `asc-copy.py`, `asc-jwt.py`, `asc-report.py`, `asc-screenshots.py`, `mac-appstore-capture.sh` |
 | Nightly | `nightly-live.sh`, `nightly-mac.sh`, `live-integrations.sh`, `journeys.sh`, `journeys-report.py`, `journeys-targets.json`, `sheet-sweep*`, `app-pages-sweep.sh`, `com.casberi.*.plist` (launchd) |
 | Engines and vendored builds | `aztec-engine.sh`, `tdlib.sh`, `tor-repackage.sh`, `ppv2-upstream.py` |
-| Generated data | `clearsign-registry.py`, `clearsign-casberi.py`, `uniswap-v4-pools.py`, `l2beat-snapshot.py`, `walletbeat-snapshot.py`, `law-digest.py`, `build-blocks.py`, `coin-symbol.swift` |
+| Generated data | `hosts-doc.py` (writes `docs/hosts.md` from the declared hosts; `--check` in verify), `clearsign-registry.py`, `clearsign-casberi.py`, `uniswap-v4-pools.py`, `l2beat-snapshot.py`, `walletbeat-snapshot.py`, `law-digest.py`, `build-blocks.py`, `coin-symbol.swift` |
 | Website | `catalog-sync.sh`, `site-integrity.py` |
 | Demo art | `demo-art/`, `make-demo-art.swift`, `make-demo-avatars.swift`, `wallet-video/` |
 | Performance | `perf.sh`, `main-thread-profile.sh` |

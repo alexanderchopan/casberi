@@ -1,0 +1,34 @@
+name: Bug report
+description: Something in Casberi does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security problems do not go here.** If you found a way to move someone's money, read their keys, or make the app show one thing and sign another, report it privately: the Security tab of this repository, then "Report a vulnerability".
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings shows it, for example 3.0.28.
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options: [iPhone, iPad, Mac]
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: A screenshot helps. Hide balances and addresses first.

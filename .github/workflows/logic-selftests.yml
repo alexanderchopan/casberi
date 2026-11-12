@@ -81,6 +81,10 @@ concurrency:
   group: logic-selftests-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+# Least privilege: this workflow only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   selftests:
     runs-on: macos-latest
@@ -92,7 +96,7 @@ jobs:
     # Tighten it once a green run has said what the real figure is.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Toolchain
         run: |
@@ -211,7 +215,7 @@ jobs:
       # see which one it is.
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: selftest-logs
           path: .selftest-out/

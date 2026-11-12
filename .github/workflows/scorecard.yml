@@ -1,0 +1,41 @@
+# OpenSSF Scorecard: an outside tool's score of this repository's security
+# practices (pinned dependencies, token permissions, branch rules, and so on).
+#
+# The result is NOT published: it is written to this run's log and kept as an
+# artifact, so the score can be read and acted on first. To publish it and
+# earn the badge, set publish_results to true and add id-token: write.
+name: Scorecard
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: scorecard.json
+          results_format: json
+          publish_results: false
+      - name: The score
+        run: |
+          python3 - <<'PY'
+          import json
+          d = json.load(open("scorecard.json"))
+          print("score", d.get("score"))
+          for c in sorted(d.get("checks", []), key=lambda c: c.get("score", -1)):
+              print(f"{c.get('score'):>3}  {c.get('name')}: {c.get('reason')}")
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: scorecard
+          path: scorecard.json

@@ -521,6 +521,13 @@ step "Build record"
 "$ROOT/scripts/build-record.sh" --self-test > /dev/null || fail "build-record.sh fails its self-test — run scripts/build-record.sh --self-test"
 print -P "%F{green}✓ build record%f"
 
+# The published list of every host the app contacts (docs/hosts.md) is
+# generated from NetworkReach.swift; a page that drifted from the code would be
+# the one privacy claim a reader checks and finds wrong.
+step "Hosts page"
+python3 "$ROOT/scripts/hosts-doc.py" --self-test > /dev/null || fail "hosts-doc.py fails its self-test"
+python3 "$ROOT/scripts/hosts-doc.py" --check || fail "docs/hosts.md is stale — run python3 scripts/hosts-doc.py"
+
 step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"
