@@ -52,14 +52,25 @@ jobs:
             command -v "$tool" >/dev/null || brew install "$tool"
           done
 
+      # Restored and saved as two steps, so an hour of TDLib is kept even when
+      # a later step fails (the combined action saves only on a green job, and
+      # the first run lost it that way).
       - name: TDLib cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: tdlib-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/Library/Caches/casberi/tdlib
           key: tdlib-${{ runner.os }}-xcode27.2-${{ hashFiles('scripts/tdlib.sh') }}
 
       - name: TDLib
         run: scripts/tdlib.sh
+
+      - name: Keep TDLib
+        if: steps.tdlib-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/Library/Caches/casberi/tdlib
+          key: ${{ steps.tdlib-cache.outputs.cache-primary-key }}
 
       - name: Aztec cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -69,18 +80,25 @@ jobs:
             tools/aztec-engine/node_modules
           key: aztec-${{ runner.os }}-${{ hashFiles('scripts/aztec-engine.sh', 'tools/aztec-engine/package-lock.json') }}
 
+      # A NAMED simulator, never the generic destination: generic builds the
+      # x86_64 slice as well, and TDLib, Tor and Aztec's prover carry arm64
+      # only (the first run compiled everything and failed at that link).
+      - name: Pick a simulator
+        run: |
+          device=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone 17 Pro \([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}')
+          [ -n "$device" ] || { xcrun simctl list devices available; echo "no iPhone 17 Pro simulator on this image"; exit 1; }
+          echo "SIM=$device" >> "$GITHUB_ENV"
+
       - name: Build for the simulator
         run: |
           scripts/xcb.sh -project Casberi/Casberi.xcodeproj -scheme Casberi \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "id=$SIM" \
             -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO build
 
       - name: Unit tests
         run: |
-          device=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone 17 Pro \([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}')
-          [ -n "$device" ] || { xcrun simctl list devices available; echo "no iPhone 17 Pro simulator on this image"; exit 1; }
           scripts/xcb.sh test -project Casberi/Casberi.xcodeproj -scheme Casberi \
-            -destination "id=$device" \
+            -destination "id=$SIM" \
             -derivedDataPath "$RUNNER_TEMP/dd" \
             -only-testing:CasberiTests CODE_SIGNING_ALLOWED=NO
