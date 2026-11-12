@@ -36,7 +36,12 @@ enum AztecApps {
     /// being USED: the directory is how it first gets used, so that gate hid
     /// the door from everyone who had not already found Aztec in Move.
     @MainActor static var doorShown: Bool {
-        YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive
+        #if DEBUG
+        // `-aztecDoorSample YES`: the door and the tiles of what you have
+        // connected (prd §1757) on a simulator, which has no Your account.
+        if UserDefaults.standard.bool(forKey: "aztecDoorSample") { return true }
+        #endif
+        return YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive
     }
 
     /// Whether `url` is one of them: https, its host or `www.` before it.

@@ -72179,3 +72179,19 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Not built.** Casberi's own short list of the apps that work, in place of Aztec's page (three taps and two pages to reach an app; the page lists other wallets, bridges and an explorer beside the apps): a design ruling still to be made. Sign-in on the three Ethereum apps, untested for want of an account on the simulator. The phone's own storage failure (§1753).
 
 **Mac half (§1402).** The browser is the same view on the Mac; the band stands there too.
+
+## §1757 — The Aztec apps you have connected stand as tiles beside the directory (extends §1700m; keeps §1700c's "no list of apps to offer") (user, 2026-11-12, shown three ways to reach an app on the canvas "Aztec apps in Casberi: directory options": "B, tiles"; then "but you will need their logos right?" and, of the apps that do not connect, "it's because they are private alpha right now") — BUILT; SEEN on a simulator with RavenHouse: a yes to Connect made the tile, named RavenHouse, wearing the site's own raven on white, and a tap on it opened the site; NOT seen: Remove, a second app, an Ethereum connect, a phone
+
+**Why.** Aztec's directory is five taps from an app: the tile, Aztec's page of thirteen entries, a card, Aztec's page about the app, Open. Casberi keeping its own list of apps was the other option and reopens §1700c ("we don't have a uniswap app why would we have one for nemi olla or xochi"). A tile for something you have does not: tiles are what you have, the directory is where you find the rest.
+
+1. **A site you connect becomes a tile** in Library's Wallet folder, after "Aztec directory", under Yours (`AztecAppsStore`, `SourcesFolderAztecApp`): its icon over its name, one tap opens its front page in Casberi's browser, as the directory's tile opens Aztec's. A yes to Connect is what makes one, for your Aztec account or your account on Ethereum; a page only opened, or a Connect declined, makes none. So an app still in private alpha never stands there until it connects for you.
+2. **Its name is the directory's, else its own address** (`AztecAppsShape.name`): "RavenHouse" for `app.ravenhouse.xyz`, and `some.site.example` for a site the directory does not name. Never the page's title: a page writes its own.
+3. **Its icon is the site's own, asked of the page while you are on it** (`AztecBrowserModel.rememberApp`): the page's home-screen icon, else its largest declared one, else its favicon, read by the page itself, drawn down to a tile on white (a site's mark is often a dark shape on nothing, and RavenHouse's raven vanished on the folder's ground) and kept on this phone. No artwork is bundled and no new host is reached. An icon the page will not give (another origin's, an SVG, over 600 KB) leaves the tile the app's initials.
+4. **Eight at most, the newest connect first; a hold offers Open and Remove** (`AztecAppsShape.cap`). Kept in this phone's defaults, not synced.
+5. **The same gate as the directory's tile** (`AztecApps.doorShown`): Your account, an iPhone, never the demo. `-aztecDoorSample YES` shows both on a simulator.
+
+**Not built.** Reconnecting a remembered site without asking (RavenHouse asks twice on a return visit: its own reconnect gives up while Connect and the emoji check are answered): a security ruling still to be made. Removing a tile does not disconnect anything, because nothing stays connected between visits.
+
+**Mac half (§1402).** None: Library's directory tile is the phone's (§1700m item 3), and so are these.
+
+**Self-test** (`scripts/aztec-apps-selftest.sh`, in the pass): the names, the door, the order, the cap, Remove; four mutations; a site is kept only on a yes, and no tile reads a page's title.

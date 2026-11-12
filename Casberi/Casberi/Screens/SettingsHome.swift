@@ -42,7 +42,8 @@ struct SettingsHome: View {
     /// by a door that named it (prd §1234; the Apps screen's until then).
     @State private var trackPick: TrackPick?
     /// Aztec's directory, raised from the Wallet folder (prd §1700m).
-    @State private var aztecDirectory = false
+    /// Aztec's directory, or one app you have connected (prd §1757), in Casberi's browser.
+    @State private var aztecDirectory: AztecAppLink?
     /// The folder sprung open over the page (prd §1316).
     @State private var openFolder: String?
     /// The apps last opened from Library, for its Recent row (prd §1733);
@@ -164,7 +165,10 @@ struct SettingsHome: View {
                                   // The Wallet folder leads with Aztec's
                                   // directory (prd §1700m).
                                   aztecDirectory: category == CategoryFold.walletCategory && AztecApps.doorShown
-                                      ? { aztecDirectory = true } : nil)
+                                      ? { aztecDirectory = AztecAppLink(url: AztecApps.directory) } : nil,
+                                  // Beside it, the Aztec apps you have connected (prd §1757).
+                                  aztecApp: category == CategoryFold.walletCategory && AztecApps.doorShown
+                                      ? { app in aztecDirectory = URL(string: app.door).map(AztecAppLink.init(url:)) } : nil)
                     .transition(folderSpring)
             }
         }
@@ -211,8 +215,8 @@ struct SettingsHome: View {
         #endif
         // Aztec's directory in Casberi's browser, raised over Library as the
         // Wallet's Home door raises it (prd §1700m, §1700i).
-        .sheet(isPresented: $aztecDirectory) {
-            AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)
+        .sheet(item: $aztecDirectory) { link in
+            AztecBrowserView(url: link.url, ethereum: true, sends: true)
                 .presentationDragIndicator(.visible)
         }
         .modifier(DSOneSheet(route: $trackPick, pushes: { _ in route.sheet != nil },

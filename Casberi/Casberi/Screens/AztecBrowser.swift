@@ -137,6 +137,11 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         // A swipe from the edge goes back a page and forward again: Home's
         // door opens a directory you walk through (prd §1700i).
         page.allowsBackForwardNavigationGestures = true
+        // Clear until the page paints: a web view is white first, and that
+        // flashed over the dark sheet for as long as a page took to load.
+        page.isOpaque = false
+        page.backgroundColor = .clear
+        page.scrollView.backgroundColor = .clear
         #if DEBUG
         page.isInspectable = true
         #endif
@@ -170,6 +175,44 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     func wallet(starting: Bool) {
         if walletStarting != starting { walletStarting = starting }
     }
+
+    /// **A CONNECTED APP BECOMES A TILE, WEARING ITS OWN ICON (prd §1757).**
+    /// The site is kept by its address, and its icon is asked of the page
+    /// itself, here, while you are on it: the page's own request for its
+    /// own file, so no new host is reached and no artwork is bundled. An
+    /// icon the page will not give (another origin's, an SVG) leaves the
+    /// tile its initials.
+    private func rememberApp() {
+        guard let url = page.url, let host = url.host(percentEncoded: false)?.lowercased() else { return }
+        AztecAppsStore.shared.connected(url)
+        Task { [weak self] in
+            guard let self, let text = try? await page.callAsyncJavaScript(Self.iconScript, arguments: ["most": AztecAppsStore.iconBytes],
+                                                                         in: nil, contentWorld: .defaultClient) as? String,
+                  let comma = text.firstIndex(of: ","), text.hasPrefix("data:image/"),
+                  let data = Data(base64Encoded: String(text[text.index(after: comma)...])) else { return }
+            AztecAppsStore.shared.setIcon(data, host: host)
+        }
+    }
+
+    /// The page's largest declared icon (its home-screen one first), else
+    /// its favicon, as a data URL; null when it is too large or not there.
+    private static let iconScript = """
+        const size = l => Math.max(0, ...String(l.getAttribute('sizes') || '').split(/\\s+/).map(s => parseInt(s, 10) || 0));
+        const links = [...document.querySelectorAll('link[rel~="apple-touch-icon"], link[rel~="icon"]')]
+          .filter(l => l.href && !/\\.svg(\\?|$)/i.test(l.href))
+          .sort((a, b) => (b.rel.includes('apple') - a.rel.includes('apple')) || (size(b) - size(a)));
+        const href = links[0]?.href ?? new URL('/favicon.ico', location.origin).href;
+        const reply = await fetch(href, { credentials: 'omit' });
+        if (!reply.ok) return null;
+        const blob = await reply.blob();
+        if (blob.size > most || !/^image\\//.test(blob.type)) return null;
+        return await new Promise(done => {
+          const reader = new FileReader();
+          reader.onload = () => done(String(reader.result));
+          reader.onerror = () => done(null);
+          reader.readAsDataURL(blob);
+        });
+        """
 
     /// The app ended the session an ask was for: the ask goes with it.
     func withdraw(session: String) {
@@ -616,6 +659,8 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
                 return
             }
         }
+        // A site you connect stands in Library from now (prd §1757).
+        if yes { switch ask { case .connect, .ethConnect: rememberApp(); default: break } }
         queue.removeAll { $0.id == ask.id }
         // A declined connect ends the session: its emoji check is not asked
         // (the session's id is the connect's request id, prd §1700j).

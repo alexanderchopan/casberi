@@ -384,6 +384,10 @@ struct SourcesOpenFolder: View {
     /// keeps its door. Nil for every other folder, and while you have no
     /// Your account (`AztecApps.doorShown`, prd §1700s).
     var aztecDirectory: (() -> Void)? = nil
+    /// **THE AZTEC APPS YOU HAVE CONNECTED STAND BESIDE IT (prd §1757).**
+    /// Each opens its own site in Casberi's browser in one tap; the
+    /// directory stays the way to find the rest. Nil where the directory is.
+    var aztecApp: ((AztecAppsShape.App) -> Void)? = nil
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
                                 count: 4)
@@ -402,6 +406,11 @@ struct SourcesOpenFolder: View {
                     }
                     if let aztecDirectory {
                         SourcesFolderAztecDirectory(action: aztecDirectory)
+                    }
+                    if let aztecApp {
+                        ForEach(AztecAppsStore.shared.apps) { app in
+                            SourcesFolderAztecApp(app: app, icon: AztecAppsStore.shared.icons[app.host]) { aztecApp(app) }
+                        }
                     }
                     ForEach(yours, id: \.self) { name in
                         SourcesFolderApp(name: name, yours: true, needsYou: needs(name),
@@ -534,6 +543,55 @@ private struct SourcesFolderAztecDirectory: View {
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Aztec directory"))
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// An Aztec app you have connected (prd §1757): its own icon over its name,
+/// as any app of yours; its initials until the site's icon is read. A hold
+/// offers Open and Remove: it is yours to take off the folder again.
+private struct SourcesFolderAztecApp: View {
+    let app: AztecAppsShape.App
+    let icon: UIImage?
+    let action: () -> Void
+
+    private var side: CGFloat { DS.Face.seat + 12 }
+
+    var body: some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                Group {
+                    if let icon {
+                        Image(uiImage: icon).resizable().scaledToFill()
+                            .frame(width: side, height: side)
+                            .clipShape(RoundedRectangle(cornerRadius: side * 0.225, style: .continuous))
+                    } else {
+                        BridgeIcon(name: app.name, size: side)
+                    }
+                }
+                Text(verbatim: app.name)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(app.name.contains(" ") ? 2 : 1)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .contextMenu {
+            Button(action: action) { Label("Open", systemImage: "arrow.up.forward.app") }
+            Button(role: .destructive) {
+                withAnimation(DS.Motion.standard) { AztecAppsStore.shared.remove(app.host) }
+            } label: { Label("Remove", systemImage: "minus.circle") }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: app.name))
         .accessibilityAddTraits(.isButton)
     }
 }

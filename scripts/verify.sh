@@ -2585,6 +2585,9 @@ harness "Shield bridge self-test" "shield bridge self-test" "scripts/shield-brid
 # An Aztec app in Casberi's browser finds Casberi (prd §1700j): Aztec's own wallet-sdk on both
 # sides, a 5 s discovery window, and no call answered before Connect and the emoji check.
 harness "Aztec connect self-test" "aztec connect self-test" "scripts/aztec-connect-selftest.sh" "the Aztec connect self-test failed — run scripts/aztec-connect-selftest.sh"
+# The Aztec apps you have connected stand as tiles in Library (prd §1757): named by the
+# directory or by their own address, never by a page's title; one front-page door each.
+harness "Aztec apps self-test" "aztec apps self-test" "scripts/aztec-apps-selftest.sh" "the Aztec apps self-test failed — run scripts/aztec-apps-selftest.sh"
 # zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
 # as yours, an expired one read as open, a router's leg titled as a pool move.
 harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh" "the zFi + Tacit self-test failed — run scripts/zfi-selftest.sh"
