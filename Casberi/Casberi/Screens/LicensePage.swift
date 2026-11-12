@@ -26,12 +26,15 @@ enum Licenses {
         "Reown Swift SDK": "WalletConnect Community License · Reown",
         "swift-qrcode-generator": "MIT · Project Nayuki, fwcd",
         "SwiftImageReadWrite": "MIT · Darren Ford",
+        "swift-secp256k1": "MIT · GigaBitcoin, Pieter Wuille",
+        "TDLib": "Boost 1.0 and Apache 2.0 · Telegram, OpenSSL",
+        "Tor": "BSD, Apache 2.0 and MIT · The Tor Project, libevent, OpenSSL, iCepa",
         "Yttrium": "Apache 2.0 · Reown",
     ]
 
     /// The libraries under Apache 2.0, whose page carries its text after
     /// their own notice.
-    static let underApache: Set<String> = ["Aztec engine", "Coinbase Wallet Mobile SDK", "Yttrium"]
+    static let underApache: Set<String> = ["Aztec engine", "Coinbase Wallet Mobile SDK", "TDLib", "Tor", "Yttrium"]
 
     static let source = URL(string: "https://github.com/alexanderchopan/casberi")!
     /// The GPL as the repository holds it, the README's section 7
