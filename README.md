@@ -1,6 +1,7 @@
 # Casberi
 
 [![Static checks](https://github.com/alexanderchopan/casberi/actions/workflows/static-checks.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/static-checks.yml)
+[![App build](https://github.com/alexanderchopan/casberi/actions/workflows/app-build.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/app-build.yml)
 [![Logic self-tests](https://github.com/alexanderchopan/casberi/actions/workflows/logic-selftests.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/logic-selftests.yml)
 [![Engine reproducibility](https://github.com/alexanderchopan/casberi/actions/workflows/engine-reproducibility.yml/badge.svg?branch=main)](https://github.com/alexanderchopan/casberi/actions/workflows/engine-reproducibility.yml)
 

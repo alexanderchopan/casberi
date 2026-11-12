@@ -2,10 +2,9 @@
 # own machine: proof that the tree builds for somebody who is not the
 # developer.
 #
-# MANUAL ONLY for now (Actions → App build → Run workflow). It has not yet
-# had a green run, and an unproven job on every push would mark commits red
-# for reasons that are the job's, not the commit's. Add a `push:` trigger once
-# it has passed.
+# Runs on every push that touches the app, what it vendors or how it is
+# built, and by hand. About fifteen minutes once TDLib is cached; the first
+# green run was 2026-11-12, on the image's iPhone 18 Pro simulator.
 #
 # What a clean machine needs that the repo does not carry:
 #   - TDLib, built from Telegram's source at a pinned commit by
@@ -19,6 +18,16 @@
 name: App build
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Casberi/**'
+      - 'Vendor/**'
+      - 'tools/aztec-engine/**'
+      - 'scripts/tdlib.sh'
+      - 'scripts/aztec-engine.sh'
+      - 'scripts/xcb.sh'
+      - '.github/workflows/app-build.yml'
   workflow_dispatch:
 
 concurrency:
