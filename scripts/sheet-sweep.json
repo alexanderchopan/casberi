@@ -579,7 +579,7 @@
      "tap": "button:^Gmail, A sender"
     }
    ],
-   "anchor": "text:=Uma Patel",
+   "anchor": "button:=Sheet Grabber",
    "afterSwipe": "button:=Add to Life"
   },
   {
