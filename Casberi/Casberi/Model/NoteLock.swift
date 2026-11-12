@@ -17,8 +17,8 @@ import Security
 ///
 /// **The key lives in iCloud Keychain (the user's ruling, 2026-09-28), which
 /// is Apple's own design for its locked notes:** a locked note opens on each
-/// of your devices, and survives a new phone. This is the ONE Keychain item
-/// the app stores synchronizable, a reasoned exception to §277's
+/// of your devices, and survives a new phone. It was the first Keychain
+/// item the app stored synchronizable; each one since is a reasoned exception to §277's
 /// device-only rule, recorded in `keychain-audit.py`'s `KNOWN_EXEMPT`: §277
 /// keeps a bridge's credential from leaving the device, and this key's whole
 /// job is to reach your other devices, end-to-end encrypted by iCloud

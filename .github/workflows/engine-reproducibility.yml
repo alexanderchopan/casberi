@@ -1,0 +1,39 @@
+# The JavaScript engines the app bundles are committed as built files
+# (Casberi/Casberi/Resources/privacy-engine.js, railgun-engine.js and its
+# wasm). Each engine's `build.mjs --check` rebuilds from the pinned packages
+# in memory and fails if the committed bytes differ, so a bundle that does not
+# match its source cannot sit in the tree unnoticed.
+#
+# The Aztec engine is not here: its output is not committed (it is built on
+# the developer's machine by scripts/aztec-engine.sh before every app build).
+name: Engine reproducibility
+
+on:
+  push:
+    paths:
+      - 'tools/privacy-pools-engine/**'
+      - 'tools/railgun-engine/**'
+      - 'Casberi/Casberi/Resources/privacy-engine.js'
+      - 'Casberi/Casberi/Resources/railgun-engine.js'
+      - 'Casberi/Casberi/Resources/*.wasm'
+      - '.github/workflows/engine-reproducibility.yml'
+  workflow_dispatch:
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [privacy-pools-engine, railgun-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned packages
+        working-directory: tools/${{ matrix.engine }}
+        run: npm ci --no-audit --no-fund
+      - name: Rebuild and compare with the committed bundle
+        working-directory: tools/${{ matrix.engine }}
+        run: node build.mjs --check

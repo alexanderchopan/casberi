@@ -80,3 +80,9 @@ Casberi is free software: you can redistribute it and/or modify it under the ter
 **Additional permission under GNU GPL version 3 section 7.** If you modify this program, or any covered work, by linking or combining it with Reown's `reown-swift` SDK (or a modified version of that library), containing parts covered by the terms of the WalletConnect Community License Agreement, the licensors of this program grant you additional permission to convey the resulting work.
 
 The license covers the code. The Casberi name, app icon and logo are not licensed: a fork must use its own.
+
+Third-party code bundled with the app, and its licences, are listed in [`Casberi/Casberi/Resources/Licenses.md`](Casberi/Casberi/Resources/Licenses.md).
+
+## Contributing
+
+Casberi does not take outside contributions. See [`CONTRIBUTING.md`](CONTRIBUTING.md).

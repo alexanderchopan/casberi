@@ -15,7 +15,7 @@ Every index line below names the file to open. **Keep this file under 100KB** �
 ## Repository & working directory (RULE)
 
 - **The canonical working copy is `~/Developer/casberi` — NOT iCloud Drive.** Always work here. The old iCloud copy (`.../myStuff/product/casberi`) is deprecated; do not edit it.
-- Backed by a **PUBLIC** GitHub remote `origin` → https://github.com/alexanderchopan/casberi. **Every commit is world-readable the moment it lands**, so nothing secret may ever be committed: real keys live in the login Keychain via `scripts/dev-keys.sh`, and the only in-tree credentials are public identifiers (the Reown/WalletConnect project id, a Dropbox app key). Actions minutes are free for public repos. A `post-commit` hook auto-pushes to `origin` in the background (`.git/last-autopush.log`). Solo, straight to `main`, no branches or PRs. Committing is NOT a release — releasing is `scripts/testflight.sh`.
+- Backed by a **PUBLIC** GitHub remote `origin` → https://github.com/alexanderchopan/casberi. **Every commit is world-readable the moment it lands**, so nothing secret may ever be committed: real keys live in the login Keychain via `scripts/dev-keys.sh`, and the only in-tree credentials are public ids (Reown, Dropbox) and the shared read-only Alchemy and Zerion keys. Actions minutes are free for public repos. A `post-commit` hook auto-pushes to `origin` in the background (`.git/last-autopush.log`). Solo, straight to `main`, no branches or PRs. Committing is NOT a release — releasing is `scripts/testflight.sh`.
 
 ## Layout
 

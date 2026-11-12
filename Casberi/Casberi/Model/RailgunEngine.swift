@@ -24,10 +24,11 @@ import WebKit
 ///
 /// **What it does today:** open the 0zk wallet, build the pool's two trees
 /// from the current-tree checkpoint and check every root (`sync`), read the
-/// balances by token with what is spendable, and prepare a shield or an
-/// unshield for your account to send. It SENDS nothing. Ethereum only.
-/// Nothing is persisted: the trees are rebuilt on every open (§1713 item 9,
-/// open at build).
+/// balances by token with what is spendable, prepare a shield or an
+/// unshield for your account to send, and hand a private send to a Railgun
+/// broadcaster (`broadcastSend`, prd §1721). Ethereum only.
+/// The pool's trees are kept between launches in the engine's own IndexedDB
+/// store (§1713 item 9); see `start()`.
 @MainActor
 final class RailgunEngine: NSObject {
 
