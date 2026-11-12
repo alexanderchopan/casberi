@@ -24,5 +24,5 @@ Start with `law.md`. It is the current ruling for every area of the app, each li
 | --- | --- |
 | `hooks/` | Per-area build records: wallet, bridges, design, system, agent, social, rooms, imports, devnets. Each DEBUG launch hook and what it measures. |
 | `specs/` | Feature specs. The security-relevant ones: `signing-safety-spec.md`, `safe-wallet-spec.md`, `signer-spec.md`, `aztec-security-model.md`. |
-| `marketing/` | Store copy, launch drafts and the growth plan. |
+| `store/` | The App Store page's text, read and applied by `scripts/asc-copy.py` and checked by `scripts/catalog-sync.sh`. |
 | `archive/` | Superseded specs and session handoffs, kept because code comments and the ledger cite them. Not current. |

@@ -2,7 +2,7 @@
 """asc-report.py — the store funnel, read from App Store Connect's Analytics Reports.
 
 The app has no telemetry, by rule, so App Store Connect is the only place installs,
-their sources and their campaigns come from (docs/marketing/growth.md, workstream 1). Nothing
+their sources and their campaigns come from (the growth plan, workstream 1). Nothing
 here reads the app; everything is Apple's aggregate, privacy-thresholded counts.
 
   asc-report.py status                what report requests exist, and which reports

@@ -16,7 +16,7 @@
 #        screen died — onboarding is the "How it works" greeting straight
 #        into the catalog, and the catalog is code-derived. Nothing to check.
 #
-#   3. STORE-COPY APP LISTS (docs/marketing/store-copy.md, docs/marketing/app-store-submission.md)
+#   3. STORE-COPY APP LISTS (docs/store/store-copy.md, docs/store/app-store-submission.md)
 #        A `CONNECTS WITH` block is a promise on the App Store that the app
 #        connects to each name in it, so every name MUST resolve to a
 #        CONNECTABLE offer — stricter than the marquee rule, which only asks
@@ -48,7 +48,7 @@ DOCS="website/docs.html"
 if [ -n "${CATALOG_SYNC_COPYDOCS:-}" ]; then
   read -ra COPYDOCS <<< "$CATALOG_SYNC_COPYDOCS"
 else
-  COPYDOCS=(docs/marketing/store-copy.md docs/marketing/app-store-submission.md)
+  COPYDOCS=(docs/store/store-copy.md docs/store/app-store-submission.md)
 fi
 
 tmp="$(mktemp -d)"

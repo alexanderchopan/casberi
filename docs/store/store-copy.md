@@ -11,7 +11,7 @@ promotional text 170, subtitle 30.
 **Live subtitle (read 2026-09-27, `asc-copy.py read`): `One app for your things`** — both the
 live appInfo (READY_FOR_SALE) and the in-review one (WAITING_FOR_REVIEW). Shared by iOS and
 Mac: the subtitle rides the app, not a version. Promotional text was EMPTY on both
-platforms until it was applied the same day (below). Full snapshot: `docs/marketing/store-live.json`.
+platforms until it was applied the same day (below). Full snapshot: `docs/store/store-live.json`.
 
 **Subtitle, owed with the next version (user, 2026-10-05):** `Every subscription, one place` (29 of 30). The live
 appInfo reads `One app for your things`; the subtitle rides the app, so it changes with the next submitted version.

@@ -34,7 +34,7 @@ One home for your things
 > inbox frame when 1.0.12's copy was pushed (prd §643, §643 amendment), and
 > the string above is the one it replaced. **The live string is not recorded
 > anywhere in this repo** — read it back through the App Store Connect API and
-> paste it here and in `docs/marketing/store-copy.md`. This is not cosmetic: subtitle is
+> paste it here and in `docs/store/store-copy.md`. This is not cosmetic: subtitle is
 > one of the three fields Apple indexes for search, so it is the line the
 > keyword budget below is written against.
 *(24)* — Alternatives: `Everything you make, one home` (29) · `Your things, private, on-device` (30)
@@ -43,7 +43,7 @@ One home for your things
 ```
 Connect your apps and wallets once. Everything lands in one private feed, so you read it all in one place.
 ```
-*(106 — rewritten 2026-09-13: the built-in agent it named is deprecated (prd §697b), and the live promotional text is recorded in `docs/marketing/store-copy.md`. Before that, rewritten 2026-07-21 for the agent-shell redesign; the old capture-first text also claimed "Nothing leaves your phone," which wallet syncs and optional BYOK made an overclaim)*
+*(106 — rewritten 2026-09-13: the built-in agent it named is deprecated (prd §697b), and the live promotional text is recorded in `docs/store/store-copy.md`. Before that, rewritten 2026-07-21 for the agent-shell redesign; the old capture-first text also claimed "Nothing leaves your phone," which wallet syncs and optional BYOK made an overclaim)*
 
 ### Keywords  *(≤100, comma-separated, NO spaces — spaces waste the budget)*
 ```
@@ -55,7 +55,7 @@ wallet,crypto,portfolio,tracker,ai,agent,second,brain,notes,feed,farcaster,blues
 
 ### Description  *(≤4000)*
 
-**SUPERSEDED — the live description lives in `docs/marketing/store-copy.md`, not here.**
+**SUPERSEDED — the live description lives in `docs/store/store-copy.md`, not here.**
 That file holds the 1,794-character iOS text applied by hand on 2026-09-07
 (§643) and the Mac one beside it. **Read back from the public listing
 2026-09-11 and it matches**, which also closes the question §643's amendment
@@ -74,7 +74,7 @@ the list sat six retirements behind with no signal anywhere. `catalog-sync.sh`
 checks any `CONNECTS WITH` block in the copy docs now, so a re-added list
 cannot drift again.
 
-Git has the old text if it is ever wanted: `git show HEAD:docs/marketing/app-store-submission.md`.
+Git has the old text if it is ever wanted: `git show HEAD:docs/store/app-store-submission.md`.
 
 ### What's New (version notes)  *(≤4000)*
 For a first public release, keep it simple:

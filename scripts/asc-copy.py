@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""asc-copy.py — the App Store page's text, read back and applied from docs/marketing/store-copy.md.
+"""asc-copy.py — the App Store page's text, read back and applied from docs/store/store-copy.md.
 
-The store page is where every channel ends (docs/marketing/growth.md, workstream 2), and the
+The store page is where every channel ends (the growth plan, workstream 2), and the
 repo lost track of it twice: store-copy.md said "pending" for four days after a
 description went live, and the live subtitle was changed on 2026-09-08 and never
 written down. So the first verb READS, and nothing is applied that was not read
 first in the same run.
 
   asc-copy.py read                 live + editable fields, both platforms, every
-                                   locale → docs/marketing/store-live.json, en-US printed
+                                   locale → docs/store/store-live.json, en-US printed
   asc-copy.py diff                 en-US live/editable vs the drafts in store-copy.md
   asc-copy.py apply --platform IOS --field promotionalText          (dry run)
   asc-copy.py apply --platform IOS --field promotionalText --yes    (PATCH + read back)
@@ -34,8 +34,8 @@ API = "https://api.appstoreconnect.apple.com/v1"
 APP_ID = "6788637831"
 KEY_ID = os.environ.get("ASC_KEY_ID", "TR287WZD72")
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "2152ec98-0a7c-477a-9c4a-e1c478a3a106")
-STORE_COPY = os.path.join(ROOT, "docs", "marketing", "store-copy.md")
-SNAPSHOT = os.path.join(ROOT, "docs", "marketing", "store-live.json")
+STORE_COPY = os.path.join(ROOT, "docs", "store", "store-copy.md")
+SNAPSHOT = os.path.join(ROOT, "docs", "store", "store-live.json")
 PLATFORMS = ("IOS", "MAC_OS")
 LOCALE = "en-US"
 

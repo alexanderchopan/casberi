@@ -49944,7 +49944,7 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 
 **Migration v9, because rows keep their source string forever.** A row landed under the old name resolves to no seat after the rename — no chip, no category, no mark, exactly the "Privacy Pools" mismatch `offer(forSource:)` documents, but with no suffix trick to save it — and the connected seat itself reads as disconnected on the Apps screen, since a bridge record is found by name. So `RootShell`'s one-time block rewrites `source` on the old rows (v1's "You" → "Voice" shape) and `BridgeStore.rename` moves the record and its `BridgeHealth` entry. The old accented literal survives in exactly one place, the migration's own predicate, which is what it is for.
 
-**Not in this pass.** The App Store description still says "Ethrex Hegotá" (`docs/marketing/store-copy.md` is updated; the live listing is a metadata PATCH at the next version, not a build). The `.ai-ethrexhegota` / `.ai-ethrexprivacy` CSS classes on the website are not names and stay. Comments and ledger entries that narrate the old names are history and are deliberately not rewritten.
+**Not in this pass.** The App Store description still says "Ethrex Hegotá" (`docs/store/store-copy.md` is updated; the live listing is a metadata PATCH at the next version, not a build). The `.ai-ethrexhegota` / `.ai-ethrexprivacy` CSS classes on the website are not names and stay. Comments and ledger entries that narrate the old names are history and are deliberately not rewritten.
 
 ## §630 — The inclusion pass: glass goes opaque under Reduce Transparency, money says its direction without colour, the dock gets a haptic grammar and a pointer, a thin room closes with a row; and no coach tip (user, 2026-09-06)
 
@@ -50429,7 +50429,7 @@ keyboard walk instead. A first cut of this entry's own Mac copy carried
 "workouts" twice, which is exactly the 2026-09-03 failure that made these two
 descriptions separate in the first place.
 
-**Nothing is pushed.** The copy is staged in `docs/marketing/store-copy.md` only.
+**Nothing is pushed.** The copy is staged in `docs/store/store-copy.md` only.
 Description edits answer 409 while a version is In Review; promotional text
 and review notes take a PATCH.
 
@@ -50448,7 +50448,7 @@ the two platforms need not read differently at the top of the page while the
 review runs.
 
 **The doc's own heading was four days stale and cost this session real work.**
-`docs/marketing/store-copy.md` said "Pending — iOS, apply to 1.0.12" while describing copy
+`docs/store/store-copy.md` said "Pending — iOS, apply to 1.0.12" while describing copy
 that had since been superseded, so the state had to be re-derived from the API
 record and the user's own paste rather than read off the file. The headings are
 now the state (`## iOS — APPLIED <date>`, `## Mac — BLOCKED, In Review`), and
@@ -50630,10 +50630,10 @@ words rather than a card that links to them.
 **Two corrections, and the second is the one that costs something.**
 
 **It is pushed.** §643 closes *"Nothing is pushed. The copy is staged in
-`docs/marketing/store-copy.md` only."* iOS 1.0.12's copy went to App Store Connect on
+`docs/store/store-copy.md` only."* iOS 1.0.12's copy went to App Store Connect on
 2026-09-08 and the subtitle moved to the inbox frame in the same pass.
 
-**And it was never staged there.** `docs/marketing/store-copy.md` was last written by the
+**And it was never staged there.** `docs/store/store-copy.md` was last written by the
 §628/§629 commits and holds the **3,999-character** iOS description and the
 **3,994-character** Mac one — the 100+ app catalogue dump §643 ruled against.
 The halved text §643 measures at 1,794 and 1,778 characters exists in no file,
@@ -50644,8 +50644,8 @@ the only thing that ever claimed the file had been updated.
 
 **The consequence is that the repo does not know what is on the store.** Either
 the halved copy went up and has no record here, or the old copy did and §643's
-ruling never shipped; only ASC can say which. `docs/marketing/store-copy.md` now opens
-with that gap stated and a checklist, and `docs/marketing/app-store-submission.md` marks
+ruling never shipped; only ASC can say which. `docs/store/store-copy.md` now opens
+with that gap stated and a checklist, and `docs/store/app-store-submission.md` marks
 its subtitle (`One home for your things`, 24) as the string that was replaced.
 **Neither is filled in from memory** — a store-copy doc carrying invented text
 is worse than one carrying an admitted hole, because the next session pastes
@@ -54432,7 +54432,7 @@ One real session stored locally makes it a one-launch check.
 
 **1. Retry is a control, not a sentence.** Ten failure lines said "try again" with nothing to tap. `BridgeSyncStatusRows` takes an optional `retry`, drawn as a `DSSlabDoor` "Try again" row under a `.failed` proof only. It is wired on the connected pages whose sync runs only on appear: Spotify, Mail, Twitch, Slack and Farcaster handles. Pages whose Connect slab already returns on failure (CardPointers, Dropbox, Slack connect, GitHub) take none. `FollowImportSheet` and `SafeQueueCard` retry through a `.task(id: attempt)`; the Safe retry appears only for `.chainUnreadable` and re-runs the same check, never a signature. Spotify's sign-in "Try again" keeps its action and gains a 44pt target. **Honesty fixes found on the way:** five failures drew in the SUCCESS green because they were `.says` (Mail's rejected login, unreachable server, failed sign-in and unreadable inbox; Farcaster's "couldn't reach"), and Slack's connected page drew its status row twice. All are `.failed` now, and Slack draws one row.
 
-**2. The ask's leftover doors (§697b's remainder).** The hero widget, still in the bundle, tapped `casberi://brief`, a route §697b gated off, so every hero tap was dead; it opens the feed, and `dock-selftest.sh` fails any widget that mints a brief or ask link. The kept-ask payload was still written and reloaded on every keep and every foreground for a kind no bundle registers; it is gated on `AskSurface.enabled`. Walletbeat's and L2BEAT's cards still showed "Ask about this"; hidden while the flag is off. `ShellChrome.ask` is deliberately NOT gated: the thing sheet's "Carry on with <agent>" door, which §697b kept, calls it. Widget type now rides the `widget*` rungs and `WidgetChrome.blockRadius`. **Copy:** `docs/marketing/store-copy.md`, `docs/marketing/app-store-submission.md`, `website/docs.html` and both `llms` files no longer sell the ask; store-copy's sections are marked REWRITTEN, NOT YET APPLIED, since nothing was sent to App Store Connect. Placed kept-ask widgets still show the system placeholder, as §697b ruled.
+**2. The ask's leftover doors (§697b's remainder).** The hero widget, still in the bundle, tapped `casberi://brief`, a route §697b gated off, so every hero tap was dead; it opens the feed, and `dock-selftest.sh` fails any widget that mints a brief or ask link. The kept-ask payload was still written and reloaded on every keep and every foreground for a kind no bundle registers; it is gated on `AskSurface.enabled`. Walletbeat's and L2BEAT's cards still showed "Ask about this"; hidden while the flag is off. `ShellChrome.ask` is deliberately NOT gated: the thing sheet's "Carry on with <agent>" door, which §697b kept, calls it. Widget type now rides the `widget*` rungs and `WidgetChrome.blockRadius`. **Copy:** `docs/store/store-copy.md`, `docs/store/app-store-submission.md`, `website/docs.html` and both `llms` files no longer sell the ask; store-copy's sections are marked REWRITTEN, NOT YET APPLIED, since nothing was sent to App Store Connect. Placed kept-ask widgets still show the system placeholder, as §697b ruled.
 
 **3. 44pt to hit, same size drawn.** `dsTapTarget` after the background on `Chip` (interactive only), `VerbCapsule`, `DSCopyCapsule`, the thing sheet's back chevron and lock-screen capsule, the catalogue's Yours/All segment (track pinned at 36), Approve/Deny, the toast action and `CopyAddressButton`. `accessibility-audit.py` now reads `Button(action:)` and `Button("…")`, flags word-labelled buttons framed under the floor, and adds `small-tap-component` for capsule and chip components; MEASURED over the pre-fix tree it reports exactly these nine sites and nothing else, and zero after. **Visible growth:** rows holding these controls get up to 16pt taller — the thing sheet's eyebrow row with a back button, a request row's Approve/Deny, a toast with an action, ConnectWalletRow's address well, and the composer's tag-completion chips. The roster's "You" chip is a label and passes `interactive: false`.
 
@@ -57194,7 +57194,7 @@ The octopus the person sees "while the app is loading" is the app-switcher cover
 - `AppleWalletScreen`'s own shorter copy of it;
 - the catalog comment naming "US-only" as one of the seat's two permanent ceilings;
 - `NSFinancialDataUsageDescription` — the string **Apple itself shows** in the system permission prompt — which named three US products and nothing else;
-- `docs/marketing/store-copy.md`, i.e. the App Store listing, which opened the claim with "In the US".
+- `docs/store/store-copy.md`, i.e. the App Store listing, which opened the claim with "In the US".
 
 **The honesty rule cuts both ways here, and that is why the fix is not just "delete US-only".** A sentence that under-claims is still a false status: it tells somebody a working feature is unavailable to them, which §83 bans for exactly the reason it bans the reverse. The replacement names both regions and both minimum versions rather than a country list that will go stale the next time Apple adds one: "It needs iOS 17.4 or later in the US, or iOS 18.4 or later in the UK."
 
@@ -63212,7 +63212,7 @@ The confusion it answers: three ids from the Logos team, all reading 0, with not
 
 **What was stored.** `SourceRename.sweepRetiredAsk` runs at every launch beside `sweepRetiredSeats`. Once per device it removes the defaults the ask wrote (`keptAsks.*`, `brief.*`, `agent.noticed.*`, `home.insight.*`, `mcp.server.*`, the cluster names, the composer's counters, the hint's spent flag) and the MCP pairing token's Keychain item. At every launch it deletes any MCP save request still in the store (`sourceRef == "mcp.save"`), because CloudKit can still land one from another device. No `Thing` a person kept is touched; an answer saved as a note stays theirs. `WidgetPublish` clears the retired widgets' payloads and their pictures from the app group on every pass, and the app clears its Home Screen quick actions at launch so an old Daily Brief leaves the icon. No schema field goes.
 
-**Not changed here.** The App Store description and the store screenshots still show the brief and the Today widget (`docs/marketing/store-copy.md`, `mac-appstore-capture.sh`'s shot 1); they change with the next submission. `docs/law.md` is regenerated from this entry.
+**Not changed here.** The App Store description and the store screenshots still show the brief and the Today widget (`docs/store/store-copy.md`, `mac-appstore-capture.sh`'s shot 1); they change with the next submission. `docs/law.md` is regenerated from this entry.
 
 ## §1048 — One Wallet: the money rooms merge into one room, its total counts cash, exchanges and Privy, and Markets, Frames and Logos stay their own rooms (user: "mock up for me what it would look like if all the wallet 'rooms' were in one consolidated wallet no on separate screens. i think for devent frames and logos you leave those separate", then "i like what you did with wallet. i say lets keep markets separate. top number should include cash and exchange balances. and nft to holdings is great", then "you need to include privy with wallet", 2026-10-01; reverses §826's Privy half; amends §1039)
 
@@ -63788,7 +63788,7 @@ Apple rejected iOS 2.0 (build 720) under 4.1(a) Copycats and attached all sixtee
 
 **The pictures.** Five per device, plain black ground, a white headline with one pink phrase, one device showing a real screen, the demo pill hidden (`-hideDemoBanner`), the status bar at 9:41: Home ("Everything new, in one place" — the nomination's "daily brief" is Home, user), Work picked to GitHub ("Know what needs you"; the user chose it over the room's own Trello-led cover), Wallet ("All your money, one number"), Day ("What's next, soonest first"), Notes ("Your notes, and everything you keep"). Reading was cut (user: "we are for builders"). Social, Agents and Media were left out because their screens are the marks Apple named; the tray and catalogue for the same reason. The iPad set is the same five on the iPad's layout, each with its own thing open in the pane. Generators: `~/Documents/casberi-deck/cards/appstore2.py` and `appstore2_ipad.py`; output in `~/Downloads/App Store 2.0 iPhone|iPad`.
 
-**Applied.** `scripts/asc-screenshots.py` (new; dry run unless `--yes`) deleted the ten iPhone 6.5" and six iPad 12.9" screenshots on iOS 2.0 and uploaded the ten new ones; all ten read back `COMPLETE`. The description (`docs/marketing/store-copy.md`, 1,641 characters, was 2,854) names no third-party product and drops the deleted features (the testnets, a chart for every app, the ask); applied with `asc-copy.py` and read back.
+**Applied.** `scripts/asc-screenshots.py` (new; dry run unless `--yes`) deleted the ten iPhone 6.5" and six iPad 12.9" screenshots on iOS 2.0 and uploaded the ten new ones; all ten read back `COMPLETE`. The description (`docs/store/store-copy.md`, 1,641 characters, was 2,854) names no third-party product and drops the deleted features (the testnets, a chart for every app, the ask); applied with `asc-copy.py` and read back.
 
 **Not yet.** A build with today's fixes (721) and the resubmission.
 
@@ -67386,7 +67386,7 @@ The Wallet's list drew "Swapped 0.0136 ETH → 32.55 USDC on…" and "1 of 2 sig
 
 ## §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cannot see or will not do, or what a control is, is cut; long lines a person needs are cut to their fact (amends §748's kept categories and §780b's "say what it doesn't know" for the Wallet; §83's always-drawn read line on the token chart; §641b's signing limits on the Safe page) (user, 2026-10-18: "our wallet has a lot of helper text we don't need like 'this is a module we cant see it ...' or 'scanned in last 6 hours...' we don't need all this. apple would never have it"; of the cut list, "ok do it")
 
-The inventory is `design/wallet-helper-text-audit.md`: four passes (Home, Holdings and Markets, Security, Accounts and Safe), every line sorted into cut, shorten, your call, keep.
+The inventory is `docs/archive/wallet-helper-text-audit.md`: four passes (Home, Holdings and Markets, Security, Accounts and Safe), every line sorted into cut, shorten, your call, keep.
 
 1. **Cut (model with it where nothing else reads it):** the total's "The line starts at the next reading"; Holdings' "Last read: …" (`PlaceReading`, `staleReadings`, `WalletCash.readings`, `PrivyHomeStore.walletReadAt` deleted); the token chart's "read just now" and the price card's Live stamp; card spend's unpriced, settles-daily, months-left-out and "not following long enough" clauses; Privy's "not read yet"; Subscriptions' "not counted", "Found in" and the Stop tracking message; the Bitcoin receipt's "no dollar figure" line; devnet "isn't on mainnet"; the NFT picker's intro and Solana note; the smart-account modules sentence (and the Delegations section and the checkup's `delegationsUnreadable` it alone kept standing); "Revoking is free apart from gas"; approvals' unpriced note (`unpricedNote` deleted); "A transaction you sign there — never here" (both copies); the flagged box's "No market prices it" and its attack narration; the follow tray's format and not-yet lines; the WalletConnect picker's read-only clauses and Safe-lookup notes; "Read-only — following can never move funds"; "Activity is public…"; the naming alerts' messages and the address card's two consequence lines; the Safe page's "Signs behind Face ID. It can never execute." / "This phone holds no funds."; the Safe card's guard note and "Safe paused reads" note (`guardNote`, `readLimitNote`, `ReadLimit` deleted; a guard alone no longer stands a Safe card); "Casberi signs; it can't execute"; "Described by"; "Simulated as the Safe's call…".
 2. **Shortened:** the total's note is "Not counting {what}"; the sheet's red lines are the box's titles ("A copy of an address you've used", "You didn't send this"); alert subtitles are "Once" / "Once a day"; "Not traded"; the cap is "Following 5 of 5."; "Following N Safe"; "Signing for N Safes"; every not-simulated reason is "Not simulated"; a throttled Safe read is "Couldn't reach Safe"; the statement and recovery footnotes are "Nothing moves." and "The owners can cancel until it runs."; Apple Wallet's three promises stand before Connect only.
@@ -67619,14 +67619,14 @@ Mock: the design canvas "Aztec experience".
 1. **Every build offers Base, Ethereum and Base Sepolia** (`YourAccountOp.networks`, no `#if DEBUG`). Base Sepolia's coins come from a faucet and carry no value; it is there so the account can be tried without real money.
 2. **It says so wherever it is picked**: the network list reads "Test network · its coins have no value", and the sentence's grey line ends "test coins" in the attention ink while Base Sepolia is the network. CoW settles on neither test network, so there the sentence starts on Send (§1438 item 6).
 3. **`your-account-selftest.sh`** now holds the opposite gate: the three networks in every build, and Base Sepolia marked `isTest`. The probe and draft hooks stay `#if DEBUG`.
-4. **The account sends and swaps**, so "Casberi can read, never spend" is no longer true of the app. The App Store description and the website's Wallet page are redrafted in `docs/marketing/store-copy.md` and `website/wallet.html`; the live store text changes with the next App Store submission, the website with its next deploy. Following someone else's wallet stays read-only.
+4. **The account sends and swaps**, so "Casberi can read, never spend" is no longer true of the app. The App Store description and the website's Wallet page are redrafted in `docs/store/store-copy.md` and `website/wallet.html`; the live store text changes with the next App Store submission, the website with its next deploy. Following someone else's wallet stays read-only.
 
 ### §1439a — Base Sepolia out of shipped builds again: the two live networks ship, the test network stays DEBUG's (reverts §1439 items 1–3; item 4 stands) (user, 2026-10-19: "a sepolia only build but then we have the dormant problem so ya ok we can wait but we may as well ship w/o sepolia")
 
 1. **A shipped build offers Base and Ethereum**; Base Sepolia is compiled out of it, as §1435 had it. The reasons, in the user's review: mainnet is the product and the only place swaps exist; a test network in public hands confuses (worthless coins, exchanges that will not withdraw to it); and a Sepolia-only public build while the organisation account is processed would ship the live networks dormant (§1435, App Review 2.3.1). So the public build waits for the organisation account rather than shipping a cut-down one.
 2. **DEBUG keeps Base Sepolia** for rehearsing sends, batches and recovery with faucet coins; §1439 item 2's "test coins" line and network-list note stay, and draw only there.
 3. **`your-account-selftest.sh`** holds the gate again: Sepolia inside `#if DEBUG`, Base and Ethereum in the shipped list, Sepolia marked `isTest`.
-4. **§1439 item 4 stands**: the account sends and swaps, so the store and website copy are redrafted (`docs/marketing/store-copy.md`, `website/wallet.html`).
+4. **§1439 item 4 stands**: the account sends and swaps, so the store and website copy are redrafted (`docs/store/store-copy.md`, `website/wallet.html`).
 
 
 ## §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §1436's batch) (user, 2026-10-19: "look at relay.link"; "one provider is simpler"; "ok. lets switch"; "don't ship on cow"; "no need if we aren't using it")
