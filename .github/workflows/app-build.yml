@@ -85,8 +85,15 @@ jobs:
       # only (the first run compiled everything and failed at that link).
       - name: Pick a simulator
         run: |
-          device=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone 17 Pro \([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}')
-          [ -n "$device" ] || { xcrun simctl list devices available; echo "no iPhone 17 Pro simulator on this image"; exit 1; }
+          # `|| true` on each lookup: the step runs under `bash -e`, where an
+          # assignment whose grep matches nothing ends the script before the
+          # line that would have printed why (the second run died that way).
+          xcrun simctl list devices available > "$RUNNER_TEMP/sims.txt"
+          device=$(grep -oE 'iPhone 17 Pro \([0-9A-F-]{36}\)' "$RUNNER_TEMP/sims.txt" | head -1 | grep -oE '[0-9A-F-]{36}' || true)
+          # The image's own iPhone, whichever it carries, when it has no 17 Pro.
+          [ -n "$device" ] || device=$(grep -E '^ +iPhone ' "$RUNNER_TEMP/sims.txt" | grep -oE '[0-9A-F-]{36}' | head -1 || true)
+          if [ -z "$device" ]; then cat "$RUNNER_TEMP/sims.txt"; echo "no iPhone simulator on this image"; exit 1; fi
+          grep "$device" "$RUNNER_TEMP/sims.txt"
           echo "SIM=$device" >> "$GITHUB_ENV"
 
       - name: Build for the simulator
