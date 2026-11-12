@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Move's warnings (prd §1509 item 2, §1513, Phase 2 of
-# docs/signing-safety-spec.md) — `MoveWarnings`: the lookalike of history,
+# docs/specs/signing-safety-spec.md) — `MoveWarnings`: the lookalike of history,
 # the known set's one-way rule (received-from never makes an address known),
 # the guard on OFAC's downloaded list (empty, malformed, sharply smaller),
 # the order (red over amber, one line), the words, and the readers of

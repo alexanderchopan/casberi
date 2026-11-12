@@ -33,7 +33,7 @@ final class SubscriptionsReading {
     static let sources: [String] = [AppleWalletBridge.sourceName, WalletCards.privacySource, RocketMoneyLive.source,
                                     SimpleFINShape.source]
 
-    /// The key the last keyed refresh ran for (docs/wallet-perf-spec.md B4).
+    /// The key the last keyed refresh ran for (docs/specs/wallet-perf-spec.md B4).
     private var refreshedFor: String?
 
     /// Spending and Day start this on one key; the second leaves. A caller

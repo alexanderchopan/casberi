@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// The cross-source cluster derivations — what's left of the old Home board
-/// composer after the Pinned board retired (2026-07-20, docs/agent-brief.md
+/// composer after the Pinned board retired (2026-07-20, docs/archive/agent-brief.md
 /// rulings 11-12). The board's own composition (`compose`/`daily`,
 /// `appendPinnedApps`, `appendWalletHoldings`, the cover, `awayLine`,
 /// `boardSources`) is gone; the agent's `KeptAskComposers` reimplements the

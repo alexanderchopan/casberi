@@ -1,6 +1,6 @@
 # Casberi
 
-Native iOS app — a personal corpus of "things" (links, screenshots, events, chats, voice notes, agent outputs). Solo project, live on the App Store (iOS and Mac); betas ship via TestFlight. Growth plan: `docs/growth.md`.
+Native iOS app — a personal corpus of "things" (links, screenshots, events, chats, voice notes, agent outputs). Solo project, live on the App Store (iOS and Mac); betas ship via TestFlight. Growth plan: `docs/marketing/growth.md`.
 
 **How this file is organised.** It is a RULE SHEET, loaded into every session — rules,
 build commands, gotchas, and a one-line index of every DEBUG hook. The long-form record
@@ -22,8 +22,8 @@ Every index line below names the file to open. **Keep this file under 100KB** �
 - `Casberi/Casberi.xcodeproj` — the Xcode project. Targets: **Casberi** (app), **ShareExtension** (appex), **CasberiWidgets** (widget bundle). Bundle id `com.casberi.app`; app group `group.com.casberi.app`.
 - `Casberi/Casberi/` — app sources (`Design/`, `GenUI/`, `Model/`, `Screens/`, `Shell/`).
 - `Casberi/Shared/` — sources compiled into both app and extension targets.
-- `docs/` — **build-brief.md §8 (design system) is law**; prd.md carries product rulings; name-ledger.md.
-- `prototype/` — visual spec. `design/app-icon/` — icon SVG sources.
+- `docs/` — **build-brief.md §8 (design system) is law**; prd.md carries product rulings; map: `docs/README.md`.
+- `design/app-icon/` — icon SVG sources; mockups stay local (gitignored).
 - The pbxproj is **hand-authored** (objectVersion 77, file-system-synchronized groups). New source files in synced folders are picked up automatically; Info.plist keys and target settings are edited directly in the pbxproj.
 
 ## Xcode MCP and Apple docs (RULE)
@@ -339,7 +339,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-photoVerbProbe` — what a screenshot's thing sheet OFFERS, and whether each offer can LAND (prd §275, 2026-08-02) → docs/hooks/system.md · prd §275
 - **On-device intelligence, the librarian half** (`-embeddingProbe`) → docs/hooks/system.md · prd §282
 - `-relatedProbe` — what the thing sheet shows UNDER a thing: relatedKept| (the earlier copy). The embedding neighbours are NOT drawn since prd §632 and are logged as a diagnostic count only → docs/hooks/system.md
-- **The sheet draws the words the app holds (`enrichedText`), never what a model wrote** → docs/reading-spec.md · prd §645
+- **The sheet draws the words the app holds (`enrichedText`), never what a model wrote** → docs/specs/reading-spec.md · prd §645
 - `-topicMapProbe` — the text treemap, headless (bare `YES` = Obsidian). **Photos, Files and RSS draw no figure since prd §832: the newest thing leads, above the grid** → docs/hooks/rooms.md · prd §230 · §832
 - `-roomInsightProbe` — what a source's room LEADS with (prd §247, 2026-07-31) → docs/hooks/rooms.md · prd §247
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298
@@ -394,7 +394,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **Stored HyperEVM/World Chain transfer dates are re-timed by a bounded, ledgered heal (never a done flag), and a World ID grant row's dial opens `worldapp://grants` only when World App answers its scheme** → docs/hooks/wallet.md · prd §792
 - **World App money is complete: forward-verified World App usernames and faces, the WLD Vault in the total, Morpho on chain 480, and the next grant as a dated row read off World's contract (`-worldAppProbe YES`).** → docs/hooks/wallet.md · prd §795
 - **World Chain approvals read off Blockscout (public RPCs cap logs at 100 blocks; Blockscout pads `topics` with `null`, which must be stripped or every ERC-20 grant reads as ERC-721)** → docs/hooks/wallet.md · prd §797
-- **World ID: this phone as an authenticator is BLOCKED in World's app (§787), and the seat (§786) is NOT BUILDABLE. Do not build from `docs/worldid-seat-spec.md`** → docs/hooks/wallet.md · docs/worldid-authenticator-spec.md · prd §785 · §786 · §787
+- **World ID: this phone as an authenticator is BLOCKED in World's app (§787), and the seat (§786) is NOT BUILDABLE. Do not build from `docs/specs/worldid-seat-spec.md`** → docs/hooks/wallet.md · docs/specs/worldid-authenticator-spec.md · prd §785 · §786 · §787
 - **AgentKit is NOT BUILT (prd §801, user-declined after measuring)** — World App answered our own 3.0 bridge request and refused it (`verification_rejected`, "Visit an Orb"). → docs/hooks/wallet.md · prd §801
 - **A World App username is a name ONLY in the follow field (`NameResolve.followTarget`, prd §802), never a `NameResolve.Family`** → docs/hooks/wallet.md · prd §801b · §802
 - `-safeProbe background` `-signerProbe` — Safe: background queue read, gateway-first confirmation, simulation. UNMEASURED → prd §1249

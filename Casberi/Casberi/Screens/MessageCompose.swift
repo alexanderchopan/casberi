@@ -1,7 +1,7 @@
 import SwiftUI
 import MessageUI
 
-/// The system composers, as sheets (docs/social-spec.md section 0). The
+/// The system composers, as sheets (docs/specs/social-spec.md section 0). The
 /// person taps Send, the app never does — a composer is the one sanctioned
 /// write for Messages and Mail, and it ends on its own Cancel or Send, which
 /// is all the app reads.

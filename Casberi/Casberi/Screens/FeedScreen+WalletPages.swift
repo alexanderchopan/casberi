@@ -355,7 +355,7 @@ extension FeedScreen {
         // whatever Home shows (it did under the deleted Spending list).
         // After the open has drawn and the hand is still: the reading is two
         // months of rows, fetched on the main actor, and Home draws without it
-        // (docs/wallet-perf-spec.md B4).
+        // (docs/specs/wallet-perf-spec.md B4).
         .task(id: walletSpendingKey) {
             await GestureGate.idle()
             guard !Task.isCancelled else { return }

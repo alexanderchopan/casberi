@@ -75,7 +75,7 @@ KNOWN_DANGLING = {
     "177": "never written; five Composer/AskCommands comments cite it for the "
            "related-follow-up ruling of 2026-07-22",
     "327": "never written; a block another session parked and dropped, named "
-           "only by docs/agent-panel-tiles.md's own handoff steps",
+           "only by docs/archive/agent-panel-tiles.md's own handoff steps",
 }
 
 # WHAT COUNTS AS A SECTION. Only an H2. This matters more than it looks: the

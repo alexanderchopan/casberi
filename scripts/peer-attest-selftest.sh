@@ -21,7 +21,7 @@
 #
 # Independence: the enclave key's hash in the fixture and the AES-GCM vector
 # were computed by Python's `cryptography`, not by the code under test; a
-# Swift seal was opened by Python on 2026-10-29 (docs/peer-spec.md).
+# Swift seal was opened by Python on 2026-10-29 (docs/specs/peer-spec.md).
 #
 # Pure, local, deterministic — no network, no key, no simulator.
 set -euo pipefail

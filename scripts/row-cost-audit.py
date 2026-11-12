@@ -6,7 +6,7 @@ work rather than tuning it, each re-introducible by one plausible edit. This
 pins them.
 
 WHY AN AUDIT AND NOT A HARNESS. There is no scroll instrument in this project
-— `docs/perf-spec.md` P3 says so and refuses to optimise scroll blind. So
+— `docs/specs/perf-spec.md` P3 says so and refuses to optimise scroll blind. So
 these fixes were found by READING, and nothing that runs can tell you they are
 still in place: the build is happy either way, every existing self-test passes
 either way, and the symptom is "the feed feels slower on a big corpus", which

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// The refusals, the rail, and the hand-off (prd §425, `docs/signer-spec.md`
+/// The refusals, the rail, and the hand-off (prd §425, `docs/specs/signer-spec.md`
 /// §5/§7/§8) — everything between "a transaction is waiting" and "65 bytes
 /// left this phone".
 ///

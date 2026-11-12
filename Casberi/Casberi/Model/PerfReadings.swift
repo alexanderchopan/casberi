@@ -2,7 +2,7 @@ import Foundation
 
 /// The phone's own perf numbers, readable ON the phone (prd §623, 2026-09-05).
 ///
-/// **What this closes.** `docs/perf-spec.md` P0 — "baseline the phone" — was
+/// **What this closes.** `docs/specs/perf-spec.md` P0 — "baseline the phone" — was
 /// written as a procedure that needs Xcode attached to the device: a Release
 /// scheme, two launch arguments, and somebody reading the console. Every
 /// number in the perf record is Debug on a simulator because that procedure

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Share (docs/social-spec.md section 3, prd §1370) — what the dial's Share
+/// Share (docs/specs/social-spec.md section 3, prd §1370) — what the dial's Share
 /// disc raises: the system share sheet, with the card and the link as two
 /// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both. The
 /// sheet's header draws the card (`LinkItem`'s metadata); Messages, Mail and

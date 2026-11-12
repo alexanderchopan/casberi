@@ -73,7 +73,7 @@ sleep 1
 # `-sweepTimer YES` turns on the 16ms main-actor heartbeat for the foreground
 # sweep (SweepClock) so this launch also reports its STALL SHAPE — the reading
 # every real regression in the perf record slipped past while launch/RSS/
-# answer read clean (docs/perf-spec.md P4). Same Release-capable gate the
+# answer read clean (docs/specs/perf-spec.md P4). Same Release-capable gate the
 # phone's "Measure stalls" switch flips (prd §623).
 PID=$(xcrun simctl launch "$DEVICE_ID" "$BUNDLE" \
   -onboarded YES -deeplink casberi://home -sweepTimer YES \

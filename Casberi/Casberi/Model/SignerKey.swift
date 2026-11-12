@@ -3,7 +3,7 @@ import Security
 import LocalAuthentication
 import P256K
 
-/// The key that can sign and can never spend (prd §425, `docs/signer-spec.md`
+/// The key that can sign and can never spend (prd §425, `docs/specs/signer-spec.md`
 /// §4/§6) — a secp256k1 key born on this phone, gated behind Face ID, never
 /// exported, and useful only because a Safe whose threshold is 2 or more will
 /// not execute on one signature.

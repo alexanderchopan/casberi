@@ -6,7 +6,7 @@ import SwiftData
 /// re-run the exact same scoring for a kept SEARCH, never the model.
 /// `RootShell.answerDocument`'s model-routing sits entirely ABOVE this: this
 /// function only ever ranks a corpus by keyword/tag/content/semantic score —
-/// docs/agent-brief.md ruling 1's "kept path is deterministic" guarantee
+/// docs/archive/agent-brief.md ruling 1's "kept path is deterministic" guarantee
 /// depends on this file never importing FoundationModels.
 enum Retriever {
     /// Matches are scored, not just found: title hits outweigh tag hits

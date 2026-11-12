@@ -8,7 +8,7 @@ import Translation
 /// names a kind — but it wears no chip of its own (2026-08-01): the day
 /// header names it and any source chip tap clears it.
 ///
-/// SHAPED FEEDS (docs/handoff-shaped-feeds.md): when one source is in force
+/// SHAPED FEEDS (docs/archive/handoff-shaped-feeds.md): when one source is in force
 /// the feed takes that source's native shape — Photos becomes a grid, Zerion
 /// leads with the holdings treemap, Calendar reads as an agenda, Gmail
 /// surfaces what's waiting, Reminders groups by state, chats earn takeaway
@@ -146,7 +146,7 @@ struct FeedScreen: View {
     /// across the person's own swipes instead of all at once on launch.
     @State private var everBuilt = false
     /// The room's own share card, raised by the door under its tiles
-    /// (docs/social-spec.md section 6, item 3). Presented from the screen's
+    /// (docs/specs/social-spec.md section 6, item 3). Presented from the screen's
     /// root, never from the row that asks for it.
     @State var roomShare: RoomShareCard.Input?
     /// A Notes folder's card (prd §1021), from the folder's long press.
@@ -421,7 +421,7 @@ struct FeedScreen: View {
     /// selected on iOS 18.6 (§592's field report, 2026-08-31), and is correct
     /// on iOS 26 — same binary. Both halves were finally seen on the SAME
     /// day, 2026-09-05, when an iOS 18.6 simulator runtime was installed
-    /// here for the first time (docs/perf-spec.md P1's unblock step 1): see
+    /// here for the first time (docs/specs/perf-spec.md P1's unblock step 1): see
     /// prd §623 for what each runtime showed. A deployment target of 18.0
     /// means both branches ship.
     ///
@@ -484,7 +484,7 @@ struct FeedScreen: View {
         \.messageCount,
         // The Wallet's move rows read what a transfer was worth per row
         // (`walletMoveRow`, `walletOwnMoveRow`): one `Double?`, else a fault
-        // for every row drawn (docs/wallet-perf-spec.md B6).
+        // for every row drawn (docs/specs/wallet-perf-spec.md B6).
         \.transferUSD,
     ]
 

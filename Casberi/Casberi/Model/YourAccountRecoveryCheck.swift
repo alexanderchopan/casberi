@@ -1,7 +1,7 @@
 import Foundation
 
 /// **THE RECOVERY KEY IS CHECKED ONCE A MONTH (prd §1509 item 4, Phase 4 of
-/// `docs/signing-safety-spec.md`; user: "every month if that is fine").**
+/// `docs/specs/signing-safety-spec.md`; user: "every month if that is fine").**
 /// One row in the Wallet's Needs you thirty days after the last good check,
 /// or after the key was made; never a notification, never a badge (§1490).
 /// The check sends nothing and costs no fee: the device owner unlocks the

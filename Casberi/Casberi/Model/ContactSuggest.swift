@@ -1,7 +1,7 @@
 import Foundation
 
 /// Tier-2 and tier-3 links from the corpus — what a rule can say about two
-/// identities being one contact (prd §916, `docs/addresses-spec.md` section 3).
+/// identities being one contact (prd §916, `docs/specs/addresses-spec.md` section 3).
 ///
 /// **Stated** (tier 3): a contact card's own field names a handle the app
 /// follows — "Bluesky: jesse", "GitHub: torvalds" in the card's social

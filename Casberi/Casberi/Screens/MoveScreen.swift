@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 /// **MOVE (prd §1422): your account's page** — the Apple pass of the
-/// 2026-10-18 canvas (docs/safe-wallet-spec.md, section 2a). Centred head: your
+/// 2026-10-18 canvas (docs/specs/safe-wallet-spec.md, section 2a). Centred head: your
 /// account's face, its name, its address. Then the modules, bare on the page
 /// (§1382, §1393), a 32pt seam between them (§1386).
 ///

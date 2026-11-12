@@ -35,7 +35,7 @@ enum ReadableParse {
     /// 70.3k" and reaches the README's prose at 2. So the small limit does not
     /// protect the excerpt from chrome — it guarantees the excerpt is nothing
     /// BUT chrome, because the article never gets a slot to displace it. That
-    /// is the inverse of what `docs/reading-spec.md` A.5 predicted, and it is
+    /// is the inverse of what `docs/specs/reading-spec.md` A.5 predicted, and it is
     /// why the measurement it insisted on came first.
     ///
     /// The trailing risk is real and much smaller: on a page with no

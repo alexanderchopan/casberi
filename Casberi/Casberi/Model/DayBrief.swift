@@ -7,7 +7,7 @@ import SwiftUI
 /// since §385). It also fed the whisper capsule and the Today brief, until
 /// both went (§550; the brief with the ask, 2026-10-01).
 ///
-/// Deterministic by construction (docs/agent-brief.md ruling 1's spine
+/// Deterministic by construction (docs/archive/agent-brief.md ruling 1's spine
 /// guarantee — no model anywhere near the launch path): every fragment is a
 /// fact the app already holds, joined in a fixed order, and a day with
 /// nothing to say composes nil — the whisper simply doesn't show (honesty

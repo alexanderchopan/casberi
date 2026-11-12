@@ -95,7 +95,7 @@ the same `KNOWN_EXEMPT` shape this codebase uses everywhere else, ready
 rather than invented under pressure.
 
 Static and source-only — no build, no simulator, matches the DEMO(2026-08-07)
-addendum to `docs/demo-spec.md`.
+addendum to `docs/specs/demo-spec.md`.
 
 Usage:  scripts/demo-selftest.py [--self-test] [--verbose]
 Exit 0 = every check passed (or, under --self-test, every fixture behaved).

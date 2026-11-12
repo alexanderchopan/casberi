@@ -163,7 +163,7 @@ func prose(_ n: Int, _ word: String = "sentence") -> String {
 }
 
 // ── the cap: an article longer than the old 1,200 arrives WHOLE ────────────
-// THE MUTATION THAT MATTERS (docs/reading-spec.md A.5): a fixture whose
+// THE MUTATION THAT MATTERS (docs/specs/reading-spec.md A.5): a fixture whose
 // article is longer than the old cap, asserting the text does NOT end in "…".
 print("the cap")
 let longArticle = "<html><body><main>"

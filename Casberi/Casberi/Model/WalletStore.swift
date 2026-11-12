@@ -536,7 +536,7 @@ final class WalletStore {
         }
     }
 
-    /// **DECODED ONCE PER WRITE, NOT ONCE PER BODY PASS (docs/wallet-perf-spec.md
+    /// **DECODED ONCE PER WRITE, NOT ONCE PER BODY PASS (docs/specs/wallet-perf-spec.md
     /// B1).** The Wallet's crown asked for these on every body evaluation, twice
     /// (the line and the face chips), and each ask decoded up to a thousand
     /// samples, each carrying a holdings map, per wallet. The memo is keyed on

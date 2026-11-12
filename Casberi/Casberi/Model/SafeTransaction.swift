@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Safe co-signer's arithmetic (prd §425, `docs/signer-spec.md`) — the
+/// The Safe co-signer's arithmetic (prd §425, `docs/specs/signer-spec.md`) — the
 /// EIP-712 preimage of a Safe transaction, and the 65 bytes a signature is
 /// serialized into. Foundation-only and pure by design, so
 /// `scripts/safetx-selftest.sh` compiles this file WHOLE and unmodified and
@@ -183,7 +183,7 @@ enum SafeTxEncoder {
         + "address refundReceiver,uint256 nonce)"
 
     /// Safe < 1.3.0's domain — `(address verifyingContract)` alone, with no
-    /// chainId. Held here for ONE reason: so `docs/signer-spec.md` §3's claim
+    /// chainId. Held here for ONE reason: so `docs/specs/signer-spec.md` §3's claim
     /// that an old Safe is refused rather than mis-signed has a name in the
     /// code. Nothing signs against it. The refusal itself is free and
     /// automatic — an old Safe's own `getTransactionHash` disagrees with the

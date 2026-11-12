@@ -321,7 +321,7 @@ struct GenRender: View {
         // composer (the model writes prose, never element names), so a retired
         // element name can never arrive from a synthesis.
 
-        // Shaped-feed grammar (docs/handoff-shaped-feeds.md) — display forms
+        // Shaped-feed grammar (docs/archive/handoff-shaped-feeds.md) — display forms
         // of the shaped rows, so compositions can paint them; the interactive
         // twins live in Screens/ShapedRows.swift and belong to the List.
         case "TxRow":        GenTxRow(el: el).mountIn()
@@ -2966,7 +2966,7 @@ struct GenSkeletonBlock: View {
     }
 }
 
-// MARK: - Shaped-feed grammar (display forms — docs/handoff-shaped-feeds.md)
+// MARK: - Shaped-feed grammar (display forms — docs/archive/handoff-shaped-feeds.md)
 
 /// TxRow(verb, amount, detail) — verb leads; "Received" wears confirm.
 /// A token mark opens the row (ruling 2026-07-07: icons live at row scale,

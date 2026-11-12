@@ -330,7 +330,7 @@ KNOWN_PROPER: set[str] = {
     # Settings switch the person has to find, spelled as Settings spells it.
     "Lock", "Screen", "Live", "Activities",
     # Apple's Messages app, named by the share tray's row ("Send in
-    # Messages", docs/social-spec.md section 3). Mail is a catalog seat.
+    # Messages", docs/specs/social-spec.md section 3). Mail is a catalog seat.
     "Messages",
     # In-app surfaces referenced by name — the chips and screens a sentence
     # points at ("add one from Apps", "washes the top of All").

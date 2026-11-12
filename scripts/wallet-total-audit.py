@@ -232,7 +232,7 @@ def audit(texts: dict) -> list:
                    "Privy with no switch (prd §1048)")
     # Combined means no address AND no group: Following (prd §1536) reads
     # wallets only, so cash is gated on both.
-    # Since docs/wallet-perf-spec.md A2 the cash read starts beside the
+    # Since docs/specs/wallet-perf-spec.md A2 the cash read starts beside the
     # holdings, through one helper whose first line is the gate.
     if "async let cashRead = Self.cashIfCombined(combined)" not in pr \
             or "guard combined else { return ([], []) }" not in body(ingest, "func cashIfCombined(") \
@@ -395,7 +395,7 @@ def audit(texts: dict) -> list:
                    "account back — a locked launch knows no account until a relaunch (prd §1592)")
 
     # 7 — the Wallet opens on a number (prd §1593).
-    # Since docs/wallet-perf-spec.md A3: on activation itself, ahead of the
+    # Since docs/specs/wallet-perf-spec.md A3: on activation itself, ahead of the
     # sleep that holds the foreground work back, not inside that work.
     act = body(code["RootShell"], "private func handleActivation(").split("let runForegroundWork", 1)[0]
     if "TorClient.shared.start()" not in act:

@@ -1,7 +1,7 @@
 import Foundation
 
 /// **YOUR OWN NODE (prd §1509 item 5, Phase 5 of
-/// `docs/signing-safety-spec.md`).** Your account reads each network from
+/// `docs/specs/signing-safety-spec.md`).** Your account reads each network from
 /// Casberi's list of public nodes, through Tor (§1495). With your own node on,
 /// a network takes an address you give it instead, checked before it is used:
 /// `eth_chainId` must be that network's, and `eth_blockNumber` must answer.

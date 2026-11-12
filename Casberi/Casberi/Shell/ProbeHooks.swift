@@ -3313,7 +3313,7 @@ enum ProbeHooks {
         },
         // `-addressesProbe YES` — the contact index, rebuilt over the stores
         // and the link ledger, one line per contact (prd §916, step 2 of
-        // docs/addresses-spec.md). The first line's `linked:` count is the
+        // docs/specs/addresses-spec.md). The first line's `linked:` count is the
         // measurement the spec's step 3 waits on: how many of the person's
         // own entries actually join. Never prints a phone or an email.
         // `-addressesProbe fill` first asks web3.bio for the book's profiles

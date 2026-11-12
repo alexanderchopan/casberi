@@ -75,7 +75,7 @@ grep -q 'AppMetrics.begin()' "$APPFILE" \
 # `DiagnosticsScreen` is ~15KB and fits the 64KB pipe buffer, so `echo`
 # finishes before grep exits and it passed; `ProbeHooks` is 284KB and did not.
 # The failure was a violation reported against correct code, in the same words
-# as the real bug — the exact shape `docs/perf-spec.md` records as worse than
+# as the real bug — the exact shape `docs/specs/perf-spec.md` records as worse than
 # staying silent. Without `-q`, grep drains its input and there is no SIGPIPE.
 PROBES_CODE=$(sed 's://.*::' "$PROBES")
 
@@ -112,7 +112,7 @@ for banned in 'URLSession' 'URLRequest' 'URL(string:'; do
          echo "  ruling, a NetworkReach entry and a NetworkLedger.record — not a diff."; exit 1; }
 done
 
-# ── The signposts (docs/perf-spec.md P0) ───────────────────────────────────
+# ── The signposts (docs/specs/perf-spec.md P0) ───────────────────────────────────
 #
 # EVERY SPAN IS PAIRED. An unmatched `.begin` overlaps two intervals on the
 # `.exclusive` signpost id and the samples that come back are nonsense — and

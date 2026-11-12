@@ -1,7 +1,7 @@
 import Foundation
 
 /// **WHAT A MOVE WILL DO, BEFORE FACE ID (prd §1509 item 1, Phase 1 of
-/// `docs/signing-safety-spec.md`).** The sentence stays the screen; its grey
+/// `docs/specs/signing-safety-spec.md`).** The sentence stays the screen; its grey
 /// line gains the network fee and one word, Details, which opens what this
 /// exact operation is: who it goes to, the fee in the network's coin, the
 /// nonce, what the simulation found, and a page deeper the calls in words,

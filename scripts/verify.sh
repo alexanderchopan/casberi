@@ -1148,7 +1148,7 @@ python3 "$ROOT/scripts/wallet-row-audit.py" \
   || fail "a Wallet row stands off the one pitch — use walletListRow() / walletStackRow() / walletRowPitch() (prd §1482)"
 print -P "%F{green}✓ wallet row audit%f"
 
-# The Wallet's waits stay cut (prd §1732, docs/wallet-perf-spec.md). Static,
+# The Wallet's waits stay cut (prd §1732, docs/specs/wallet-perf-spec.md). Static,
 # no build. It fails the balance history decoded per read, a second holdings
 # read per wallet in a pass, the total's extras or the filters' reads waiting
 # behind the holdings, a rider or the pass run untimed, and the scope
@@ -1340,7 +1340,7 @@ print -P "%F{green}✓ query-read audit%f"
 # image decoded inside a row's body. Plus a sweep for the last of those
 # anywhere in the tree.
 #
-# There is NO scroll instrument in this project (docs/perf-spec.md P3), so
+# There is NO scroll instrument in this project (docs/specs/perf-spec.md P3), so
 # nothing that RUNS can tell you these are still in place: the build is happy
 # either way, every self-test passes either way, and the only symptom is "the
 # feed feels slower on a big corpus" — the report this repo has already chased

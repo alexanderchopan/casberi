@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Move's Details (prd §1509 item 1, docs/signing-safety-spec.md Phase 1) —
+# Move's Details (prd §1509 item 1, docs/specs/signing-safety-spec.md Phase 1) —
 # the fee arithmetic, ERC-8213's digests, the revert words and the calls in
 # words (`YourAccountPreview`), plus the wiring a compiler cannot see: sends
 # are simulated before Face ID, a failing simulation dims the verb, "Not

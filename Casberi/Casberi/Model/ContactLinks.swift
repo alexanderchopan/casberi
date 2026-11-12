@@ -1,7 +1,7 @@
 import Foundation
 
 /// The link ledger — the ONE thing the Addresses room persists that no seat
-/// already holds (prd §916, `docs/addresses-spec.md` section 2.3).
+/// already holds (prd §916, `docs/specs/addresses-spec.md` section 2.3).
 ///
 /// A `ContactLink` says two identity keys belong to one contact, and HOW the
 /// app knows it (`LinkTier`). The keys are `Identity.key`'s canonical form

@@ -1,6 +1,6 @@
 import Foundation
 
-/// **YOUR ACCOUNT (docs/safe-wallet-spec.md, prd §1421, §1422) — the
+/// **YOUR ACCOUNT (docs/specs/safe-wallet-spec.md, prd §1421, §1422) — the
 /// arithmetic.** A Safe 1.4.1 whose one owner is Safe's own shared passkey
 /// signer, set up with this phone's Secure Enclave key, run through Safe's
 /// 4337 module. Every contract is Safe's, at the addresses in Safe's own

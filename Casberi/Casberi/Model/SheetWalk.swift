@@ -7,7 +7,7 @@ import Foundation
 /// shape — a held array handed onward is build 177 — so the array is never
 /// carried and the predicate is rebuilt from this at the far end.
 ///
-/// `docs/reading-spec.md` A.3 specified an `enum` of three cases (source, kind,
+/// `docs/specs/reading-spec.md` A.3 specified an `enum` of three cases (source, kind,
 /// none). It is a STRUCT here because the feed has TWO independent filters that
 /// compose: `FeedFilter.source` (the chip strip) and `FeedFilter.tag` (the
 /// agent's kind filter, §269). A room can be both — "my links, in the RSS

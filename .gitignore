@@ -49,3 +49,16 @@ Casberi/AztecEngine/
 Casberi/vendor/aztec/
 tools/aztec-engine/node_modules/
 tools/aztec-engine/shield/
+
+# Design scratch: mockups, prototypes, clips and sweep captures stay on the
+# designer's disk. The repo carries the product and the shipped icon sources.
+design/mockups/
+design/clips/
+design/sweep/
+prototype/
+
+# A local cktool export; the tracked schema is docs/cloudkit-schema.ckdb
+/schema.ckdb
+
+# Spike run logs
+tools/**/run-output.log

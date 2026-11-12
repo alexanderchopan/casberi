@@ -1,7 +1,7 @@
 import Foundation
 
 /// JSON-RPC to a node and to an ERC-4337 bundler — public, keyless,
-/// interchangeable (measured 2026-10-19, `docs/safe-wallet-spec.md` §7).
+/// interchangeable (measured 2026-10-19, `docs/specs/safe-wallet-spec.md` §7).
 enum Chain {
     struct Network: Sendable {
         let name: String

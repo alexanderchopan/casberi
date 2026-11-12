@@ -1,7 +1,7 @@
 import Foundation
 
 /// **A WARNING IS ONE LINE YOU CAN SIGN PAST (prd §1509 item 2, Phase 2 of
-/// `docs/signing-safety-spec.md`).** What Move finds wrong with a sentence
+/// `docs/specs/signing-safety-spec.md`).** What Move finds wrong with a sentence
 /// takes the grey line's place, in amber (check it) or red (reported), and
 /// the verb becomes "Send anyway" / "Swap anyway": the first tap arms it, the
 /// second signs. Walletbeat's rule, warn rather than block; it amends

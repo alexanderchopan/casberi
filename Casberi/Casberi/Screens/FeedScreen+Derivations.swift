@@ -97,7 +97,7 @@ extension FeedScreen {
             ?? feedThings
         // Resolved once, not per row (prd §1079).
         let people = socialScopeMembers
-        // The Wallet's scope too (docs/wallet-perf-spec.md B3): its four reads
+        // The Wallet's scope too (docs/specs/wallet-perf-spec.md B3): its four reads
         // (the app picked, the room, Following's list, the address) were
         // resolved again for every row, and the app pick builds a set over
         // every connected bridge.

@@ -2,7 +2,7 @@ import SwiftUI
 import Photos
 import CryptoKit
 
-/// Shaped Feed rows (docs/handoff-shaped-feeds.md) — when one source is in
+/// Shaped Feed rows (docs/archive/handoff-shaped-feeds.md) — when one source is in
 /// force the feed takes that source's native shape; "All" renders kind-aware
 /// rows that borrow a whisper of their source's shape. These are the row
 /// views; FeedScreen dispatches them and keeps day groups, swipes, pins, the

@@ -304,7 +304,7 @@ struct RootShell: View {
 
     private var shell: some View {
         shellPhaseAware
-        // The agent is a full-screen ZStack layer now (docs/agent-brief.md
+        // The agent is a full-screen ZStack layer now (docs/archive/agent-brief.md
         // ruling 3), rendered above in `shell`'s own ZStack — no more sheet.
         // A fresh composer open is a fresh answer conversation — drop the prior
         // transcript so one conversation's turns never bleed into the next
@@ -494,7 +494,7 @@ struct RootShell: View {
             // nothing.
             SafePeer.startIfNeeded { modelContext }
             // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
-            // retired, docs/agent-brief.md rulings 11-12; reverted to
+            // retired, docs/archive/agent-brief.md rulings 11-12; reverted to
             // "always All" 2026-07-28 per user feedback — the §131 amendment
             // that persisted "wherever you left it" is undone). Deep links
             // and debug hooks below can still override this within the same
@@ -527,7 +527,7 @@ struct RootShell: View {
             }
             // The same instant, reported to MetricKit instead of the console —
             // so this number arrives from real devices in Release without
-            // anybody holding one (docs/perf-spec.md P0). OUTSIDE the
+            // anybody holding one (docs/specs/perf-spec.md P0). OUTSIDE the
             // `LaunchClock.reports` gate on purpose: that gate exists so a
             // shipped build never LOGS for a real person, and a signpost is not
             // a log — it is the measurement the gate was blocking.
@@ -2147,7 +2147,7 @@ struct RootShell: View {
         // Tor connects while the app draws, not when the first wallet read
         // asks for it (prd §1593), and on ACTIVATION, not after the 250ms
         // (first: 800ms) hold that keeps the sweep out of the launch's frames
-        // (docs/wallet-perf-spec.md A3): every wallet read waits on its
+        // (docs/specs/wallet-perf-spec.md A3): every wallet read waits on its
         // bootstrap. It starts a thread and returns; free once started; no
         // wallet, no Tor (§1495).
         if !WalletStore.shared.addresses.isEmpty, !DemoMode.isActive { TorClient.shared.start() }
@@ -2491,7 +2491,7 @@ struct RootShell: View {
                 }
                 .zIndex(2)
             }
-            // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
+            // The agent's bar (docs/archive/agent-brief.md ruling 6) — hosted HERE,
             // not on MainSurface, so it rides every screen this app can push
             // (Apps, Settings, a bridge setup form), not just MainSurface's
             // own root the way the FAB it replaces used to. The berry
@@ -3017,7 +3017,7 @@ struct RootShell: View {
 
     // MARK: - Screens
 
-    /// The agent, full screen (docs/agent-brief.md ruling 3) — the composer's
+    /// The agent, full screen (docs/archive/agent-brief.md ruling 3) — the composer's
     /// entire existing pipeline (byok, lastAnswerHits, GenStream),
     /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
     private var agentSurface: some View {
@@ -3459,7 +3459,7 @@ struct RootShell: View {
         //
         // RELEASE TOO, since 2026-09-05: the same two moments go to MetricKit
         // as `AskFirstPaint` / `AskSettled` signposts, which is how this span
-        // gets measured on a phone (docs/perf-spec.md P0). ONE wrapper feeds
+        // gets measured on a phone (docs/specs/perf-spec.md P0). ONE wrapper feeds
         // both instruments — two would be the second-copy drift this codebase
         // keeps paying for, and here the copies would disagree about which
         // channel painted first.

@@ -64,7 +64,7 @@ final class SpendingReading {
     static let walletSource = "Wallet"
     static var sources: [String] { cardSources + [WiseShape.source, walletSource] }
 
-    /// The key the last keyed refresh ran for (docs/wallet-perf-spec.md B4).
+    /// The key the last keyed refresh ran for (docs/specs/wallet-perf-spec.md B4).
     private var refreshedFor: String?
 
     /// Home and Spending both start this on one key when the Wallet opens; the

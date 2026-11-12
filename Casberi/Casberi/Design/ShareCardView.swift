@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The share card's drawing (docs/social-spec.md section 2). Four zones, top to
+/// The share card's drawing (docs/specs/social-spec.md section 2). Four zones, top to
 /// bottom: the seat or the author, the picture if there is one, the words,
 /// and a foot pinned to the bottom that carries the app icon and the app's name
 /// in the brand ink (and `casberi.app`, quieter, on the far edge) — the one place the brand hue lands on the card, because

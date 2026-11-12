@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// The Addresses list — the fourth segment under the face (prd §916 and its
-/// amendment; `docs/addresses-spec.md` section 1).
+/// amendment; `docs/specs/addresses-spec.md` section 1).
 ///
 /// A DIRECTORY, not a feed: it has no time, so it takes the Accounts screen's
 /// own anatomy — the shared search field above, the dock's category chips as

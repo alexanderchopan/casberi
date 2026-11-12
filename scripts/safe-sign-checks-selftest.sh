@@ -1,5 +1,5 @@
 #!/bin/zsh
-# The co-signer's checks (prd §1514, Phase 3 of docs/signing-safety-spec.md)
+# The co-signer's checks (prd §1514, Phase 3 of docs/specs/signing-safety-spec.md)
 # — `SafeSignChecks`: Reown Verify's answer as the pair block reads it (a
 # missing context is unknown, never confirmed), unlimited approvals found in
 # the calldata itself (ERC-20 approve and increaseAllowance, Permit2,

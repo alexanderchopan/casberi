@@ -166,7 +166,7 @@ struct SafeQueueCard: View {
 
 // MARK: - Signing, when this phone is an owner (prd §425)
 
-/// The ask (`docs/signer-spec.md` §9), drawn under the queue card it belongs
+/// The ask (`docs/specs/signer-spec.md` §9), drawn under the queue card it belongs
 /// to rather than as a screen of its own — the pending transaction is already
 /// on screen as a money receipt with a flat bottom edge (`MoneyReceipt` has
 /// meant "still in the machine" by that edge since §363), and the one thing

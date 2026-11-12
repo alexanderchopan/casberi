@@ -6,7 +6,7 @@ import SwiftUI
 /// most-recent-first. Tapping a chip swaps the surface under a fixed header,
 /// so the strip never scrolls out of reach the way Feed's old in-list chip
 /// row did. (The Pinned board that used to lead retired 2026-07-20,
-/// docs/agent-brief.md rulings 11-12 — content-first, always.)
+/// docs/archive/agent-brief.md rulings 11-12 — content-first, always.)
 ///
 /// **"All" is PINNED, not merely first (2026-08-16).** It renders in the fixed
 /// head beside the two doors and is filtered out of the scroll, so the way back

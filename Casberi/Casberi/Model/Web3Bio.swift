@@ -1,7 +1,7 @@
 import Foundation
 
 /// web3.bio — one keyless lookup that answers "who is this?" across the name
-/// services (prd §916, 2026-09-24; `docs/addresses-spec.md` step 1).
+/// services (prd §916, 2026-09-24; `docs/specs/addresses-spec.md` step 1).
 ///
 /// `api.web3.bio/ns/{query}` takes an address or a name and returns every
 /// record it links: ENS, Basenames, Linea Name Service, Farcaster, Lens, SNS.

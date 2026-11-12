@@ -634,7 +634,7 @@ enum BridgeRefresh {
             }
         }
         if !WalletStore.shared.addresses.isEmpty {
-            // **THE WALLET ON SCREEN GOES FIRST (docs/wallet-perf-spec.md C4).**
+            // **THE WALLET ON SCREEN GOES FIRST (docs/specs/wallet-perf-spec.md C4).**
             // Its slot sat behind some thirty others, up to ~6s after the
             // lead-in; standing on the Wallet, it takes the first slot's time
             // and no one else's slot moves.

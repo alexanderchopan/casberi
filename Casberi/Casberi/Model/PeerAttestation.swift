@@ -3,7 +3,7 @@ import Foundation
 import Security
 
 /// The key Peer's enclave will read a payment app's session with, and the
-/// proof that it IS the enclave's (prd §1598 item 2, docs/peer-spec.md
+/// proof that it IS the enclave's (prd §1598 item 2, docs/specs/peer-spec.md
 /// "Measured, 2026-10-28"). Deposit's proof runs in the app: the session a
 /// person signs into in our web view is sealed to this key and only to it, so
 /// everything here exists to refuse a key that is not provably inside Peer's

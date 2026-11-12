@@ -1,6 +1,6 @@
 #!/bin/zsh
 # The monthly recovery check (prd §1515, Phase 4 of
-# docs/signing-safety-spec.md) — `YourAccountRecoveryCheck`: the due rule
+# docs/specs/signing-safety-spec.md) — `YourAccountRecoveryCheck`: the due rule
 # (thirty days from the last good check, else from the key's making, now
 # when neither is known), each network's standing, and the sentence (green
 # only when the key is here, it signed, and no network the account is on

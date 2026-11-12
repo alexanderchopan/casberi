@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Wallet's three waits, timed (docs/wallet-perf-spec.md Phase 0).
+/// The Wallet's three waits, timed (docs/specs/wallet-perf-spec.md Phase 0).
 ///
 /// - **Open**: the Wallet tab tapped → its last reading drawn.
 /// - **Current**: a holdings read asked → the live total returned, split into

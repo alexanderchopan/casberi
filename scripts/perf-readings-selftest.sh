@@ -26,7 +26,7 @@
 # signpost spans and the sweep report actually hand their numbers over, that
 # every save is counted, that the screen and the probe draw through the SAME
 # digest, and that the source room's light-column projection stays behind its
-# OS gate (docs/perf-spec.md P1 — a bare assignment reproduces §592's
+# OS gate (docs/specs/perf-spec.md P1 — a bare assignment reproduces §592's
 # empty-room defect on iOS 18.6).
 set -euo pipefail
 cd "$(dirname "$0")/.."

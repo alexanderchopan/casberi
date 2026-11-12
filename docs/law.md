@@ -1803,7 +1803,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444, §1612)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446, §1565; part superseded by §1688)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
-- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493, §1628)
+- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/specs/safe-wall… (amended by §1493, §1628)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,… (amended by §1715)
 - §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's doll…
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…

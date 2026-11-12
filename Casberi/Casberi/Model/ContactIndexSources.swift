@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// The stores the contact index is built FROM, and the verified links they
-/// already imply (prd §916, `docs/addresses-spec.md` sections 2.4 and 3).
+/// already imply (prd §916, `docs/specs/addresses-spec.md` sections 2.4 and 3).
 ///
 /// This is the impure half of `ContactIndex`: it reads the wallet book, the
 /// social watch lists, the corpus's contacts and GitHub people, the feed

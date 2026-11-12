@@ -3,7 +3,7 @@ import SwiftData
 import UIKit
 
 /// The one surface (2026-07-13, drastic restructure; the Pinned board
-/// retired 2026-07-20, docs/agent-brief.md rulings 11-12): the app is a
+/// retired 2026-07-20, docs/archive/agent-brief.md rulings 11-12): the app is a
 /// single scrolling destination with a fixed chip header — All leads, then
 /// every source. Content-first, always: the per-app glance job the board
 /// used to carry moved to the agent's own kept-ask chips; this surface is
@@ -3314,7 +3314,7 @@ struct MainSurface: View {
                     }
                 }
             }
-            // The agent bar moved OFF MainSurface entirely (docs/agent-brief.md
+            // The agent bar moved OFF MainSurface entirely (docs/archive/agent-brief.md
             // ruling 6): it now rides RootShell's own ZStack, above EVERY
             // screen this app can push (Apps, Settings, a bridge setup form),
             // not just this one's root — the FAB used to stop at MainSurface's

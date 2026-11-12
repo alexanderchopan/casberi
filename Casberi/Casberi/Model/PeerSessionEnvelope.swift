@@ -21,7 +21,7 @@ import Security
 /// enclave key it was sealed to. It carries no nonce and no id: the enclave's
 /// schema refuses extra fields, so a sealed session is good for as long as
 /// the payment app's session is, and is sent once, to the verify call, and
-/// never stored (docs/peer-spec.md "Measured, 2026-10-28").
+/// never stored (docs/specs/peer-spec.md "Measured, 2026-10-28").
 enum PeerSessionEnvelope {
 
     static let protectedHeader = "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIn0"

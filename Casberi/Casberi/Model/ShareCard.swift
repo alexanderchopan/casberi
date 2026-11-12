@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 /// The share card — one image of a thing, in the app's own hand, that a
-/// person sends out (docs/social-spec.md section 2, 2026-09-24).
+/// person sends out (docs/specs/social-spec.md section 2, 2026-09-24).
 ///
 /// This is the app's first OUTWARD-facing surface: the card goes into a text
 /// thread, a mail, a post, and is the only thing about Casberi the person on

@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Casberi Safe co-signer self-test — the arithmetic behind every signature
-# this app will ever produce (prd §425, docs/signer-spec.md §3/§6/§8).
+# this app will ever produce (prd §425, docs/specs/signer-spec.md §3/§6/§8).
 #
 #   Casberi/Casberi/Model/SafeTransaction.swift   compiled WHOLE and unmodified
 #   Casberi/Casberi/Model/Keccak256.swift         its only dependency

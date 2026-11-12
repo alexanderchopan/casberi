@@ -1,7 +1,7 @@
 import Foundation
 
 /// The contact index — one contact per component of identities joined by
-/// links (prd §916, `docs/addresses-spec.md` section 2).
+/// links (prd §916, `docs/specs/addresses-spec.md` section 2).
 ///
 /// **Nothing here is stored.** A `Contact` is a value built at read time from
 /// the stores that already hold the identities (`ContactIndexSources.swift`

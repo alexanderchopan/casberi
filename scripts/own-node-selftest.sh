@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Your own node (prd §1517, Phase 5 of docs/signing-safety-spec.md) —
+# Your own node (prd §1517, Phase 5 of docs/specs/signing-safety-spec.md) —
 # `OwnNode`: the address rule (http or https, a host, nothing else), the
 # check's verdict (the chain id must be the network's and a block must
 # answer, a wrong chain is never kept), its words, and the switch; then the

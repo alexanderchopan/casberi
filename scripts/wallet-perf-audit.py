@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wallet-perf audit (docs/wallet-perf-spec.md, 2026-11-09).
+"""Wallet-perf audit (docs/specs/wallet-perf-spec.md, 2026-11-09).
 
 WHAT THE WALLET'S WAITS WERE MADE OF, AND THE ORDER THAT TOOK THEM AWAY. Each
 rule below is work that no longer runs, runs once, or runs beside something
@@ -171,7 +171,7 @@ def main() -> int:
         print("✗ wallet-perf audit findings:")
         for line in bad:
             print("  " + line)
-        print("\nSee docs/wallet-perf-spec.md: each rule is work the Wallet no longer waits on.")
+        print("\nSee docs/specs/wallet-perf-spec.md: each rule is work the Wallet no longer waits on.")
         return 1
     print("✓ wallet-perf audit: history decoded per write, one holdings read per wallet, the total's "
           "extras beside it, the doors' riders first, the filters' reads early, the scope resolved once, "

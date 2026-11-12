@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// One deterministic doc-composer per ask KIND (docs/agent-brief.md, ruling
+/// One deterministic doc-composer per ask KIND (docs/archive/agent-brief.md, ruling
 /// 1) — and FIND's engine (`search`, the composer's deterministic door). Mirrors
 /// `HomeComposition`'s own shape: hand-authored `"root = Stack([...])"` line
 /// arrays, built directly from `Thing`/`WalletStore`/`TokensAsk` reads.
@@ -1018,7 +1018,7 @@ enum KeptAskComposers {
     /// remainder is now counted out loud rather than silently discarded.
     static let searchRowLimit = 12
 
-    /// A free-text ask kept as a standing search (docs/agent-brief.md ruling
+    /// A free-text ask kept as a standing search (docs/archive/agent-brief.md ruling
     /// 13, 2026-07-20) — re-runs `Retriever.rank` EVERY time, the same
     /// deterministic engine `RootShell.answerDocument`'s general retrieval
     /// branch uses, never the model. The honest degradation this requires:

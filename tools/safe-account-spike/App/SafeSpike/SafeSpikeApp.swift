@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// A testnet harness for "Your account" (docs/safe-wallet-spec.md): a Safe on
+/// A testnet harness for "Your account" (docs/specs/safe-wallet-spec.md): a Safe on
 /// Base Sepolia whose key lives in this iPhone's Secure Enclave, a new key
 /// with every send if you ask, gas paid from the account's own balance
 /// through a public bundler. Nothing of ours on chain, no server. Never shipped.

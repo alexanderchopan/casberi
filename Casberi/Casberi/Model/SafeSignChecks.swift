@@ -1,7 +1,7 @@
 import Foundation
 
 /// **THE CO-SIGNER'S CHECKS (prd §1509 item 3, Phase 3 of
-/// `docs/signing-safety-spec.md`).** Signing for someone else's Safe gains
+/// `docs/specs/signing-safety-spec.md`).** Signing for someone else's Safe gains
 /// three things: pairing asks Reown Verify where the request really came
 /// from (a site's own metadata can claim any name), an unlimited approval is
 /// a red line in words, and the sign block's Details carries the nonce and

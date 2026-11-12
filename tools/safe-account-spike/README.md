@@ -1,6 +1,6 @@
 # "Your account" on a testnet: the Safe harness
 
-A throwaway iPhone app that runs the account `docs/safe-wallet-spec.md` describes,
+A throwaway iPhone app that runs the account `docs/specs/safe-wallet-spec.md` describes,
 on **Base Sepolia**, before any of it is built into Casberi:
 
 - a **Safe 1.4.1** whose one owner is Safe's own **shared passkey signer**, set up

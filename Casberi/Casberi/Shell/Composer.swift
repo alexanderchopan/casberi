@@ -91,7 +91,7 @@ struct Composer: View {
     var onNavigate: (NavigateIntent) -> Void = { _ in }
     /// Keep a synthesis answer — lands it as a note in the feed so the recap
     /// isn't ephemeral. The composer hands over the answer's plain text.
-    /// Labelled "Save as a note" on the button (docs/agent-brief.md, the
+    /// Labelled "Save as a note" on the button (docs/archive/agent-brief.md, the
     /// 2026-07-19 rename): "Keep" itself is reserved for minting a standing
     /// kept-ask chip — a different verb now, see `onKeep` below.
     var onKeepAnswer: (String) -> Void = { _ in }
@@ -99,7 +99,7 @@ struct Composer: View {
     /// so open/close is a morph of the same substance, not a swap.
     var glassNamespace: Namespace.ID? = nil
     /// Resolves a thing id to a real `Thing` for the agent's own drill-down
-    /// (docs/agent-brief.md ruling 8 — the Stack session model: tapping
+    /// (docs/archive/agent-brief.md ruling 8 — the Stack session model: tapping
     /// content inside an answer PUSHES a thing-view rather than presenting a
     /// sheet). nil ids, or ids that no longer resolve, render nothing.
     var resolveThing: (String) -> Thing? = { _ in nil }
@@ -110,7 +110,7 @@ struct Composer: View {
     /// read. The agent picker's "+" draws only when this is non-nil, so it can
     /// never be a control that does nothing (§83).
     var onOpenAgents: (() -> Void)? = nil
-    /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
+    /// Lowers the agent (docs/archive/agent-brief.md ruling 9: staying is the
     /// default; a bare tap never ejects you — this is the ONE thing "Open in
     /// app" from inside a pushed thing-view is allowed to do to the agent
     /// itself). Called at the end of every `close()`, so both new exits (✕,

@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Casberi signer self-test, the §913 half — the arithmetic behind the three
 # things the co-signer signs beyond a Safe transaction, and the one way it is
-# asked (prd §913, docs/signer-spec.md §12).
+# asked (prd §913, docs/specs/signer-spec.md §12).
 #
 #   Casberi/Casberi/Model/SafeTypedData.swift          EIP-712 in general
 #   Casberi/Casberi/Model/SafeStatement.swift          Safe messages, SIWE, Snapshot

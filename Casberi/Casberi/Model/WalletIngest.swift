@@ -440,7 +440,7 @@ enum WalletIngest {
         // has no transfer jobs at all, which must not read as "unreachable":
         // `reachedAny` stays false, and the holdings path is what speaks.
         let evmAddresses = evmOnly(addresses)
-        // **THE SPAM FILTERS' READS START NOW (docs/wallet-perf-spec.md C2).**
+        // **THE SPAM FILTERS' READS START NOW (docs/specs/wallet-perf-spec.md C2).**
         // What each wallet holds, and its NFT collections, are asked of the
         // addresses alone, never of the transfers; they were awaited one after
         // another below, after the transfer reads. Started here they run
@@ -815,7 +815,7 @@ enum WalletIngest {
             added += 1
         }
         // One index call for the pass's rows, where it was one per row
-        // (docs/wallet-perf-spec.md C3); same rows, same moment, before the save.
+        // (docs/specs/wallet-perf-spec.md C3); same rows, same moment, before the save.
         if !landed.isEmpty { SpotlightIndex.index(landed) }
         // Durable before the gas total accumulates (2026-07-20 review):
         // gas is a bare running sum with no per-tx ledger, so a job whose
@@ -851,7 +851,7 @@ enum WalletIngest {
                                                         heldByOwner: heldByOwner,
                                                         ownedNFTs: ownedNFTs) }
         added += approvalsAdded
-        // **THE DOORS' RIDERS RIDE FIRST (docs/wallet-perf-spec.md C1).**
+        // **THE DOORS' RIDERS RIDE FIRST (docs/specs/wallet-perf-spec.md C1).**
         // Needs you reads Safe's queue and Permissions reads approvals and
         // delegations; every other rider below fills a page behind a door. So
         // these go before the rest, and a pass that is still reading Morpho
@@ -2312,7 +2312,7 @@ enum WalletIngest {
         }
         let perfStart = WalletPerf.counts()
         let perfT0 = Date()
-        // **THE EXTRAS START WITH THE HOLDINGS (docs/wallet-perf-spec.md A2).**
+        // **THE EXTRAS START WITH THE HOLDINGS (docs/specs/wallet-perf-spec.md A2).**
         // None of them reads another, or the holdings: each was awaited in a
         // row after the holdings returned, so the total waited for their sum.
         // Started here, it waits for the slowest. The number is still drawn
@@ -3175,7 +3175,7 @@ enum WalletIngest {
     /// crown can date a windowed figure.
     private static func fetchHeldTokensDated(addresses: [String]) async -> (tokens: [HeldToken], at: Date)? {
         guard !addresses.isEmpty else { return nil }
-        // **SEVERAL WALLETS ARE THEIR OWN READS, MERGED (docs/wallet-perf-spec.md
+        // **SEVERAL WALLETS ARE THEIR OWN READS, MERGED (docs/specs/wallet-perf-spec.md
         // A1).** The room asks one wallet at a time (`walletGroupOutcome`) and
         // the sweep asked all of them at once, and the window keyed the two
         // differently, so every wallet's `/positions` went out twice a pass.

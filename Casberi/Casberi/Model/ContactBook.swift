@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// The saved half of Addresses — what the person adds BY HAND (prd §916
-/// amendment, `docs/addresses-spec.md` section 2.6; user: "anywhere in the
+/// amendment, `docs/specs/addresses-spec.md` section 2.6; user: "anywhere in the
 /// app there is a person even if not social like an rss writer or whatever").
 ///
 /// The seats feed the index; this is the one population that is neither a

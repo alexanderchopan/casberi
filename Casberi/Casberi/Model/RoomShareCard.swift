@@ -1,6 +1,6 @@
 import Foundation
 
-/// A room's own share card (docs/social-spec.md section 6, item 3): a week on
+/// A room's own share card (docs/specs/social-spec.md section 6, item 3): a week on
 /// GitHub, a streak on Duolingo, a week of workouts — a figure the room can stand behind, drawn
 /// by the same `ShareCardView` a thing's card is, reached by one door row
 /// under the room's tiles.

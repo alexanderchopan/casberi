@@ -5,7 +5,7 @@ import os
 #endif
 
 /// The three spans this app is judged on, measured on REAL DEVICES in RELEASE
-/// (2026-09-05) — `docs/perf-spec.md`'s P0, running by itself.
+/// (2026-09-05) — `docs/specs/perf-spec.md`'s P0, running by itself.
 ///
 /// **What this fixes.** The perf spec ranks "baseline the phone" above every
 /// other workstream and says everything below re-ranks against it; it is still

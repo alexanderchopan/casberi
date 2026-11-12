@@ -6,7 +6,7 @@ import WalletConnectPairing
 
 /// THIS PHONE AS A WALLETCONNECT PEER — the Safe web app, or any app that
 /// speaks to owner wallets, pairs to it the way it pairs to a hardware
-/// wallet (prd §913; `docs/signer-spec.md` §7's tier 2). The peer takes a
+/// wallet (prd §913; `docs/specs/signer-spec.md` §7's tier 2). The peer takes a
 /// request, reads it through `SafePeerRequest`, runs it through the same
 /// signer the service path uses, and hands the signature back over the
 /// session. Nothing here decides whether a signature may happen.
