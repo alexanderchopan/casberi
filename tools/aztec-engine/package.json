@@ -17,5 +17,12 @@
   "devDependencies": {
     "vite": "7.1.12",
     "vite-plugin-node-polyfills": "0.24.0"
+  },
+  "overrides": {
+    "systeminformation": "5.33.16",
+    "glob": "14.0.2",
+    "minimatch": "11.0.1",
+    "@opentelemetry/propagator-jaeger": "2.9.0",
+    "@opentelemetry/core": "2.8.0"
   }
 }
