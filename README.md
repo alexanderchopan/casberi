@@ -1,6 +1,10 @@
 # Casberi
 
-A native app for iPhone, iPad and Mac. It keeps the things you collect (links, screenshots, notes, mail, events) in one feed, and holds a self-custody wallet. Live on the App Store; site at [casberi.app](https://casberi.app).
+**Keep it Moving, Privately.**
+
+Your life and money are spread across accounts. You spend the day switching between apps to get anything done. Casberi gives you an inbox and a wallet to keep it all moving, privately.
+
+A native app for iPhone, iPad and Mac, with a self-custody wallet. Live on the App Store; site at [casberi.app](https://casberi.app).
 
 Casberi holds keys and signs transactions. To report a vulnerability, see [`SECURITY.md`](SECURITY.md).
 
