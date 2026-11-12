@@ -138,19 +138,24 @@ enum LogosKey {
 
     /// Signs a message hash: a 64-byte BIP-340 signature and the 32-byte
     /// x-only key, the witness LEZ takes. Face ID (or the passcode) is asked
-    /// for at the read, with `reason`.
+    /// first, here, with `reason`: the item carries no access control of its
+    /// own, so the read alone would ask nothing. A phone with no passcode set
+    /// has nothing to ask.
     ///
     /// **Verified before it leaves**: the signature is checked against the
     /// key it came from, and that key must still derive the account this
     /// phone remembers — one curve operation proving the hash signed is the
     /// hash asked for, and that the stored scalar still belongs to the
     /// account the sheet named.
-    static func sign(hash: [UInt8], reason: String) throws -> (signature: [UInt8], publicKey: [UInt8]) {
+    static func sign(hash: [UInt8], reason: String) async throws -> (signature: [UInt8], publicKey: [UInt8]) {
         guard hash.count == 32 else { throw Failure.curve }
         guard let expected = accountID() else { throw Failure.missing }
         let context = LAContext()
         context.localizedReason = reason
-        context.localizedFallbackTitle = ""
+        if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) {
+            let passed = (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
+            guard passed else { throw Failure.locked(errSecUserCanceled) }
+        }
         var scalar = try readScalar(context: context)
         defer { scalar.resetBytes(in: 0..<scalar.count) }
         guard let key = try? P256K.Schnorr.PrivateKey(dataRepresentation: scalar) else { throw Failure.curve }

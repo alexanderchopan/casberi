@@ -79,7 +79,7 @@ enum LogosSend {
 
         let witness: (signature: [UInt8], publicKey: [UInt8])
         do {
-            witness = try LogosKey.sign(
+            witness = try await LogosKey.sign(
                 hash: LogosWire.messageHash(message),
                 reason: String(localized: "Send \(LogosWire.amount(amount)) test tokens on Logos"))
         } catch LogosKey.Failure.locked {
