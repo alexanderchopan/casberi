@@ -124,9 +124,8 @@ guard "a swap's feed row asks the rule (it carries no direction)" "$BAND" \
   'return ProtocolMark\.mark\(counterparty: thing\.transferCounterparty'
 guard "the feed row's carried lead is the action glyph with the badge" "$BAND" \
   'case \.carried\(let mark\):'
-guard "Lend's foot credits Aave" "$LEND" 'Text\("Powered by Aave"\)'
+guard_absent "Lend's foot repeats no credit: the sentence says Aave (prd §1754)" "$LEND" 'Powered by Aave'
 guard "the private send's foot credits Privacy Pools (prd §1718)" "$PRIVATE" 'Text\("Powered by Privacy Pools"\)'
-guard "Lend's credit wears the mark through Move's one door" "$LEND" 'MoveSentence\.mark\(of: "Aave"\)'
 guard "Move's mark door falls back to the rule" \
   "Casberi/Casberi/Screens/MoveSentence.swift" 'ProtocolMark\.mark\(forVenue: service\)'
 # No small mark on a Holdings row's second line (prd §1718, user: "even aave

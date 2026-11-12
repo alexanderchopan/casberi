@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1931 of 2004 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1933 of 2006 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1890,7 +1890,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 - §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
-- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past
+- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1754)
 - §1510 — Details in Move: the fee on every send, this exact operation simulated and previewed, Raw transaction a page deeper,…
 - §1511 — Move's sentence is placed against the width it was measured for, so a clause never draws over the next (applies §1501…
 - §1512 — Relay stays the one swap provider under Tor: it is read directly, and every move it carries says so on its foot (answ…
@@ -1920,7 +1920,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590)
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
 - §1538 — Private money is CROPS: a private pocket on Aztec, our own open-source account, the engine on the phone, no gatekeeper (amended by §1700d)
-- §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675)
+- §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675, §1754)
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
 - §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678)
@@ -1938,7 +1938,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698, §1700f)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
-- §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track…
+- §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track… (part superseded by §1754)
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567, §1719)
@@ -1981,7 +1981,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
 - §1599 — Buy is a card buying crypto; gift cards are Spend
-- §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o…
+- §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o… (amended by §1754)
 - §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644, §1687)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
@@ -1998,7 +1998,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i… (amended by §1738)
 - §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes… (amended by §1738)
 - §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with,…
-- §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th…
+- §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th… (amended by §1754, §1755)
 - §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and… (amended by §1665)
 - §1618 — A Wallet app's pages are its own again: an account row and Needs you on Home, what it holds in Holdings and the box,… (amended by §1729)
 - §1619 — Muse signs in on muse.ai, as Beeper connects it, and answers in your own Muse chat; an agent seat may send what you t…
@@ -2055,13 +2055,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1670 — A token's row opens that token: its sheet takes Holdings' sum apart into Networks and Accounts; the Tokens door and a…
 - §1671 — Yours is always on the switch: with no account it opens Move to make one; the demo's own account is in the demo's hol…
 - §1672 — A Holdings tile opens its token's sheet in one tap, every token, and the sheet draws the token's price chart; every t…
-- §1673 — Limit orders are Swap's last word: the sentence ends "when", Now or a price, and a price is a CoW order
+- §1673 — Limit orders are Swap's last word: the sentence ends "when", Now or a price, and a price is a CoW order (amended by §1754)
 - §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 ite…
 - §1673b — §1673 built: Swap ends "when", a price is a CoW order this phone builds and pre-signs, "Powered by CoW Swap" (builds…
 - §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry)
 - §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1)
 - §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows… (amended by §1695)
-- §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa…
+- §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa… (amended by §1754)
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission… (amended by §1710)
 - §1678 — Swap asks Uniswap v4 on Ethereum: the four standard pools and AZTEC/ETH's hooked pool, the router handed what it sell… (amended by §1680)
@@ -2071,9 +2071,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1681a — A verb in the list has no line under it (amends §1681 item 1)
 - §1681b — Once the sheet grows it stays grown (amends §1681 item 6)
 - §1682 — A swap that moves the price says so: "Moves the price 6.4%" in the attention ink under the exchange's credit, from 1%…
-- §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 item…
+- §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 item… (amended by §1754)
 - §1684 — Act where you look: a held token's sheet sends and swaps it, and a signature row in Needs you opens the transaction i…
-- §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car… (amended by §1700f)
+- §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car… (amended by §1700f; part superseded by §1754)
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
 - §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
 - §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565'…
@@ -2152,7 +2152,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1728 — Railgun's Move says dollars: the amount in dollars with the floor beside it and $10 · Half · All, under the floor you…
 - §1729 — Needs you, Permissions and Threats stand on Wallet Home while empty: Needs you at 0, Permissions "None", Threats "Uns…
 - §1730 — Railgun's sends show their steps in Move's foot with Aztec's rows: a move-in Checking · Signing · Sent on Ethereum, a…
-- §1731 — The Wallet stands on one left edge and draws every chart in one ink, its picker line at one height; Move's sentence i…
+- §1731 — The Wallet stands on one left edge and draws every chart in one ink, its picker line at one height; Move's sentence i… (amended by §1754)
 - §1732 — The Wallet waits less: one holdings read per wallet a pass, the total's extras beside it, Tor on activation, the door…
 - §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder'…
 - §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
@@ -2179,6 +2179,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
 - §1753 — Your Aztec account's engine starts over when its store stops answering
+- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755)
+- §1755 — Move's act is a pink card
 
 ## Dead rulings → what replaced them (generated)
 

@@ -72134,3 +72134,31 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** The same engine; nothing here is phone-only.
 
 **Hook.** `-aztecEngineProbe recycle` (in `docs/hooks/wallet.md`).
+
+## §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amends §1600's "always" both networks, §1673/§1683's "now." at rest, §1509's "$25.00 · Fee up to $0.01 · Details" line, §1539/§1675's credit in the foot, §1616 item 8's Add at the verb's size, §1731's body17 for the verbs alone; retires §1685's "Powered by Aave" and §1557's slider on Send and Swap) (user, 2026-11-12, on a canvas of nine Move mockups: "the part that worries me is where we have smaller font and what the text says that it is too wordy, and i think we could probably do better on buttons"; shown the list of what the mockups change: "do all these"; of the ledger: "make sure your indents match"; shown four ways to set the amount: "probably D no slider") — BUILT; SEEN on the simulator (the demo): the open sentence, Swap, Send, Sweep; NOT SEEN: a real quote's "You get" and Fee rows, the When row, the tense change while a send goes, Lend's act; nothing seen on a phone or the Mac
+
+**What changed.**
+
+1. **One ledger.** Every small fact under a Send, Swap or Sweep sentence is a row: a grey name, its figure on the page's right edge, all `body17` (`MoveSentence.ledgerRows`, `ledger(door:)`). Rows, in order: When, Amount (the other unit when dollars are typed), You get, Round-ups, Fee, Through, "Moves the price N%" (amber), Total (bold). The last row opens Details; its chevron follows the name so no figure is pushed in. The dot-joined print line is gone from these three verbs.
+2. **The exchange is a row, not a credit.** "Through · Uniswap" with the mark; the pool's fee is in the price and is Details' to say. Across's and a wrap's lines keep their own words as a row. The foot holds the acts alone; Relay's, CoW Swap's, Bitrefill's and the card seller's credits stay in the foot, at `body17`: nothing in Move's foot is under 17pt.
+3. **The sentence is shorter.** Empty: "Swap token for token." The amount appears with the token or the moment it is typed. Filled on one network: "Swap 0.005 ETH for 19.2 USDC on Base." The network it leaves is a word only when it differs; the token picked names where it comes from, and the last word still opens "Get <token> on".
+4. **"now" left the sentence.** The ledger's When row ("Now", a chevron) opens the two rows; "when ETH is $4,042." ends the sentence once a price is picked.
+5. **No slider on Send and Swap.** The amount's choices are rows: $20, $50, $100 (those you can cover), Half and All with what each comes to, the pick in pink; the $ · token switch ends the "Amount" line. Spend keeps the slider.
+6. **The act wears Face ID's glyph** until a stage has it (Send, Swap, Sweep, Lend). Add is `heading24` with a plus.
+7. **The verbs are `heading24`.** Token and network choices stay the Wallet's row.
+8. **Tense.** The verb reads "Sending", "Swapping", "Sweeping", "Spending" in pink while it goes; the receipt's past tense is pink; its facts are a row each.
+9. **Words cut.** "No address for <name>" (was "No address answers to"); When's Custom says nothing more; "ETH now" and its price; Lend's "Powered by Aave" (the sentence says Aave).
+
+**Not built.** The mockups' Sending steps (Checked · Signed · Sending) for an ordinary send; "Send again" on Done; Lend's Half · All as words (2026-11-10's ruling ties them to Round-ups', Aztec's and Railgun's); "Quarter"; the ledger on Spend, Buy, Receive and the private sentences. The foot's bigger act (a pink card, a tall card, slide to send) is mocked on the canvas and not picked.
+
+**Mac half (§1402).** Nothing here is phone-only: the same views draw in the Mac's Move.
+
+**Self-tests.** `your-account-selftest.sh` (You get, Fee, the ledger's door), `limit-order-selftest.sh` (the When row, `whenSpoken`), `private-money-selftest.sh` (Round-ups' two rows), `protocol-mark-selftest.sh` (Lend repeats no credit).
+
+## §1755 — Move's act is a pink card (amends §1442d's and §1616 item 8's words at the foot, §1754 item 6's Add; an exception to §782's "no plates" and the 2026-10-18 "no wide pill buttons", as §759's control is) (user, 2026-11-12, of Move's foot: "i'm wondering if the buttons at the bottom should be more delightful maybe one is on a pink card or something. i also think they could take up more space because on most of these screens we have a lot of white space"; shown three on the canvas, a pink card, a tall card and slide to send: "A, pink card") — BUILT; SEEN on the simulator (the demo): Sweep's and Lend's cards; NOT SEEN: Add's square beside Send's card, a greyed or warned card, a stage's words in it; nothing seen on a phone or the Mac
+
+**What changed.** The foot's act fills the row as a card (`MoveSentence.actCard`, 76pt, `DS.Radius.widget`): Face ID's glyph, the verb at `heading24`, and the ledger's Total at its trailing edge, white on the pick's pink. It is grey when it cannot act, and amber or red when a warning stands. Add is a square of the same height beside it, a plus alone. Send, Swap, Sweep, Spend, Receive's Copy address, Buy and Lend wear it.
+
+**Not built.** The receipt's Done and Cancel order stay words; the private sentences (Aztec, Railgun, Privacy Pools, a fresh Receive) keep their own feet. Slide to send was not picked: the tap already asks Face ID (§1687), and a slide would confirm twice.
+
+**Mac half (§1402).** The same view draws in the Mac's Move.

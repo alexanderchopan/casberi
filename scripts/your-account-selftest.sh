@@ -565,6 +565,11 @@ grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decima
   && grep -q 'let exact = quote?.across.map { $0.swap == nil } == true || quote?.wrap != nil' "$SENTENCE" \
   || { echo "✗ the print line no longer carries the ≈ and the exact quote, or drops the ≈ for a pool's quote (prd §1479, §83, §1556)"; exit 1; }
 # The fee after it is the network's alone since §1539: the pool's is in the price (`swapFeePrint`).
-grep -q 'case .swap: \[soldPrint, quotePrint, swapFeePrint\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote or the whole fee (prd §1479, §1509)"; exit 1; }
+# Rows of the ledger since §1754: "You get" carries the exact quote, "Fee" the network's.
+grep -q 'rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back))' "$SENTENCE" \
+  && grep -q 'rows.append(LedgerRow(id: "fee", name: String(localized: "Fee"), value: fee))' "$SENTENCE" \
+  || { echo "✗ the swap's ledger dropped the exact quote or the whole fee (prd §1479, §1509, §1754)"; exit 1; }
+# One ledger, one size: its last row opens Details, and no figure is pushed in by a chevron (prd §1754).
+grep -q 'ledger(door: offersDetails)' "$SENTENCE" || { echo "✗ the ledger's last row no longer opens Details (prd §1754)"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, the sentence is one size that wraps, the create walk ends on Created, and an exported key is kept apart and shown only once it landed"

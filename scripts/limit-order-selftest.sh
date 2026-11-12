@@ -54,8 +54,11 @@ grep -q 'static let whenPresets = \[5, 10, 25\]' "$MOVE" \
 grep -q 'unitChip("%", on: priceInPercent' "$MOVE" && grep -q 'unitChip("\$", on: !priceInPercent' "$MOVE" \
   || { echo "✗ the list no longer offers % and $ (prd §1683)"; exit 1; }
 
-# At rest the sentence ends "when", before the tokens are picked (prd §1673d).
-grep -q 'if whenDrawn { whenClause }' "$MOVE" && grep -q 'return with == nil || buy == nil' "$MOVE" \
+# At rest the sentence says nothing of when (prd §1754): the ledger's When
+# row is the door, there before the tokens are picked (prd §1673d), and the
+# clause is drawn once a price is picked.
+grep -q 'if whenSpoken { whenClause }' "$MOVE" && grep -q 'return with == nil || buy == nil' "$MOVE" \
+  && grep -q 'LedgerRow(id: "when", name: String(localized: "When"), value: String(localized: "Now"),' "$MOVE" \
   || { echo "✗ \"when\" waits for the bought token again (prd §1673d)"; exit 1; }
 
 grep -q 'priceWords: Self.priceWords(v, places: p.places), seconds: orderSeconds)' "$MOVE" \

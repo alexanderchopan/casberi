@@ -344,33 +344,21 @@ struct MoveLendSentence<Head: View>: View {
             case .failed:
                 footButton(String(localized: "Try again"), on: true) { Task { await move.read(account: account) } }
             default:
-                footButton(footVerb, on: live && move.units != nil) {
+                footButton(footVerb, on: live && move.units != nil, faceID: !move.acting) {
                     open = nil
                     Task { await move.run(account: account) }
                 }
                 .disabled(!(live && move.units != nil))
             }
         }
-            if case .done = move.stage {} else { credit }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
         .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
     }
 
-    /// **POWERED BY AAVE (prd §1685):** the protocol that does the move signs
-    /// the foot as Relay and CoW Swap do, its mark beside its name, while
-    /// there is a move to make.
-    private var credit: some View {
-        HStack(spacing: DS.Space.s1) {
-            Text("Powered by Aave")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-            MoveSentence.mark(of: "Aave").accessibilityHidden(true)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s1)
-    }
+    // No credit under the act (prd §1754, retiring §1685's): the sentence
+    // already says "on Aave".
 
     /// What the cost line says after the dollars.
     private var costTail: String? {
@@ -391,15 +379,9 @@ struct MoveLendSentence<Head: View>: View {
         }
     }
 
-    private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(verbatim: word)
-                .dsText(.heading34)
-                .foregroundStyle(on ? DS.pickInk : DS.textTertiary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(minHeight: 48, alignment: .trailing)
-        }
-        .buttonStyle(RowPress())
+    private func footButton(_ word: String, on: Bool, faceID: Bool = false, act: @escaping () -> Void) -> some View {
+        // Move's one act: the pink card (prd §1755).
+        Button(action: act) { MoveSentence.actCard(word, on: on, faceID: faceID) }
+            .buttonStyle(PressSpring())
     }
 }
