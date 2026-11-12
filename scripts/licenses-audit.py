@@ -66,7 +66,7 @@ def self_test():
         (SWIFT, '        "QRCode": "MIT · Darren Ford",\n', "", "has no line"),
         (SWIFT, '        "Yttrium": "Apache 2.0 · Reown",\n',
          '        "Yttrium": "Apache 2.0 · Reown",\n        "Gone": "MIT",\n', "does not hold"),
-        (SWIFT, '"Coinbase Wallet Mobile SDK", "Yttrium"]', '"QRCode", "Yttrium"]', "never points at the Apache"),
+        (SWIFT, '"TDLib", "Tor", "Yttrium"]', '"TDLib", "Tor", "QRCode", "Yttrium"]', "never points at the Apache"),
         (MD, "# Apache License, Version 2.0\n", "# Apache text, renamed\n", "its text is not in the file"),
     ]
     failed = 0
