@@ -285,6 +285,21 @@ check(!ZkMoneyWire.requestOpen(expires: payNow.addingTimeInterval(-60), now: pay
 check(ZkMoneyWire.requestOpen(expires: nil, now: payNow), "one with no expiry stays open")
 check(ZkMoneyLink.title(.request(tag: "zac", amount: 20.5, symbol: "DAI", note: nil, expires: nil)).hasPrefix(ZkMoneyLink.requestTitleLead),
       "every request's title begins with the words Pay's gate reads")
+// A fee bigger than the amount says so, and a paid request says Paid (prd §1752).
+check(ZkMoneyWire.feeWarning(total: ZkMoneyWire.requestPayment(tag: "zac", amount: Decimal(string: "0.01"), symbol: "DAI").amount)
+      == "The fee is 35 times the amount", "a cent asked: the fee is 35 times the amount")
+check(ZkMoneyWire.feeWarning(total: "0.6") == "The fee is more than the amount", "a quarter asked: the fee is more than the amount, under twice")
+check(ZkMoneyWire.feeWarning(total: "0.7") == nil && ZkMoneyWire.feeWarning(total: payDai.amount) == nil,
+      "an amount the size of the fee or over says nothing")
+check(ZkMoneyWire.feeWarning(total: "0.35") == nil && ZkMoneyWire.feeWarning(total: "") == nil && ZkMoneyWire.feeWarning(total: "0.2") == nil,
+      "…nor does a total that is the fee alone, less than it, or not a number")
+let askedTitle = ZkMoneyLink.title(.request(tag: "zac", amount: Decimal(string: "0.01"), symbol: "DAI", note: nil, expires: nil))
+check(ZkMoneyLink.paidTitle(askedTitle) == "Paid — 0.01 DAI to zac.zk.money", "a paid request's title leads with Paid, on the same one seam")
+check(ZkMoneyLink.paidTitle(ZkMoneyLink.requestTitleLead + "zk.money", asked: "0.01 DAI", to: "zac.zk.money") == "Paid — 0.01 DAI to zac.zk.money",
+      "a short link's row takes what Send read from it")
+check(ZkMoneyLink.paidTitle(ZkMoneyLink.requestTitleLead + "zk.money") == "Paid — zk.money", "…and keeps its own words when Send read nothing")
+check(ZkMoneyLink.paidTitle("zk.money payment link") == "zk.money payment link" && !ZkMoneyLink.paidTitle(askedTitle).hasPrefix(ZkMoneyLink.requestTitleLead),
+      "any other title is left alone, and a paid one no longer reads as open")
 
 // A format-3 request as zk.money's wallet writes one (made-up ids, the real
 // packet's shape, prd §1751): its token is named as it stands on Aztec.
@@ -469,6 +484,15 @@ mutate "no resolver read as one" \
 mutate "a request's title losing the words Pay reads" \
   'return requestTitleLead + (what.map' \
   'return "Request — " + (what.map'
+mutate "a fee many times the amount left unsaid" \
+  'guard asked > 0.000_000_5, payFeeUSD > asked else { return nil }' \
+  'guard asked > 0.000_000_5, payFeeUSD > asked * 100 else { return nil }'
+mutate "a fee smaller than the amount warned of" \
+  'guard asked > 0.000_000_5, payFeeUSD > asked else { return nil }' \
+  'guard asked > 0.000_000_5 else { return nil }'
+mutate "a paid request still titled as open" \
+  'return paidTitleLead + title.dropFirst(requestTitleLead.count)' \
+  'return title'
 
 # Pay a request, read (prd §1745): what a screen cannot show. Pay drawn with no
 # account to pay from, or on a row already paid, is a dead control; a row
@@ -524,6 +548,34 @@ awk '/private func choose\(_ h: Tokens.Held\) \{/,/^    }/' "$SEND" \
 awk '/private var toWord: some View \{/,/^    }/' "$SEND" \
   | grep -q 'ZkMoneyLink.spellsLink(to) ? String(localized: "zk.money request")' \
   || { echo "✗ To spells a request link out while it is looked up"; exit 1; }
+
+# Quality of life (prd §1752), read. A link pasted from the sentence that is
+# not a request would sit in To as an address nobody answers to; a paid row
+# that kept its title would read as open; a fee warning drawn after the
+# amount changed would warn about a sentence that is no longer there.
+awk '/private func pasteLink\(\) \{/,/^    }/' "$SEND" > "$TMP/paste.txt"
+awk '/guard ZkMoneyLink.spellsLink\(text\) else \{/{g=NR} /to = text/{t=NR} END{exit !(g && t && g<t)}' "$TMP/paste.txt" \
+  || { echo "✗ Paste link puts any link into To, not only a request"; exit 1; }
+grep -q 'UIPasteboard.general.detectedPatterns(for: \[link\])' "$SEND" \
+  && ! awk '/private func readClipboard\(\) async \{/,/^    }/' "$SEND" | grep -q 'UIPasteboard.general.string' \
+  || { echo "✗ the clipboard is read before the tap: Paste link must ask the system for a pattern only"; exit 1; }
+grep -q 'thing.title = ZkMoneyLink.paidTitle(thing.title, asked: request.asked, to: request.to)' "$TMP/settle.txt" \
+  && grep -q 'if case .landed(let transaction?, _) = outcome {' "$TMP/settle.txt" \
+  || { echo "✗ a paid request keeps its open title, or keeps an explorer page for a send never seen on chain"; exit 1; }
+grep -q 'if thing.mark == .done, thing.title.hasPrefix(ZkMoneyLink.paidTitleLead),' "$VERBS" \
+  || { echo "✗ Explorer is drawn on a request that was not paid from here"; exit 1; }
+awk '/private var requestFeeWarning: String\? \{/,/^    }/' "$SEND" | grep -q 'guard requestPrint != nil, let request = payingRequest else { return nil }' \
+  || { echo "✗ the fee warning outlives the request: it is said after the amount or the tag changed"; exit 1; }
+awk '/static func againDraft\(_ thing: Thing\) -> Draft\? \{/,/^    }/' "$SEND" > "$TMP/again.txt"
+grep -q 'guard thing.transferDirection == "sent", let to = sendableCounterparty(thing)' "$TMP/again.txt" \
+  && grep -q 'WalletWatch.sameAddress(thing.walletAddress ?? "", account)' "$TMP/again.txt" \
+  || { echo "✗ Again is offered on a transfer this account did not send, or to someone Send would refuse"; exit 1; }
+awk '/enum RecentTo \{/,/^    }/' "$SEND" > "$TMP/recent.txt"
+grep -q 'if let name = p.toName, ZkMoneyWire.tag(name) != nil { return name.lowercased() }' "$TMP/recent.txt" \
+  && grep -q 'return ZkMoney.knownName(for: p.to) == nil ? p.to : nil' "$TMP/recent.txt" \
+  || { echo "✗ Recent keeps a zk.money deposit address, which is spent once paid, instead of the tag"; exit 1; }
+grep -q 'if verb == .send, !sweeping, sent.outcome != .dryRun, !YourAccountDemo.isDemo(account) {' "$SEND" \
+  || { echo "✗ Recent records a dry run, a sweep, a card's payment or the demo's send"; exit 1; }
 
 # The resolver is asked of ENS before each lookup (prd §1750), and the lookup
 # must come from the one it names: the pin alone went stale in eight days.

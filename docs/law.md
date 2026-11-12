@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1929 of 2002 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1930 of 2003 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a)
@@ -1968,7 +1968,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in (amended by §1619)
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
 - §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687)
-- §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593)
+- §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593, §1752)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
 - §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
@@ -2170,13 +2170,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1743 — A Nymis scan says how long it takes: the footnote says a few minutes before the tap, the row says it while the scan r…
 - §1744 — Nymis scans on its own, once per address: a wallet when you follow it, your account when its first transaction lands,…
 - §1744a — Only your account scans on its own; a wallet you follow scans on a tap (amends §1744 items 1 and 5) (Nymis, relayed b…
-- §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid… (amended by §1751)
+- §1745 — A saved zk.money request can be paid: Pay opens Send written for it, the fee added on top, and the row is marked paid… (amended by §1751, §1752)
 - §1746 — zk.money's resolver is re-pinned, checked nightly against ENS, and the reader takes the request format zk.money write… (amended by §1750)
 - §1747 — Listen stands only over a body of forty words or more
 - §1748 — A zk.money request link pasted into Send's To writes the sentence, and the short link zk.money's Share gives is read… (amended by §1749)
 - §1749 — A pasted request picks its token and keeps its amount
 - §1750 — Paying a zk.money tag asks ENS for the resolver each time; the pin is the fallback
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
+- §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
 
 ## Dead rulings → what replaced them (generated)
 

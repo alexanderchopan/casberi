@@ -164,6 +164,20 @@ enum ZkMoneyLink {
         }
     }
 
+    /// **A PAID REQUEST SAYS PAID (prd §1752).** "Payment request — 0.01 DAI
+    /// to zac.zk.money" becomes "Paid — 0.01 DAI to zac.zk.money": the same
+    /// one seam, the state leading. A short link's row, kept unread as
+    /// "Payment request — zk.money", takes what Send read from it (`asked`
+    /// "0.01 DAI", `to` "zac.zk.money"). Any other title is left as it is.
+    static let paidTitleLead = "Paid — "
+    static func paidTitle(_ title: String, asked: String? = nil, to: String = "") -> String {
+        guard title.hasPrefix(requestTitleLead) else { return title }
+        if title == requestTitleLead + "zk.money", !to.isEmpty {
+            return paidTitleLead + (asked.map { "\($0) to " } ?? "to ") + to
+        }
+        return paidTitleLead + title.dropFirst(requestTitleLead.count)
+    }
+
     /// The line a request's body gains once Pay's send is taken (prd §1745).
     static func paidNote(on day: Date) -> String {
         "Paid \(day.formatted(.dateTime.month(.abbreviated).day()))"

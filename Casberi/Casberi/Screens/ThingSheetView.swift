@@ -3838,8 +3838,12 @@ struct ThingSheetView: View {
         }
         // **SEND TO THEM (prd §1587):** the other side of a transfer, with an
         // account here to send from; never your own address or a flagged row.
+        // **AGAIN (prd §1752):** a send of your own names the same amount and
+        // token too, so its tile says what it does; the action is the same.
         if let sendTo = MoveSentence.sendableCounterparty(thing) {
-            out.append(Verb(label: String(localized: "Send"), icon: "paperplane", action: .sendTo(sendTo)))
+            let again = MoveSentence.againDraft(thing) != nil
+            out.append(Verb(label: again ? String(localized: "Again") : String(localized: "Send"),
+                            icon: again ? "arrow.clockwise" : "paperplane", action: .sendTo(sendTo)))
         }
         return out
     }
@@ -5298,7 +5302,8 @@ struct ThingSheetView: View {
             // Move rises over the place this sheet came from, Send filled,
             // on the network the row moved on.
             verbResult = nil
-            chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
+            chrome.moveDraft = MoveSentence.againDraft(thing)
+                ?? MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
             raisesMove = true
             dismiss()
         case .payZkMoney:

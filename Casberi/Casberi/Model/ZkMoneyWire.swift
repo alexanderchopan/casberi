@@ -366,6 +366,20 @@ enum ZkMoneyWire {
         return RequestPayment(to: "\(tag).zk.money", amount: plainAmount(amount + fee), asked: plainAmount(amount), token: token)
     }
 
+    /// **A FEE BIGGER THAN THE AMOUNT SAYS SO (prd §1752).** `total` is what
+    /// Send holds for a request, the amount asked plus the fee: when the fee
+    /// is the larger part, the line says how many times over ("35 times"
+    /// for a cent), or "more than" under twice. nil when the amount is the
+    /// larger, or `total` is not the fee and something.
+    static func feeWarning(total: String) -> String? {
+        guard let total = Double(total) else { return nil }
+        let asked = total - payFeeUSD
+        guard asked > 0.000_000_5, payFeeUSD > asked else { return nil }
+        let times = Int((payFeeUSD / asked).rounded())
+        return times >= 2 ? String(localized: "The fee is \(times) times the amount")
+                          : String(localized: "The fee is more than the amount")
+    }
+
     /// A request can be paid until its expiry; one with none stays open.
     static func requestOpen(expires: Date?, now: Date) -> Bool {
         expires.map { $0 > now } ?? true

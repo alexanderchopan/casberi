@@ -158,6 +158,12 @@ enum VerbDerivation {
             if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {
                 out.append(Verb(label: String(localized: "Pay"), icon: "paperplane", action: .payZkMoney))
             }
+            // A request paid from here (prd §1752): the send's own page on
+            // the explorer, kept on the row when the send was seen on chain.
+            if thing.mark == .done, thing.title.hasPrefix(ZkMoneyLink.paidTitleLead),
+               let receipt = webLink(thing.externalLink), receipt.host() == "etherscan.io" {
+                out.append(Verb(label: String(localized: "Explorer"), icon: "arrow.up.right", action: .openURL(receipt)))
+            }
             // Music rows open the exact track in their app — the stored content
             // is a music.apple.com / open.spotify.com universal link. Named and
             // iconed by the app (like "Open in Calendar"), with the app scheme

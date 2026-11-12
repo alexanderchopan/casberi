@@ -175,7 +175,8 @@ extension FeedScreen {
                 catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .sendTo(let address):
-            chrome.moveDraft = MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
+            chrome.moveDraft = MoveSentence.againDraft(thing)
+                ?? MoveSentence.sendDraft(to: address, on: MoveSentence.network(of: thing))
             chrome.moveTray = true
         case .payZkMoney:
             // Send written for this request (prd §1745).

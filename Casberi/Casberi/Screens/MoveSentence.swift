@@ -200,6 +200,11 @@ struct MoveSentence: View {
     /// To's Paste put the field's text there: once it resolves, the list
     /// closes on its own.
     @State private var pastedTo = false
+    /// The clipboard looks like it holds a link (prd §1752): asked of the
+    /// system as a pattern, never read, so nothing is taken before the tap.
+    @State private var clipboardLink = false
+    /// The last people this account sent to, newest first (prd §1752).
+    @State private var recentTo: [String] = []
     /// A name in To being asked of its resolver, or one none answered for:
     /// said under the sentence, never a grey word left to guess (prd §1586).
     enum Lookup: Equatable { case looking(String), missing(String), refused(String) }
@@ -543,6 +548,9 @@ struct MoveSentence: View {
         let at: Date
         /// The zk.money request Pay wrote this draft for (prd §1745).
         var request: PayingRequest? = nil
+        /// Again (prd §1752): the token a sent row names, by its symbol; it
+        /// is matched to one you hold once the holdings land.
+        var symbol: String? = nil
     }
 
     /// **PAY A zk.money REQUEST (prd §1745).** The saved row Pay opened Send
@@ -646,6 +654,7 @@ struct MoveSentence: View {
     /// asked for. Only such an open picks a draft up.
     private let picksUpDraft: Bool
     @State private var draftWithID: String?
+    @State private var draftSymbol: String?
     @State private var payingRequest: PayingRequest?
     /// The deposit addresses resolved for the request's tag this visit.
     @State private var requestDeposits: Set<String> = []
@@ -662,6 +671,28 @@ struct MoveSentence: View {
     static func sendDraft(to address: String, on network: Op.Network? = nil) -> Draft {
         Draft(verb: .send, network: network ?? Op.base, networkPicked: network != nil, amount: "", inDollars: true,
               withID: nil, buy: nil, buyOn: nil, to: address, at: Date())
+    }
+
+    /// **SEND AGAIN (prd §1752).** A transfer your own account sent, on a
+    /// network Move sends on: the same person, the same amount, the same
+    /// token. nil for any other row, which keeps Send with To alone. The
+    /// row's amount is the one it shows, so it is only taken under 1,000,
+    /// where the row writes every digit it rounds to.
+    static func againDraft(_ thing: Thing) -> Draft? {
+        guard thing.transferDirection == "sent", let to = sendableCounterparty(thing), let net = network(of: thing),
+              let account = YourAccountDemo.shownAddress, WalletWatch.sameAddress(thing.walletAddress ?? "", account) else { return nil }
+        let (amount, symbol) = WalletFlow.parseAmount(thing.transferAmount ?? "")
+        guard let amount, amount > 0, amount < 1_000, !symbol.isEmpty else { return nil }
+        return Draft(verb: .send, network: net, networkPicked: true, amount: againAmount(amount), inDollars: false,
+                     withID: nil, buy: nil, buyOn: nil, to: to, at: Date(), symbol: symbol)
+    }
+
+    /// "25", "0.0123": the amount field's own text, no grouping, no trailing zeros.
+    static func againAmount(_ amount: Double) -> String {
+        var text = String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), amount)
+        while text.hasSuffix("0") { text.removeLast() }
+        if text.hasSuffix(".") { text.removeLast() }
+        return text
     }
 
     /// **SEND OR SWAP FROM A HOLDING'S LONG PRESS (prd §1609).** The token on
@@ -700,6 +731,9 @@ struct MoveSentence: View {
         guard thing.source == "Wallet", !thing.isFlagged, YourAccountDemo.shownAddress != nil,
               thing.transferDirection == "sent" || thing.transferDirection == "received",
               SwapStage(thing) == nil, thing.grantedAt == nil,
+              // A round-up's buy went to a Relay deposit address and a zk.money
+              // move to a one-time address or a portal (prd §1752): nobody to pay.
+              SpendingSource.roundUp(of: thing) == nil, ZkMoney.knownName(for: thing.counterpartyAddress ?? "") == nil,
               !WalletIngest.isWorldGrantHolder(thing.counterpartyAddress),
               !WalletFlow.parseAmount(thing.transferAmount ?? "").symbol.isEmpty,
               // A pool the app names by address, or a book entry known to be a
@@ -723,6 +757,7 @@ struct MoveSentence: View {
         inDollars = d.inDollars
         // The token is matched once the holdings land (`readHoldings`).
         draftWithID = d.withID
+        draftSymbol = d.symbol
         buy = d.buy
         buyOn = d.buyOn
         amount = d.amount
@@ -736,6 +771,13 @@ struct MoveSentence: View {
         guard verb == .send, let request = payingRequest, let asked = request.asked,
               amount == request.amount, to.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == request.to else { return nil }
         return String(localized: "\(asked) asked, plus zk.money's $0.35 fee")
+    }
+
+    /// The fee is more than the amount asked (prd §1752): amber, over the
+    /// line, while the sentence pays the request as written.
+    private var requestFeeWarning: String? {
+        guard requestPrint != nil, let request = payingRequest else { return nil }
+        return ZkMoneyWire.feeWarning(total: request.amount)
     }
 
     /// A request Pay wrote this send for is paid once a send to an address
@@ -756,6 +798,13 @@ struct MoveSentence: View {
         thing.mark = .done
         thing.dueAt = nil
         thing.enrichedText = [thing.enrichedText, ZkMoneyLink.paidNote(on: .now)].compactMap { $0 }.joined(separator: "\n")
+        // **A PAID REQUEST SAYS PAID (prd §1752):** its title leads with the
+        // word, in the Feed and on its sheet, and a send seen on chain
+        // leaves its explorer page as the row's door.
+        thing.title = ZkMoneyLink.paidTitle(thing.title, asked: request.asked, to: request.to)
+        if case .landed(let transaction?, _) = outcome {
+            thing.externalLink = "https://etherscan.io/tx/\(transaction)"
+        }
         context.saveHonestly()
         NSLog("zkMoneyPay| request paid | %@", thing.title)
     }
@@ -1345,6 +1394,7 @@ struct MoveSentence: View {
             // the tap now): while the send prepares and signs it reads its own
             // balances, so nothing competes with it; back from the Signer's
             // wallet the page reads as before.
+            if now == .active { Task { await readClipboard() } }
             if now == .active, stage != .preparing, stage != .signing, !heldBy.isEmpty {
                 Task { await readHoldings() }
                 if !YourAccountDemo.isDemo(account) { Task { [account, network] in await Chain.readAhead(account, on: network) } }
@@ -1388,11 +1438,26 @@ struct MoveSentence: View {
             // What you hold opens the first list; Uniswap's lists, which only
             // For and a pasted contract need, follow (prd §1586).
             pickUpDraft()
+            readRecentTo()
+            Task { await readClipboard() }
             await readHoldings(shared: true)
             if with == nil, let id = draftWithID {
                 with = heldBy[network.chainId]?.first { $0.id == id }
             }
             draftWithID = nil
+            // Again (prd §1752): the row names its token by symbol alone, so
+            // it is picked only when one token you hold there wears it; with
+            // none or two, the amount goes too and the sentence asks.
+            if let symbol = draftSymbol {
+                let named = (heldBy[network.chainId] ?? []).filter { $0.token.symbol.caseInsensitiveCompare(symbol) == .orderedSame }
+                if with == nil, named.count == 1 {
+                    with = named[0]
+                } else if with == nil {
+                    amount = ""
+                    inDollars = true
+                }
+            }
+            draftSymbol = nil
             #if DEBUG
             if Self.drafting {
                 await readLists()
@@ -2721,10 +2786,100 @@ struct MoveSentence: View {
                 // The box rises into the space and fades as its pick lands.
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
             } else {
-                line
-                    .transition(.opacity)
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    line
+                    if offersPasteLink { pasteLinkRow }
+                }
+                .transition(.opacity)
             }
         }
+    }
+
+    // MARK: - Paste from the sentence (prd §1752)
+
+    /// **A LINK ON THE CLIPBOARD IS OFFERED UNDER THE SENTENCE (prd §1752).**
+    /// Send with To still blank and something to send: one word pastes a
+    /// zk.money request without opening To's list. The system says only
+    /// whether the clipboard looks like a link, so the word is "Paste link",
+    /// never what the link is; the clipboard is read at the tap.
+    private var offersPasteLink: Bool {
+        clipboardLink && verb == .send && hint == nil && receipt == nil && stage == nil
+            && privateMode == nil && !freshReceive && !fresh && !emptyEverywhere && !readFailed
+            && to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var pasteLinkRow: some View {
+        Button { pasteLink() } label: {
+            Text("Paste link")
+                .dsText(.body17)
+                .foregroundStyle(DS.pickInk)
+                .frame(minHeight: 44, alignment: .leading)
+        }
+        .buttonStyle(RowPress())
+    }
+
+    private func pasteLink() {
+        let text = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // Only a request link is taken from here: any other link has no
+        // address to send to, and To's own list pastes an address.
+        guard ZkMoneyLink.spellsLink(text) else {
+            withAnimation(DS.Motion.standard) { clipboardLink = false }
+            say(text.isEmpty ? String(localized: "Nothing to paste") : String(localized: "That link is not a payment request"))
+            return
+        }
+        DSHaptic.snap()
+        withAnimation(DS.Motion.standard) { to = text }
+    }
+
+    /// Whether the clipboard looks like a link: a pattern the system
+    /// answers without showing it to the app, so no paste notice rises.
+    private func readClipboard() async {
+        let link = \UIPasteboard.DetectedValues.probableWebURL
+        let found = (try? await UIPasteboard.general.detectedPatterns(for: [link])) ?? []
+        let has = found.contains(link)
+        if has != clipboardLink { withAnimation(DS.Motion.standard) { clipboardLink = has } }
+    }
+
+    // MARK: - Recent recipients (prd §1752)
+
+    /// **RECENT LEADS To (prd §1752).** The last three people Send sent to
+    /// from this account, kept on this phone as each send is taken. Send's
+    /// own record and never the Wallet's rows: a round-up's buy, a deposit
+    /// and a card's payment are sent rows too, and their one-time addresses
+    /// are nobody to pay again. A zk.money tag is kept as the tag, so it is
+    /// looked up afresh each time (prd §1692); anyone else as an address.
+    enum RecentTo {
+        static func key(_ account: String) -> String { "move.recentTo.\(account.lowercased())" }
+        static func read(_ account: String) -> [String] {
+            UserDefaults.standard.stringArray(forKey: key(account)) ?? []
+        }
+        /// What a taken batch adds, newest first: each plain send's tag or address.
+        static func entries(_ batch: [Chain.Item]) -> [String] {
+            batch.reversed().compactMap { item in
+                guard case .send(let p) = item else { return nil }
+                if let name = p.toName, ZkMoneyWire.tag(name) != nil { return name.lowercased() }
+                return ZkMoney.knownName(for: p.to) == nil ? p.to : nil
+            }
+        }
+        static func remember(_ batch: [Chain.Item], account: String) {
+            let sent = entries(batch)
+            guard !sent.isEmpty else { return }
+            UserDefaults.standard.set(MoveSentence.recent(sent + read(account)), forKey: key(account))
+        }
+    }
+
+    private func readRecentTo() {
+        recentTo = RecentTo.read(account)
+    }
+
+    /// Each one once, in the order given, three at most.
+    static func recent(_ addresses: [String], cap: Int = 3) -> [String] {
+        var out: [String] = []
+        for address in addresses where !out.contains(where: { $0.caseInsensitiveCompare(address) == .orderedSame }) {
+            out.append(address)
+            if out.count == cap { break }
+        }
+        return out
     }
 
     /// Everything under the sentence, down to the edge (or the keys).
@@ -2912,6 +3067,10 @@ struct MoveSentence: View {
             // control, stands under it here rather than stranded at the foot.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 if verb == .send, let lookup { lookupLine(lookup) }
+                if let words = requestFeeWarning {
+                    Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 // **MORE THAN YOU HAVE, WITH THE FIX (prd §1586):** the slider
                 // stays, and the note is a door to all of it.
                 if verb == .send || verb == .swap, over {
@@ -3656,6 +3815,32 @@ struct MoveSentence: View {
         // The person the line above goes to leads, said so (§1442h).
         let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
         return VStack(alignment: .leading, spacing: 0) {
+            // **RECENT (prd §1752):** the last people Send sent to from here,
+            // at the top of the list, above Private and your book; typing searches
+            // the book, so the three stand only while the field is blank.
+            let recent = q.isEmpty ? recentTo.filter { a in
+                !(above.map { WalletWatch.sameAddress($0.to, a) || $0.toName?.caseInsensitiveCompare(a) == .orderedSame } ?? false)
+            } : []
+            if !recent.isEmpty {
+                listHeader(String(localized: "Recent"))
+                ForEach(recent, id: \.self) { entry in
+                    if ZkMoneyWire.tag(entry) != nil {
+                        // A tag is resolved as a typed one is: To looks it up.
+                        listRow(entry, sub: "zk.money", mark: entry) {
+                            to = entry
+                            pick {}
+                        }
+                    } else {
+                        let name = AddressBook.shared.name(for: entry)
+                        listRow(name ?? YourAccount.short(entry), sub: name == nil ? nil : YourAccount.short(entry),
+                                mark: name, face: name.map(AssetMark.hasAsset) == true ? nil : entry) {
+                            to = name ?? entry
+                            resolved = Recipient(address: EIP55.checksum(entry), name: name, imitates: nil)
+                            pick {}
+                        }
+                    }
+                }
+            }
             // **YOUR PRIVATE BALANCE, ONE NOUN, TOLD APART BY NETWORK (prd
             // §1719, amending §1718 item 6 and §1700g item 2).** Two rows
             // under one "Private" header, both "Your private balance", the
@@ -3695,6 +3880,11 @@ struct MoveSentence: View {
                     goAztec(.send, recipient: to.trimmingCharacters(in: .whitespaces).lowercased())
                 }
             }
+            // Your book under its own word once Recent stands over it, so no
+            // row of the book reads as someone you just paid.
+            if !recent.isEmpty, !book.isEmpty {
+                listHeader(String(localized: "Addresses"))
+            }
             if let above, q.isEmpty {
                 listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
                         face: above.to) {
@@ -3709,7 +3899,10 @@ struct MoveSentence: View {
                     pick {}
                 }
             }
-            ForEach(Array(book.filter { e in above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true }.prefix(20)), id: \.address) { e in
+            ForEach(Array(book.filter { e in
+                (above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true)
+                    && !recent.contains { WalletWatch.sameAddress($0, e.address) }
+            }.prefix(20)), id: \.address) { e in
                 // A company in the book (Uniswap, Coinbase) wears its logo; a
                 // person, their face (prd §1534).
                 listRow(e.name, sub: YourAccount.short(e.address), mark: e.name,
@@ -5163,6 +5356,12 @@ struct MoveSentence: View {
                     for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
                 }
                 settleRequest(batch, outcome: sent.outcome)
+                // Who Send sent to leads To next time (prd §1752): a send taken,
+                // never a dry run, a sweep or the demo's.
+                if verb == .send, !sweeping, sent.outcome != .dryRun, !YourAccountDemo.isDemo(account) {
+                    RecentTo.remember(batch, account: account)
+                    readRecentTo()
+                }
                 spendZkMoney(batch)
                 withAnimation(DS.Motion.standard) {
                     if sweeping {
