@@ -59,7 +59,7 @@ LEDGER = ROOT / "docs" / "prd.md"
 
 # Where a `§N` citation may appear. docs/prd.md is excluded — it is the ledger
 # itself, and its internal cross-references are checked by the same pass.
-CITERS = [ROOT / "CLAUDE.md", ROOT / "docs", ROOT / "scripts", ROOT / "Casberi"]
+CITERS = [ROOT / ".claude" / "CLAUDE.md", ROOT / "docs", ROOT / "scripts", ROOT / "Casberi"]
 CITER_SUFFIXES = {".md", ".py", ".sh", ".swift"}
 
 # A `§N` that names a section of ANOTHER document, not this ledger. Each entry

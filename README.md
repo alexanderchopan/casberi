@@ -75,7 +75,7 @@ The static audits and logic self-tests need no simulator and run on their own; e
 
 ## How the project is run
 
-One developer, commits straight to `main`. Each shipped build is recorded in [`docs/builds.md`](docs/builds.md) with the commit it was archived from, and a build made from a clean tree is tagged `build-<n>`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `CLAUDE.md` is the working rule sheet for AI coding sessions; it imports `docs/hooks/index.md`, the index of the DEBUG launch hooks.
+One developer, commits straight to `main`. Each shipped build is recorded in [`docs/builds.md`](docs/builds.md) with the commit it was archived from, and a build made from a clean tree is tagged `build-<n>`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `.claude/CLAUDE.md` is the working rule sheet for AI coding sessions; it imports `docs/hooks/index.md`, the index of the DEBUG launch hooks. Unfamiliar words are in [`docs/glossary.md`](docs/glossary.md).
 
 ## License
 

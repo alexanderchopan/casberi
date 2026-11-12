@@ -505,9 +505,10 @@ fi
 # is one somebody raises rather than obeys, so the headroom is deliberate.
 CLAUDE_MD_MAX=102400
 step "CLAUDE.md context budget"
-# The hook index is `docs/hooks/index.md`, which CLAUDE.md imports (`@docs/hooks/index.md`):
+# The rule sheet is `.claude/CLAUDE.md` (out of the repo root since 2026-11-11). The hook
+# index is `docs/hooks/index.md`, which it imports (`@../docs/hooks/index.md`):
 # an imported file is loaded into every session too, so the budget is the sum.
-_cmsize=$(cat "$ROOT/CLAUDE.md" "$ROOT/docs/hooks/index.md" | wc -c | tr -d ' ')
+_cmsize=$(cat "$ROOT/.claude/CLAUDE.md" "$ROOT/docs/hooks/index.md" | wc -c | tr -d ' ')
 if (( _cmsize > CLAUDE_MD_MAX )); then
   fail "CLAUDE.md plus its imported docs/hooks/index.md is ${_cmsize}b, over the ${CLAUDE_MD_MAX}b budget — it is loaded into every session. Move the long-form entry to docs/hooks/<area>.md or docs/verify.md and leave a one-line index line pointing there (see the top of CLAUDE.md)."
 fi

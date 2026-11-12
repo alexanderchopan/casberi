@@ -191,7 +191,7 @@ deliberately does not check are in `docs/verify.md`.
 
 ## DEBUG launch-arg hooks
 
-@docs/hooks/index.md
+@../docs/hooks/index.md
 
 ## SwiftUI/UIKit gotchas already paid for
 

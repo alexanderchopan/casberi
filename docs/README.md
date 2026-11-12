@@ -7,7 +7,8 @@ Start with `law.md`. It is the current ruling for every area of the app, each li
 | File | What it is |
 | --- | --- |
 | `law.md` | Current rulings by area. Generated from `prd.md` by `scripts/law-digest.py`. |
-| `prd.md` | The ruling ledger, append-only, cited everywhere as `§N`. The record, not the summary. |
+| `prd.md` | The ruling ledger, append-only, cited everywhere as `§N`. A record to look things up in, not something to read through: it is 7 MB and GitHub will not render it. Read `law.md`. |
+| `glossary.md` | The words the code and docs use: thing, seat, bridge, room, door and the rest. |
 | `architecture.md` | Architecture and threat model: keys, the signing path, the network, trust assumptions. |
 | `build-brief.md` | The design system (§8 is law for all UI work). |
 | `brand.md` | The mark, the name and the directions that were rejected. |
@@ -24,7 +25,7 @@ Start with `law.md`. It is the current ruling for every area of the app, each li
 
 | Folder | What it holds |
 | --- | --- |
-| `hooks/` | `index.md` is the one-line index of every DEBUG launch hook, imported by `CLAUDE.md`. The rest are per-area build records: wallet, bridges, design, system, agent, social, rooms, imports, devnets. |
+| `hooks/` | `index.md` is the one-line index of every DEBUG launch hook, imported by `.claude/CLAUDE.md`. The rest are per-area build records: wallet, bridges, design, system, agent, social, rooms, imports, devnets. |
 | `specs/` | Feature specs. The security-relevant ones: `signing-safety-spec.md`, `safe-wallet-spec.md`, `signer-spec.md`, `aztec-security-model.md`. |
 | `store/` | The App Store page's text, read and applied by `scripts/asc-copy.py` and checked by `scripts/catalog-sync.sh`. |
 | `archive/` | Superseded specs and session handoffs, kept because code comments and the ledger cite them. Not current. |
