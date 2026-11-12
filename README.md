@@ -30,11 +30,12 @@ Casberi holds keys and signs transactions. To report a vulnerability, see [`SECU
 | Key and credential storage | `Model/TokenVault.swift`, `Model/SafeEnclaveKey.swift`, `Model/YourAccountKey.swift` |
 | Every host the app may contact | `Model/NetworkReach.swift` (declared), `Model/NetworkLedger.swift` (recorded at runtime) |
 | Private-money engines | `tools/aztec-engine/`, `tools/privacy-pools-engine/`, `tools/railgun-engine/`, built into `Casberi/Casberi/Resources/*-engine.js` |
+| Start here | `docs/architecture.md`: what the app holds, what signs, what leaves the device, what it trusts |
 | Specs | `docs/specs/signing-safety-spec.md`, `safe-wallet-spec.md`, `signer-spec.md`, `aztec-security-model.md` |
 
 The checks that guard these areas run on every pass and in CI. The ones to read first: `scripts/keychain-audit.py`, `scripts/network-reach-audit.sh`, `scripts/safe-signer-selftest.sh`, `scripts/clearsign-selftest.sh`, `scripts/secret-scan-selftest.py`, `scripts/redaction-coverage-audit.py`. `docs/verify.md` says what each one catches.
 
-No secret is committed. Development keys live in the developer's login Keychain (`scripts/dev-keys.sh`); the only identifiers in the tree are public ones (a WalletConnect project id, a Dropbox app key).
+No signing key, user credential or developer key is committed. Development keys live in the developer's login Keychain (`scripts/dev-keys.sh`). Two shared read-only data keys (Alchemy, Zerion) ship in the binary and are in the source on purpose, beside public identifiers such as the WalletConnect project id; `docs/architecture.md` says where.
 
 ## Building
 
@@ -64,7 +65,7 @@ The static audits and logic self-tests need no simulator and run on their own; e
 
 ## How the project is run
 
-One developer, commits straight to `main`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `CLAUDE.md` is the working rule sheet for AI coding sessions and doubles as an index of the DEBUG launch hooks.
+One developer, commits straight to `main`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `CLAUDE.md` is the working rule sheet for AI coding sessions; it imports `docs/hooks/index.md`, the index of the DEBUG launch hooks.
 
 ## License
 

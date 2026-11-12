@@ -2,7 +2,7 @@
   "name": "casberi-railgun-engine",
   "private": true,
   "version": "0.0.1",
-  "description": "SPIKE: can Railgun's open TypeScript wallet SDK run in the app's hidden web view, as Privacy Pools' does (prd §1540)? Sepolia only. Not in the app.",
+  "description": "Railgun's wallet SDK, bundled into one script for the app's hidden web view (prd §1713). The spike pages in src/ do not ship.",
   "type": "module",
   "dependencies": {
     "@railgun-community/engine": "9.9.1",
