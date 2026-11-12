@@ -1,7 +1,0 @@
-node_modules/
-state/
-*.key
-.env
-circuits-cache/
-circuits-cache-sepolia-dev/
-*.log

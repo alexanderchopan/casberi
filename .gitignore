@@ -66,6 +66,3 @@ tools/**/run-output.log
 # Local-only writing: marketing drafts and specs not yet settled
 docs/marketing/
 docs/drafts/
-
-# Spike build output (tools/aztec-dapp-spike/build.mjs regenerates it)
-tools/aztec-dapp-spike/dist/

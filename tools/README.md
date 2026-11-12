@@ -16,7 +16,4 @@ JavaScript and contract code that sits beside the app. Nothing here runs on a se
 
 | Folder | The question it answered |
 | --- | --- |
-| `aztec-phone-spike/` | Can an iPhone alone run a private Aztec account? |
-| `aztec-dapp-spike/` | Can an Aztec app find and talk to Casberi as its wallet? |
-| `privacy-pools-trial/` | Privacy Pools v2 on Sepolia, measured. Testnet only. |
 | `safe-account-spike/` | The Safe account on Base Sepolia, before it was built into the app. |

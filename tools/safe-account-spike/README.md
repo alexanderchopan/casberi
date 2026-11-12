@@ -30,8 +30,7 @@ the chain verify the signature. Passed 2026-10-19, plain and with the rotation.
 
 ## On the phone
 
-Build `App/SafeSpike.xcodeproj` for the device (signing as in
-`tools/aztec-phone-spike/scripts/run-on-phone.sh`). The app shows the account's
+Build `App/SafeSpike.xcodeproj` for the device (signed with your own team). The app shows the account's
 address: send it about **0.001 Base Sepolia ETH** from a faucet, then:
 
 1. **Check (no funds needed)**: estimate, sign, the chain's verdict.
