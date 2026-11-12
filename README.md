@@ -6,6 +6,12 @@ Your life and money are spread across accounts. You spend the day switching betw
 
 A native app for iPhone, iPad and Mac, with a self-custody wallet. Live on the App Store; site at [casberi.app](https://casberi.app).
 
+<p>
+  <img src="docs/images/01-inbox-wallet.jpg" alt="An inbox and a wallet for all your accounts" width="250">
+  <img src="docs/images/04-money.jpg" alt="Your money in one place" width="250">
+  <img src="docs/images/07-private.jpg" alt="Send and receive privately" width="250">
+</p>
+
 Casberi holds keys and signs transactions. To report a vulnerability, see [`SECURITY.md`](SECURITY.md).
 
 ## Repository map
@@ -17,7 +23,7 @@ Casberi holds keys and signs transactions. To report a vulnerability, see [`SECU
 | `Casberi/Shared/` | Source compiled into both the app and its extensions (the data model, the shared store). |
 | `Casberi/ShareExtension/`, `CasberiWidgets/`, `NotificationContent/` | The extensions. |
 | `Casberi/CasberiTests/`, `CasberiUITests/` | Tests that need a real model container. |
-| `Vendor/` | Vendored dependencies: `swift-secp256k1`, `TorKit`. TDLib is fetched, not committed. |
+| `Vendor/` | Vendored dependencies and where each comes from. See [`Vendor/README.md`](Vendor/README.md). |
 | `tools/` | JavaScript engines bundled into the app, and the spikes that measured them. See [`tools/README.md`](tools/README.md). |
 | `scripts/` | The verification suite and release tooling. See [`scripts/README.md`](scripts/README.md). |
 | `docs/` | Rulings, specs and build records. See [`docs/README.md`](docs/README.md). |
@@ -69,7 +75,7 @@ The static audits and logic self-tests need no simulator and run on their own; e
 
 ## How the project is run
 
-One developer, commits straight to `main`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `CLAUDE.md` is the working rule sheet for AI coding sessions; it imports `docs/hooks/index.md`, the index of the DEBUG launch hooks.
+One developer, commits straight to `main`. Each shipped build is recorded in [`docs/builds.md`](docs/builds.md) with the commit it was archived from, and a build made from a clean tree is tagged `build-<n>`. Product and design decisions are recorded as numbered rulings in `docs/prd.md` and cited in code as `prd §N`; `docs/law.md` is the current summary. `CLAUDE.md` is the working rule sheet for AI coding sessions; it imports `docs/hooks/index.md`, the index of the DEBUG launch hooks.
 
 ## License
 

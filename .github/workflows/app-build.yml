@@ -1,0 +1,82 @@
+# Builds the app from a clean checkout and runs its unit tests, on GitHub's
+# own machine: proof that the tree builds for somebody who is not the
+# developer.
+#
+# MANUAL ONLY for now (Actions → App build → Run workflow). It has not yet
+# had a green run, and an unproven job on every push would mark commits red
+# for reasons that are the job's, not the commit's. Add a `push:` trigger once
+# it has passed.
+#
+# What a clean machine needs that the repo does not carry:
+#   - TDLib, built from Telegram's source at a pinned commit by
+#     scripts/tdlib.sh (about an hour; cached here by that script's hash).
+#     With no Telegram app id in the Keychain its header says 0, and the
+#     Telegram seat says it cannot sign in. The app still builds.
+#   - Aztec's prover and the engine page, fetched and built by
+#     scripts/aztec-engine.sh (scripts/xcb.sh runs it before the build).
+#
+# Nothing is signed and nothing is uploaded: this is a simulator build.
+name: App build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: app-build-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # The Xcode 27 image; the app is built with Xcode 27.2.
+    runs-on: xcode-27
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode 27.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Tools TDLib needs
+        run: |
+          for tool in cmake gperf; do
+            command -v "$tool" >/dev/null || brew install "$tool"
+          done
+
+      - name: TDLib cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/casberi/tdlib
+          key: tdlib-${{ runner.os }}-xcode27.2-${{ hashFiles('scripts/tdlib.sh') }}
+
+      - name: TDLib
+        run: scripts/tdlib.sh
+
+      - name: Aztec cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            Casberi/vendor/aztec
+            tools/aztec-engine/node_modules
+          key: aztec-${{ runner.os }}-${{ hashFiles('scripts/aztec-engine.sh', 'tools/aztec-engine/package-lock.json') }}
+
+      - name: Build for the simulator
+        run: |
+          scripts/xcb.sh -project Casberi/Casberi.xcodeproj -scheme Casberi \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO build
+
+      - name: Unit tests
+        run: |
+          device=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone 17 Pro \([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}')
+          [ -n "$device" ] || { xcrun simctl list devices available; echo "no iPhone 17 Pro simulator on this image"; exit 1; }
+          scripts/xcb.sh test -project Casberi/Casberi.xcodeproj -scheme Casberi \
+            -destination "id=$device" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            -only-testing:CasberiTests CODE_SIGNING_ALLOWED=NO

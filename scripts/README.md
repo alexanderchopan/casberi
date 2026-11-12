@@ -26,7 +26,7 @@ Every check has a `--self-test` proving it can fail. What each one catches is in
 
 | Group | Scripts |
 | --- | --- |
-| Release | `testflight.sh`, `testflight-mac.sh`, `testflight-public-beta*.sh`, `testflight-expire-*`, `testflight-retry-review.sh`, `appstore-release.sh`, `appstore-swap-build.sh`, `exportOptions.plist` |
+| Release | `build-record.sh` (which commit a build is; refuses a ship from a tree that matches none), `testflight.sh`, `testflight-mac.sh`, `testflight-public-beta*.sh`, `testflight-expire-*`, `testflight-retry-review.sh`, `appstore-release.sh`, `appstore-swap-build.sh`, `exportOptions.plist` |
 | App Store Connect | `asc-copy.py`, `asc-jwt.py`, `asc-report.py`, `asc-screenshots.py`, `mac-appstore-capture.sh` |
 | Nightly | `nightly-live.sh`, `nightly-mac.sh`, `live-integrations.sh`, `journeys.sh`, `journeys-report.py`, `journeys-targets.json`, `sheet-sweep*`, `app-pages-sweep.sh`, `com.casberi.*.plist` (launchd) |
 | Engines and vendored builds | `aztec-engine.sh`, `tdlib.sh`, `tor-repackage.sh`, `ppv2-upstream.py` |

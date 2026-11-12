@@ -71,6 +71,12 @@ done < <(find "$TMP_DIR" -maxdepth 1 -name 'asc-*.p8' -mmin +120 2>/dev/null)
 # local copy carries the new number; commit the bump so runs never collide.
 # Set SKIP_BUMP=1 to reuse the current number (e.g. re-uploading a fix).
 PBXPROJ="$SRC/Casberi.xcodeproj/project.pbxproj"
+# Which commit this build is (scripts/build-record.sh): the archive is a copy
+# of the working tree, so it matches a commit only if the tree is clean now.
+# A tree that differs from HEAD is refused; ALLOW_DIRTY=1 ships it anyway and
+# the ledger (docs/builds.md) says so.
+RECORD="$(cd "$(dirname "$0")" && pwd)/build-record.sh"
+TREE_STATE="$("$RECORD" check)"
 if [ "${SKIP_BUMP:-0}" != "1" ]; then
   CUR=$(grep -oE 'CURRENT_PROJECT_VERSION = [0-9]+' "$PBXPROJ" | grep -oE '[0-9]+' | sort -n | tail -1)
   NEW=$((CUR + 1))
@@ -142,4 +148,9 @@ xcodebuild \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
 echo "✓ Uploaded. It appears in TestFlight after ~5–30 min of processing."
+BUILT=$(grep -oE 'CURRENT_PROJECT_VERSION = [0-9]+' "$PBXPROJ" | grep -oE '[0-9]+' | sort -n | tail -1)
+VERSION=$(grep -oE 'MARKETING_VERSION = [0-9.]+' "$PBXPROJ" | grep -oE '[0-9.]+$' | sort -V | tail -1)
+# shellcheck disable=SC2086  # TREE_STATE is two words: the state and the commit
+"$RECORD" add iOS "$BUILT" "$VERSION" $TREE_STATE || echo "⚠ the build record was not written; add the row to docs/builds.md by hand"
+echo "  Commit project.pbxproj and docs/builds.md together, push, then: scripts/build-record.sh tag $BUILT"
 echo "  App Store Connect → Casberi → TestFlight → add yourself as an internal tester."

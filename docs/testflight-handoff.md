@@ -12,6 +12,14 @@ way we always do.
    HealthKit, no push. Do not "restore" the unsigned trick. Verify a doubtful
    build with `codesign -d --entitlements :- Payload/Casberi.app` on the
    exported IPA.)
+   **The ship is refused if tracked files under `Casberi/` or `Vendor/` differ
+   from HEAD** (`scripts/build-record.sh`, 2026-11-11): the archive is a copy
+   of the working tree, so a build matches a commit only when the tree is
+   clean. Commit first or ship from a clean worktree; `ALLOW_DIRTY=1` ships
+   anyway and the row says `dirty`. After the upload the script adds a row to
+   `docs/builds.md`. Commit `project.pbxproj` and `docs/builds.md` together,
+   push, then run `scripts/build-record.sh tag <build>` to tag the commit
+   `build-<n>` and push the tag.
 2. **There is no public-beta step any more (user ruling 2026-10-28).** Most
    people sat on TestFlight builds instead of the App Store version, so every
    build was expired, the public link closed

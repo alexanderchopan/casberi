@@ -16,6 +16,7 @@ Start with `law.md`. It is the current ruling for every area of the app, each li
 | `liveness.md` | The SwiftData crash class and the rule that prevents it. |
 | `cloudkit-deploy.md`, `cloudkit-schema.ckdb` | Shipping a schema change to CloudKit Production. |
 | `testflight-handoff.md` | The release runbook. |
+| `builds.md` | Which commit each shipped build was made from. Written by the ship scripts. |
 | `website.md` | Rules for casberi.app (`website/`). |
 | `workers.md` | Rules for unattended agent sessions and the gate that enforces them. |
 

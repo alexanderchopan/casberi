@@ -513,6 +513,13 @@ if (( _cmsize > CLAUDE_MD_MAX )); then
 fi
 print -P "%F{green}✓ CLAUDE.md + hook index ${_cmsize}b / ${CLAUDE_MD_MAX}b%f"
 
+# Which commit a shipped build is (scripts/build-record.sh): both ship scripts
+# refuse a tree that matches no commit and write the row a tag is cut from, so
+# a rule there that stopped holding would be found at the next ship, not here.
+step "Build record"
+"$ROOT/scripts/build-record.sh" --self-test > /dev/null || fail "build-record.sh fails its self-test — run scripts/build-record.sh --self-test"
+print -P "%F{green}✓ build record%f"
+
 step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"
