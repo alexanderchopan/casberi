@@ -859,6 +859,27 @@ check(F.lookOrder(eth: "4300000000000000", usdc: "1", usdcPool: true) == .both, 
 check(F.lookOrder(eth: "0", usdc: "25000000", usdcPool: true) == .usdc && F.lookOrder(eth: "1", usdc: "0", usdcPool: true) == .eth
       && F.lookOrder(eth: "0", usdc: "0", usdcPool: true) == .nothing && F.lookOrder(eth: "1", usdc: "5", usdcPool: false) == .eth,
       "a look asks about a token the address does not hold, or one with no pool")
+// prd §1778: with both at one address the token goes first while the
+// address's own ETH pays its gas (a tester's 1,000 USDC beside 0.01 ETH).
+check(F.tokenGoesFirst(eth: "10000000000000000", token: "1000000000", tokenMinimum: "10000000", maxFee: "118486350"),
+      "USDC beside ETH that pays its gas still waits for the ETH to move first")
+check(!F.tokenGoesFirst(eth: "27643633810000", token: "1000000000", tokenMinimum: "10000000", maxFee: "95972657"),
+      "the token goes first with too little ETH beside it for its gas")
+check(!F.tokenGoesFirst(eth: "10000000000000000", token: "1", tokenMinimum: "10000000", maxFee: "118486350"),
+      "USDC dust holds the ETH beside it back (finding 4)")
+check(!F.tokenGoesFirst(eth: "10000000000000000", token: "1000000000", tokenMinimum: nil, maxFee: "118486350"),
+      "the token goes first with the pool's terms unread")
+// What waits and will not move by itself is listed for Holdings; nothing else is.
+let waitBook: [F.Entry] = [
+    F.Entry(index: 1, address: "0xa", made: made0, state: .needsGas(amount: "1000000000"), chainId: 1, symbol: "USDC"),
+    F.Entry(index: 2, address: "0xb", made: made0.addingTimeInterval(5), state: .failed(amount: "10000000000000000"), chainId: 1),
+    F.Entry(index: 3, address: "0xc", made: made0, state: .moved(amount: "1", tx: "0x1"), chainId: 1),
+    F.Entry(index: 4, address: "0xd", made: made0, state: .tooLittle(amount: "1"), chainId: 1),
+    F.Entry(index: 5, address: "0xe", made: made0, state: .waiting, chainId: 1),
+    F.Entry(index: 6, address: "0xf", made: made0, state: .needsGas(amount: "5"), symbol: "USDC"),
+]
+check(F.waiting(waitBook, on: 1).map(\.address) == ["0xb", "0xa"], "Holdings misses money waiting at a one-time address, or lists money that is not waiting")
+check(F.waiting(waitBook, on: 11_155_111).map(\.address) == ["0xf"], "money waiting on one network is listed on another")
 
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
@@ -917,6 +938,10 @@ mutate "past the head is an answer" "$WIRE" 's/body\.range\(of: "beyond current 
 mutate "the fee cap forgets the price can double" "$TX" 's/max\(gasPrice \* 2, t\) \+ t/max(gasPrice, t) + t/'
 mutate "the fresh key ignores its index" "$FRESH" 's/let message = domain \+ bigEndian\(index\) \+ bigEndian\(counter\)/let message = domain + bigEndian(counter)/'
 mutate "a fresh key may be n or more" "$FRESH" 's/ && k\.lexicographicallyPrecedes\(curveOrder\)//'
+mutate "the token goes first whatever ETH is beside it" "$FRESH" 's/return \(Decimal\(string: gas\.shortfall\) \?\? 1\) == 0/return true/'
+mutate "token dust goes first" "$FRESH" 's/have >= least,\n              let gas = tokenGas/have >= 0,\n              let gas = tokenGas/'
+mutate "a move that failed is not listed as waiting" "$FRESH" 's/case \.needsGas, \.failed: return true/case .needsGas: return true/'
+mutate "money waiting on another network is listed" "$FRESH" 's/guard entry\.network == chainId else \{ return false \}/guard entry.network >= 0 else { return false }/'
 mutate "a fresh address is reused" "$FRESH" 's/\}\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/}.map(\\.index).max()/'
 mutate "a move under way is asked again" "$FRESH" 's/entries\.filter \{ if case \.moving = \$0\.state \{ false \} else \{ true \} \}/entries/'
 mutate "the gas is not taken out of what arrived" "$FRESH" 's/let spare = have - reserve/let spare = have/'
@@ -1100,4 +1125,12 @@ awk '/^            walletAztecRows$/{a=NR} /^            walletAddMoneyRow$/{m=N
     || { echo "✗ a slider is drawn again (prd §1776: no sliders)"; exit 1; }
 use "$SENT" 'if verb != .receive, receipt == nil {' "a verb's amount is no longer its rows (prd §1776)"
 echo "  ok   Add money: the last row under Private, the balance you have or the two to pick from; no slider anywhere"
-echo "  ok   74 mutations"
+# prd §1778: the wiring. The token's turn is decided before the ETH's, the
+# rows are drawn in Holdings, and the empty place yields to them.
+awk '/FreshAddress.tokenGoesFirst\(eth: balance, token: usdc, tokenMinimum: least, maxFee: String\(cap\)\)/{t=NR} /let moved = await lookEthereum\(entry, balance: balance, network: network, context: context\)/{e=NR} END{exit !(t && e && t<e)}' "$FRESHM" \
+    || { echo "✗ with ETH and a token at one address the ETH still moves first (prd §1778)"; exit 1; }
+use "$HOLD" 'walletFreshWaitingRows(mask: mask, prices: store.shownPrices)' "Holdings no longer shows money waiting at a one-time address (prd §1778)"
+use "$HOLD" 'return FreshAddress.waiting(FreshReceive.shared.entries, on: network.chainId)' "Holdings lists waiting money by another rule than the model's (prd §1778)"
+use "$HOLD" 'chrome.moveFreshReceive = true' "a waiting row no longer opens Receive, where the move is made (prd §1778)"
+echo "  ok   a one-time address: the token first while its own ETH pays, what waits shown in Holdings"
+echo "  ok   78 mutations"

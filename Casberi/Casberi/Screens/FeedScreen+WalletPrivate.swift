@@ -86,6 +86,9 @@ extension FeedScreen {
                 if selectedSeat == nil {
                     walletRailgunRows(mask: mask)
                 }
+                // What arrived at a one-time address and has not moved in
+                // (prd §1778): never invisible.
+                walletFreshWaitingRows(mask: mask, prices: store.shownPrices)
                 // Empty, the place stands where its rows will (prd §1718, by
                 // §769's rule: an empty state draws what would fill it): one
                 // row for Privacy Pools, named and marked as a holding's line
@@ -93,7 +96,8 @@ extension FeedScreen {
                 // Send to your private balance.
                 // One row whatever protocol sits behind it (prd §1719): the
                 // token decides Privacy Pools or Railgun, never the person.
-                if rows.isEmpty, RailgunHoldings.shared.shown.isEmpty, !store.restoring, PrivateMove.available {
+                if rows.isEmpty, RailgunHoldings.shared.shown.isEmpty, !store.restoring, PrivateMove.available,
+                   walletFreshWaiting.isEmpty {
                     walletPlaceRow(String(localized: "Your private balance"),
                                    line: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
                                    mark: nil,
@@ -103,6 +107,83 @@ extension FeedScreen {
                 }
             }
         }
+    }
+
+    /// **WAITING AT A ONE-TIME ADDRESS (prd §1778; a tester, 2026-11-13,
+    /// who paid a private address 1,000 USDC and saw no balance anywhere:
+    /// "panik").** Money that arrived at a fresh address and has not moved in
+    /// showed only under Receive's address. It stands here too: the token,
+    /// its state in amber, the amount grey because the total does not count
+    /// it yet. A tap opens Receive, where the move is made.
+    var walletFreshWaiting: [FreshAddress.Entry] {
+        #if DEBUG
+        // `-freshWaitingSample YES`: the two rows over the demo, which makes
+        // no address and so could never draw them.
+        if UserDefaults.standard.bool(forKey: "freshWaitingSample") {
+            return [FreshAddress.Entry(index: 1, address: "0x0000000000000000000000000000000000000d58", made: .now,
+                                       state: .needsGas(amount: "1000000000"), chainId: 1, symbol: "USDC"),
+                    FreshAddress.Entry(index: 2, address: "0x0000000000000000000000000000000000000d59", made: .now,
+                                       state: .failed(amount: "10000000000000000"), chainId: 1)]
+        }
+        #endif
+        guard !DemoMode.isActive, let network = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) else { return [] }
+        return FreshAddress.waiting(FreshReceive.shared.entries, on: network.chainId)
+    }
+
+    @ViewBuilder
+    func walletFreshWaitingRows(mask: String?, prices: [String: Double]) -> some View {
+        ForEach(walletFreshWaiting) { entry in
+            walletFreshWaitingRow(entry, mask: mask, prices: prices)
+        }
+    }
+
+    private func walletFreshWaitingRow(_ entry: FreshAddress.Entry, mask: String?, prices: [String: Double]) -> some View {
+        let symbol = entry.token
+        let decimals = FreshTx.railgunToken(symbol: symbol)?.decimals ?? (symbol == "USDC" ? 6 : 18)
+        let (amount, state): (String, String) = switch entry.state {
+        case .needsGas(let amount): (amount, String(localized: "Needs a little private ETH"))
+        case .failed(let amount): (amount, String(localized: "Not moved yet"))
+        default: ("0", "")
+        }
+        let usd: Double? = {
+            guard let price = prices[symbol.lowercased()], let units = Decimal(string: amount) else { return nil }
+            return NSDecimalNumber(decimal: units / pow(10, decimals)).doubleValue * price
+        }()
+        let figure = mask ?? usd.map(WalletValue.money) ?? PrivateMoney.figure(amount, decimals: decimals, symbol: symbol)
+        return Button {
+            DSHaptic.selection()
+            chrome.moveFreshReceive = true
+            chrome.moveTray = true
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Image(systemName: "clock")
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(DS.attention)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: symbol)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Text(verbatim: state)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.attentionInk)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure, tone: DS.textSecondary)
+            }
+            .walletRowPitch()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [symbol, state, figure].joined(separator: ". ")))
+        .accessibilityHint(Text("Opens the address it is waiting at"))
+        .walletListRow()
     }
 
     /// **RAILGUN'S TOKENS IN THE PRIVATE BLOCK (prd §1713 items 1, 4 and 5,

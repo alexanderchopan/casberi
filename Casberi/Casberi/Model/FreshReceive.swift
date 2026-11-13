@@ -174,6 +174,17 @@ final class FreshReceive {
             case .usdc:
                 await lookToken(entry, pool: usdcPool!, held: usdc, eth: balance, network: network, interactive: force, context: context)
             case .both:
+                // **THE TOKEN FIRST WHILE THE ADDRESS'S OWN ETH PAYS ITS GAS
+                // (prd §1778).** ETH moved first took the gas with it and
+                // left the USDC waiting on private ETH. The ETH that is left
+                // moves on the next look, from what the chain says then.
+                let cap = (try? await PrivateRPC.fees(network))?.maxFee
+                let least = await minimumBudget(usdcPool!, on: network)
+                if let cap, FreshAddress.tokenGoesFirst(eth: balance, token: usdc, tokenMinimum: least, maxFee: String(cap)) {
+                    NSLog("freshAddress| token first | %@ | %u | its own ETH pays", network.name, entry.index)
+                    await lookToken(entry, pool: usdcPool!, held: usdc, eth: balance, network: network, interactive: force, context: context)
+                    continue
+                }
                 let moved = await lookEthereum(entry, balance: balance, network: network, context: context)
                 // ETH that moved took the address's nonce and its balance: the
                 // USDC is looked at next time, from what the chain says then.

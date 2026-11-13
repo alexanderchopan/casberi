@@ -134,6 +134,35 @@ enum FreshAddress {
         }
     }
 
+    /// **BOTH AT ONE ADDRESS: THE TOKEN FIRST WHILE ITS OWN ETH PAYS (prd
+    /// §1778).** ETH moved first, whole, and took the token's gas with it:
+    /// the USDC beside it then waited on private ETH that was itself waiting
+    /// for approval, and showed nowhere (a tester's 1,000 USDC beside 0.01
+    /// ETH, 2026-11-13). While the token is enough to move and the address's
+    /// own ETH covers its approval and deposit, the token goes first; the ETH
+    /// that is left moves on the next look. Dust of the token still never
+    /// holds the ETH back (finding 4).
+    static func tokenGoesFirst(eth: String, token: String, tokenMinimum: String?, maxFee: String) -> Bool {
+        guard let have = Decimal(string: token), let least = tokenMinimum.flatMap({ Decimal(string: $0) }), have >= least,
+              let gas = tokenGas(ethHeld: eth, maxFee: maxFee) else { return false }
+        return (Decimal(string: gas.shortfall) ?? 1) == 0
+    }
+
+    /// **WAITING AT A FRESH ADDRESS, FOR HOLDINGS (prd §1778).** What arrived
+    /// and has not moved in, and will not by itself: a token short of gas, or
+    /// a move that failed. The newest first. Money that is moving, moved or
+    /// too little to move is not here: it has its own row, or none.
+    static func waiting(_ entries: [Entry], on chainId: Int) -> [Entry] {
+        entries.filter { entry in
+            guard entry.network == chainId else { return false }
+            switch entry.state {
+            case .needsGas, .failed: return true
+            default: return false
+            }
+        }
+        .sorted { ($0.made, $0.index) > ($1.made, $1.index) }
+    }
+
     /// What the chain says of a sent transaction now.
     enum SentVerdict: Equatable { case landed, reverted, waiting, dropped }
 

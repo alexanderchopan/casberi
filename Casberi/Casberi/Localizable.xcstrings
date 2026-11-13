@@ -118895,6 +118895,34 @@
         }
       }
     },
+    "Needs a little private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Necesita un poco de ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベートETHが少し必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH가 조금 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要少量私密 ETH"
+          }
+        }
+      }
+    },
     "Needs attention" : {
       "localizations" : {
         "es" : {
@@ -127360,6 +127388,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未挖矿"
+          }
+        }
+      }
+    },
+    "Not moved yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no se ha movido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ移動していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 옮기지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未转入"
           }
         }
       }
@@ -140568,6 +140624,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开钱包的安全"
+          }
+        }
+      }
+    },
+    "Opens the address it is waiting at" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre la dirección donde espera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待機中のアドレスを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중인 주소를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开它等待所在的地址"
           }
         }
       }
