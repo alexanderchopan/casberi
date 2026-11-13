@@ -339,8 +339,9 @@ strip "$FEED" > "$FEED_BARE"
 
 # Since prd §1480 the gate is the Permissions page's: its skeleton draws on
 # the checkup's own counts, and the delegations count is the acting list's
-# own split.
-grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0 {' "$FEED_BARE" && grep -q 'if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }' "$FEED_BARE" \
+# own split. Since prd §1762 an Aztec app's authorizations are permissions
+# too, so the skeleton also waits on there being none of those.
+grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0, !walletShowsAztecGrants {' "$FEED_BARE" && grep -q 'if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }' "$FEED_BARE" \
   || fail "the Permissions page's empty gate has drifted from the checkup's counts"
 grep -q 'delegations: WalletPermissions.actingHolders(holders).count' "$FEED_BARE" \
   || fail "the checkup's delegations no longer count the acting list's own holders"
