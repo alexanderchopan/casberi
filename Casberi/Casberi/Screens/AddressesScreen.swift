@@ -1070,6 +1070,10 @@ struct ContactSheet: View {
     /// Called after a change this sheet made (a rename, an unfollow) so the
     /// list behind it rebuilds; the sheet dismisses itself on those.
     var onChanged: (() -> Void)? = nil
+    /// False where this sheet rises over another (a transfer's): Move cannot
+    /// rise under a sheet still standing, so Send and Pay are not drawn
+    /// there (§83, prd §1774).
+    var raisesMove = true
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -1146,6 +1150,27 @@ struct ContactSheet: View {
     /// Pushed inside a sheet's stack (prd §1238) it brings no stack of its
     /// own; risen on its own, it does.
     var body: some View {
+        // **MOVE RISES WHEN THE WHOLE SHEET HAS GONE (prd §1772).** On the
+        // stack, not its first page: a wallet's card pushed over that page
+        // had already made it disappear, so Send from the card closed the
+        // sheet and nothing rose (seen on the simulator, 2026-11-13).
+        sheetBody.onDisappear(perform: raiseMove)
+    }
+
+    private func raiseMove() {
+        if let to = sending {
+            sending = nil
+            chrome.moveDraft = MoveSentence.sendDraft(to: to)
+            chrome.moveTray = true
+        } else if let tag = paying {
+            paying = nil
+            chrome.moveDraft = MoveSentence.sendDraft(to: tag, on: YourAccountOp.ethereum)
+            chrome.moveTray = true
+        }
+    }
+
+    @ViewBuilder
+    private var sheetBody: some View {
         if inSheetStack {
             stackContent
         } else {
@@ -1312,12 +1337,6 @@ struct ContactSheet: View {
             }
             .dsPageBackground()
             .toolbar(.hidden, for: .navigationBar)
-            .onDisappear {
-                guard let tag = paying else { return }
-                paying = nil
-                chrome.moveDraft = MoveSentence.sendDraft(to: tag, on: YourAccountOp.ethereum)
-                chrome.moveTray = true
-            }
             .task {
                 waiting = Self.waiting(for: contact, context: modelContext)
                 let shown = Set(waiting.map(\.id))
@@ -1377,14 +1396,19 @@ struct ContactSheet: View {
                 }
             }
             .navigationDestination(item: $pushed) { door in
-                Group {
-                    switch door {
-                    case .address(let entry): AddressCard(entry: entry)
-                    case .profile(let profile): SocialProfileCard(profile: profile)
-                    }
-                }
-                .dsSheetStep()
+                pushedPage(door).dsSheetStep()
             }
+        }
+    }
+
+    /// Its own builder: inline, the sheet's body no longer type-checked.
+    @ViewBuilder
+    private func pushedPage(_ door: Door) -> some View {
+        switch door {
+        // One wallet of several: its own card carries Send, and Move rises
+        // once this sheet has gone (prd §1772).
+        case .address(let entry): AddressCard(entry: entry, onSend: raisesMove ? sendFromCard : nil)
+        case .profile(let profile): SocialProfileCard(profile: profile)
         }
     }
 
@@ -1448,6 +1472,8 @@ struct ContactSheet: View {
     /// The tag Pay was tapped for (prd §1767): Send opens for it once this
     /// card has gone.
     @State private var paying: String?
+    /// The wallet Send was tapped for (prd §1771), raised the same way.
+    @State private var sending: String?
 
     private func copy(_ value: String, key: String) {
         DSPasteboard.copy(value)
@@ -1472,8 +1498,39 @@ struct ContactSheet: View {
         cardEmail ?? contact.identities.first { $0.kind == .email }?.body
     }
 
+    /// **SEND, FROM A PERSON (prd §1771).** The one address Send may open on:
+    /// a contact with exactly one wallet, a 0x address Move can send to, that
+    /// the book does not know as a contract or a key, with an account here to
+    /// send from. Two wallets is a choice this disc cannot make, so each keeps
+    /// its own page and the disc is not drawn (§83).
+    private var sendAddress: String? {
+        let wallets = contact.identities.filter { $0.kind == .wallet }
+        guard raisesMove, wallets.count == 1, let body = wallets.first?.body, Self.sendable(body) else { return nil }
+        return body
+    }
+
+    /// An address Send may open on: an account here to send from, a 0x
+    /// address, and not one the book knows as a contract or a key.
+    static func sendable(_ address: String) -> Bool {
+        guard YourAccountDemo.shownAddress != nil, ENS.isHexAddress(address) else { return false }
+        let kind = AddressBook.shared.entry(for: address)?.kind
+        return kind != .contract && kind != .key
+    }
+
+    private func sendFromCard(_ to: String) {
+        sending = to
+        dismiss()
+    }
+
     private var dial: [Disc] {
         var out: [Disc] = []
+        if let to = sendAddress {
+            // Move rises once the card has gone, as Pay's does (`onDisappear`).
+            out.append(Disc(icon: "arrow.up", label: String(localized: "Send")) {
+                sending = to
+                dismiss()
+            })
+        }
         if MessageCompose.canText, cardPhone != nil {
             out.append(Disc(icon: "message", label: String(localized: "Message")) { composer = .messages })
         }
@@ -1687,7 +1744,7 @@ struct ContactSheet: View {
         // the row opens Send on Ethereum with the tag in To, which sets up
         // the dollar you hold; with none it stays a fact that copies (§83).
         case .zkMoney:
-            guard YourAccountDemo.shownAddress != nil, let bare = ZkMoneyWire.tag(identity.body) else { return nil }
+            guard raisesMove, YourAccountDemo.shownAddress != nil, let bare = ZkMoneyWire.tag(identity.body) else { return nil }
             let tag = ZkMoneyWire.display(bare)
             // **MOVE RISES ONCE THE CARD HAS GONE (`onDisappear`), never on a
             // timer.** Raised 450ms after `dismiss()`, Move met this card

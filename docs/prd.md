@@ -72412,3 +72412,62 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **A crossing another phone of the account sent to a payee** is not folded into one row there (`chainCrossing` takes the account or the handler as recipient): it reads as a send to Across.
 
 **Mac half (§1402).** None: the same sentence.
+
+## §1771 — A contact with one wallet is someone to send to: Send leads the contact's dial (extends §1767's Pay, which only a zk.money tag had) (user, 2026-11-13, of the contacts audit's first gap: "Yes, build it") — BUILT; SEEN on a simulator: the disc, and Move rising with "Send token to Jesse on network."; NOT seen: a taken send, a phone, the Mac
+
+**The gap.** Contacts fed Send's To list and Activity's names, and nothing went the other way: a person with a wallet address had no Send on their sheet, their address card or a search hit. The way to pay someone you had on file was a past transfer's Again, or Copy and paste.
+
+**The rule.**
+
+1. **Send leads the dial** (`ContactSheet.dial`, `sendAddress`), before Message, Mail and Copy: four discs at most.
+2. **Drawn only where it can act (§83):** an account here to send from; exactly one wallet on the contact; a 0x address; the book does not know it as a contract or a key. Two wallets is a choice the disc cannot make, so each keeps its own page.
+3. **Move rises once the sheet has gone** (`onDisappear`, §1767's lesson), on `MoveSentence.sendDraft(to:)` with no network picked: To is the person, the token and network are asked.
+4. **Move's own checks stand.** A first send still says so; the disc promises nothing about the address.
+
+**Not built** (the audit's other gaps, each its own ruling): Send on the address card and on a search hit; To reading every contact, not the address book alone; contracts and keys leaving To; a contact's own face on Activity rows; adding an unknown address to an existing contact; a request; saved Aztec and Railgun recipients.
+
+**Mac half (§1402).** The same sheet and the same dial; not seen there.
+
+## §1772 — The address card's tiles are Send · Copy · Explorer · More: the Note tile is deleted (amends §499's tiles; extends §1771 to a contact with several wallets) (user, 2026-11-13: "should we add five? or remove the jump to note?", then "ok" to removing it) — BUILT; SEEN on a simulator: the four tiles, and Move rising from the card's Send; NOT seen: a phone, the Mac
+
+1. **Four tiles at most.** Send leads; the Note tile goes, on every address card. The note's field stands on the card under the tiles, so its tile was a jump to something already on screen.
+2. **Send is drawn only where a host can close itself and raise Move after** (`AddressCard.onSend`, supplied by `ContactSheet`), for an address `ContactSheet.sendable` passes (§1771 item 2's rule, less the one-wallet clause: this card is one wallet). A card risen from a transfer's sheet or the Wallet page draws none (§83): the transfer's sheet has its own Send.
+3. **Move rises when the whole contact sheet has gone** (`ContactSheet.raiseMove`, on the stack). §1771 hung it on the sheet's first page, which had already disappeared under a pushed card: Send from the card closed the sheet and nothing rose (seen on the simulator, fixed the same hour). Pay (§1767) rides the same door.
+
+**Mac half (§1402).** The same card; not seen there.
+
+## §1773 — Send's To reads your contacts, and lists no contract or key (extends §1752's To list, which read the address book alone) (user, 2026-11-13: "Next gap first") — BUILT; SEEN on a simulator: the list without a duplicate row for a book name; NOT seen: a contact found by a card's name or a handle (the simulator holds no linked card), a phone, the Mac
+
+1. **People the book's names did not find** (`MoveSentence.people`, `readPeople`): a listed, named contact with a 0x wallet, matched on its name, every identity (a handle, an ENS name, a mailbox) and its keywords. The row is the person's name over the book's name for that address when it is another word, else the address's tail; picking it sets To to the person.
+2. **Read once on the sentence's open**, from the index's last build, or one build when there is none; never in a body.
+3. **No contract and no key in the list.** A book entry known as either is not drawn. A name typed in full still resolves, and Move warns on a contract before Face ID (§1513). An entry whose kind has not been detected still shows.
+4. **The face is the address's** (`WalletFace`), not the card's photo: the list row has no slot for a contact's picture yet.
+
+**Not built:** the card's photo on To rows; a contact with no address offered an "Add address"; "Sent before" on a row.
+
+**Mac half (§1402).** The same sentence; not seen there.
+
+## §1774 — A transfer's face opens the person, when Contacts knows more of them than the address (amends §369's "the address card for a wallet") (user, 2026-11-13: "Next gap first") — BUILT; NOT seen on any device: the demo holds no contact that joins a wallet to a card or a handle, so the simulator could not draw one
+
+1. **The person first** (`ThingSheetView.openAddressCard`, `FaceTarget.contact`): an address the index has joined to a card, a handle or a second wallet, on a listed contact, opens that contact's sheet, where the address is one row and its own card one tap on. An address that is all the app knows keeps its address card, as before. The index's last build is read; nothing is fetched.
+2. **No Send or Pay on that sheet** (`ContactSheet.raisesMove = false`): it stands over the transfer's sheet, and Move cannot rise under a sheet still standing (§1767's lesson). The transfer's own Send tile is the door (§83: absent, never dead).
+3. **The face is still the address's.** The money head's face is its cover and its ground (§1649, §1658); the contact's photo there is its own ruling.
+
+**Not built:** the contact's photo on the money head and on Activity rows; adding an unknown address to an existing contact.
+
+**Mac half (§1402).** The same sheet, with `chrome` handed in as every sheet's is (§872); not seen there.
+
+## §1775 — Save on a transfer asks who the address is: someone you have, or a new name (amends §1394's Save, which only named the address) (user, 2026-11-13: "Yes, build it", of "add to an existing contact") — BUILT; SEEN on a simulator: the tray over a demo transfer, a pick joining the address to that contact ("Added to Sam Rees"), the transfer then reading "From Sam Rees"; NOT seen: New name's alert after the tray, the lookalike line, a phone, the Mac
+
+**The gap.** Save on a transfer from an address the book did not hold raised a name field. Typing "Jesse" made a second Jesse beside the one Contacts already had from a card or a handle.
+
+1. **Save raises "Who is ...xxxx"** (`AddToContactTray`, `FaceTarget.addTo`): New name first, then the people you have, whoever dealt with you last leading, with the search field at the bottom (`DSTraySearchField`). A person or a company with a name; not a biller, not you, not someone who already holds the address.
+2. **A pick puts the address on the person** (`AddToContact.join`): the book names the address with the person's name, so every transfer with it is retitled (`CounterpartyRetitle`) and Send knows it; the link ledger joins the two as confirmed, so Contacts keeps one row. The toast says "Added to <name>".
+3. **New name is the old answer**: the tray goes, then the transfer's own name alert rises.
+4. **An address that imitates one in the book says so** at the top of the tray, in the attention ink, before anyone is picked (the poisoning rule, §1025).
+5. **The "Who" row's pencil still names** the address directly; only the Save tile asks.
+6. **To undo:** the person's sheet, the address's row, More, Remove from book.
+
+**Not built:** the same question from the address card's "Name this address" and from Contacts' "Not named yet" rows; a harness over `AddToContact.candidates`.
+
+**Mac half (§1402).** The same tray, with `chrome` handed in (§872); not seen there.

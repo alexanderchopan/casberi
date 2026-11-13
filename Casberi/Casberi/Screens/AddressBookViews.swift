@@ -600,6 +600,9 @@ private struct AddressChunkFlow: Layout {
 
 struct AddressCard: View {
     let entry: AddressBook.Entry
+    /// Send to this address (prd §1772): supplied by a host that can close
+    /// itself and raise Move after; nil draws no tile (§83).
+    var onSend: ((String) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
@@ -685,7 +688,10 @@ struct AddressCard: View {
     @State private var copyToken = 0
     @State private var copyOpen = false
 
-    init(entry: AddressBook.Entry) { self.entry = entry }
+    init(entry: AddressBook.Entry, onSend: ((String) -> Void)? = nil) {
+        self.entry = entry
+        self.onSend = onSend
+    }
 
     /// Live, so a rename or a kind landing repaints the card.
     private var current: AddressBook.Entry { book.entry(for: entry.address) ?? entry }
@@ -1462,7 +1468,7 @@ struct AddressCard: View {
         }
     }
 
-    /// **THE ACTION TILES** (prd §499) — three equal tiles under the identity,
+    /// **THE ACTION TILES** (prd §499, §1772) — equal tiles under the identity,
     /// the shape every consumer profile puts there.
     ///
     /// It replaces two things that were hiding: the Copy pill, which sat
@@ -1472,21 +1478,25 @@ struct AddressCard: View {
     ///
     /// A tile is ABSENT rather than disabled when its verb cannot run — a
     /// person with no address has nothing to copy and no explorer to open
-    /// (§83), so they get the Note tile alone and the row simply narrows.
+    /// (§83), so the row simply narrows.
     /// The last tile is `overflowMenu`, the card's secondary verbs (prd §782).
     @ViewBuilder
     private var actionTiles: some View {
         let copyValue = reachLines.first?.clipboard
         HStack(spacing: DS.Space.s2) {
+            // **SEND LEADS, AND THE NOTE TILE IS GONE (prd §1772, user: "or
+            // remove the jump to note?").** Four tiles at most; the note's
+            // field stands on this card under them, so its tile was a jump
+            // to something already on screen.
+            if let onSend, ContactSheet.sendable(current.address) {
+                actionTile("arrow.up", String(localized: "Send")) {
+                    DSHaptic.tap()
+                    onSend(current.address)
+                }
+            }
             if let copyValue {
                 actionTile("doc.on.doc", String(localized: "Copy")) {
                     didCopy(copyValue)
-                }
-            }
-            if isInBook {
-                actionTile("square.and.pencil", String(localized: "Note")) {
-                    DSHaptic.tap()
-                    noteFocused = true
                 }
             }
             if let link = explorerLink {

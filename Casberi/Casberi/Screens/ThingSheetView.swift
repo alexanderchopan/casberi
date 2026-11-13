@@ -144,6 +144,12 @@ struct ThingSheetView: View {
     enum FaceTarget: Identifiable {
         case person(SocialProfile)
         case address(AddressBook.Entry)
+        /// The person behind an address, when Contacts knows more of them
+        /// than the address (prd §1774).
+        case contact(Contact)
+        /// Who an unknown address is: the people you have, or a new name
+        /// (prd §1775).
+        case addTo(String)
         /// A held checklist item's reminder tray (prd §1022). A CASE on the
         /// existing face route rather than a `.sheet` of its own: this view
         /// already carries three sibling `.sheet` modifiers and a fourth is the
@@ -165,6 +171,8 @@ struct ThingSheetView: View {
             switch self {
             case .person(let profile): return "person:\(profile.id)"
             case .address(let entry):  return "address:\(entry.id)"
+            case .contact(let contact): return "contact:\(contact.id)"
+            case .addTo(let address): return "addTo:\(address)"
             case .remind(let ordinal, _): return "remind:\(ordinal)"
             case .track(let name): return "track:\(name)"
             case .followSite(let host): return "followSite:\(host)"
@@ -1599,6 +1607,14 @@ struct ThingSheetView: View {
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
+            // No Send or Pay from here: this sheet stands under the person's,
+            // and its own Send tile is the door to Move (prd §1774).
+            case .contact(let contact):
+                ContactSheet(contact: contact, raisesMove: false)
+                    .environment(chrome)
+            case .addTo(let address):
+                AddToContactTray(address: address) { nameCounterpartyAction?() }
+                    .environment(chrome)
             case .remind(_, let text):
                 NoteRemindTray(note: thing, item: text)
             case .followChannel(let seat, let name):
@@ -3580,8 +3596,11 @@ struct ThingSheetView: View {
     private var moneyKeep: VerbDial.Keep? {
         if moneyHasPerson, let cp = thing.counterpartyAddress?.lowercased() {
             if AddressBook.shared.entry(for: cp) == nil {
-                guard let name = nameCounterpartyAction else { return nil }
-                return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus", act: name)
+                guard nameCounterpartyAction != nil else { return nil }
+                // Save asks who it is (prd §1775): someone you have, or a new name.
+                return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus") {
+                    faceTarget = .addTo(cp)
+                }
             }
             guard !WalletStore.shared.addresses.contains(where: { $0.address.lowercased() == cp }) else { return nil }
             return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
@@ -4792,6 +4811,16 @@ struct ThingSheetView: View {
     /// address really is named from inside it.
     private func openAddressCard(_ address: String) {
         guard !address.isEmpty else { return }
+        // **THE PERSON, WHEN THERE IS ONE (prd §1774).** An address Contacts
+        // has joined to a card, a handle or a second wallet opens that
+        // person's sheet, where the address is one row; an address that is
+        // all the app knows keeps its own card. The index's last build,
+        // never a fetch.
+        if let person = ContactIndexSources.contact(forKey: Identity.key(.wallet, address)),
+           person.identities.count > 1, ContactIndexSources.isListed(person) {
+            faceTarget = .contact(person)
+            return
+        }
         faceTarget = .address(
             AddressBook.shared.entry(for: address)
                 ?? AddressBook.Entry(

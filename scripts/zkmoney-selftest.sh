@@ -654,7 +654,7 @@ grep -q 'await ZkMoney.resolve(tag: bare) != nil else { return nil }' "$PEOPLE" 
   || { echo "✗ Contacts no longer finds a zk.money tag, or names one nobody has claimed"; exit 1; }
 awk '/private func door\(for identity: Identity\) -> \(\(\) -> Void\)\? \{/,/^    }/' "$PEOPLE" > "$TMP/door.txt"
 grep -q 'paying = tag' "$TMP/door.txt" && ! grep -q 'chrome.moveTray' "$TMP/door.txt" \
-  && awk '/\.onDisappear \{/{d=NR} /guard let tag = paying else \{ return \}/{g=NR} /chrome.moveDraft = MoveSentence.sendDraft\(to: tag, on: YourAccountOp.ethereum\)/{m=NR} END{exit !(d && g && m && d<g && g<m)}' "$PEOPLE" \
+  && awk '/sheetBody\.onDisappear\(perform: raiseMove\)/{d=NR} /\} else if let tag = paying \{/{g=NR} /chrome.moveDraft = MoveSentence.sendDraft\(to: tag, on: YourAccountOp.ethereum\)/{m=NR} END{exit !(d && g && m && d<g && g<m)}' "$PEOPLE" \
   || { echo "✗ a saved tag has no Pay door, or Move is raised while the card is still closing (a crash)"; exit 1; }
 
 # A tag paid from another token (prd §1768), read. The tail must pay the

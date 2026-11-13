@@ -248,7 +248,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1948 of 2021 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1953 of 2026 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -660,7 +660,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §366 — A note sheet is words: the category whose whole job was to show them, showing the fewest
 - §367 — An agent sheet is a conversation, and the conversation was in the record all along (part superseded by §1187)
 - §368 — A shopping sheet is a receipt or a watch, and the fork is not the price
-- §369 — The money receipt: every money thing gets a hero, and it speaks in sentences (amended by §524)
+- §369 — The money receipt: every money thing gets a hero, and it speaks in sentences (amended by §524, §1774)
 - §370 — Verbose copy is a sentence that says what the screen already says
 - §371 — The rail is preserved and content does not go behind it
 - §372 — The address book learns what an address can DO
@@ -805,7 +805,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §496 — One address book, two rooms — Kind.key, a note field, and where an address was met
 - §497 — The Connected spine leaves the address book
 - §498 — The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a s… (amended by §583)
-- §499 — The account sheet stops looking like a database
+- §499 — The account sheet stops looking like a database (amended by §1772)
 - §500 — Ethrex Hegotá — a seat for a chain that publishes what other chains hide (amended by §504, §522; part superseded by §525, §1038)
 - §501 — Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped (amended by §1587)
 - §502 — Five moments the address book did not have, and the one it cannot have
@@ -1778,7 +1778,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a…
 - §1392 — Contacts lists who you deal with, in one anatomy, with no money (amends §1265's Recent card, §1323's Contacts, the 20…
 - §1393 — No grey card anywhere but the Apps page's folders (amends §1258's sheet card, §1227's tray card, §1383's kept panels…
-- §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
+- §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows) (amended by §1775)
 - §1395 — Deleting a price alert clears its Went off rows, and a Went off row deletes from its long press (amends §1081's Alert…
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
 - §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n… (amended by §1636, §1740)
@@ -2198,6 +2198,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1768 — A zk.money tag is paid from any token on Ethereum: swapped into USDC in the same transaction (extends §1767 item 1 an…
 - §1769 — A connect you tapped shows Casberi's emoji check, kept site or not
 - §1770 — A zk.money tag is paid from another network: Across delivers the dollar to the tag's address on Ethereum (second half…
+- §1771 — A contact with one wallet is someone to send to: Send leads the contact's dial (extends §1767's Pay, which only a zk.… (amended by §1772)
+- §1772 — The address card's tiles are Send · Copy · Explorer · More: the Note tile is deleted
+- §1773 — Send's To reads your contacts, and lists no contract or key (extends §1752's To list, which read the address book alone)
+- §1774 — A transfer's face opens the person, when Contacts knows more of them than the address
+- §1775 — Save on a transfer asks who the address is: someone you have, or a new name
 
 ## Dead rulings → what replaced them (generated)
 

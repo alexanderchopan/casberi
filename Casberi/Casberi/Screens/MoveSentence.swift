@@ -205,6 +205,7 @@ struct MoveSentence: View {
     @State private var clipboardLink = false
     /// The last people this account sent to, newest first (prd §1752).
     @State private var recentTo: [String] = []
+    @State private var people: [ToPerson] = []
     /// A name in To being asked of its resolver, or one none answered for:
     /// said under the sentence, never a grey word left to guess (prd §1586).
     enum Lookup: Equatable { case looking(String), missing(String), refused(String) }
@@ -3067,6 +3068,39 @@ struct MoveSentence: View {
 
     private func readRecentTo() {
         recentTo = RecentTo.read(account)
+        readPeople()
+    }
+
+    /// **TO READS YOUR CONTACTS (prd §1773).** Someone in Contacts with a
+    /// wallet Send can reach, found by any name they go by: the card's, a
+    /// handle, an ENS name, a note. The index's last build, or one build
+    /// here on the sentence's first open; never in a body.
+    struct ToPerson: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let address: String
+        /// Everything a search may hit, lowercased.
+        let terms: String
+    }
+
+    private func readPeople() {
+        let built = ContactIndexSources.contacts.isEmpty
+            ? ContactIndexSources.rebuild(context: context) : ContactIndexSources.contacts
+        people = MoveSentence.people(from: built.filter(ContactIndexSources.isListed)) { address in
+            let kind = AddressBook.shared.entry(for: address)?.kind
+            return kind != .contract && kind != .key
+        }
+    }
+
+    /// One row per contact with a 0x wallet `allowed` passes: their first.
+    static func people(from contacts: [Contact], allowed: (String) -> Bool) -> [ToPerson] {
+        contacts.compactMap { c in
+            guard !c.isUnnamed,
+                  let wallet = c.identities.first(where: { $0.kind == .wallet && ENS.isHexAddress($0.body) && allowed($0.body) })
+            else { return nil }
+            let terms = ([c.name] + c.identities.map(\.body) + c.keywords).joined(separator: " ").lowercased()
+            return ToPerson(id: c.id, name: c.name, address: wallet.body, terms: terms)
+        }
     }
 
     /// Each one once, in the order given, three at most.
@@ -4200,8 +4234,18 @@ struct MoveSentence: View {
 
     private var toList: some View {
         let q = to.trimmingCharacters(in: .whitespaces).lowercased()
+        // No contract and no key (prd §1773): machinery in the book is not
+        // someone to send to. A name typed in full still resolves, and Move
+        // warns on a contract before Face ID (§1513).
         let book = AddressBook.shared.all.filter { e in
-            ENS.isHexAddress(e.address) && (q.isEmpty || e.name.lowercased().contains(q) || e.address.lowercased().hasPrefix(q))
+            ENS.isHexAddress(e.address) && e.kind != .contract && e.kind != .key
+                && (q.isEmpty || e.name.lowercased().contains(q) || e.address.lowercased().hasPrefix(q))
+        }
+        // People the book's own names did not find: a contact whose card,
+        // handle or ENS name matches, or one whose wallet is not in the book.
+        let found = people.filter { p in
+            !book.contains { WalletWatch.sameAddress($0.address, p.address) }
+                && (q.isEmpty ? AddressBook.shared.entry(for: p.address) == nil : p.terms.contains(q))
         }
         // The person the line above goes to leads, said so (§1442h).
         let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
@@ -4280,7 +4324,7 @@ struct MoveSentence: View {
             // addresses, found by its name, its tag or `@name`.
             let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)
                 .filter { saved in !recent.contains { $0.caseInsensitiveCompare(saved.tag) == .orderedSame } }
-            if !recent.isEmpty, !(book.isEmpty && tags.isEmpty) {
+            if !recent.isEmpty, !(book.isEmpty && tags.isEmpty && found.isEmpty) {
                 listHeader(String(localized: "Addresses"))
             }
             ForEach(Array(tags.prefix(8)), id: \.tag) { saved in
@@ -4313,6 +4357,17 @@ struct MoveSentence: View {
                         face: AssetMark.hasAsset(e.name) ? nil : e.address) {
                     to = e.name
                     resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
+                    pick {}
+                }
+            }
+            ForEach(Array(found.prefix(8))) { p in
+                // The line is the name the book has for the address, when it
+                // is another word than the person's; else its tail.
+                let bookName = AddressBook.shared.name(for: p.address)
+                listRow(p.name, sub: bookName.flatMap { $0.caseInsensitiveCompare(p.name) == .orderedSame ? nil : $0 }
+                            ?? YourAccount.short(p.address), face: p.address) {
+                    to = p.name
+                    resolved = Recipient(address: EIP55.checksum(p.address), name: p.name, imitates: nil)
                     pick {}
                 }
             }
