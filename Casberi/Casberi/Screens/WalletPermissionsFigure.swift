@@ -30,6 +30,9 @@ struct WalletPermissionsFigure: View {
     /// When these grants were read, while they stand on an earlier launch's
     /// reading (prd §1709); nil once the live read lands.
     var asOf: Date? = nil
+    /// Authorizations given to Aztec apps, listed under the box (prd §1762):
+    /// with any, an empty pack does not say "No permissions".
+    var aztecGrants = 0
     let open: (PermissionsPack.Piece) -> Void
 
     static let diameter: CGFloat = 200
@@ -42,7 +45,8 @@ struct WalletPermissionsFigure: View {
         if pieces.isEmpty {
             // What would fill it, empty (§769): the pack's own drawing, the
             // short state on it.
-            WalletScopeEmptyFigure(section: .permissions, padded: false)
+            WalletScopeEmptyFigure(section: .permissions, padded: false,
+                                   words: aztecGrants > 0 ? String(localized: "\(aztecGrants) to Aztec apps") : nil)
         } else {
             let disc = PermissionsPack.disc(pieces, acting: acting, held: held)
             let inner = PermissionsPack.inner(pieces, disc: disc)

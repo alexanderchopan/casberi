@@ -96,10 +96,10 @@ grep -q "additionalScopes: \[fpc.address\], maxAcceptableGasCost: cap," $MAIN \
   || { echo "✗ a private payment is measured with no ceiling: the contract keeps the whole declared limit"; exit 1; }
 grep -q "    reached: sendsReached," $MAIN \
   || { echo "✗ a failed private send no longer asks whether it reached Aztec before it is tried again"; exit 1; }
-(( $(grep -c "await sendOwn(wallet, " $MAIN) == 3 )) \
-  || { echo "✗ Casberi's three sends (a claim, a private send, an exit) no longer all pay through sendOwn"; exit 1; }
-(( $(grep -c "sendOwn(wallet, " $MAIN) == 5 )) \
-  || { echo "✗ sendOwn has a caller the pass does not know (its own line, the three sends, an app's authorization)"; exit 1; }
+(( $(grep -c "await sendOwn(wallet, " $MAIN) == 4 )) \
+  || { echo "✗ Casberi's four sends (a claim, a private send, an exit, an authorization's take-back) no longer all pay through sendOwn"; exit 1; }
+(( $(grep -c "sendOwn(wallet, " $MAIN) == 6 )) \
+  || { echo "✗ sendOwn has a caller the pass does not know (its own line, the four sends, an app's authorization)"; exit 1; }
 (( $(grep -c "\.send({ from: me" $MAIN) == 2 )) \
   || { echo "✗ a send in main.js goes around sendOwn (two are allowed: sendOwn's own, and the legacy gas claim)"; exit 1; }
 (cd $ENGINE && node test/private-fees.test.mjs) || { echo "✗ the private gas checks failed"; exit 1; }
@@ -128,6 +128,7 @@ fees_mutant "an app's transaction skips the private balance" "s/  if \(privateBa
 fees_mutant "a transaction naming its own payer is paid by Casberi" "s/  if \(payer\) return [^\n]*\n//"
 fees_mutant "the app's scopes are dropped for the contract's" 's/\[\.\.\.\(opts\?\.additionalScopes \?\? \[\]\), \.\.\.\(paid\.additionalScopes \?\? \[\]\)\]/[...(paid.additionalScopes ?? [])]/'
 fees_mutant "the app's own gas settings are kept over the measured ones" 's/fee: \{ \.\.\.\(opts\?\.fee \?\? \{\}\), gasSettings: paid\.fee\.gasSettings \}/fee: { gasSettings: paid.fee.gasSettings, ...(opts?.fee ?? {}) }/'
+fees_mutant "an account with no gas is sent anyway" "s/    if \(ownHolds && !\(await ownHolds\(\)\)\) throw new Error\(NO_GAS\);\n//"
 grep -q "if (method === 'sendTx' && !parsed\[0\]?.feePayer) {" $MAIN \
   || { echo "✗ an app's transaction with no payer is no longer paid as Casberi's own, or one with its own payer is rewritten"; exit 1; }
 grep -q "pay: () => feeFor(wallet, appInteraction(wallet, payload, opts), gasJSON)," $MAIN \
@@ -162,10 +163,31 @@ grep -q "if (method === 'grantPublicAuthwit') return grantForApp(wallet, args, o
 grep -q "const answer = await new Promise(resolve => waiting.set(id, resolve));" $MAIN \
   && grep -q "if (!answer.yes) throw new Error('The person declined grantPublicAuthwit');" $MAIN \
   || { echo "✗ an authorization is written without the person's yes"; exit 1; }
-grep -q "const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas));" $MAIN \
+grep -q "const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas, async () => (await ownFeeJuice(wallet)) > 0n));" $MAIN \
   || { echo "✗ an authorization's transaction no longer pays and takes turns as Casberi's sends do"; exit 1; }
 grep -q 'It lets \\(grantee) make this call in your name, once. Anyone can see it.' Casberi/Casberi/Screens/AztecBrowser.swift \
   || { echo "✗ the sheet no longer says who an authorization is for"; exit 1; }
+
+# ── What a call says (prd §1763) ─────────────────────────────────────────
+# An app's call laid over its contract's own interface, for the sheet a
+# person approves from: a wrong lay is a wrong recipient or amount.
+WORDS_SRC=$ENGINE/src/call-words.js
+[[ -f $WORDS_SRC ]] || { echo "✗ $WORDS_SRC not found"; exit 1; }
+(cd $ENGINE && node test/call-words.test.mjs) || { echo "✗ the call-words checks failed"; exit 1; }
+words_mutant() { # name, perl expression
+  perl -0pe "$2" $WORDS_SRC > $TMP/call-words.js
+  cmp -s $WORDS_SRC $TMP/call-words.js && { echo "✗ mutation '$1' changed nothing"; exit 1; }
+  if (cd $ENGINE && WORDS=$TMP/call-words.js node test/call-words.test.mjs >/dev/null 2>&1); then
+    echo "✗ mutation '$1' passed: the call-words checks cannot see it"; exit 1
+  fi
+  echo "✓ mutation '$1' fails the call-words checks"
+}
+words_mutant "a call that does not fit its interface is read anyway" 's/ \|\| sizes\.reduce\(\(a, b\) => a \+ b, 0\) !== flat\.length//'
+words_mutant "a wide value shifts the ones after it" 's/    at \+= sizes\[i\];\n/    at += 1;\n/'
+words_mutant "any number is drawn as the token's amount" 's/token && AMOUNT\.test\(params\[i\]\.name\) && /token \&\& /'
+words_mutant "a dust amount is rounded to nothing" 's/  if \(!part && whole === 0n && n > 0n\) return [^\n]*\n//'
+grep -q "calls.push({ name: c.name, to: tail(c.to), type: c.type, args: await wordsOf(wallet, c.to, c.name, c.args) });" $MAIN \
+  || { echo "✗ the sheet is no longer told what each call says"; exit 1; }
 
 # ── zk.money's short links (prd §1748) ──────────────────────────────────
 # The tag a link's record stands under, the locator's pinned address, and

@@ -72250,3 +72250,79 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** None: the Aztec account is the phone's (§1700s).
 
 **Self-test** (`scripts/aztec-connect-selftest.sh`): `test/app-grant.test.mjs`, eleven refusals and the sheet's words, four mutations; main.js still asks before it writes, pays through `sendOwn`, and the sheet still names who the authorization is for.
+
+## §1761 — Gas on Aztec is added where it is found missing: on an app's approval sheet and from Holdings' gas row (extends §1700aa and §1759 item 4; amends §1759's "Add some in Move first") (user, 2026-11-12, asked how someone gets Fee Juice in the app: "i like the add gas idea lets do it") — BUILT; see the end of the batch (§1766) for what was seen
+
+**Why.** Gas came two ways only: riding along with a move in, whenever the private balance was short, and from an "Add gas" that Send showed after a send had already found the account short. Someone who opened an app first had no way to get any, and §1759's line sent them to a button in Move they might never be shown.
+
+1. **Holdings' gas row opens Gas on Aztec** (`AztecGasTray`, `FeedSheetRoute.aztecGas`): what the account holds in AZTEC, its state in one word ("On its way", "None", "Low", nothing when there is enough), and Add gas, the top-up Send already made (`AztecGas.topUp`: 30 AZTEC from your account on Ethereum, bought with its USDC when it holds too little).
+2. **The row stands at nothing too**: an Aztec account in use that holds no gas shows "Fee Juice · None", so the tray can be reached before there is any. Its line carries the state: "Aztec · Gas · Low".
+3. **An approval sheet whose gas is missing offers Add gas** (`AztecBrowserModel.addGas`): the sheet stays, and its line turns to "Gas is on its way to Aztec. Approve in a few minutes."
+4. **A transaction the account cannot pay for is not proved or sent** (`sendPaying`'s `ownHolds`, for an app's transaction and an authorization): the app is told "Your Aztec account has no gas yet. Gas you just added arrives in a few minutes." Casberi's own sends, which Move checks first, are unchanged.
+5. **How gas stands is one rule** (`AztecGas.state`): a top-up on its way, nothing, under one transaction's worth by the thresholds a send already uses, or enough.
+
+**Not built.** "About N transactions left": no figure for what one costs is kept that would stand behind the number. Topping up without being asked.
+
+**Mac half (§1402).** None: the Aztec account is the phone's (§1700s).
+
+## §1762 — The authorizations you gave Aztec apps are listed in Wallet › Permissions and can be taken back (extends §1760, which listed neither) (user, 2026-11-12: "lets also do 2, 3, 4, 5, 6, 7. do all") — BUILT; see §1766 for what was seen
+
+1. **Each one approved in Casberi is kept on this phone** (`AztecGrantsStore`, from the engine's `engineAppGranted`): the site, who may make the call, the contract, the function, its arguments in words, and the hash Aztec's registry holds it under. Forty at most.
+2. **Permissions lists them under "Aztec apps"** (`walletAztecGrantsSection`): the app's name and icon, the call and the caller's tail, and Take back. They count in the Permissions door's number.
+3. **The list is read against Aztec's registry when the page appears** (`grantsStanding`, the registry's own `utility_is_consumable`): one an app has used, or one taken back elsewhere, leaves. One that cannot be read stays, and one under ten minutes old stays while its transaction lands.
+4. **Take back is one transaction** (`revokeGrant`: the registry write with "no"), after Face ID and the co-signer, paid as the account's sends are.
+
+**Not built.** Authorizations given in another wallet with the same account: only the registry knows them, and it cannot be listed by account.
+
+**Mac half (§1402).** None.
+
+## §1763 — An approval sheet says what each call says (extends §1700j's sheet, which named the function alone) (user, 2026-11-12: "do all") — BUILT; see §1766
+
+1. **A call's arguments are named by its contract's own interface** (`tools/aztec-engine/src/call-words.js`), which the app registered with the wallet: "to ...4f2a · amount 5 USDC" under the function's name. An address by its tail, a boolean as yes or no, a long number by its tail, five arguments at most.
+2. **An amount is read in the token only for a token Casberi knows** (Shield's USDC and WETH) and only for an argument named amount, value or quantity. Any other number stays the number the call carries.
+3. **A call that does not fit its interface says nothing**: the sheet shows the function's name alone, as before, never a guess. A contract the wallet does not know says nothing either.
+4. **Public functions are read too**: an interface keeps them apart from its private ones (measured 2026-11-12), and an authorization's call is usually public.
+
+**Not built.** What a private call goes on to do, and the net change to what you hold. RavenHouse's verify asks to authorize `set_authorized` on Aztec's own registry for its contract: a signed challenge nothing can spend from, which the sheet draws as the call it is.
+
+**Mac half (§1402).** None.
+
+## §1764 — An app's transaction lands in the Wallet's Activity (extends §1700's Activity, which Aztec apps never reached) (user, 2026-11-12: "do all") — BUILT; see §1766
+
+One Wallet row per transaction Casberi sent for an Aztec app, and per authorization (`AztecAppActivity`): "RavenHouse — mint to private", "RavenHouse — authorized set authorized". The name is the directory's (§1757), the row opens the site. Written when the transaction is sent, once per hash.
+
+**Not built.** Casberi's own private sends on Aztec still write no row of their own (a Shield deposit's claim does).
+
+**Mac half (§1402).** None.
+
+## §1765 — A connected app connects again without being asked (settles §1757's "Not built"; amends §1700j's Connect and emoji check for a kept site) (user, 2026-11-12: "do all", of "Remember connected apps") — BUILT; see §1766
+
+**Why.** RavenHouse reconnects by itself when its page loads and shows no emoji grid; Casberi raised Connect and "Do these match?" over a page with nothing to compare, the site gave up meanwhile, and the person was asked again after tapping its own Connect.
+
+1. **A site with a tile is let in** (`AztecAppsShape.remembered`): Connect and the emoji check are answered yes without a sheet when the connecting page's origin is a kept site's, over https, the same host and port.
+2. **The tile is the standing yes.** Remove (a hold on the tile) takes it back: the next connect asks again.
+3. **Nothing else is granted by it**: every transaction and authorization still asks, with Face ID and the co-signer.
+
+**Starting sooner** was asked for with this and needed nothing new: the account's engine already starts when the app comes forward and when the Wallet opens (`MoveWarm`, §1700v), and when the browser opens (§1756).
+
+**Mac half (§1402).** None.
+
+## §1766 — NFTs you hold privately on Aztec stand in Holdings (extends §1700 item 4's rows) (user, 2026-11-12: "do all") — BUILT, UNMEASURED against a real collection: no NFT contract was registered with the simulator's wallet, so the read is written to the standard's interface and has met no chain
+
+1. **A collection that answers `get_private_nfts(owner, page)`** (the NFT standard's own read; RavenHouse's token is the same family's) is read with the account's other holdings: its token ids, four pages at most.
+2. **One row a collection** in Holdings › Private (`walletAztecRows`): its name, "Aztec · NFT", and "#42" for one token or the count for several, with a plus when more were held than were read. Never a price.
+3. **A collection held in the open is not read.**
+
+**Seen, for §1761 to §1766** (simulator, 2026-11-12, an Aztec account holding nothing):
+- §1765: RavenHouse, kept as a tile, opened and connected with no Connect and no emoji sheet (`app | reconnected`), and stood at its own verify step.
+- §1760, §1763, §1761: its "Verify with wallet" raised the sheet with "set authorized", "message hash ...041c · authorize yes", "Public · ...5e83", the amber "Your Aztec account has no gas." and an Add gas row. Decline answered the site.
+- §1761: Holdings drew "Fee Juice · Aztec · Gas" with an amber None, and its tap raised Gas on Aztec: "0 AZTEC", None, the sentence, Add gas.
+- §1762: with `-aztecGrantsSample YES`, Permissions drew "Aztec apps" with RavenHouse (its own icon) and Nemi, each with Take back, the door counted them, and the box said "2 to Aztec apps" where it had said "No permissions".
+- §1764: with `-aztecEngineProbe activity`, Activity's Today led with "RavenHouse" over "mint to private".
+- §1766: with `-aztecNFTSample YES`, Holdings › Private drew "Rise of Rivals · Aztec · NFT · #42" and "Casberi Arms · 3".
+
+**Not seen, any of it:** a top-up made from the sheet or the tray (the simulator runs the demo, where Add gas is off, and has no account to buy with), the "on its way" line, a paid transaction, an authorization taken back, a real NFT, a phone. What RavenHouse registered was read (`-aztecEngineProbe contracts`): its token, an escrow, an auction, Aztec's registry, and no NFT collection.
+
+**Mac half (§1402).** None.
+
+`-aztecGrantsSample YES`, `-aztecNFTSample YES`, `-aztecEngineProbe contracts|activity`.

@@ -78,6 +78,14 @@ enum AztecAppsShape {
         apps.map { var app = $0; app.name = name(host: app.host); return app }
     }
 
+    /// **A KEPT SITE CONNECTS AGAIN UNASKED (prd §1765).** Whether a connect
+    /// from `origin` is from a site already kept: https, the same host and
+    /// port. Its tile is the standing yes; Remove takes it back.
+    static func remembered(_ apps: [App], origin: String?) -> Bool {
+        guard let origin, let door = door(URL(string: origin)) else { return false }
+        return apps.contains { $0.door == door }
+    }
+
     static func removed(_ apps: [App], host: String) -> [App] {
         apps.filter { $0.host != host.lowercased() }
     }

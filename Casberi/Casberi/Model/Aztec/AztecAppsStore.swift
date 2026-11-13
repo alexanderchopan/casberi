@@ -38,6 +38,9 @@ final class AztecAppsStore {
         save()
     }
 
+    /// Whether a connect from this origin is a kept site's (prd §1765).
+    func remembers(origin: String?) -> Bool { AztecAppsShape.remembered(apps, origin: origin) }
+
     /// Whether a kept site still wears its initials: the browser asks its
     /// page for the icon again the next time you are on it.
     func lacksIcon(_ host: String) -> Bool {

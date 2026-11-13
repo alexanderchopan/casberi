@@ -40,6 +40,12 @@ extension FeedScreen {
                          mark: holding.name, tone: DS.textPrimary)
             }
             .background { aztecReading }
+            // NFTs you hold privately (prd §1766): one row a collection, its
+            // name, how many, never a price.
+            ForEach(store.nftsHeld) { holding in
+                aztecRow(title: holding.name, line: "Aztec · " + String(localized: "NFT"),
+                         figure: mask ?? Self.nftFigure(holding), mark: nil, tone: DS.textPrimary)
+            }
             // On its way in (prd §1700ac): one grey row per deposit Aztec has
             // not handed over, behind a clock, as Railgun's unlisted money is
             // (§1713 item 5) — a state, nobody waiting on you, never amber.
@@ -80,13 +86,23 @@ extension FeedScreen {
                 // Network · fact (prd §1718): "Aztec · Gas"; a public token,
                 // "Aztec" alone, as the Tokens rows above it name theirs.
                 aztecRow(title: holding.name,
-                         line: gas ? String(localized: "Aztec · Gas") : "Aztec",
+                         line: gas ? Self.gasLine(AztecGas.state) : "Aztec",
                          figure: mask ?? (gas ? nil : store.usd(holding, units: units).map(WalletValue.money))
                              ?? Self.aztecFigure(holding, units: units),
                          // Grey, as every Tokens row's figure is.
-                         mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary)
+                         mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary,
+                         // The gas row opens Gas on Aztec (prd §1761).
+                         act: gas ? { feedSheet = .aztecGas } : nil)
             }
             .background { aztecReading }
+            // An account in use that holds no gas still shows where gas is
+            // added (prd §1761): the row stood only once there was some.
+            if store.shown.used, !store.publicHeld.contains(where: { $0.kind == .feeJuice }) {
+                // The figure says None; the line does not say it twice.
+                aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
+                         figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
+                         act: { feedSheet = .aztecGas })
+            }
         }
     }
 
@@ -132,8 +148,43 @@ extension FeedScreen {
 
     /// Holdings' row anatomy (`walletPrivateRow`), with no act: nothing opens
     /// until Aztec has its sends (§1700 step 4), so it is not a button.
+    /// A collection's figure: its one token's number, else how many, with a
+    /// plus when more were held than were read (prd §1766).
+    static func nftFigure(_ holding: AztecAccountStore.Holding) -> String {
+        let ids = holding.ids ?? []
+        if ids.count == 1, holding.more != true, let only = ids.first, only.count <= 8 { return "#" + only }
+        return "\(ids.count)" + (holding.more == true ? "+" : "")
+    }
+
+    /// The gas row's line: the place and the fact (prd §1718), and how the
+    /// gas stands when that needs saying (prd §1761).
+    static func gasLine(_ state: AztecGas.Standing) -> String {
+        guard let word = AztecGasTray.word(state) else { return String(localized: "Aztec · Gas") }
+        return String(localized: "Aztec · Gas") + " · " + word.words
+    }
+
+    @ViewBuilder
     private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
-                          arriving: Bool = false) -> some View {
+                          arriving: Bool = false, act: (() -> Void)? = nil) -> some View {
+        if let act {
+            Button {
+                DSHaptic.selection()
+                act()
+            } label: {
+                aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .dsHover()
+            .walletListRow()
+        } else {
+            aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
+                .walletListRow()
+        }
+    }
+
+    private func aztecRowLabel(title: String, line: String, figure: String, mark: String?, tone: Color,
+                               arriving: Bool) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             Group {
                 if arriving {
@@ -164,7 +215,80 @@ extension FeedScreen {
         .walletRowPitch()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: [title, line, figure].joined(separator: ". ")))
-        .walletListRow()
+    }
+
+    // MARK: - Authorizations given to Aztec apps (prd §1762)
+
+    /// Whether the authorizations stand here: where the Aztec account does.
+    var walletShowsAztecGrants: Bool {
+        walletShowsAztec && !AztecGrantsStore.shared.grants.isEmpty
+    }
+
+    /// **WHAT AZTEC APPS MAY STILL DO IN YOUR NAME (prd §1762).** One row an
+    /// authorization: the app, the call and who may make it, and Take back.
+    /// Read against Aztec's registry when the page appears, so one an app
+    /// has used is gone.
+    @ViewBuilder
+    var walletAztecGrantsSection: some View {
+        if walletShowsAztecGrants {
+            let store = AztecGrantsStore.shared
+            walletCard(String(localized: "Aztec apps"), glyph: "checkmark.seal", anchor: "aztecGrants") {
+                ForEach(store.grants) { grant in
+                    HStack(spacing: DS.Space.s3) {
+                        Group {
+                            if let icon = AztecAppsStore.shared.icons[grant.host] {
+                                Image(uiImage: icon).resizable().scaledToFill()
+                                    .frame(width: DS.Face.list, height: DS.Face.list)
+                                    .clipShape(RoundedRectangle(cornerRadius: DS.Face.list * 0.2237, style: .continuous))
+                            } else {
+                                ProtocolInlineMark(mark: "aztec")
+                            }
+                        }
+                        .frame(width: DS.Face.list)
+                        .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: AztecAppsShape.name(host: grant.host))
+                                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                            Text(verbatim: AztecGrantsShape.line(grant))
+                                .dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                        aztecTakeBackWord(grant)
+                    }
+                    .walletRowPitch()
+                    .walletListRow()
+                }
+                .task { await store.refresh() }
+            }
+        }
+    }
+
+    /// The row's one act, in the pick's ink as Revoke is (prd §1385).
+    private func aztecTakeBackWord(_ grant: AztecGrantsShape.Grant) -> some View {
+        let store = AztecGrantsStore.shared
+        let inFlight = store.takingBack == grant.hash
+        return Button {
+            DSHaptic.selection()
+            Task {
+                do {
+                    try await store.takeBack(grant)
+                    chrome.flash(String(localized: "Taken back"))
+                } catch {
+                    chrome.flash(AztecEngine.words(error))
+                }
+            }
+        } label: {
+            Text(verbatim: inFlight ? String(localized: "Taking back…") : String(localized: "Take back"))
+                .dsText(.body17)
+                .foregroundStyle(store.takingBack == nil ? DS.pickInk : DS.textTertiary)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(RowPress())
+        .disabled(store.takingBack != nil || DemoMode.isActive)
+        .layoutPriority(1)
+        .accessibilityLabel(Text("Take back \(AztecAppsShape.name(host: grant.host))'s authorization"))
     }
 
     /// Your account's accounts (§1700a item 1): once the Aztec account's

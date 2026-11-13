@@ -15,7 +15,15 @@ enum AztecEngineProbe {
         // account and the chain again from the page that replaces it.
         // `appgas`: then measure one harmless call as an app's transaction is
         // paid, the private payment in front of it (prd §1759). Nothing sent.
-        guard raw == "YES" || raw == "1" || raw == "used" || raw == "recycle" || raw == "appgas" else { return }
+        // `contracts`: then list every contract the wallet knows by its
+        // interface's name and functions: what an app registered.
+        // `activity`: land one sample app row in the Wallet's Activity (prd §1764).
+        if raw == "activity" {
+            AztecAppActivity.land(origin: "https://app.ravenhouse.xyz", calls: ["mint_to_private"],
+                                  transaction: "0x5a3b1e" + String(Int(Date().timeIntervalSince1970)), authorization: false)
+            return
+        }
+        guard ["YES", "1", "used", "recycle", "appgas", "contracts"].contains(raw) else { return }
         Task { @MainActor in
             let start = Date()
             func say(_ step: String, _ detail: String) {
@@ -42,6 +50,13 @@ enum AztecEngineProbe {
                     let measured = probe?["measured"] as? Bool == true
                     say("appGas", "sheet says \(probe?["kind"] ?? "?") · payer named: \((probe?["payer"] as? String ?? "").isEmpty ? "none" : "yes") · "
                         + (measured ? "measured l2 \(probe?["l2"] ?? "?") da \(probe?["da"] ?? "?")" : "not measured: \(probe?["error"] ?? "?")"))
+                }
+                if raw == "contracts" {
+                    let probe = try await AztecEngine.shared.call("contractsProbe") as? [String: Any]
+                    for contract in probe?["contracts"] as? [[String: Any]] ?? [] {
+                        say("contract", "\(contract["address"] ?? "?") · \(contract["name"] ?? "?") · "
+                            + (contract["functions"] as? [String] ?? []).joined(separator: " "))
+                    }
                 }
                 if raw == "recycle" {
                     AztecEngine.shared.failNextAsk = true

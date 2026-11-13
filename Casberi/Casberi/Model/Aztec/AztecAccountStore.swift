@@ -21,7 +21,7 @@ final class AztecAccountStore {
     static let shared = AztecAccountStore()
 
     struct Holding: Codable, Equatable, Identifiable {
-        enum Kind: String, Codable { case feeJuice, token }
+        enum Kind: String, Codable { case feeJuice, token, nft }
         let kind: Kind
         /// The token's contract on Aztec.
         let address: String
@@ -32,6 +32,10 @@ final class AztecAccountStore {
         /// Base units, as text (they overflow 64 bits). Nil: that side was not read.
         let privateUnits: String?
         let publicUnits: String?
+        /// A collection's token ids you hold privately, and whether there are
+        /// more than were read (prd §1766). Nil for anything but an NFT.
+        var ids: [String]? = nil
+        var more: Bool? = nil
         var id: String { address }
 
         /// What the account holds of it, in whole tokens, private and public
@@ -44,7 +48,7 @@ final class AztecAccountStore {
 
         /// Whether any of it is held, decimals or not.
         var isHeld: Bool {
-            [privateUnits, publicUnits].contains { ($0.flatMap { Decimal(string: $0) } ?? 0) > 0 }
+            !(ids ?? []).isEmpty || [privateUnits, publicUnits].contains { ($0.flatMap { Decimal(string: $0) } ?? 0) > 0 }
         }
 
         /// **GAS, BOTH PLACES (prd §1700aa).** Fee Juice the account can spend:
@@ -200,6 +204,17 @@ final class AztecAccountStore {
     /// contract, which no one else can read.
     var privateHeld: [Holding] {
         shown.holdings.filter { h in h.kind == .token && (h.privateUnits.flatMap { Decimal(string: $0) } ?? 0) > 0 }
+    }
+    /// The collections you hold NFTs from, privately (prd §1766).
+    var nftsHeld: [Holding] {
+        #if DEBUG
+        // `-aztecNFTSample YES`: two collections on a simulator that holds none.
+        if UserDefaults.standard.bool(forKey: "aztecNFTSample") {
+            return [Holding(kind: .nft, address: "0x01", name: "Rise of Rivals", decimals: nil, privateUnits: nil, publicUnits: nil, ids: ["42"], more: false),
+                    Holding(kind: .nft, address: "0x02", name: "Casberi Arms", decimals: nil, privateUnits: nil, publicUnits: nil, ids: ["3", "7", "12"], more: false)]
+        }
+        #endif
+        return shown.holdings.filter { $0.kind == .nft && !($0.ids ?? []).isEmpty }
     }
     var publicHeld: [Holding] {
         shown.holdings.filter { h in
@@ -384,7 +399,8 @@ final class AztecAccountStore {
                        name: row["symbol"] as? String ?? row["name"] as? String ?? AddressTail.short(address),
                        decimals: row["decimals"] as? Int,
                        privateUnits: row["private"] as? String,
-                       publicUnits: row["public"] as? String)
+                       publicUnits: row["public"] as? String,
+                       ids: row["ids"] as? [String], more: row["more"] as? Bool)
     }
 
     private func save() {

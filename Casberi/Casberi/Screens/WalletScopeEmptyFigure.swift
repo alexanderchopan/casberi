@@ -38,6 +38,10 @@ struct WalletScopeEmptyFigure: View {
     /// the short state, which would say "Nothing held" over money not yet
     /// read (user: "wallet holdings sometimes don't load").
     var reading: Bool = false
+    /// Words in place of the section's own short state, where "nothing here"
+    /// would be untrue: Permissions' pack is empty while authorizations to
+    /// Aztec apps stand under it (prd §1762).
+    var words: String? = nil
 
     var body: some View {
         // `.home` returned nil for both until §761 and never reached here; it
@@ -51,7 +55,7 @@ struct WalletScopeEmptyFigure: View {
             .padding(.horizontal, padded ? WalletCardStyle.pad : 0)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Loading…"))
-        } else if let words = section.emptyBody {
+        } else if let words = words ?? section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
                          words: Text(words), scale: .room(section.skeleton))
                 .padding(.horizontal, padded ? WalletCardStyle.pad : 0)

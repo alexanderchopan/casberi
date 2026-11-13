@@ -76,14 +76,23 @@ export function inTurn() {
 // send that fails BEFORE anything reached the node is tried once more from
 // the account's own gas; after that, or when that fails too, the first
 // failure is the one the person reads.
-export async function sendPaying({ pay, send, reached, log = () => {} }) {
+//
+// `ownHolds`, when given, is asked before a send that would pay from the
+// account's own gas: an account that holds none is told so in words and
+// nothing is proved or sent (prd §1761). An app's transaction passes it;
+// Casberi's own sends, which Move has already checked, do not.
+export const NO_GAS = 'Your Aztec account has no gas yet. Gas you just added arrives in a few minutes.';
+export async function sendPaying({ pay, send, reached, ownHolds, log = () => {} }) {
   let paid = { how: 'own' };
   try {
     paid = (await pay()) ?? paid;
   } catch (e) {
     log('privateFeesSkipped', { error: words(e).slice(0, 160) });
   }
-  if (paid.how === 'own') return { receipt: await send(undefined), paid: 'own', gasNonce: null };
+  if (paid.how === 'own') {
+    if (ownHolds && !(await ownHolds())) throw new Error(NO_GAS);
+    return { receipt: await send(undefined), paid: 'own', gasNonce: null };
+  }
   const before = reached();
   try {
     return { receipt: await send(paid.options), paid: paid.how, gasNonce: paid.item?.nonce ?? null };
@@ -91,6 +100,7 @@ export async function sendPaying({ pay, send, reached, log = () => {} }) {
     if (reached() !== before) throw first; // it may be in a block: never send it twice
     log('privateFeesFellBack', { how: paid.how, error: words(first).slice(0, 160) });
     try {
+      if (ownHolds && !(await ownHolds())) throw first;
       return { receipt: await send(undefined), paid: 'own', gasNonce: null };
     } catch {
       throw first;

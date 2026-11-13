@@ -33,9 +33,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         struct Call: Equatable {
             let name: String; let to: String; let isPublic: Bool
             /// Set when the call is not sent but AUTHORIZED (prd §1760): the
-            /// tail of who may make it in your name, and its arguments in
-            /// short words.
+            /// tail of who may make it in your name.
             var grantee: String? = nil
+            /// The call's arguments in short words, named by its contract's
+            /// own interface (prd §1763); none when that is not known.
             var args: [String] = []
         }
 
@@ -91,6 +92,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     @Published var ask: Request? {
         didSet { if ask != nil { askSheetUp = true } }
     }
+    /// The approval sheet's Add gas is buying it (prd §1761), and why it
+    /// could not: said on the sheet, where the tap was.
+    @Published private(set) var addingGas = false
+    @Published private(set) var gasFailed: String?
     /// An ask sheet is on screen or still leaving it. The Signer sheet is
     /// raised over whatever is on top, so it waits for this one to go: raised
     /// while it slides away, it went with it and nothing showed (build 951,
@@ -685,6 +690,23 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         ask = queue.removeFirst()
     }
 
+    /// **ADD GAS, WHERE IT IS FOUND MISSING (prd §1761).** An app's
+    /// transaction met an account with no gas and the sheet could only say
+    /// so. The same top-up Send's "Add gas" makes, from the sheet; the ask
+    /// stays, and its gas line says the deposit is on its way.
+    func addGas() async {
+        guard !addingGas, case .send(let id, let host, let calls, "none")? = ask else { return }
+        addingGas = true
+        gasFailed = nil
+        defer { addingGas = false }
+        do {
+            _ = try await AztecGas.topUp { _ in }
+            if case .send(id, _, _, _)? = ask { ask = .send(id: id, host: host, calls: calls, fee: "arriving") }
+        } catch {
+            gasFailed = AztecEngine.words(error)
+        }
+    }
+
     /// The connect sheet's quiet line: connect as your co-signer (prd §1700l).
     func connectAsCoSigner(_ ask: Request) async {
         guard case .ethConnect = ask, coSigner != nil else { return }
@@ -813,6 +835,8 @@ struct AztecBrowserView: View {
         .sheet(item: $model.ask, onDismiss: { model.sheetGone() }) { ask in
             AztecAskSheet(ask: ask, sends: model.sends, coSigner: model.coSigner, asCoSigner: model.ethCoSigner != nil, reconnecting: model.reconnecting,
                           remembered: model.rememberedCoSigner,
+                          addingGas: model.addingGas, gasFailed: model.gasFailed,
+                          addGas: { Task { await model.addGas() } },
                           useCoSigner: { Task { await model.connectAsCoSigner(ask) } },
                           addCoSigner: chrome.map { chrome in {
                               // No co-signer to sign in with (prd §1700u): turn
@@ -847,6 +871,10 @@ struct AztecAskSheet: View {
     var reconnecting = false
     /// You signed in here with your co-signer before (prd §1700l item 11).
     var remembered = false
+    /// Add gas, offered where a transaction's gas is missing (prd §1761).
+    var addingGas = false
+    var gasFailed: String? = nil
+    var addGas: () -> Void = {}
     var useCoSigner: () -> Void = {}
     /// Where an app turned your account down and there is no co-signer to
     /// sign in with instead: Your account's keys (prd §1700u). Nil where the
@@ -920,8 +948,8 @@ struct AztecAskSheet: View {
         case "private": (String(localized: "Gas, paid privately"), false)
         case "own": (String(localized: "Gas, from your account, in the open"), false)
         case "app": (String(localized: "Gas, paid by the app"), false)
-        case "arriving": (String(localized: "Gas, from your deposit on its way to Aztec"), false)
-        case "none": (String(localized: "Your Aztec account has no gas. Add some in Move first."), true)
+        case "arriving": (String(localized: "Gas is on its way to Aztec. Approve in a few minutes."), false)
+        case "none": (String(localized: "Your Aztec account has no gas."), true)
         default: nil
         }
     }
@@ -977,9 +1005,14 @@ struct AztecAskSheet: View {
                         .foregroundStyle(call.isPublic ? DS.attention : DS.textSecondary)
                         .frame(width: 22)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: call.name.replacingOccurrences(of: "_", with: " ")
-                             + (call.grantee == nil ? "" : " (" + call.args.joined(separator: ", ") + ")"))
+                        Text(verbatim: call.name.replacingOccurrences(of: "_", with: " "))
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        // What the call says (prd §1763): "to ...4f2a · amount 5 USDC".
+                        if !call.args.isEmpty {
+                            Text(verbatim: call.args.joined(separator: " · "))
+                                .dsText(.subhead12).foregroundStyle(DS.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                         Text(verbatim: "\(call.isPublic ? String(localized: "Public") : String(localized: "Private")) · \(call.to)")
                             .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     }
@@ -989,6 +1022,16 @@ struct AztecAskSheet: View {
                 Text(verbatim: gas.words).dsText(.subhead12)
                     .foregroundStyle(gas.missing ? DS.attentionInk : DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                // Where the gas is missing, the way to add it (prd §1761).
+                if gas.missing {
+                    DSDoorRow(icon: "fuelpump", title: Text(addingGas ? "Adding gas…" : "Add gas")) { addGas() }
+                        .disabled(addingGas || DemoMode.isActive)
+                    // A top-up that could not be made says why, here (§83).
+                    if let gasFailed {
+                        Text(verbatim: gasFailed).dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
         case .ethConnect where needsCoSigner:
             DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here.")
@@ -1109,7 +1152,19 @@ struct AztecAskSheet: View {
     }
 
     private var height: CGFloat {
-        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner || needsCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 190; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send, .ethSend, .ethTopUp: 520 }
+        switch ask { case .connect: 400; case .ethConnect: leadsWithCoSigner || needsCoSigner ? 600 : (coSigner == nil ? 400 : 460); case .emoji: 190; case .ethSign: signIn != nil && !whole ? 560 : 720; case .send(_, _, let calls, let fee): Self.sendHeight(calls, fee: fee, failed: gasFailed != nil); case .ethSend, .ethTopUp: 520 }
+    }
+
+    /// An Aztec approval's height: the sheet's own, and a little room for
+    /// what it now says (prd §1760, §1761, §1763). The tray already grows to
+    /// its content (measured on the simulator: the 520 sheet drew the whole
+    /// authorization, a little tight under the grabber), so these are small.
+    static func sendHeight(_ calls: [AztecBrowserModel.Request.Call], fee: String, failed: Bool) -> CGFloat {
+        var height: CGFloat = 520
+        if calls.first?.grantee != nil { height += 24 }
+        height += CGFloat(max(0, calls.count - 1)) * 48
+        if failed, gasLine(fee)?.missing == true { height += 44 }
+        return min(height, 760)
     }
 
     private var acceptWord: String {

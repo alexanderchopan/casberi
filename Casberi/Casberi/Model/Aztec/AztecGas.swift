@@ -172,6 +172,21 @@ enum AztecGas {
         return inside < enoughPrivate
     }
 
+    /// **HOW THE ACCOUNT'S GAS STANDS (prd §1761)**, for Holdings' gas row
+    /// and its tray: a top-up on its way, nothing, under one transaction's
+    /// worth, or enough. The thresholds are the ones a send already uses.
+    enum Standing: Equatable { case arriving, none, low, enough }
+    @MainActor
+    static var state: Standing {
+        let (gas, inside, own) = standing
+        return state(waiting: gas.contains { !$0.claimed }, inside: inside, own: own)
+    }
+    static func state(waiting: Bool, inside: Decimal, own: Decimal) -> Standing {
+        if waiting { return .arriving }
+        if inside + own <= 0 { return .none }
+        return inside >= enoughPrivate || own >= enough ? .enough : .low
+    }
+
     /// The deposits kept, what the account holds inside the fee contract and
     /// what it holds of its own, base units.
     @MainActor

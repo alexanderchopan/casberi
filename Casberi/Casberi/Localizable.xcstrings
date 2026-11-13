@@ -33104,6 +33104,34 @@
         }
       }
     },
+    "%lld to Aztec apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld a apps de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アプリへ %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 앱에 %lld건"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 项授予 Aztec 应用"
+          }
+        }
+      }
+    },
     "%lld to sign" : {
       "localizations" : {
         "es" : {
@@ -49940,6 +49968,34 @@
         }
       }
     },
+    "Adding gas…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadiendo gas…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガスを追加中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스 추가 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在添加 gas…"
+          }
+        }
+      }
+    },
     "Adding works once you leave the demo." : {
       "localizations" : {
         "es" : {
@@ -59099,6 +59155,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Aztec 账户 · 私密"
+          }
+        }
+      }
+    },
+    "Aztec apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apps de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 应用"
           }
         }
       }
@@ -98400,6 +98484,34 @@
         }
       }
     },
+    "Gas is on its way to Aztec. Approve in a few minutes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El gas va de camino a Aztec. Aprueba en unos minutos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガスが Aztec に向かっています。数分後に承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스가 Aztec으로 오는 중입니다. 몇 분 뒤에 승인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas 正在转入 Aztec。请几分钟后再批准。"
+          }
+        }
+      }
+    },
     "Gas on %@ is %@" : {
       "localizations" : {
         "es" : {
@@ -98620,34 +98732,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas，从你的账户公开支付"
-          }
-        }
-      }
-    },
-    "Gas, from your deposit on its way to Aztec" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gas, de tu depósito en camino a Aztec"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ガス（Aztec に向かっている入金から）"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "가스, Aztec으로 오는 입금에서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gas，来自你正在转入 Aztec 的存款"
           }
         }
       }
@@ -111939,6 +112023,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "丢了这台 iPhone，就在下一台上登录。"
+          }
+        }
+      }
+    },
+    "Low" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bajo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残りわずか"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "부족"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "偏低"
           }
         }
       }
@@ -184592,6 +184704,62 @@
         }
       }
     },
+    "Take back %@'s authorization" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar la autorización de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤回 %@ 的授权"
+          }
+        }
+      }
+    },
+    "Take back %@'s authorization to call %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar la autorización de %1$@ para llamar %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の %2$@ 呼び出しの承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 %2$@ 호출 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤回 %1$@ 调用 %2$@ 的授权"
+          }
+        }
+      }
+    },
     "Take back %@?" : {
       "localizations" : {
         "es" : {
@@ -184616,6 +184784,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "取回 %@?"
+          }
+        }
+      }
+    },
+    "Take back this authorization" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar esta autorización"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤回此授权"
           }
         }
       }
@@ -184648,6 +184844,34 @@
         }
       }
     },
+    "Taken back" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り消しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "철회됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已撤回"
+          }
+        }
+      }
+    },
     "Takes it back" : {
       "localizations" : {
         "es" : {
@@ -184672,6 +184896,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将其取回"
+          }
+        }
+      }
+    },
+    "Taking back…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り消し中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "철회 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在撤回…"
           }
         }
       }
@@ -220921,30 +221173,30 @@
         }
       }
     },
-    "Your Aztec account has no gas. Add some in Move first." : {
+    "Your Aztec account has no gas." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tu cuenta de Aztec no tiene gas. Añade un poco en Move primero."
+            "value" : "Tu cuenta de Aztec no tiene gas."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Aztec アカウントにガスがありません。先に Move で追加してください。"
+            "value" : "Aztec アカウントにガスがありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Aztec 계정에 가스가 없습니다. 먼저 Move에서 추가하세요."
+            "value" : "Aztec 계정에 가스가 없습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "你的 Aztec 账户没有 gas。请先在 Move 中添加。"
+            "value" : "你的 Aztec 账户没有 gas。"
           }
         }
       }
@@ -232261,6 +232513,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "运作中 · 已借入 %@"
+          }
+        }
+      }
+    },
+    "authorized %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "autorizó %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を承認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已授权 %@"
           }
         }
       }

@@ -7,7 +7,7 @@
 //   SKIP_ADDRESS=1 node test/...                the logic alone (no hashing)
 //
 // Exit 0 when every check holds, 1 otherwise.
-const { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions } = await import(process.env.FEES ?? '../src/private-fees.js');
+const { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions, NO_GAS } = await import(process.env.FEES ?? '../src/private-fees.js');
 
 let failures = 0;
 const check = (ok, what) => { if (!ok) { failures++; console.log('✗ ' + what); } };
@@ -138,6 +138,23 @@ check(opts.fee.gasSettings === gasSettings && opts.fee.congestionEstimate === 3,
 check(opts.from === ME && opts.wait.timeout === 9 && !('paymentMethod' in opts.fee), "nothing else of the app's is touched, and no payment method crosses to the wallet");
 opts = payingOptions(undefined, { additionalScopes: [FPC], fee: { gasSettings } });
 check(opts.additionalScopes.join() === FPC && opts.fee.gasSettings === gasSettings, 'an app that sent no options still gets the payment');
+
+// --- an account with no gas is told before anything is sent (prd §1761) -----------
+{
+  let sends = 0;
+  const send = async () => { sends++; return 'r'; };
+  let said = '';
+  try { await sendPaying({ pay: async () => ({ how: 'own' }), send, reached: () => 0, ownHolds: async () => false }); } catch (e) { said = e.message; }
+  check(said === NO_GAS && sends === 0, 'nothing private and nothing of its own: it says so, and nothing is sent');
+  const ok = await sendPaying({ pay: async () => ({ how: 'own' }), send, reached: () => 0, ownHolds: async () => true });
+  check(ok.paid === 'own' && sends === 1, 'an account with gas of its own still pays from it');
+  sends = 0; said = '';
+  const failing = async options => { sends++; if (options) throw new Error('the contract refused'); return 'r'; };
+  try { await sendPaying({ pay: async () => ({ how: 'private', options: {} }), send: failing, reached: () => 0, ownHolds: async () => false }); } catch (e) { said = e.message; }
+  check(said === 'the contract refused' && sends === 1, 'a private payment that fails is not tried again from gas the account does not hold, and the first failure is read');
+  const own = await sendPaying({ pay: async () => ({ how: 'own' }), send, reached: () => 0 });
+  check(own.paid === 'own', "Casberi's own sends, which pass no such check, are sent as before");
+}
 
 // --- the pinned address ---------------------------------------------------------
 check(PRIVATE_FEES.salt === 1n, 'the shared salt is 1: every wallet derives one address');

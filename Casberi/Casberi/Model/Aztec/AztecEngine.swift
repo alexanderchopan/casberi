@@ -132,7 +132,7 @@ final class AztecEngine: NSObject {
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
                            "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep",
-                           "engineBroken", "engineAskGone", "engineAppPaid"]
+                           "engineBroken", "engineAskGone", "engineAppPaid", "engineAppGranted", "engineAppSent"]
 
     // MARK: - A store that stopped answering
 
@@ -303,11 +303,24 @@ final class AztecEngine: NSObject {
                 answer(.connect(requestId: requestId, host: ""), yes: false)
                 return
             }
+            // A site you have connected before connects again unasked: its
+            // tile in Apps is the standing yes (prd §1765).
+            if AztecAppsStore.shared.remembers(origin: body["origin"] as? String) {
+                NSLog("aztecEngine| app | reconnected | %@", Self.host(body["origin"]))
+                answer(.connect(requestId: requestId, host: Self.host(body["origin"])), yes: true)
+                return
+            }
             browser.enqueue(.connect(requestId: requestId, host: Self.host(body["origin"])))
         case "engineEmoji":
             guard let sessionId = body["sessionId"] as? String, let emoji = body["emoji"] as? String else { return }
             guard let browser else {
                 answer(.emoji(sessionId: sessionId, host: "", emoji: emoji), yes: false)
+                return
+            }
+            // …and its emoji check with it: an app reconnecting by itself
+            // shows no grid to compare with (RavenHouse, measured 2026-11-12).
+            if AztecAppsStore.shared.remembers(origin: body["origin"] as? String) {
+                answer(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji), yes: true)
                 return
             }
             browser.enqueue(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji))
@@ -325,7 +338,9 @@ final class AztecEngine: NSObject {
                 AztecBrowserModel.Request.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
                                            isPublic: ($0["type"] as? String) == "public",
                                            grantee: grant?["caller"] as? String,
-                                           args: grant == nil ? [] : (grant?["args"] as? [String] ?? []))
+                                           // Each call's arguments in words, by its contract's
+                                           // own interface (prd §1763); none when it has none.
+                                           args: $0["args"] as? [String] ?? grant?["args"] as? [String] ?? [])
             }
             // How its gas is paid (prd §1759), the engine's word. A deposit
             // still on its way is the phone's to know: the engine is handed
@@ -337,6 +352,14 @@ final class AztecEngine: NSObject {
             // An app's transaction minted a gas deposit: it is spent (prd §1759).
             AztecGas.spent(by: body)
             NSLog("aztecEngine| app | paid | %@", body["paid"] as? String ?? "?")
+        case "engineAppGranted":
+            // Kept for Wallet › Permissions (prd §1762), and one Activity row.
+            AztecGrantsStore.shared.add(body)
+            AztecAppActivity.land(origin: body["origin"] as? String, calls: [body["method"] as? String ?? ""],
+                                  transaction: body["tx"] as? String ?? "", authorization: true)
+        case "engineAppSent":
+            AztecAppActivity.land(origin: body["origin"] as? String, calls: body["calls"] as? [String] ?? [],
+                                  transaction: body["tx"] as? String ?? "", authorization: false)
         default:
             break
         }

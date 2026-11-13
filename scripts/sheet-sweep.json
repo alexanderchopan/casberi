@@ -1179,6 +1179,33 @@
    "anchor": "switch:=By a date"
   },
   {
+   "id": "wallet-aztec-gas",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#aztecGas"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Holdings"
+    },
+    {
+     "maybe": "button:=All"
+    },
+    {
+     "tap": "button:^Fee Juice"
+    }
+   ],
+   "anchor": "button:=Add gas"
+  },
+  {
    "id": "wallet-token",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletToken"

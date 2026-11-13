@@ -246,7 +246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1938 of 2011 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1944 of 2017 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2186,6 +2186,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1758 — A tile wears a vector icon, and Galactica is called Galactica
 - §1759 — An app's transaction on Aztec pays its gas as Casberi's own sends do
 - §1760 — Casberi answers `grantPublicAuthwit`, the Nulo wallet's method, so an app can ask for a public authorization (extends…
+- §1761 — Gas on Aztec is added where it is found missing: on an app's approval sheet and from Holdings' gas row (extends §1700…
+- §1762 — The authorizations you gave Aztec apps are listed in Wallet › Permissions and can be taken back (extends §1760, which…
+- §1763 — An approval sheet says what each call says (extends §1700j's sheet, which named the function alone)
+- §1764 — An app's transaction lands in the Wallet's Activity (extends §1700's Activity, which Aztec apps never reached)
+- §1765 — A connected app connects again without being asked (settles §1757's "Not built"; amends §1700j's Connect and emoji ch…
+- §1766 — NFTs you hold privately on Aztec stand in Holdings (extends §1700 item 4's rows)
 
 ## Dead rulings → what replaced them (generated)
 

@@ -246,7 +246,7 @@ extension FeedScreen {
         let following = walletFollowingSlots
         let needs = walletNeedsCount(upcoming: upcoming)
         let counts = walletSecurityCounts
-        let permissions = counts.delegations + counts.approvals
+        let permissions = counts.delegations + counts.approvals + (walletShowsAztecGrants ? AztecGrantsStore.shared.grants.count : 0)
         // One account with nothing on Home (prd §1492's quiet state).
         let quiet = !onAll && !walletOnFollowing && !(yours != nil && yoursPicked)
             && needs == 0 && permissions == 0 && counts.flagged == 0
@@ -754,13 +754,16 @@ extension FeedScreen {
         case .needsYou:
             walletNeedsYouPage(upcoming: upcoming, nextEventID: nextEventID)
         case .permissions:
-            if counts(\.delegations) + counts(\.approvals) == 0 {
+            // The authorizations you gave Aztec apps count as permissions too
+            // (prd §1762): the page is not empty while one stands.
+            if counts(\.delegations) + counts(\.approvals) == 0, !walletShowsAztecGrants {
                 // What you just took back, else the empty rows (§769).
                 if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }
                 else { walletRevokedTodaySection }
             }
             walletActingSection
             walletApprovalsSection
+            walletAztecGrantsSection
         case .threats:
             // What gives your addresses away, by Nymis (prd §1701).
             let privacy = walletPrivacySlots
@@ -1001,7 +1004,8 @@ extension FeedScreen {
             WalletPermissionsFigure(grants: walletLive.exposure.all,
                                     acting: walletPermissionsActing,
                                     held: walletPermissionsHeld,
-                                    asOf: walletLive.asOf) { walletOpenPermission($0) }
+                                    asOf: walletLive.asOf,
+                                    aztecGrants: walletShowsAztecGrants ? AztecGrantsStore.shared.grants.count : 0) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
             let things = walletThreatThings

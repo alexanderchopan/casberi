@@ -16,6 +16,8 @@
 set -u
 cd "$(dirname "$0")/.."
 SHAPE="Casberi/Casberi/Model/Aztec/AztecAppsShape.swift"
+GRANTS="Casberi/Casberi/Model/Aztec/AztecGrantsShape.swift"
+TAIL="Casberi/Shared/AddressTail.swift"
 BROWSER="Casberi/Casberi/Screens/AztecBrowser.swift"
 LIBRARY="Casberi/Casberi/Screens/SourcesLibrary.swift"
 TMP="$(mktemp -d)"
@@ -56,26 +58,54 @@ for i in 0..<12 { many = AztecAppsShape.connected(many, url: url("https://app\(i
 check(many.count == AztecAppsShape.cap && many.first?.host == "app11.example" && !many.contains { $0.host == "app0.example" },
       "the folder holds eight, and the oldest connect goes first")
 check(AztecAppsShape.removed(apps, host: "ROLLING.CHAT").map(\.host) == ["app.ravenhouse.xyz"], "Remove takes one off, by its address")
+
+// A kept site connects again unasked (prd §1765).
+check(AztecAppsShape.remembered(apps, origin: "https://app.ravenhouse.xyz"), "a kept site's origin is remembered")
+check(!AztecAppsShape.remembered(apps, origin: "https://ravenhouse.xyz") && !AztecAppsShape.remembered(apps, origin: "https://app.ravenhouse.xyz.evil.example"),
+      "a neighbouring or look-alike host is not")
+check(!AztecAppsShape.remembered(apps, origin: "http://app.ravenhouse.xyz") && !AztecAppsShape.remembered(apps, origin: "https://app.ravenhouse.xyz:8443")
+      && !AztecAppsShape.remembered(apps, origin: nil), "nor the same host over http, on another port, or no origin at all")
+check(!AztecAppsShape.remembered(AztecAppsShape.removed(apps, host: "app.ravenhouse.xyz"), origin: "https://app.ravenhouse.xyz"),
+      "Remove takes the standing yes back")
+
+// The authorizations you have given (prd §1762).
+func grant(_ hash: String, at: Date) -> AztecGrantsShape.Grant {
+    .init(hash: hash, host: "app.ravenhouse.xyz", caller: "0x" + String(repeating: "0", count: 60) + "63f2", contract: "0x" + String(repeating: "0", count: 60) + "5e83", method: "set_authorized", args: [], transaction: "0x1", at: at)
+}
+var grants = AztecGrantsShape.added([], grant("0xAA", at: now))
+grants = AztecGrantsShape.added(grants, grant("0xbb", at: now.addingTimeInterval(60)))
+grants = AztecGrantsShape.added(grants, grant("0xaa", at: now.addingTimeInterval(120)))
+check(grants.map(\.hash) == ["0xaa", "0xbb"], "an authorization approved again is listed once, newest first")
+let later = now.addingTimeInterval(3600)
+check(AztecGrantsShape.kept(grants, standing: ["0xBB"], unread: [], now: later).map(\.hash) == ["0xbb"],
+      "one the registry no longer holds (used, or taken back) leaves the list")
+check(AztecGrantsShape.kept(grants, standing: [], unread: ["0xaa"], now: later).map(\.hash) == ["0xaa"],
+      "one that could not be read stays: unread is not gone")
+check(AztecGrantsShape.kept(grants, standing: [], unread: [], now: now.addingTimeInterval(180)).count == 2,
+      "one just approved stays while its own transaction lands")
+check(AztecGrantsShape.removed(grants, hash: "0xAA").map(\.hash) == ["0xbb"], "a take-back removes it, whatever the hash's case")
+check(AztecGrantsShape.line(grants[0]) == "set authorized · ...63f2", "the row's line is the call and who may make it")
 exit(failed == 0 ? 0 : 1)
 SWIFT
 
-if ! swiftc -Onone -o "$TMP/run" "$SHAPE" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "$SHAPE" "$GRANTS" "$TAIL" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the Aztec apps harness does not compile"; tail -20 "$TMP/build.log"; exit 1
 fi
 "$TMP/run" || { echo "✗ Aztec apps self-test failed"; exit 1; }
 
 # Each check must be able to fail: a change that breaks the rule must turn a check red.
-mutate() {
-  local what="$1" old="$2" new="$3"
-  grep -qF -- "$old" "$SHAPE" || { echo "✗ mutation '$what' has nothing to change: its anchor is gone"; exit 1; }
-  python3 - "$SHAPE" "$TMP/Mut.swift" "$old" "$new" <<'PY' || { echo "✗ mutation '$what' is STALE: its anchor is missing or not unique"; exit 1; }
+mutate() { # what, old, new, [the file it changes: the apps' shape unless named]
+  local what="$1" old="$2" new="$3" file="${4:-$SHAPE}"
+  local other="$GRANTS"; [[ "$file" == "$GRANTS" ]] && other="$SHAPE"
+  grep -qF -- "$old" "$file" || { echo "✗ mutation '$what' has nothing to change: its anchor is gone"; exit 1; }
+  python3 - "$file" "$TMP/Mut.swift" "$old" "$new" <<'PY' || { echo "✗ mutation '$what' is STALE: its anchor is missing or not unique"; exit 1; }
 import sys
 src, dst, old, new = sys.argv[1:5]
 text = open(src, encoding="utf-8").read()
 assert text.count(old) == 1, "anchor is not unique"
 open(dst, "w", encoding="utf-8").write(text.replace(old, new))
 PY
-  if ! swiftc -Onone -o "$TMP/mut" "$TMP/Mut.swift" "$TMP/main.swift" > /dev/null 2>&1; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/Mut.swift" "$other" "$TAIL" "$TMP/main.swift" > /dev/null 2>&1; then
     echo "✗ mutation '$what' does not compile, so it proves nothing"; exit 1
   fi
   if "$TMP/mut" > /dev/null 2>&1; then echo "✗ mutation '$what' still passes: no check catches it"; exit 1; fi
@@ -93,6 +123,15 @@ mutate "a list with no end" \
 mutate "a kept tile left under its old name" \
   'apps.map { var app = $0; app.name = name(host: app.host); return app }' \
   'apps.map { $0 }'
+mutate "any https site is remembered" \
+  'return apps.contains { $0.door == door }' \
+  'return !apps.isEmpty'
+mutate "an authorization that could not be read is dropped" \
+  '|| unknown.contains($0.hash.lowercased())' \
+  '' "$GRANTS"
+mutate "an authorization the registry no longer holds stays listed" \
+  'stands.contains($0.hash.lowercased()) || unknown' \
+  'true || unknown' "$GRANTS"
 mutate "a tile opening the page you happened to be on" \
   'return "https://\(host)\(port)/"' \
   'return url.absoluteString'
@@ -108,4 +147,9 @@ grep -q 'AztecAppsShape.renamed(' Casberi/Casberi/Model/Aztec/AztecAppsStore.swi
   || { echo "✗ the kept list is read back without its names corrected"; exit 1; }
 grep -q "canvas.toDataURL('image/png')" "$BROWSER" && grep -q 'if !now { self?.askIconIfMissing() }' "$BROWSER" \
   || { echo "✗ a vector icon is no longer drawn, or a tile with no icon is never asked again"; exit 1; }
+grep -q 'if AztecAppsStore.shared.remembers(origin: body\["origin"\] as? String) {' Casberi/Casberi/Model/Aztec/AztecEngine.swift \
+  || { echo "✗ a kept site is asked to connect again, or a site that is not kept is let through"; exit 1; }
+grep -q 'try await PrivateRootKey.unlock(reason: String(localized: "Take back this authorization"))' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
+  && grep -q 'try await AztecCoSign.approve(' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
+  || { echo "✗ a take-back is sent without Face ID or the co-signer"; exit 1; }
 echo "✓ Aztec apps self-test passed"

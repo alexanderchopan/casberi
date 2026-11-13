@@ -67,6 +67,8 @@ extension FeedScreen {
         case walletTokens
         /// Set or change the savings goal on your private balance (prd §1667).
         case savingsGoal
+        /// Gas on Aztec, and Add gas (prd §1761).
+        case aztecGas
         /// Watch a token (prd §1632 item 4).
         case watchToken
         /// One subscription, by its key (prd §1105).
@@ -105,6 +107,7 @@ extension FeedScreen {
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
+            case .aztecGas: "aztecGas"
             case .watchToken: "watchToken"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
@@ -310,6 +313,8 @@ extension FeedScreen {
             WatchTokenSheet(held: walletHeldTokens)
         case .savingsGoal:
             SavingsGoalTray()
+        case .aztecGas:
+            AztecGasTray()
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

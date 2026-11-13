@@ -46,7 +46,11 @@ import { WALLET_ICON } from './icon.js';
 import { watched, sendsReached } from './steps.js';
 import { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions } from './private-fees.js';
 import { mergeExecutionPayloads } from '@aztec-labs/stdlib/tx';
-import { SetPublicAuthwitContractInteraction } from '@aztec-labs/aztec.js/authorization';
+import { SetPublicAuthwitContractInteraction, getMessageHashFromIntent } from '@aztec-labs/aztec.js/authorization';
+import { ContractFunctionInteraction } from '@aztec-labs/aztec.js/contracts';
+import { FunctionType } from '@aztec-labs/aztec.js/abi';
+import { STANDARD_AUTH_REGISTRY_ADDRESS } from '@aztec-labs/standard-contracts/auth-registry/constants';
+import { callWords } from './call-words.js';
 import { grantRequest, grantWords } from './app-grant.js';
 import { siloedTag, payloads } from './zk-link.js';
 
@@ -289,15 +293,33 @@ async function feeFor(wallet, interaction, gasJSON) {
 // One of Casberi's own sends, paid privately when it can be, in its turn:
 // it chooses how to pay only once the send before it has landed.
 const ownTurn = inTurn();
-function sendOwn(wallet, interaction, gasJSON) {
+function sendOwn(wallet, interaction, gasJSON, ownHolds) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
   return ownTurn(() => sendPaying({
     pay: () => feeFor(wallet, interaction, gasJSON),
     send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
     reached: sendsReached,
+    ownHolds,
     log,
   }));
+}
+
+// What the account holds of its own Fee Juice; nothing when it cannot be read.
+async function ownFeeJuice(wallet) {
+  try {
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const feeJuice = await getCanonicalFeeJuice();
+    if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
+      await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
+    }
+    const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+    const { result } = await fj.methods.balance_of_public(me).simulate({ from: me });
+    return BigInt(result.toString());
+  } catch (e) {
+    log('ownGasUnread', { error: String(e?.message ?? e).slice(0, 160) });
+    return 0n;
+  }
 }
 
 // AN APP'S TRANSACTION, PAID AS CASBERI'S OWN ARE (prd §1759). The app's
@@ -327,6 +349,8 @@ function sendForApp(wallet, payload, opts, gasJSON) {
       ? wallet.sendTx(mergeExecutionPayloads([await paid.fee.paymentMethod.getExecutionPayload(), payload]), payingOptions(opts, paid))
       : wallet.sendTx(payload, opts)),
     reached: sendsReached,
+    // An account with no gas of its own is told so before anything is proved (prd §1761).
+    ownHolds: async () => (await ownFeeJuice(wallet)) > 0n,
     log,
   }));
 }
@@ -340,19 +364,7 @@ async function appFeeKind(wallet, args) {
   if (!payer) {
     const fpc = await privateFpc(wallet).catch(() => null);
     if (fpc) privateBalance = await privateGasBalance(fpc, me);
-    if (privateBalance === 0n) {
-      try {
-        const feeJuice = await getCanonicalFeeJuice();
-        if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
-          await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
-        }
-        const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
-        const { result } = await fj.methods.balance_of_public(me).simulate({ from: me });
-        ownBalance = BigInt(result.toString());
-      } catch (e) {
-        log('ownGasUnread', { error: String(e?.message ?? e).slice(0, 160) });
-      }
-    }
+    if (privateBalance === 0n) ownBalance = await ownFeeJuice(wallet);
   }
   return appFee({ payer, me: accountAddress, privateBalance, ownBalance });
 }
@@ -411,8 +423,8 @@ const own = {
         const instance = await wallet.pxe.getContractInstance(address);
         const classId = instance?.currentContractClassId ?? instance?.originalContractClassId;
         const artifact = classId && (await wallet.pxe.getContractArtifact(classId));
-        const names = new Set((artifact?.functions ?? []).map(f => f.name));
-        if (!names.has('balance_of_private')) continue;
+        const names = new Set(allFunctions(artifact).map(f => f.name));
+        if (!names.has('balance_of_private') && !names.has('get_private_nfts')) continue;
         const token = await Contract.at(address, artifact, wallet);
         // Its decimals and symbol from its own functions, whichever spelling it
         // uses; unknown stays null (the app then shows no amount, never a guess).
@@ -425,6 +437,30 @@ const own = {
           }
           return null;
         };
+        // NFTS YOU HOLD PRIVATELY (prd §1766): a collection that answers
+        // `get_private_nfts(owner, page)`, the standard's own read (a page of
+        // token ids, zero for an empty slot, and whether there is more).
+        // Four pages at most; a collection held in the open is not read.
+        if (names.has('get_private_nfts')) {
+          const ids = [];
+          let more = false;
+          for (let page = 0; page < 4; page++) {
+            const { result } = await token.methods.get_private_nfts(me, page).simulate({ from: me });
+            const [list, next] = Array.isArray(result) ? result : [result?.[0] ?? [], result?.[1] ?? false];
+            for (const id of list ?? []) {
+              const n = BigInt((id?.value ?? id).toString());
+              if (n !== 0n) ids.push(n.toString());
+            }
+            more = Boolean(next);
+            if (!more) break;
+          }
+          if (ids.length) {
+            out.push({ kind: 'nft', address: address.toString(), name: artifact.name,
+                       symbol: fieldText(await view(['public_get_name', 'name', 'public_get_symbol', 'symbol'])),
+                       ids: ids.slice(0, 50), more });
+          }
+          continue;
+        }
         const known = SHIELD.assets.find(a => AztecAddress.fromStringUnsafe(a.token).equals(address));
         const decimalsRaw = known ? known.decimals : await view(['decimals', 'public_get_decimals', 'private_get_decimals']);
         const symbolRaw = known ? null : await view(['symbol', 'public_get_symbol', 'private_get_symbol']);
@@ -633,6 +669,56 @@ const own = {
       return { on: true, kind, payer: String(payload.feePayer ?? ''), measured: false, error: String(e?.message ?? e).slice(0, 200) };
     }
   },
+  // AUTHORIZATIONS YOU HAVE GIVEN (prd §1762). Which of these hashes Aztec's
+  // public registry still holds for this account: one the app has used, or
+  // one taken back, no longer stands. A read; nothing sent.
+  async grantsStanding(hashesJSON) {
+    const wallet = await getWallet();
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const address = { kind: 'struct', path: 'authwit::aztec::protocol_types::address::aztec_address::AztecAddress',
+                      fields: [{ name: 'inner', type: { kind: 'field' } }] };
+    const abi = {
+      name: 'utility_is_consumable', isInitializer: false, functionType: FunctionType.UTILITY, isOnlySelf: false, isStatic: false,
+      parameters: [{ name: 'address', type: address, visibility: 'private' },
+                   { name: 'message_hash', type: { kind: 'field' }, visibility: 'private' }],
+      returnType: { kind: 'boolean' }, errorTypes: {},
+    };
+    const standing = [], unread = [];
+    for (const hash of JSON.parse(hashesJSON || '[]')) {
+      try {
+        const { result } = await new ContractFunctionInteraction(wallet, STANDARD_AUTH_REGISTRY_ADDRESS, abi, [me, Fr.fromString(String(hash))])
+          .simulate({ from: me });
+        if (result) standing.push(String(hash));
+      } catch (e) {
+        unread.push(String(hash));
+        log('grantUnread', { error: String(e?.message ?? e).slice(0, 160) });
+      }
+    }
+    return { standing, unread };
+  },
+  // Take one back: the same registry write with `false`, the account's own
+  // transaction, paid as its sends are. The app asks Face ID and the
+  // co-signer before calling.
+  async revokeGrant(hash, gasJSON) {
+    const wallet = await getWallet();
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const revoke = new SetPublicAuthwitContractInteraction(wallet, me, Fr.fromString(String(hash)), false);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, revoke, gasJSON);
+    log('grantRevoked', { tx: receipt.txHash.toString(), status: receipt.status, paid });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
+  },
+  // `-aztecEngineProbe contracts`: every contract the wallet knows, by its
+  // interface's name and its functions' names. What an app registered.
+  async contractsProbe() {
+    const wallet = await getWallet();
+    const out = [];
+    for (const address of await wallet.pxe.getContracts()) {
+      const artifact = await artifactOf(wallet, address);
+      out.push({ address: tail(address.toString()), name: artifact?.name ?? '?',
+                 functions: allFunctions(artifact).map(f => f.name).slice(0, 80) });
+    }
+    return { contracts: out };
+  },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
     return { chainId: c.chainId.toBigInt().toString(), version: c.version.toBigInt().toString() };
@@ -649,8 +735,42 @@ const waiting = new Map();
 // can start public steps of its own; they are not read yet, so the sheet
 // does not claim to know them.)
 const tail = a => '...' + String(a ?? '').slice(-4);
-function describe(args, fee) {
-  const calls = (args?.[0]?.calls ?? []).map(c => ({ name: c.name, to: tail(c.to), type: c.type }));
+
+// A registered contract's interface, or null: the app registers its
+// contracts with the wallet when it connects (prd §1763 reads them).
+async function artifactOf(wallet, address) {
+  try {
+    const instance = await wallet.pxe.getContractInstance(AztecAddress.fromStringUnsafe(String(address)));
+    const classId = instance?.currentContractClassId ?? instance?.originalContractClassId;
+    return (classId && (await wallet.pxe.getContractArtifact(classId))) || null;
+  } catch {
+    return null;
+  }
+}
+// Every function an interface declares: its public ones are kept apart
+// from the private and utility ones (measured 2026-11-12: `functions` alone
+// names no public function but `public_dispatch`).
+const allFunctions = artifact => (artifact?.functions ?? []).concat(artifact?.nonDispatchPublicFunctions ?? []);
+// A token whose symbol and decimals Casberi knows: Shield's.
+const knownToken = address => {
+  try {
+    const a = SHIELD.assets.find(x => BigInt(x.token) === BigInt(String(address)));
+    return a ? { symbol: a.symbol, decimals: a.decimals } : null;
+  } catch {
+    return null;
+  }
+};
+// One call's arguments in words, by its contract's own interface; none when
+// the contract is not known or the call does not fit it (`call-words.js`).
+async function wordsOf(wallet, to, name, flat) {
+  const fn = allFunctions(await artifactOf(wallet, to)).find(f => f.name === name);
+  return (fn && callWords(fn, (flat ?? []).map(String), knownToken(to))) ?? [];
+}
+async function describe(wallet, args, fee) {
+  const calls = [];
+  for (const c of args?.[0]?.calls ?? []) {
+    calls.push({ name: c.name, to: tail(c.to), type: c.type, args: await wordsOf(wallet, c.to, c.name, c.args) });
+  }
   return { calls, fee };
 }
 
@@ -671,20 +791,30 @@ async function grantForApp(wallet, args, origin) {
   const target = await Contract.at(contract, artifact, wallet);
   if (typeof target.methods[asked.method] !== 'function') throw new Error(`That contract has no function ${asked.method}`);
   const call = await target.methods[asked.method](...asked.args).getFunctionCall();
-  const grant = await SetPublicAuthwitContractInteraction.create(
-    wallet, me, { caller: AztecAddress.fromStringUnsafe(asked.caller), call }, true);
+  const intent = { caller: AztecAddress.fromStringUnsafe(asked.caller), call };
+  const hash = (await getMessageHashFromIntent(intent, await wallet.getChainInfo())).toString();
+  const grant = new SetPublicAuthwitContractInteraction(wallet, me, Fr.fromString(hash), true);
+  // The call's arguments by name where its interface fits, else as sent.
+  const fn = allFunctions(artifact).find(f => f.name === asked.method);
+  const words = (fn && callWords(fn, call.args.map(String), knownToken(asked.contract))) ?? grantWords(asked.args);
   const id = ++asks;
   native('engineApprove', {
     id, method: 'grantPublicAuthwit', origin, fee: await appFeeKind(wallet, [{}]),
-    calls: [{ name: asked.method, to: tail(asked.contract), type: 'public' }],
-    grant: { caller: tail(asked.caller), args: grantWords(asked.args) },
+    calls: [{ name: asked.method, to: tail(asked.contract), type: 'public', args: words }],
+    grant: { caller: tail(asked.caller), args: words },
   });
   const answer = await new Promise(resolve => waiting.set(id, resolve));
   log('approval', { method: 'grantPublicAuthwit', yes: answer.yes });
   if (!answer.yes) throw new Error('The person declined grantPublicAuthwit');
-  const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas));
+  const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas, async () => (await ownFeeJuice(wallet)) > 0n));
   log('appGranted', { tx: sent.receipt.txHash.toString(), status: sent.receipt.status, paid: sent.paid });
   native('engineAppPaid', { paid: sent.paid, gasNonce: sent.gasNonce });
+  // Kept by the phone: what was authorized, for whom, and the hash that
+  // takes it back (prd §1762).
+  native('engineAppGranted', {
+    origin, hash, caller: asked.caller, contract: asked.contract, method: asked.method, args: words,
+    tx: sent.receipt.txHash.toString(),
+  });
   return sent.receipt.txHash.toString();
 }
 
@@ -693,7 +823,7 @@ async function grantForApp(wallet, args, origin) {
 async function askPerson(method, args, origin, wallet) {
   const id = ++asks;
   const fee = method === 'sendTx' ? await appFeeKind(wallet, args) : '';
-  native('engineApprove', { id, method, origin, ...describe(args, fee) });
+  native('engineApprove', { id, method, origin, ...(await describe(wallet, args, fee)) });
   return new Promise(resolve => waiting.set(id, resolve));
 }
 
@@ -732,6 +862,12 @@ async function callForApp(method, args, origin) {
       const sent = await sendForApp(wallet, parsed[0], parsed[1] ?? {}, gas);
       log('appPaid', { how: sent.paid });
       native('engineAppPaid', { paid: sent.paid, gasNonce: sent.gasNonce });
+      // For the Wallet's Activity (prd §1764): the site, its calls, the hash.
+      const hash = sent.receipt?.receipt?.txHash ?? sent.receipt?.txHash;
+      native('engineAppSent', {
+        origin, tx: hash ? hash.toString() : '',
+        calls: (args?.[0]?.calls ?? []).map(c => String(c.name ?? '')).slice(0, 6),
+      });
       return sent.receipt;
     };
   }
