@@ -629,7 +629,7 @@ ING="Casberi/Casberi/Model/WalletIngest.swift"
 PEOPLE="Casberi/Casberi/Screens/AddressesScreen.swift"
 awk '/private func setUpTagPayment\(\) \{/,/^    }/' "$SEND" > "$TMP/setup.txt"
 grep -q 'guard verb == .send, payingRequest == nil else { return }' "$TMP/setup.txt" \
-  && grep -q 'let fits = network == Op.ethereum && with != nil' "$TMP/setup.txt" \
+  && grep -q 'let fits = with != nil && (network == Op.ethereum' "$TMP/setup.txt" \
   && grep -q 'let pick = ZkMoneyWire.payOrder.lazy.compactMap' "$TMP/setup.txt" \
   && grep -q 'if !dollars { amount = "" }' "$TMP/setup.txt" \
   || { echo "✗ a typed tag no longer sets up its payment, or it overwrites a request's or a token a deposit takes"; exit 1; }
@@ -674,8 +674,30 @@ grep -q 'guard let q = tagSwap, q.sellAmount == units else { return nil }' "$SEN
 awk '/private var zkMoneyRefusal: String\? \{/,/^    }/' "$SEND" \
   | grep -q 'let usd = tagSwap.map { Op.dollars($0.minimumBuy, decimals: 6, price: 1) }' \
   || { echo "✗ a converted tag payment is not held to the deposit's fee and cap"; exit 1; }
-awk '/private func add\(\) \{/,/^    }/' "$SEND" | grep -q 'if tagConverts {' \
+awk '/private func add\(\) \{/,/^    }/' "$SEND" | grep -q 'if tagConverts || tagCrosses {' \
   || { echo "✗ a converted tag payment can be added to a batch"; exit 1; }
+
+# A tag paid from another network (prd §1770), read. The crossing must name
+# the tag's own address as Across's recipient, in the quote, in the line and
+# again at signing; a quote for another address must not sign; a tag is paid
+# the dollar as itself, so nothing but the account ever stands between
+# Across and it; and it is a tag paid: remembered, spent, offered to save.
+awk '/private var tagCrosses: Bool \{/,/^    }/' "$SEND" > "$TMP/crosses.txt"
+grep -q 'guard verb == .send, paysZkMoney, items.isEmpty, network != Op.ethereum, !network.isTest, with != nil,' "$TMP/crosses.txt" \
+  && grep -q 'YourAccountAcross.carries(.dollar, from: network.chainId, to: Op.ethereum.chainId)' "$TMP/crosses.txt" \
+  || { echo "✗ a tag is crossed for on Ethereum, on a test network, or beside kept lines"; exit 1; }
+grep -q 'guard let q = tagSwap, q.sellAmount == units, q.across?.payee?.lowercased() == r.address.lowercased() else { return nil }' "$SEND" \
+  && grep -q 'to: Op.ethereum, payee: r.address, payeeName: r.name))' "$SEND" \
+  || { echo "✗ a crossing quoted for one address is signed for another, or the line does not name the tag as the payee"; exit 1; }
+grep -q 'payee: s.payee)' Casberi/Casberi/Model/YourAccountChain.swift \
+  && grep -q 'guard let leg = quote.across, leg.payee?.lowercased() == s.payee?.lowercased() else {' Casberi/Casberi/Model/YourAccountChain.swift \
+  || { echo "✗ at signing the crossing is quoted again without its payee, so the tag's money would arrive at your own account"; exit 1; }
+grep -q 'if payee != nil, arrivesAsItself != .dollar {' "Casberi/Casberi/Model/YourAccountChain+Across.swift" \
+  || { echo "✗ a payee may be paid through the handler or in something other than the dollar"; exit 1; }
+awk '/static func paidTags\(_ batch: \[Chain.Item\]\)/,/^    }/' "$SEND" | grep -q 'guard let to = s.payee, let name = s.payeeName, ZkMoneyWire.tag(name) != nil else { return nil }' \
+  || { echo "✗ a tag paid from another network is not remembered as paid"; exit 1; }
+grep -q 'if case .swap(let s) = item, let to = s.payee?.lowercased(), zkMoneyDeposits.contains(to) { return to }' "$SEND" \
+  || { echo "✗ a one-time address paid from another network is not marked spent"; exit 1; }
 
 # The resolver is asked of ENS before each lookup (prd §1750), and the lookup
 # must come from the one it names: the pin alone went stale in eight days.

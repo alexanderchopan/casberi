@@ -1471,6 +1471,10 @@ enum YourAccountChain {
         /// Where what it buys arrives, when that is another network: Across
         /// carries it (prd §1555). Nil for a swap on `network` itself.
         var to: Network? = nil
+        /// Someone else is paid what crosses (prd §1770): their address on
+        /// `to`, and the name To read it under.
+        var payee: String? = nil
+        var payeeName: String? = nil
 
         /// To another network.
         var crosses: Bool { to.map { $0 != network } ?? false }
@@ -1785,8 +1789,9 @@ enum YourAccountChain {
                 guard items.count == 1, let dest = s.to else {
                     throw Failure(message: String(localized: "A swap to another network goes alone"))
                 }
-                let quote = try await crossQuote(net, to: dest, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
-                guard let leg = quote.across else { throw Failure(message: String(localized: "This swap could not be written")) }
+                let quote = try await crossQuote(net, to: dest, sell: s.sell, buy: s.buy, amount: s.amount, account: account,
+                                                 payee: s.payee)
+                guard let leg = quote.across, leg.payee?.lowercased() == s.payee?.lowercased() else { throw Failure(message: String(localized: "This swap could not be written")) }
                 let crossCount = leg.asset == .eth ? 1 : 2
                 guard quote.calls.count >= crossCount else { throw Failure(message: String(localized: "This swap could not be written")) }
                 let swapCalls = Array(quote.calls.dropLast(crossCount))
@@ -1849,7 +1854,8 @@ enum YourAccountChain {
                     atLeast: there == nil ? nil : true, fallbackContract: there == nil ? nil : fallback,
                     fallbackSymbol: there == nil ? nil : (leg.asset == .eth ? "WETH" : landing.symbol),
                     fallbackDecimals: there == nil ? nil : landing.decimals, fallbackUnits: there == nil ? nil : leg.outputAmount,
-                    refundDecimals: bridged.decimals == s.buy.decimals ? nil : bridged.decimals)
+                    refundDecimals: bridged.decimals == s.buy.decimals ? nil : bridged.decimals,
+                    payee: s.payee?.lowercased(), payeeName: s.payeeName)
                 // ETH's unwrap and a swap on arrival run on the other network:
                 // proven there before Face ID (prd §1555, §1566).
                 if YourAccountAcross.viaHandler(leg) { arrives = await arrivalCheck(dest, leg: leg, account: account) }

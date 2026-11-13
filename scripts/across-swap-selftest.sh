@@ -187,6 +187,28 @@ check(!X.acceptable(leg("9499999999999999", deadline: 1_000_7200), now: 1_000_00
 check(X.acceptable(leg("9500000000000000", deadline: 1_000_7200), now: 1_000_0000), "exactly 5% is refused")
 check(!X.acceptable(leg("9989268712761862", deadline: 1_000_0000 + 21_601), now: 1_000_0000), "a deadline past six hours is taken")
 check(!X.acceptable(leg("9989268712761862", deadline: 1_000_0000), now: 1_000_0000), "a deadline already past is taken")
+// ── Someone else is paid (prd §1770): a zk.money tag's one-time address ────
+let payee = "0x5a3e9d1b2c4f6a8e0d7c9b1a3f5e7d9c2b4a6e8f"
+if let d = legs.firstIndex(where: { $0.0.asset == .dollar }) {
+    var paid = legs[d].0; paid.payee = payee
+    let calls = X.calls(paid, fees: legs[d].1, account: account)
+    check(calls != nil && X.checked(calls!, leg: paid, account: account, now: legs[d].3) != nil, "a dollar crossing that pays someone else is refused")
+    check(calls != legs[d].2, "a payee changes nothing in the deposit")
+    check(calls.map { X.checked($0, leg: legs[d].0, account: account, now: legs[d].3) == nil } == true, "a deposit paying someone else passes as one paying the account")
+    check(X.checked(legs[d].2, leg: paid, account: account, now: legs[d].3) == nil, "a deposit paying the account passes as one paying the payee")
+    var other = paid; other.payee = "0x1111111111111111111111111111111111111111"
+    check(calls.map { X.checked($0, leg: other, account: account, now: legs[d].3) == nil } == true, "a deposit paying one address passes as one paying another")
+    check(calls.map { Array($0.last!.data[4..<36]) } == Array(legs[d].2.last!.data[4..<36]), "the depositor, whose the refund is, moved with the payee")
+    let url = X.feesURL(.dollar, from: paid.from, to: paid.to, amount: paid.inputAmount, account: account, payee: payee)?.absoluteString ?? ""
+    check(url.contains("recipient=" + payee) && !url.contains("recipient=" + account.lowercased()), "the fee is asked for the account, not the payee")
+} else { check(false, "no dollar vector to pay someone else with") }
+if let e = legs.firstIndex(where: { $0.0.asset == .eth }) {
+    var paid = legs[e].0; paid.payee = payee
+    check(X.calls(paid, fees: legs[e].1, account: account) == nil && X.checked(legs[e].2, leg: paid, account: account, now: legs[e].3) == nil,
+          "ETH, which goes through the handler, is sent to a payee")
+    check(X.feesURL(.eth, from: paid.from, to: paid.to, amount: paid.inputAmount, account: account, payee: payee) == nil, "a fee is asked for ETH to a payee")
+} else { check(false, "no ETH vector to refuse a payee with") }
+check(X.feesURL(.dollar, from: 8453, to: 1, amount: "20000000", account: account, payee: "bob.zk.money") == nil, "a payee that is no address is asked for")
 var late = legs[0]; late.3 = legs[0].0.fillDeadline + 1
 check(X.checked(late.2, leg: late.0, account: account, now: late.3) == nil, "a crossing whose deadline passed is signed")
 
@@ -563,7 +585,7 @@ wire "$CHAIN" 'if let crossing = a.crossing, a.sold.contains(where: { $0.across.
   "ETH or a swap on arrival is signed without the arrival proven"
 wire "$CHAIN" 'if YourAccountAcross.viaHandler(leg) { arrives = await arrivalCheck(dest, leg: leg, account: account) }' \
   "the handler's run on the receiving network is not simulated before Face ID (prd §1566)"
-wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute)' \
+wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute,' \
   "Across's fee for a swap on arrival is asked without its message"
 wire "Casberi/Casberi/Model/YourAccountChain+Across.swift" 'let best = try await bestRoute(dest, sell: into, buy: target, amount: fees.outputAmount, ends: (false, false)),' \
   "the swap on arrival is not quoted on the receiving network for exactly what a relayer pays"
@@ -632,9 +654,17 @@ mutate "a SpokePool address typo'd" \
 mutate "the check stops reading the depositor" \
   'guard word(d, 0).flatMap(address) == me,' 'guard word(d, 0) != nil,'
 mutate "ETH goes straight to the account (it arrives as WETH)" \
-  'let recipient = viaHandler(leg) ? handler : account' 'let recipient = account'
+  'let recipient = viaHandler(leg) ? handler : (leg.payee ?? account)' 'let recipient = leg.payee ?? account'
 mutate "the check takes any ETH recipient" \
-  'guard word(d, 1).flatMap(address) == handler,' 'guard word(d, 1) != nil,'
+  'word(d, 1).flatMap(address) == handler, let want' 'word(d, 1) != nil, let want'
+mutate "the check takes any dollar recipient" \
+  'guard word(d, 1).flatMap(address) == (leg.payee?.lowercased() ?? me), note.isEmpty else { return nil }' 'guard note.isEmpty else { return nil }'
+mutate "a payee is paid through the handler" \
+  'if let payee = leg.payee { guard !viaHandler(leg), SafeABI.word(address: payee) != nil else { return nil } }' 'if let payee = leg.payee { guard SafeABI.word(address: payee) != nil else { return nil } }'
+mutate "the handler's check forgets a payee" \
+  'guard leg.payee == nil, word(d, 1)' 'guard word(d, 1)'
+mutate "the fee for a payee is asked for the account" \
+  '(payee ?? account).lowercased()' 'account.lowercased()'
 mutate "the check stops comparing the message" \
   'note == want else { return nil }' 'note.count >= 0 else { return nil }'
 mutate "the message pays the handler, not the account" \

@@ -530,7 +530,8 @@ struct MoveSentence: View {
     static func unsavedTags(_ batch: [Chain.Item]) -> [String] {
         var out: [String] = []
         for item in batch {
-            guard case .send(let p) = item, let bare = p.toName.flatMap({ ZkMoneyWire.tag($0) }) else { continue }
+            let named: String? = { switch item { case .send(let p): p.toName; case .swap(let s): s.payeeName } }()
+            guard let bare = named.flatMap({ ZkMoneyWire.tag($0) }) else { continue }
             let tag = ZkMoneyWire.display(bare)
             if !out.contains(tag), !ContactBook.shared.has(Identity.key(.zkMoney, tag)) { out.append(tag) }
         }
@@ -541,8 +542,15 @@ struct MoveSentence: View {
     /// Activity to name the person (prd §1767).
     static func paidTags(_ batch: [Chain.Item]) -> [(address: String, tag: String)] {
         batch.compactMap { item in
-            guard case .send(let p) = item, let name = p.toName, ZkMoneyWire.tag(name) != nil else { return nil }
-            return (p.to, name)
+            switch item {
+            case .send(let p):
+                guard let name = p.toName, ZkMoneyWire.tag(name) != nil else { return nil }
+                return (p.to, name)
+            case .swap(let s):
+                // Paid from another network (prd §1770).
+                guard let to = s.payee, let name = s.payeeName, ZkMoneyWire.tag(name) != nil else { return nil }
+                return (to, name)
+            }
         }
     }
 
@@ -822,6 +830,7 @@ struct MoveSentence: View {
         guard let request = payingRequest, outcome != .dryRun else { return }
         let paid = lines.contains { item in
             if case .send(let p) = item { return requestDeposits.contains(p.to.lowercased()) }
+            if case .swap(let s) = item, let to = s.payee { return requestDeposits.contains(to.lowercased()) }
             return false
         }
         guard paid else { return }
@@ -1030,6 +1039,13 @@ struct MoveSentence: View {
                 guard let q = tagSwap, q.sellAmount == units else { return nil }
                 return .swap(Chain.Swap(network: network, sell: with.token, buy: Op.dollar(on: network), amount: units, quote: q))
             }
+            // A tag paid from another network (prd §1770): the line is the
+            // crossing, Across paying the tag's address on Ethereum.
+            if tagCrosses {
+                guard let q = tagSwap, q.sellAmount == units, q.across?.payee?.lowercased() == r.address.lowercased() else { return nil }
+                return .swap(Chain.Swap(network: network, sell: with.token, buy: Op.dollar(on: Op.ethereum), amount: units, quote: q,
+                                        to: Op.ethereum, payee: r.address, payeeName: r.name))
+            }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
         case .receive, .buy, .sweep, .deposit, .lend:
             return nil
@@ -1065,22 +1081,41 @@ struct MoveSentence: View {
         return .send(Op.Payment(network: network, token: Op.dollar(on: network), amount: q.minimumBuy, to: r.address, toName: r.name))
     }
 
+    /// **PAY A TAG FROM ANOTHER NETWORK (prd §1770, user: "ok lets do the
+    /// pay a tag from another network").** A tag is paid on Ethereum; most
+    /// money here is on Base. From a network Across carries the dollar from,
+    /// the one transaction is the crossing (what you send swapped into that
+    /// network's dollar first, if it is not it), with the tag's one-time
+    /// address as the recipient on Ethereum: a relayer pays the tag exactly
+    /// what Across quoted. It goes alone, as every crossing does, and a
+    /// crossing nobody fills comes back to you.
+    private var tagCrosses: Bool {
+        guard verb == .send, paysZkMoney, items.isEmpty, network != Op.ethereum, !network.isTest, with != nil,
+              YourAccountAcross.carries(.dollar, from: network.chainId, to: Op.ethereum.chainId) else { return false }
+        return true
+    }
+
     private var tagSwapKey: String {
-        guard tagConverts, let with else { return "" }
-        return "\(with.id)|\(units ?? "")|\(resolved?.address ?? "")"
+        guard tagConverts || tagCrosses, let with else { return "" }
+        return "\(network.chainId)|\(with.id)|\(units ?? "")|\(resolved?.address ?? "")"
     }
 
     private func requoteTag() async {
         tagSwap = nil
         tagSwapNote = nil
-        guard tagConverts, let with, let units, units != "0", !over else { return }
+        let crossing = tagCrosses
+        guard tagConverts || crossing, let with, let units, units != "0", !over, let payee = resolved?.address else { return }
         try? await Task.sleep(for: .milliseconds(500))
         guard !Task.isCancelled else { return }
         do {
-            let q = try await Chain.swapQuote(network, sell: with.token, buy: Op.dollar(on: network), amount: units, account: account)
+            let q = crossing
+                ? try await Chain.crossQuote(network, to: Op.ethereum, sell: with.token, buy: Op.dollar(on: Op.ethereum), amount: units,
+                                             account: account, payee: payee)
+                : try await Chain.swapQuote(network, sell: with.token, buy: Op.dollar(on: network), amount: units, account: account)
             guard !Task.isCancelled else { return }
             withAnimation(DS.Motion.standard) { tagSwap = q }
-            NSLog("zkMoneyPay| swapped first | %@ %@ | min %@ USDC | calls=%d", units, with.token.symbol, q.minimumBuy, q.calls.count)
+            NSLog("zkMoneyPay| %@ | %@ %@ | min %@ USDC | calls=%d", crossing ? "from \(network.name)" : "swapped first", units,
+                  with.token.symbol, q.minimumBuy, q.calls.count)
         } catch let failure as Chain.Failure {
             if !Task.isCancelled { tagSwapNote = failure.message }
         } catch {}
@@ -1098,9 +1133,9 @@ struct MoveSentence: View {
         guard paysZkMoney, let with else { return nil }
         // Swapped into USDC first (prd §1768): the limits are the deposit's
         // own, checked on what the swap must return.
-        if tagConverts {
+        if tagConverts || tagCrosses {
             let usd = tagSwap.map { Op.dollars($0.minimumBuy, decimals: 6, price: 1) }
-            return ZkMoneyWire.payRefusal(chainId: network.chainId, token: ZkMoneyWire.usdc, usd: usd)
+            return ZkMoneyWire.payRefusal(chainId: Op.ethereum.chainId, token: ZkMoneyWire.usdc, usd: usd)
         }
         // The three tokens it takes are dollars: with no price read, a token
         // is a dollar, so the cap never goes unchecked.
@@ -1128,8 +1163,11 @@ struct MoveSentence: View {
             if let id = draftWithID, ZkMoneyWire.payTokens.contains(id) { return }
         }
         // Any token picked on Ethereum stands: one a deposit takes is sent
-        // as it is, another is swapped into USDC first (prd §1768).
-        let fits = network == Op.ethereum && with != nil
+        // as it is, another is swapped into USDC first (prd §1768). So does
+        // one picked on a network Across carries the dollar from: the tag is
+        // paid from where your money is (prd §1770).
+        let fits = with != nil && (network == Op.ethereum
+            || (!network.isTest && YourAccountAcross.carries(.dollar, from: network.chainId, to: Op.ethereum.chainId)))
         guard !fits else { return }
         let onEthereum = heldBy[Op.ethereum.chainId] ?? []
         // The dollar you hold; with none, the most of anything you hold
@@ -1160,6 +1198,7 @@ struct MoveSentence: View {
     private func spendZkMoney(_ lines: [Chain.Item]) {
         let paid = lines.compactMap { item -> String? in
             if case .send(let p) = item, zkMoneyDeposits.contains(p.to.lowercased()) { return p.to.lowercased() }
+            if case .swap(let s) = item, let to = s.payee?.lowercased(), zkMoneyDeposits.contains(to) { return to }
             return nil
         }
         guard !paid.isEmpty else { return }
@@ -1257,7 +1296,7 @@ struct MoveSentence: View {
     private var exchangeCredit: [CreditLine] {
         // A price's order credits CoW Swap with its mark, in `foot` (prd §1673).
         if limiting { return [] }
-        guard verb == .swap || verb == .sweep else { return [] }
+        guard verb == .swap || verb == .sweep || tagConverts || tagCrosses else { return [] }
         // **"THROUGH ACROSS · 0.06% FEE · ABOUT 10 SECONDS" (prd §1555).**
         // A swap to another network: Across's fee, rounded as a pool's is,
         // and its time; under the pool's words when a token is swapped first.
@@ -3012,6 +3051,8 @@ struct MoveSentence: View {
         /// What a taken batch adds, newest first: each plain send's tag or address.
         static func entries(_ batch: [Chain.Item]) -> [String] {
             batch.reversed().compactMap { item in
+                // A tag paid from another network is a tag paid (prd §1770).
+                if case .swap(let s) = item, let name = s.payeeName, ZkMoneyWire.tag(name) != nil { return name.lowercased() }
                 guard case .send(let p) = item else { return nil }
                 if let name = p.toName, ZkMoneyWire.tag(name) != nil { return name.lowercased() }
                 return ZkMoney.knownName(for: p.to) == nil ? p.to : nil
@@ -3329,7 +3370,7 @@ struct MoveSentence: View {
         if verb == .send {
             if malformed { return String(localized: "Check the address") }
             if let zkMoneyRefusal { return zkMoneyRefusal }
-            if tagConverts, let tagSwapNote { return tagSwapNote }
+            if tagConverts || tagCrosses, let tagSwapNote { return tagSwapNote }
         }
         // What signing would refuse, said before the tap: a fee the account
         // cannot pay, a node that would not price it (prd §1509).
@@ -3375,7 +3416,7 @@ struct MoveSentence: View {
             if let words = requestPrint { rows.append(LedgerRow(id: "request", name: words)) }
             // Swapped into USDC first (prd §1768): what reaches the tag,
             // exactly, before zk.money's own fee.
-            if tagConverts, let q = tagSwap, pendingItem != nil {
+            if tagConverts || tagCrosses, let q = tagSwap, pendingItem != nil {
                 rows.append(LedgerRow(id: "tagGets", name: String(localized: "They get"),
                                       value: Self.figure(q.minimumBuy, decimals: 6) + " USDC"))
             }
@@ -5418,7 +5459,7 @@ struct MoveSentence: View {
         if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
         // A tag paid from another token is one send to the person, whatever
         // it takes to make (prd §1768).
-        if tagConverts { return title(.send) }
+        if tagConverts || tagCrosses { return title(.send) }
         let batch = all
         let swaps = batch.filter { if case .swap = $0 { true } else { false } }.count
         let kind: Verb? = swaps == batch.count ? .swap : swaps == 0 ? .send : nil
@@ -5490,8 +5531,9 @@ struct MoveSentence: View {
             say(String(localized: "An order goes alone"))
             return
         }
-        if tagConverts {
-            say(String(localized: "A tag paid from another token goes alone"))
+        if tagConverts || tagCrosses {
+            say(tagCrosses ? String(localized: "A tag paid from another network goes alone")
+                           : String(localized: "A tag paid from another token goes alone"))
             return
         }
         guard let item = pendingItem else {

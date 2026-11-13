@@ -159,6 +159,12 @@ grep -q "canvas.toDataURL('image/png')" "$BROWSER" && grep -q 'if !now { self?.a
   || { echo "✗ a vector icon is no longer drawn, or a tile with no icon is never asked again"; exit 1; }
 grep -q 'if AztecAppsStore.shared.remembers(origin: body\["origin"\] as? String) {' Casberi/Casberi/Model/Aztec/AztecEngine.swift \
   || { echo "✗ a kept site is asked to connect again, or a site that is not kept is let through"; exit 1; }
+# A kept site's emoji check is answered for it only when the page connected
+# by itself (prd §1769): a connect the person tapped shows the page's grid,
+# and Casberi's must be shown beside it.
+grep -q 'if await browser.personTapped() {' Casberi/Casberi/Model/Aztec/AztecEngine.swift \
+  && grep -q "if (e.isTrusted) window.__casberiTapAt = Date.now();" "$BROWSER" \
+  || { echo "✗ a kept site's emoji check is skipped even when the person tapped Connect, or a touch the page made up counts"; exit 1; }
 grep -q 'try await PrivateRootKey.unlock(reason: String(localized: "Revoke this authorization"))' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
   && grep -q 'try await AztecCoSign.approve(' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
   || { echo "✗ a take-back is sent without Face ID or the co-signer"; exit 1; }

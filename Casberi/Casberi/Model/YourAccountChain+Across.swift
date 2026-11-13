@@ -19,9 +19,10 @@ extension YourAccountChain {
     /// read; a refusal in Across's own words, drawn as theirs. A swap on
     /// arrival (`through`, prd §1566) is priced with its message's shape.
     static func acrossFees(_ asset: Across.Asset, from: Network, to: Network, amount: String,
-                           account: String, through route: YourAccountSwap.Route? = nil) async throws -> Across.Fees {
+                           account: String, through route: YourAccountSwap.Route? = nil,
+                           payee: String? = nil) async throws -> Across.Fees {
         guard let url = Across.feesURL(asset, from: from.chainId, to: to.chainId, amount: amount, account: account,
-                                       through: route, now: Int(Date().timeIntervalSince1970)) else {
+                                       through: route, payee: payee, now: Int(Date().timeIntervalSince1970)) else {
             throw Failure(message: String(localized: "Across does not carry this from \(from.name) to \(to.name)"))
         }
         guard let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: "Your account") else {
@@ -44,9 +45,14 @@ extension YourAccountChain {
     /// it buys is what Across's relayers pay, or for a swap on arrival what
     /// the receiving network's pools pay for exactly that, quoted now.
     static func crossQuote(_ net: Network, to dest: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token,
-                           amount: String, account: String) async throws -> YourAccountSwap.Quote {
+                           amount: String, account: String, payee: String? = nil) async throws -> YourAccountSwap.Quote {
         let arrivesAsItself = Across.asset(of: buy, on: dest)
         let asset = arrivesAsItself ?? Across.asset(of: sell, on: net) ?? .eth
+        // Someone else is paid the receiving network's dollar as itself, or
+        // not at all (prd §1770): no handler stands between Across and them.
+        if payee != nil, arrivesAsItself != .dollar {
+            throw Failure(message: String(localized: "This payment could not be written"))
+        }
         guard Across.carries(asset, from: net.chainId, to: dest.chainId),
               arrivesAsItself != nil || (YourAccountSwap.supported(dest) && buy.contract != nil) else {
             throw Failure(message: String(localized: "Across does not carry \(buy.symbol) to \(dest.name)"))
@@ -60,6 +66,7 @@ extension YourAccountChain {
             let out = YourAccountSwap.minimum(bridged, bps: 6) ?? "0"
             var leg = Across.Leg(asset: asset, from: net.chainId, to: dest.chainId, toName: dest.name, inputAmount: bridged,
                                  outputAmount: out, seconds: 10, fillDeadline: Int(Date().timeIntervalSince1970) + 7_200)
+            leg.payee = payee
             if arrivesAsItself == nil, let destBook, let there = YourAccountDemo.quote(sell: landing, buy: buy, amount: out),
                let into = Across.bridged(asset, on: dest.chainId), let target = buy.contract?.lowercased(),
                let least = YourAccountSwap.minimum(there.buyAmount, bps: destBook.slippageBps) {
@@ -84,7 +91,8 @@ extension YourAccountChain {
             }
             arrivalRoute = found.route
         }
-        let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute)
+        let fees = try await acrossFees(asset, from: net, to: dest, amount: bridged, account: account, through: arrivalRoute,
+                                        payee: payee)
         if fees.tooLow || fees.minDeposit.map({ !YourAccountOp.atMost($0, bridged) }) == true {
             let least = fees.minDeposit.map { YourAccountOp.spoken($0, decimals: crossing.decimals) } ?? "more"
             throw Failure(message: String(localized: "Too little for Across: at least \(least) \(crossing.symbol)"))
@@ -94,6 +102,7 @@ extension YourAccountChain {
         }
         var leg = Across.Leg(asset: asset, from: net.chainId, to: dest.chainId, toName: dest.name, inputAmount: bridged,
                              outputAmount: fees.outputAmount, seconds: fees.seconds, fillDeadline: fees.fillDeadline)
+        leg.payee = payee
         guard Across.acceptable(leg, now: Int(Date().timeIntervalSince1970)) else {
             throw Failure(message: String(localized: "Across's fee is too high for this amount"))
         }

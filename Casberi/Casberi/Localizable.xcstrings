@@ -589,6 +589,34 @@
         }
       }
     },
+    "A tag paid from another network goes alone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un tag pagado desde otra red va solo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のネットワークから支払うタグは単独で送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 네트워크에서 결제하는 태그는 단독으로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从其他网络支付的标签需单独发送"
+          }
+        }
+      }
+    },
     "A tag paid from another token goes alone" : {
       "localizations" : {
         "es" : {
@@ -781,6 +809,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存 %@"
+          }
+        }
+      }
+    },
+    "Sending %@ to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando %1$@ a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@に%1$@を送金中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에게 %1$@ 보내는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在向 %2$@ 发送 %1$@"
+          }
+        }
+      }
+    },
+    "Sent %@ to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviaste %1$@ a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@に%1$@を送金しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에게 %1$@ 보냄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已向 %2$@ 发送 %1$@"
           }
         }
       }
@@ -191625,6 +191709,34 @@
         }
       }
     },
+    "The payment to %@ wasn't filled" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El pago a %@ no se completó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@への支払いは実行されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에게 보낸 결제가 체결되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向 %@ 的付款未完成"
+          }
+        }
+      }
+    },
     "The people behind your accounts" : {
       "localizations" : {
         "es" : {
@@ -196312,6 +196424,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法写入此订单"
+          }
+        }
+      }
+    },
+    "This payment could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar este pago"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この支払いを作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 결제를 작성할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法生成这笔付款"
           }
         }
       }

@@ -72378,3 +72378,37 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Not built:** from another network (Across delivering USDC to the tag's address on Ethereum). Across's deposit, its fee quote and the Wallet's reader of a crossing each take the account as the recipient today (`YourAccountAcross`), and a fill to a one-time address is unproven.
 
 **Mac half (§1402).** None: the same sentence.
+
+## §1769 — A connect you tapped shows Casberi's emoji check, kept site or not (amends §1765 item 1's "the emoji check [is] answered yes without a sheet") (user, 2026-11-12, on the phone with build 990: "ravenouse showed the emojis but connected w/o our app showing them") — BUILT; NOT seen on any device: the tap, the page's grid and Casberi's beside it
+
+**Why.** §1765 answered a kept site's Connect and its emoji check for it, because RavenHouse reconnects by itself as its page loads and shows no grid to compare with. But the same site, when you tap its Connect, does show its grid, and Casberi showed nothing beside it: a check with one half.
+
+1. **The page's own reconnect stays silent.** A kept site that connects as it loads, with no touch on the page, is answered for as before.
+2. **A connect you started is checked.** If the person touched the page in the last 45 seconds, the emoji sheet is shown for a kept site too (`AztecBrowserModel.personTapped`). The Connect sheet is still skipped: the tile is the standing yes to connecting; the emoji check is not a permission but a comparison.
+3. **A real touch only.** The time of the last touch is kept in Casberi's own script world, and a `pointerdown` the page's script made up is not one (`isTrusted`).
+
+**Also seen on the user's phone with build 990 (2026-11-12), which settles what §1760, §1762 and §1767 could only show with sample data:** RavenHouse's verify raised the authorization sheet and it was approved ("it asked for authorization and let me approve it"); Permissions listed it and Revoke worked ("permissions and revoke work! amazing"); Galactica's tile wore its icon once its page had loaded; and "the zkmoney stuff works!". Which of §1767's rows were run was not said.
+
+**Mac half (§1402).** None: the same browser.
+
+## §1770 — A zk.money tag is paid from another network: Across delivers the dollar to the tag's address on Ethereum (second half of §1768's "paying from eth or other network"; amends §1767 item 1 and §1768 item 6: a token picked on Base stays on Base) (user, 2026-11-12: "ok lets do the pay a tag from another network"; and, testing 990: "when sending to zkmoney tag i don't think i have enough eth in my wallet") — BUILT, UNMEASURED on a chain; SEEN on a simulator with the demo's estimate; Across's fee question MEASURED for a recipient that is not the depositor
+
+**Why.** A tag is paid on Ethereum, and its fee there is paid in ETH. Most money here is on Base, and an account with no ETH on Ethereum could not pay a tag at all.
+
+1. **One crossing, the tag as its recipient** (`MoveSentence.tagCrosses`, `Chain.Swap.payee`, `Across.Leg.payee`). With a tag in To, on a network Across carries the dollar from, and a token picked: the one transaction is the crossing (what you send swapped into that network's dollar first, if it is not it), and Across's deposit names the tag's one-time address as the recipient on Ethereum. A relayer pays the tag exactly what Across quoted. The sentence reads "Send 20 USDC to bob.zk.money on Base."
+2. **The account stays the depositor**, so a crossing nobody fills comes back to you, as every crossing does.
+3. **The dollar as itself, or not at all.** A payee is paid Ethereum's USDC with no handler and no message between Across and it; ETH, or a swap on arrival, to a payee is refused in the fee question, in the deposit and in the check (`YourAccountAcross.checked` reads the recipient back from the bytes and takes only the address the leg names).
+4. **The same address at every step.** The quote is asked for that address; the line signs only a quote whose payee is the address To holds; at signing the crossing is quoted again with it and refused if the leg's payee is another.
+5. **The ledger** says "They get" (Across's output, exactly), the fee, and "Through Across · its fee · its time". The deposit's own limits are held on what arrives. It goes alone.
+6. **Activity:** the crossing's one row reads "Sending 19.94 USDC to bob.zk.money", then "Sent …" once the receiving SpokePool says it was filled, or the refund's words. The tag is remembered as paid, leads Recent, and is offered to save, as a tag paid on Ethereum is.
+7. **Setting up:** a token picked on Base (or Robinhood) stays where it is. Only with nothing picked does Send still move to Ethereum.
+
+**Measured (2026-11-12, Across's `suggested-fees`, a made-up depositor and recipient):** 20 USDC from Base to Ethereum for another recipient is quoted: 19.936392 out, about 8 seconds, at least about 0.50 USDC a deposit.
+
+**Seen** (simulator, the demo's account): `-moveSendDraft "20|zac.zk.money"` on Base read "Send 20 USDC to zac.zk.money on Base.", "They get 19.99 USDC", "Fee up to $0.01", "Through Across · 0.06% fee · about 10 seconds" (`zkMoneyPay| from Base | … | min 19988000 USDC`). The figures are the demo's estimate.
+
+**Not seen:** a real quote in the app, the simulation, the transaction, a fill to a one-time address, zk.money sweeping what a relayer paid there (it sweeps what a plain transfer paid; a fill is one), the Activity row, any of it on a phone. The first real one is the user's to tap, small.
+
+**A crossing another phone of the account sent to a payee** is not folded into one row there (`chainCrossing` takes the account or the handler as recipient): it reads as a send to Across.
+
+**Mac half (§1402).** None: the same sentence.

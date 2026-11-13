@@ -131,6 +131,8 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         if aztec {
             controller.addUserScript(WKUserScript(source: relay, injectionTime: .atDocumentStart,
                                                   forMainFrameOnly: true, in: Self.relayWorld))
+            controller.addUserScript(WKUserScript(source: Self.tapClock, injectionTime: .atDocumentStart,
+                                                  forMainFrameOnly: true, in: Self.relayWorld))
         }
         if ethereum {
             controller.addUserScript(WKUserScript(source: BrowserEthereum.script, injectionTime: .atDocumentStart,
@@ -177,6 +179,25 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     }
 
     func goBack() { page.goBack() }
+
+    /// When the person last touched the page, kept in Casberi's own world:
+    /// a real touch only, never one the page's script made up.
+    private static let tapClock = """
+        window.__casberiTapAt = 0;
+        addEventListener('pointerdown', e => { if (e.isTrusted) window.__casberiTapAt = Date.now(); }, { capture: true, passive: true });
+        """
+
+    /// **A CONNECT YOU STARTED SHOWS ITS EMOJI CHECK, KEPT SITE OR NOT (prd
+    /// §1769, user: "ravenouse showed the emojis but connected w/o our app
+    /// showing them").** Whether the person touched the page in the last
+    /// `seconds`: a kept site that connects by itself as its page loads shows
+    /// no grid and is answered for (§1765); one whose Connect you tapped
+    /// shows its grid, so Casberi shows its own to compare.
+    func personTapped(within seconds: Double = 45) async -> Bool {
+        let since = (try? await page.callAsyncJavaScript("return Date.now() - (window.__casberiTapAt || 0)", arguments: [:],
+                                                         in: nil, contentWorld: Self.relayWorld)) as? Double
+        return since.map { $0 < seconds * 1_000 } ?? false
+    }
 
     /// The page again, from the network: the way to try a connect an app
     /// will not offer twice.

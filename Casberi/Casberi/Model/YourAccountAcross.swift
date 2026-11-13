@@ -117,9 +117,11 @@ enum YourAccountAcross {
     /// A swap on arrival (`through`, prd §1566) is priced with its own
     /// message's shape: relayers pay the gas of running it.
     static func feesURL(_ asset: Asset, from: Int, to: Int, amount: String, account: String,
-                        through route: YourAccountSwap.Route? = nil, now: Int = 0) -> URL? {
+                        through route: YourAccountSwap.Route? = nil, payee: String? = nil, now: Int = 0) -> URL? {
         guard carries(asset, from: from, to: to), let input = bridged(asset, on: from),
               let output = bridged(asset, on: to), YourAccountSwap.isPositive(amount) else { return nil }
+        // Someone else is paid the dollar as itself, or not at all (prd §1770).
+        if let payee { guard asset == .dollar, route == nil, SafeABI.word(address: payee) != nil else { return nil } }
         var parts = URLComponents(string: feesEndpoint)
         var items = [URLQueryItem(name: "inputToken", value: input), URLQueryItem(name: "outputToken", value: output),
                      URLQueryItem(name: "originChainId", value: String(from)),
@@ -132,7 +134,7 @@ enum YourAccountAcross {
             guard let message = message(to: to, amount: amount, account: account) else { return nil }
             items += [URLQueryItem(name: "recipient", value: handler), URLQueryItem(name: "message", value: SafeABI.hex(message))]
         } else {
-            items.append(URLQueryItem(name: "recipient", value: account.lowercased()))
+            items.append(URLQueryItem(name: "recipient", value: (payee ?? account).lowercased()))
         }
         parts?.queryItems = items
         return parts?.url
@@ -200,6 +202,12 @@ enum YourAccountAcross {
         /// buys there, through the handler's message. Nil when ETH or the
         /// dollar is what arrives.
         var swap: Arrival? = nil
+        /// **SOMEONE ELSE IS PAID (prd §1770).** The address the dollar is
+        /// delivered to on `to` when that is not the account: a zk.money
+        /// tag's one-time address. The dollar only, arriving as itself: no
+        /// handler, no message, so the fill is a plain transfer to it. The
+        /// account stays the depositor, so a refund is still the account's.
+        var payee: String? = nil
 
         /// Across's whole fee, in millionths of what is sent.
         var feePips: Int {
@@ -326,7 +334,8 @@ enum YourAccountAcross {
               let inAmount = A.amount(leg.inputAmount), let outAmount = A.amount(leg.outputAmount),
               SafeABI.word(address: account) != nil, fees.exclusivity >= 0,
               let note = message(for: leg, account: account) else { return nil }
-        let recipient = viaHandler(leg) ? handler : account
+        if let payee = leg.payee { guard !viaHandler(leg), SafeABI.word(address: payee) != nil else { return nil } }
+        let recipient = viaHandler(leg) ? handler : (leg.payee ?? account)
         return YourAccountSwap.call(depositSignature, [
             .address(account), .address(recipient), .address(input), .address(output),
             inAmount, outAmount, .uint(leg.to), .address(fees.exclusiveRelayer),
@@ -396,11 +405,13 @@ enum YourAccountAcross {
         let note = Array(d[(4 + noteAt + 32)..<(4 + noteAt + 32 + noteLength)])
         // To the handler only with exactly the message that pays the account
         // (ETH's unwrap, or the swap on arrival with the account its fallback).
+        // Someone else (prd §1770): exactly the address the leg names, the
+        // dollar as itself, no message.
         if viaHandler(leg) {
-            guard word(d, 1).flatMap(address) == handler, let want = message(for: leg, account: account),
+            guard leg.payee == nil, word(d, 1).flatMap(address) == handler, let want = message(for: leg, account: account),
                   note == want else { return nil }
         } else {
-            guard word(d, 1).flatMap(address) == me, note.isEmpty else { return nil }
+            guard word(d, 1).flatMap(address) == (leg.payee?.lowercased() ?? me), note.isEmpty else { return nil }
         }
         return (approvals, deposits)
     }
@@ -731,6 +742,10 @@ enum YourAccountAcross {
         /// and the fill's transaction on the receiving network once met.
         var depositId: String?
         var fillTx: String?
+        /// Someone else was paid (prd §1770): their address on `to`, and the
+        /// name it was paid under ("bob.zk.money").
+        var payee: String?
+        var payeeName: String?
     }
 
     private static let crossingsKey = "yourAccount.across.crossings"
@@ -875,6 +890,11 @@ enum YourAccountAcross {
     /// The row's title, by what happened: "USDC arriving on Base", "Swapped
     /// 0.02 ETH for USDC", "Refunded 0.01 WETH on Ethereum".
     static func title(_ c: Crossing) -> String {
+        // Someone else was paid (prd §1770): the row says who, as a send's does.
+        if let name = c.payeeName, c.state != .refunded {
+            let paid = "\(Op.display(c.outputUnits, decimals: c.decimals, places: c.decimals == 6 ? 2 : 6)) \(c.symbol)"
+            return c.state == .waiting ? String(localized: "Sending \(paid) to \(name)") : String(localized: "Sent \(paid) to \(name)")
+        }
         switch c.state {
         case .waiting:
             return String(localized: "\(c.symbol) arriving on \(networkName(c.to))")
@@ -894,10 +914,14 @@ enum YourAccountAcross {
         switch c.state {
         case .waiting where now > c.fillDeadline:
             return String(localized: "Not filled · coming back on \(networkName(c.from))")
+        case .waiting where c.payee != nil:
+            return String(localized: "\(c.sold) from \(networkName(c.from))")
         case .waiting:
             return String(localized: "Swapped \(c.sold) on \(networkName(c.from))")
         case .filled:
             return String(localized: "\(networkName(c.from)) to \(networkName(c.to))")
+        case .refunded where c.payee != nil:
+            return String(localized: "The payment to \(c.payeeName ?? networkName(c.to)) wasn't filled")
         case .refunded:
             return String(localized: "The swap to \(networkName(c.to)) wasn't filled")
         }

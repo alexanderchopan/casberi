@@ -317,10 +317,20 @@ final class AztecEngine: NSObject {
                 answer(.emoji(sessionId: sessionId, host: "", emoji: emoji), yes: false)
                 return
             }
-            // …and its emoji check with it: an app reconnecting by itself
-            // shows no grid to compare with (RavenHouse, measured 2026-11-12).
+            // …and its emoji check with it, when the page connected by itself:
+            // an app reconnecting as it loads shows no grid to compare with
+            // (RavenHouse, measured 2026-11-12). A connect you tapped shows
+            // the page's grid, so Casberi's is shown beside it (prd §1769).
             if AztecAppsStore.shared.remembers(origin: body["origin"] as? String) {
-                answer(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji), yes: true)
+                let ask = AztecBrowserModel.Request.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji)
+                Task { @MainActor in
+                    if await browser.personTapped() {
+                        NSLog("aztecEngine| app | emoji shown | %@", Self.host(body["origin"]))
+                        browser.enqueue(ask)
+                    } else {
+                        self.answer(ask, yes: true)
+                    }
+                }
                 return
             }
             browser.enqueue(.emoji(sessionId: sessionId, host: Self.host(body["origin"]), emoji: emoji))

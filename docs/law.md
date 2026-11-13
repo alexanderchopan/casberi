@@ -152,7 +152,8 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry and refuse a follow (§1273, §1384). It reads both Aztec V5 and V6 deployments (§1692). A tag Send paid is titled "Sent … to <tag>": Send keeps the one-time address and the tag on this phone (§1767).
 - Move's Send pays a `<tag>.zk.money` at a fresh deposit address its ENS resolver proves on chain, asked at pay time, one per payment, never stored; DAI, USDC or USDT on Ethereum, over $0.35, under $5,000; a tag still on V5 is refused by name. No seat: a zk.money passkey cannot be used by another app (§1692).
-- A zk.money tag is a person: a typed tag or `@name` moves Send to Ethereum and picks the dollar you hold; saved tags stand in Send's To list; a tag is paid from any token on Ethereum, swapped into USDC in the same transaction, the tag paid the swap's minimum exactly (§1768); a contact with a tag has Pay, risen from the card's `onDisappear`, never a timer; Contacts' search finds a claimed tag on chain; Again pays the tag, never the spent address; a paid tag not yet saved is offered on the receipt (§1767).
+- A kept Aztec site that connects by itself as its page loads is answered for; a connect the person tapped (a real touch on the page in the last 45 seconds) still shows Casberi's emoji check (§1769, amending §1765).
+- A zk.money tag is a person: a typed tag or `@name` moves Send to Ethereum and picks the dollar you hold; saved tags stand in Send's To list; a tag is paid from any token on Ethereum, swapped into USDC in the same transaction, the tag paid the swap's minimum exactly (§1768); from another network Across delivers the dollar to the tag's address, the account still the depositor, the payee read back from the deposit's bytes before Face ID (§1770); a contact with a tag has Pay, risen from the card's `onDisappear`, never a timer; Contacts' search finds a claimed tag on chain; Again pays the tag, never the spent address; a paid tag not yet saved is offered on the receipt (§1767).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
@@ -247,7 +248,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1946 of 2019 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1948 of 2021 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2191,10 +2192,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1762 — The authorizations you gave Aztec apps are listed in Wallet › Permissions and can be taken back (extends §1760, which…
 - §1763 — An approval sheet says what each call says (extends §1700j's sheet, which named the function alone)
 - §1764 — An app's transaction lands in the Wallet's Activity (extends §1700's Activity, which Aztec apps never reached)
-- §1765 — A connected app connects again without being asked (settles §1757's "Not built"; amends §1700j's Connect and emoji ch…
+- §1765 — A connected app connects again without being asked (settles §1757's "Not built"; amends §1700j's Connect and emoji ch… (amended by §1769)
 - §1766 — NFTs you hold privately on Aztec stand in Holdings (extends §1700 item 4's rows)
 - §1767 — A zk.money tag is a person: Send sets its payment up, Contacts keeps and pays it, Activity names it (extends §1692's…
 - §1768 — A zk.money tag is paid from any token on Ethereum: swapped into USDC in the same transaction (extends §1767 item 1 an…
+- §1769 — A connect you tapped shows Casberi's emoji check, kept site or not
+- §1770 — A zk.money tag is paid from another network: Across delivers the dollar to the tag's address on Ethereum (second half…
 
 ## Dead rulings → what replaced them (generated)
 
