@@ -215,6 +215,58 @@ extension FeedScreen {
         .walletListRow()
     }
 
+    /// **ADD MONEY, THE LAST ROW UNDER PRIVATE (prd §1776, user: "i have a
+    /// hard time getting money into my aztec account", then "'send to your
+    /// private balance' is fine but need a 'add money'").** A verb, so a row
+    /// (§746), last (§995), and it stays whether or not anything is held:
+    /// the empty place's row went once money was in, and the only way back
+    /// was a recipient in Send. The sentence it opens is Send's, unchanged.
+    /// Which balance: the one you have; with both, Send's To list, which
+    /// leads with the two and is told apart by network (§1719).
+    @ViewBuilder
+    var walletAddMoneyRow: some View {
+        if selectedSeat == nil, !walletOnFollowing,
+           selectedWallet.map(YourAccountDemo.isYours) ?? true,
+           PrivateMove.available || Self.aztecTakesMoney {
+            Button { walletAddMoney() } label: {
+                HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                    Image(systemName: "plus")
+                        .dsGlyph(.body)
+                        .foregroundStyle(DS.pickInk)
+                        .frame(width: DSRoomChassis.headGlyph)
+                        .accessibilityHidden(true)
+                    Text("Add money")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: DS.Space.s2)
+                }
+                .walletRowPitch()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .dsHover()
+            .accessibilityHint(Text("Sends to your private balance"))
+            .walletListRow()
+        }
+    }
+
+    /// Whether Send offers your private balance on Aztec: its To list's own
+    /// rule, so the door never promises a row the list will not draw.
+    static var aztecTakesMoney: Bool {
+        (YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable
+    }
+
+    func walletAddMoney() {
+        DSHaptic.selection()
+        switch (PrivateMove.available, Self.aztecTakesMoney) {
+        case (true, true): chrome.moveDraft = MoveSentence.privateDraft()
+        case (false, true): chrome.moveAztec = .deposit
+        default: chrome.movePrivately = .deposit
+        }
+        chrome.moveTray = true
+    }
+
     /// The section's total: the private dollars, as the box counts them; with
     /// none to count (test money, §949), one token's quantity, else nothing.
     private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double], plus aztec: Double = 0) -> String? {

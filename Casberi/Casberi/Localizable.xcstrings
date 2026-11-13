@@ -29624,34 +29624,6 @@
         }
       }
     },
-    "%lld percent" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld por ciento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld パーセント"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld퍼센트"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "百分之 %lld"
-          }
-        }
-      }
-    },
     "%lld percent to the next milestone." : {
       "localizations" : {
         "es" : {
@@ -49404,6 +49376,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加密钥"
+          }
+        }
+      }
+    },
+    "Add money" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir dinero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "お金を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "돈 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加资金"
           }
         }
       }
@@ -102025,34 +102025,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用方法"
-          }
-        }
-      }
-    },
-    "How much of what you have" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cuánto de lo que tienes"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "持っている分のどれだけか"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "가진 것 중 얼마나"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你所持有的多少"
           }
         }
       }

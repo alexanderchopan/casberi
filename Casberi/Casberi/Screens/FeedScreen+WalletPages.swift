@@ -529,6 +529,8 @@ extension FeedScreen {
             walletPrivateRows
             // Your Aztec account's holdings, after 0xBow's (prd §1700 item 4).
             walletAztecRows
+            // The section's one verb, last (prd §1776).
+            walletAddMoneyRow
             if positions > 0 {
                 walletDoor(.positions)
                 ForEach(Array(walletPositionPreview.prefix(Self.holdingsPreviewCount)), id: \.name) { row in

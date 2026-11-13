@@ -17,7 +17,7 @@ import UIKit
 /// narrows them; nothing slides over the page. One grey line says the rest:
 /// the other unit (tap it to type in it), what you have, the fee.
 ///
-/// The foot holds the slider (a share of what you have) and two words: the
+/// The foot holds two words: the
 /// verb, which signs, and **Add**, which keeps the sentence as a line at the
 /// top and starts the next one in the same transaction — keeping what it is
 /// for or who it is to, and the network, so three tokens for one, or several
@@ -587,6 +587,18 @@ struct MoveSentence: View {
         /// Again (prd §1752): the token a sent row names, by its symbol; it
         /// is matched to one you hold once the holdings land.
         var symbol: String? = nil
+        /// The blank that stands open when the sentence appears: Add money's
+        /// To, where your private balances lead (prd §1776).
+        var opens: Blank? = nil
+    }
+
+    /// **ADD MONEY (prd §1776).** Send with To open, for someone with two
+    /// private balances: the list leads with both, told apart by network
+    /// (§1719), and one tap picks. With one balance the door goes straight
+    /// to its sentence and no draft is written.
+    static func privateDraft() -> Draft {
+        Draft(verb: .send, network: Op.ethereum, networkPicked: true, amount: "", inDollars: true,
+              withID: nil, buy: nil, buyOn: nil, to: "", at: Date(), opens: .to)
     }
 
     /// **PAY A zk.money REQUEST (prd §1745).** The saved row Pay opened Send
@@ -806,6 +818,7 @@ struct MoveSentence: View {
         amount = d.amount
         to = d.to
         payingRequest = d.request
+        if let which = d.opens { open = which }
     }
 
     /// "20.5 DAI asked, plus zk.money's $0.35 fee": said while the sentence
@@ -2748,7 +2761,7 @@ struct MoveSentence: View {
             // monospaced one ate the gap before the token ("100USDC").
             .monospacedDigit()
             // Not typing, the figure is drawn over the field so its digits
-            // roll as the slider moves (§1438b); the field still takes the tap.
+            // roll as an amount row is picked (§1438b); the field still takes the tap.
             .foregroundStyle(typing || amount.isEmpty ? DS.pickInk : .clear)
             .overlay(alignment: .leading) {
                 if !typing, !amount.isEmpty {
@@ -3316,16 +3329,16 @@ struct MoveSentence: View {
             }
         } else if let with {
             // One line of small print (§1442f): the other unit and the fee.
-            // The exchange's credit is the foot's, and the slider, the amount's own
-            // control, stands under it here rather than stranded at the foot.
+            // The exchange's credit is the foot's, and the amount's own rows
+            // stand under it here rather than stranded at the foot.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 if verb == .send, let lookup { lookupLine(lookup) }
                 if let words = requestFeeWarning {
                     Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // **MORE THAN YOU HAVE, WITH THE FIX (prd §1586):** the slider
-                // stays, and the note is a door to all of it.
+                // **MORE THAN YOU HAVE, WITH THE FIX (prd §1586):** the amount's
+                // rows stay, and the note is a door to all of it.
                 if verb == .send || verb == .swap, over {
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         Text("More than you have").dsText(.body17).foregroundStyle(DS.attentionInk)
@@ -3343,16 +3356,11 @@ struct MoveSentence: View {
                         .disabled(stage != nil)
                     }
                 }
-                // The slider and the $ · token switch work on the line being
-                // filled, so they share a row under the sentence (§1442g),
-                // over the ledger (prd §1754).
-                if verb == .send || verb == .swap, receipt == nil {
+                // The amount's rows and the $ · token switch work on the line
+                // being filled, under the sentence (§1442g), over the ledger
+                // (prd §1754); every verb's, and no slider anywhere (prd §1776).
+                if verb != .receive, receipt == nil {
                     amountPicks(with)
-                } else if verb != .receive, receipt == nil {
-                    HStack(spacing: DS.Space.s4) {
-                        DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
-                        unitSwitch
-                    }
                 }
                 // **ONE LEDGER (prd §1754, retiring §1509's "$25.00 · Fee up
                 // to $0.01 · Details"):** a grey name and its figure, a row
@@ -3484,7 +3492,8 @@ struct MoveSentence: View {
     }
 
     /// **NO SLIDER (prd §1754, user, shown four ways to set the amount:
-    /// "probably D no slider").** The amount's choices are rows under the
+    /// "probably D no slider"; every verb and the limit order since prd §1776,
+    /// user: "no sliders", "Yes, everywhere").** The amount's choices are rows under the
     /// sentence, as every other word's are: the round dollar amounts you can
     /// cover, then Half and All with what each comes to; the one that is the
     /// amount wears the pick's pink. A tap on the figure still types any
@@ -4999,11 +5008,9 @@ struct MoveSentence: View {
                     }
                     return .handled
                 })
+            // The amount's rows, as every other sentence's (prd §1776).
             if receipt == nil {
-                HStack(spacing: DS.Space.s4) {
-                    DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
-                    unitSwitch
-                }
+                amountPicks(with)
             }
         }
         .fixedSize(horizontal: false, vertical: true)

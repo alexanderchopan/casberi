@@ -577,7 +577,7 @@ enum YourAccountOp {
         return s.isEmpty ? "0" : String(s)
     }
 
-    /// `percent` of `units`, rounded down: the slider's quarter, half, all.
+    /// `percent` of `units`, rounded down: Half, All.
     static func share(_ units: String, percent: Int) -> String {
         let p = min(max(percent, 0), 100)
         guard p < 100 else { return units.drop { $0 == "0" }.isEmpty ? "0" : String(units.drop { $0 == "0" }) }

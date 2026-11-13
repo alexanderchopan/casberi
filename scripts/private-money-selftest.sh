@@ -1082,4 +1082,22 @@ use "$FRESHM" 'switch FreshAddress.lookOrder(eth: balance, usdc: usdc, usdcPool:
 awk '/static func move\(account: String\) async throws -> Move \{/,/^    }$/' "Casberi/Casberi/Model/RoundUpsPot+Chain.swift" | grep -q 'PrivateMove.available && PrivateOnEthereum.owner != nil' \
     || { echo "✗ Round-ups moves where private money is not available (finding 7, prd §1690)"; exit 1; }
 echo "  ok   the review's fixes in use: kept before sent, followed past two minutes, reserved, the gas paid once, ETH apart from USDC, never public"
+# Add money (prd §1776): the Private section's one verb, last, and it stays;
+# which balance is the one you have, or Send's To list when you have both.
+use "$HOLD" 'Text("Add money")' "Holdings' Private lost its Add money row (prd §1776)"
+use "$HOLD" 'PrivateMove.available || Self.aztecTakesMoney {' "Add money's gate changed: it stands wherever a private balance takes money, held or not (prd §1776)"
+use "$HOLD" 'case (true, true): chrome.moveDraft = MoveSentence.privateDraft()' "Add money picks a balance for someone who has two (prd §1776, §1719)"
+use "$HOLD" 'case (false, true): chrome.moveAztec = .deposit' "Add money with Aztec alone no longer opens its sentence (prd §1776)"
+use "$HOLD" '(YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable' "Add money's Aztec rule left the To list's own (prd §1776)"
+use "$SENT" '(YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable' "Send's To list changed when it offers Aztec: Add money's rule must follow (prd §1776)"
+use "$SENT" 'if let which = d.opens { open = which }' "a draft no longer opens its blank: Add money lands on a closed sentence (prd §1776)"
+use "$SENT" 'withID: nil, buy: nil, buyOn: nil, to: "", at: Date(), opens: .to)' "Add money's draft no longer opens To (prd §1776)"
+awk '/^            walletAztecRows$/{a=NR} /^            walletAddMoneyRow$/{m=NR} END{exit !(a && m && a<m)}' "$PAGES" \
+    || { echo "✗ Add money is not the Private section's last row (prd §1776, §995)"; exit 1; }
+# No slider anywhere in Move (prd §1776, finishing §1754).
+[[ ! -e Casberi/Casberi/Design/DSShareSlider.swift ]] || { echo "✗ Move's slider is back (prd §1776)"; exit 1; }
+! grep -rqE 'DSShareSlider|[^A-Za-z]Slider\(' Casberi/Casberi/Screens Casberi/Casberi/Design Casberi/Casberi/Shell \
+    || { echo "✗ a slider is drawn again (prd §1776: no sliders)"; exit 1; }
+use "$SENT" 'if verb != .receive, receipt == nil {' "a verb's amount is no longer its rows (prd §1776)"
+echo "  ok   Add money: the last row under Private, the balance you have or the two to pick from; no slider anywhere"
 echo "  ok   74 mutations"

@@ -157,6 +157,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
 - Move's Sweep swaps every token under $1 (or $5, round-ups' two steps) on one network for ETH, in one transaction and one Face ID: never ETH, an unpriced token, one not on Uniswap's list unless a swap here bought it, round-ups' change, or a swap returning under half; ten at most (§1537, §1542).
+- Private in Holdings ends in Add money, a row that stays whether or not anything is held; it opens Send to the private balance you have, or Send's To list when you have two (§1776, §1719). Move draws no slider: an amount is typed or picked from its rows, $20 · $50 · $100, Half, All (§1754, §1776).
 - Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before the key signs (Face ID itself is asked at the tap, §1687). The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
 - Round-ups round to the next $1 or $5, picked in the walk and the tray; the walk says "Save your change, earn interest, privately." (§1741). Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every send's change to the next dollar goes to Round-ups (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
@@ -248,7 +249,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1953 of 2026 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1953 of 2027 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1822,7 +1823,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
 - §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and… (amended by §1480)
 - §1437 — Revoke in the app: your account takes back what it let others spend, in Wallet › Security (builds §1436 item 2; the p…
-- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… (amended by §1547) [+3 sub-entries]
+- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… (amended by §1547, §1776) [+3 sub-entries]
 - §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) [+1 sub-entries]
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
@@ -1940,7 +1941,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698, §1700f)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
 - §1556 — A crossing's refund is listed where it came back, Details' swap row fits its line, and Across's exact output has no ≈
-- §1557 — Move's slider fills pink under a white thumb, the thumb sits under the finger, and the quarters are dots in the track… (part superseded by §1754)
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567, §1719)
@@ -2099,7 +2099,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
 - §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700ac, §1700k, §1720)
-- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720)
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720, §1776)
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k, §1700p)
@@ -2141,7 +2141,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field (amended by §1735)
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
-- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720)
+- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720, §1776)
 - §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private…
 - §1720 — Into your private balance on Aztec from your co-signer: when Shield scores your co-signer and not your account, Move'…
 - §1721 — Railgun in Holdings and Move, in every build: its tokens in the one Private block, moving in by the token you picked,… (amended by §1727)
@@ -2181,7 +2181,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
 - §1753 — Your Aztec account's engine starts over when its store stops answering
-- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755)
+- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776)
 - §1755 — Move's act is a pink card
 - §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view
 - §1757 — The Aztec apps you have connected stand as tiles beside the directory (extends §1700m; keeps §1700c's "no list of app… (amended by §1758)
@@ -2203,12 +2203,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1773 — Send's To reads your contacts, and lists no contract or key (extends §1752's To list, which read the address book alone)
 - §1774 — A transfer's face opens the person, when Contacts knows more of them than the address
 - §1775 — Save on a transfer asks who the address is: someone you have, or a new name
+- §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1098→§1738 · §1138→§1612 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1314→§1612 · §1317→§1612 · §1362→§1367 · §1366→§1367
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1098→§1738 · §1138→§1612 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1314→§1612 · §1317→§1612 · §1362→§1367 · §1366→§1367 · §1557→§1776
 
 ## Renumbered (generated)
 
