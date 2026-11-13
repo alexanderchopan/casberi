@@ -234,6 +234,10 @@ struct MoveSentence: View {
     @State private var slot = 0
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
+    /// The swap a zk.money tag's payment makes first (prd §1768): what you
+    /// send, into USDC, in the same transaction.
+    @State private var tagSwap: YourAccountSwap.Quote?
+    @State private var tagSwapNote: String?
     /// Whose words `quoteNote` is, drawn as its mark (§1442n), when they are
     /// a service's rather than the app's.
     @State private var quoteFrom: String?
@@ -1020,6 +1024,12 @@ struct MoveSentence: View {
             // §1438b): it warns, and the verb takes a second tap.
             guard let r = resolved, stands(r), !zkMoneyUsed.contains(r.address.lowercased()),
                   zkMoneyRefusal == nil else { return nil }
+            // A tag paid from a token a deposit does not take (prd §1768):
+            // the line is the swap into USDC, and `tagTail` pays the tag.
+            if tagConverts {
+                guard let q = tagSwap, q.sellAmount == units else { return nil }
+                return .swap(Chain.Swap(network: network, sell: with.token, buy: Op.dollar(on: network), amount: units, quote: q))
+            }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
         case .receive, .buy, .sweep, .deposit, .lend:
             return nil
@@ -1034,7 +1044,47 @@ struct MoveSentence: View {
         return WalletWatch.sameAddress(text, r.address) || r.name?.caseInsensitiveCompare(text) == .orderedSame
     }
 
-    private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) }
+    private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) + (tagTail.map { [$0] } ?? []) }
+
+    /// **PAY A TAG FROM ANY TOKEN ON ETHEREUM (prd §1768, user: "and or
+    /// paying from eth or other network?").** A deposit takes DAI, USDC or
+    /// USDT; ETH, or any other token Swap sells on Ethereum, was refused.
+    /// Now the one transaction swaps it into USDC and pays the tag: the swap
+    /// first, then exactly the USDC the swap must return (its minimum) to the
+    /// tag's address. What the pool pays over that minimum stays yours, as
+    /// USDC. It goes alone: no kept lines, and Add is refused.
+    private var tagConverts: Bool {
+        guard verb == .send, paysZkMoney, items.isEmpty, network == Op.ethereum, YourAccountSwap.supported(network),
+              let with else { return false }
+        return !ZkMoneyWire.payTokens.contains(with.id)
+    }
+
+    /// The payment a converted tag payment ends with.
+    private var tagTail: Chain.Item? {
+        guard tagConverts, pendingItem != nil, let q = tagSwap, let r = resolved else { return nil }
+        return .send(Op.Payment(network: network, token: Op.dollar(on: network), amount: q.minimumBuy, to: r.address, toName: r.name))
+    }
+
+    private var tagSwapKey: String {
+        guard tagConverts, let with else { return "" }
+        return "\(with.id)|\(units ?? "")|\(resolved?.address ?? "")"
+    }
+
+    private func requoteTag() async {
+        tagSwap = nil
+        tagSwapNote = nil
+        guard tagConverts, let with, let units, units != "0", !over else { return }
+        try? await Task.sleep(for: .milliseconds(500))
+        guard !Task.isCancelled else { return }
+        do {
+            let q = try await Chain.swapQuote(network, sell: with.token, buy: Op.dollar(on: network), amount: units, account: account)
+            guard !Task.isCancelled else { return }
+            withAnimation(DS.Motion.standard) { tagSwap = q }
+            NSLog("zkMoneyPay| swapped first | %@ %@ | min %@ USDC | calls=%d", units, with.token.symbol, q.minimumBuy, q.calls.count)
+        } catch let failure as Chain.Failure {
+            if !Task.isCancelled { tagSwapNote = failure.message }
+        } catch {}
+    }
 
     /// To holds a deposit address zk.money's resolver proved for a tag.
     private var paysZkMoney: Bool {
@@ -1046,6 +1096,12 @@ struct MoveSentence: View {
     /// picked and they pass.
     private var zkMoneyRefusal: String? {
         guard paysZkMoney, let with else { return nil }
+        // Swapped into USDC first (prd §1768): the limits are the deposit's
+        // own, checked on what the swap must return.
+        if tagConverts {
+            let usd = tagSwap.map { Op.dollars($0.minimumBuy, decimals: 6, price: 1) }
+            return ZkMoneyWire.payRefusal(chainId: network.chainId, token: ZkMoneyWire.usdc, usd: usd)
+        }
         // The three tokens it takes are dollars: with no price read, a token
         // is a dollar, so the cap never goes unchecked.
         let usd = units.map { Op.dollars($0, decimals: with.token.decimals, price: with.price ?? 1) }
@@ -1071,10 +1127,15 @@ struct MoveSentence: View {
             if let symbol = draftSymbol?.uppercased(), ["USDC", "USDT", "DAI"].contains(symbol) { return }
             if let id = draftWithID, ZkMoneyWire.payTokens.contains(id) { return }
         }
-        let fits = network == Op.ethereum && (with.map { ZkMoneyWire.payTokens.contains($0.id) } ?? false)
+        // Any token picked on Ethereum stands: one a deposit takes is sent
+        // as it is, another is swapped into USDC first (prd §1768).
+        let fits = network == Op.ethereum && with != nil
         guard !fits else { return }
         let onEthereum = heldBy[Op.ethereum.chainId] ?? []
+        // The dollar you hold; with none, the most of anything you hold
+        // there, which the same transaction swaps.
         let pick = ZkMoneyWire.payOrder.lazy.compactMap { id in onEthereum.first { $0.id == id && self.left($0) != "0" } }.first
+            ?? onEthereum.filter { self.left($0) != "0" }.max { ($0.usd ?? 0) < ($1.usd ?? 0) }
         let dollars = inDollars || ["USDC", "USDT", "DAI"].contains(with?.token.symbol.uppercased() ?? "")
         if network != Op.ethereum {
             network = Op.ethereum
@@ -1085,7 +1146,11 @@ struct MoveSentence: View {
         networkPicked = true
         if !dollars { amount = "" }
         with = pick
-        inDollars = pick == nil
+        // An amount that stood was dollars; a token that is not a dollar
+        // keeps it as dollars, or loses it where the token has no price.
+        let pickIsDollar = pick.map { ZkMoneyWire.payTokens.contains($0.id) } ?? false
+        if pick != nil, !pickIsDollar, pick?.price == nil { amount = "" }
+        inDollars = pick == nil || (!pickIsDollar && pick?.price != nil)
         // The list of what you hold opened because nothing was picked
         // (§1534); with the dollar picked it steps aside for the amount.
         if pick != nil, open == .with { open = nil }
@@ -1476,6 +1541,7 @@ struct MoveSentence: View {
             if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
         .task(id: quoteKey) { await requote() }
+        .task(id: tagSwapKey) { await requoteTag() }
         .task(id: limitKey) { await readLimitPrices() }
         .task(id: orderShown?.uid) { await followOrder() }
         // What the account is on this network, read before the tap (prd §1602).
@@ -3263,6 +3329,7 @@ struct MoveSentence: View {
         if verb == .send {
             if malformed { return String(localized: "Check the address") }
             if let zkMoneyRefusal { return zkMoneyRefusal }
+            if tagConverts, let tagSwapNote { return tagSwapNote }
         }
         // What signing would refuse, said before the tap: a fee the account
         // cannot pay, a node that would not price it (prd §1509).
@@ -3306,6 +3373,12 @@ struct MoveSentence: View {
         }
         if verb == .send {
             if let words = requestPrint { rows.append(LedgerRow(id: "request", name: words)) }
+            // Swapped into USDC first (prd §1768): what reaches the tag,
+            // exactly, before zk.money's own fee.
+            if tagConverts, let q = tagSwap, pendingItem != nil {
+                rows.append(LedgerRow(id: "tagGets", name: String(localized: "They get"),
+                                      value: Self.figure(q.minimumBuy, decimals: 6) + " USDC"))
+            }
             if peopleCount > 1 { rows.append(LedgerRow(id: "people", name: String(localized: "To"), value: String(localized: "\(peopleCount) people"))) }
         }
         if verb == .buy {
@@ -5343,6 +5416,9 @@ struct MoveSentence: View {
         if limiting { return String(localized: "Place order") }
         // A warning makes it a second tap (prd §1509 item 2).
         if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
+        // A tag paid from another token is one send to the person, whatever
+        // it takes to make (prd §1768).
+        if tagConverts { return title(.send) }
         let batch = all
         let swaps = batch.filter { if case .swap = $0 { true } else { false } }.count
         let kind: Verb? = swaps == batch.count ? .swap : swaps == 0 ? .send : nil
@@ -5412,6 +5488,10 @@ struct MoveSentence: View {
     private func add() {
         if limiting {
             say(String(localized: "An order goes alone"))
+            return
+        }
+        if tagConverts {
+            say(String(localized: "A tag paid from another token goes alone"))
             return
         }
         guard let item = pendingItem else {

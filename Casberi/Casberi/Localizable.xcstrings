@@ -589,6 +589,34 @@
         }
       }
     },
+    "A tag paid from another token goes alone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un tag pagado con otro token va solo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のトークンで支払うタグは単独で送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 토큰으로 결제하는 태그는 단독으로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用其他代币支付的标签需单独发送"
+          }
+        }
+      }
+    },
     "Again" : {
       "localizations" : {
         "es" : {
@@ -194038,6 +194066,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "不一致"
+          }
+        }
+      }
+    },
+    "They get" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相手の受取額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "상대가 받는 금액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对方收到"
           }
         }
       }

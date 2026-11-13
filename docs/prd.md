@@ -72359,3 +72359,22 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Hooks.** `-tagSave "<tag>[:<name>][,…]"|clear`, `-tagPaid "<address>:<tag>[,…]"`, and `-contactsQuery "<words>"` with `-openAddresses YES`.
 
 **Mac half (§1402).** None of its own: Send's sentence and the Contacts page are the same views on the Mac. The card's Pay was not seen there.
+
+## §1768 — A zk.money tag is paid from any token on Ethereum: swapped into USDC in the same transaction (extends §1767 item 1 and §1692's "DAI, USDC or USDT"; first half of the user's "and or paying from eth or other network?") (user, 2026-11-12: "well why wouldn't we do the holding zkmoney dollars? and or paying from eth or other network?") — BUILT, UNMEASURED on a chain; SEEN on a simulator with the demo's account and the demo's estimate only. NOT built: paying from another network
+
+**Why.** A deposit takes DAI, USDC or USDT. Someone holding ETH on Ethereum was told "zk.money takes DAI, USDC or USDT on Ethereum" and had to swap first by hand.
+
+1. **One transaction, two steps** (`MoveSentence.tagConverts`, `tagTail`). With a tag in To, on Ethereum, and a token picked that a deposit does not take and Swap sells: the swap into USDC, then a send of USDC to the tag's one-time address. The sentence still reads "Send 0.01 ETH to bob.zk.money on Ethereum." and the slab says Send.
+2. **The tag is paid the swap's minimum, exactly.** The send is for `minimumBuy`, the least the swap may return before it is refused, so the two cannot disagree: a pool that moved pays the tag the same amount or the whole transaction is refused before Face ID. What the pool pays over the minimum stays in your account as USDC. A send of the quote would fail on any move; this is `zkmoney-selftest.sh`'s check.
+3. **"They get" in the ledger** says that USDC figure, before zk.money's own $0.35.
+4. **The deposit's limits are held on that figure** (`zkMoneyRefusal`): over the fee, under $5,000.
+5. **It goes alone.** No kept lines beside it, and Add says "A tag paid from another token goes alone".
+6. **Setting up (amends §1767 item 1):** a token already picked on Ethereum stands, whatever it is. Coming from another network, Send picks the dollar you hold on Ethereum and, with none, the most of anything you hold there; an amount that stood in dollars stays in dollars.
+
+**Seen** (simulator, 2026-11-12, the demo's account): `-moveSendDraft "0.01|zac.zk.money|ETH@Ethereum"` read "Send 0.01 ETH to zac.zk.money on Ethereum.", "They get 38.12 USDC", the total, and a live slab (`zkMoneyPay| swapped first | … | min 38115000 USDC`). The figure is the demo's estimate, not a pool's.
+
+**Not seen:** a pool's quote for it, the simulation before Face ID, the transaction, its Activity rows (a swap, then "Sent … USDC to <tag>"), any of it on a phone. The first real one is the user's to tap.
+
+**Not built:** from another network (Across delivering USDC to the tag's address on Ethereum). Across's deposit, its fee quote and the Wallet's reader of a crossing each take the account as the recipient today (`YourAccountAcross`), and a fill to a one-time address is unproven.
+
+**Mac half (§1402).** None: the same sentence.

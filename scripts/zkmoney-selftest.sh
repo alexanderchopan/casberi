@@ -629,7 +629,7 @@ ING="Casberi/Casberi/Model/WalletIngest.swift"
 PEOPLE="Casberi/Casberi/Screens/AddressesScreen.swift"
 awk '/private func setUpTagPayment\(\) \{/,/^    }/' "$SEND" > "$TMP/setup.txt"
 grep -q 'guard verb == .send, payingRequest == nil else { return }' "$TMP/setup.txt" \
-  && grep -q 'let fits = network == Op.ethereum && (with.map { ZkMoneyWire.payTokens.contains($0.id) } ?? false)' "$TMP/setup.txt" \
+  && grep -q 'let fits = network == Op.ethereum && with != nil' "$TMP/setup.txt" \
   && grep -q 'let pick = ZkMoneyWire.payOrder.lazy.compactMap' "$TMP/setup.txt" \
   && grep -q 'if !dollars { amount = "" }' "$TMP/setup.txt" \
   || { echo "✗ a typed tag no longer sets up its payment, or it overwrites a request's or a token a deposit takes"; exit 1; }
@@ -656,6 +656,26 @@ awk '/private func door\(for identity: Identity\) -> \(\(\) -> Void\)\? \{/,/^  
 grep -q 'paying = tag' "$TMP/door.txt" && ! grep -q 'chrome.moveTray' "$TMP/door.txt" \
   && awk '/\.onDisappear \{/{d=NR} /guard let tag = paying else \{ return \}/{g=NR} /chrome.moveDraft = MoveSentence.sendDraft\(to: tag, on: YourAccountOp.ethereum\)/{m=NR} END{exit !(d && g && m && d<g && g<m)}' "$PEOPLE" \
   || { echo "✗ a saved tag has no Pay door, or Move is raised while the card is still closing (a crash)"; exit 1; }
+
+# A tag paid from another token (prd §1768), read. The tail must pay the
+# swap's MINIMUM, never its quote: paying the quote fails the whole
+# transaction whenever the pool moves a hair, and paying more than the swap
+# returned is not possible. The limits are the deposit's, on that minimum; a
+# stale quote for another amount must not sign; it goes alone.
+awk '/private var tagConverts: Bool \{/,/^    }/' "$SEND" > "$TMP/converts.txt"
+grep -q 'guard verb == .send, paysZkMoney, items.isEmpty, network == Op.ethereum, YourAccountSwap.supported(network),' "$TMP/converts.txt" \
+  && grep -q 'return !ZkMoneyWire.payTokens.contains(with.id)' "$TMP/converts.txt" \
+  || { echo "✗ a tag is swapped for on another network, beside kept lines, or when the token is one a deposit takes"; exit 1; }
+awk '/private var tagTail: Chain.Item\? \{/,/^    }/' "$SEND" \
+  | grep -q 'amount: q.minimumBuy, to: r.address, toName: r.name' \
+  || { echo "✗ a converted tag payment no longer pays the swap's minimum to the tag's address"; exit 1; }
+grep -q 'guard let q = tagSwap, q.sellAmount == units else { return nil }' "$SEND" \
+  || { echo "✗ a converted tag payment signs a quote for another amount"; exit 1; }
+awk '/private var zkMoneyRefusal: String\? \{/,/^    }/' "$SEND" \
+  | grep -q 'let usd = tagSwap.map { Op.dollars($0.minimumBuy, decimals: 6, price: 1) }' \
+  || { echo "✗ a converted tag payment is not held to the deposit's fee and cap"; exit 1; }
+awk '/private func add\(\) \{/,/^    }/' "$SEND" | grep -q 'if tagConverts {' \
+  || { echo "✗ a converted tag payment can be added to a batch"; exit 1; }
 
 # The resolver is asked of ENS before each lookup (prd §1750), and the lookup
 # must come from the one it names: the pin alone went stale in eight days.
