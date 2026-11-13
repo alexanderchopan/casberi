@@ -46,7 +46,7 @@ struct WalletPermissionsFigure: View {
             // What would fill it, empty (§769): the pack's own drawing, the
             // short state on it.
             WalletScopeEmptyFigure(section: .permissions, padded: false,
-                                   words: aztecGrants > 0 ? String(localized: "\(aztecGrants) to Aztec apps") : nil)
+                                   headline: aztecGrants > 0 ? String(localized: "\(aztecGrants) to Aztec apps") : nil)
         } else {
             let disc = PermissionsPack.disc(pieces, acting: acting, held: held)
             let inner = PermissionsPack.inner(pieces, disc: disc)
