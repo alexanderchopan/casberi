@@ -484,6 +484,9 @@ struct MoveSentence: View {
         /// Addresses this landed send paid that have no name yet: the
         /// receipt offers to name each (prd §1586).
         var names: [String] = []
+        /// The zk.money tags this send paid that are not yet a contact
+        /// (prd §1767): each gets a Save row, as an unnamed address gets Name.
+        var tags: [String] = []
         /// Which move this receipt is: two alike sentences are two receipts,
         /// and a watch writes only on its own.
         var id = UUID()
@@ -519,6 +522,26 @@ struct MoveSentence: View {
     }
 
     /// The addresses a batch sent to that your book has no name for.
+    /// The tags a batch paid that are not saved contacts yet, as `bob.zk.money`.
+    static func unsavedTags(_ batch: [Chain.Item]) -> [String] {
+        var out: [String] = []
+        for item in batch {
+            guard case .send(let p) = item, let bare = p.toName.flatMap({ ZkMoneyWire.tag($0) }) else { continue }
+            let tag = ZkMoneyWire.display(bare)
+            if !out.contains(tag), !ContactBook.shared.has(Identity.key(.zkMoney, tag)) { out.append(tag) }
+        }
+        return out
+    }
+
+    /// The tags a batch paid and the one-time address each was paid at, for
+    /// Activity to name the person (prd §1767).
+    static func paidTags(_ batch: [Chain.Item]) -> [(address: String, tag: String)] {
+        batch.compactMap { item in
+            guard case .send(let p) = item, let name = p.toName, ZkMoneyWire.tag(name) != nil else { return nil }
+            return (p.to, name)
+        }
+    }
+
     static func unnamed(_ batch: [Chain.Item]) -> [String] {
         var out: [String] = []
         for item in batch {
@@ -726,6 +749,13 @@ struct MoveSentence: View {
     /// The other side of a wallet transfer you could send to: an address,
     /// not yours, not flagged, with an account on this phone to send from.
     static func sendableCounterparty(_ thing: Thing) -> String? {
+        // **A TAG YOU PAID IS SOMEONE TO PAY AGAIN (prd §1767).** The row
+        // went to a one-time address nobody may send to twice, so the door
+        // names the tag, and Send resolves a fresh address for it.
+        if thing.source == "Wallet", !thing.isFlagged, thing.transferDirection == "sent",
+           YourAccountDemo.shownAddress != nil, let tag = ZkMoney.paidTag(at: thing.counterpartyAddress ?? "") {
+            return tag
+        }
         // A plain transfer only: a swap's router, an approval's spender or a
         // grant's contract is a counterparty too, and money sent there is lost.
         guard thing.source == "Wallet", !thing.isFlagged, YourAccountDemo.shownAddress != nil,
@@ -1024,6 +1054,44 @@ struct MoveSentence: View {
 
     /// The deposit addresses `lines` pay are spent: To asks for a fresh one
     /// if it holds one of them.
+    ///
+    /// **A TYPED TAG SETS UP ITS OWN PAYMENT (prd §1767).** A tag is paid in
+    /// DAI, USDC or USDT on Ethereum and nowhere else. A pasted request moved
+    /// Send there and picked the dollar you hold (§1749); a typed tag left
+    /// whatever stood, Base's USDC by default, and then refused it. Now a
+    /// tag that resolves does the same: Ethereum, the dollar you hold (USDC,
+    /// then DAI, then USDT). Only when what stands could not pay it, so a
+    /// token you picked that a deposit takes is left alone; an amount in
+    /// dollars or in a dollar token stands, any other is cleared.
+    private func setUpTagPayment() {
+        // A request Pay wrote has set itself up (§1749), and a draft whose
+        // own dollar is still being matched to a holding (Again) keeps it.
+        guard verb == .send, payingRequest == nil else { return }
+        if network == Op.ethereum {
+            if let symbol = draftSymbol?.uppercased(), ["USDC", "USDT", "DAI"].contains(symbol) { return }
+            if let id = draftWithID, ZkMoneyWire.payTokens.contains(id) { return }
+        }
+        let fits = network == Op.ethereum && (with.map { ZkMoneyWire.payTokens.contains($0.id) } ?? false)
+        guard !fits else { return }
+        let onEthereum = heldBy[Op.ethereum.chainId] ?? []
+        let pick = ZkMoneyWire.payOrder.lazy.compactMap { id in onEthereum.first { $0.id == id && self.left($0) != "0" } }.first
+        let dollars = inDollars || ["USDC", "USDT", "DAI"].contains(with?.token.symbol.uppercased() ?? "")
+        if network != Op.ethereum {
+            network = Op.ethereum
+            buy = nil
+            buyOn = nil
+            quote = nil
+        }
+        networkPicked = true
+        if !dollars { amount = "" }
+        with = pick
+        inDollars = pick == nil
+        // The list of what you hold opened because nothing was picked
+        // (§1534); with the dollar picked it steps aside for the amount.
+        if pick != nil, open == .with { open = nil }
+        NSLog("zkMoneyPay| tag set up | %@", pick?.token.symbol ?? "no token held")
+    }
+
     private func spendZkMoney(_ lines: [Chain.Item]) {
         let paid = lines.compactMap { item -> String? in
             if case .send(let p) = item, zkMoneyDeposits.contains(p.to.lowercased()) { return p.to.lowercased() }
@@ -2975,6 +3043,19 @@ struct MoveSentence: View {
                     }
                     .transition(.opacity)
                 }
+                // A tag you paid and have not saved: one tap keeps it as a
+                // contact, under the tag's own name (prd §1767). Contacts
+                // renames it.
+                ForEach(receipt.tags, id: \.self) { tag in
+                    DSDoorRow(icon: "person.crop.circle.badge.plus", title: Text("Save \(tag)")) {
+                        let name = tag
+                        ContactBook.shared.save(Identity.make(.zkMoney, tag), name: name)
+                        withAnimation(DS.Motion.standard) { self.receipt?.tags.removeAll { $0 == tag } }
+                        DSHaptic.success()
+                        say(String(localized: "Saved \(name)"))
+                    }
+                    .transition(.opacity)
+                }
             }
         } else if verb == .deposit {
             depositLine
@@ -4022,7 +4103,9 @@ struct MoveSentence: View {
                 ForEach(recent, id: \.self) { entry in
                     if ZkMoneyWire.tag(entry) != nil {
                         // A tag is resolved as a typed one is: To looks it up.
-                        listRow(entry, sub: "zk.money", mark: entry) {
+                        // One you saved wears the name you gave it (prd §1767).
+                        let saved = ContactBook.shared.name(for: Identity.key(.zkMoney, entry))
+                        listRow(saved ?? entry, sub: saved == nil ? "zk.money" : entry, mark: entry) {
                             to = entry
                             pick {}
                         }
@@ -4078,8 +4161,19 @@ struct MoveSentence: View {
             }
             // Your book under its own word once Recent stands over it, so no
             // row of the book reads as someone you just paid.
-            if !recent.isEmpty, !book.isEmpty {
+            // **THE TAGS YOU SAVED (prd §1767).** A zk.money tag in Contacts
+            // is someone to pay, so it stands in the book beside the
+            // addresses, found by its name, its tag or `@name`.
+            let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)
+                .filter { saved in !recent.contains { $0.caseInsensitiveCompare(saved.tag) == .orderedSame } }
+            if !recent.isEmpty, !(book.isEmpty && tags.isEmpty) {
                 listHeader(String(localized: "Addresses"))
+            }
+            ForEach(Array(tags.prefix(8)), id: \.tag) { saved in
+                listRow(saved.name, sub: saved.name.lowercased() == saved.tag ? "zk.money" : saved.tag, mark: saved.tag) {
+                    to = saved.tag
+                    pick {}
+                }
             }
             if let above, q.isEmpty {
                 listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
@@ -5550,7 +5644,7 @@ struct MoveSentence: View {
                     made.detail = [made.detail, said].filter { !$0.isEmpty }.joined(separator: " · ")
                 }
                 // A first send to an address with no name offers one (prd §1586).
-                if case .landed = sent.outcome, !sweeping { made.names = Self.unnamed(batch) }
+                if case .landed = sent.outcome, !sweeping { made.names = Self.unnamed(batch); made.tags = Self.unsavedTags(batch) }
                 if let took { made.detail = [made.detail, took].filter { !$0.isEmpty }.joined(separator: " · ") }
                 // A token a swap just bought is spendable now, not when the
                 // Wallet next reads the account (§1442l).
@@ -5563,6 +5657,9 @@ struct MoveSentence: View {
                 if verb == .send, !sweeping, sent.outcome != .dryRun, !YourAccountDemo.isDemo(account) {
                     RecentTo.remember(batch, account: account)
                     readRecentTo()
+                    // Who each one-time address was for, so Activity names
+                    // the person and not "zk.money" (prd §1767).
+                    ZkMoney.notePaid(Self.paidTags(batch))
                 }
                 spendZkMoney(batch)
                 withAnimation(DS.Motion.standard) {
@@ -5618,7 +5715,7 @@ struct MoveSentence: View {
                             guard f.receipt == true else { continue }
                             var landed = Self.receipt(for: batch, done: Chain.Transacted(sent: .init(outcome: .landed(transaction: f.tx, rotated: false), network: net)), on: net)
                             if sweeping { landed = Self.swept(landed, count: batch.count) }
-                            if !sweeping { landed.names = Self.unnamed(batch) }
+                            if !sweeping { landed.names = Self.unnamed(batch); landed.tags = Self.unsavedTags(batch) }
                             withAnimation(DS.Motion.standard) { receipt = landed }
                             // A swap to another network that landed late is watched to its arrival.
                             if var c = done.crossing, let tx = f.tx {
@@ -6205,6 +6302,13 @@ struct MoveSentence: View {
             }
             return
         }
+        // `@bob` is zk.money's own spelling of a tag (prd §1767): To reads
+        // it as bob.zk.money, unless a name in your book is spelled so.
+        if let full = ZkMoneyWire.atTag(text),
+           !AddressBook.shared.all.contains(where: { $0.name.caseInsensitiveCompare(text) == .orderedSame }) {
+            to = full
+            return
+        }
         // A zk.money tag is paid at a fresh deposit address its resolver
         // proves on chain, never at the account the tag names (prd §1692),
         // and is read before your book: a name there may hold a deposit
@@ -6224,6 +6328,7 @@ struct MoveSentence: View {
                     if text.lowercased() == payingRequest?.to { requestDeposits.insert(address.lowercased()) }
                     lookup = nil
                     resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
+                    setUpTagPayment()
                 case .notOnV6:
                     lookup = .refused(String(localized: "\(ZkMoneyWire.display(tag)) hasn't moved to Aztec's new network yet"))
                 case .unclaimed:

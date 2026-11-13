@@ -311,6 +311,8 @@ struct AddressesSection: View {
     /// (prd §1110).
     static func resolvable(_ q: String) -> Bool {
         if ENS.isHexAddress(q) { return true }
+        // `@bob` is zk.money's spelling of bob.zk.money (prd §1767).
+        if ZkMoneyWire.atTag(q) != nil { return true }
         guard !q.contains(" "), q.count >= 3, !q.hasPrefix("@") else { return false }
         return q.contains(".") && !q.hasPrefix(".") && !q.hasSuffix(".")
     }
@@ -331,6 +333,15 @@ struct AddressesSection: View {
                 ?? records.compactMap(\.displayName).first
             return Resolved(query: q, address: address, name: named ?? WalletStore.shortAddress(address),
                             identities: identities, avatar: records.compactMap(\.avatar).first)
+        }
+        // **A zk.money TAG IS FOUND ON CHAIN (prd §1767).** web3.bio does not
+        // know the tags, so a search for one found nobody. The name registry
+        // says whether the tag is taken; a taken one is a person to save and
+        // to pay. It carries no address: the wallet behind a tag is private,
+        // and a payment goes to a fresh address its resolver proves.
+        if let tag = ZkMoneyWire.atTag(q) ?? ZkMoneyWire.tag(q).map(ZkMoneyWire.display) {
+            guard let bare = ZkMoneyWire.tag(tag), await ZkMoney.resolve(tag: bare) != nil else { return nil }
+            return Resolved(query: q, address: nil, name: tag, identities: [Identity.make(.zkMoney, tag)], avatar: nil)
         }
         guard case .records(let records) = await Web3Bio.lookup(q), !records.isEmpty else { return nil }
         // An ENS name's address is the chain's, never web3.bio's (prd §1629):
@@ -385,6 +396,16 @@ struct AddressesSection: View {
             VStack(spacing: 0) {
                 if let address = hit.address {
                     DSDoorRow(icon: "eye", title: Text("Follow \(hit.name)")) { follow(hit, address: address) }
+                }
+                // A tag found is someone to pay, saved or not (prd §1767):
+                // Send opens on Ethereum with the tag in To. This is the
+                // page, not a card, so nothing is closing under Move.
+                if YourAccountDemo.shownAddress != nil,
+                   let tag = hit.identities.first(where: { $0.kind == .zkMoney })?.body {
+                    DSDoorRow(icon: "paperplane", title: Text("Pay \(hit.name)")) {
+                        chrome.moveDraft = MoveSentence.sendDraft(to: tag, on: YourAccountOp.ethereum)
+                        chrome.moveTray = true
+                    }
                 }
                 DSDoorRow(icon: "person.crop.circle.badge.plus", label: "Add to Addresses") { add(hit) }
             }
@@ -1242,6 +1263,12 @@ struct ContactSheet: View {
                     // transfers; anything else the person names is a
                     // `ContactBook` save. A card's name is Apple's to change,
                     // so a card-led contact draws no row (§83).
+                    // **PAY (prd §1767).** A contact with a zk.money tag is
+                    // someone to pay: the verb leads the card's rows, and the
+                    // tag's own row opens the same Send.
+                    if let tag = contact.identities.first(where: { $0.kind == .zkMoney }), let pay = door(for: tag) {
+                        DSDoorRow(icon: "paperplane", label: "Pay") { pay() }
+                    }
                     if contact.lead.kind != .contact {
                         DSDoorRow(icon: "character.cursor.ibeam", label: "Rename") {
                             draft = contact.isUnnamed ? "" : contact.name
@@ -1285,6 +1312,12 @@ struct ContactSheet: View {
             }
             .dsPageBackground()
             .toolbar(.hidden, for: .navigationBar)
+            .onDisappear {
+                guard let tag = paying else { return }
+                paying = nil
+                chrome.moveDraft = MoveSentence.sendDraft(to: tag, on: YourAccountOp.ethereum)
+                chrome.moveTray = true
+            }
             .task {
                 waiting = Self.waiting(for: contact, context: modelContext)
                 let shown = Set(waiting.map(\.id))
@@ -1412,6 +1445,9 @@ struct ContactSheet: View {
     }
 
     @State private var copied: String?
+    /// The tag Pay was tapped for (prd §1767): Send opens for it once this
+    /// card has gone.
+    @State private var paying: String?
 
     private func copy(_ value: String, key: String) {
         DSPasteboard.copy(value)
@@ -1646,8 +1682,24 @@ struct ContactSheet: View {
         case .email:
             guard let url = URL(string: "mailto:\(identity.body)") else { return nil }
             return { openURL(url) }
-        // A zk.money tag has no public page to open: its wallet is private.
-        case .contact, .ens, .basename, .linea, .lens, .zkMoney, .worldApp, .biller:
+        // **A zk.money TAG'S DOOR IS PAY (prd §1767).** It has no public page
+        // to open: its wallet is private. With an account here to send from,
+        // the row opens Send on Ethereum with the tag in To, which sets up
+        // the dollar you hold; with none it stays a fact that copies (§83).
+        case .zkMoney:
+            guard YourAccountDemo.shownAddress != nil, let bare = ZkMoneyWire.tag(identity.body) else { return nil }
+            let tag = ZkMoneyWire.display(bare)
+            // **MOVE RISES ONCE THE CARD HAS GONE (`onDisappear`), never on a
+            // timer.** Raised 450ms after `dismiss()`, Move met this card
+            // still closing, and the card was drawn again with none of the
+            // shell's environment: "No Observable object of type ShellChrome"
+            // (a crash on the simulator, 2026-11-12, named by asking the
+            // render graph which view was updating).
+            return {
+                paying = tag
+                dismiss()
+            }
+        case .contact, .ens, .basename, .linea, .lens, .worldApp, .biller:
             return nil
         }
     }

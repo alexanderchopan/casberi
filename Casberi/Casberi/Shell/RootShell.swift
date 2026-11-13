@@ -1101,7 +1101,8 @@ struct RootShell: View {
             // `-openAddresses YES` lands on Library › Contacts, the Contacts
             // app's page since Library's box was deleted (2026-10-30).
             if UserDefaults.standard.bool(forKey: "openAddresses") {
-                chrome.settingsLanding = .contacts("")
+                // `-contactsQuery "<words>"` lands with the search typed.
+                chrome.settingsLanding = .contacts(UserDefaults.standard.string(forKey: "contactsQuery") ?? "")
                 sceneState.route.present(.casberi)
             }
             // `-openReach YES` — the reach screen, the same shape (prd §967).

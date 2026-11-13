@@ -41,6 +41,39 @@ enum ZkMoney {
     /// The portals' DAI as last read in a pass that named a zk.money move.
     nonisolated(unsafe) static var lastPortalTotal: Decimal?
 
+    // MARK: - Who a deposit address was for (prd §1767)
+
+    private static let paidKey = "zkmoney.paid.v1"
+    nonisolated(unsafe) private static var paid: [[String]] =
+        (UserDefaults.standard.array(forKey: paidKey) as? [[String]]) ?? []
+
+    /// The tag Send paid at this deposit address, as `bob.zk.money`; nil for
+    /// an address it did not pay a tag at. Read from any thread.
+    static func paidTag(at address: String) -> String? {
+        lock.lock(); defer { lock.unlock() }
+        return ZkMoneyWire.paidTag(paid, at: address).map(ZkMoneyWire.display)
+    }
+
+    /// Send paid these tags at these addresses: kept, and each address is a
+    /// deposit address from now, before its sweep gives it code. The
+    /// defaults writes happen outside the lock (prd §721).
+    static func notePaid(_ pairs: [(address: String, tag: String)]) {
+        guard !pairs.isEmpty else { return }
+        lock.lock()
+        paid = ZkMoneyWire.paid(paid, adding: pairs)
+        deposits.formUnion(paid.prefix(pairs.count).map { $0[0] })
+        let ledger = paid, kept = Array(deposits.prefix(500))
+        lock.unlock()
+        UserDefaults.standard.set(ledger, forKey: paidKey)
+        UserDefaults.standard.set(kept, forKey: depositsKey)
+    }
+
+    /// What a zk.money address is called where a person is named: the tag
+    /// paid there, else zk.money's own name.
+    static func label(for address: String) -> String? {
+        paidTag(at: address) ?? knownName(for: address)
+    }
+
     /// zk.money's name for an address the app already knows to be zk.money's.
     static func knownName(for address: String) -> String? {
         let a = address.lowercased()

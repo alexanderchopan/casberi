@@ -187,6 +187,52 @@ enum ZkMoneyWire {
 
     static func display(_ tag: String) -> String { ZkMoneyLink.display(tag) }
 
+    /// **`@bob` IS `bob.zk.money` (prd §1767).** zk.money's own app spells a
+    /// tag with an at sign; Send's To and Contacts' search read it the same
+    /// way. Only that spelling: a bare word is a name in your book or
+    /// nothing, and `@bob.zk.money` is already a tag. Nil for anything else.
+    static func atTag(_ raw: String) -> String? {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.hasPrefix("@"), tag(text) == nil, let bare = tag(text, bareAllowed: true) else { return nil }
+        return display(bare)
+    }
+
+    /// **WHO A DEPOSIT ADDRESS WAS FOR (prd §1767).** A tag is paid at a
+    /// one-time address, so the chain never names the person: Activity said
+    /// "Deposited into zk.money" for every tag you ever paid. Send knows the
+    /// tag when it sends, and keeps the pair here: `[address, tag]`, the
+    /// newest first, each address once, `paidCap` at most.
+    static let paidCap = 500
+    static func paid(_ ledger: [[String]], adding pairs: [(address: String, tag: String)]) -> [[String]] {
+        var out: [[String]] = [], seen = Set<String>()
+        let fresh = pairs.compactMap { pair -> [String]? in
+            guard let bare = tag(pair.tag), pair.address.lowercased().hasPrefix("0x") else { return nil }
+            return [pair.address.lowercased(), bare]
+        }
+        for row in fresh.reversed() + ledger where row.count == 2 && seen.insert(row[0]).inserted {
+            out.append(row)
+            if out.count == paidCap { break }
+        }
+        return out
+    }
+    static func paidTag(_ ledger: [[String]], at address: String) -> String? {
+        let a = address.lowercased()
+        return ledger.first { $0.count == 2 && $0[0] == a }?[1]
+    }
+
+    /// The tags among your saved contacts that a typed `query` finds, by the
+    /// name you gave or the tag itself: `(tag, name)`, as Send's To lists them.
+    static func savedTags(_ saved: [(id: String, name: String)], query: String) -> [(tag: String, name: String)] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let needle = q.hasPrefix("@") ? String(q.dropFirst()) : q
+        return saved.compactMap { entry -> (tag: String, name: String)? in
+            guard let bare = tag(entry.id) else { return nil }
+            let full = display(bare)
+            guard needle.isEmpty || entry.name.lowercased().contains(needle) || full.hasPrefix(needle) else { return nil }
+            return (full, entry.name)
+        }
+    }
+
     /// ENS namehash of `<tag>.zk.money` (raw, as zk.money hashes it).
     static func nameHash(_ tag: String) -> String {
         var node = [UInt8](repeating: 0, count: 32)

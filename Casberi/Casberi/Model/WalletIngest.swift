@@ -1305,7 +1305,8 @@ enum WalletIngest {
         return AddressBook.shared.name(for: a)
             ?? ContactIndexSources.contact(forKey: Identity.key(.wallet, a)).flatMap { $0.isUnnamed ? nil : $0.name }
             ?? knownContracts[a]
-            ?? ZkMoney.knownName(for: a)
+            // The tag paid at a deposit address, else "zk.money" (prd §1767).
+            ?? ZkMoney.label(for: a)
             ?? Tacit.knownName(for: a)
             // The exchange routers the account swaps through (prd §1539):
             // a grant to one is that exchange's.
@@ -1948,6 +1949,7 @@ enum WalletIngest {
         var direction: String? = nil
         var amountText: String? = nil
         var counterpartyName: String? = nil
+        var zkMoneyMove = false
         if watched.count > 1,
            let cp, let other = watched.first(where: { $0.address.lowercased() == cp }),
            let mine = watched.first(where: { $0.address.lowercased() == address.lowercased() }) {
@@ -1998,9 +2000,17 @@ enum WalletIngest {
             // zk.money (2026-10-11): a move into or out of a private wallet,
             // in the venue grammar `CounterpartyRetitle` already reads
             // ("Deposited … into", "Withdrew … from").
-            title = received ? "Withdrew \(amount) \(asset) from \(ZkMoney.name)"
-                             : "Deposited \(amount) \(asset) into \(ZkMoney.name)"
-            counterpartyName = ZkMoney.name
+            // A deposit Send made to a tag names the person it paid (prd
+            // §1767): the chain shows a one-time address and nothing else.
+            if !received, let tag = ZkMoney.paidTag(at: cp) {
+                title = "Sent \(amount) \(asset) to \(tag)"
+                counterpartyName = tag
+            } else {
+                title = received ? "Withdrew \(amount) \(asset) from \(ZkMoney.name)"
+                                 : "Deposited \(amount) \(asset) into \(ZkMoney.name)"
+                counterpartyName = ZkMoney.name
+            }
+            zkMoneyMove = true
             direction = received ? "received" : "sent"
             amountText = "\(amount) \(asset)"
         } else if let cp, names[cp] == Tacit.name, !amount.isEmpty,
@@ -2044,7 +2054,7 @@ enum WalletIngest {
         // (honesty rule: no dead controls).
         thing.counterpartyAddress = WalletVerbs.isVoid(cp) ? nil : cp
         // zk.money's dated note: what is public about the move, and the pool.
-        if counterpartyName == ZkMoney.name { thing.enrichedText = ZkMoney.note(portal: ZkMoney.lastPortalTotal) }
+        if zkMoneyMove { thing.enrichedText = ZkMoney.note(portal: ZkMoney.lastPortalTotal) }
         // Tacit's: what is public about the move (prd §1281).
         if counterpartyName == Tacit.name { thing.enrichedText = Tacit.note }
         thing.transferDirection = direction

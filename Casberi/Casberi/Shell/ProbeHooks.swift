@@ -5162,6 +5162,35 @@ enum ProbeHooks {
             NSLog("[Casberi] subscriptionTrack: %@ | %@", entry?.name ?? "refused", entry?.id ?? "")
             Task { await SubscriptionsReading.shared.refresh(context) }
         },
+        // `-tagSave "<tag>[:<name>][,…]"|clear` — save zk.money tags as
+        // contacts, as Send's Save row and Contacts' search do (prd §1767).
+        // `-tagPaid "<address>:<tag>[,…]"` notes that a one-time address was
+        // paid for a tag, as a taken send does, so Again on that row names
+        // the tag.
+        Hook(key: "tagSave") { spec, _ in
+            if spec == "clear" {
+                for saved in ContactBook.shared.all where ZkMoneyWire.tag(saved.id) != nil {
+                    ContactBook.shared.save(Identity.make(.zkMoney, saved.id), name: "")
+                }
+                NSLog("tagSave: cleared")
+                return
+            }
+            for pair in spec.split(separator: ",") {
+                let parts = pair.split(separator: ":", maxSplits: 1).map(String.init)
+                guard let bare = ZkMoneyWire.tag(parts[0]) ?? ZkMoneyWire.tag(parts[0], bareAllowed: true) else { continue }
+                let tag = ZkMoneyWire.display(bare)
+                ContactBook.shared.save(Identity.make(.zkMoney, tag), name: parts.count > 1 ? parts[1] : tag)
+                NSLog("tagSave: %@ | %@", tag, ContactBook.shared.name(for: Identity.key(.zkMoney, tag)) ?? "-")
+            }
+        },
+        Hook(key: "tagPaid") { spec, _ in
+            let pairs = spec.split(separator: ",").compactMap { pair -> (address: String, tag: String)? in
+                let parts = pair.split(separator: ":", maxSplits: 1).map(String.init)
+                return parts.count == 2 ? (parts[0], parts[1]) : nil
+            }
+            ZkMoney.notePaid(pairs)
+            for pair in pairs { NSLog("tagPaid: %@ | %@", AddressTail.short(pair.address), ZkMoney.paidTag(at: pair.address) ?? "refused") }
+        },
         // `-addressBook "<Name>:<address>[,<Name>:<address>…]"|clear` — seed the
         // address book headlessly (prd §169). `clear` empties it. Splits each
         // pair on the LAST colon so a name may carry its own.

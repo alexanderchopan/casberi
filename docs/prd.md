@@ -72330,3 +72330,32 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** None.
 
 `-aztecGrantsSample YES`, `-aztecNFTSample YES`, `-aztecEngineProbe contracts|activity`.
+
+## §1767 — A zk.money tag is a person: Send sets its payment up, Contacts keeps and pays it, Activity names it (extends §1692's Send and §1752's Recent and Again; amends §1273's "Deposited … into zk.money" for a tag Send paid) (user, 2026-11-12: "i think zkmoney tags are going to become more popular and we should support it as much as we can the payign to it and the contacts.") — BUILT; SEEN on a simulator for items 1 to 4 and 7 (see the end); NOT seen: a taken payment, so items 5, 6 and 8 have met no chain
+
+**Why.** A tag could be paid since §1692, and nothing else in the app knew it was somebody. Typed into Send it kept whatever stood (Base's USDC by default) and was then refused; `@bob`, zk.money's own spelling, was read as nothing; a tag saved in Contacts was not in Send's list and its card had no door; a search for a tag found nobody, because web3.bio does not know them; and every tag you ever paid read "Deposited into zk.money" in Activity, since a tag is paid at a one-time address the chain never ties to a name.
+
+1. **A typed tag sets up its own payment** (`MoveSentence.setUpTagPayment`). When a tag resolves, Send moves to Ethereum and picks the dollar you hold, USDC then DAI then USDT (`ZkMoneyWire.payOrder`), as a pasted request has since §1749. Only when what stands could not pay it: a token a deposit takes, already on Ethereum, is left alone; a request Pay wrote keeps its own setup; an amount in dollars or in a dollar token stands, any other is cleared. The list of what you hold steps aside once the dollar is picked.
+2. **`@bob` is `bob.zk.money`** (`ZkMoneyWire.atTag`), in Send's To and in Contacts' search. Only that spelling: a bare word is a name in your book or nothing, and a book entry spelled `@bob` wins.
+3. **Saved tags stand in Send's To list** (`ZkMoneyWire.savedTags`), beside the addresses, found by the name you gave, the tag or `@name`. A tag in Recent wears the name you saved it under.
+4. **A contact with a tag has Pay.** The card leads its rows with Pay, and the tag's own row opens the same Send: Ethereum, the tag in To. With no account on this phone to send from the row stays a fact that copies (§83). A tag found by Contacts' search has Pay too, saved or not.
+5. **Activity names who you paid.** Send knows the tag when it sends and keeps the pair, the one-time address and the tag, on this phone (`ZkMoney.notePaid`, `zkmoney.paid.v1`, 500 at most, never synced). A sent row at such an address is titled "Sent 20 USDC to bob.zk.money" where it read "Deposited 20 USDC into zk.money", and its counterparty is the tag. A deposit made outside Casberi, or before this build, keeps the old words: nothing on chain says whose it was.
+6. **Again on a tag you paid** pays the tag, never the spent address (`sendableCounterparty` answers the tag; Send resolves a fresh address for it).
+7. **Contacts finds a tag.** A search for `bob.zk.money` or `@bob` asks zk.money's name registry on Ethereum (`ZkMoney.resolve`), and a claimed tag is a row to add and to pay. It carries no address: the wallet behind a tag is private. An unclaimed tag finds nobody.
+8. **A tag you paid and have not saved is offered once**, on the receipt: "Save bob.zk.money", one tap, under the tag's own name. Contacts renames it.
+
+**Not built, and next by the user's word ("well why wouldn't we do the holding zkmoney dollars? and or paying from eth or other network?"):** paying a tag from a token a deposit does not take, or from another network, and holding zk.money's dollars on Aztec. Neither is in this entry.
+
+**A crash this entry's first build had, and what it cost.** Pay on the card dismissed the card and raised Move 450ms later, the timer other sheets use. Move met the card still closing, the card was drawn again with none of the shell's environment, and the app died: "No Observable object of type ShellChrome found". The stack names no view. It was named by asking the render graph at the breakpoint which attribute was updating (`AGGraphGetCurrentAttribute`, then `swift_getTypeName` on its type): `DynamicBody<ViewBodyAccessor<Casberi.ContactSheet>>`. Move now rises from the card's `onDisappear`. `zkmoney-selftest.sh` fails a door that raises Move itself.
+
+**Seen** (simulator, 2026-11-12, the demo's account):
+- Items 1, 2: `-moveSendDraft "20|@zac"`, drafted on Base, read "Send 20 USDC to zac.zk.money on Ethereum." (`zkMoneyPay| tag set up | USDC`).
+- Item 3: with `-tagSave "zac.zk.money:Zachary,mia.zk.money"`, To listed "Zachary · zac.zk.money" and "mia.zk.money · zk.money" over the book; a tap on Zachary wrote the same sentence.
+- Item 4: Contacts › Zachary drew the tag, Pay, Rename, Remove; Pay closed the card and opened Send on Ethereum with USDC picked and the amount asked for.
+- Item 7: Contacts' search for `@` and a claimed tag drew the tag under "Not in your addresses" with Pay and Add to Addresses, about twenty seconds after the search on the simulator ("No match" stands meanwhile, as it does for any name still being looked up); Pay opened Send on Ethereum with the tag in To and USDC picked. A made-up tag drew "No match".
+
+**Not seen:** the Save row, the Activity title and Again, which each need a payment taken (the demo's Send acts on nothing); any of it on a phone.
+
+**Hooks.** `-tagSave "<tag>[:<name>][,…]"|clear`, `-tagPaid "<address>:<tag>[,…]"`, and `-contactsQuery "<words>"` with `-openAddresses YES`.
+
+**Mac half (§1402).** None of its own: Send's sentence and the Contacts page are the same views on the Mac. The card's Pay was not seen there.

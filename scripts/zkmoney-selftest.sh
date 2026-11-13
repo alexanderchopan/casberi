@@ -323,6 +323,28 @@ check(ZkMoneyLink.spellsLink(" https://zk.money/r#AmW2BnPW7YhL8BwsIi2CraA ") && 
 check(!ZkMoneyLink.spellsLink("zac.zk.money") && !ZkMoneyLink.spellsLink("https://zk.money.example.com/r#A") && !ZkMoneyLink.spellsLink("https://example.com/zk.money") && !ZkMoneyLink.spellsLink("0x6b175474e89094c44da98b954eedeac495271d0f") && !ZkMoneyLink.spellsLink(""),
       "…and a tag, another site and an address are not one")
 
+// Tags, as people (prd §1767).
+print("tags as people")
+check(ZkMoneyWire.atTag("@Zac") == "zac.zk.money" && ZkMoneyWire.atTag(" @zac ") == "zac.zk.money", "@zac is zac.zk.money")
+check(ZkMoneyWire.atTag("zac") == nil && ZkMoneyWire.atTag("@zac.zk.money") == nil && ZkMoneyWire.atTag("@za c") == nil && ZkMoneyWire.atTag("@") == nil,
+      "…and a bare word, a whole tag and a phrase are not that spelling")
+let oneTime = "0x" + String(repeating: "aB", count: 20), second = "0x" + String(repeating: "cd", count: 20)
+var ledger = ZkMoneyWire.paid([], adding: [(oneTime, "zac.zk.money")])
+check(ledger == [[oneTime.lowercased(), "zac"]] && ZkMoneyWire.paidTag(ledger, at: oneTime.uppercased().replacingOccurrences(of: "0X", with: "0x")) == "zac",
+      "a paid deposit address remembers its tag, whatever its case")
+ledger = ZkMoneyWire.paid(ledger, adding: [(second, "mia.zk.money"), (oneTime, "zac.zk.money")])
+check(ledger.count == 2 && ledger.first?[1] == "zac" && ZkMoneyWire.paidTag(ledger, at: second) == "mia", "each address once, the newest first")
+check(ZkMoneyWire.paid(ledger, adding: [(second, "Mom"), ("zac.zk.money", "zac.zk.money")]) == ledger, "a name that is no tag, or an address that is none, is not kept")
+check(ZkMoneyWire.paidTag(ledger, at: "0x" + String(repeating: "ef", count: 20)) == nil, "an address never paid names nobody")
+var long: [[String]] = []
+for i in 0..<(ZkMoneyWire.paidCap + 20) { long = ZkMoneyWire.paid(long, adding: [("0x" + String(format: "%040x", i), "zac.zk.money")]) }
+check(long.count == ZkMoneyWire.paidCap && long.first?[0] == "0x" + String(format: "%040x", ZkMoneyWire.paidCap + 19), "the ledger is bounded, the oldest dropped")
+let saved: [(id: String, name: String)] = [("zac.zk.money", "Zachary"), ("mia.zk.money", "mia.zk.money"), ("vitalik.eth", "Vitalik"), ("gh:zac", "Zac"), ("zed", "Zed")]
+check(ZkMoneyWire.savedTags(saved, query: "").map(\.tag) == ["zac.zk.money", "mia.zk.money"], "only saved tags are listed, never another name service")
+check(ZkMoneyWire.savedTags(saved, query: "zach").map(\.name) == ["Zachary"] && ZkMoneyWire.savedTags(saved, query: "@mi").map(\.tag) == ["mia.zk.money"]
+      && ZkMoneyWire.savedTags(saved, query: "mia.zk").count == 1 && ZkMoneyWire.savedTags(saved, query: "vit").isEmpty,
+      "…found by the name you gave, the tag, or @name")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
@@ -433,6 +455,27 @@ mutate "the amount read little-endian" \
 mutate "a zero owner read as an account" \
   'return address.allSatisfy { $0 == "0" } ? nil : "0x" + address' \
   'return "0x" + address'
+mutate "a bare word read as an @tag" \
+  'guard text.hasPrefix("@"), tag(text) == nil,' \
+  'guard tag(text) == nil,'
+mutate "a paid address kept in the case it was sent in" \
+  'return [pair.address.lowercased(), bare]' \
+  'return [pair.address, bare]'
+mutate "a paid address kept twice" \
+  'where row.count == 2 && seen.insert(row[0]).inserted {' \
+  'where row.count == 2 {'
+mutate "the paid ledger left to grow" \
+  'if out.count == paidCap { break }' \
+  'if out.count == paidCap * 2 { break }'
+mutate "a name that is no tag kept as one" \
+  'guard let bare = tag(pair.tag), pair.address' \
+  'guard let bare = tag(pair.tag, bareAllowed: true), pair.address'
+mutate "every saved name listed as a tag" \
+  'guard let bare = tag(entry.id) else { return nil }' \
+  'guard let bare = tag(entry.id, bareAllowed: true) else { return nil }'
+mutate "a saved tag not found by @name" \
+  'let needle = q.hasPrefix("@") ? String(q.dropFirst()) : q' \
+  'let needle = q'
 mutate "a bare word taken as a tag" \
   '} else if !bareAllowed {' \
   '} else if false {'
@@ -576,6 +619,43 @@ grep -q 'if let name = p.toName, ZkMoneyWire.tag(name) != nil { return name.lowe
   || { echo "✗ Recent keeps a zk.money deposit address, which is spent once paid, instead of the tag"; exit 1; }
 grep -q 'if verb == .send, !sweeping, sent.outcome != .dryRun, !YourAccountDemo.isDemo(account) {' "$SEND" \
   || { echo "✗ Recent records a dry run, a sweep, a card's payment or the demo's send"; exit 1; }
+
+# Tags as people (prd §1767), read. A typed tag that kept Base's USDC would
+# be refused as it was; one that cleared a request's own setup would undo
+# §1749; a Save row for a tag already saved, an Again to a spent address, or
+# an Activity row that says "zk.money" for someone Send knew by name is the
+# feature not there.
+ING="Casberi/Casberi/Model/WalletIngest.swift"
+PEOPLE="Casberi/Casberi/Screens/AddressesScreen.swift"
+awk '/private func setUpTagPayment\(\) \{/,/^    }/' "$SEND" > "$TMP/setup.txt"
+grep -q 'guard verb == .send, payingRequest == nil else { return }' "$TMP/setup.txt" \
+  && grep -q 'let fits = network == Op.ethereum && (with.map { ZkMoneyWire.payTokens.contains($0.id) } ?? false)' "$TMP/setup.txt" \
+  && grep -q 'let pick = ZkMoneyWire.payOrder.lazy.compactMap' "$TMP/setup.txt" \
+  && grep -q 'if !dollars { amount = "" }' "$TMP/setup.txt" \
+  || { echo "✗ a typed tag no longer sets up its payment, or it overwrites a request's or a token a deposit takes"; exit 1; }
+awk '/case .address\(let address\):/{a=NR} /setUpTagPayment\(\)/{s=NR} /case .notOnV6:/{n=NR} END{exit !(a && s && n && a<s && s<n)}' "$SEND" \
+  || { echo "✗ a tag that resolves no longer sets up its payment"; exit 1; }
+grep -q 'if let full = ZkMoneyWire.atTag(text),' "$SEND" \
+  || { echo "✗ To no longer reads @name as a tag"; exit 1; }
+grep -q 'ZkMoney.notePaid(Self.paidTags(batch))' "$SEND" \
+  || { echo "✗ a tag paid from Send is not remembered: Activity says zk.money for it"; exit 1; }
+awk '/static func unsavedTags\(_ batch: \[Chain.Item\]\) -> \[String\] \{/,/^    }/' "$SEND" \
+  | grep -q '!ContactBook.shared.has(Identity.key(.zkMoney, tag))' \
+  || { echo "✗ Save is offered for a tag that is already a contact"; exit 1; }
+awk '/static func sendableCounterparty\(_ thing: Thing\) -> String\? \{/,/^    }/' "$SEND" \
+  | grep -q 'let tag = ZkMoney.paidTag(at: thing.counterpartyAddress ?? "") {' \
+  || { echo "✗ Again on a tag you paid is gone, or it would send to the spent address"; exit 1; }
+grep -q 'let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)' "$SEND" \
+  || { echo "✗ a saved tag is no longer in Send's To list"; exit 1; }
+grep -q 'if !received, let tag = ZkMoney.paidTag(at: cp) {' "$ING" \
+  || { echo "✗ Activity no longer names the tag a deposit address was for"; exit 1; }
+grep -q 'await ZkMoney.resolve(tag: bare) != nil else { return nil }' "$PEOPLE" \
+  && grep -q 'if ZkMoneyWire.atTag(q) != nil { return true }' "$PEOPLE" \
+  || { echo "✗ Contacts no longer finds a zk.money tag, or names one nobody has claimed"; exit 1; }
+awk '/private func door\(for identity: Identity\) -> \(\(\) -> Void\)\? \{/,/^    }/' "$PEOPLE" > "$TMP/door.txt"
+grep -q 'paying = tag' "$TMP/door.txt" && ! grep -q 'chrome.moveTray' "$TMP/door.txt" \
+  && awk '/\.onDisappear \{/{d=NR} /guard let tag = paying else \{ return \}/{g=NR} /chrome.moveDraft = MoveSentence.sendDraft\(to: tag, on: YourAccountOp.ethereum\)/{m=NR} END{exit !(d && g && m && d<g && g<m)}' "$PEOPLE" \
+  || { echo "✗ a saved tag has no Pay door, or Move is raised while the card is still closing (a crash)"; exit 1; }
 
 # The resolver is asked of ENS before each lookup (prd §1750), and the lookup
 # must come from the one it names: the pin alone went stale in eight days.
