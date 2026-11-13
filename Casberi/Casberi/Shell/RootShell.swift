@@ -2480,6 +2480,14 @@ struct RootShell: View {
             // every sheet (`ToastWindow`, prd §1443); the Mac draws it here.
             if !ToastWindow.usesWindow { ToastLayer(chrome: chrome) }
 
+            // A send that goes on behind its sheet (prd §1777): over the
+            // band, under every sheet, drawn only while there is one.
+            MoveStepCapsule()
+                .environment(chrome)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, MoveStepCapsule.overBand)
+                .zIndex(2)
+
             // The capture flight (§1): a proxy card glides from the capture
             // point to the "All" chip, then it pulses once.
             if let flight = chrome.flight {

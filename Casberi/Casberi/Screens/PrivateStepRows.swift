@@ -123,9 +123,27 @@ struct AztecStepCapsule: View {
     }
 
     @ViewBuilder private func capsule(_ run: PrivateSendSteps.Run, now: Date) -> some View {
+        if run.ok == false {
+            Button { withAnimation(DS.Motion.standard) { steps.clear() } } label: { StepCapsuleLabel(run: run, now: now) }
+                .buttonStyle(PressSpring())
+                .accessibilityHint(Text("Dismisses"))
+        } else {
+            StepCapsuleLabel(run: run, now: now).allowsHitTesting(false)
+        }
+    }
+}
+
+/// The capsule's one line, for both its callers: the spinner and the step
+/// under way with its seconds, the check and "Sent" with the send's whole
+/// seconds, or "Not sent". Glass: it is the floating layer.
+struct StepCapsuleLabel: View {
+    let run: PrivateSendSteps.Run
+    let now: Date
+
+    var body: some View {
         let failed = run.ok == false
         let step = run.plan.steps[run.currentIndex]
-        let label = HStack(spacing: DS.Space.s2) {
+        HStack(spacing: DS.Space.s2) {
             if failed {
                 Image(systemName: "exclamationmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.destructive)
             } else if run.ended != nil {
@@ -144,12 +162,60 @@ struct AztecStepCapsule: View {
         .padding(.vertical, DS.Space.s2)
         .dsGlass(cornerRadius: DS.Radius.widget)
         .accessibilityElement(children: .combine)
-        if failed {
-            Button { withAnimation(DS.Motion.standard) { steps.clear() } } label: { label }
+    }
+}
+
+/// **MOVE'S SEND, BEHIND ITS SHEET (prd §1777; user, after a send within
+/// Aztec took 34 s to prove and 75 s to send: "would be good if checking and
+/// proving and then sending is in the background").** Once Face ID and the
+/// co-signer have answered, the sheet closes and this floats over the tab
+/// bar, the browser's capsule exactly: the step under way and its seconds,
+/// "Sent to Aztec" for two seconds, then gone. A failure stays, and its tap
+/// opens the sentence again with the reason on its step and Try again.
+/// Mounted on the shell, and it ticks only while there is a send to draw.
+struct MoveStepCapsule: View {
+    @State private var steps = PrivateSendSteps.shared
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        ZStack {
+            if let run = steps.away {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    capsule(run, now: context.date)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                // "Sent" stands two seconds, as the browser's does.
+                .task(id: run.ended) {
+                    guard run.ended != nil, run.ok == true else { return }
+                    try? await Task.sleep(for: .seconds(Self.sentStands))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                }
+            }
+        }
+        .animation(DS.Motion.standard, value: steps.away != nil)
+    }
+
+    static let sentStands: Double = 2
+    /// Clear of the tab bar (62 pt and its gap), under the toast's line.
+    static let overBand: CGFloat = 84
+
+    @ViewBuilder private func capsule(_ run: PrivateSendSteps.Run, now: Date) -> some View {
+        if run.ok == false {
+            Button {
+                // The sentence it came from, with its reason and Try again;
+                // with no sentence kept, there is only the word to put away.
+                if AztecMove.kept != nil {
+                    chrome.moveAztec = .send
+                    chrome.moveTray = true
+                } else {
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                }
+            } label: { StepCapsuleLabel(run: run, now: now) }
                 .buttonStyle(PressSpring())
-                .accessibilityHint(Text("Dismisses"))
+                .accessibilityHint(Text("Opens the send"))
         } else {
-            label.allowsHitTesting(false)
+            StepCapsuleLabel(run: run, now: now).allowsHitTesting(false)
         }
     }
 }

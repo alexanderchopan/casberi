@@ -1,7 +1,7 @@
 import SwiftUI
 
 #if DEBUG
-/// `-privateStepsPreview move|app|fail|signed` (prd §1700w, §1700x): plays one
+/// `-privateStepsPreview move|app|fail|signed|away|awayfail` (prd §1700w, §1700x, §1777): plays one
 /// private send's steps on a timeline over the shell, through the real
 /// `PrivateSendSteps` and the views Move and the Aztec browser draw.
 ///   - `move`: an Aztec send (checking 2 s, proving 9 s, sent 8 s, done),
@@ -11,15 +11,20 @@ import SwiftUI
 ///   - `signed`: a move-in (Railgun's, or a Shield deposit), Checking ·
 ///     Signing · Sent on Ethereum; a send's rows lead with "Confirmed with
 ///     Face ID", a move-in's do not (it signs inside its clock).
+///   - `away`, `awayfail`: Move's send behind its sheet, drawn by the
+///     shell's own capsule over the tab bar (`MoveStepCapsule`); this view
+///     draws nothing and only plays the steps.
 /// No engine, no money: a simulator cannot prove a mainnet send, and this is
 /// how the drawing is seen. NSLogs `privateStepsPreview| <mode> | <step>`.
 struct PrivateStepsPreview: View {
     private let mode = UserDefaults.standard.string(forKey: "privateStepsPreview")
-        .flatMap { ["move", "app", "fail", "signed"].contains($0) ? $0 : nil }
+        .flatMap { ["move", "app", "fail", "signed", "away", "awayfail"].contains($0) ? $0 : nil }
     @State private var steps = PrivateSendSteps.shared
 
     var body: some View {
-        if let mode {
+        if let mode, mode.hasPrefix("away") {
+            Color.clear.allowsHitTesting(false).task { await play(mode) }
+        } else if let mode {
             ZStack(alignment: .bottom) {
                 DS.surfaceSheet.ignoresSafeArea()
                 if mode == "app" {
@@ -72,9 +77,10 @@ struct PrivateStepsPreview: View {
         }
         try? await Task.sleep(for: .seconds(4))
         if kind == .move { s.begin(.move, plan: plan) }
+        if mode.hasPrefix("away") { s.sendAway() }
         await say("checking", after: 0)
         switch mode {
-        case "fail":
+        case "fail", "awayfail":
             await say("proving", after: 2)
             await say("failed", after: 6, extra: ["reason": "Aztec's node did not answer. Nothing was sent."])
         case "signed":

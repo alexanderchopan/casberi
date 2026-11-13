@@ -64,6 +64,21 @@ final class AztecMove {
     /// The last private send was paid from the account's own Fee Juice, in
     /// the open (prd §1700aa): the done line says so, never a quiet downgrade.
     private(set) var paidInTheOpen = false
+
+    /// **THE SEND BEHIND ITS SHEET (prd §1777).** A send within Aztec asks
+    /// for Face ID and the co-signer, then needs nobody while it is checked,
+    /// proved and sent (34 s and 75 s on the user's phone). So the sheet
+    /// closes at that point and the move is kept here: the shell's capsule
+    /// draws its steps, and Move opened on Aztec again shows this same
+    /// sentence, running or failed, never a second one beside it.
+    static var kept: AztecMove?
+    /// Closes the sheet; nil where the sentence is a page, which stays.
+    var onAway: (() -> Void)?
+    /// Another send is still going behind its sheet.
+    private var anotherIsGoing: Bool {
+        guard let other = Self.kept, other !== self, case .working = other.stage else { return false }
+        return true
+    }
     /// **GAS BOUGHT WITH WHAT YOU MOVE (prd §1700aa).** Gas rides along and
     /// your account holds too little AZTEC for it: a little of the token
     /// being moved is sold for it in the same operation.
@@ -322,6 +337,8 @@ final class AztecMove {
 
     /// Where the move stands: balances, Shield's word, the account's gas.
     func read() async {
+        // Read afresh, it is a sentence like any other again (prd §1777).
+        if Self.kept === self { Self.kept = nil }
         stage = .reading
         readingSince = .now
         defer { readingSince = nil }
@@ -417,6 +434,9 @@ final class AztecMove {
     /// The move, as the sentence says it.
     func run() async {
         guard stage == .ready, amountOK, let units, let asset else { return }
+        // One send at a time: the engine proves one, and its words name no
+        // send. A move-in is signed on Ethereum and may go meanwhile.
+        guard mode != .send || !anotherIsGoing else { stage = .failed(String(localized: "A send is still on its way")); return }
         let steps = PrivateSendSteps.shared
         // Last send's rows go; this send's start at its own tap (prd §1700x).
         steps.forget(.move)
@@ -458,8 +478,19 @@ final class AztecMove {
                     // has said anything (prd §1700w).
                     steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
+                    // Every ask is answered: the rest needs nobody, so the
+                    // sheet goes and the shell's capsule says the rest
+                    // (prd §1777).
+                    if let onAway {
+                        Self.kept = self
+                        steps.sendAway()
+                        onAway()
+                    }
                     let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units, AztecGas.unminted]) as? [String: Any]
                     AztecGas.spent(by: out)
+                    // The engine says "done" itself; a send it handed back
+                    // without the word is done all the same.
+                    steps.finishAway()
                     paidInTheOpen = (out?["paid"] as? String) == "own"
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
@@ -470,11 +501,15 @@ final class AztecMove {
                 }
                 await AztecAccountStore.shared.refresh()
             }
+            if Self.kept === self { Self.kept = nil }
             DSHaptic.success()
         } catch {
-            // The rows keep the failure on the step it reached (prd §1700x).
-            steps.fail(AztecEngine.words(error))
-            stage = .failed(AztecEngine.words(error))
+            // The rows keep the failure on the step it reached (prd §1700x),
+            // in the sheet or behind it (prd §1777).
+            let words = AztecEngine.words(error)
+            if Self.kept === self, steps.away != nil { steps.failAway(words) } else { steps.fail(words) }
+            stage = .failed(words)
+            if Self.kept === self { DSHaptic.failure() }
         }
     }
 
@@ -549,7 +584,20 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
-        .task(id: move.mode) { await move.read() }
+        // A send kept behind its sheet is shown as it stands, running or
+        // failed, never read over (prd §1777).
+        .task(id: move.mode) { if AztecMove.kept !== move { await move.read() } }
+        .onAppear { if AztecMove.kept === move { PrivateSendSteps.shared.bringBack() } }
+        .onDisappear {
+            guard AztecMove.kept === move else { return }
+            if case .working = move.stage {
+                PrivateSendSteps.shared.sendAway()
+            } else {
+                // A failure seen is put away with its sheet.
+                AztecMove.kept = nil
+                PrivateSendSteps.shared.forget(.move)
+            }
+        }
         // What Aztec has carried is claimed while the sentence stands.
         .task {
             guard AztecProver.isAvailable, !DemoMode.isActive else { return }
@@ -968,6 +1016,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
                         open = nil
                         typing = false
+                        move.onAway = inTray ? { chrome.moveTray = false } : nil
                         Task { await move.run() }
                     }
                     .disabled(!ready)

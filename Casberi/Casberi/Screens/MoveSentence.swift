@@ -57,7 +57,9 @@ struct MoveSentence: View {
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
         _aztecMode = State(initialValue: aztec)
-        let aztecMove = AztecMove()
+        // A send still going, or failed, behind its sheet is the sentence
+        // Move opens on (prd §1777).
+        let aztecMove = (aztec == .send ? AztecMove.kept : nil) ?? AztecMove()
         aztecMove.mode = aztec ?? .deposit
         _aztecMove = State(initialValue: aztecMove)
         let railgunMove = RailgunMove()
@@ -116,8 +118,13 @@ struct MoveSentence: View {
 
     /// Into your private balance on Aztec, or from it to `recipient`.
     private func goAztec(_ mode: AztecMove.Mode, recipient: String? = nil) {
-        aztecMove.mode = mode
-        aztecMove.recipient = mode == .send ? recipient : nil
+        if mode == .send, let kept = AztecMove.kept {
+            // The one behind its sheet, as it stands (prd §1777).
+            aztecMove = kept
+        } else {
+            aztecMove.mode = mode
+            aztecMove.recipient = mode == .send ? recipient : nil
+        }
         withAnimation(DS.Motion.standard) { open = nil; aztecMode = mode }
         DSHaptic.selection()
     }

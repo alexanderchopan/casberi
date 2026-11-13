@@ -103,22 +103,79 @@ final class PrivateSendSteps {
 
     private(set) var run: Run?
 
+    /// **A SEND THAT GOES ON BEHIND ITS SHEET (prd §1777).** Once every ask
+    /// is answered a send within Aztec needs nobody for a minute or two, so
+    /// its sheet closes and the run moves here, where the shell's capsule
+    /// draws it (`MoveStepCapsule`). Its own slot: a second move started
+    /// meanwhile begins in `run` and cannot overwrite it, and the engine's
+    /// words about it still reach it (`received`).
+    private(set) var away: Run?
+
     /// The caller starts the clock at its tap, before a cold engine has said anything.
     func begin(_ kind: Kind, plan: Plan) {
         run = Run(kind: kind, plan: plan, started: .now)
     }
 
+    /// Move's running send leaves its sheet.
+    func sendAway() {
+        guard let current = run, current.kind == .move, current.isRunning else { return }
+        away = current
+        run = nil
+    }
+
+    /// Its sheet is open again: the rows there draw it, running or failed.
+    /// Never over another send that is still going in the sheet.
+    func bringBack() {
+        guard let current = away, run?.isRunning != true else { return }
+        run = current
+        away = nil
+    }
+
+    /// The send behind the sheet failed in the caller's own code.
+    func failAway(_ reason: String) {
+        guard var current = away, current.isRunning else { return }
+        current.ended = .now
+        current.ok = false
+        current.reason = reason
+        away = current
+    }
+
+    /// The send behind the sheet came back good and the engine never said so.
+    func finishAway() {
+        guard var current = away, current.isRunning else { return }
+        current.ended = .now
+        current.ok = true
+        current.reachedNetwork = true
+        away = current
+    }
+
+    /// The capsule has said "Sent" for its two seconds, or a failure was opened.
+    func clearAway() { away = nil }
+
     /// One `engineStep` message. `plan` is the engine's own, for a send it
     /// began itself (an app's transaction in the browser).
     func received(_ body: [String: Any], plan: Plan) {
         guard let step = body["step"] as? String, let kind = Kind(rawValue: body["kind"] as? String ?? "") else { return }
+        // The engine's words about a send behind its sheet go to it there
+        // (prd §1777): only Aztec's engine speaks here, and only an Aztec
+        // send is ever away.
+        if let behind = away, behind.kind == kind, behind.isRunning {
+            if step != "checking" { away = Self.advanced(behind, step: step, body: body) }
+            return
+        }
         if step == "checking" {
             // The caller's own tap already started this run; anything else is a new send.
             if let run, run.kind == kind, run.isRunning { return }
             run = Run(kind: kind, plan: plan, started: .now)
             return
         }
-        guard var current = run, current.kind == kind, current.isRunning else { return }
+        guard let current = run, current.kind == kind, current.isRunning else { return }
+        run = Self.advanced(current, step: step, body: body)
+    }
+
+    /// One step's word applied to a run: a step reached, or its end.
+    static func advanced(_ run: Run, step: String, body: [String: Any]) -> Run {
+        var current = run
         switch step {
         case "done", "failed":
             current.ended = .now
@@ -126,11 +183,11 @@ final class PrivateSendSteps {
             if step == "failed" { current.reason = (body["reason"] as? String).flatMap { $0.isEmpty ? nil : $0 } }
             if body["sent"] as? Bool == true { current.reachedNetwork = true }
         default:
-            guard let key = Key(rawValue: step), current.plan.steps.contains(where: { $0.key == key }) else { return }
+            guard let key = Key(rawValue: step), current.plan.steps.contains(where: { $0.key == key }) else { return run }
             current.at[key] = current.at[key] ?? .now
             if key == .sent { current.reachedNetwork = true }
         }
-        run = current
+        return current
     }
 
     /// A step reached, said by the caller (a send its own Swift drives, like

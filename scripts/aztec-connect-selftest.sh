@@ -82,6 +82,102 @@ steps_mutant "a failure reads as done" "s/ok ? 'done' : 'failed'/'done'/"
 steps_mutant "only a string body is a send" 's/  else if (ArrayBuffer.isView(body))/  else if (false)/'
 steps_mutant "an unwatched send is not counted" 's/^  reached++;$/  if (watching) reached++;/'
 
+# ── A send behind its sheet (prd §1777) ─────────────────────────────────
+# Move's send within Aztec goes on after its sheet closes, in its own slot:
+# a second move started meanwhile must not overwrite it, the engine's words
+# must still reach it, and it comes back only to a sheet with nothing running.
+# `PrivateSendSteps.swift` is compiled whole but for UIKit's device word.
+STEPS_SWIFT=Casberi/Casberi/Model/PrivateSendSteps.swift
+ROWS_SWIFT=Casberi/Casberi/Screens/PrivateStepRows.swift
+AZTEC_MOVE=Casberi/Casberi/Screens/MoveAztecPrivate.swift
+sed -e '/^import UIKit$/d' -e '/^\/\/\/ \*\*THIS DEVICE, BY NAME/,$d' $STEPS_SWIFT > $TMP/Steps.swift
+grep -q "enum DeviceWord" $TMP/Steps.swift && { echo "✗ the harness could not cut the device word out of $STEPS_SWIFT"; exit 1; }
+cat > $TMP/main.swift <<'SWIFT'
+import Foundation
+enum DeviceWord {
+    @MainActor static var proving: String { "Proving" }
+    @MainActor static var proved: String { "Proved" }
+}
+@MainActor func runChecks() -> Int {
+    var fails = 0
+    func check(_ name: String, _ ok: Bool) { if !ok { print("  ✗ \(name)"); fails += 1 } }
+    let s = PrivateSendSteps.shared
+    s.sendAway()
+    check("nothing running, nothing goes away", s.away == nil)
+    s.begin(.app, plan: .send(.aztec))
+    s.sendAway()
+    check("an app's send never leaves its page", s.away == nil && s.run?.kind == .app)
+    s.clear()
+    s.begin(.move, plan: .send(.aztec))
+    s.sendAway()
+    check("Move's send leaves the sheet's slot", s.run == nil && s.away?.isRunning == true)
+    s.begin(.move, plan: .signed(.ethereum))
+    s.received(["step": "proving", "kind": "move"], plan: .send(.aztec))
+    check("the engine's words reach the send behind the sheet", s.away?.currentIndex == 1)
+    check("a second move in the sheet is not moved by them", s.run?.currentIndex == 0 && s.run?.plan == .signed(.ethereum))
+    s.received(["step": "checking", "kind": "move"], plan: .send(.aztec))
+    check("a checking for it starts no new run", s.run?.plan == .signed(.ethereum) && s.away?.currentIndex == 1)
+    s.bringBack()
+    check("never brought back over a move still running", s.away != nil && s.run?.plan == .signed(.ethereum))
+    s.received(["step": "done", "kind": "move", "sent": true], plan: .send(.aztec))
+    check("done ends the send behind the sheet, not the one in it", s.away?.ok == true && s.run?.isRunning == true)
+    s.finish()
+    s.clearAway()
+    s.forget(.move)
+    check("both put away", s.run == nil && s.away == nil)
+    s.begin(.move, plan: .send(.aztec))
+    s.sendAway()
+    s.failAway("Aztec's node did not answer")
+    check("its failure keeps its reason", s.away?.ok == false && s.away?.reason == "Aztec's node did not answer")
+    s.bringBack()
+    check("a failed send comes back to its sheet", s.run?.ok == false && s.run?.reason != nil && s.away == nil)
+    s.clear()
+    s.begin(.move, plan: .send(.aztec))
+    s.sendAway()
+    s.finishAway()
+    check("a send handed back without the engine's word is done", s.away?.ok == true && s.away?.reachedNetwork == true)
+    s.failAway("late")
+    check("a finished send is not failed afterwards", s.away?.ok == true)
+    return fails
+}
+let fails = MainActor.assumeIsolated { runChecks() }
+exit(fails == 0 ? 0 : 1)
+SWIFT
+swiftc -Onone -o $TMP/steps-run $TMP/Steps.swift $TMP/main.swift 2>&1 | grep -E 'error:' || true
+[[ -x $TMP/steps-run ]] || { echo "✗ the send-behind-its-sheet harness did not compile"; exit 1; }
+$TMP/steps-run || { echo "✗ a send behind its sheet is not kept apart (prd §1777)"; exit 1; }
+away_mutant() { # name, sed expression
+  sed "$2" $TMP/Steps.swift > $TMP/StepsMutant.swift
+  cmp -s $TMP/Steps.swift $TMP/StepsMutant.swift && { echo "✗ mutation '$1' changed nothing"; exit 1; }
+  rm -f $TMP/steps-mrun
+  swiftc -Onone -o $TMP/steps-mrun $TMP/StepsMutant.swift $TMP/main.swift 2>/dev/null || { echo "✗ mutation '$1' did not compile"; exit 1; }
+  if $TMP/steps-mrun >/dev/null 2>&1; then echo "✗ mutation '$1' passed: the checks cannot see it"; exit 1; fi
+  echo "✓ mutation '$1' fails the checks"
+}
+away_mutant "the engine's words go to the sheet's run" 's/if let behind = away, behind.kind == kind, behind.isRunning {/if let behind = away, behind.kind == kind, false {/'
+away_mutant "an app's send goes away" 's/guard let current = run, current.kind == .move, current.isRunning else { return }/guard let current = run, current.isRunning else { return }/'
+away_mutant "brought back over a running move" 's/guard let current = away, run?.isRunning != true else { return }/guard let current = away else { return }/'
+away_mutant "a send that went away stays in the sheet too" 's/^        run = nil$/        _ = run/'
+# The wiring no compiled function can prove: the sheet closes only after
+# every ask, one send at a time, and the shell draws it.
+awk '/try await AztecCoSign.approve\(/{a=NR} /steps.sendAway\(\)/{if(!s)s=NR} /AztecEngine.shared.call\("sendPrivately"/{c=NR} END{exit !(a && s && c && a<s && s<c)}' $AZTEC_MOVE \
+  || { echo "✗ the sheet closes before Face ID and the co-signer answered, or after the send began (prd §1777)"; exit 1; }
+grep -q 'guard mode != .send || !anotherIsGoing else {' $AZTEC_MOVE \
+  || { echo "✗ a second send can start while one is behind its sheet (prd §1777)"; exit 1; }
+grep -q 'move.onAway = inTray ? { chrome.moveTray = false } : nil' $AZTEC_MOVE \
+  || { echo "✗ Send no longer closes its sheet, or closes a page that has no sheet (prd §1777)"; exit 1; }
+grep -q '.task(id: move.mode) { if AztecMove.kept !== move { await move.read() } }' $AZTEC_MOVE \
+  || { echo "✗ a send behind its sheet is read over when its sentence opens again (prd §1777)"; exit 1; }
+grep -q 'if Self.kept === self, steps.away != nil { steps.failAway(words) } else { steps.fail(words) }' $AZTEC_MOVE \
+  || { echo "✗ a failure behind the sheet fails whatever is in the sheet (prd §1777)"; exit 1; }
+grep -q 'let aztecMove = (aztec == .send ? AztecMove.kept : nil) ?? AztecMove()' Casberi/Casberi/Screens/MoveSentence.swift \
+  || { echo "✗ Move opened on Aztec no longer shows the send behind its sheet (prd §1777)"; exit 1; }
+grep -q 'MoveStepCapsule()' Casberi/Casberi/Shell/RootShell.swift \
+  || { echo "✗ the shell no longer draws a send behind its sheet (prd §1777)"; exit 1; }
+grep -q 'if let run = steps.away {' $ROWS_SWIFT \
+  || { echo "✗ the shell's capsule ticks with nothing to draw, or draws the sheet's own run (prd §1777)"; exit 1; }
+echo "✓ a send behind its sheet: its own slot, the engine's words, one at a time, the shell's capsule"
+
 # ── Private gas (prd §1700aa) ───────────────────────────────────────────
 # The shared private fee contract: used only on its rollup and at the address
 # its own bytecode derives, never asked for more than is there, and a send

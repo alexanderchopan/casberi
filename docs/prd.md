@@ -72491,3 +72491,21 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** The row is drawn on Catalyst too; with no prover there, Aztec is never offered and it opens your private balance on Ethereum's sentence. The amount rows are the same view.
 
 **Checks.** `private-money-selftest.sh`: the row, its gate, each of the three picks, the To list's Aztec rule held in both places, the draft that opens To, the row after Aztec's rows; no `DSShareSlider` file and no slider drawn in Screens, Design or Shell; a verb's amount is its rows.
+
+## §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar says the rest (extends §1700w, §1700x; amends §1700f item 14) (user, 2026-11-13, after a private send to another Aztec address on their phone: "it just took 75s to send and 34 to prove", "would be good if checking and proving and then sending is in the backgorund"; asked whether to build it: "Yes, build it") — BUILT
+
+**Why.** A send within Aztec asks for Face ID and the co-signer, and then needs nobody for a minute or two while it is checked, proved on the phone and handed to Aztec. The sheet stood over the app for all of it.
+
+1. **The sheet closes when the last ask is answered** (`AztecMove.run`, the `sendPrivately` branch): after Face ID and the co-signer's approval, before the engine is called. Only a send to an Aztec address, and only where the sentence is a sheet. A move-in and an exit to Ethereum stay in their sheet: both can raise the Signer sheet part-way.
+2. **A capsule over the tab bar says the rest** (`MoveStepCapsule`, on the shell): the Aztec browser's capsule exactly (§1700w's C, one shared `StepCapsuleLabel`): the step under way and its seconds, then "Sent to Aztec" with the send's whole seconds for two seconds, then gone. It ticks only while there is a send to draw.
+3. **A failure stays** as "Not sent". Its tap opens the sentence it came from, with the reason on the step it reached and Try again, as the sheet would have shown it. Closed again, the failure is put away.
+4. **Its own slot** (`PrivateSendSteps.away`). A second move started meanwhile begins in the sheet's slot and cannot overwrite it; the engine's words go to the send behind the sheet while it runs (only Aztec's engine speaks through `received`, and only an Aztec send is ever away); it comes back to a sheet only when nothing is running there.
+5. **One send at a time.** A second send within Aztec, or an exit, while one is going says "A send is still on its way". A move-in may go: it is signed on Ethereum. Move opened on Aztec while one is going shows that same sentence and its rows (`AztecMove.kept`), never a second beside it.
+6. **Leaving Casberi pauses it.** iOS suspends the prover with the app; nothing here changes that, and nothing is said about it.
+7. **Not built:** an Activity row for a send within Aztec (there is none today, in the sheet or behind it); the same for an exit to Ethereum; a notification when it lands.
+
+**Mac half (§1402).** The Mac has no prover and no send within Aztec; the capsule is mounted on the shell there too and has nothing to draw.
+
+**Checks.** `aztec-connect-selftest.sh` compiles `PrivateSendSteps.swift` (UIKit's device word cut) against a harness: only Move's running send goes away, the engine's words reach it and not the sheet's run, done and failure end it alone, never brought back over a running move; four mutations. Wiring by reading: the sheet closes after the co-signer and before the engine's call, one send at a time, a kept sentence is never read over, a failure behind the sheet fails only itself, the shell draws it.
+
+**Seen** (simulator, `-openRoom Wallet -privateStepsPreview away`, the sample timeline, no engine): the capsule over the tab bar reading "Proving on this iPhone · 8 s", then "Sending to Aztec · 17 s", gone after the send ended; with `awayfail`, "Not sent" standing. **Not seen:** "Sent to Aztec" in a frame (it stood between two screenshots), the tap on a failure (the simulator took no input), the sheet closing after Face ID, a real send behind it, a failure's sentence opened again, any of it on a phone. The first real one is the user's.

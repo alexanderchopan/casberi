@@ -45566,6 +45566,34 @@
         }
       }
     },
+    "A send is still on its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía hay un envío en camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ送金の途中です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 보내는 중인 송금이 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有一笔发送在途中"
+          }
+        }
+      }
+    },
     "A sender" : {
       "localizations" : {
         "es" : {
@@ -140764,6 +140792,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开恢复密钥检查"
+          }
+        }
+      }
+    },
+    "Opens the send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre el envío"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "송금을 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开这笔发送"
           }
         }
       }
