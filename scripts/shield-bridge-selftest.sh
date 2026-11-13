@@ -301,7 +301,11 @@ DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr 
 # SettingsHome is Library's Wallet folder, Aztec's directory (prd §1700m).
 [[ "$DOORS" == "Casberi/Casberi/Screens/SettingsHome.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
-grep -q "AztecBrowserView(url: AztecApps.directory, ethereum: true, sends: true)" Casberi/Casberi/Screens/SettingsHome.swift \
+# Since prd §1757 one sheet serves the directory's tile and each connected
+# app's, so the guard holds both halves: the directory raises the sheet, and
+# the sheet offers the account.
+grep -q "aztecDirectory = AztecAppLink(url: AztecApps.directory)" Casberi/Casberi/Screens/SettingsHome.swift \
+  && grep -q "AztecBrowserView(url: link.url, ethereum: true, sends: true)" Casberi/Casberi/Screens/SettingsHome.swift \
   || { echo "✗ Library's Aztec directory no longer offers your account to an Ethereum app"; exit 1; }
 # The directory is how the Aztec account first gets used, so its tile may not
 # wait for that use (prd §1700s).
