@@ -72272,6 +72272,10 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 3. **The list is read against Aztec's registry when the page appears** (`grantsStanding`, the registry's own `utility_is_consumable`): one an app has used, or one taken back elsewhere, leaves. One that cannot be read stays, and one under ten minutes old stays while its transaction lands.
 4. **Take back is one transaction** (`revokeGrant`: the registry write with "no"), after Face ID and the co-signer, paid as the account's sends are.
 
+**The box draws the apps** (user, 2026-11-12, of the grey skeleton reading "2 to Aztec apps": "this should have icons or tokens in it"): with no money in reach and at least one authorization, the Permissions box is a pack of the apps' own icons (`WalletPermissionsFigure.aztecFigure`, `AztecGrantsShape.byApp`), one circle an app, its area how many authorizations it holds, an app with no icon kept by its initial; beside it the count over "to Aztec apps" and the apps by name, five at most. No dollars. With money in reach the box is the balance's disc as before and the apps are the list under it. SEEN on the simulator with `-aztecGrantsSample YES`: RavenHouse's raven and Nemi's circle, "2 to Aztec apps", and Revoke on each row.
+
+**The verb is Revoke** (user, 2026-11-12, of the reel's "Take back what you gave": "so revoke permissions"): the row's act, its toast ("Revoked"), the Face ID reason and the co-signer's line. Builds 987 and earlier say "Take back", which is Lend's word, for money; this entry's items 2 and 4 name the act by its first word.
+
 **Not built.** Authorizations given in another wallet with the same account: only the registry knows them, and it cannot be listed by account.
 
 **Mac half (§1402).** None.

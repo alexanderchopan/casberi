@@ -225,7 +225,9 @@ extension FeedScreen {
     }
 
     /// **WHAT AZTEC APPS MAY STILL DO IN YOUR NAME (prd §1762).** One row an
-    /// authorization: the app, the call and who may make it, and Take back.
+    /// authorization: the app, the call and who may make it, and Revoke: the
+    /// app's word for a permission taken away (user, 2026-11-12: "revoke
+    /// permissions"). "Take back" is Lend's word, for money.
     /// Read against Aztec's registry when the page appears, so one an app
     /// has used is gone.
     @ViewBuilder
@@ -272,13 +274,13 @@ extension FeedScreen {
             Task {
                 do {
                     try await store.takeBack(grant)
-                    chrome.flash(String(localized: "Taken back"))
+                    chrome.flash(String(localized: "Revoked"))
                 } catch {
                     chrome.flash(AztecEngine.words(error))
                 }
             }
         } label: {
-            Text(verbatim: inFlight ? String(localized: "Taking back…") : String(localized: "Take back"))
+            Text(verbatim: inFlight ? String(localized: "Revoking…") : String(localized: "Revoke"))
                 .dsText(.body17)
                 .foregroundStyle(store.takingBack == nil ? DS.pickInk : DS.textTertiary)
                 .lineLimit(1)
@@ -288,7 +290,7 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .disabled(store.takingBack != nil || DemoMode.isActive)
         .layoutPriority(1)
-        .accessibilityLabel(Text("Take back \(AztecAppsShape.name(host: grant.host))'s authorization"))
+        .accessibilityLabel(Text("Revoke \(AztecAppsShape.name(host: grant.host))'s authorization"))
     }
 
     /// Your account's accounts (§1700a item 1): once the Aztec account's

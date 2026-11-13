@@ -1005,7 +1005,7 @@ extension FeedScreen {
                                     acting: walletPermissionsActing,
                                     held: walletPermissionsHeld,
                                     asOf: walletLive.asOf,
-                                    aztecGrants: walletShowsAztecGrants ? AztecGrantsStore.shared.grants.count : 0) { walletOpenPermission($0) }
+                                    aztecApps: walletShowsAztecGrants ? AztecGrantsShape.byApp(AztecGrantsStore.shared.grants) : []) { walletOpenPermission($0) }
         // **WHETHER THEY ARE GROWING (prd §1633).**
         case .threats:
             let things = walletThreatThings

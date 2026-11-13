@@ -52,6 +52,27 @@ enum AztecGrantsShape {
         }
     }
 
+    /// One app's authorizations, for the Permissions box: a circle an app,
+    /// its area how many it holds.
+    struct AppShare: Equatable, Identifiable {
+        let host: String
+        let count: Int
+        var id: String { host }
+    }
+
+    /// The apps that hold authorizations, the one with the most first, then
+    /// by the newest; five at most, as the box's other lists are.
+    static func byApp(_ grants: [Grant]) -> [AppShare] {
+        var counts: [String: Int] = [:], order: [String] = []
+        for grant in grants {
+            if counts[grant.host] == nil { order.append(grant.host) }
+            counts[grant.host, default: 0] += 1
+        }
+        return order.enumerated()
+            .sorted { a, b in counts[a.element]! != counts[b.element]! ? counts[a.element]! > counts[b.element]! : a.offset < b.offset }
+            .prefix(5).map { AppShare(host: $0.element, count: counts[$0.element]!) }
+    }
+
     /// The row's line: the call and who may make it. "set authorized · ...63f2".
     static func line(_ grant: Grant) -> String {
         grant.method.replacingOccurrences(of: "_", with: " ") + " · " + tail(grant.caller)

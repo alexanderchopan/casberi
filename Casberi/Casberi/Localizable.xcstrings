@@ -33104,34 +33104,6 @@
         }
       }
     },
-    "%lld to Aztec apps" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld a apps de Aztec"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aztec アプリへ %lld 件"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aztec 앱에 %lld건"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld 项授予 Aztec 应用"
-          }
-        }
-      }
-    },
     "%lld to sign" : {
       "localizations" : {
         "es" : {
@@ -162764,6 +162736,62 @@
         }
       }
     },
+    "Revoke %@'s authorization" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revocar la autorización de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤销 %@ 的授权"
+          }
+        }
+      }
+    },
+    "Revoke %@'s authorization to call %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revocar la autorización de %1$@ para llamar %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の %2$@ 呼び出しの承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 %2$@ 호출 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤销 %1$@ 调用 %2$@ 的授权"
+          }
+        }
+      }
+    },
     "Revoke %lld approvals on %@" : {
       "localizations" : {
         "es" : {
@@ -162844,6 +162872,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Revoke.cash 上撤销"
+          }
+        }
+      }
+    },
+    "Revoke this authorization" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revocar esta autorización"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この承認を取り消す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 승인 철회"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "撤销此授权"
           }
         }
       }
@@ -163052,6 +163108,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "撤销除了 Gas 费外是免费的。从最上面开始。"
+          }
+        }
+      }
+    },
+    "Revoking…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revocando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り消し中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "철회 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在撤销…"
           }
         }
       }
@@ -184704,62 +184788,6 @@
         }
       }
     },
-    "Take back %@'s authorization" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Retirar la autorización de %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ の承認を取り消す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@의 승인 철회"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "撤回 %@ 的授权"
-          }
-        }
-      }
-    },
-    "Take back %@'s authorization to call %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Retirar la autorización de %1$@ para llamar %2$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ の %2$@ 呼び出しの承認を取り消す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@의 %2$@ 호출 승인 철회"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "撤回 %1$@ 调用 %2$@ 的授权"
-          }
-        }
-      }
-    },
     "Take back %@?" : {
       "localizations" : {
         "es" : {
@@ -184784,34 +184812,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "取回 %@?"
-          }
-        }
-      }
-    },
-    "Take back this authorization" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Retirar esta autorización"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "この承認を取り消す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이 승인 철회"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "撤回此授权"
           }
         }
       }
@@ -184844,34 +184844,6 @@
         }
       }
     },
-    "Taken back" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Retirada"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "取り消しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "철회됨"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已撤回"
-          }
-        }
-      }
-    },
     "Takes it back" : {
       "localizations" : {
         "es" : {
@@ -184896,34 +184868,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将其取回"
-          }
-        }
-      }
-    },
-    "Taking back…" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Retirando…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "取り消し中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "철회 중…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在撤回…"
           }
         }
       }
@@ -249158,6 +249102,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发给 %lld 人"
+          }
+        }
+      }
+    },
+    "to Aztec apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a apps de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アプリへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 앱에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "授予 Aztec 应用"
           }
         }
       }

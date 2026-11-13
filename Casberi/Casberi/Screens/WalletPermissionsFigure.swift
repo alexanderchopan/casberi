@@ -30,9 +30,10 @@ struct WalletPermissionsFigure: View {
     /// When these grants were read, while they stand on an earlier launch's
     /// reading (prd §1709); nil once the live read lands.
     var asOf: Date? = nil
-    /// Authorizations given to Aztec apps, listed under the box (prd §1762):
-    /// with any, an empty pack does not say "No permissions".
-    var aztecGrants = 0
+    /// The Aztec apps that hold authorizations, listed under the box (prd
+    /// §1762): with any, a box with no money in reach draws them, each app
+    /// a circle wearing its own icon, never "No permissions" over a list.
+    var aztecApps: [AztecGrantsShape.AppShare] = []
     let open: (PermissionsPack.Piece) -> Void
 
     static let diameter: CGFloat = 200
@@ -42,11 +43,12 @@ struct WalletPermissionsFigure: View {
         let pieces = PermissionsPack.pieces(grants, acting: acting, held: held)
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let money: (Double) -> String = { mask ?? WalletValue.exactMoney($0) }
-        if pieces.isEmpty {
+        if pieces.isEmpty, !aztecApps.isEmpty {
+            aztecFigure
+        } else if pieces.isEmpty {
             // What would fill it, empty (§769): the pack's own drawing, the
             // short state on it.
-            WalletScopeEmptyFigure(section: .permissions, padded: false,
-                                   headline: aztecGrants > 0 ? String(localized: "\(aztecGrants) to Aztec apps") : nil)
+            WalletScopeEmptyFigure(section: .permissions, padded: false)
         } else {
             let disc = PermissionsPack.disc(pieces, acting: acting, held: held)
             let inner = PermissionsPack.inner(pieces, disc: disc)
@@ -67,6 +69,64 @@ struct WalletPermissionsFigure: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+    }
+
+    // MARK: - Aztec apps (prd §1762)
+
+    /// **THE AZTEC APPS THAT HOLD AN AUTHORIZATION, AS A PACK OF THEIR OWN
+    /// ICONS** (user, 2026-11-12, of the grey skeleton with "2 to Aztec
+    /// apps" on it: "this should have icons or tokens in it"). A mark packs
+    /// (prd §917): one circle an app, its area how many authorizations it
+    /// holds; beside it the count, and the apps by name. No dollars: an
+    /// authorization is one named call, and what it could move is not read.
+    private var aztecFigure: some View {
+        let total = aztecApps.reduce(0) { $0 + $1.count }
+        return HStack(alignment: .center, spacing: DS.Space.s4) {
+            DSCirclePack(items: aztecApps.map {
+                DSCirclePackItem(id: $0.host, share: Double($0.count),
+                                 label: "\(AztecAppsShape.name(host: $0.host)), \($0.count)")
+            }, mark: { item, diameter in
+                Group {
+                    if let icon = AztecAppsStore.shared.icons[item.id] {
+                        Image(uiImage: icon).resizable().scaledToFill()
+                    } else {
+                        // No icon kept: the app's initial, on the box's grey.
+                        ZStack {
+                            Circle().fill(PermissionsDisc.groundFill)
+                            Text(verbatim: String(AztecAppsShape.name(host: item.id).prefix(1)).uppercased())
+                                .dsText(diameter >= 72 ? .heading34 : .body17)
+                                .fontWeight(.bold)
+                                .foregroundStyle(DS.textSecondary)
+                        }
+                    }
+                }
+                .frame(width: diameter, height: diameter)
+                .clipShape(Circle())
+            })
+            .frame(width: Self.diameter, height: Self.diameter)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: "\(total)")
+                        .dsText(.heading28)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                    Text("to Aztec apps")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(2)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(aztecApps) { app in
+                        Text(verbatim: AztecAppsShape.name(host: app.host))
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: - Beside the disc

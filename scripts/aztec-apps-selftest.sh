@@ -85,6 +85,13 @@ check(AztecGrantsShape.kept(grants, standing: [], unread: [], now: now.addingTim
       "one just approved stays while its own transaction lands")
 check(AztecGrantsShape.removed(grants, hash: "0xAA").map(\.hash) == ["0xbb"], "a take-back removes it, whatever the hash's case")
 check(AztecGrantsShape.line(grants[0]) == "set authorized · ...63f2", "the row's line is the call and who may make it")
+func on(_ host: String, _ hash: String) -> AztecGrantsShape.Grant {
+    .init(hash: hash, host: host, caller: "0x1", contract: "0x2", method: "m", args: [], transaction: "0x1", at: now)
+}
+let shares = AztecGrantsShape.byApp([on("a.example", "1"), on("b.example", "2"), on("b.example", "3"), on("c.example", "4")])
+check(shares.map(\.host) == ["b.example", "a.example", "c.example"] && shares.map(\.count) == [2, 1, 1],
+      "the box's circles are one an app, the app with the most first, a tie in the list's own order")
+check(AztecGrantsShape.byApp((0..<9).map { on("h\($0).example", "\($0)") }).count == 5, "five apps at most")
 exit(failed == 0 ? 0 : 1)
 SWIFT
 
@@ -129,6 +136,9 @@ mutate "any https site is remembered" \
 mutate "an authorization that could not be read is dropped" \
   '|| unknown.contains($0.hash.lowercased())' \
   '' "$GRANTS"
+mutate "every authorization is its own circle" \
+  'if counts[grant.host] == nil { order.append(grant.host) }' \
+  'order.append(grant.host)' "$GRANTS"
 mutate "an authorization the registry no longer holds stays listed" \
   'stands.contains($0.hash.lowercased()) || unknown' \
   'true || unknown' "$GRANTS"
@@ -149,7 +159,7 @@ grep -q "canvas.toDataURL('image/png')" "$BROWSER" && grep -q 'if !now { self?.a
   || { echo "✗ a vector icon is no longer drawn, or a tile with no icon is never asked again"; exit 1; }
 grep -q 'if AztecAppsStore.shared.remembers(origin: body\["origin"\] as? String) {' Casberi/Casberi/Model/Aztec/AztecEngine.swift \
   || { echo "✗ a kept site is asked to connect again, or a site that is not kept is let through"; exit 1; }
-grep -q 'try await PrivateRootKey.unlock(reason: String(localized: "Take back this authorization"))' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
+grep -q 'try await PrivateRootKey.unlock(reason: String(localized: "Revoke this authorization"))' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
   && grep -q 'try await AztecCoSign.approve(' Casberi/Casberi/Model/Aztec/AztecGrantsStore.swift \
   || { echo "✗ a take-back is sent without Face ID or the co-signer"; exit 1; }
 echo "✓ Aztec apps self-test passed"

@@ -15,13 +15,20 @@ final class AztecGrantsStore {
 
     private static let key = "aztec.grants.v1"
 
+    #if DEBUG
+    private static var sampled: Bool {
+        guard let raw = UserDefaults.standard.string(forKey: "aztecGrantsSample") else { return false }
+        return raw == "YES" || raw == "1" || raw == "one"
+    }
+    #endif
+
     private init() {
         grants = UserDefaults.standard.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode([AztecGrantsShape.Grant].self, from: $0) } ?? []
         #if DEBUG
-        // `-aztecGrantsSample YES`: two authorizations on a simulator, whose
-        // account cannot pay for one (prd §1762).
-        if UserDefaults.standard.bool(forKey: "aztecGrantsSample") {
+        // `-aztecGrantsSample YES|one`: two authorizations (or the first
+        // alone) on a simulator, whose account cannot pay for one (prd §1762).
+        if Self.sampled {
             grants = [
                 .init(hash: "0x" + String(repeating: "1a", count: 32), host: "app.ravenhouse.xyz",
                       caller: "0x" + String(repeating: "0", count: 60) + "63f2", contract: "0x" + String(repeating: "0", count: 60) + "5e83",
@@ -30,6 +37,7 @@ final class AztecGrantsStore {
                       caller: "0x" + String(repeating: "0", count: 60) + "9c1d", contract: "0x" + String(repeating: "0", count: 60) + "4f38",
                       method: "transfer_public_to_public", args: ["amount 5 USDC"], transaction: "0x00", at: .now),
             ]
+            if UserDefaults.standard.string(forKey: "aztecGrantsSample") == "one" { grants = Array(grants.prefix(1)) }
         }
         #endif
     }
@@ -50,7 +58,7 @@ final class AztecGrantsStore {
     func refresh() async {
         guard !grants.isEmpty, !DemoMode.isActive, AztecProver.isAvailable else { return }
         #if DEBUG
-        if UserDefaults.standard.bool(forKey: "aztecGrantsSample") { return }
+        if Self.sampled { return }
         #endif
         guard let data = try? JSONEncoder().encode(grants.map(\.hash)),
               let answer = try? await AztecEngine.shared.call("grantsStanding", [String(decoding: data, as: UTF8.self)]) as? [String: Any] else { return }
@@ -65,8 +73,8 @@ final class AztecGrantsStore {
         guard takingBack == nil else { return }
         takingBack = grant.hash
         defer { takingBack = nil }
-        try await PrivateRootKey.unlock(reason: String(localized: "Take back this authorization"))
-        try await AztecCoSign.approve(String(localized: "Take back \(AztecGrantsShape.tail(grant.caller))'s authorization to call \(grant.method)"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Revoke this authorization"))
+        try await AztecCoSign.approve(String(localized: "Revoke \(AztecGrantsShape.tail(grant.caller))'s authorization to call \(grant.method)"))
         let out = try await AztecEngine.shared.call("revokeGrant", [grant.hash, AztecGas.unminted]) as? [String: Any]
         AztecGas.spent(by: out)
         grants = AztecGrantsShape.removed(grants, hash: grant.hash)
@@ -75,7 +83,7 @@ final class AztecGrantsStore {
 
     private func save() {
         #if DEBUG
-        if UserDefaults.standard.bool(forKey: "aztecGrantsSample") { return }
+        if Self.sampled { return }
         #endif
         UserDefaults.standard.set(try? JSONEncoder().encode(grants), forKey: Self.key)
     }
