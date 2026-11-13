@@ -98,6 +98,8 @@ grep -q "    reached: sendsReached," $MAIN \
   || { echo "✗ a failed private send no longer asks whether it reached Aztec before it is tried again"; exit 1; }
 (( $(grep -c "await sendOwn(wallet, " $MAIN) == 3 )) \
   || { echo "✗ Casberi's three sends (a claim, a private send, an exit) no longer all pay through sendOwn"; exit 1; }
+(( $(grep -c "sendOwn(wallet, " $MAIN) == 5 )) \
+  || { echo "✗ sendOwn has a caller the pass does not know (its own line, the three sends, an app's authorization)"; exit 1; }
 (( $(grep -c "\.send({ from: me" $MAIN) == 2 )) \
   || { echo "✗ a send in main.js goes around sendOwn (two are allowed: sendOwn's own, and the legacy gas claim)"; exit 1; }
 (cd $ENGINE && node test/private-fees.test.mjs) || { echo "✗ the private gas checks failed"; exit 1; }
@@ -116,8 +118,54 @@ fees_mutant "a send that reached Aztec is sent again" 's/    if \(reached\(\) !=
 fees_mutant "the second failure hides the first" 's/    \} catch \{\n      throw first;/    } catch (second) {\n      throw second;/'
 fees_mutant "the pinned address is not the one the bytecode derives" 's/0x0516ebb4/0x0516ebb5/'
 fees_mutant "two sends choose how to pay at once" 's/    const mine = last\.then\(run\);/    const mine = Promise.resolve().then(run);/'
-grep -q "return ownTurn(() => sendPaying({" $MAIN \
-  || { echo "✗ Casberi's sends no longer take turns: a claim and a send can be offered the same gas deposit"; exit 1; }
+(( $(grep -c "return ownTurn(() => sendPaying({" $MAIN) == 2 )) \
+  || { echo "✗ Casberi's sends, or an app's, no longer take turns: two can be offered the same gas deposit"; exit 1; }
+
+# ── An app's transaction pays as Casberi's own do (prd §1759) ────────────
+# It named no payer, so the account's own Fee Juice paid: an account whose
+# gas is in the private fee contract could not pay for anything an app asked.
+fees_mutant "an app's transaction skips the private balance" "s/  if \(privateBalance > 0n\) return 'private';\n//"
+fees_mutant "a transaction naming its own payer is paid by Casberi" "s/  if \(payer\) return [^\n]*\n//"
+fees_mutant "the app's scopes are dropped for the contract's" 's/\[\.\.\.\(opts\?\.additionalScopes \?\? \[\]\), \.\.\.\(paid\.additionalScopes \?\? \[\]\)\]/[...(paid.additionalScopes ?? [])]/'
+fees_mutant "the app's own gas settings are kept over the measured ones" 's/fee: \{ \.\.\.\(opts\?\.fee \?\? \{\}\), gasSettings: paid\.fee\.gasSettings \}/fee: { gasSettings: paid.fee.gasSettings, ...(opts?.fee ?? {}) }/'
+grep -q "if (method === 'sendTx' && !parsed\[0\]?.feePayer) {" $MAIN \
+  || { echo "✗ an app's transaction with no payer is no longer paid as Casberi's own, or one with its own payer is rewritten"; exit 1; }
+grep -q "pay: () => feeFor(wallet, appInteraction(wallet, payload, opts), gasJSON)," $MAIN \
+  || { echo "✗ an app's transaction is no longer measured and capped as Casberi's own sends are"; exit 1; }
+grep -q "const fee = method === 'sendTx' ? await appFeeKind(wallet, args) : '';" $MAIN \
+  || { echo "✗ the approval sheet is no longer told how an app's transaction is paid"; exit 1; }
+! grep -q "Paid from your Fee Juice" $MAIN \
+  || { echo "✗ the sheet's fixed fee line is back: it said Fee Juice whatever paid"; exit 1; }
+
+# ── An app's public authorization (prd §1760) ────────────────────────────
+# `grantPublicAuthwit`, the Nulo wallet's method RavenHouse calls. For a
+# token it is a spending approval: a request for another account, a caller
+# that is the account itself, or a sheet that hides who gets it, each a way
+# to sign something the person did not read.
+GRANT_SRC=$ENGINE/src/app-grant.js
+[[ -f $GRANT_SRC ]] || { echo "✗ $GRANT_SRC not found"; exit 1; }
+(cd $ENGINE && node test/app-grant.test.mjs) || { echo "✗ the authorization checks failed"; exit 1; }
+grant_mutant() { # name, perl expression
+  perl -0pe "$2" $GRANT_SRC > $TMP/app-grant.js
+  cmp -s $GRANT_SRC $TMP/app-grant.js && { echo "✗ mutation '$1' changed nothing"; exit 1; }
+  if (cd $ENGINE && GRANT=$TMP/app-grant.js node test/app-grant.test.mjs >/dev/null 2>&1); then
+    echo "✗ mutation '$1' passed: the authorization checks cannot see it"; exit 1
+  fi
+  echo "✓ mutation '$1' fails the authorization checks"
+}
+grant_mutant "an app grants from an account that is not connected" "s/  if \(!same\(account, me\)\) throw [^\n]*\n//"
+grant_mutant "the account authorizes itself" "s/  if \(same\(caller, me\)\) throw [^\n]*\n//"
+grant_mutant "a function name is taken unread" 's/\|\| !METHOD\.test\(method\)//'
+grant_mutant "a long argument is drawn whole" 's/s\.length > 14 \?/s.length > 1400 ?/'
+grep -q "if (method === 'grantPublicAuthwit') return grantForApp(wallet, args, origin);" $MAIN \
+  || { echo "✗ main.js no longer answers grantPublicAuthwit"; exit 1; }
+grep -q "const answer = await new Promise(resolve => waiting.set(id, resolve));" $MAIN \
+  && grep -q "if (!answer.yes) throw new Error('The person declined grantPublicAuthwit');" $MAIN \
+  || { echo "✗ an authorization is written without the person's yes"; exit 1; }
+grep -q "const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas));" $MAIN \
+  || { echo "✗ an authorization's transaction no longer pays and takes turns as Casberi's sends do"; exit 1; }
+grep -q 'It lets \\(grantee) make this call in your name, once. Anyone can see it.' Casberi/Casberi/Screens/AztecBrowser.swift \
+  || { echo "✗ the sheet no longer says who an authorization is for"; exit 1; }
 
 # ── zk.money's short links (prd §1748) ──────────────────────────────────
 # The tag a link's record stands under, the locator's pinned address, and

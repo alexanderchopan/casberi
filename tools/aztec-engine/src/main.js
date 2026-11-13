@@ -44,7 +44,10 @@ import { FPCFeePaymentMethod, PrivateMintAndPayFeePaymentMethod } from '@alejoam
 import { estimateGasSettings, maxFeesPerGasFromBaseFees, maxGasCostFor } from '@alejoamiras/private-fee-juice/utils';
 import { WALLET_ICON } from './icon.js';
 import { watched, sendsReached } from './steps.js';
-import { PRIVATE_FEES, choose, sendPaying, inTurn } from './private-fees.js';
+import { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions } from './private-fees.js';
+import { mergeExecutionPayloads } from '@aztec-labs/stdlib/tx';
+import { SetPublicAuthwitContractInteraction } from '@aztec-labs/aztec.js/authorization';
+import { grantRequest, grantWords } from './app-grant.js';
 import { siloedTag, payloads } from './zk-link.js';
 
 const params = new URLSearchParams(location.search);
@@ -297,6 +300,63 @@ function sendOwn(wallet, interaction, gasJSON) {
   }));
 }
 
+// AN APP'S TRANSACTION, PAID AS CASBERI'S OWN ARE (prd §1759). The app's
+// payload names no payer, so Casberi's payment goes in front of the app's
+// calls, as Aztec's own `send` puts a payment method's; measured first the
+// same way, never above what is there, and in the same turn as Casberi's
+// sends so two never choose the same gas. The app's calls are not changed.
+function appInteraction(wallet, payload, opts) {
+  const { wait: _wait, ...rest } = opts ?? {};
+  return {
+    async simulate({ from, additionalScopes, fee }) {
+      const paying = mergeExecutionPayloads([await fee.paymentMethod.getExecutionPayload(), payload]);
+      const result = await wallet.simulateTx(paying, {
+        ...rest,
+        from: rest.from ?? from,
+        additionalScopes: [...(rest.additionalScopes ?? []), ...(additionalScopes ?? [])],
+        fee: { gasSettings: fee.gasSettings },
+      });
+      return { gasUsed: result.gasUsed };
+    },
+  };
+}
+function sendForApp(wallet, payload, opts, gasJSON) {
+  return ownTurn(() => sendPaying({
+    pay: () => feeFor(wallet, appInteraction(wallet, payload, opts), gasJSON),
+    send: async paid => (paid
+      ? wallet.sendTx(mergeExecutionPayloads([await paid.fee.paymentMethod.getExecutionPayload(), payload]), payingOptions(opts, paid))
+      : wallet.sendTx(payload, opts)),
+    reached: sendsReached,
+    log,
+  }));
+}
+
+// How an app's transaction will be paid, for the sheet, before it is asked.
+// A balance that cannot be read counts as nothing there.
+async function appFeeKind(wallet, args) {
+  const me = AztecAddress.fromStringUnsafe(accountAddress);
+  const payer = args?.[0]?.feePayer;
+  let privateBalance = 0n, ownBalance = 0n;
+  if (!payer) {
+    const fpc = await privateFpc(wallet).catch(() => null);
+    if (fpc) privateBalance = await privateGasBalance(fpc, me);
+    if (privateBalance === 0n) {
+      try {
+        const feeJuice = await getCanonicalFeeJuice();
+        if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
+          await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
+        }
+        const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+        const { result } = await fj.methods.balance_of_public(me).simulate({ from: me });
+        ownBalance = BigInt(result.toString());
+      } catch (e) {
+        log('ownGasUnread', { error: String(e?.message ?? e).slice(0, 160) });
+      }
+    }
+  }
+  return appFee({ payer, me: accountAddress, privateBalance, ownBalance });
+}
+
 // --- Casberi's own calls -----------------------------------------------------------
 const own = {
   // A zk.money short link's record (prd §1748): the tag its seed derives, one
@@ -543,6 +603,36 @@ const own = {
     const balance = await privateGasBalance(fpc, AztecAddress.fromStringUnsafe(accountAddress));
     return { on: true, address: fpc.address.toString(), balance: balance.toString() };
   },
+  // `-aztecEngineProbe appgas` (prd §1759): one harmless call, handed over
+  // as an app's arrives (through the wire's own schema, naming no payer),
+  // measured with the private payment in front of it. Nothing is sent. An
+  // account with gas answers its measure; one without answers the contract's
+  // own refusal, which still proves the payment reached the contract.
+  async appGasProbe() {
+    const wallet = await getWallet();
+    const fpc = await privateFpc(wallet).catch(() => null);
+    if (!fpc) return { on: false };
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const feeJuice = await getCanonicalFeeJuice();
+    if (!(await wallet.getContractMetadata(feeJuice.address)).instance) {
+      await wallet.registerContract(feeJuice.instance, feeJuice.artifact);
+    }
+    const fj = await Contract.at(feeJuice.address, feeJuice.artifact, wallet);
+    const wire = JSON.parse(jsonStringify([await fj.methods.check_balance(0n).request(), { from: me }]));
+    const kind = await appFeeKind(wallet, wire);
+    const [payload, opts] = await parseWithOptionals(wire, getSchemaParameters(WalletSchema.sendTx));
+    const balance = await privateGasBalance(fpc, me);
+    try {
+      const settings = await estimateGasSettings(appInteraction(wallet, payload, opts), {
+        aztecNode: wallet.aztecNode, from: me, paymentMethod: new FPCFeePaymentMethod(fpc.address),
+        additionalScopes: [fpc.address], maxAcceptableGasCost: balance > 0n ? balance : 1n,
+      });
+      return { on: true, kind, payer: String(payload.feePayer ?? ''), measured: true,
+               l2: String(settings.gasLimits.l2Gas), da: String(settings.gasLimits.daGas) };
+    } catch (e) {
+      return { on: true, kind, payer: String(payload.feePayer ?? ''), measured: false, error: String(e?.message ?? e).slice(0, 200) };
+    }
+  },
   async chain() {
     const c = await (await getWallet()).getChainInfo();
     return { chainId: c.chainId.toBigInt().toString(), version: c.version.toBigInt().toString() };
@@ -554,18 +644,56 @@ let asks = 0;
 const waiting = new Map();
 
 // What the sheet says about a transaction, read from the request itself: each
-// call's function and contract, private or public, and who pays the fee. (A
-// private call can start public steps of its own; they are not read yet, so
-// the sheet does not claim to know them.)
+// call's function and contract, private or public, and how its gas is paid
+// (`appFee`'s word; empty for a request that sends nothing). (A private call
+// can start public steps of its own; they are not read yet, so the sheet
+// does not claim to know them.)
 const tail = a => '...' + String(a ?? '').slice(-4);
-function describe(args) {
+function describe(args, fee) {
   const calls = (args?.[0]?.calls ?? []).map(c => ({ name: c.name, to: tail(c.to), type: c.type }));
-  return { calls, fee: 'Paid from your Fee Juice' };
+  return { calls, fee };
 }
 
-function askPerson(method, args, origin) {
+// A PUBLIC AUTHORIZATION (prd §1760, `app-grant.js`): the Nulo wallet's
+// `grantPublicAuthwit`, answered as Nulo answers it. The contract must be one
+// the app has registered with the wallet (its interface names the function
+// and encodes the arguments); the registry write is the account's own
+// transaction, asked, approved and paid as Casberi's own sends are, and its
+// hash is the answer.
+async function grantForApp(wallet, args, origin) {
+  const asked = grantRequest(args, accountAddress);
+  const me = AztecAddress.fromStringUnsafe(accountAddress);
+  const contract = AztecAddress.fromStringUnsafe(asked.contract);
+  const instance = await wallet.pxe.getContractInstance(contract);
+  const classId = instance?.currentContractClassId ?? instance?.originalContractClassId;
+  const artifact = classId && (await wallet.pxe.getContractArtifact(classId));
+  if (!artifact) throw new Error('Casberi does not know that contract: the app has not registered it');
+  const target = await Contract.at(contract, artifact, wallet);
+  if (typeof target.methods[asked.method] !== 'function') throw new Error(`That contract has no function ${asked.method}`);
+  const call = await target.methods[asked.method](...asked.args).getFunctionCall();
+  const grant = await SetPublicAuthwitContractInteraction.create(
+    wallet, me, { caller: AztecAddress.fromStringUnsafe(asked.caller), call }, true);
   const id = ++asks;
-  native('engineApprove', { id, method, origin, ...describe(args) });
+  native('engineApprove', {
+    id, method: 'grantPublicAuthwit', origin, fee: await appFeeKind(wallet, [{}]),
+    calls: [{ name: asked.method, to: tail(asked.contract), type: 'public' }],
+    grant: { caller: tail(asked.caller), args: grantWords(asked.args) },
+  });
+  const answer = await new Promise(resolve => waiting.set(id, resolve));
+  log('approval', { method: 'grantPublicAuthwit', yes: answer.yes });
+  if (!answer.yes) throw new Error('The person declined grantPublicAuthwit');
+  const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas));
+  log('appGranted', { tx: sent.receipt.txHash.toString(), status: sent.receipt.status, paid: sent.paid });
+  native('engineAppPaid', { paid: sent.paid, gasNonce: sent.gasNonce });
+  return sent.receipt.txHash.toString();
+}
+
+// The answer is `{ yes, gas }`: `gas` is the app's list of private gas
+// deposits nobody has minted yet, as Casberi's own sends are handed it.
+async function askPerson(method, args, origin, wallet) {
+  const id = ++asks;
+  const fee = method === 'sendTx' ? await appFeeKind(wallet, args) : '';
+  native('engineApprove', { id, method, origin, ...describe(args, fee) });
   return new Promise(resolve => waiting.set(id, resolve));
 }
 
@@ -580,17 +708,33 @@ async function callForApp(method, args, origin) {
       wallet: { name: WALLET.walletName, version: WALLET.walletVersion },
     };
   }
+  // Two of the Nulo wallet's methods (prd §1760). Its features list names
+  // what a build can route; Casberi claims none of them.
+  if (method === 'grantPublicAuthwit') return grantForApp(wallet, args, origin);
+  if (method === 'getWalletFeatures') return [];
   if (typeof wallet[method] !== 'function') throw new Error(`Unknown wallet method: ${method}`);
+  let gas = '[]';
   if (!READS.has(method)) {
-    const yes = await askPerson(method, args, origin);
-    log('approval', { method, yes });
-    if (!yes) throw new Error(`The person declined ${method}`);
+    const answer = await askPerson(method, args, origin, wallet);
+    log('approval', { method, yes: answer.yes });
+    if (!answer.yes) throw new Error(`The person declined ${method}`);
+    gas = answer.gas;
   }
   const parsed = schemaHasMethod(WalletSchema, method)
     ? await parseWithOptionals(args ?? [], getSchemaParameters(WalletSchema[method]))
     : args ?? [];
   // An approved transaction reports its steps to the browser (prd §1700w).
-  const run = () => wallet[method](...parsed);
+  // One that names no payer is paid as Casberi's own sends are (prd §1759);
+  // one that names its own is sent as the app wrote it.
+  let run = () => wallet[method](...parsed);
+  if (method === 'sendTx' && !parsed[0]?.feePayer) {
+    run = async () => {
+      const sent = await sendForApp(wallet, parsed[0], parsed[1] ?? {}, gas);
+      log('appPaid', { how: sent.paid });
+      native('engineAppPaid', { paid: sent.paid, gasNonce: sent.gasNonce });
+      return sent.receipt;
+    };
+  }
   const result = await (READS.has(method) ? run() : watched('app', run));
   return result === undefined ? undefined : JSON.parse(jsonStringify(result));
 }
@@ -697,8 +841,8 @@ window.casberiEngine = {
   confirmEmoji(sessionId, match) {
     gate.confirmEmoji(sessionId, match);
   },
-  answerApproval(id, yes) {
-    waiting.get(id)?.(yes);
+  answerApproval(id, yes, gas) {
+    waiting.get(id)?.({ yes: yes === true, gas: typeof gas === 'string' ? gas : '[]' });
     waiting.delete(id);
   },
 };

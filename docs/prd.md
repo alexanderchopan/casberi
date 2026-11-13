@@ -72195,3 +72195,58 @@ Measured on the Mac build before the pass, at 1440×900: Wallet Home drew five d
 **Mac half (§1402).** None: Library's directory tile is the phone's (§1700m item 3), and so are these.
 
 **Self-test** (`scripts/aztec-apps-selftest.sh`, in the pass): the names, the door, the order, the cap, Remove; four mutations; a site is kept only on a yes, and no tile reads a page's title.
+
+## §1758 — A tile wears a vector icon, and Galactica is called Galactica (amends §1757 items 2 and 3) (user, 2026-11-12, on the phone with build 984: "Galactica shows up as just 'Private inference' with no logo") — BUILT; SEEN on a simulator: Galactica, Olla, RollingChat and Xochi kept by `-aztecAppsSample`, each visited once in Casberi's browser, each tile then wearing its site's own icon, Galactica's and Olla's drawn from an SVG, Galactica named Galactica; NOT seen: a tile kept on a phone under the old name taking the new one, a vector icon served from another origin
+
+**Why.** Two faults in one tile. The name table had the site's address as its name ("Private Inference", from privateinference.gg), where Aztec's directory calls the app Galactica. And the icon script skipped every SVG, which is the only icon five of the directory's thirteen declare (Galactica, Olla, Nyx, Nulo, Aztecscan): each of them would have stood as two initials.
+
+1. **The table holds all thirteen of the directory's names**, by the host each opens on (`AztecAppsShape.names`, read 2026-11-12): privateinference.gg is Galactica.
+2. **A kept tile takes the table's name when the list is read back** (`AztecAppsShape.renamed`, at `AztecAppsStore`'s start), so a name corrected in a later build reaches a tile kept before it.
+3. **A vector icon is drawn to a picture, in the page** (`AztecBrowserModel.iconScript`): the page fetches its own SVG, loads it as an image (an image runs none of the file's script), draws it on white at 360 pixels and hands back a PNG. The order is the home-screen icon, then a vector one, then the largest picture, then the favicon. The same weight limit as before (`AztecAppsStore.iconBytes`), and the same request: the page's own, for its own file.
+4. **A tile with no icon is asked again** each time its site finishes loading in Casberi's browser (`askIconIfMissing`), so a tile kept by build 984 gets its icon on the next visit, with no new connect.
+
+**Its name, outward.** The feature is called Connected Apps (user, 2026-11-12: "i think the name of the feature should be Connected Apps") in the reel, the tweet and release notes. A tile is an app you have connected, kept until you remove it or a ninth pushes the oldest out; it does not say a session is open, and Connect is still asked on each visit. No screen in the app draws the name yet.
+
+**Not built.** A sharper picture for a site whose only icon is a 16 pixel favicon (Dark Forest, Shield): it is drawn as the site gave it.
+
+**Mac half (§1402).** None: the tiles are the phone's (§1757).
+
+**Self-test** (`scripts/aztec-apps-selftest.sh`): Galactica's name, an old name read back as the new one and its mutation; the script still draws a vector icon and a tile without one is still asked.
+
+`-aztecAppsSample "<host>[,<host>…]"` keeps those sites as connected on a simulator that cannot sign in to them.
+
+## §1759 — An app's transaction on Aztec pays its gas as Casberi's own sends do (amends §1700aa's "Casberi's sends", §1700j's approval sheet) (user, 2026-11-12, of RavenHouse on the phone: "nor can i verify with my wallet (maybe i need fee juice in it? but don't i have?)"; told that an app's transaction is passed through with no payment and so looks for gas on the account, not in the private fee contract where the account's gas is: "Yes, fix gas first") — BUILT; SEEN on a simulator, with an account that holds no gas: `-aztecEngineProbe appgas` (see the end of this entry); NOT seen: a transaction paid this way, on any device. This was NOT what stopped RavenHouse's verify: that was an unknown wallet method (§1760), seen on the simulator after this was built. Gas is the wall behind it, since §1760's authorization is a transaction of the account's own
+
+**Why.** An app hands the wallet a transaction and, mostly, names no payer for it. Aztec's wallet then pays from the account's own Fee Juice (`completeFeeOptions`: no fee payer in the payload means `PREEXISTING_FEE_JUICE`). Since §1700aa an account's gas is bought into the shared private fee contract, so it has none of its own: every transaction an app asked for could only fail, with gas showing in Holdings. And the sheet said "Paid from your Fee Juice" whatever paid.
+
+1. **A transaction that names no payer is paid as Casberi's own are** (`sendForApp`, `tools/aztec-engine/src/main.js`): from what the account keeps in the contract, else by minting a deposit Aztec has carried, else from the account's own Fee Juice. The payment's calls go in front of the app's, as Aztec's own `send` puts a payment method's; the app's calls are not changed.
+2. **Measured first, never above what is there** (`appInteraction`, through §1700aa's `feeFor` and `choose`), and **in the same turn** as Casberi's sends (`ownTurn`), so an app's transaction and a send never choose the same gas.
+3. **A transaction that names its own payer is sent as the app wrote it** (a sponsor, or the account's own claim): Casberi adds nothing.
+4. **The sheet says how the gas is paid**, in Move's words (`AztecAskSheet.gasLine`, from `appFee`'s one word): "Gas, paid privately", "Gas, from your account, in the open", "Gas, paid by the app", "Gas, from your deposit on its way to Aztec", and, in the attention ink, "Your Aztec account has no gas. Add some in Move first." A request that sends nothing draws no gas line.
+5. **The phone hands the engine its unminted gas deposits with the yes** (`answerApproval(id, yes, gas)`), as it does for its own sends, and a deposit an app's transaction minted is marked spent (`engineAppPaid`).
+
+**Not built.** Approve stays live when the sheet says there is no gas: the balances are read, and a read can be wrong. The fee in dollars is not shown.
+
+**Mac half (§1402).** None: the Aztec account is the phone's (§1700s).
+
+**Self-test** (`scripts/aztec-connect-selftest.sh`): `appFee`'s six cases and `payingOptions` in `test/private-fees.test.mjs`, four mutations; main.js still pays a payer-less `sendTx` through `feeFor`, tells the sheet, and takes turns.
+
+`-aztecEngineProbe appgas` measures one harmless call as an app's transaction is paid, the private payment in front of it, and sends nothing.
+
+**The probe's run** (simulator, mainnet through Tor, an account holding nothing, 2026-11-12): `appGas | sheet says none · payer named: none · not measured: Assertion failed: Balance too low`. The call crossed the wire's own schema with no payer, the private payment's calls went in front of it, and the measure reached the fee contract's own refusal: the path is whole up to a balance this account does not have.
+
+## §1760 — Casberi answers `grantPublicAuthwit`, the Nulo wallet's method, so an app can ask for a public authorization (extends §1700j's approval sheet; pays by §1759) (user, 2026-11-12, of RavenHouse: "nor can i verify with my wallet"; then, told the method is Nulo's, "nulo is a browser wallet so it likely won't work w/ us") — BUILT on the assistant's recommendation, not yet ruled by the user: nothing of Nulo's is used, only the shape of its request. SEEN on a simulator with RavenHouse (2026-11-12): "Verify with wallet" raised the sheet ("app.ravenhouse.xyz asks for an authorization", "It lets ...63f2 make this call in your name, once.", `set authorized (...6fe1, true)`, Public, the contract's tail, and the amber no-gas line for an account holding nothing); Decline answered the site, which said "The authorization was declined in your wallet". NOT seen: an approved authorization, its transaction, the co-signer's ask, any of it on a phone
+
+**Why.** RavenHouse's "Verify with wallet" answered `Wallet verification failed: {"message":"Unknown wallet method: grantPublicAuthwit"}` (simulator, 2026-11-12). The method is not in Aztec's wallet interface, in 6.0.0 or in the 7.0 nightly: the Nulo wallet adds it with three others (`@nulo-sh/wallet-sdk-schema-patch`, public, Apache-2.0), and apps written against Nulo call it. Its own note says a wallet without it rejects the call and an app should fall back; RavenHouse does not.
+
+1. **What it asks** (`tools/aztec-engine/src/app-grant.js`): `[account, { caller, contract, method, args }]`, "let `caller` make this one call on `contract` in the account's name". Casberi builds the call from the contract's interface, which the app must have registered with the wallet, computes its authorization hash with Aztec's own `SetPublicAuthwitContractInteraction`, writes it to Aztec's public authorization registry with one transaction of the account's own, and answers that transaction's hash, as Nulo does.
+2. **Refused before anything is built**: an account that is not the connected one, a caller that is the account itself, a caller or contract that is not an address, a function name with anything but letters, digits and underscores, more than 32 arguments, a contract the wallet does not know, a function the contract does not have.
+3. **The sheet says who it is for** (`AztecAskSheet`): the title "<site> asks for an authorization", the sentence "It lets ...abcd make this call in your name, once. Anyone can see it.", then the call, its arguments in short words (an address or a long number by its tail, six at most), the contract's tail, and the gas line of §1759. For a token's transfer this is a spending approval, and it reads as one.
+4. **Approved as a send is**: Face ID, then the co-signer (§1700f item 4), told "<site>: authorize ...abcd to call <function>". Paid and queued as Casberi's own sends (§1759, `sendOwn`).
+5. **`getWalletFeatures` answers an empty list**: Nulo's one feature ("dapp-self-pay") is not something Casberi does. `registerToken` and `isTokenRegistered` stay unknown.
+
+**Not built.** A list of the authorizations you have given, and a way to take one back (Nulo keeps both); the dollar value of a token call's amount; reading what an authorized call would move.
+
+**Mac half (§1402).** None: the Aztec account is the phone's (§1700s).
+
+**Self-test** (`scripts/aztec-connect-selftest.sh`): `test/app-grant.test.mjs`, eleven refusals and the sheet's words, four mutations; main.js still asks before it writes, pays through `sendOwn`, and the sheet still names who the authorization is for.

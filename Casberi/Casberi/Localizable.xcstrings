@@ -3590,6 +3590,34 @@
         }
       }
     },
+    "%@ asks for an authorization" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ pide una autorización"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が承認を求めています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 승인을 요청합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 请求授权"
+          }
+        }
+      }
+    },
     "%@ asks most, at %lld%% of every request. %@" : {
       "localizations" : {
         "en" : {
@@ -9744,6 +9772,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 未获批准"
+          }
+        }
+      }
+    },
+    "%@ now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今すぐ %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即 %@"
           }
         }
       }
@@ -20520,6 +20576,34 @@
         }
       }
     },
+    "%@: authorize %@ to call %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@: autorizar a %2$@ a llamar %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@：%2$@ に %3$@ の呼び出しを許可"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@: %2$@이(가) %3$@을(를) 호출하도록 승인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@：授权 %2$@ 调用 %3$@"
+          }
+        }
+      }
+    },
     "%@: not moved" : {
       "localizations" : {
         "es" : {
@@ -29340,6 +29424,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 笔待处理扣款未计入"
+          }
+        }
+      }
+    },
+    "%lld people" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld personas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 人"
           }
         }
       }
@@ -98484,6 +98596,118 @@
         }
       }
     },
+    "Gas, from your account, in the open" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas, de tu cuenta, de forma pública"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス（アカウントから、公開で）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스, 내 계정에서 공개적으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas，从你的账户公开支付"
+          }
+        }
+      }
+    },
+    "Gas, from your deposit on its way to Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas, de tu depósito en camino a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス（Aztec に向かっている入金から）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스, Aztec으로 오는 입금에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas，来自你正在转入 Aztec 的存款"
+          }
+        }
+      }
+    },
+    "Gas, paid by the app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas, pagado por la app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス（アプリが支払い）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스, 앱이 지불"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas，由应用支付"
+          }
+        }
+      }
+    },
+    "Gas, paid privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas, pagado de forma privada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス（プライベートに支払い）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스, 비공개로 지불"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas，私密支付"
+          }
+        }
+      }
+    },
     "Gas: %@. Opens gas alerts." : {
       "localizations" : {
         "es" : {
@@ -104940,6 +105164,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "它会作为笔记进入你的订阅流 — 和其他内容一样可查找。"
+          }
+        }
+      }
+    },
+    "It lets %@ make this call in your name, once. Anyone can see it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permite que %@ haga esta llamada en tu nombre, una vez. Cualquiera puede verlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ があなたの名義でこの呼び出しを 1 回行えるようにします。誰でも確認できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 내 이름으로 이 호출을 한 번 할 수 있게 합니다. 누구나 볼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许 %@ 以你的名义执行一次此调用。任何人都能看到。"
           }
         }
       }
@@ -121328,6 +121580,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有地址对应 %@"
+          }
+        }
+      }
+    },
+    "No address for %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay dirección para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のアドレスがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 주소가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有 %@ 的地址"
           }
         }
       }
@@ -183807,6 +184087,34 @@
         }
       }
     },
+    "Sweeping" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Barriendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スイープ中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스윕 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在归集"
+          }
+        }
+      }
+    },
     "Swept" : {
       "localizations" : {
         "es" : {
@@ -217481,6 +217789,34 @@
         }
       }
     },
+    "You get" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取る額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 금액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你将收到"
+          }
+        }
+      }
+    },
     "You get at least" : {
       "localizations" : {
         "es" : {
@@ -220581,6 +220917,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 Aztec 账户没有响应"
+          }
+        }
+      }
+    },
+    "Your Aztec account has no gas. Add some in Move first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Aztec no tiene gas. Añade un poco en Move primero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントにガスがありません。先に Move で追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정에 가스가 없습니다. 먼저 Move에서 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Aztec 账户没有 gas。请先在 Move 中添加。"
           }
         }
       }
@@ -248826,6 +249190,34 @@
         }
       }
     },
+    "token." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "token."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークン。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代币。"
+          }
+        }
+      }
+    },
     "tokens" : {
       "localizations" : {
         "es" : {
@@ -249510,6 +249902,34 @@
         }
       }
     },
+    "under a cent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "menos de un centavo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 セント未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1센트 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不到一美分"
+          }
+        }
+      }
+    },
     "under a day" : {
       "localizations" : {
         "es" : {
@@ -249758,6 +250178,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最多"
+          }
+        }
+      }
+    },
+    "up to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "hasta %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最大 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최대 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最多 %@"
+          }
+        }
+      }
+    },
+    "up to %@ ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "hasta %@ ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最大 %@ ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최대 %@ ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最多 %@ ETH"
           }
         }
       }

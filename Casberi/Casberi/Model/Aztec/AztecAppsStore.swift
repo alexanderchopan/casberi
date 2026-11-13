@@ -16,11 +16,16 @@ final class AztecAppsStore {
     private static let key = "aztec.apps.connected.v1"
 
     private init() {
-        apps = (UserDefaults.standard.data(forKey: Self.key))
-            .flatMap { try? JSONDecoder().decode([AztecAppsShape.App].self, from: $0) } ?? []
+        apps = AztecAppsShape.renamed((UserDefaults.standard.data(forKey: Self.key))
+            .flatMap { try? JSONDecoder().decode([AztecAppsShape.App].self, from: $0) } ?? [])
         for app in apps {
             if let image = UIImage(contentsOfFile: Self.iconFile(app.host).path) { icons[app.host] = image }
         }
+        #if DEBUG
+        if let hosts = UserDefaults.standard.string(forKey: "aztecAppsSample") {
+            sample(hosts.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        }
+        #endif
     }
 
     /// A connect you said yes to: the site stands in Library from now.
@@ -32,6 +37,20 @@ final class AztecAppsStore {
         apps = next
         save()
     }
+
+    /// Whether a kept site still wears its initials: the browser asks its
+    /// page for the icon again the next time you are on it.
+    func lacksIcon(_ host: String) -> Bool {
+        apps.contains { $0.host == host } && icons[host] == nil
+    }
+
+    #if DEBUG
+    /// `-aztecAppsSample "<host>[,<host>…]"`: keep these sites as connected,
+    /// the last one leading, on a simulator that cannot sign in to them.
+    func sample(_ hosts: [String]) {
+        for host in hosts { connected(URL(string: "https://\(host)/")) }
+    }
+    #endif
 
     func remove(_ host: String) {
         apps = AztecAppsShape.removed(apps, host: host)

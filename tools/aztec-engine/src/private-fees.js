@@ -97,3 +97,34 @@ export async function sendPaying({ pay, send, reached, log = () => {} }) {
     }
   }
 }
+
+// AN APP'S TRANSACTION PAYS AS CASBERI'S OWN DO (prd §1759). An app hands the
+// wallet a transaction and, mostly, no way to pay for it; Aztec's wallet then
+// pays from the account's own Fee Juice. An account that keeps its gas in the
+// private fee contract has none of that, so the app's transaction failed with
+// gas sitting where it could not be used (RavenHouse's "Verify with wallet").
+//
+// What the sheet says before it is approved, read from the request and the
+// two balances:
+//   app      the transaction names another payer: the app, or its sponsor;
+//   private  what the account keeps in the contract pays;
+//   own      the account's own Fee Juice pays, in the open;
+//   none     neither holds anything.
+// A transaction that names the account itself as payer carries the account's
+// own claim, and is the account's to pay.
+export function appFee({ payer, me, privateBalance, ownBalance }) {
+  if (payer) return String(payer).toLowerCase() === String(me).toLowerCase() ? 'own' : 'app';
+  if (privateBalance > 0n) return 'private';
+  return ownBalance > 0n ? 'own' : 'none';
+}
+
+// The app's own send options with Casberi's payment added: every scope the
+// app asked for kept and the contract's added, the measured gas settings in
+// place of the app's. Nothing else of the app's is touched.
+export function payingOptions(opts, paid) {
+  return {
+    ...(opts ?? {}),
+    additionalScopes: [...(opts?.additionalScopes ?? []), ...(paid.additionalScopes ?? [])],
+    fee: { ...(opts?.fee ?? {}), gasSettings: paid.fee.gasSettings },
+  };
+}

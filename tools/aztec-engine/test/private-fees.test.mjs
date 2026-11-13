@@ -7,7 +7,7 @@
 //   SKIP_ADDRESS=1 node test/...                the logic alone (no hashing)
 //
 // Exit 0 when every check holds, 1 otherwise.
-const { PRIVATE_FEES, choose, sendPaying, inTurn } = await import(process.env.FEES ?? '../src/private-fees.js');
+const { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions } = await import(process.env.FEES ?? '../src/private-fees.js');
 
 let failures = 0;
 const check = (ok, what) => { if (!ok) { failures++; console.log('✗ ' + what); } };
@@ -121,6 +121,23 @@ check(s.error?.message === 'first' && s.calls.length === 2, 'when the account ca
   const after = turn(async () => 'ok');
   check((await failed.catch(e => e.message)) === 'boom' && (await after) === 'ok', 'a failed send does not hold the next one');
 }
+
+// --- an app's transaction (prd §1759) -------------------------------------------
+const ME = '0x0AbC', FPC = '0x0516';
+check(appFee({ payer: undefined, me: ME, privateBalance: 5n, ownBalance: 0n }) === 'private', "an app's transaction with no payer is paid from the private balance");
+check(appFee({ payer: undefined, me: ME, privateBalance: 5n, ownBalance: 9n }) === 'private', '…before the account\'s own gas, which would name the account');
+check(appFee({ payer: undefined, me: ME, privateBalance: 0n, ownBalance: 9n }) === 'own', 'nothing private: the account pays, and the sheet says in the open');
+check(appFee({ payer: undefined, me: ME, privateBalance: 0n, ownBalance: 0n }) === 'none', 'nothing anywhere: the sheet says there is no gas');
+check(appFee({ payer: '0x0999', me: ME, privateBalance: 5n, ownBalance: 9n }) === 'app', 'a transaction that names another payer is the app\'s to pay');
+check(appFee({ payer: '0x0abc', me: ME, privateBalance: 5n, ownBalance: 9n }) === 'own', 'one that names the account itself (its own claim) is the account\'s');
+const gasSettings = { measured: true };
+let opts = payingOptions({ from: ME, additionalScopes: ['app-scope'], fee: { gasSettings: { theirs: true }, congestionEstimate: 3 }, wait: { timeout: 9 } },
+                         { additionalScopes: [FPC], fee: { paymentMethod: {}, gasSettings } });
+check(opts.additionalScopes.join() === ['app-scope', FPC].join(), "the app's scopes are kept and the contract's added");
+check(opts.fee.gasSettings === gasSettings && opts.fee.congestionEstimate === 3, "the measured gas settings replace the app's; the rest of its fee options stay");
+check(opts.from === ME && opts.wait.timeout === 9 && !('paymentMethod' in opts.fee), "nothing else of the app's is touched, and no payment method crosses to the wallet");
+opts = payingOptions(undefined, { additionalScopes: [FPC], fee: { gasSettings } });
+check(opts.additionalScopes.join() === FPC && opts.fee.gasSettings === gasSettings, 'an app that sent no options still gets the payment');
 
 // --- the pinned address ---------------------------------------------------------
 check(PRIVATE_FEES.salt === 1n, 'the shared salt is 1: every wallet derives one address');

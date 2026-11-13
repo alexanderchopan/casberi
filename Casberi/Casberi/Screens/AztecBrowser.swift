@@ -30,7 +30,14 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         /// your account first (prd §1700l item 10). Amounts in wei.
         case ethTopUp(id: String, host: String, signer: String, amount: String, holds: String, needs: String)
 
-        struct Call: Equatable { let name: String; let to: String; let isPublic: Bool }
+        struct Call: Equatable {
+            let name: String; let to: String; let isPublic: Bool
+            /// Set when the call is not sent but AUTHORIZED (prd §1760): the
+            /// tail of who may make it in your name, and its arguments in
+            /// short words.
+            var grantee: String? = nil
+            var args: [String] = []
+        }
 
         var id: String {
             switch self {
@@ -152,7 +159,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         watching = [
             page.observe(\.isLoading, options: [.initial, .new]) { [weak self] view, _ in
                 let now = view.isLoading
-                Task { @MainActor in self?.loading = now }
+                Task { @MainActor in
+                    self?.loading = now
+                    if !now { self?.askIconIfMissing() }
+                }
             },
             page.observe(\.canGoBack, options: [.initial, .new]) { [weak self] view, _ in
                 let now = view.canGoBack
@@ -179,12 +189,26 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     /// **A CONNECTED APP BECOMES A TILE, WEARING ITS OWN ICON (prd §1757).**
     /// The site is kept by its address, and its icon is asked of the page
     /// itself, here, while you are on it: the page's own request for its
-    /// own file, so no new host is reached and no artwork is bundled. An
-    /// icon the page will not give (another origin's, an SVG) leaves the
-    /// tile its initials.
+    /// own file, so no new host is reached and no artwork is bundled. A
+    /// vector icon is drawn to a picture in the page. An icon the page will
+    /// not give (another origin's) leaves the tile its initials.
     private func rememberApp() {
-        guard let url = page.url, let host = url.host(percentEncoded: false)?.lowercased() else { return }
+        guard let url = page.url else { return }
         AztecAppsStore.shared.connected(url)
+        askIcon()
+    }
+
+    /// A kept site whose tile still wears its initials is asked again each
+    /// time its page finishes loading: one connected before its icon could
+    /// be read (a vector one, before 3.0.30) gets it on the next visit.
+    private func askIconIfMissing() {
+        guard let host = page.url?.host(percentEncoded: false)?.lowercased(),
+              AztecAppsStore.shared.lacksIcon(host) else { return }
+        askIcon()
+    }
+
+    private func askIcon() {
+        guard let host = page.url?.host(percentEncoded: false)?.lowercased() else { return }
         Task { [weak self] in
             guard let self, let text = try? await page.callAsyncJavaScript(Self.iconScript, arguments: ["most": AztecAppsStore.iconBytes],
                                                                          in: nil, contentWorld: .defaultClient) as? String,
@@ -194,18 +218,38 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         }
     }
 
-    /// The page's largest declared icon (its home-screen one first), else
-    /// its favicon, as a data URL; null when it is too large or not there.
+    /// The page's own icon as a data URL: its home-screen one first, then a
+    /// vector one (drawn here to a picture: most Aztec apps declare only an
+    /// SVG, and a tile cannot keep one), then its largest, else its favicon;
+    /// null when it is too large or not there.
     private static let iconScript = """
         const size = l => Math.max(0, ...String(l.getAttribute('sizes') || '').split(/\\s+/).map(s => parseInt(s, 10) || 0));
+        const vector = l => /\\.svg(\\?|#|$)/i.test(l.href) || /svg/i.test(l.type || '');
+        const rank = l => l.rel.includes('apple') ? 3 : vector(l) ? 2 : 1;
         const links = [...document.querySelectorAll('link[rel~="apple-touch-icon"], link[rel~="icon"]')]
-          .filter(l => l.href && !/\\.svg(\\?|$)/i.test(l.href))
-          .sort((a, b) => (b.rel.includes('apple') - a.rel.includes('apple')) || (size(b) - size(a)));
+          .filter(l => l.href)
+          .sort((a, b) => (rank(b) - rank(a)) || (size(b) - size(a)));
         const href = links[0]?.href ?? new URL('/favicon.ico', location.origin).href;
         const reply = await fetch(href, { credentials: 'omit' });
         if (!reply.ok) return null;
         const blob = await reply.blob();
         if (blob.size > most || !/^image\\//.test(blob.type)) return null;
+        if (/svg/i.test(blob.type)) {
+          // Drawn as a picture, never run: an <img> runs no script of the file's.
+          const address = URL.createObjectURL(blob);
+          try {
+            const picture = new Image();
+            picture.src = address;
+            await picture.decode();
+            const side = 360, canvas = document.createElement('canvas');
+            canvas.width = canvas.height = side;
+            const ink = canvas.getContext('2d');
+            ink.fillStyle = '#ffffff';
+            ink.fillRect(0, 0, side, side);
+            ink.drawImage(picture, 0, 0, side, side);
+            return canvas.toDataURL('image/png');
+          } catch { return null; } finally { URL.revokeObjectURL(address); }
+        }
         return await new Promise(done => {
           const reader = new FileReader();
           reader.onload = () => done(String(reader.result));
@@ -653,7 +697,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
             do {
                 try await PrivateRootKey.unlock(reason: String(localized: "Approve this Aztec transaction"))
                 // The co-signer approves an app's transaction too (prd §1700f item 4).
-                try await AztecCoSign.approve(String(localized: "\(host): \(calls.map(\.name).joined(separator: ", "))"))
+                // An authorization is named as one to the co-signer too (prd §1760).
+                let names = calls.map(\.name).joined(separator: ", ")
+                try await AztecCoSign.approve(calls.first?.grantee.map { String(localized: "\(host): authorize \($0) to call \(names)") }
+                                              ?? String(localized: "\(host): \(names)"))
             } catch {
                 failed = AztecEngine.words(error)
                 return
@@ -865,6 +912,20 @@ struct AztecAskSheet: View {
     /// them showed above it (RavenHouse, 2026-11-12), so "They match" was a
     /// guess. Now the nine and the two answers on one foot, no slab: short
     /// enough that a grid in the middle of the page stays whole above it.
+    /// **HOW AN APP'S TRANSACTION PAYS ITS GAS (prd §1759)**, in the words
+    /// Move uses, from the engine's one word. It read "Paid from your Fee
+    /// Juice" whatever paid, and for a request that sends nothing.
+    static func gasLine(_ kind: String) -> (words: String, missing: Bool)? {
+        switch kind {
+        case "private": (String(localized: "Gas, paid privately"), false)
+        case "own": (String(localized: "Gas, from your account, in the open"), false)
+        case "app": (String(localized: "Gas, paid by the app"), false)
+        case "arriving": (String(localized: "Gas, from your deposit on its way to Aztec"), false)
+        case "none": (String(localized: "Your Aztec account has no gas. Add some in Move first."), true)
+        default: nil
+        }
+    }
+
     private var emojiCheck: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             content
@@ -904,20 +965,31 @@ struct AztecAskSheet: View {
                 .lineLimit(1).minimumScaleFactor(0.5)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .send(_, _, let calls, let fee):
+            // An authorization says who gets it before what it is for (prd §1760).
+            if let grantee = calls.first?.grantee {
+                DSProse.text("It lets \(grantee) make this call in your name, once. Anyone can see it.")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             ForEach(Array(calls.enumerated()), id: \.offset) { _, call in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     Image(systemName: call.isPublic ? "eye" : "lock.fill")
                         .foregroundStyle(call.isPublic ? DS.attention : DS.textSecondary)
                         .frame(width: 22)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: call.name.replacingOccurrences(of: "_", with: " "))
+                        Text(verbatim: call.name.replacingOccurrences(of: "_", with: " ")
+                             + (call.grantee == nil ? "" : " (" + call.args.joined(separator: ", ") + ")"))
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                         Text(verbatim: "\(call.isPublic ? String(localized: "Public") : String(localized: "Private")) · \(call.to)")
                             .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     }
                 }
             }
-            Text(verbatim: fee).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            if let gas = Self.gasLine(fee) {
+                Text(verbatim: gas.words).dsText(.subhead12)
+                    .foregroundStyle(gas.missing ? DS.attentionInk : DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         case .ethConnect where needsCoSigner:
             DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1008,6 +1080,7 @@ struct AztecAskSheet: View {
         switch named {
         case .connect(_, let host): String(localized: "Connect \(host)?")
         case .emoji: String(localized: "Do these match?")
+        case .send(_, let host, let calls, _) where calls.first?.grantee != nil: String(localized: "\(host) asks for an authorization")
         case .send(_, let host, _, _): String(localized: "\(host) wants to send")
         case .ethConnect(_, let host): (leadsWithCoSigner || needsCoSigner) && reconnecting ? String(localized: "\(host) doesn't accept Aztec accounts or Safes")
                                      : leadsWithCoSigner ? String(localized: "Connect \(host) with your co-signer?")

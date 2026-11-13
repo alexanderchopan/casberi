@@ -13,7 +13,9 @@ enum AztecEngineProbe {
         // Wallet's row and Holdings › Private › Aztec show (prd §1700a).
         // `recycle`: then fail one call as a dead store does, and read the
         // account and the chain again from the page that replaces it.
-        guard raw == "YES" || raw == "1" || raw == "used" || raw == "recycle" else { return }
+        // `appgas`: then measure one harmless call as an app's transaction is
+        // paid, the private payment in front of it (prd §1759). Nothing sent.
+        guard raw == "YES" || raw == "1" || raw == "used" || raw == "recycle" || raw == "appgas" else { return }
         Task { @MainActor in
             let start = Date()
             func say(_ step: String, _ detail: String) {
@@ -35,6 +37,12 @@ enum AztecEngineProbe {
                     ? "on · \(AddressTail.short(fees?["address"] as? String ?? "")) · holds \(fees?["balance"] ?? "?")" : "off")
                 let plan = try await AztecEngine.shared.call("feeJuicePlan", ["1"]) as? [String: Any]
                 say("gasPlan", "\(plan?["kind"] ?? "?") · to \(AddressTail.short(plan?["to"] as? String ?? ""))")
+                if raw == "appgas" {
+                    let probe = try await AztecEngine.shared.call("appGasProbe") as? [String: Any]
+                    let measured = probe?["measured"] as? Bool == true
+                    say("appGas", "sheet says \(probe?["kind"] ?? "?") · payer named: \((probe?["payer"] as? String ?? "").isEmpty ? "none" : "yes") · "
+                        + (measured ? "measured l2 \(probe?["l2"] ?? "?") da \(probe?["da"] ?? "?")" : "not measured: \(probe?["error"] ?? "?")"))
+                }
                 if raw == "recycle" {
                     AztecEngine.shared.failNextAsk = true
                     let again = try await AztecEngine.shared.accountAddress()

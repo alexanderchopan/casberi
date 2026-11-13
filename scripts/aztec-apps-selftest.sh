@@ -33,6 +33,9 @@ func url(_ s: String) -> URL? { URL(string: s) }
 check(AztecAppsShape.name(host: "app.ravenhouse.xyz") == "RavenHouse", "a site the directory names takes that name")
 check(AztecAppsShape.name(host: "APP.OLLA.FINANCE") == "Olla" && AztecAppsShape.name(host: "www.nemi.fi") == "Nemi",
       "…whatever its case, and behind www")
+check(AztecAppsShape.name(host: "privateinference.gg") == "Galactica", "Galactica is called what the directory calls it, not by its address")
+check(AztecAppsShape.renamed([AztecAppsShape.App(host: "privateinference.gg", name: "Private Inference", door: "https://privateinference.gg/", at: now)]).map(\.name) == ["Galactica"],
+      "a tile kept under an old name reads the table's name when the list is read back")
 check(AztecAppsShape.name(host: "ravenhouse.evil.example") == "ravenhouse.evil.example",
       "a site the directory does not name is called by its own address")
 check(AztecAppsShape.door(url("https://app.ravenhouse.xyz/collections/7?x=1#top")) == "https://app.ravenhouse.xyz/",
@@ -87,6 +90,9 @@ mutate "the same site listed twice" \
 mutate "a list with no end" \
   '+ rest).prefix(cap))' \
   '+ rest).prefix(1000))'
+mutate "a kept tile left under its old name" \
+  'apps.map { var app = $0; app.name = name(host: app.host); return app }' \
+  'apps.map { $0 }'
 mutate "a tile opening the page you happened to be on" \
   'return "https://\(host)\(port)/"' \
   'return url.absoluteString'
@@ -98,4 +104,8 @@ awk '/private func rememberApp\(\) \{/,/^    }/' "$BROWSER" | grep -q 'AztecApps
   || { echo "✗ a connected site no longer reaches the store"; exit 1; }
 grep -q 'Text(verbatim: app.name)' "$LIBRARY" && ! grep -q 'page.title' "$BROWSER" \
   || { echo "✗ a tile is named by something other than the kept name, or the page title is read"; exit 1; }
+grep -q 'AztecAppsShape.renamed(' Casberi/Casberi/Model/Aztec/AztecAppsStore.swift \
+  || { echo "✗ the kept list is read back without its names corrected"; exit 1; }
+grep -q "canvas.toDataURL('image/png')" "$BROWSER" && grep -q 'if !now { self?.askIconIfMissing() }' "$BROWSER" \
+  || { echo "✗ a vector icon is no longer drawn, or a tile with no icon is never asked again"; exit 1; }
 echo "✓ Aztec apps self-test passed"

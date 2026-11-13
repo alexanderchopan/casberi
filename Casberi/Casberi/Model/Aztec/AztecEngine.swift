@@ -132,7 +132,7 @@ final class AztecEngine: NSObject {
 
     static let messages = ["engineReady", "engineLog", "engineNeedsRoot", "engineReply",
                            "engineToTab", "engineConnect", "engineApprove", "engineEmoji", "engineStep",
-                           "engineBroken", "engineAskGone"]
+                           "engineBroken", "engineAskGone", "engineAppPaid"]
 
     // MARK: - A store that stopped answering
 
@@ -318,12 +318,25 @@ final class AztecEngine: NSObject {
                 webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, false)", arguments: ["id": id], in: nil, in: .page) { _ in }
                 return
             }
+            // An authorization (prd §1760) carries who it is for and the
+            // call's arguments; a send carries neither.
+            let grant = body["grant"] as? [String: Any]
             let calls = (body["calls"] as? [[String: Any]] ?? []).map {
                 AztecBrowserModel.Request.Call(name: $0["name"] as? String ?? "?", to: $0["to"] as? String ?? "",
-                                           isPublic: ($0["type"] as? String) == "public")
+                                           isPublic: ($0["type"] as? String) == "public",
+                                           grantee: grant?["caller"] as? String,
+                                           args: grant == nil ? [] : (grant?["args"] as? [String] ?? []))
             }
-            browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls,
-                                  fee: body["fee"] as? String ?? ""))
+            // How its gas is paid (prd §1759), the engine's word. A deposit
+            // still on its way is the phone's to know: the engine is handed
+            // the list only with the answer.
+            var fee = body["fee"] as? String ?? ""
+            if fee == "none", AztecGas.unminted != "[]" { fee = "arriving" }
+            browser.enqueue(.send(id: id, host: Self.host(body["origin"]), calls: calls, fee: fee))
+        case "engineAppPaid":
+            // An app's transaction minted a gas deposit: it is spent (prd §1759).
+            AztecGas.spent(by: body)
+            NSLog("aztecEngine| app | paid | %@", body["paid"] as? String ?? "?")
         default:
             break
         }
@@ -354,7 +367,10 @@ final class AztecEngine: NSObject {
         case .emoji(let sessionId, _, _):
             webView?.callAsyncJavaScript("casberiEngine.confirmEmoji(s, match)", arguments: ["s": sessionId, "match": yes], in: nil, in: .page) { _ in }
         case .send(let id, _, _, _):
-            webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, yes)", arguments: ["id": id, "yes": yes], in: nil, in: .page) { _ in }
+            // With the gas deposits nobody has minted yet, as Casberi's own
+            // sends are handed them: an app's transaction pays the same way.
+            webView?.callAsyncJavaScript("casberiEngine.answerApproval(id, yes, gas)",
+                                         arguments: ["id": id, "yes": yes, "gas": AztecGas.unminted], in: nil, in: .page) { _ in }
         case .ethConnect, .ethSign, .ethSend, .ethTopUp:
             break // the browser answers its own Ethereum asks
         }

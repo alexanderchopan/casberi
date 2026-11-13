@@ -24,16 +24,23 @@ enum AztecAppsShape {
     static let cap = 8
 
     /// The names Aztec's own directory gives its apps, by the host each
-    /// opens on (read 2026-11-12). Olla's page moves to its app's host.
+    /// opens on (read 2026-11-12): all thirteen. Olla's page moves to its
+    /// app's host; Galactica's address is privateinference.gg.
     static let names: [String: String] = [
+        "aztecscan.xyz": "Aztecscan",
+        "dfaztec-s1.dfarchon.xyz": "Dark Forest",
+        "privateinference.gg": "Galactica",
         "nemi.fi": "Nemi",
+        "nulo.sh": "Nulo",
+        "nyx.money": "Nyx",
         "olla.finance": "Olla",
         "app.olla.finance": "Olla",
-        "xochi.fi": "Xochi",
         "app.ravenhouse.xyz": "RavenHouse",
         "rolling.chat": "RollingChat",
-        "privateinference.gg": "Private Inference",
-        "dfaztec-s1.dfarchon.xyz": "Dark Forest",
+        "shield.human.tech": "Shield",
+        "xochi.fi": "Xochi",
+        "zk.money": "zk.money",
+        "zkpassport.id": "ZKPassport",
     ]
 
     /// What a connected site is called: the directory's name for it, else
@@ -62,6 +69,13 @@ enum AztecAppsShape {
         guard let door = door(url), let host = URL(string: door)?.host(percentEncoded: false) else { return apps }
         let rest = apps.filter { $0.host != host }
         return Array(([App(host: host, name: name(host: host), door: door, at: at)] + rest).prefix(cap))
+    }
+
+    /// The kept list as it is read back: each site under the name the table
+    /// gives it NOW, so a name corrected here reaches a tile kept before
+    /// (Galactica, kept as "Private Inference", the name of its address).
+    static func renamed(_ apps: [App]) -> [App] {
+        apps.map { var app = $0; app.name = name(host: app.host); return app }
     }
 
     static func removed(_ apps: [App], host: String) -> [App] {
