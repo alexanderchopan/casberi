@@ -284,7 +284,7 @@ struct MoveMenuBox<Content: View>: View {
         .presentationCompactAdaptation(.popover)
         // **GLASS, NOT A SLAB (prd §1804):** the rows and the sentence
         // show through it, blurred.
-        .presentationBackground(.ultraThinMaterial)
+        .dsMenuGlass()
     }
 
     private var box: some View {

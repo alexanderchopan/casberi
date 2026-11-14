@@ -597,6 +597,10 @@ extension View {
             .shadow(color: DS.cardShadow, radius: 16, x: 0, y: 12)
     }
 
+    /// A popover menu's ground (prd §1804): the page shows through, blurred.
+    /// Under Reduce Transparency it is the sheet's opaque surface.
+    func dsMenuGlass() -> some View { modifier(DSMenuGlass()) }
+
     /// The top corner of a PRESENTED sheet (prd §412, 2026-08-20) — the system's
     /// own concentric curve on iOS 26, the §8 pin below it.
     ///
@@ -712,5 +716,18 @@ private struct DSTapTarget<S: Shape>: ViewModifier {
         content
             .frame(minWidth: size, minHeight: size)
             .contentShape(shape)
+    }
+}
+
+private struct DSMenuGlass: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content.presentationBackground(DS.surfaceSheet)
+        } else {
+            content.presentationBackground(.ultraThinMaterial)
+        }
     }
 }
