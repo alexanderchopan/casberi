@@ -77,6 +77,8 @@ struct MoveChoiceRowLabel: View {
     var chevron = true
     /// The token's or the network's own mark, before the value.
     var mark: MoveRowMark?
+    /// One amber word before the answer: "New", on a first send (prd §1805).
+    var note: String?
 
     var body: some View {
         // **ONE LINE (prd §1794, the user of the Apple canvas: "board 3 is
@@ -88,7 +90,7 @@ struct MoveChoiceRowLabel: View {
                 .lineLimit(1)
                 .layoutPriority(1)
             Spacer(minLength: DS.Space.s3)
-            MoveChoiceValue(value: value, ink: ink, chevron: chevron, mark: mark)
+            MoveChoiceValue(value: value, ink: ink, chevron: chevron, mark: mark, note: note)
         }
         .frame(minHeight: MoveChoiceRowLabel.height)
         .contentShape(Rectangle())
@@ -105,15 +107,23 @@ struct MoveChoiceValue: View {
     var ink: Color = DS.textPrimary
     var chevron = true
     var mark: MoveRowMark?
+    var note: String?
 
     var body: some View {
         HStack(alignment: .center, spacing: DS.Space.s2) {
+            if let note {
+                Text(verbatim: note).dsText(.heading17).foregroundStyle(DS.attentionInk).lineLimit(1)
+                    .transition(.opacity)
+            }
             if let mark { mark }
+            // **A LONG NAME WRAPS, IT NEVER SHRINKS (prd §1805):** two lines
+            // at the row's own size, read from the trailing edge.
             Text(verbatim: value)
                 .dsText(.heading20)
                 .foregroundStyle(ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+                .fixedSize(horizontal: false, vertical: true)
             Image(systemName: "chevron.up.chevron.down").dsGlyph(.caption, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
                 .opacity(chevron ? 1 : 0)
@@ -351,5 +361,15 @@ struct MoveMenuCheck: View {
             .foregroundStyle(ink)
             .symbolEffect(.bounce, options: .nonRepeating)
             .accessibilityLabel(Text("Picked"))
+    }
+}
+
+/// **A VERB PRESSED GROWS TOWARD THE TITLE IT BECOMES (prd §1805).** From
+/// its leading edge, so the word stays on its margin.
+struct MoveVerbPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 1.08 : 1, anchor: .leading)
+            .animation(DS.Motion.standard, value: configuration.isPressed)
     }
 }

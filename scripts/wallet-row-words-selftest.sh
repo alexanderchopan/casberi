@@ -5,8 +5,8 @@
 #
 # Every failure reads as a cut row or a wrong word:
 #   • "Swapped 0.0136 ETH → 32.55 USDC on…" — the sentence drawn as the name;
-#     since prd §1555 the row reads "0.0136 ETH for 32.55 USDC", the verb
-#     the glyph's and VoiceOver's, the venue on the line
+#     the row reads "Swapped 0.0136 ETH for 32.55 USDC" (prd §1805, verb
+#     first as a send's row; §1555 had left it to the glyph), venue on the line
 #   • a swap's venue lost, or its verb gone from VoiceOver
 #   • "1 of 2 signatures collected on deposit e t h" — the count as the name,
 #     the act split on every capital
@@ -40,28 +40,28 @@ typealias W = WalletRowWords.Words
 // A swap: the trade as it reads, "for" for the arrow, its verb left to the
 // glyph and kept for VoiceOver, the venue on the line (prd §1555).
 check(WalletRowWords.read("Swapped 0.0136 ETH → 32.55 USDC on Uniswap")
-      == W(name: "0.0136 ETH for 32.55 USDC", clause: "On Uniswap",
+      == W(name: "Swapped 0.0136 ETH for 32.55 USDC", clause: "On Uniswap",
            spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap"),
       "an EVM swap reads out for in, the venue on the line, the verb spoken")
-check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.name == "1,240 USDC for 0.4962 ETH",
+check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.name == "Swapped 1,240 USDC for 0.4962 ETH",
       "a grouped amount stays whole")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")
-      == W(name: "0.5 ETH for 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      == W(name: "Swapped 0.5 ETH for 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
       "no venue, no line clause")
 check(WalletRowWords.read("Swapped ETH → USDC")
-      == W(name: "ETH for USDC", spoken: "Swapped ETH for USDC"),
+      == W(name: "Swapped ETH for USDC", spoken: "Swapped ETH for USDC"),
       "bare symbols")
 check(WalletRowWords.read("Swapped 2 SOL → 310 USDC on Jupiter")
-      == W(name: "2 SOL for 310 USDC", clause: "On Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
+      == W(name: "Swapped 2 SOL for 310 USDC", clause: "On Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
       "a Solana swap reads the same")
-check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "0.05 ETH for 160 ÚЅDС",
+check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "Swapped 0.05 ETH for 160 ÚЅDС",
       "a look-alike symbol is drawn as it is; the row's flag picks the ink")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC — on Base")
-      == W(name: "0.5 ETH for 1,240 USDC", qualifier: "on Base", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      == W(name: "Swapped 0.5 ETH for 1,240 USDC", qualifier: "on Base", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
       "a seam after a swap rides as the qualifier")
-check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("Swapped") == false
+check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.hasPrefix("Swapped ") == true
       && WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("→") == false,
-      "the drawn name carries neither the verb nor the arrow")
+      "the drawn name leads with its verb and carries no arrow")
 
 // A Safe row: the act is the name, the count the line.
 check(WalletRowWords.read("1 of 2 signatures collected on deposit ETH — your signature is needed")
@@ -140,11 +140,11 @@ mutate "split on every capital (the shipped 'deposit e t h')" \
 mutate "a swap keeps its sentence" \
     'swap(title) ?? safe(title)' \
     'safe(title)'
-mutate "the verb comes back into the drawn name" \
-    'let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"' \
-    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"'
+mutate "the verb leaves the drawn name (prd §1805)" \
+    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"' \
+    'let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"'
 mutate "VoiceOver loses the verb" \
-    'spoken: "Swapped \(name)" + (on.map { " on \($0)" } ?? ""))' \
+    'spoken: name + (on.map { " on \($0)" } ?? ""))' \
     'spoken: name)'
 mutate "the venue leaves the line" \
     'clause: on.map { "On \($0)" },' \

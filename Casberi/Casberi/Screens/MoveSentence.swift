@@ -173,6 +173,8 @@ struct MoveSentence: View {
     /// The network is a blank too until it is picked (§1438c): the sentence
     /// starts "0 token for token on network." and the network comes first.
     @State private var networkPicked = false
+    /// Every network has answered once: a choice of one can be told from a read still landing.
+    @State private var readWhole = false
     /// A swap's "To" network is picked, by its own menu or by a token
     /// picked on it (prd §1794): nothing is picked for you.
     @State private var destinationPicked = false
@@ -1920,7 +1922,11 @@ struct MoveSentence: View {
         // Said once when both sides are on one network: "Swap 20 USDC for
         // ETH on Base." reads; "on Base for ETH on Base." does not.
         if networkPicked, buy == nil || buyHome != network { MoveClause(glue: String(localized: "on")) { originWord } }
-        if buy != nil { MoveClause(glue: String(localized: "for")) { buyWord } }
+        if buy != nil {
+            MoveClause(glue: String(localized: "for")) { buyWord }
+        } else if swapGap == .buy {
+            MoveClause(glue: String(localized: "for")) { word(String(localized: "a token."), ink: DS.pickInk) }
+        }
         if networkPicked, buy != nil { MoveClause(glue: String(localized: "on")) { destinationWord } }
         if whenSpoken { whenClause }
     }
@@ -1946,6 +1952,12 @@ struct MoveSentence: View {
                 case .current: currentSellClauses(glue: glue, trail: join.trail, leads: first && lead != nil)
                 }
             }
+            // Nothing of the line is picked yet and the token is the gap.
+            if group.hasCurrent, lines.isEmpty, sendGap == .with {
+                MoveClause(glue: g == 0 ? lead : String(localized: "and")) {
+                    word(String(localized: "a token"), ink: DS.pickInk)
+                }
+            }
             if !group.hasCurrent || toShown {
                 MoveClause(glue: String(localized: "to")) {
                     if group.hasCurrent {
@@ -1954,9 +1966,17 @@ struct MoveSentence: View {
                         word(group.name ?? "", ink: MoveSentence.settledInk)
                     }
                 }
+            } else if sendGap == .to {
+                MoveClause(glue: String(localized: "to")) {
+                    word(String(localized: "someone") + (networkPicked ? "" : "."), ink: DS.pickInk)
+                }
             }
         }
-        if networkPicked { MoveClause(glue: String(localized: "on")) { networkWord } }
+        if networkPicked {
+            MoveClause(glue: String(localized: "on")) { networkWord }
+        } else if sendGap == .network {
+            MoveClause(glue: String(localized: "on")) { word(String(localized: "a network."), ink: DS.pickInk) }
+        }
     }
 
     /// **A SECOND MOVE IS A SECOND SENTENCE (prd §1494, user: "this should
@@ -2843,7 +2863,15 @@ struct MoveSentence: View {
         // picked, and the clause not at all until one of them is.
         let stop = trail ?? (sellStops ? "." : nil)
         let split = inDollars && !amount.isEmpty && with != nil
-        if sellShown {
+        if sellShown, with != nil, sendGap == .amount || swapGap == .amount {
+            // The amount is the gap: "an amount of USDC" (prd §1805).
+            MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : MoveSentence.glueInk) {
+                word(String(localized: "an amount"), ink: DS.pickInk)
+                    .background { amountBlank(dollars: inDollars) }
+            }
+            .layoutValue(key: FlowBreak.self, value: leads)
+            MoveClause(glue: String(localized: "of"), trail: stop) { withWord }
+        } else if sellShown {
             MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : MoveSentence.glueInk, trail: split ? nil : stop) {
                 // The figure and its token wrap between them when the two are
                 // wider than a line ("1234567.89" over "USDC"), never truncate.
@@ -2869,7 +2897,8 @@ struct MoveSentence: View {
     /// The line being filled ends the sentence: nothing picked follows it.
     private var sellStops: Bool {
         switch verb {
-        case .send: !networkPicked && !toShown
+        // A gap's clause follows it (prd §1805): the stop is that clause's.
+        case .send: sendGap == nil && !networkPicked && !toShown
         case .swap: !networkPicked && buy == nil
         default: false
         }
@@ -3071,8 +3100,17 @@ struct MoveSentence: View {
     /// them where money is.
     private var verbList: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // **THE MENU IS WORDS AT THE SENTENCE'S SIZE (prd §1805, retiring
+            // §1681's and §1737's glyphs):** a verb says what it does, and
+            // the one pressed grows toward the title it becomes.
             ForEach(offeredVerbs, id: \.self) { v in
-                listRow(title(v), symbol: glyph(v), bareSymbol: true, rung: .heading34) { pickVerb(v) }
+                Button { pickVerb(v) } label: {
+                    Text(verbatim: title(v)).dsText(MoveSentence.rung)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(MoveVerbPress())
             }
         }
     }
@@ -3091,20 +3129,9 @@ struct MoveSentence: View {
             aztecReceive = false
             verb = v
             receipt = nil
+            takeOnlyChoices()
         }
         DSHaptic.selection()
-    }
-
-    private func glyph(_ v: Verb) -> String {
-        switch v {
-        case .swap: "arrow.up.arrow.down"
-        case .send: "arrow.up"
-        case .receive: "arrow.down"
-        case .buy: "creditcard"
-        case .sweep: "tray.and.arrow.down"
-        case .deposit: "plus"
-        case .lend: "building.columns"
-        }
     }
 
     private func title(_ v: Verb) -> String {
@@ -3201,7 +3228,7 @@ struct MoveSentence: View {
                 : ZkMoneyLink.spellsLink(to) ? String(localized: "zk.money request")
                 : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))   // a pasted address waits as its tail (§1553)
         let missing: Bool = { if case .missing = lookup { true } else { false } }()
-        return blank(shown + (verb == .send && !networkPicked ? "." : ""), ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : MoveSentence.settledInk),
+        return blank(shown + (verb == .send && !networkPicked && sendGap != .network ? "." : ""), ink: toWarningInk ?? (resolved?.imitates != nil || missing ? DS.attentionInk : resolved == nil ? DS.textTertiary : MoveSentence.settledInk),
                   .to, empty: resolved == nil && to.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.
@@ -3232,7 +3259,7 @@ struct MoveSentence: View {
     private var originWord: some View {
         Group {
             if networkPicked {
-                blank(network.name + (buy == nil ? "." : ""), ink: MoveSentence.settledInk, .network, label: Text("From \(network.name), change"))
+                blank(network.name + (buy == nil && swapGap != .buy ? "." : ""), ink: MoveSentence.settledInk, .network, label: Text("From \(network.name), change"))
             } else {
                 blank(String(localized: "network"), ink: DS.textTertiary, .network, empty: true, label: Text("Pick a network"))
             }
@@ -3488,6 +3515,11 @@ struct MoveSentence: View {
             // the first frame, picked or not.
             if verb == .swap, [.network, .with, .destination, .buy].contains(b.names) { continue }
             if b.names == .destination { continue }
+            // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805):** the one
+            // network you hold anything on, and the one token there, are
+            // said by the sentence and ask nothing.
+            if verb == .send, items.isEmpty, b.names == .network, onlyNetwork { continue }
+            if verb == .send, items.isEmpty, b.names == .with, onlyToken { continue }
             let id = "choice\(b.names)"
             guard seen.insert(id).inserted else { continue }
             var value = b.empty ? pick : Self.rowValue(b.text)
@@ -3496,6 +3528,8 @@ struct MoveSentence: View {
             if !b.empty, b.names == .amount, inDollars, let with, units != nil, let other = otherUnit(with) { value += " · " + other }
             var row = LedgerRow(id: id, name: Self.rowName(b.names, verb: verb), value: value, opens: b.opens)
             if !b.empty { row.mark = rowMark(b.names) }
+            // A first send to an address says so in its row (prd §1805).
+            if b.names == .to, !b.empty, firstSendShown { row.note = String(localized: "New") }
             rows.append((Self.rowRank(b.names), row))
         }
         if verb == .swap { rows.append(contentsOf: swapPairRows) }
@@ -3512,6 +3546,86 @@ struct MoveSentence: View {
         for i in sorted.indices where sorted[i].value == pick { sorted[i].valueInk = DS.textSecondary }
         if let next = sorted.firstIndex(where: { $0.value == pick }) { sorted[next].valueInk = DS.pickInk }
         return sorted
+    }
+
+    /// The lead warning's kin: this address has never been sent to.
+    private var firstSendShown: Bool {
+        shownFindings.contains { if case .firstSend = $0 { true } else { false } }
+    }
+
+    /// The networks you hold anything on, once every network has answered.
+    private var fundedNetworks: [Op.Network] {
+        networksByWorth.filter { !(heldBy[$0.chainId] ?? []).isEmpty }
+    }
+
+    /// One network holds everything you have, and it is the one picked.
+    private var onlyNetwork: Bool {
+        #if DEBUG
+        // `-moveOnlyChoice YES`: draw Send as an account with one token on
+        // one network would see it (the demo holds several).
+        if UserDefaults.standard.bool(forKey: "moveOnlyChoice") { return networkPicked }
+        #endif
+        return readWhole && unread.isEmpty && networkPicked && fundedNetworks.count == 1 && fundedNetworks.first == network
+    }
+
+    /// One token on the network picked, and it is the one picked.
+    private var onlyToken: Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "moveOnlyChoice") { return with != nil }
+        #endif
+        return readWhole && onlyNetwork && held.count == 1 && with?.id == held.first?.id
+    }
+
+    /// **WHAT HAS ONE ANSWER IS ANSWERED (prd §1805, amending §1438c's
+    /// "nothing is picked for you" for a choice of one).** Send only, a
+    /// single line, and only after every network has been read.
+    private func takeOnlyChoices() {
+        guard verb == .send, readWhole, unread.isEmpty, receipt == nil, stage == nil, items.isEmpty else { return }
+        let funded = fundedNetworks
+        if !networkPicked, funded.count == 1, let only = funded.first { switchNetwork(only) }
+        if networkPicked, fundedNetworks.count == 1, fundedNetworks.first == network,
+           with == nil, held.count == 1, let only = held.first { choose(only) }
+    }
+
+    /// **THE SENTENCE SHOWS ITS GAP (prd §1805, amending §1791's "what is
+    /// not picked is not said").** Once something is picked, the next thing
+    /// still to choose stands in the sentence in the pick's pink, where its
+    /// word will go: "Send an amount of USDC to Ana on Base." One gap at a
+    /// time, the same one the first pink row asks for.
+    private var sendGap: Blank? {
+        guard verb == .send, receipt == nil, stage == nil, items.isEmpty, thenWord == nil,
+              !verbStops, !emptyEverywhere else { return nil }
+        if !toShown { return .to }
+        if !networkPicked { return .network }
+        if with == nil { return amount.isEmpty ? .with : nil }
+        return amount.isEmpty ? .amount : nil
+    }
+
+    private var swapGap: Blank? {
+        guard verb == .swap, receipt == nil, stage == nil, items.isEmpty, thenWord == nil,
+              !limiting, !emptyEverywhere, networkPicked, with != nil else { return nil }
+        if buy == nil { return .buy }
+        return amount.isEmpty ? .amount : nil
+    }
+
+    /// **THE BUTTON NAMES WHAT IS MISSING (prd §1805):** the first row
+    /// still to be filled, which the grey card opens.
+    private var missingRow: Blank? {
+        guard verb == .send || verb == .swap || verb == .buy, stage == nil, receipt == nil, !limiting, !footOn else { return nil }
+        let pick = String(localized: "Choose")
+        return choiceRowList.first { $0.value == pick }?.opens
+    }
+
+    private func missingWords(_ which: Blank) -> String {
+        switch which {
+        case .to: String(localized: "Choose who")
+        case .network, .destination, .elsewhere, .depositNetwork: String(localized: "Choose a network")
+        case .with, .buy, .elsewhereCoin, .depositCoin: String(localized: "Choose a token")
+        case .amount: String(localized: "Choose an amount")
+        case .merchant: String(localized: "Choose a merchant")
+        case .group: String(localized: "Choose a category")
+        default: String(localized: "Choose")
+        }
     }
 
     /// The network a swap arrives on is known: picked, or the only one.
@@ -3774,7 +3888,7 @@ struct MoveSentence: View {
                             // Where it arrives is asked of a network it leaves from.
                             tapBlank(which == .destination && !networkPicked ? .network : which)
                         } label: {
-                            MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
+                            MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark, note: r.note)
                         }
                         .buttonStyle(RowPress())
                         .accessibilityHint(Text("Changes it"))
@@ -4061,6 +4175,15 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                 }
+                // Where the move is kept (prd §1805).
+                Button {
+                    DSHaptic.selection()
+                    chrome.moveTray = false
+                    chrome.openWalletActivity()
+                } label: {
+                    Text("See in your activity").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
                 // A first send to an unnamed address: name it here, and the
                 // next send is a pick from your book (prd §1586).
                 ForEach(receipt.names, id: \.self) { address in
@@ -4296,6 +4419,8 @@ struct MoveSentence: View {
         var valueInk: Color?
         /// The token's or network's mark, on a choice's row (prd §1792).
         var mark: MoveRowMark?
+        /// One amber word before the value: "New" on a first send (prd §1805).
+        var note: String?
     }
 
     /// **ONE LEDGER UNDER THE SENTENCE (prd §1754, user: "the part that
@@ -4939,9 +5064,10 @@ struct MoveSentence: View {
                     MoveRowMark(token: mark, network: net.flatMap { Self.networkMark($0) }, size: Self.listMark)
                 }
                 VStack(alignment: .leading, spacing: 2) {
+                    // A long name wraps at its size (prd §1805).
                     Text(verbatim: title).dsText(rung)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).minimumScaleFactor(0.5)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     if let sub {
                         Text(verbatim: sub).dsText(.subhead12)
                             .foregroundStyle(sub == Self.aztecRule ? DS.aztecInk : DS.textSecondary).lineLimit(2)
@@ -6276,7 +6402,18 @@ struct MoveSentence: View {
                     } label: { actCard(String(localized: "Done"), on: true, fill: DS.fillStrong) }
                         .buttonStyle(PressSpring())
                 }
-                if verb != .receive, verb != .deposit, !nothingToMove, focus != .amount {
+                if verb != .receive, verb != .deposit, !nothingToMove, focus != .amount, let missingRow {
+                    // **THE BUTTON NAMES WHAT IS MISSING (prd §1805):** never
+                    // a grey verb that does nothing; it opens that row.
+                    Button {
+                        tapBlank(missingRow == .amount && with == nil && (verb == .send || verb == .swap) ? .with : missingRow)
+                    } label: {
+                        actCard(missingWords(missingRow), on: true, fill: DS.fillStrong)
+                            .animation(DS.Motion.standard, value: missingRow)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityHint(Text("Opens its row"))
+                } else if verb != .receive, verb != .deposit, !nothingToMove, focus != .amount {
                     Button { sign() } label: {
                         // **THE ACT WEARS FACE ID'S GLYPH (prd §1754):** the
                         // tap asks Face ID (§1687), and the word says so
@@ -7279,6 +7416,8 @@ struct MoveSentence: View {
         }
         heldBy = found
         unread = failed
+        readWhole = true
+        takeOnlyChoices()
         if let w = with, !failed.contains(network.chainId) {
             with = found[network.chainId]?.first { $0.id == w.id }
         }
@@ -8264,7 +8403,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// Lines are `;`-separated, each `<amount>|<to>[|<SYM>]`; every line but
+    /// Lines are `;`-separated, each `<amount>|<to>[|<SYM>]` (`none` for one not yet picked); every line but
     /// the last is Added once its recipient resolves. A trailing
     /// `@<network>` sends on that network (`20|zac.zk.money|USDC@Ethereum`).
     private func sendDraft(_ given: String? = nil) {
@@ -8284,9 +8423,10 @@ struct MoveSentence: View {
             for (n, parts) in lines.enumerated() {
                 if parts.count > 2, let h = held.first(where: { $0.token.symbol == parts[2] }) { with = h }
                 if with == nil { with = held.first }
-                amount = parts.first ?? ""
+                // "none" leaves that word unpicked, to show the sentence's gap.
+                amount = parts.first == "none" ? "" : parts.first ?? ""
                 inDollars = false
-                to = parts.count > 1 ? parts[1] : ""
+                to = parts.count > 1 && parts[1] != "none" ? parts[1] : ""
                 // Filled, so the list the first open raised steps aside.
                 open = nil
                 NSLog("moveSendDraft: amount=%@ %@ to=%@", amount, with?.token.symbol ?? "-", to)

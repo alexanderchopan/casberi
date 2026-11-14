@@ -72937,3 +72937,19 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo, Send's Token menu. NOT SEEN: the check on a pick, the Done card. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is words, Activity keeps the verb (amends §1791, §1438c, §1681, §1737, §1555, §1794) (user, 2026-11-14, of the canvases "Move and Account: what I'd improve next" and "Move: unique, minimal, fun to touch": "do all")
+
+1. **The button names what is missing.** While a row of Send, Swap or Spend is still "Choose", the foot's card is grey with white words ("Choose who", "Choose a network", "Choose a token", "Choose an amount", "Choose a merchant", "Choose a category") and a tap opens that row. Never a grey verb that does nothing (§83).
+2. **A first send to an address says "New"** in its To row, one amber word before the address (`LedgerRow.note`), read off the same finding the warning line reads (`.firstSend`).
+3. **A long name wraps, it never shrinks:** a row's answer and a menu's row take two lines at their own size. Left to shrink: the sentence's own word wider than a line (§1501), the act's card, the fact lines.
+4. **The receipt gains one row, "See in your activity",** (lower case, as the receipt's own "check your activity" is) which closes Move on the Wallet's Activity (`ShellChrome.openWalletActivity`). The receipt was already the sentence in the past tense; "Send again" is not added, since Done returns to the verb.
+5. **The sentence shows its gap** (amends §1791's "what is not picked is not said"): once something is picked, the next thing to choose stands in the sentence in the pick's pink where its word will go. Send: "to someone", "on a network.", "a token", "an amount of USDC". Swap: "for a token.", "an amount of ETH". One gap at a time, a single line only, and never a touch target (§1781). With nothing picked the sentence is still not drawn.
+6. **A row only where there is a choice** (amends §1438c's "nothing is picked for you" for a choice of one): in Send, when every network has been read and one holds everything you have, it is picked and its row is not drawn; the same for the one token there. The sentence still says both.
+7. **The menu is words at the sentence's size** (retires §1681's and §1737's verb glyphs): the verbs A to Z, no glyph, and the one pressed grows from its leading edge (`MoveVerbPress`).
+8. **Activity keeps the verb** (amends §1555's "the swap glyph says Swapped"): a swap's row reads "Swapped 1,240 USDC for 0.4962 ETH", as a send's and a receive's rows already lead with theirs. A move between your own accounts is unchanged.
+9. NOT BUILT: press and slide through a menu; a picked word landing in the sentence with its own motion beyond the existing rise; the gap on Spend, Lend and the private sends; rows hidden on Swap.
+
+**Seen:** the simulator, demo: the menu, "Choose who", "Choose an amount", "New", "to someone", "an amount of USDC", Send with two rows (`-moveOnlyChoice YES`), the swap's row in Activity. NOT SEEN: Swap's two gaps, the one-choice detection on a real account with one token, "See in your activity", a two-line answer. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `wallet-row-words-selftest.sh`: the swap's name leads with its verb, and a mutation that drops it fails.

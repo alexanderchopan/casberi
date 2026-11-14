@@ -99,12 +99,15 @@ enum WalletRowWords {
         // Display only: the stored title keeps "Swapped …", which search,
         // `CounterpartyRetitle`, `BalancePrivacy` and the demo read, and
         // VoiceOver keeps the verb (`spoken`).
-        let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"
+        // **ACTIVITY KEEPS THE SENTENCE MOVE WROTE (prd §1805, amending
+        // §1555's "the swap glyph says Swapped"):** a swap's row reads as a
+        // send's and a receive's do, verb first, in the past tense.
+        let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"
         let on = venue.flatMap { $0.isEmpty ? nil : $0 }
         return Words(name: name,
                      clause: on.map { "On \($0)" },
                      qualifier: seam.line,
-                     spoken: "Swapped \(name)" + (on.map { " on \($0)" } ?? ""))
+                     spoken: name + (on.map { " on \($0)" } ?? ""))
     }
 
     /// "0.5 ETH", or the bare symbol when the title carries no amount.
