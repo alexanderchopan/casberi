@@ -27,17 +27,10 @@ struct MoveLendSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // The verb leads the sentence (prd §1681); while Aave is
-                // read it stands on a line above.
-                if move.stage == .reading {
-                    head()
-                        .padding(.bottom, DS.Space.s4)
-                }
-                MoveFlow { sentence }
-                    // No control (prd §1781): its choices are the rows under it.
+                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
+                // (prd §1794, §1800):** as Move's own verbs.
+                head()
                     .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.figure)
-                    .animation(DS.Motion.standard, value: move.chainId)
                 Group {
                     // A row's choices are a menu on the row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -45,7 +38,7 @@ struct MoveLendSentence<Head: View>: View {
                         line
                     }
                 }
-                .padding(.top, DS.Space.s6)
+                .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -100,7 +93,8 @@ struct MoveLendSentence<Head: View>: View {
                 .accessibilityLabel(Text("Amount, \(move.figure)"))
                 .accessibilityHint(Text("Picks how much"))
             }
-            MovePhrase(String(localized: "Aave"), glue: move.mode == .lend ? String(localized: "on") : String(localized: "from"))
+            // One "on" (prd §1800): "Lend 100 USDC to Aave on Base."
+            MovePhrase(String(localized: "Aave"), glue: move.mode == .lend ? String(localized: "to") : String(localized: "from"))
             MoveClause(glue: String(localized: "on")) {
                 Button { toggle(.network) } label: {
                     MoveWord((move.network?.name ?? "") + ".", ink: MoveSentence.settledInk)
@@ -238,8 +232,10 @@ struct MoveLendSentence<Head: View>: View {
     /// which network: what the sentence's two words opened.
     private var choiceRows: [MoveChoiceRow] {
         guard live, doneHash == nil else { return [] }
-        return [MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.figure) { toggle(.amount) },
-                MoveChoiceRow(id: "network", name: String(localized: "Network"), value: move.network?.name ?? "") { toggle(.network) }]
+        // The network first: it decides what can be lent (prd §1797).
+        let mark = move.network.flatMap { MoveSentence.networkMark($0) }.map { MoveRowMark(network: $0) }
+        return [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: move.network?.name ?? "", mark: mark) { toggle(.network) },
+                MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.figure) { toggle(.amount) }]
     }
 
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
@@ -339,6 +335,14 @@ struct MoveLendSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
+        MoveFlow { sentence }
+            // No control (prd §1781): its choices are the rows above it.
+            .allowsHitTesting(false)
+            .animation(DS.Motion.standard, value: move.figure)
+            .animation(DS.Motion.standard, value: move.chainId)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, DS.Space.s3)
         // ONE THING AT A TIME over the act, as every Move sentence (prd
         // §1700y, §1700z): the steps while it works and after, the cost while ready.
         if let run = stepsRun {

@@ -72857,3 +72857,14 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo: `-moveSweepDraft YES`, `-moveDepositDraft "50|USDC@Base"`, `-moveBuyDraft "Amazon|25"`. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z) (user, 2026-11-14, of Lend's board on the Design canvas: "ok for now")
+
+1. **"Lend" is the page's title and the sentence stands over the button,** as Move's own verbs (§1794).
+2. **One "on":** "Lend 100 USDC to Aave on Base." ("Take back 100 USDC from Aave on Base." is unchanged.)
+3. **The Network row leads,** with its mark; Amount follows.
+4. Not changed here, and still to bring to the board: the Half · All chips, the "you have" line, "Take back" as a word, and the cost line between the sentence and the button.
+
+**Seen:** the simulator, demo, Move › Lend. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
