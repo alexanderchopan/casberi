@@ -72784,3 +72784,12 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** the simulator, demo: Send's whole draft and Swap's (`-moveSwapDraft "20|USDC|ETH"`). **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1795 — Swap is four plain rows: From, Token, To, Token (amends §1794 item 5) (user, 2026-11-13, of the pair rows: "swap looks weird")
+
+1. **No two menus on one line.** The pair rows put a network's menu and its token's side by side, and the two columns never lined up between From and To. Swap's rows are Send's: From (the network), Token, To (the network), Token, Amount, When, each one line with its answer at the trailing edge. Air stands before To and before Amount, so the two sides read apart.
+2. **The network is said once when both sides share it:** "Swap 20 USDC for ETH on Base." (§1754's rule again, over §1793 item 4); both are said when they differ.
+
+**Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

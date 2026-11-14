@@ -1903,7 +1903,9 @@ struct MoveSentence: View {
         // "said once"):** "Swap $20 of USDC on Base for ETH on Ethereum."
         // Each token is said with where it is, so a swap to another
         // network reads as any other swap does.
-        if networkPicked { MoveClause(glue: String(localized: "on")) { originWord } }
+        // Said once when both sides are on one network: "Swap 20 USDC for
+        // ETH on Base." reads; "on Base for ETH on Base." does not.
+        if networkPicked, buy == nil || buyHome != network { MoveClause(glue: String(localized: "on")) { originWord } }
         if buy != nil { MoveClause(glue: String(localized: "for")) { buyWord } }
         if networkPicked, buy != nil { MoveClause(glue: String(localized: "on")) { destinationWord } }
         if whenSpoken { whenClause }
@@ -2967,35 +2969,6 @@ struct MoveSentence: View {
     /// Spend and Buy are always in dollars; Send and Swap as picked.
     private var amountInDollars: Bool { inDollars || verb == .buy || verb == .deposit }
 
-    /// One side of a swap: its name, then the network's menu and the token's.
-    private func pairRow(_ name: String, _ network: LedgerRow, _ token: LedgerRow?) -> some View {
-        HStack(alignment: .center, spacing: DS.Space.s4) {
-            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            pairHalf(network)
-            if let token { pairHalf(token) }
-        }
-        .frame(minHeight: MoveChoiceRowLabel.height)
-    }
-
-    private func pairHalf(_ r: LedgerRow) -> some View {
-        Button {
-            guard let which = r.opens else { return }
-            // Where it arrives is asked of a network it leaves from.
-            tapBlank(which == .destination && !networkPicked ? .network : which)
-        } label: {
-            MoveChoiceValue(value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
-                .frame(minHeight: MoveChoiceRowLabel.height)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text(verbatim: Self.rowName(r.opens ?? .network, verb: verb) + ", " + r.value))
-        .accessibilityHint(Text("Changes it"))
-        .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-            if let which = r.opens { menu(which) }
-        }
-    }
-
     /// The Amount row: its list on a tap, and the field in the value's
     /// place while a figure is typed.
     private func amountRow(_ r: LedgerRow) -> some View {
@@ -3416,8 +3389,9 @@ struct MoveSentence: View {
         case .amount: String(localized: "Amount")
         case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
         case .buy: String(localized: "Token")
-        case .network, .elsewhere, .depositNetwork: String(localized: "Network")
-        case .destination: String(localized: "To network")
+        case .network: verb == .swap ? String(localized: "From") : String(localized: "Network")
+        case .elsewhere, .depositNetwork: String(localized: "Network")
+        case .destination: String(localized: "To")
         case .arrives: String(localized: "Arrives as")
         case .elsewhereCoin, .depositCoin: String(localized: "Token")
         case .group: String(localized: "Category")
@@ -3488,17 +3462,16 @@ struct MoveSentence: View {
         let kept = keptRowLines
         if !rows.isEmpty || !kept.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows.filter { r in verb != .swap || (r.opens != .with && r.opens != .buy) }) { r in
+                ForEach(rows) { r in
                     Group {
-                        if verb == .swap, r.opens == .network || r.opens == .destination {
-                            // **A NETWORK AND ITS TOKEN, ONE LINE (prd §1794):**
-                            // the network first, since it decides the token.
-                            let token = rows.first { $0.opens == (r.opens == .network ? .with : .buy) }
-                            pairRow(r.opens == .network ? String(localized: "From") : String(localized: "To"), r, token)
-                        } else if r.opens == .amount {
+                        if r.opens == .amount {
                             amountRow(r).id("moveAmountRow")
                         } else {
-                            Button { if let which = r.opens { tapBlank(which) } } label: {
+                            Button {
+                                guard let which = r.opens else { return }
+                                // Where it arrives is asked of a network it leaves from.
+                                tapBlank(which == .destination && !networkPicked ? .network : which)
+                            } label: {
                                 MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
                             }
                             .buttonStyle(RowPress())
@@ -3508,10 +3481,13 @@ struct MoveSentence: View {
                     // Always under its row (user, 2026-11-13: "token menu opens
                     // downward, but network one opens upward"): left to the
                     // system, each row's menu went its own way.
-                    .popover(isPresented: verb == .swap && (r.opens == .network || r.opens == .destination) ? .constant(false) : menuShown(r.opens),
-                             attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         if let which = r.opens { menu(which) }
                     }
+                    // **A SWAP'S TWO SIDES STAND APART (prd §1795):** a
+                    // network over its token, air before the next side and
+                    // before what is asked of the whole swap.
+                    .padding(.top, verb == .swap && (r.opens == .destination || r.opens == .amount) ? DS.Space.s4 : 0)
                 }
                 ForEach(kept, id: \.id) { line in
                     HStack(spacing: 0) {
