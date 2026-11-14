@@ -137,7 +137,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - **The signer's four doors, no funded wallet (prd §913)** → docs/hooks/wallet.md · prd §913
-- `-wipeAccessProbe YES` — run the Data tray's Delete access internals and log before/after credential counts.
+- `-wipeAccessProbe YES` — run the Data tray's Delete access and log credential counts before and after.
 - `-bskyReposts` — Social grew an INBOUND half (2026-07-31, prd §239) → docs/hooks/social.md · prd §239
 - **An account marked `mine` lands its OWN replies (2026-09-17)** → docs/hooks/social.md · prd §804
 - Social enrichment (2026-07-16, prd 81) — both networks, one pass through Model/SocialBridge.swift. → docs/hooks/social.md
@@ -225,7 +225,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-watchCapProbe <address>` — attempt one more watch and NSLog `added`/`alreadyWatching`/`limitReached`/`invalid` (prd §170); one add per launch.
 - `-holdingsWindowProbe` `-holdingsWindow` — the holdings freshness window (prd §216, HoldingsCache in Model/WalletIngest.swift) → docs/hooks/wallet.md · prd §216
 - `-portfolioProbe YES|<watched address>` — the combined portfolio read headless (prd §155): merged total, token count and treemap shape. Spends Alchemy credits → docs/hooks/wallet.md
-- **Diagnostics is deleted (2026-10-21); perf readings: `-perfReadingsProbe`/`-metricsProbe`**
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
 - `-connectStrava YES` / `-connectGarmin YES` — run a rider's connect: Health workouts filtered by `sourceRevision` through `HealthIngest.riders`, one row per rider. On the sim expect "connected, 0 in" → docs/hooks/system.md
 - **ONE ACTIVITY, ONE ROW — and Strava never wins (RULE, `Model/HealthRiders.swift`).** → docs/hooks/system.md
