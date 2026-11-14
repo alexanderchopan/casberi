@@ -1890,9 +1890,13 @@ struct MoveSentence: View {
         // you pick names where it comes from, and the last word still opens
         // "Get <token> on". Before anything is picked the sentence is
         // "Swap token for token." and "now" is the ledger's When row.
-        if networkPicked, buyHome != network { MoveClause(glue: String(localized: "on")) { originWord } }
+        // **BOTH NETWORKS, ALWAYS (prd §1793, restoring §1600 over §1754's
+        // "said once"):** "Swap $20 of USDC on Base for ETH on Ethereum."
+        // Each token is said with where it is, so a swap to another
+        // network reads as any other swap does.
+        if networkPicked, with != nil { MoveClause(glue: String(localized: "on")) { originWord } }
         if buy != nil { MoveClause(glue: String(localized: "for")) { buyWord } }
-        if networkPicked { MoveClause(glue: String(localized: "on")) { destinationWord } }
+        if networkPicked, buy != nil { MoveClause(glue: String(localized: "on")) { destinationWord } }
         if whenSpoken { whenClause }
     }
 
@@ -2985,26 +2989,11 @@ struct MoveSentence: View {
 
     @ViewBuilder private var buyWord: some View {
         if let buy {
-            // Short in the sentence, the ≈ and the exact figure in the
-            // print (§1479), so the clause stays whole at the biggest rung.
-            // A price's order states what it gets in the line, never the pools' figure.
-            let back = limiting ? nil : buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
-                ?? (pricing && staleBack?.id == buy.id ? staleBack?.text : nil)
-            // The whole swap's result, pink like every value; locked by a
-            // kept swap (§1442c), a tap says so (§1442g).
+            // The token alone (prd §1793): what comes back is the ledger's
+            // "You get", with its ≈, and never a figure in the sentence.
             let symbol = crossBuy?.symbol ?? buy.token.symbol
-            let word = blank((back ?? "") + symbol + (networkPicked ? "" : "."), ink: MoveSentence.settledInk,
-                             .buy, label: Text("For \(symbol), change"))
-            if pricing {
-                // While the pools price it, the word breathes: working, not stuck.
-                word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
-            } else {
-                word
-            }
-        } else {
-            // The sentence's last word until a network is picked (prd §1754).
-            blank(networkPicked ? String(localized: "token") : String(localized: "token."),
-                  ink: DS.textTertiary, .buy, empty: true, label: Text("Pick what you want"))
+            blank(symbol + (networkPicked ? "" : "."), ink: MoveSentence.settledInk,
+                  .buy, label: Text("For \(symbol), change"))
         }
     }
 
@@ -3053,7 +3042,7 @@ struct MoveSentence: View {
     private var originWord: some View {
         Group {
             if networkPicked {
-                blank(network.name, ink: MoveSentence.settledInk, .network, label: Text("From \(network.name), change"))
+                blank(network.name + (buy == nil ? "." : ""), ink: MoveSentence.settledInk, .network, label: Text("From \(network.name), change"))
             } else {
                 blank(String(localized: "network"), ink: DS.textTertiary, .network, empty: true, label: Text("Pick a network"))
             }
@@ -3294,16 +3283,25 @@ struct MoveSentence: View {
             guard b.names != .verb else { continue }
             let folds = verb == .swap
             if b.names == .network, folds { continue }
-            // A swap that can only stay where it is has no row to say so.
-            if b.names == .destination, destinations.count < 2 { continue }
+            // **A SWAP IS TWO PAIRS (prd §1793):** the network it arrives
+            // on rides the token it arrives as, as the one it leaves does.
+            if b.names == .destination { continue }
             let id = "choice\(b.names)"
             guard seen.insert(id).inserted else { continue }
             var value = b.empty ? pick : Self.rowValue(b.text)
             if !b.empty, b.names == .with, folds, networkPicked { value += " · " + network.name }
+            if !b.empty, b.names == .buy, folds, networkPicked { value += " · " + buyHome.name }
             if !b.empty, b.names == .amount, inDollars, let with, units != nil, let other = otherUnit(with) { value += " · " + other }
             var row = LedgerRow(id: id, name: Self.rowName(b.names, verb: verb), value: value, opens: b.opens)
             if !b.empty { row.mark = rowMark(b.names) }
             rows.append((Self.rowRank(b.names), row))
+        }
+        // **WHEN IS A CHOICE (prd §1793).** "Now" until a price is picked,
+        // there once the pair is known and not before: nothing is picked
+        // for a swap that is not yet a swap.
+        if verb == .swap, whenDrawn, !limiting, when != nil, !seen.contains("choicewhen") {
+            rows.append((Self.rowRank(.when), LedgerRow(id: "choicewhen", name: Self.rowName(.when, verb: verb),
+                                                        value: String(localized: "Now"), opens: .when)))
         }
         var sorted = rows.enumerated().sorted { ($0.element.rank, $0.offset) < ($1.element.rank, $1.offset) }.map(\.element.row)
         if let next = sorted.firstIndex(where: { $0.value == pick }) { sorted[next].valueInk = DS.pickInk }
@@ -3351,8 +3349,8 @@ struct MoveSentence: View {
         case .from: String(localized: "From")
         case .to: String(localized: "To")
         case .amount: String(localized: "Amount")
-        case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
-        case .buy: String(localized: "For")
+        case .with: verb == .buy ? String(localized: "Pay with") : verb == .swap ? String(localized: "From") : String(localized: "Token")
+        case .buy: String(localized: "To")
         case .network, .elsewhere, .depositNetwork: String(localized: "Network")
         case .destination: String(localized: "Arrives on")
         case .arrives: String(localized: "Arrives as")
@@ -3945,11 +3943,7 @@ struct MoveSentence: View {
     private var ledgerRows: [LedgerRow] {
         guard receipt == nil else { return [] }
         var rows: [LedgerRow] = []
-        if verb == .swap, whenDrawn, !limiting {
-            // "now" left the sentence; this row is the door to a price.
-            rows.append(LedgerRow(id: "when", name: String(localized: "When"), value: String(localized: "Now"),
-                                  opens: when == nil ? whenWaitsOn : .when))
-        }
+        // When is a choice, so it is a row among the choices (prd §1793).
         if verb == .swap, !limiting, let back = quotePrint {
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back))
         }
