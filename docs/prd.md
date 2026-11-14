@@ -72700,3 +72700,17 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** `private-money-selftest.sh`: no `walletOnItsWaySection` in `Screens/`, and Holdings' two waiting rows build their steps.
+
+## §1788 — Fixes from the screen-by-screen walk: the private account's door stands from the first frame, its rows carry no line, Networks names every network, a menu opens under its row (amends §1784, §1786) (user, 2026-11-13, walking a new account on the simulator: "how is it true there is no aztec account, it's automatic", "on this screen remove aztect to aztec only since it repeats twice, and also 'through Shield'", "Networks needs to say Aztec, Base, Ethereum, Robinhood", "it can't just say '4 networks' b/c user won't know what they are", "token menu opens downward, but network one opens upward", "they should open below the row")
+
+1. **The Private account door stands from the first frame** (`walletPrivatePlaces`): it waited on the Aztec address, which it does not show, and arrived a moment after the page. The rows that only read (the address, the Safes) draw no separator: two lines showed across Account while they waited.
+2. **The private account's two rows carry no line**: "Add money from Ethereum" and "Send from Aztec to Aztec". The rule stands once, over the address.
+3. **Networks names every network the account is good on, A–Z**: "Aztec, Base, Ethereum, Robinhood". It listed only where a first transaction had landed, so a new account read "Aztec" alone. The names shrink to fit one line and never fold to a count.
+4. **A menu opens under its row, always** (`arrowEdge: .top`): left to the system, each row's menu went its own way.
+5. **The walk's recovery step** reads "If you lose this device, you can open your account on another device."
+
+**Seen** (simulator, a new account out of the demo, dark): the door present as Account opens; the private account's page with two plain rows; Networks with four names; (the demo) Send's Token menu under the lowest row. **Not seen:** Buy's Token and Network menus after the change, the Mac, a phone.
+
+**Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `private-money-selftest.sh` reads the popover's edge.

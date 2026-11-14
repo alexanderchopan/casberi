@@ -61,7 +61,13 @@ struct WalletUnsignedSection: View {
         switch part {
         case .safes:
             if roster.safes.contains(where: { !$0.isYourAccount }) { yourSafes.task(id: queueKey) { await read() } }
-            else { Color.clear.frame(height: 0).task(id: queueKey) { await read() } }
+            else {
+                // Read without a row: no separator, no ground (the app draws no lines).
+                Color.clear.frame(height: 0).task(id: queueKey) { await read() }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+            }
         case .unsigned:
             if !roster.isEmpty { section }
         }

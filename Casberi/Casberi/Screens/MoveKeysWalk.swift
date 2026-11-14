@@ -130,7 +130,7 @@ struct MoveKeysWalk: View {
             // "Device", not "iPhone": the key opens it on an iPad or a Mac on
             // the same Apple Account too. No "sign in": there is no Casberi
             // login to sign into (§1501).
-            small(String(localized: "If you lose this device, your account opens on another."))
+            small(String(localized: "If you lose this device, you can open your account on another device."))
         case .signer:
             MoveFlow {
                 MoveWord(String(localized: "A co-signer"))

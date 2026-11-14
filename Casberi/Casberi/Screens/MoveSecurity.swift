@@ -250,7 +250,7 @@ struct MoveSecurity: View {
                 // Robinhood" → "3 networks").
                 ViewThatFits(in: .horizontal) {
                     Text(verbatim: value).lineLimit(1).fixedSize()
-                    Text(verbatim: short ?? value).lineLimit(1)
+                    Text(verbatim: short ?? value).lineLimit(1).minimumScaleFactor(short == nil ? 0.7 : 1)
                 }
                 .dsText(.body17)
                 .foregroundStyle(tone)
@@ -1024,17 +1024,19 @@ struct MoveSecurity: View {
             return reading ? String(localized: "Reading…") : String(localized: "Couldn't read \(names(unread))")
         }
         if standings.isEmpty { return String(localized: "Reading…") }
-        // Your private account's network counts too (prd §1700h): your
-        // account lives on Aztec as well as on your Safe's networks.
-        let aztec = AztecAccountStore.shared.isShown
-        if live.isEmpty { return aztec ? String(localized: "Aztec") : String(localized: "None yet") }
-        return aztec ? String(localized: "\(names(live)) and Aztec") : names(live)
+        // **EVERY NETWORK THE ACCOUNT IS GOOD ON, A–Z (user, 2026-11-13:
+        // "Networks needs to say Aztec, Base, Ethereum, Robinhood").** The
+        // row listed only where a first transaction had landed, so a new
+        // account read "Aztec" alone under an address good on three more.
+        var all = Op.networks.map(\.name)
+        if AztecAccountStore.shared.isShown { all.append("Aztec") }
+        return all.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }.joined(separator: ", ")
     }
 
     private var networksShort: String? {
         if !unread.isEmpty { return unread.count > 1 && !reading ? String(localized: "Couldn't read \(unread.count) networks") : nil }
-        let count = live.count + (AztecAccountStore.shared.isShown ? 1 : 0)
-        return count > 1 ? String(localized: "\(count) networks") : nil
+        // The names are the fact: they shrink to fit, never fold to a count.
+        return nil
     }
 
     private var outsideVerb: String? {

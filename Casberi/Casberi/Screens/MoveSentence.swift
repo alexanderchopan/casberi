@@ -3301,8 +3301,10 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
-                    // No edge named: the system opens it toward the room there is.
-                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds)) {
+                    // Always under its row (user, 2026-11-13: "token menu opens
+                    // downward, but network one opens upward"): left to the
+                    // system, each row's menu went its own way.
+                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         if let which = r.opens { menu(which) }
                     }
                 }

@@ -1167,7 +1167,7 @@ use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ??
 use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
 # prd §1784: a row's list is a menu on the row, in every sentence; the next
 # one waits for the last to be gone.
-use "$SENT" '.popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds)) {' "Move's rows no longer open their lists as menus (prd §1784)"
+use "$SENT" '.popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {' "Move's rows no longer open their lists as menus (prd §1784)"
 use "$SENT" 'guard let open, open != .verb, choiceRowList.contains(where: { $0.opens == open }) else { return nil }' "the verbs' menu is a popover, or a list with no row has nowhere to open (prd §1784)"
 use "$SENT" '.onDisappear { menuGone() }' "the next menu no longer waits for the last to leave (prd §1784)"
 use "$SENT" '.safeAreaInset(edge: .bottom, spacing: 0) { if inlineOpen == nil, !rawOpen { foot.transition(.opacity) } }' "the foot leaves while a menu is up (prd §1784)"

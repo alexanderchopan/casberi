@@ -327,7 +327,9 @@ extension FeedScreen {
                 chrome.moveTray = true
             }
         }
-        if aztec != nil {
+        // The account is yours from the start (prd §1700t): its door stands
+        // from the first frame, and never waits on the address it does not show.
+        if store.isShown {
             accountListRow(glyph: "diamond", title: String(localized: "Private account"),
                            line: String(localized: "Aztec to Aztec only"),
                            lineInk: DS.aztecInk, glyphInk: DS.aztecInk) { chrome.yourAccountShowsAztec = true }
@@ -336,12 +338,14 @@ extension FeedScreen {
             // The account is yours from the start (prd §1700t) but its
             // address comes from the engine: read it once, here, and keep it.
             Color.clear.frame(height: 0).task { _ = await store.refresh() }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
         }
     }
 
     /// Whether Account has a private place to list.
     var walletHasPrivatePlaces: Bool {
-        PrivateMove.freshAvailable || (AztecAccountStore.shared.isShown && AztecAccountStore.shared.shown.address != nil)
+        PrivateMove.freshAvailable || AztecAccountStore.shared.isShown
     }
 
     /// **THE PRIVATE ACCOUNT'S OWN PAGE (prd §1786).** Its box is Aztec's
@@ -349,13 +353,13 @@ extension FeedScreen {
     /// ways its money moves, each named for both ends, and the way back.
     @ViewBuilder
     func walletPrivateAccountRows() -> some View {
-        accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"),
-                       line: String(localized: "Through Shield"), glyphInk: DS.aztecInk) {
+        // No line under either (user, 2026-11-13): the rule stands once, over
+        // the address, and each name already says both ends.
+        accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"), glyphInk: DS.aztecInk) {
             chrome.moveAztec = .deposit
             chrome.moveTray = true
         }
         accountListRow(glyph: "arrow.up", title: String(localized: "Send from Aztec to Aztec"),
-                       line: String(localized: "Aztec to Aztec only"), lineInk: DS.aztecInk,
                        glyphInk: DS.aztecInk) {
             chrome.moveAztec = .send
             chrome.moveTray = true
@@ -369,7 +373,7 @@ extension FeedScreen {
 
     /// The Holdings row's anatomy: the mark, the name over its line, a
     /// chevron because it opens.
-    private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String,
+    private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String = "",
                                 lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary,
                                 pick: @escaping () -> Void) -> some View {
         Button {
@@ -391,10 +395,12 @@ extension FeedScreen {
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Text(verbatim: line)
-                    .dsText(.subhead12)
-                    .foregroundStyle(lineInk)
-                    .lineLimit(1)
+                if !line.isEmpty {
+                    Text(verbatim: line)
+                        .dsText(.subhead12)
+                        .foregroundStyle(lineInk)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)

@@ -117,7 +117,7 @@ struct MoveChoiceRows<Menu: View>: View {
                     .accessibilityHint(Text("Changes it"))
                     .popover(isPresented: Binding(get: { open.wrappedValue == r.id },
                                                   set: { if !$0, open.wrappedValue == r.id { open.wrappedValue = nil } }),
-                             attachmentAnchor: .rect(.bounds)) {
+                             attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         MoveMenuBox { menu(r.id) }
                             .environment(chrome)
                     }
