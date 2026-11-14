@@ -121,18 +121,29 @@ struct PlaceTabBar: View {
     /// fill, a lighter pill, as iOS 26's bar draws its selected tab.
     static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
+    /// **THE PHONE'S BAR IS FEED · WALLET (prd §1783, amends §1715; user:
+    /// "move on right w/ feed and wallet in capsule on left").** Apps left
+    /// the bar for the title row's trailing end (`FeedScreen.appsDoor`) and
+    /// is still the page past the Wallet on the swipe, as the App Library
+    /// is; with it gone nothing stands between the Wallet and Move. The rail
+    /// keeps all three places (§1402).
+    static let places: [PlaceTab] = [.feed, .wallet]
+    /// One tab's width in the hugging capsule.
+    static let tabWidth: CGFloat = 88
     var body: some View {
         // THE BAR FOLDS INTO MOVE (prd §1735): read down, the places draw
         // into the act's circle at the trailing edge and Move stands alone,
         // one tap from anywhere on the page. A scroll back up brings the
         // places out again; no circle is left on the leading side.
         HStack(spacing: DS.Space.s2) {
-            if folded {
-                Spacer(minLength: 0)
-            } else {
+            if !folded {
                 tabs
                     .transition(.scale(scale: 0.2, anchor: .trailing).combined(with: .opacity))
             }
+            // The capsule hugs its two places at the leading edge and Move
+            // stands alone at the trailing one (prd §1783), as iOS sets a
+            // tab bar and its search circle.
+            Spacer(minLength: 0)
             moveCircle
                 // Folded, the capture flight lands on the one thing left.
                 .background { if folded { FeedTabFrame() } }
@@ -149,7 +160,7 @@ struct PlaceTabBar: View {
     /// into Move's circle and Move stands alone (prd §1735).
     private var tabs: some View {
         HStack(spacing: 0) {
-            ForEach(PlaceTab.allCases.filter { $0 != .move }) { tab in
+            ForEach(Self.places) { tab in
                 Button {
                     taps[tab, default: 0] &+= 1
                     DSHaptic.selection()
@@ -164,7 +175,8 @@ struct PlaceTabBar: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(width: Self.tabWidth)
+                    .frame(maxHeight: .infinity)
                     .background {
                         if tab == current {
                             Capsule().fill(DS.fillStrong).padding(.vertical, DS.Space.s1)
@@ -180,7 +192,6 @@ struct PlaceTabBar: View {
             }
         }
         .padding(.horizontal, DS.Space.s1)
-        .frame(maxWidth: .infinity)
         .frame(height: size)
         .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }

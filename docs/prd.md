@@ -72623,3 +72623,20 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 
 **Checks.** `private-money-selftest.sh`, by reading: the rows draw `MoveChoiceRowLabel`, a pick sets `advances` and the list that opens is the first still to be filled, and nothing of Pay again is in To.
 
+
+## §1783 — The phone's bar is Feed · Wallet with Move apart; Apps leaves the bar for the top right of the title row (amends §1715, §1741 and §752) (user, 2026-11-13, of a canvas of six bars: "its weird to have wallet and move separated by apps", "what if apps wasn't on the tab bar", "do what apple does", "it has to be top right because in rooms we have the settings switches by the room names", then "ok lets do that. move on right w/ feed and wallet in capsule on left")
+
+**The design** is a canvas of six bars (https://claude.ai/artifact/U8yCkGkgMY3AKr3EhoGMMP, private to the user). Four wants could not all hold with three places in the capsule: the Feed first, Move at the right, the Wallet beside Move, Apps last. Taking Apps off the bar keeps all four.
+
+1. **The capsule is Feed · Wallet** (`PlaceTabBar.places`), hugging its two tabs at the leading edge. Move's circle stands alone at the trailing edge, as iOS sets a tab bar and its search circle. Nothing stands between the Wallet and Move.
+2. **Apps ends the title row** (`FeedScreen.appsDoor`): the grid, in the glyph's pink, at the trailing end of the Feed's and the Wallet's title row, after the demo's pill. It takes the door the tab took (`PlaceTab.open`), so the pull still runs. The seat beside a page's name is its settings disc's (§1444), so Apps could not stand there.
+3. **§752's one exception.** No controls at the top still holds; this one is in the title row and scrolls away with it, as "Exit demo" does (§1389).
+4. **Apps is still the last page of the swipe**, past the Wallet, as the App Library is (`HomeScope.phoneWalk` is unchanged). On Apps the bar shows no pick.
+5. **The fold is unchanged** (§1735): read down, the places draw into Move's circle.
+6. **Not chosen, from the canvas:** two capsules (Move nested in the Wallet's reads as the Wallet's, and it opens over the Feed too); Move first on the left (people expect the act on the right); Feed · Apps · Wallet; one capsule with Move in the middle.
+
+**Seen** (simulator, the demo, dark): the Feed and the Wallet with the two-tab capsule at the left, Move at the right and the grid ending the title row after "Exit demo"; the grid pressed on the Wallet opening Apps, the bar with no pick. **Not seen:** the fold, the swipe to Apps, the light page, a pick's title ("Wallet · Holdings") beside the grid, the iPad, the Mac, a phone.
+
+**Mac half (§1402).** The rail is unchanged: Feed · Wallet · Apps and Move, ⌘1–⌘4. The grid is drawn at compact width only.
+
+**Checks.** None added.
