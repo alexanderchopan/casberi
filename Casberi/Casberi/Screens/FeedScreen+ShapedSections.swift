@@ -458,10 +458,9 @@ extension FeedScreen {
                     // Following lit (prd §1536): the wallets you follow lead
                     // Home, each a tap to open, and Follow an account.
                     if walletOnFollowing { walletFollowingPage }
-                    // What is still on its way (prd §1779), above the doors.
-                    // The three places' rows are gone (prd §1785): where
-                    // each is kept is Account's list.
-                    walletOnItsWaySection
+                    // Home is the balance and its doors (prd §1480). The
+                    // three places' rows (prd §1785) and On its way (prd
+                    // §1787) are gone from it: Holdings lists both.
                     walletHomeDoors(upcoming: upcoming)
                     // The tokens you watch, open (prd §1632 item 2).
                     if walletWatchlistShows { walletWatchlistHomeSection }

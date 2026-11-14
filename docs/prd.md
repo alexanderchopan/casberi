@@ -72687,3 +72687,16 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** The same sections on Catalyst. Not seen.
 
 **Checks.** `private-money-selftest.sh`, by reading: the private places are doors, the private account's send names both ends, and Account's door resets to the public account.
+
+## §1787 — On its way leaves Home; Holdings' waiting rows open its steps (amends §1779) (user, 2026-11-13, of the section on Home in build 997: "wtf is 'on its way' doing on home!", "why in god's name would it appear on home", "it should be in holdings")
+
+1. **Home draws no On its way** (`walletOnItsWaySection` and its list are deleted). Home is the balance and its doors (§1480).
+2. **Holdings already lists what waits**, under Private: waiting for approval, Railgun's hour, a one-time address. Those rows stay.
+3. **A waiting row opens its steps** (`.onItsWay`): "Waiting for approval" and a token in Railgun's hour open the sheet Home's rows opened. Before, the first opened Send and the second took no tap. A one-time address's row still opens its address.
+4. **Not reached any more:** the steps of a one-time address and of an Aztec deposit (`OnItsWay.atAddress`, `.aztec`), which only Home's list built. The model keeps them.
+
+**Seen:** nothing yet. **Not seen:** Home without the section, the two rows opening their steps, the Mac.
+
+**Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `private-money-selftest.sh`: no `walletOnItsWaySection` in `Screens/`, and Holdings' two waiting rows build their steps.

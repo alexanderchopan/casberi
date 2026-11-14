@@ -132,7 +132,7 @@ use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
 use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
-grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'return Button { walletOpenPrivate(.send) } label:' "$HOLD" \
+grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q '                walletOpenPrivate(.send)' "$HOLD" \
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
 # would be a private flow outside Move.
@@ -1201,15 +1201,15 @@ use "$AZT" 'title: String(localized: "Send from Aztec to Aztec"),' "the private 
 ! grep -q 'mark: "safe", title: String(localized: "Safe")' "$AZT" || { echo "✗ the Safe is a row under its own box again (prd §1786)"; exit 1; }
 use "Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift" 'if walletOnPrivateAccount {' "the private account's page draws the public account's rows (prd §1786)"
 use "$PAGES" 'WalletUnsignedSection(part: .unsigned,' "Without a signature left Permissions (prd §1786)"
-use "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" 'walletOnItsWaySection' "Home lost On its way: money in transit is invisible there again (prd §1779)"
-use "$HOLD" 'if !items.isEmpty {' "On its way draws with nothing on its way (prd §1779)"
-use "$HOLD" 'feedSheet = .onItsWay(item)' "an On its way row no longer opens its steps (prd §1779)"
-use "$HOLD" 'Text(verbatim: item.line)' "an On its way row no longer says which step it is on (prd §1779)"
-for kind in 'OnItsWay.atAddress(' 'OnItsWay.waitingApproval(' 'OnItsWay.railgun(' 'OnItsWay.aztec('; do
-    use "$HOLD" "$kind" "On its way misses a kind of waiting: $kind (prd §1779)"
+# prd §1787: On its way left Home; Holdings' waiting rows open its steps.
+! grep -rq 'walletOnItsWaySection' Casberi/Casberi/Screens || { echo "✗ On its way is on Home again (prd §1787)"; exit 1; }
+use "$HOLD" 'feedSheet = .onItsWay(item)' "a waiting row in Holdings no longer opens its steps (prd §1787)"
+for kind in 'OnItsWay.waitingApproval(' 'OnItsWay.railgun('; do
+    use "$HOLD" "$kind" "a kind of waiting lost its steps in Holdings: $kind (prd §1787)"
 done
 use "$PAGES" 'Text(verbatim: YourAccountOp.networks.map(\.name).joined(separator: " · "))' "the public address no longer says which networks it is good on (prd §1779)"
 use "Casberi/Casberi/Screens/AztecBrowser.swift" 'tint: asksAztec ? DS.aztecFill : DS.pickInk,' "an Aztec app's ask wears the pick's pink again (prd §1779)"
+
 # On its way's steps, run: which step each trip is on, and the row's count.
 WAY="Casberi/Casberi/Model/OnItsWay.swift"
 [[ -f "$WAY" ]] || { echo "✗ $WAY not found"; exit 1; }

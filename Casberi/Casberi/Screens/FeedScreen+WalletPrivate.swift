@@ -115,114 +115,6 @@ extension FeedScreen {
         selectedSeat == nil && !walletOnFollowing && (selectedWallet.map(YourAccountDemo.isYours) ?? true)
     }
 
-    /// **ON ITS WAY, ON HOME (prd §1779: money is never invisible).** What
-    /// has left one place and not arrived in another, gathered where the
-    /// Wallet opens: waiting at a one-time address, waiting for approval,
-    /// Railgun's hour, Aztec carrying a deposit. The same rows Holdings
-    /// draws under Private, so a state reads the same in both. Nothing on
-    /// its way, no section.
-    /// Everything still travelling, in the order it most needs you: what
-    /// waits at an address, then approvals, Railgun's hour, Aztec's carry.
-    var walletOnItsWayItems: [OnItsWay.Item] {
-        guard walletShowsPrivatePlaces else { return [] }
-        let store = PrivateMoneyStore.shared
-        let prices = store.shownPrices
-        func usd(_ symbol: String, _ amount: String, _ decimals: Int) -> Double? {
-            guard let price = prices[symbol.lowercased()], let units = Decimal(string: amount) else { return nil }
-            return NSDecimalNumber(decimal: units / pow(10, decimals)).doubleValue * price
-        }
-        var items: [OnItsWay.Item] = walletFreshWaiting.map { entry in
-            let symbol = entry.token
-            let decimals = FreshTx.railgunToken(symbol: symbol)?.decimals ?? (symbol == "USDC" ? 6 : 18)
-            let (amount, needsGas): (String, Bool) = switch entry.state {
-            case .needsGas(let amount): (amount, true)
-            case .failed(let amount): (amount, false)
-            default: ("0", false)
-            }
-            return OnItsWay.atAddress(id: entry.id, title: PrivateMoney.figure(amount, decimals: decimals, symbol: symbol),
-                                      usd: usd(symbol, amount, decimals), needsGas: needsGas)
-        }
-        items += store.rows.filter { $0.kind == .waiting }.map { row in
-            OnItsWay.waitingApproval(id: row.id, title: PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol),
-                                     usd: PrivateMoney.rowUSD(row, prices: prices))
-        }
-        let railgun = RailgunHoldings.shared
-        items += railgun.pendingShown.map { h in
-            OnItsWay.railgun(id: h.id, title: RailgunHoldings.figure(h.pending, decimals: h.decimals) + " " + h.symbol,
-                             usd: railgun.usd(h, units: h.pending))
-        }
-        if walletShowsAztec {
-            let aztec = AztecAccountStore.shared
-            items += aztec.arriving.map { d in
-                OnItsWay.aztec(id: String(d.nonce), title: AztecAccountStore.figure(d), usd: aztec.usd(d))
-            }
-        }
-        return items
-    }
-
-    /// **ON ITS WAY, ON HOME (prd §1779: money is never invisible).** What
-    /// has left one place and not arrived in another, gathered where the
-    /// Wallet opens. Each row says the step it is on and how many there are
-    /// ("Waiting for gas · step 2 of 4"); amber only when it waits on you.
-    /// Its tap opens the steps. Nothing on its way, no section.
-    @ViewBuilder
-    var walletOnItsWaySection: some View {
-        let items = walletOnItsWayItems
-        if !items.isEmpty {
-            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            walletDoorsSection {
-                walletDoorRow(glyph: "clock", name: String(localized: "On its way")) {
-                    chrome.walletSection = .holdings
-                    chrome.walletScrollRequest = ShellChrome.privateAnchor
-                }
-                .task {
-                    await PrivateMoneyStore.shared.refresh()
-                    await FreshReceive.shared.check(context: modelContext)
-                }
-                ForEach(items) { item in
-                    walletOnItsWayRow(item, mask: mask)
-                }
-            }
-        }
-    }
-
-    private func walletOnItsWayRow(_ item: OnItsWay.Item, mask: String?) -> some View {
-        let figure = mask ?? item.usd.map(WalletValue.money) ?? ""
-        return Button {
-            DSHaptic.selection()
-            feedSheet = .onItsWay(item)
-        } label: {
-            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                Image(systemName: "clock")
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(item.needs != nil ? DS.attention : DS.textSecondary)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: item.title)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Text(verbatim: item.line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(item.needs != nil ? DS.attentionInk : DS.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                walletRowFigure(figure, tone: DS.textSecondary)
-            }
-            .walletRowPitch()
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .dsHover()
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [item.title, item.line, figure].filter { !$0.isEmpty }.joined(separator: ". ")))
-        .accessibilityHint(Text("Shows its steps"))
-        .walletListRow()
-    }
-
     /// **WAITING AT A ONE-TIME ADDRESS (prd §1778; a tester, 2026-11-13,
     /// who paid a private address 1,000 USDC and saw no balance anywhere:
     /// "panik").** Money that arrived at a fresh address and has not moved in
@@ -323,8 +215,14 @@ extension FeedScreen {
         let figure = mask ?? store.usd(h, units: units).map(WalletValue.money)
             ?? RailgunHoldings.figure(units, decimals: h.decimals)
         return Button {
-            guard !pending else { return }
             DSHaptic.selection()
+            // Still in Railgun's hour: its steps (prd §1787), nothing to move yet.
+            if pending {
+                let item = OnItsWay.railgun(id: h.id, title: RailgunHoldings.figure(h.pending, decimals: h.decimals) + " " + h.symbol,
+                                            usd: store.usd(h, units: h.pending))
+                feedSheet = .onItsWay(item)
+                return
+            }
             chrome.moveRailgun = .init(contract: h.contract, takeBack: true)
             chrome.moveTray = true
         } label: {
@@ -358,9 +256,8 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
-        .disabled(pending)
         .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(pending ? [] : .isButton)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [h.symbol, line, figure].joined(separator: ". ")))
         .walletListRow()
     }
@@ -535,7 +432,17 @@ extension FeedScreen {
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
-        return Button { walletOpenPrivate(.send) } label: {
+        return Button {
+            // Waiting for approval: its steps (prd §1787), nothing to send yet.
+            if row.kind == .waiting {
+                let item = OnItsWay.waitingApproval(id: row.id, title: PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol),
+                                                    usd: PrivateMoney.rowUSD(row, prices: prices))
+                DSHaptic.selection()
+                feedSheet = .onItsWay(item)
+            } else {
+                walletOpenPrivate(.send)
+            }
+        } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
                 Group {
                     if let glyph {

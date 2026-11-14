@@ -252,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1963 of 2037 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1964 of 2038 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2217,6 +2217,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616)
 - §1785 — The three money rows leave the Wallet's Home; Account opens on the Safe (amends §1779)
 - §1786 — Account is your public account; the private places are doors, and Aztec's address stands only on its own page (amends…
+- §1787 — On its way leaves Home; Holdings' waiting rows open its steps (amends §1779)
 
 ## Dead rulings → what replaced them (generated)
 
