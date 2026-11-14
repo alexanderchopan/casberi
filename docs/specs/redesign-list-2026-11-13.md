@@ -58,6 +58,55 @@ user asked for. Rulings land in `docs/prd.md` as each is designed.
 12. **A network always shows its icon** wherever it is named: rows, menus, a
     badge on a token's icon, the Account page. Not inside Move's sentence.
 
+## Settled on mocks, 2026-11-13 (Move) — not all built
+
+The user ruled, late on 2026-11-13: "lets do all the design work on mocks not
+sim. then build after". These are the decisions taken on the Design canvases.
+Build from the canvases, not from memory.
+
+Canvases: Swap and every verb, https://claude.ai/artifact/MKyywZjryYs2KbYrMan4VD ·
+three further improvements, https://claude.ai/artifact/P9Gbe4WiCdWAD773fE1NRT ·
+sentence top or bottom, https://claude.ai/artifact/RdmZttjGVfB4fWXrwqaj56
+
+**The layout (items 11, 13, 15, 16, and the notes).**
+- The verb is the page's title. The sentence stands over the button and grows
+  upward; the rows above it never move. ("Yes, bottom")
+- A row is one line, 44 points: the name left in grey (`body17`), the answer
+  right (`heading20`) with its mark, then `chevron.up.chevron.down`. A menu
+  opens under its row. ("board 3 is better")
+- One thing asks at a time: the next "Choose" is pink, the rest grey.
+- The network is always its own row, before its token. A token's mark carries
+  NO network badge: the Network row already shows it. ("the network decides
+  the token"; "we don't need to show the network icon")
+- The total is said once, on the button. "You have" is at the head of the
+  amount's menu.
+- **Swap's rows: Network, Token, "To" (a line of its own), Network, Token,
+  Amount, When.** Never "From"/"To" as a network row's name, never two menus
+  on one line. ("i want the rows to be network token to network token")
+- **Add another (Option D):** the first swap keeps its rows; a pink "And" with
+  an × heads a second set of the same rows under it, and the page scrolls.
+  In the second set Network, To › Network and To › Token are filled from the
+  first swap, grey and fixed; only Token and Amount are asked. The To token
+  stays locked ("Keep it locked"). Nothing is picked for the new swap.
+- Send, Spend, Buy, Sweep, Lend and the private send are drawn in the same
+  layout ("ok for now"). Spend has a "Pay with" line over its Network and
+  Token; Sweep's line is a "Tokens under" row; Buy says where it arrives and
+  that Stripe takes the card, and its button is "Continue with Stripe".
+- **Three more, all approved ("i'm good w/ these all of them"):** the sheet is
+  as tall as what it holds (unverified that Move's sheet can be sized so);
+  facts are quieter than choices (Fee and Through values grey, "You get"
+  white); Swap's To network starts on the network picked and stays changeable.
+
+**Built so far (commits f06e1dbcb … e5d65898d):** the sentence over the button,
+one-line rows, Send, Swap as Network / Token / To network / To token (labels
+to change to the list above), the amount typed in its row. **Not built:** the
+"To" line, no network badge, Option D, the other verbs' own changes, the three
+further improvements.
+
+**Still to mock:** Receive and the "which address do I give out" screens
+(5, 6, 7, 14), Account (4, 8, 9, 10), Round-ups (2), the walk's first and last
+screens (1, 3).
+
 ## To consider
 - The grey word in a title is the way back and does not look like a button.
 - Networks' names are shown small to fit one line.
