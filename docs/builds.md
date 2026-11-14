@@ -25,3 +25,4 @@ Which commit each shipped build was made from. `scripts/testflight.sh` and `scri
 | 996 | 3.0.30 | iOS | `85cba80c2` | clean | 2026-11-14 |
 | 997 | 3.0.30 | iOS | `8e79f7ec0` | clean | 2026-11-14 |
 | 997 | 3.0.30 | iOS | `8e79f7ec0` | clean | 2026-11-14 |
+| 998 | 3.0.30 | iOS | `52c981a1a` | clean | 2026-11-14 |
