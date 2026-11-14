@@ -100,14 +100,6 @@ struct MoveSecurity: View {
                 })
             }
             if addingOutside { outsideField }
-            row(title: String(localized: "Networks"), value: networksValue,
-                tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
-                short: networksShort,
-                verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
-            // Already on, never a choice (prd §1495 item 6, placed by §1496):
-            // its state where a setting's value stands, no line.
-            row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
-                tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             row(title: AztecAccountStore.shared.isShown ? String(localized: "Private keys") : String(localized: "Private key"),
                 value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
@@ -116,6 +108,21 @@ struct MoveSecurity: View {
                 row(title: String(localized: "Private balance"), value: String(localized: "Not backed up"),
                     tone: DS.attentionInk, verb: privateBackupVerb)
             }
+            }
+            .padding(.leading, Self.rowIndent)
+            // **CONNECTION IS ITS OWN SECTION (prd §1786):** the networks and
+            // Tor are how the account is reached, and stood among the keys.
+            SectionPanelName(name: String(localized: "Connection"), glyph: Self.connectionGlyph, inset: 0)
+                .padding(.top, DS.Space.s3)
+            VStack(alignment: .leading, spacing: 0) {
+            row(title: String(localized: "Networks"), value: networksValue,
+                tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
+                short: networksShort,
+                verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
+            // Already on, never a choice (prd §1495 item 6, placed by §1496):
+            // its state where a setting's value stands, no line.
+            row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
+                tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             }
             .padding(.leading, Self.rowIndent)
             SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
@@ -226,6 +233,7 @@ struct MoveSecurity: View {
     /// Who signs, as a section's glyph: a person with a key. Not Permissions'
     /// bare key (who can spend FROM you) and not Your account's shield.
     static let keysGlyph = "person.badge.key"
+    static let connectionGlyph = "globe"
 
     /// A row (prd §1496): its name, then the fact in grey and, where there is
     /// something to do, the verb in the pick's ink — both when a fact stands

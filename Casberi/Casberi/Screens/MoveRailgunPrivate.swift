@@ -647,22 +647,14 @@ struct MoveRailgunSentence<Head: View>: View {
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.holding)
                 Group {
-                    if open, picking {
-                        VStack(alignment: .leading, spacing: 0) {
-                            MoveListBack(name: String(localized: "Token")) { toggle() }
-                            tokens
-                        }
-                        .padding(.vertical, DS.Space.s2)
-                        .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
-                    } else {
-                        VStack(alignment: .leading, spacing: DS.Space.s3) {
-                            MoveChoiceRows(rows: choiceRows)
-                            line
-                        }
-                        .transition(.opacity)
+                    // The tokens are a menu on their row (prd §1784).
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        MoveChoiceRows(rows: choiceRows,
+                                       open: Binding(get: { open && picking ? "token" : nil }, set: { if $0 == nil { open = false } })) { _ in tokens }
+                        line
                     }
                 }
-                .padding(.top, open ? DS.Space.s4 : DS.Space.s6)
+                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -670,7 +662,7 @@ struct MoveRailgunSentence<Head: View>: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { if !open { foot.transition(.opacity) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         .onChange(of: open) { _, now in if now { chrome.moveTall = true } }
         .task(id: move.mode) { await move.read() }
     }

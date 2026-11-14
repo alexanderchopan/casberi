@@ -88,12 +88,18 @@ struct MoveChoiceRowLabel: View {
     static let height: CGFloat = 60
 }
 
-struct MoveChoiceRows: View {
+struct MoveChoiceRows<Menu: View>: View {
     let rows: [MoveChoiceRow]
     var disabled = false
     /// The ink of the first row still to be picked: the pick's, or Aztec's
     /// own on an Aztec sentence (prd §1779).
     var nextInk: Color = DS.pickInk
+    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The id of the row whose
+    /// menu is up, and that row's list. The rows stay where they are; a tap
+    /// outside the menu sets this nil.
+    var open: Binding<String?>
+    @ViewBuilder var menu: (String) -> Menu
+    @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
         if !rows.isEmpty {
@@ -109,10 +115,41 @@ struct MoveChoiceRows: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
+                    .popover(isPresented: Binding(get: { open.wrappedValue == r.id },
+                                                  set: { if !$0, open.wrappedValue == r.id { open.wrappedValue = nil } }),
+                             attachmentAnchor: .rect(.bounds)) {
+                        MoveMenuBox { menu(r.id) }
+                            .environment(chrome)
+                    }
                 }
             }
             .disabled(disabled)
         }
+    }
+}
+
+/// A row's list as its menu (prd §1784): a menu's width, as tall as its
+/// rows up to `MoveSentence.menuRoom`, then they scroll, on the system's own
+/// popover ground. A popover on the phone too, never a sheet.
+struct MoveMenuBox<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ViewThatFits(in: .vertical) {
+            box
+            ScrollView { box }.scrollIndicators(.hidden)
+        }
+        .frame(width: MoveSentence.menuWidth)
+        .frame(maxHeight: MoveSentence.menuRoom)
+        .presentationCompactAdaptation(.popover)
+        .presentationBackground(.ultraThickMaterial)
+    }
+
+    private var box: some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
     }
 }
 

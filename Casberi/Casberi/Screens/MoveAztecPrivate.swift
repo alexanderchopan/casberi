@@ -580,18 +580,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         .padding(.top, DS.Space.s2)
                 }
                 Group {
-                    if let open, move.stage == .ready {
-                        choices(open)
-                            .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
-                    } else {
-                        VStack(alignment: .leading, spacing: DS.Space.s3) {
-                            MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk)
-                            line
-                        }
-                        .transition(.opacity)
+                    // A row's choices are a menu on the row (prd §1784).
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk, open: menuRow) { _ in menu }
+                        line
                     }
                 }
-                .padding(.top, open != nil ? DS.Space.s4 : DS.Space.s6)
+                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -600,7 +595,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         // A send kept behind its sheet is shown as it stands, running or
         // failed, never read over (prd §1777).
@@ -842,6 +837,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     // MARK: - Choices
 
+    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
+    /// up; a tap outside it closes the list with no pick.
+    private var menuRow: Binding<String?> {
+        Binding(get: { open.map { $0 == .token ? "token" : "to" } }, set: { if $0 == nil { open = nil } })
+    }
+
+    @ViewBuilder private var menu: some View { if let open { choices(open) } }
+
     private func toggle(_ blank: Blank) {
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
@@ -871,7 +874,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            MoveListBack(name: blank == .token ? String(localized: "Token") : String(localized: "To"), ink: DS.aztecInk) { toggle(blank) }
             switch blank {
             case .token: tokens
             case .recipient: recipients

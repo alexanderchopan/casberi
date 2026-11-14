@@ -39,18 +39,13 @@ struct MoveLendSentence<Head: View>: View {
                     .animation(DS.Motion.standard, value: move.figure)
                     .animation(DS.Motion.standard, value: move.chainId)
                 Group {
-                    if let open, move.stage == .ready {
-                        choices(open)
-                            .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
-                    } else {
-                        VStack(alignment: .leading, spacing: DS.Space.s3) {
-                            MoveChoiceRows(rows: choiceRows)
-                            line
-                        }
-                        .transition(.opacity)
+                    // A row's choices are a menu on the row (prd §1784).
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
+                        line
                     }
                 }
-                .padding(.top, open != nil ? DS.Space.s4 : DS.Space.s6)
+                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -58,7 +53,7 @@ struct MoveLendSentence<Head: View>: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
@@ -225,6 +220,14 @@ struct MoveLendSentence<Head: View>: View {
 
     // MARK: - The blanks' choices
 
+    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
+    /// up; a tap outside it closes the list with no pick.
+    private var menuRow: Binding<String?> {
+        Binding(get: { open.map { $0 == .amount ? "amount" : "network" } }, set: { if $0 == nil { open = nil } })
+    }
+
+    @ViewBuilder private var menu: some View { if let open { choices(open) } }
+
     private func toggle(_ blank: Blank) {
         guard live else { return }
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
@@ -241,7 +244,6 @@ struct MoveLendSentence<Head: View>: View {
 
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            MoveListBack(name: blank == .amount ? String(localized: "Amount") : String(localized: "Network")) { toggle(blank) }
             switch blank {
             case .amount: amounts
             case .network: networks

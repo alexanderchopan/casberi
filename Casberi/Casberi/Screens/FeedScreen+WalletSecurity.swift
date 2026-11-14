@@ -70,28 +70,41 @@ extension FeedScreen {
         // The demo's own account in the demo (prd §1475), else this phone's.
         if let account = YourAccountDemo.shownAddress,
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
-            walletCard(String(localized: "Your account"), glyph: ScopeTileGlyph.move, anchor: SecurityAnchor.account.id) {
-                // The Safe and the Aztec account, once Aztec is used (prd
-                // §1700a): first, before the Safe's keys.
-                walletAccountList(safe: account)
-                MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
-                    .walletStackRow()
-                    // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
-                    .task(id: chrome.walletScrollRequest) {
-                        guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
-                        try? await Task.sleep(for: .milliseconds(300))
-                        cardScrollTarget = SecurityAnchor.account.id
-                        chrome.walletScrollRequest = nil
-                    }
+            if walletOnPrivateAccount {
+                // The private account's own page (prd §1786): its address
+                // in the box above, its two moves here.
+                walletDoorsSection { walletPrivateAccountRows() }
+            } else {
+                // The private places are doors (prd §1786), before the keys.
+                if walletHasPrivatePlaces {
+                    walletCard(String(localized: "Private"), glyph: "eye.slash") { walletPrivatePlaces() }
+                }
+                // Keys, Connection and Spending name themselves (prd §1786):
+                // no "Your account" over them, the page already says Account.
+                Section {
+                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
+                        .walletStackRow()
+                        // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
+                        .task(id: chrome.walletScrollRequest) {
+                            guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
+                            try? await Task.sleep(for: .milliseconds(300))
+                            cardScrollTarget = SecurityAnchor.account.id
+                            chrome.walletScrollRequest = nil
+                        }
+                }
+                .id(SecurityAnchor.account.id)
+                .environment(\.feedSectionPanelFilled, false)
             }
-            // Your Safes and what moves each without a signature (prd §1738,
-            // was the Safe pick's): nothing while you hold a key to none.
-            WalletUnsignedSection(onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
+            // The Safes you hold a key to besides your own (prd §1786; what
+            // moves each without a signature is Permissions').
+            if !walletOnPrivateAccount {
+            WalletUnsignedSection(part: .safes, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
             // Where each network is read from (prd §1517), under the Keys card.
             // The recovery check's page is Needs you's door (§1515): the Keys
             // card already has a Recovery key row.
             walletDoorsSection {
                 walletDoor(.nodes)
+            }
             }
         }
     }

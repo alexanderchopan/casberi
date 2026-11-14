@@ -72640,3 +72640,50 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** The rail is unchanged: Feed · Wallet · Apps and Move, ⌘1–⌘4. The grid is drawn at compact width only.
 
 **Checks.** None added.
+
+## §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616) (user, 2026-11-13, of a canvas whose playable Send opened a menu under each row: "ya that is so much better", "not just send and swap it would be for all of move wouldn't it", "ok do it")
+
+**The design** is a canvas (https://claude.ai/artifact/5v2GTvuxmNPxh49fPs5Qme, private to the user). Its top board is a playable Send; the three under it (Move as a page, with trays) were refused: "i'm scared to make such drastic changes".
+
+1. **A row's choices open as a menu attached to the row** (`MoveSentence.menu`, `menuShown`; `MoveMenuBox` for the private sentences and Lend). The rows stay where they are, the sentence over them and the foot under them. A tap outside the menu closes it with no pick.
+2. **The lists are the ones the page drew.** Their search field, their marks and balances, "Another amount" raising the keys: nothing in a list changed. A menu has no name at its head (`MoveListBack` is the page's alone).
+3. **The verbs' menu is the page**, whole and A–Z (§1781). A list with no row on screen to hang from still opens in the page (`inlineOpen`).
+4. **Every sentence**: Move's own verbs through `MoveSentence`, and your private balance, your private account, Railgun and Lend through `MoveChoiceRows(open:menu:)`.
+5. **The next menu opens by itself after a pick** (§1782), in Send and Swap as before, once the last menu has left the screen (`menuGone`): one rising while another leaves does not appear.
+6. **A menu is 320pt wide and as tall as its rows up to 300pt, then they scroll**, on the system's thick material so the foot's act does not read through. The system opens it toward the room there is.
+
+**Seen** (simulator, the demo, dark, Send): Token's menu with search, marks and balances; ETH picked, the menu gone and Amount's opening by itself; $20 picked, the sentence whole and Send lit; To's menu with its field, the two private places and two contacts. **Not seen:** the keyboard in a menu's search, "Another amount", Swap and the other verbs, the four other sentences, the light page, the iPad, the Mac, a phone.
+
+**Mac half (§1402).** The same menus on Catalyst, where a popover is the system's own. Not seen.
+
+**Checks.** `private-money-selftest.sh`, by reading: the rows present their list as a popover, the verbs' list is never one, the next waits for `menuGone`, the foot stays under a menu, and none of the four other sentences opens a list in the page.
+
+## §1785 — The three money rows leave the Wallet's Home; Account opens on the Safe (amends §1779) (user, 2026-11-13, of Home's Public, Private balance and Private account rows on a phone: "this is not what i wanted", "i wanted when you tapped the word account it showed your safe, your aztec, and if possible somethign for the private balance", "so that if a user goes there at first to copy an address they don't just randomly send to aztec"; asked whether the rows stay, "Remove them"; "account needs to show what it always has and does now")
+
+1. **Home draws no Public, Private balance or Private account row** (`walletPlaceRows` is deleted). On its way stays above the doors.
+2. **Account is unchanged**: its box, and under it the Safe, the private balance and Aztec, each by name (`walletAccountList`).
+3. **Account opens on the Safe** (`walletDoor`): the Home row that opened it on the Aztec address is gone, and the door sets the box back to the Safe, so the address someone comes to copy is never Aztec's by leftover. Aztec's row on the page still shows its address there.
+
+**Seen:** nothing yet on a device. **Not seen:** Home without the rows, Account opened after Aztec was shown, the Mac.
+
+**Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `private-money-selftest.sh`: no `walletPlaceRows` in `Screens/`, and the door's reset.
+
+## §1786 — Account is your public account; the private places are doors, and Aztec's address stands only on its own page (amends §1779, §1785, §1700a, §1700f item 2, §1738, §1496) (user, 2026-11-13, of a canvas of Home, Account and the private account's page: "Build and ship"; "I think the 'send' on aztec should be clear send from aztec to aztec"; of Your Safes and Without a signature under Account, "i am not sure they make sense", "i'm confused where they should go")
+
+**The design** is a canvas (https://claude.ai/artifact/BNTLU5rZYici2Kk2WfiFoD, private to the user).
+
+1. **Account's box is always the Safe**: the face, the name, the whole address, its networks, Copy address. It never turns to Aztec's on this page, so whoever comes to copy an address copies the public one.
+2. **Private is a section of two doors** (`walletPrivatePlaces`), before the keys: Private balance ("A new address each time", opening Receive privately) and Private account ("Aztec to Aztec only", in Aztec's ink). Neither shows an address here. The Safe's own row is gone: the box is the Safe.
+3. **The private account has its own page** (`walletOnPrivateAccount`), titled "Account · Private account", the grey word going back: Aztec's address in Aztec's ink under "Aztec to Aztec only.", Copy for Aztec, then its two moves, each named for both ends: "Add money from Ethereum" and "Send from Aztec to Aztec" (was "Send on Aztec"). Nothing of the public account is drawn on it.
+4. **Keys holds keys**: Signs from, Recovery keys, Co-signer, Private keys. **Connection** is its own section under it: Networks and Tor, which stood among the keys. Spending is unchanged. No "Your account" heading stands over them: the page is named Account.
+5. **Your Safes stands only once you hold a key to a Safe besides your own** (`WalletUnsignedSection.Part.safes`): for your account alone it repeated the keys above it. Its "2 of 3" is not said elsewhere yet.
+6. **Without a signature is Permissions'** (`.unsigned`): what can move a Safe with nobody signing is a permission, on All or with your account picked.
+7. **Account opens on the public account** (§1785's reset stands).
+
+**Seen** (simulator, the demo's account, dark): Account with the Safe's box, Private's two doors and Keys; the private account's page with its address, rule, Copy for Aztec and the two moves. **Not seen:** the way back from the private account's page, Connection and Spending below the fold, Permissions with Without a signature, Your Safes with a second Safe, Private balance's door, the light page, the iPad, the Mac, a phone.
+
+**Mac half (§1402).** The same sections on Catalyst. Not seen.
+
+**Checks.** `private-money-selftest.sh`, by reading: the private places are doors, the private account's send names both ends, and Account's door resets to the public account.

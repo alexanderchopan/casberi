@@ -237,6 +237,8 @@ struct MoveSentence: View {
     /// A pick just closed its list (prd §1782): the next row still to be
     /// filled opens by itself, once. A list closed by hand sets nothing.
     @State private var advances = false
+    /// A row's menu is on screen (prd §1784).
+    @State private var menuUp = false
     @State private var search = ""
     @State private var pasted: [Int: Tokens.Listed] = [:]
     @State private var items: [Chain.Item] = []
@@ -1534,14 +1536,14 @@ struct MoveSentence: View {
                         // the home bar (prd §1616 item 5): with no card, a box
                         // ending above it clipped a row in mid-air.
                         space(room: geo.size.height, inset: listReach(geo))
-                            .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
+                            .padding(.top, inlineOpen == nil ? DS.Space.s6 : DS.Space.s4)
                     }
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
                 // Scrolled to the end, the last line clears the foot's fade;
                 // an open list has no foot and runs to the edge itself.
-                .padding(.bottom, open == nil ? DS.Space.s4 + Self.footFade : 0)
+                .padding(.bottom, inlineOpen == nil ? DS.Space.s4 + Self.footFade : 0)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
             }
         }
@@ -1553,7 +1555,7 @@ struct MoveSentence: View {
         .scrollDismissesKeyboard(.interactively)
         // While a blank is open the foot steps aside: its verb cannot sign a
         // half-picked sentence, and the list takes its room (§1442a).
-        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil, !rawOpen { foot.transition(.opacity) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { if inlineOpen == nil, !rawOpen { foot.transition(.opacity) } }
         // A network picked is read again; the first pass is `readHoldings`'
         // (prd §1586: Base was read twice on every open).
         .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
@@ -1594,7 +1596,9 @@ struct MoveSentence: View {
         // list closed by its name, the keys raised, or a sheet made short
         // leaves the rows as they are.
         .onChange(of: open) { _, now in
-            guard now == nil, advances else { return }
+            // A menu's pick waits for the menu to be gone (`menuGone`): the
+            // next one cannot rise while it is still leaving (prd §1784).
+            guard now == nil, advances, !menuUp else { return }
             advances = false
             Task { @MainActor in
                 // The rows are read off the sentence, which draws the pick first.
@@ -3058,32 +3062,12 @@ struct MoveSentence: View {
     /// rather than stacking for the length of the animation.
     private func space(room: CGFloat, inset: CGFloat = 0) -> some View {
         ZStack(alignment: .topLeading) {
-            if let open {
-                choices(room: choicesRoom(room), inset: inset, searches: open == .with || open == .buy || open == .to || open == .arrives || open == .merchant, which: open) {
+            if let open = inlineOpen {
+                choices(room: choicesRoom(room), inset: inset, searches: Self.searches(open), which: open) {
                     ZStack(alignment: .topLeading) {
-                        Group {
-                            switch open {
-                            case .verb: verbList
-                            case .with: withList
-                            case .buy: buyList
-                            case .to: toList
-                            case .network: networkList
-                            case .destination: destinationList
-                            case .elsewhere: elsewhereList
-                            case .elsewhereCoin: elsewhereCoinList
-                            case .arrives: arrivesList
-                            case .group: groupList
-                            case .merchant: merchantList
-                            case .depositCoin: depositCoinList
-                            case .depositNetwork: depositNetworkList
-                            case .when: whenList
-                            case .until: untilList
-                            case .from: fromList
-                            case .amount: amountList
-                            }
-                        }
-                        .id(open)
-                        .transition(.opacity)
+                        list(for: open)
+                            .id(open)
+                            .transition(.opacity)
                     }
                 }
                 // The box rises into the space and fades as its pick lands.
@@ -3098,6 +3082,91 @@ struct MoveSentence: View {
             }
         }
     }
+
+    /// The lists that lead with a search field.
+    static func searches(_ which: Blank) -> Bool {
+        which == .with || which == .buy || which == .to || which == .arrives || which == .merchant
+    }
+
+    /// One blank's list, wherever it is drawn.
+    @ViewBuilder private func list(for which: Blank) -> some View {
+        switch which {
+        case .verb: verbList
+        case .with: withList
+        case .buy: buyList
+        case .to: toList
+        case .network: networkList
+        case .destination: destinationList
+        case .elsewhere: elsewhereList
+        case .elsewhereCoin: elsewhereCoinList
+        case .arrives: arrivesList
+        case .group: groupList
+        case .merchant: merchantList
+        case .depositCoin: depositCoinList
+        case .depositNetwork: depositNetworkList
+        case .when: whenList
+        case .until: untilList
+        case .from: fromList
+        case .amount: amountList
+        }
+    }
+
+    /// **A LIST IS A MENU ON ITS ROW (prd §1784, user, of a mock that opened
+    /// one under each row: "ya that is so much better").** A row's choices
+    /// open as a menu attached to it: the rows stay where they are, the
+    /// sentence over them, the foot under them. The lists themselves are the
+    /// ones the page drew (their search, their marks, "Another amount"). The
+    /// verbs' menu is the page and stays whole; a list with no row on screen
+    /// to hang from still opens in the page.
+    private var menuOpen: Blank? {
+        guard let open, open != .verb, choiceRowList.contains(where: { $0.opens == open }) else { return nil }
+        return open
+    }
+
+    /// The list drawn in the page: the verbs', or one with no row to hang from.
+    private var inlineOpen: Blank? { menuOpen == nil ? open : nil }
+
+    /// Whether this row's menu is up; closed by a tap outside it, the list
+    /// closes with no pick.
+    private func menuShown(_ which: Blank?) -> Binding<Bool> {
+        Binding(get: { which != nil && menuOpen == which },
+                set: { shown in if !shown, open == which { open = nil } })
+    }
+
+    /// A row's list as its menu: as wide as a menu, as tall as its rows up
+    /// to `menuRoom`, on the system's own popover ground.
+    private func menu(_ which: Blank) -> some View {
+        choices(room: Self.menuRoom, searches: Self.searches(which), which: which, named: false) {
+            list(for: which)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+        .frame(width: Self.menuWidth)
+        // As tall as its rows: the popover is sized by what it holds.
+        .fixedSize(horizontal: false, vertical: true)
+        .environment(chrome)
+        .onAppear { menuUp = true }
+        .onDisappear { menuGone() }
+        .presentationCompactAdaptation(.popover)
+        // Thick enough that the foot's act does not read through the rows.
+        .presentationBackground(.ultraThickMaterial)
+    }
+
+    /// A menu has left the screen: after a pick, the next row still to be
+    /// filled opens its own (prd §1782, §1784).
+    private func menuGone() {
+        menuUp = false
+        guard advances else { return }
+        advances = false
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(120))
+            advance()
+        }
+    }
+
+    static let menuWidth: CGFloat = 320
+    static let menuRoom: CGFloat = 300
 
     /// **ROWS CHANGE IT, THE SENTENCE SAYS IT (prd §1781, completing §1779;
     /// a tester, 2026-11-13: "I had no idea words are tappable"; the user:
@@ -3232,6 +3301,10 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
+                    // No edge named: the system opens it toward the room there is.
+                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds)) {
+                        if let which = r.opens { menu(which) }
+                    }
                 }
                 ForEach(kept, id: \.id) { line in
                     HStack(spacing: 0) {
@@ -3410,7 +3483,7 @@ struct MoveSentence: View {
     }
 
     /// An open list in the tray, keys down (with them up they are the edge).
-    private var reachesEdge: Bool { inTray && open != nil && !chrome.keyboardUp }
+    private var reachesEdge: Bool { inTray && inlineOpen != nil && !chrome.keyboardUp }
 
     /// The home bar's inset an open list's last row clears at the end.
     private func listReach(_ geo: GeometryProxy) -> CGFloat {
@@ -3427,10 +3500,11 @@ struct MoveSentence: View {
     /// sentence, then they scroll. It grows downward only: the sentence
     /// above never moves (§1442b). A token list leads with its search.
     private func choices<Rows: View>(room: CGFloat, inset: CGFloat = 0, searches: Bool, which: Blank,
-                                     @ViewBuilder _ rows: () -> Rows) -> some View {
+                                     named: Bool = true, @ViewBuilder _ rows: () -> Rows) -> some View {
         // Every list but the verbs' leads with its own name, which closes it
         // (prd §1781): the sentence's word no longer does.
-        let named = which != .verb
+        // A menu closes by a tap outside it and needs no name (prd §1784).
+        let named = named && which != .verb
         let head: CGFloat = (searches ? max(searchHeight, Self.listRowHeight) : 0) + (named ? Self.listRowHeight : 0)
         return VStack(alignment: .leading, spacing: 0) {
             if named { MoveListBack(name: Self.rowName(which, verb: verb)) { tapBlank(which) } }

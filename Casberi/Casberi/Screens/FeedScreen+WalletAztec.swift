@@ -309,64 +309,28 @@ extension FeedScreen {
         .accessibilityLabel(Text("Revoke \(AztecAppsShape.name(host: grant.host))'s authorization"))
     }
 
-    /// Your account's accounts (§1700a item 1): once the Aztec account's
-    /// address is known (§1700t), the card lists both — the Safe, then Aztec — by their own
-    /// names, the line under each saying how it works and its address's tail
-    /// ("Public · …c8e01", "Private · …2b3c"; user, 2026-11-04: "do as you
-    /// recommend"). Not "Public/Private account": 0xBow's private balance is a
-    /// third private place, and Aztec can hold public balances too. Before
-    /// Aztec is used the box above already names the Safe, so no list is drawn.
+    /// **THE PRIVATE PLACES ARE DOORS (prd §1786, of a canvas: "Build and
+    /// ship").** Under Account's box, which is always the Safe: your private
+    /// balance, whose address is new each time, and your private account,
+    /// whose address stands on its own page in Aztec's ink and nowhere here.
+    /// Someone who came to copy an address copies the public one.
     @ViewBuilder
-    func walletAccountList(safe: String) -> some View {
+    func walletPrivatePlaces() -> some View {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
-        // **YOUR PRIVATE BALANCE HAS A ROW (prd §1779; user: "a brand new
-        // user ... will want to do privacy pools or railgun", "how do we make
-        // it so that in 'your account' it shows a row for private balance").**
-        // The list stood only once Aztec was used, and never named the
-        // private balance. It stands as soon as there is a second place, and
-        // the private balance leads Aztec: it is what a new person wants.
-        let privately = PrivateMove.freshAvailable
-        if aztec != nil || privately {
-            // Each row picks the address Your Account's header shows (prd
-            // §1700f item 2): the lit one is the one showing.
-            accountListRow(mark: "safe", title: String(localized: "Safe"),
-                           line: String(localized: "Public · \(AddressTail.short(safe))"),
-                           lit: !chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = false }
-            if privately {
-                // No one address to show: it is new each time, and the row
-                // says so. Its tap is Receive privately, where one is made.
-                accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),
-                               line: String(localized: "Ethereum · a new address each time"),
-                               lit: false) {
-                    chrome.moveFreshReceive = true
-                    chrome.moveTray = true
-                }
+        if PrivateMove.freshAvailable {
+            // No one address to show: its tap is Receive privately, where
+            // one is made.
+            accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),
+                           line: String(localized: "A new address each time")) {
+                chrome.moveFreshReceive = true
+                chrome.moveTray = true
             }
-            if let aztec {
-                // Its rule beside its tail, in its own ink (prd §1779).
-                accountListRow(mark: "aztec", title: String(localized: "Aztec"),
-                               line: String(localized: "\(AddressTail.short(aztec)) · Aztec to Aztec only"),
-                               lineInk: DS.aztecInk,
-                               lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
-                // **THE PRIVATE ACCOUNT'S OWN VERBS (prd §1779).** With it
-                // picked, the two ways money moves stand under it: in from
-                // Ethereum, and on within Aztec. Crossing is named as
-                // crossing, never as an ordinary send.
-                if chrome.yourAccountShowsAztec {
-                    accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"),
-                                   line: String(localized: "Through Shield"), glyphInk: DS.aztecInk, lit: true) {
-                        chrome.moveAztec = .deposit
-                        chrome.moveTray = true
-                    }
-                    accountListRow(glyph: "arrow.up", title: String(localized: "Send on Aztec"),
-                                   line: String(localized: "Aztec to Aztec only"), lineInk: DS.aztecInk,
-                                   glyphInk: DS.aztecInk, lit: true) {
-                        chrome.moveAztec = .send
-                        chrome.moveTray = true
-                    }
-                }
-            }
+        }
+        if aztec != nil {
+            accountListRow(glyph: "diamond", title: String(localized: "Private account"),
+                           line: String(localized: "Aztec to Aztec only"),
+                           lineInk: DS.aztecInk, glyphInk: DS.aztecInk) { chrome.yourAccountShowsAztec = true }
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
             // The account is yours from the start (prd §1700t) but its
@@ -375,10 +339,38 @@ extension FeedScreen {
         }
     }
 
-    /// The Holdings row's anatomy: the mark, the name over its line; the lit
-    /// row's name in the primary ink, the other's secondary.
+    /// Whether Account has a private place to list.
+    var walletHasPrivatePlaces: Bool {
+        PrivateMove.freshAvailable || (AztecAccountStore.shared.isShown && AztecAccountStore.shared.shown.address != nil)
+    }
+
+    /// **THE PRIVATE ACCOUNT'S OWN PAGE (prd §1786).** Its box is Aztec's
+    /// address in Aztec's ink (`WalletYourAccountFigure`); under it, the two
+    /// ways its money moves, each named for both ends, and the way back.
+    @ViewBuilder
+    func walletPrivateAccountRows() -> some View {
+        accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"),
+                       line: String(localized: "Through Shield"), glyphInk: DS.aztecInk) {
+            chrome.moveAztec = .deposit
+            chrome.moveTray = true
+        }
+        accountListRow(glyph: "arrow.up", title: String(localized: "Send from Aztec to Aztec"),
+                       line: String(localized: "Aztec to Aztec only"), lineInk: DS.aztecInk,
+                       glyphInk: DS.aztecInk) {
+            chrome.moveAztec = .send
+            chrome.moveTray = true
+        }
+    }
+
+    /// Whether the private account's page is the one showing.
+    var walletOnPrivateAccount: Bool {
+        chrome.yourAccountShowsAztec && AztecAccountStore.shared.isShown && AztecAccountStore.shared.shown.address != nil
+    }
+
+    /// The Holdings row's anatomy: the mark, the name over its line, a
+    /// chevron because it opens.
     private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String,
-                                lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary, lit: Bool,
+                                lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary,
                                 pick: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
@@ -397,7 +389,7 @@ extension FeedScreen {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title)
                     .dsText(.body17)
-                    .foregroundStyle(lit ? DS.textPrimary : DS.textSecondary)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Text(verbatim: line)
                     .dsText(.subhead12)
@@ -405,14 +397,15 @@ extension FeedScreen {
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
+            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .walletRowPitch()
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(lit ? .isSelected : [])
-        .accessibilityHint(Text("Shows its address above"))
         .walletStackRow()
     }
 }

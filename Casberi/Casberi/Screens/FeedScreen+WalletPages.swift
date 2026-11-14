@@ -35,6 +35,10 @@ extension FeedScreen {
                     wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
         walletDoorRow(glyph: section.glyph, name: name ?? section.label, figure: figure,
                       figureTone: figureTone, word: word, wordTone: wordTone) {
+            // Account opens on the Safe, whatever was looked at last (prd
+            // §1785): the address someone comes to copy is never Aztec's
+            // by leftover.
+            if section == .yourAccount { chrome.yourAccountShowsAztec = false }
             if let act { act() } else { chrome.walletSection = section }
         }
         // Where back from this door's page lands (prd §1587).
@@ -766,6 +770,12 @@ extension FeedScreen {
             walletActingSection
             walletApprovalsSection
             walletAztecGrantsSection
+            // What can move a Safe of yours with nobody signing (prd §1786,
+            // from Account's page): on All, or with your account picked.
+            if let account = YourAccountDemo.shownAddress,
+               chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
+                WalletUnsignedSection(part: .unsigned, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
+            }
         case .threats:
             // What gives your addresses away, by Nymis (prd §1701).
             let privacy = walletPrivacySlots

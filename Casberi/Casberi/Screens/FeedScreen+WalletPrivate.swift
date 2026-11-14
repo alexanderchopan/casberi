@@ -115,53 +115,6 @@ extension FeedScreen {
         selectedSeat == nil && !walletOnFollowing && (selectedWallet.map(YourAccountDemo.isYours) ?? true)
     }
 
-    /// **THREE PLACES, ON HOME (prd §1779; the canvas's first screen).** What
-    /// is yours is in one of three: Public, your private balance, your
-    /// private account. Each is a row with its dollars, and its tap opens
-    /// where that money is. A place you do not have draws no row.
-    @ViewBuilder
-    var walletPlaceRows: some View {
-        if walletShowsPrivatePlaces, YourAccountDemo.shownAddress != nil, PrivateMove.available || walletShowsAztec {
-            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []
-            let lent = walletLentStanding.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0
-            let store = PrivateMoneyStore.shared
-            let railgun = RailgunHoldings.shared
-            let privately = store.rows.filter { $0.kind == .held }.compactMap { PrivateMoney.rowUSD($0, prices: store.shownPrices) }.reduce(0, +)
-                + railgun.spendableShown.compactMap { railgun.usd($0, units: $0.spendable) }.reduce(0, +)
-            let aztec = AztecAccountStore.shared
-            let onAztec = aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +)
-            walletDoorsSection {
-                walletDoorRow(glyph: WalletSection.holdings.glyph, name: String(localized: "Public"),
-                              figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd } + lent)) {
-                    chrome.walletSection = .holdings
-                }
-                // The three figures are read where they stand: Holdings read
-                // them only once its Private head had appeared.
-                .task {
-                    await store.refresh()
-                    await store.readPrices()
-                    await railgun.refresh()
-                    _ = await aztec.walletHolding()
-                }
-                if PrivateMove.available {
-                    walletDoorRow(glyph: "eye.slash", name: String(localized: "Private balance"),
-                                  figure: mask ?? WalletValue.money(privately)) {
-                        chrome.walletSection = .holdings
-                        chrome.walletScrollRequest = ShellChrome.privateAnchor
-                    }
-                }
-                if walletShowsAztec {
-                    walletDoorRow(glyph: "diamond", glyphTone: DS.aztecInk, name: String(localized: "Private account"),
-                                  figure: mask ?? WalletValue.money(onAztec)) {
-                        chrome.yourAccountShowsAztec = true
-                        chrome.walletSection = .yourAccount
-                    }
-                }
-            }
-        }
-    }
-
     /// **ON ITS WAY, ON HOME (prd §1779: money is never invisible).** What
     /// has left one place and not arrived in another, gathered where the
     /// Wallet opens: waiting at a one-time address, waiting for approval,

@@ -43,6 +43,13 @@ extension FeedScreen {
 /// with no module says None; a module on another Safe is red. A row opens
 /// the Safe.
 struct WalletUnsignedSection: View {
+    /// **EACH HALF WHERE IT BELONGS (prd §1786, user, of the two under
+    /// Account: "i'm confused where they should go").** Who signs a Safe is
+    /// Account's, and only once you hold a key to a Safe besides your own:
+    /// for your account alone it said the Keys above it again. What can move
+    /// a Safe with nobody signing is a permission, and stands on Permissions.
+    enum Part { case safes, unsigned }
+    var part: Part
     var onOpenSafe: (SafeRoster.Safe) -> Void
     /// The queue's rows, so a signature landing re-reads the roster.
     var queueKey: Int = 0
@@ -51,10 +58,19 @@ struct WalletUnsignedSection: View {
     @State private var roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
 
     var body: some View {
-        if !roster.isEmpty {
-            yourSafes
-            section
+        switch part {
+        case .safes:
+            if roster.safes.contains(where: { !$0.isYourAccount }) { yourSafes.task(id: queueKey) { await read() } }
+            else { Color.clear.frame(height: 0).task(id: queueKey) { await read() } }
+        case .unsigned:
+            if !roster.isEmpty { section }
         }
+    }
+
+    private func read() async {
+        roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
+        await SafeRosterReading.shared.refresh()
+        roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
     }
 
     private var yourSafes: some View {
@@ -109,11 +125,7 @@ struct WalletUnsignedSection: View {
         }
         // Bare, as the Feed's (prd §1382), and as `walletCard` draws it.
         .environment(\.feedSectionPanelFilled, false)
-        .task(id: queueKey) {
-            roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
-            await SafeRosterReading.shared.refresh()
-            roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
-        }
+        .task(id: queueKey) { await read() }
     }
 
     @ViewBuilder

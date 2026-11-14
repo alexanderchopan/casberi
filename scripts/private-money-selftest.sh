@@ -1164,7 +1164,17 @@ done
 use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
 # prd §1782: bigger rows, the next list by itself; no pay again, no token chosen.
 use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary)' "Move's rows no longer lead with their answer (prd §1782)"
-use "$SENT" 'guard now == nil, advances else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
+use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
+# prd §1784: a row's list is a menu on the row, in every sentence; the next
+# one waits for the last to be gone.
+use "$SENT" '.popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds)) {' "Move's rows no longer open their lists as menus (prd §1784)"
+use "$SENT" 'guard let open, open != .verb, choiceRowList.contains(where: { $0.opens == open }) else { return nil }' "the verbs' menu is a popover, or a list with no row has nowhere to open (prd §1784)"
+use "$SENT" '.onDisappear { menuGone() }' "the next menu no longer waits for the last to leave (prd §1784)"
+use "$SENT" '.safeAreaInset(edge: .bottom, spacing: 0) { if inlineOpen == nil, !rawOpen { foot.transition(.opacity) } }' "the foot leaves while a menu is up (prd §1784)"
+use "Casberi/Casberi/Screens/MoveBack.swift" 'MoveMenuBox { menu(r.id) }' "the private sentences' rows no longer open menus (prd §1784)"
+for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
+    ! grep -q 'MoveListBack' "Casberi/Casberi/Screens/$f.swift" || { echo "✗ $f opens a list in the page again (prd §1784)"; exit 1; }
+done
 use "$SENT" 'guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }' "the list that opens by itself is not the first still to be filled (prd §1782)"
 use "$SENT" 'tapBlank(next == .amount && with == nil ? .with : next)' "Amount is asked before its token (prd §1782)"
 ! grep -q 'recentAmounts\|rememberAmounts' "$SENT" || { echo "✗ Pay again is back in To (prd §1782: declined)"; exit 1; }
@@ -1181,7 +1191,16 @@ use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule und
 use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),' "Your account lost its private balance row (prd §1779)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
-use "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" 'walletPlaceRows' "Home lost its three places (prd §1779)"
+# prd §1785: the three money rows left Home; Account opens on the Safe.
+! grep -rq 'walletPlaceRows' Casberi/Casberi/Screens || { echo "✗ Home's three money rows are back (prd §1785)"; exit 1; }
+use "$PAGES" 'if section == .yourAccount { chrome.yourAccountShowsAztec = false }' "Account can open on the Aztec address by leftover (prd §1785)"
+# prd §1786: the private places are doors; Aztec's address has its own page.
+AZT="Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift"
+use "$AZT" 'func walletPrivatePlaces() -> some View {' "Account lost its private doors (prd §1786)"
+use "$AZT" 'title: String(localized: "Send from Aztec to Aztec"),' "the private account's send no longer names both ends (prd §1786)"
+! grep -q 'mark: "safe", title: String(localized: "Safe")' "$AZT" || { echo "✗ the Safe is a row under its own box again (prd §1786)"; exit 1; }
+use "Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift" 'if walletOnPrivateAccount {' "the private account's page draws the public account's rows (prd §1786)"
+use "$PAGES" 'WalletUnsignedSection(part: .unsigned,' "Without a signature left Permissions (prd §1786)"
 use "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" 'walletOnItsWaySection' "Home lost On its way: money in transit is invisible there again (prd §1779)"
 use "$HOLD" 'if !items.isEmpty {' "On its way draws with nothing on its way (prd §1779)"
 use "$HOLD" 'feedSheet = .onItsWay(item)' "an On its way row no longer opens its steps (prd §1779)"

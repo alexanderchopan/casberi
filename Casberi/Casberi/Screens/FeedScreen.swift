@@ -1579,6 +1579,8 @@ struct FeedScreen: View {
     /// pill beside it names the place.
     var roomName: String {
         if let pinnedWalletSection { return pinnedWalletSection.label }
+        // The private account's page reads "Account · Private account" (prd §1786).
+        if walletOnPrivateAccountPage { return WalletSection.yourAccount.label }
         if HomeScope.contains(source) { return youPlaceName }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
