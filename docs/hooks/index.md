@@ -222,7 +222,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-seedWalletHistory` — writes a synthetic WalletStore.ValueSample line for a watched wallet (the first, or the named one), spaced 4h+ → docs/hooks/wallet.md
 - `-compositionProbe` — the balance card's "In protocols" strip (prd §240, 2026-07-31, Model/WalletComposition.swift), headless: what's → docs/hooks/wallet.md · prd §240
 - `-addressBook "<Name>:<address>[,…]"|clear` — seed the address book headlessly (prd §169); `-addressBookProbe YES` reports every entry's kind, which are watched, and the cap → docs/hooks/wallet.md
-- `-watchCapProbe <address>` — attempt one more watch and NSLog `added`/`alreadyWatching`/`limitReached`/`invalid` (prd §170); one add per launch.
+- `-watchCapProbe <address>` — attempt one more watch, NSLog the outcome (prd §170); one add per launch.
 - `-holdingsWindowProbe` `-holdingsWindow` — the holdings freshness window (prd §216, HoldingsCache in Model/WalletIngest.swift) → docs/hooks/wallet.md · prd §216
 - `-portfolioProbe YES|<watched address>` — the combined portfolio read headless (prd §155): merged total, token count and treemap shape. Spends Alchemy credits → docs/hooks/wallet.md
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
