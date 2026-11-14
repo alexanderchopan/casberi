@@ -1462,7 +1462,6 @@
     "Shell/MainSurface.swift:route.sheet#node.l2beatDirectory",
     "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory",
     "Shell/MainSurface.swift:route.sheet#node.notes",
-    "Shell/MainSurface.swift:route.sheet#node.settingsFolder",
     "Shell/MainSurface.swift:route.sheet#node.contacts",
     "Shell/MainSurface.swift:route.sheet#node.calendars",
     "Shell/MainSurface.swift:route.sheet#node.license"

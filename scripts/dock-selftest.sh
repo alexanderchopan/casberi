@@ -375,25 +375,26 @@ grep -q "let door: Node = door == .apps ? .casberi : door" "Casberi/Casberi/Shel
   || { echo "✗ a door asking for the catalogue no longer lands on Sources (prd §1234)."; fail=1; }
 grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
   && { echo "✗ HomeRoute.openSettings is back — the doors present Settings outright (prd §933)."; fail=1; }
-# APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing §1050g): the
-# deep link and -openSettings present Casberi's own page (`.casberi`), the
-# tray's You row carries an Apps door and a Settings door, and Apps no longer
-# pins a Casberi row (a second way into Settings is a second meaning).
-[ "$(grep -c 'route.present(.casberi)' "$TMP/root.nc")" -ge 2 ] \
-  || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer present"; \
-       echo "  Casberi's own settings (prd §1111)."; fail=1; }
+# SETTINGS ARE ON THE ACCOUNT PAGE (prd §1808, amending §1111): the deep
+# link and -openSettings open Account, and Apps holds no Settings folder (a
+# second way into Settings is a second meaning).
+[ "$(grep -c 'chrome.openWalletPage(.yourAccount)' "$TMP/root.nc")" -ge 2 ] \
+  || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer open"; \
+       echo "  the Account page, where Casberi's settings are (prd §1808)."; fail=1; }
+! grep -rq 'SourcesSettingsFolder\|CasberiFolder(' Casberi/Casberi --include='*.swift' \
+  || { echo "✗ the Settings folder is back in Apps — settings are on Account (prd §1808)."; fail=1; }
 grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1111)."; fail=1; }
 ! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ a second Settings node is back — Settings is .casberi (prd §1111)."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/LibrarySearch.swift" > "$TMP/tray.nc"
 # The rooms tray is deleted (prd §1715): its search is Library's field, and
-# the Settings it finds opens Casberi's folder through the pick Library
-# answers (§1405), never a second screen.
+# the Settings it finds opens the Account page, where Casberi's settings are
+# (prd §1808), never a second screen.
 [ ! -f "Casberi/Casberi/Shell/RoomsTray.swift" ] \
   || { echo "✗ the rooms tray is back — Search is Library's field (prd §1715)."; fail=1; }
-grep -q 'chrome.settingsPick = .casberi' "$TMP/tray.nc" \
-  || { echo "✗ the search's Settings hit no longer opens Casberi's folder (prd §1715)."; fail=1; }
+grep -q 'chrome.openWalletPage(.yourAccount)' "$TMP/tray.nc" \
+  || { echo "✗ the search's Settings hit no longer opens the Account page (prd §1808)."; fail=1; }
 grep -q 'route.present(' "$TMP/tray.nc" \
   && { echo "✗ the search presents a screen of its own — it stands in Library (prd §1715)."; fail=1; }
 # The Addresses screen is deleted (prd §1323): the directory is Sources ›

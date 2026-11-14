@@ -70,7 +70,7 @@ for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts", "mark
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1480)")
 }
 check(WalletSection.order.count == 1, "the wallet draws no tile row: one place is a label, not a control (prd §1807, §83)")
-check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
+check(WalletSection.activity.label == "Money", "the money's stream reads Money: Activity is the place beside Home (prd §1808)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
 // Holdings' four and Spending's four; together with the tiles they are

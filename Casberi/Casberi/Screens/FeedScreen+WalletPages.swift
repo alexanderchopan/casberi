@@ -418,13 +418,18 @@ extension FeedScreen {
         let week = (selectedWallet.map { wallet.valueSamples(forAddress: $0) }
             ?? wallet.combinedValueSamples(only: walletFollowingOnly))
             .filter { $0.at >= weekAgo }.map(\.usd)
+        // The phone's cards share the screen's height (prd §1808); beside a
+        // pane they keep the standard one.
+        let cardHeight = roomSizeClass == .compact
+            ? DSHomeCardMetrics.height(screen: UIScreen.main.bounds.height) : DSHomeCardMetrics.height
         LazyVGrid(columns: [GridItem(.flexible(), spacing: DSHomeCardMetrics.gap), GridItem(.flexible())],
                   spacing: DSHomeCardMetrics.gap) {
             DSHomeCard(glyph: WalletSection.yourAccount.glyph,
                        name: WalletSection.yourAccount.label,
                        figure: yours == nil ? String(localized: "Create")
                            : pending ? String(localized: "Finish setup") : yourAccountWants,
-                       figureTone: yours == nil ? DS.pickInk : DS.attentionInk) {
+                       figureTone: yours == nil ? DS.pickInk : DS.attentionInk,
+                       height: cardHeight) {
                 if yours == nil {
                     chrome.moveTray = true
                 } else if pending {
@@ -436,7 +441,8 @@ extension FeedScreen {
                 }
             }
             DSHomeCard(glyph: PlaceTab.library.glyph, name: PlaceTab.library.label,
-                       figure: apps > 0 ? "\(apps)" : nil) {
+                       figure: apps > 0 ? "\(apps)" : nil,
+                       height: cardHeight) {
                 PlaceTab.open(.library, chrome: chrome, route: route)
             }
             // Holdings wears its week as a line (user: "honestly holdings
@@ -446,23 +452,27 @@ extension FeedScreen {
                        trailing: week.count >= 2
                            ? AnyView(Sparkline(closes: week, up: (week.last ?? 0) >= (week.first ?? 0))
                                .frame(width: 56, height: 22))
-                           : nil) {
+                           : nil,
+                       height: cardHeight) {
                 chrome.walletSection = .holdings
             }
             DSHomeCard(glyph: WalletSection.permissions.glyph, name: WalletSection.permissions.label,
-                       figure: permissions > 0 ? "\(permissions)" : String(localized: "None")) {
+                       figure: permissions > 0 ? "\(permissions)" : String(localized: "None"),
+                       height: cardHeight) {
                 chrome.walletSection = .permissions
             }
             DSHomeCard(glyph: WalletSection.threats.glyph, name: WalletSection.threats.label,
                        figure: riskWord,
-                       figureTone: unseen > 0 ? DS.attentionInk : DS.textSecondary) {
+                       figureTone: unseen > 0 ? DS.attentionInk : DS.textSecondary,
+                       height: cardHeight) {
                 chrome.walletSection = .threats
             }
             DSHomeCard(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,
                        figure: tokens.isEmpty ? nil
                            : mover.map { "\($0.symbol) \($0.change.words)" } ?? "\(tokens.count)",
                        figureTone: mover.map { $0.change.tone == .up ? DS.confirmInk : DS.destructiveInk }
-                           ?? DS.textSecondary) {
+                           ?? DS.textSecondary,
+                       height: cardHeight) {
                 if tokens.isEmpty { feedSheet = .watchToken } else { chrome.walletSection = .watchlist }
             }
         }

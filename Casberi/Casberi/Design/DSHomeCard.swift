@@ -15,6 +15,16 @@ enum DSHomeCardMetrics {
     /// 88pt, so three rows, the map and the bar share an iPhone 17 Pro's
     /// screen with nothing to scroll.
     static let height: CGFloat = 88
+
+    /// **THE CARDS TAKE THE SCREEN THEY ARE GIVEN (prd §1808, user: "we can
+    /// have the cards on the home screen fill more space").** 88pt was sized
+    /// for the smallest current phone and left a taller one with air under
+    /// the third row. Three rows share whatever a taller screen adds over
+    /// 874pt (an iPhone 17 Pro), and its spare 24pt; never under 80, where a
+    /// name and a figure stop fitting, never over 132.
+    static func height(screen: CGFloat) -> CGFloat {
+        min(132, max(80, height + ((screen - 874 + 24) / 3).rounded(.down)))
+    }
     /// The air between cards, both ways.
     /// `s3` since the first build (user, 2026-11-14: "they need a bit more
     /// spacing too gaps between"): at `s2` the rows read as one block.
@@ -30,6 +40,8 @@ struct DSHomeCard<Lead: View>: View {
     /// A small drawing in the figure's place, where a picture says it
     /// better than a word (Holdings' line); drawn only with no figure.
     var trailing: AnyView? = nil
+    /// The card's height; Home passes the screen's share (`height(screen:)`).
+    var height: CGFloat = DSHomeCardMetrics.height
     let act: () -> Void
     @ViewBuilder var lead: () -> Lead
 
@@ -63,7 +75,7 @@ struct DSHomeCard<Lead: View>: View {
             }
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: DSHomeCardMetrics.height)
+            .frame(height: height)
             .dsWell(cornerRadius: DS.Radius.widget)
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
@@ -79,8 +91,8 @@ extension DSHomeCard where Lead == AnyView {
     /// A card led by a glyph in the glyph's ink (prd §1252: pink glyphs).
     init(glyph: String, glyphTone: Color = DS.brandInk, name: String, figure: String? = nil,
          figureTone: Color = DS.textSecondary, trailing: AnyView? = nil,
-         act: @escaping () -> Void) {
-        self.init(name: name, figure: figure, figureTone: figureTone, trailing: trailing, act: act) {
+         height: CGFloat = DSHomeCardMetrics.height, act: @escaping () -> Void) {
+        self.init(name: name, figure: figure, figureTone: figureTone, trailing: trailing, height: height, act: act) {
             AnyView(Image(systemName: glyph)
                 .dsGlyph(.body)
                 .foregroundStyle(glyphTone)

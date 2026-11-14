@@ -1496,7 +1496,8 @@ struct LibrarySearch: View {
     private func openSettings() {
         DSHaptic.selection()
         close()
-        chrome.settingsPick = .casberi
+        // Settings are on the Account page (prd §1808).
+        chrome.openWalletPage(.yourAccount)
     }
 
     /// Open an app's account page over where you stand (prd §1159), the way

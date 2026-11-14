@@ -323,8 +323,8 @@ struct CasberiApp: App {
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    // Casberi's own settings (prd §1111).
-                    focusedScene?.route.present(.casberi)
+                    // Casberi's own settings: the Account page (prd §1808).
+                    focusedChrome?.openWalletPage(.yourAccount)
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }

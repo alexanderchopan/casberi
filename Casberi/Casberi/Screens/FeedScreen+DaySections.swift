@@ -778,7 +778,7 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    private func openCategory(_ category: String) {
+    func openCategory(_ category: String) {
         DSHaptic.selection()
         if category == CategoryFold.walletRoom {
             chrome.walletScope = nil
@@ -786,7 +786,15 @@ extension FeedScreen {
             chrome.mergedScope[category] = nil
         }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
-        chrome.sourceRequest = category
+        // On the phone a category is a section of Activity, so asking for it
+        // only scrolls there (`routeIntoFeed`). Its own page rises the way an
+        // app's does (prd §1808): every app's rows, and its menu to narrow
+        // to one.
+        if roomSizeClass == .compact, category != CategoryFold.walletRoom {
+            chrome.appSheet = ShellChrome.AppSheet(source: category)
+        } else {
+            chrome.sourceRequest = category
+        }
     }
 
     /// Home's lead (prd §1157): the app's icon at the one row size,

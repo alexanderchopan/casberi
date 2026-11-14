@@ -190,7 +190,7 @@ EXEMPT = [
   dict(covers=[TS+"faceTarget#followChannel"],
        why="the Follow tile draws only for a video or podcast whose channel you do not follow, and every demo channel is followed (measured 2026-10-15 after prd §1326: Computerphile, Strange Loop and Signals and Threads each read Following in the From card, no Follow tile)"),
   dict(covers=[MS+"node.casberi", MS+"node.settingsPage", MS+"node.reach", MS+"node.bridge",
-               MS+"node.l2beatDirectory", MS+"node.walletbeatDirectory", MS+"node.notes", MS+"node.settingsFolder",
+               MS+"node.l2beatDirectory", MS+"node.walletbeatDirectory", MS+"node.notes",
                MS+"node.contacts", MS+"node.calendars", MS+"node.license"],
        why=PHONE_PAGE + " (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347, and the Contacts and Calendars pages its Contacts and Calendar apps open, and a library's license page under Licenses)"),
   dict(covers=[FS+"mailSubscription", FS+"following"],

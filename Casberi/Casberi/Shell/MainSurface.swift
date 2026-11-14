@@ -694,8 +694,6 @@ struct MainSurface: View {
             NetworkReachScreen()
         case .settingsPage(let page):
             SettingsPageView(page: page)
-        case .settingsFolder:
-            SettingsFolderPage()
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
             // `Destination.raisedByConnect`), and the phone's can stack inside

@@ -301,8 +301,8 @@ extension FeedScreen {
     /// A section's name (prd §1208c, §1208l): a chapter's title in the pink
     /// every title wears, its category's glyph before it and what is new
     /// since your last visit after it (counting down as you read past).
-    /// Nothing to press: the sections do not fold (§1208c), and nothing in
-    /// the Feed opens a screen of its own (§1208a). As it reaches the top it
+    /// The sections do not fold (§1208c); a category's name opens its page
+    /// (prd §1808, amending §1208a). As it reaches the top it
     /// shrinks into the pill that names where you are.
     private func scrollHeader(_ category: String, glyph: String, _ things: [Thing],
                               choices: [SectionChoice] = []) -> some View {
@@ -310,8 +310,12 @@ extension FeedScreen {
         let fresh = newSince.map { since in
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
+        // The name opens the category's page (prd §1808); Money and Needs
+        // you are no category and stay labels.
+        let door: (() -> Void)? = CategoryFold.isCategory(category) && category != CategoryFold.walletRoom
+            ? { openCategory(category) } : nil
         return SectionPanelName(name: category, glyph: glyph, choices: choices,
-                                adds: sectionAdds(category)) {
+                                adds: sectionAdds(category), open: door) {
             if fresh > 0 {
                 HStack(spacing: DS.Space.s1) {
                     Circle().fill(DS.pickInk).frame(width: 7, height: 7)
@@ -461,12 +465,20 @@ extension FeedScreen {
                         }
                         .contentShape(Rectangle())
                     } primaryAction: {
-                        DSHaptic.tap()
-                        returnToRoomTop(proxy)
+                        // The pinned copy does what the name under it does
+                        // (prd §1808): in Activity a category's name opens
+                        // its page; anywhere else it returns to the top.
+                        if !wallet, CategoryFold.isCategory(section), section != CategoryFold.walletRoom {
+                            openCategory(section)
+                        } else {
+                            DSHaptic.tap()
+                            returnToRoomTop(proxy)
+                        }
                     }
                     .buttonStyle(RowPress())
                     .accessibilityElement(children: .combine)
-                    .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
+                    .accessibilityHint(wallet ? Text("Scrolls to the top. Hold for the sections.")
+                                              : Text("Opens this section. Hold for the sections."))
                     if !adds.isEmpty { SectionAddControl(name: section, adds: adds) }
                 }
                 .padding(.horizontal, DSRoomChassis.rowInset)
@@ -760,6 +772,11 @@ struct SectionPanelName<Trailing: View>: View {
     /// runs the category's own add, the act of its Sources count's plus
     /// (prd §1292); two acts open a menu of both. Empty: no +.
     var adds: [SectionAdd] = []
+    /// **A CATEGORY'S NAME IS ITS DOOR (prd §1808, user: "if i tap social i
+    /// can't get to my twitter page").** Activity shows the newest thing from
+    /// each app; the name above them opens the category's own page, with
+    /// everything in it. Nil: a label, as everywhere else.
+    var open: (() -> Void)? = nil
     var inset: CGFloat = DSRoomChassis.rowInset
     @ViewBuilder var trailing: Trailing
 
@@ -781,7 +798,20 @@ struct SectionPanelName<Trailing: View>: View {
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
             }
-            if choices.isEmpty {
+            if choices.isEmpty, let open {
+                Button {
+                    DSHaptic.selection()
+                    open()
+                } label: {
+                    Text(verbatim: name)
+                        .dsText(.heading24)
+                        .foregroundStyle(DS.headInk)
+                        .lineLimit(1)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Opens \(name)"))
+            } else if choices.isEmpty {
                 Text(verbatim: name)
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)
@@ -807,7 +837,7 @@ struct SectionPanelName<Trailing: View>: View {
             Spacer(minLength: 0)
             if !adds.isEmpty { SectionAddControl(name: name, adds: adds) }
         }
-        .accessibilityElement(children: choices.isEmpty && adds.isEmpty ? .combine : .contain)
+        .accessibilityElement(children: choices.isEmpty && adds.isEmpty && open == nil ? .combine : .contain)
         .accessibilityAddTraits(.isHeader)
         .padding(.leading, inset)
         .padding(.trailing, inset)

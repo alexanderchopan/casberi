@@ -1056,8 +1056,7 @@ struct RootShell: View {
                 sceneState.route.present(.casberi)
             }
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                // The Settings face, not Sources (prd §1208c).
-                chrome.settingsPick = .casberi
+                // Settings are on the Account page (prd §1808).
                 // `-openDelay <s>` (DEBUG) holds this and `-openRoom` until a
                 // demo poured in the same launch has landed: the Mac's store
                 // captures pour into a fresh scratch store every launch, and a
@@ -1066,10 +1065,10 @@ struct RootShell: View {
                 if wait > 0 {
                     Task { @MainActor in
                         try? await Task.sleep(for: .seconds(wait))
-                        sceneState.route.present(.casberi)
+                        chrome.openWalletPage(.yourAccount)
                     }
                 } else {
-                    sceneState.route.present(.casberi)
+                    chrome.openWalletPage(.yourAccount)
                 }
             }
             // `-openSafe YES` — the Safe screen itself (prd §1514), for
@@ -2934,10 +2933,9 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            // Casberi's own settings (prd §1111, §1208c: the Settings face,
-            // not Sources); the apps are casberi://apps.
-            chrome.settingsPick = .casberi
-            sceneState.route.present(.casberi)
+            // Casberi's own settings: the Account page (prd §1808); the
+            // apps are casberi://apps.
+            chrome.openWalletPage(.yourAccount)
         // casberi://room/<category | Your notes> — the Category widget's
         // door (2026-10-04): the room a tray pick lands in. On a cold launch
         // a category's apps are not listed yet and the first ask lands

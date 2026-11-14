@@ -399,20 +399,27 @@ struct HoldingsTreemap: View {
                                 .lineLimit(1)
                                 .fixedSize()
                             // Too narrow for the dollars, a tile still says
-                            // its share (prd §1731): no tile stands blank.
-                            Text(HoldingsTreemapLayout.percent(tile.share))
+                            // what it is (prd §1731: no tile stands blank;
+                            // its name since §1808, where its share stood).
+                            Text(verbatim: spoken)
                                 .dsText(.label12)
-                                .monospacedDigit()
                                 .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
                                 .lineLimit(1)
                                 .fixedSize()
                             Color.clear.frame(width: 0, height: 0)
                         }
                     }
-                    if (!small || worth(tile) == nil) && showsShare {
-                        Text(HoldingsTreemapLayout.percent(tile.share))
+                    // **THE NAME, NOT THE SHARE (prd §1808, user: "it's not
+                    // clear on the treemap what those symbols are for that
+                    // one is private and no idea what the percent is").** A
+                    // mark alone asked the reader to know every token's
+                    // logo, and the percent said again what the tile's area
+                    // already shows. Under the dollars stands what the tile
+                    // is: "ETH", "Private", "Lent". "Other" names itself
+                    // above.
+                    if (!small || worth(tile) == nil) && showsShare, !isOther {
+                        Text(verbatim: spoken)
                             .dsText(.label12)
-                            .monospacedDigit()
                             .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
                             .lineLimit(1)
                     }

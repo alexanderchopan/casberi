@@ -262,7 +262,7 @@ final class ShellChrome {
     var settingsPick: SettingsFace?
     /// Which face the Sources page opens on: the master list, or Casberi's
     /// own options (its first row, prd §1231).
-    enum SettingsFace { case sources, casberi }
+    enum SettingsFace { case sources }
     /// THE FEED IS ONE SCROLL (prd §1208): a category the tray, a widget or
     /// a link asked for, which the Feed scrolls to and clears.
     var feedJump: String?

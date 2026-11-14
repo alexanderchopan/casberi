@@ -37,7 +37,6 @@ struct SourcesLibrary: View {
     /// An app's own tap, as its folder's cell takes it.
     let openApp: (String) -> Void
     let settings: (String) -> (() -> Void)?
-    let openCasberi: () -> Void
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s4, alignment: .top),
                                 count: 3)
@@ -58,10 +57,8 @@ struct SourcesLibrary: View {
                 ForEach(folders) { folder in
                     SourcesFolderTile(folder: folder, has: has, needs: needs) { open(folder.category) }
                 }
-                // **SETTINGS COME LAST (prd §1733, amending §1321's first
-                // slot):** the rarest door leaves the first seat to what you
-                // open every day.
-                CasberiFolder(action: openCasberi)
+                // No Settings folder here (prd §1808): Casberi's settings are
+                // on the Account page, with the account they belong to.
             }
         }
     }
@@ -290,39 +287,6 @@ private struct SourcesFolderTile: View {
     }
 }
 
-/// Casberi's own settings, the library's first slot.
-private struct CasberiFolder: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            DSHaptic.tap()
-            action()
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Color.clear
-                    .aspectRatio(1, contentMode: .fit)
-                    .overlay {
-                        GeometryReader { geo in
-                            // The app icon, as every other tile shows its
-                            // app's (prd §1708a, user: "this needs to be our
-                            // new logo"): the arm mark was the one old face
-                            // left in the Library.
-                            CasberiAppIcon(size: geo.size.width * 0.5)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .dsWell(cornerRadius: DS.Radius.widget)
-                SourcesFolderWords(name: "Casberi", fact: String(localized: "Settings"))
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Casberi, Settings"))
-        .accessibilityAddTraits(.isButton)
-    }
-}
 
 private struct SourcesFolderWords: View {
     let name: String
@@ -648,47 +612,6 @@ struct AppMenu: View {
         }
         Button(action: settings) {
             Label("Settings", systemImage: "slider.horizontal.3")
-        }
-    }
-}
-
-/// **CASBERI'S FOLDER IS ITS SETTINGS (prd §1321, user: "perhaps each setting
-/// could be a tile like an app").** It springs open over Sources as any folder
-/// does: the mark and "Casberi" over every setting as a tile, the version
-/// under them. A setting opens as a page pushed beside Sources; the folder
-/// stays open behind it, so coming back is the folder again.
-struct SourcesSettingsFolder: View {
-    let close: () -> Void
-
-    var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(DS.scrim)
-                .ignoresSafeArea()
-                .onTapGesture { close() }
-                .accessibilityLabel(Text("Close Casberi"))
-                .accessibilityAddTraits(.isButton)
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                // The mark stands once, in the colophon under the tiles.
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(verbatim: "Casberi")
-                        .dsText(.heading24).foregroundStyle(DS.headInk)
-                    Spacer(minLength: DS.Space.s2)
-                    Text("Settings")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                }
-                SettingsRows(style: .tiles)
-            }
-            .padding(DS.Space.s6)
-            .frame(maxWidth: 440)
-            .background(DS.surfaceRaised, in: RoundedRectangle(cornerRadius: DS.Radius.widget + DS.Space.s2,
-                                                               style: .continuous))
-            .padding(DS.Space.s6)
-        }
-        .background {
-            Button(action: close) { EmptyView() }
-                .keyboardShortcut(.cancelAction)
-                .hidden()
         }
     }
 }

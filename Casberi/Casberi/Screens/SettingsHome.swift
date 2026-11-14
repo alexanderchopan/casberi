@@ -31,9 +31,6 @@ struct SettingsHome: View {
     /// `-connectTap` fires once a launch, not at every mount.
     @MainActor static var connectTapped = false
     #endif
-    /// Casberi's own options, opened in place from its pinned row — the way a
-    /// Notes folder opens (prd §980): its name leads back.
-    @State private var casberiOpen = false
     /// Library's field is the one search (prd §1715): while it has the page
     /// (focused, or holding words) the folders step aside for its rows.
     @State private var searching = false
@@ -52,23 +49,6 @@ struct SettingsHome: View {
     /// The category a door named (`route.openCategory`, prd §1300): its
     /// folder springs open once the page has risen, then lets go.
     @State private var landCategory: String?
-    /// Casberi's folder: a card of tiles over the page on the phone (§1321),
-    /// a list in the pane beside Library where there is one (prd §1405).
-    private func openCasberiFolder() {
-        #if DEBUG
-        NSLog("[Casberi] casberiFolder| split=%d path=%d sheet=%d place=%@ hosts=%d",
-              route.accountsSplit ? 1 : 0, route.path.count, route.sheet == nil ? 0 : 1,
-              route.shownPlace.map { "\($0)" } ?? "nil", route.paneHostsPushes ? 1 : 0)
-        #endif
-        if route.paneHostsPushes {
-            // Once: a second door while the folder, or a page from it, is up
-            // would replace the pane's stack with the folder again.
-            guard !route.accountsPane.contains(.settingsFolder) else { return }
-            route.fromAccountsList { route.push(.settingsFolder) }
-        } else {
-            withAnimation(DS.Motion.folder) { casberiOpen = true }
-        }
-    }
 
     var body: some View {
         // THE ROOM'S FRAME (prd §1136f): title, box and tiles as the same
@@ -94,9 +74,7 @@ struct SettingsHome: View {
                     // found every app (§1245) is the one search: typing finds
                     // apps, accounts, people, notes and things, grouped by
                     // category, and the folders step aside for its rows.
-                    if !casberiOpen {
-                        LibrarySearch(active: $searching)
-                    }
+                    LibrarySearch(active: $searching)
                     // THE LIBRARY (prd §1316): every category a folder,
                     // Casberi's own settings the first slot.
                     if !searching {
@@ -111,8 +89,7 @@ struct SettingsHome: View {
                                            withAnimation(DS.Motion.folder) { openFolder = category }
                                        },
                                        openApp: { openFromFolder($0) },
-                                       settings: { name in yours(name).map { app in { openPage(app) } } },
-                                       openCasberi: { openCasberiFolder() })
+                                       settings: { name in yours(name).map { app in { openPage(app) } } })
                     }
                 }
                 // **ONE LEFT EDGE (prd §1733):** the field, the Recent row and
@@ -142,17 +119,9 @@ struct SettingsHome: View {
                 landCategory = nil
             }
         }
-        // Casberi's folder springs open on its settings, each a tile like an
-        // app (prd §1321).
-        .overlay {
-            if casberiOpen {
-                SourcesSettingsFolder(close: { withAnimation(DS.Motion.folder) { casberiOpen = false } })
-                    .transition(folderSpring)
-            }
-        }
         // A folder springs open over the page (prd §1316).
         .overlay {
-            if let category = openFolder, !casberiOpen,
+            if let category = openFolder,
                let folder = libraryFolders.first(where: { $0.category == category }) {
                 SourcesOpenFolder(folder: folder, has: isYours, needs: needsYou,
                                   open: { openFromFolder($0) },
@@ -179,24 +148,7 @@ struct SettingsHome: View {
         .navigationTitle(Text("Settings"))
         .toolbar(.hidden, for: .navigationBar)
         #if DEBUG
-        // `-accountDetail <case>` opens one of Casberi's own settings sheets
-        // (verify-mac's account-detail gate, the screen sweep): those rows sit
-        // behind the pinned Casberi row since prd §1136, so the hook opens it
-        // first and `SettingsRows`' own hook raises the sheet.
         .onAppear {
-            // A beat after mount: the pane's split is written by the shell
-            // after its first layout, and the folder goes where the split is.
-            if UserDefaults.standard.string(forKey: "accountDetail") != nil {
-                Task { @MainActor in
-                    // The split is written after the shell's first layout;
-                    // wait for it, bounded, so the folder goes where it would
-                    // on a tap. A narrow window never splits and falls through.
-                    for _ in 0..<30 where !route.paneHostsPushes {
-                        try? await Task.sleep(for: .milliseconds(100))
-                    }
-                    openCasberiFolder()
-                }
-            }
             // `-connectTap "<Offer name>"` — the door an unconnected app's
             // Add row in Sources › Apps takes (`offerRow`: `setup`), for
             // verify-mac's connect gate. Never a direct push: a probe on a
@@ -232,24 +184,18 @@ struct SettingsHome: View {
             route.openSources = false
             route.openCategory = nil
             route.openConnect = false
-            withAnimation(DS.Motion.standard) {
-                casberiOpen = false
-                searching = false
-            }
+            withAnimation(DS.Motion.standard) { searching = false }
             landCategory = category
         }
         .onChange(of: route.openOffer, initial: true) { _, name in
             guard let name else { return }
             route.openOffer = nil
-            withAnimation(DS.Motion.standard) { casberiOpen = false }
             openOffer(name)
         }
         .onChange(of: chrome.settingsPick, initial: true) { _, pick in
-            guard let pick else { return }
-            // Every door to the folder takes the same one (prd §1405): the
-            // pane where Library has one, the card over the page elsewhere.
-            if pick == .casberi { openCasberiFolder() }
-            else { withAnimation(DS.Motion.standard) { casberiOpen = false } }
+            // Apps is one face now: the Settings folder is deleted (prd
+            // §1808), so a pick only lands here.
+            guard pick != nil else { return }
             chrome.settingsPick = nil
         }
         .onChange(of: chrome.settingsLanding, initial: true) { _, landing in
@@ -257,7 +203,6 @@ struct SettingsHome: View {
             // a person lands on Contacts with their name in its field, a
             // calendar on Calendars.
             guard let landing else { return }
-            casberiOpen = false
             switch landing {
             case .contacts(let name): route.push(.contacts(name))
             case .calendars:          route.push(.calendars)
