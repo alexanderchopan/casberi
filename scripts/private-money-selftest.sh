@@ -118,7 +118,7 @@ HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 # Your private balance is a recipient, one noun told apart by network (prd §1719).
 use "$SENT" 'listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {' "your private balance on Ethereum is no longer a recipient"
-use "$SENT" 'listRow(String(localized: "Your private account"), sub: "Aztec", symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
+use "$SENT" 'listRow(String(localized: "Your private account"), sub: Self.aztecRule, symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
 use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no longer rows in Send's token list (prd §1719)"
@@ -142,7 +142,7 @@ grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'retu
 ! grep -q 'PrivateMove\|PrivateSender\|sendPrivately\|FreshReceive.shared.move' Casberi/Casberi/Screens/OnItsWaySheet.swift \
     || { echo "✗ On its way's steps sheet moves money: that is Move's alone (prd §1779)"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
-use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
+use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.textPrimary)' "the address to fund is no longer drawn by its tail"
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: MoveSentence.settledInk)' "the recipient is no longer drawn by its tail"
 ! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
 use "Casberi/Casberi/Model/PrivateMove.swift" 'let relayed = try await engine.relay(handle: spend.handle)' "a private send no longer goes through the relayer"
@@ -1133,7 +1133,7 @@ awk '/^            walletAztecRows$/{a=NR} /^            walletAddMoneyRow$/{m=N
 [[ ! -e Casberi/Casberi/Design/DSShareSlider.swift ]] || { echo "✗ Move's slider is back (prd §1776)"; exit 1; }
 ! grep -rqE 'DSShareSlider|[^A-Za-z]Slider\(' Casberi/Casberi/Screens Casberi/Casberi/Design Casberi/Casberi/Shell \
     || { echo "✗ a slider is drawn again (prd §1776: no sliders)"; exit 1; }
-use "$SENT" 'if verb != .receive, receipt == nil {' "a verb's amount is no longer its rows (prd §1776)"
+use "$SENT" 'amountPicks(with, closes: true)' "a verb's amount is no longer its rows (prd §1776, §1781)"
 echo "  ok   Add money: the last row under Private, the balance you have or the two to pick from; no slider anywhere"
 # prd §1778: the wiring. The token's turn is decided before the ETH's, the
 # rows are drawn in Holdings, and the empty place yields to them.
@@ -1144,8 +1144,24 @@ use "$HOLD" 'return FreshAddress.waiting(FreshReceive.shared.entries, on: networ
 use "$HOLD" 'chrome.moveFreshReceive = true' "a waiting row no longer opens Receive, where the move is made (prd §1778)"
 echo "  ok   a one-time address: the token first while its own ETH pays, what waits shown in Holdings"
 # prd §1779: the redesign's wiring, by reading.
-use "$SENT" 'static let leadVerbs: [Verb] = [.send, .receive, .swap]' "Move's menu no longer leads with Send, Receive and Swap (prd §1779)"
-use "$SENT" 'listRow(String(localized: "Make private"), symbol: "eye.slash", bareSymbol: true, rung: .heading34) { makePrivate() }' "Make private left Move's menu (prd §1779)"
+# prd §1781: the menu whole and A–Z, no Make private; the sentence no control.
+use "$SENT" 'ForEach(offeredVerbs, id: \.self) { v in' "Move's menu is no longer every verb, A–Z (prd §1781)"
+! grep -q 'localized: "Make private"\|static let leadVerbs\|func makePrivate' "$SENT" || { echo "✗ Make private or the ranked menu is back in Move (prd §1781)"; exit 1; }
+awk '/    private func blank\(_ text: String, ink: Color/,/^    }$/' "$SENT" > "$TMP/blank"
+! grep -q 'Button' "$TMP/blank" || { echo "✗ a word of Move's sentence is a button again (prd §1781)"; exit 1; }
+use "$TMP/blank" 'MoveSentenceBlanksKey.self' "a word of the sentence no longer reports its row (prd §1781)"
+use "$SENT" '.onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }' "the rows no longer read the sentence on screen (prd §1781)"
+use "$SENT" 'for b in sentenceBlanks {' "the rows are listed by hand again: a sentence can hold a choice with no row (prd §1781)"
+for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend MoveFreshReceive MoveAztecReceive; do
+    use "Casberi/Casberi/Screens/$f.swift" '.allowsHitTesting(false)' "$f's sentence takes a touch again (prd §1781)"
+done
+for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend MoveFreshReceive MoveAztecReceive; do
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard()' "$f has no way back to Move's menu (prd §1781)"
+done
+for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveChoiceRows(rows: choiceRows' "$f's choices are not rows (prd §1781)"
+done
+use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
 use "$SENT" 'Button { if let which = r.opens { tapBlank(which) } } label: {' "a choice row no longer opens the list its word opens (prd §1779)"
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
@@ -1209,7 +1225,7 @@ wmutate "money short of gas reads as moving in" 's/current: needsGas \? 1 : 2/cu
 wmutate "a row counts from zero" 's/step \\\(current \+ 1\) of/step \\(current) of/'
 wmutate "a waiting step hides what it needs" 's/let step = needs \?\? steps\[current\]/let step = steps[current]/'
 wmutate "approval waits on you" 's/steps: addressSteps, current: 3, needs: nil/steps: addressSteps, current: 3, needs: "Waiting"/'
-use "$SENT" 'rows.append(LedgerRow(id: "choiceFrom", name: String(localized: "From"), value: String(localized: "Public"), opens: .from))' "Send lost its From row (prd §1779)"
+use "$SENT" 'LedgerRow(id: "choiceFrom", name: Self.rowName(.from, verb: verb),' "Send lost its From row (prd §1779)"
 use "$SENT" 'goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)' "From's private account drops the Aztec address already typed (prd §1779)"
-echo "  ok   simplified: the menu ranked, rows that change the sentence, private doors in view, Aztec in its own ink, Pay the gas, Home's places, On its way step by step, the public address's networks"
+echo "  ok   simplified: the whole menu A–Z, a sentence that takes no touch, a row for every choice, private doors in view, Aztec in its own ink, Pay the gas, Home's places, On its way step by step, the public address's networks"
 echo "  ok   83 mutations"

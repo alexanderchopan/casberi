@@ -641,15 +641,25 @@ struct MoveRailgunSentence<Head: View>: View {
                     head().padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
+                    // The sentence says the move and is no control (prd
+                    // §1781): its choices are the rows under it.
+                    .allowsHitTesting(false)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.holding)
                 Group {
                     if open, picking {
-                        tokens
-                            .padding(.vertical, DS.Space.s2)
-                            .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
+                        VStack(alignment: .leading, spacing: 0) {
+                            MoveListBack(name: String(localized: "Token")) { toggle() }
+                            tokens
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                        .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
                     } else {
-                        line.transition(.opacity)
+                        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                            MoveChoiceRows(rows: choiceRows)
+                            line
+                        }
+                        .transition(.opacity)
                     }
                 }
                 .padding(.top, open ? DS.Space.s4 : DS.Space.s6)
@@ -727,20 +737,20 @@ struct MoveRailgunSentence<Head: View>: View {
             switch move.mode {
             case .deposit:
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
                 MovePhrase(String(localized: "Ethereum."), glue: String(localized: "on"))
             case .takeBack:
                 MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
                 // Your account (your account sends it), or someone else (a
                 // broadcaster sends it, §1721 item 3); a tap picks who.
                 MoveWordsClause(glue: String(localized: "to"),
                                 words: move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account."),
-                                ink: picking ? DS.pickInk : DS.textPrimary,
+                                ink: DS.textPrimary,
                                 action: { if picking { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
             }
@@ -882,6 +892,31 @@ struct MoveRailgunSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
+    /// from, who it goes to, how much and of what: what the sentence's
+    /// words opened.
+    private var choiceRows: [MoveChoiceRow] {
+        guard picking else { return [] }
+        let yours = String(localized: "Your private balance")
+        var rows: [MoveChoiceRow] = []
+        switch move.mode {
+        case .deposit:
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
+        case .takeBack:
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
+                                      value: move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")) {
+                leave(.pickRecipient)
+            })
+        }
+        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty) {
+            withAnimation(DS.Motion.standard) { open = false }
+            typing = true
+        })
+        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.holding?.symbol ?? "") { toggle() })
+        return rows
+    }
+
     /// The amount, typed (prd §1727): the decimal pad, the token's places at
     /// most, the figure in the sentence's own rung — as Aztec's (§1700q).
     private var amountField: some View {
@@ -892,7 +927,9 @@ struct MoveRailgunSentence<Head: View>: View {
                 .focused($typing)
                 .dsText(rung)
                 .monospacedDigit()
-                .foregroundStyle(DS.pickInk)
+                // Pink while it is typed, as Move's own figure is; white at
+                // rest, where pink would read as a thing to tap (prd §1781).
+                .foregroundStyle(typing ? DS.pickInk : DS.textPrimary)
                 .fixedSize()
         }
         .accessibilityLabel(Text("Amount"))
@@ -995,7 +1032,8 @@ struct MoveRailgunSentence<Head: View>: View {
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
             }
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                MoveBackCard()
                 Spacer(minLength: 0)
                 switch move.stage {
                 case .done:

@@ -54828,6 +54828,34 @@
         }
       }
     },
+    "Another amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otra cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別の金額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 금액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其他金额"
+          }
+        }
+      }
+    },
     "Another device signs on %@" : {
       "localizations" : {
         "es" : {
@@ -57322,6 +57350,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已到达 %@"
+          }
+        }
+      }
+    },
+    "Arrives as" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega como"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取るトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "도착 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到账代币"
+          }
+        }
+      }
+    },
+    "Arrives on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega en"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到着先"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "도착 네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到账网络"
           }
         }
       }
@@ -60247,6 +60331,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "返回帧"
+          }
+        }
+      }
+    },
+    "Back to the list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volver a la lista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リストに戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "목록으로 돌아가기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返回列表"
           }
         }
       }
@@ -69920,6 +70032,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关闭应用"
+          }
+        }
+      }
+    },
+    "Closes the list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cierra la lista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リストを閉じます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "목록을 닫습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭列表"
           }
         }
       }
@@ -110301,6 +110441,34 @@
         }
       }
     },
+    "Let the fee come from your USDC on %@, up to $%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permite que la comisión salga de tu USDC en %1$@, hasta $%2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の USDC から手数料を支払う（最大 $%2$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 USDC에서 수수료 지불 허용, 최대 $%2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许从你在 %1$@ 的 USDC 中支付手续费，最多 $%2$@"
+          }
+        }
+      }
+    },
     "Let your key organize" : {
       "localizations" : {
         "es" : {
@@ -114380,6 +114548,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "提到了你"
+          }
+        }
+      }
+    },
+    "Merchant" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comercio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "店舗"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가맹점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "商家"
           }
         }
       }
@@ -127388,6 +127584,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Sepolia ETH 不足"
+          }
+        }
+      }
+    },
+    "Not enough USDC on %@ for the fee too: it can take up to $%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay suficiente USDC en %1$@ para la comisión también: puede costar hasta $%2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の USDC が手数料分も含めると不足しています（最大 $%2$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@의 USDC가 수수료까지 내기에 부족합니다: 최대 $%2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 上的 USDC 不足以同时支付手续费：最多需 $%2$@"
           }
         }
       }
@@ -146486,6 +146710,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "支付 Gas"
+          }
+        }
+      }
+    },
+    "Pay with" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagar con"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払い方法"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제 수단"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支付方式"
           }
         }
       }
@@ -202683,6 +202935,34 @@
         }
       }
     },
+    "USDC on %@ did not accept the permit, so nothing was sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC en %@ no aceptó el permiso, así que no se envió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の USDC が許可を受け付けなかったため、何も送信されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 USDC가 허가를 받아들이지 않아 아무것도 전송되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上的 USDC 未接受授权，因此未发送任何内容"
+          }
+        }
+      }
+    },
     "USDC on Base." : {
       "localizations" : {
         "es" : {
@@ -204277,6 +204557,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "涨或跌，每天最多一次"
+          }
+        }
+      }
+    },
+    "Up to $%@ from your USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta $%@ de tu USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC から最大 $%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC에서 최대 $%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的 USDC 支付最多 $%@"
           }
         }
       }
@@ -235975,6 +236283,34 @@
         }
       }
     },
+    "fee up to $%@ from your USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "comisión de hasta $%@ de tu USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手数料は USDC から最大 $%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수수료 최대 $%@, USDC에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "手续费最多 $%@，从你的 USDC 支付"
+          }
+        }
+      }
+    },
     "fee up to %@ ETH" : {
       "localizations" : {
         "es" : {
@@ -251578,6 +251914,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最多"
+          }
+        }
+      }
+    },
+    "up to $%@ from your USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "hasta $%@ de tu USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC から最大 $%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC에서 최대 $%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的 USDC 支付最多 $%@"
           }
         }
       }

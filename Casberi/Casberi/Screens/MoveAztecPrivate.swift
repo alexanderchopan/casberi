@@ -562,6 +562,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     head().padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
+                    // The sentence says the move and is no control (prd
+                    // §1781): its choices are the rows under it, and the
+                    // amount's field is focused from its row.
+                    .allowsHitTesting(false)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
@@ -580,7 +584,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         choices(open)
                             .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
                     } else {
-                        line.transition(.opacity)
+                        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                            MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk)
+                            line
+                        }
+                        .transition(.opacity)
                     }
                 }
                 .padding(.top, open != nil ? DS.Space.s4 : DS.Space.s6)
@@ -839,8 +847,31 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
+    /// from, who it goes to, how much and of what: what the sentence's
+    /// words opened. The private account's own name wears Aztec's ink.
+    private var choiceRows: [MoveChoiceRow] {
+        guard move.stage == .ready else { return [] }
+        let yours = String(localized: "Your private account")
+        var rows: [MoveChoiceRow] = []
+        if move.mode == .deposit {
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours, ink: DS.aztecInk) { leave(.pickRecipient) })
+        } else {
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours, ink: DS.aztecInk) { leave(.switchOff) })
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
+                                      value: move.recipient.map { AddressTail.short($0) } ?? "", empty: move.recipient == nil) { toggle(.recipient) })
+        }
+        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty) {
+            withAnimation(DS.Motion.standard) { open = nil }
+            typing = true
+        })
+        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
+        return rows
+    }
+
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            MoveListBack(name: blank == .token ? String(localized: "Token") : String(localized: "To"), ink: DS.aztecInk) { toggle(blank) }
             switch blank {
             case .token: tokens
             case .recipient: recipients
@@ -989,7 +1020,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
             }
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                MoveBackCard()
                 switch move.stage {
                 case .needsFunds(let address):
                     checkAgain

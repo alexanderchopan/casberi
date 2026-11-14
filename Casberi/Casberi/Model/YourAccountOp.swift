@@ -27,6 +27,10 @@ enum YourAccountOp {
         var dollarSymbol = "USDC"
         /// A test network: free money, offered in DEBUG builds only.
         let isTest: Bool
+        /// Circle's paymaster for EntryPoint v0.7, where there is one (prd
+        /// §1780): the contract that fronts a send's gas and takes it back
+        /// from the account's own USDC. Base and its testnet only.
+        var usdcGas: String? = nil
         var id: Int { chainId }
     }
 
@@ -34,7 +38,8 @@ enum YourAccountOp {
         name: "Base", chainId: 8453,
         rpcs: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/8453/rpc", "https://api.candide.dev/public/v3/8453"],
-        dollar: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", isTest: false)
+        dollar: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", isTest: false,
+        usdcGas: "0x6C973eBe80dCD8660841D4356bf15c32460271C9")
     static let ethereum = Network(
         name: "Ethereum", chainId: 1,
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
@@ -64,7 +69,8 @@ enum YourAccountOp {
         name: "Base Sepolia", chainId: 84532,
         rpcs: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
-        dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
+        dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true,
+        usdcGas: "0x31BE08D380A21fc740883c0BC434FcFc88740b58")
 
     /// The account's networks, the same in every build: Base, Ethereum and
     /// Robinhood Chain (prd §1454), each with send, receive, swap, round-ups
@@ -215,6 +221,23 @@ enum YourAccountOp {
         /// The nonce's 24-byte key, empty for key 0. On the adapter its first
         /// 20 bytes name the validator (prd §1447 item 14: Smart Sessions).
         var nonceKey: [UInt8] = []
+        /// Who fronts the gas, when it is not the account's own ETH (prd
+        /// §1780): the paymaster, the gas its two steps may use, and what
+        /// it is handed. Nil, and the fields below are no part of anything.
+        var paymaster: String? = nil
+        var paymasterVerificationGasLimit: UInt64 = 0
+        var paymasterPostOpGasLimit: UInt64 = 0
+        var paymasterData: [UInt8] = []
+
+        /// `paymasterAndData` as the EntryPoint packs it: the address, the
+        /// two limits as sixteen bytes each, then the data. Empty with no
+        /// paymaster, which is the bytes every hash below had before.
+        var paymasterAndData: [UInt8] {
+            guard let paymaster else { return [] }
+            func half(_ n: UInt64) -> [UInt8] { Array(SafeABI.word(uint256: String(n))!.suffix(16)) }
+            return YourAccount.addressBytes(paymaster) + half(paymasterVerificationGasLimit)
+                + half(paymasterPostOpGasLimit) + paymasterData
+        }
 
         /// The nonce as the EntryPoint reads it: the key, then the sequence.
         var nonceWord: [UInt8] {
@@ -241,6 +264,12 @@ enum YourAccountOp {
                 "signature": SafeABI.hex(signature),
             ]
             if let factory { o["factory"] = factory; o["factoryData"] = SafeABI.hex(factoryData) }
+            if let paymaster {
+                o["paymaster"] = paymaster
+                o["paymasterVerificationGasLimit"] = Self.quantity(paymasterVerificationGasLimit)
+                o["paymasterPostOpGasLimit"] = Self.quantity(paymasterPostOpGasLimit)
+                o["paymasterData"] = SafeABI.hex(paymasterData)
+            }
             return o
         }
 
@@ -250,7 +279,7 @@ enum YourAccountOp {
             func word(_ n: UInt64) -> [UInt8] { SafeABI.word(uint256: String(n))! }
             func pair(_ hi: UInt64, _ lo: UInt64) -> [UInt8] { Array(word(hi).suffix(16)) + Array(word(lo).suffix(16)) }
             let initCode = factory.map { YourAccount.addressBytes($0) + factoryData } ?? []
-            let tails = [initCode, callData, [], signature].map(YourAccount.dynamic)
+            let tails = [initCode, callData, paymasterAndData, signature].map(YourAccount.dynamic)
             var offset = 9 * 32
             var offsets: [[UInt8]] = []
             for t in tails { offsets.append(YourAccount.w(offset)); offset += t.count }
@@ -265,8 +294,12 @@ enum YourAccountOp {
         var maxCost: UInt64? {
             let (a, o1) = verificationGasLimit.addingReportingOverflow(callGasLimit)
             let (b, o2) = a.addingReportingOverflow(preVerificationGas)
-            let (c, o3) = b.multipliedReportingOverflow(by: maxFeePerGas)
-            return o1 || o2 || o3 ? nil : c
+            // A paymaster's two steps are gas the operation may use too (the
+            // EntryPoint's own `requiredPreFund`); zero without one.
+            let (p, o4) = paymasterVerificationGasLimit.addingReportingOverflow(paymasterPostOpGasLimit)
+            let (g, o5) = b.addingReportingOverflow(paymaster == nil ? 0 : p)
+            let (c, o3) = g.multipliedReportingOverflow(by: maxFeePerGas)
+            return o1 || o2 || o3 || o4 || o5 ? nil : c
         }
     }
 
@@ -277,8 +310,8 @@ enum YourAccountOp {
     private static func pair(_ hi: UInt64, _ lo: UInt64) -> [UInt8] { Array(u(hi).suffix(16)) + Array(u(lo).suffix(16)) }
 
     /// The SafeOp hash the shared signer is asked to sign — EIP-712 over the
-    /// op's fields, Safe4337Module 0.3.0's own type, with no time bounds and
-    /// no paymaster. Computed HERE so the bytes Face ID approves are never
+    /// op's fields, Safe4337Module 0.3.0's own type, with no time bounds; the
+    /// paymaster's bytes are in it when gas is paid in USDC (prd §1780). Computed HERE so the bytes Face ID approves are never
     /// only a node's word: `YourAccountChain.send` refuses unless the
     /// module's `getOperationHash` agrees (`your-account-selftest.sh` pins it
     /// to Base's answer).
@@ -289,7 +322,7 @@ enum YourAccountOp {
         let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
         let structHash = k(typeHash + YourAccount.w(op.sender) + op.nonceWord + k(initCode) + k(op.callData)
                            + u(op.verificationGasLimit) + u(op.callGasLimit) + u(op.preVerificationGas)
-                           + u(op.maxPriorityFeePerGas) + u(op.maxFeePerGas) + k([]) + u(0) + u(0)
+                           + u(op.maxPriorityFeePerGas) + u(op.maxFeePerGas) + k(op.paymasterAndData) + u(0) + u(0)
                            + YourAccount.w(YourAccount.entryPoint))
         return k([0x19, 0x01] + domain + structHash)
     }
@@ -337,7 +370,8 @@ enum YourAccountOp {
                 "callData": SafeABI.hex(op.callData), "verificationGasLimit": String(op.verificationGasLimit),
                 "callGasLimit": String(op.callGasLimit), "preVerificationGas": String(op.preVerificationGas),
                 "maxPriorityFeePerGas": String(op.maxPriorityFeePerGas), "maxFeePerGas": String(op.maxFeePerGas),
-                "paymasterAndData": "0x", "validAfter": "0", "validUntil": "0", "entryPoint": YourAccount.entryPoint,
+                "paymasterAndData": SafeABI.hex(op.paymasterAndData), "validAfter": "0", "validUntil": "0",
+                "entryPoint": YourAccount.entryPoint,
             ],
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: typed, options: [.sortedKeys]) else { return nil }
@@ -351,7 +385,7 @@ enum YourAccountOp {
         let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
         let packed = YourAccount.w(op.sender) + op.nonceWord + k(initCode) + k(op.callData)
             + pair(op.verificationGasLimit, op.callGasLimit) + u(op.preVerificationGas)
-            + pair(op.maxPriorityFeePerGas, op.maxFeePerGas) + k([])
+            + pair(op.maxPriorityFeePerGas, op.maxFeePerGas) + k(op.paymasterAndData)
         return k(k(packed) + YourAccount.w(YourAccount.entryPoint) + YourAccount.w(chainId))
     }
 

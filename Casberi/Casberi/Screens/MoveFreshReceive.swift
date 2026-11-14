@@ -44,7 +44,7 @@ struct MoveFreshSentence<Head: View>: View {
                 MoveFlow {
                     head()
                     MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                    ink: moving ? DS.textPrimary : DS.pickInk,
+                                    ink: DS.textPrimary,
                                     action: { if !moving { leave() } },
                                     hint: Text("Picks where it lands"))
                     MovePhrase(network.name, glue: String(localized: "on"))
@@ -59,6 +59,9 @@ struct MoveFreshSentence<Head: View>: View {
                         }
                     }
                 }
+                // The sentence is no control (prd §1781): the address under
+                // it and the foot copy, and the foot's back leaves.
+                .allowsHitTesting(false)
                 // The line stands over the code, where it is seen: under
                 // it, a phone's foot covers it until scrolled.
                 line
@@ -206,7 +209,8 @@ struct MoveFreshSentence<Head: View>: View {
 
     /// "New address" grey, leading; "Share" pink, trailing.
     private var foot: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            MoveBackCard()
             Button {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) {

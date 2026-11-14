@@ -84,6 +84,10 @@ struct MoveDetails: View {
         guard let wei = p.feeWei else {
             return row(String(localized: "Network fee"), String(localized: "Not priced"))
         }
+        // From your USDC (prd §1780): the paymaster's most, in its dollars.
+        if let units = p.gasUSDC {
+            return row(String(localized: "Network fee"), String(localized: "Up to $\(YourAccountGas.spoken(units)) from your USDC"))
+        }
         let coin = "\(Words.coin(wei)) ETH"
         guard let usd = networkFeeUSD else { return row(String(localized: "Network fee"), String(localized: "Up to \(coin)")) }
         let value = usd < 0.01 ? String(localized: "Under a cent") : String(localized: "Up to \(MoveSentence.money(usd))")

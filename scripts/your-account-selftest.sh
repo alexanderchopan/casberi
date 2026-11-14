@@ -299,6 +299,62 @@ check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB, ownC], o
 check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownB, threshold: 2) == nil, "a removal that leaves fewer owners than the threshold was written")
 check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownC, threshold: 1) == nil, "a removal of a key that is no owner was written")
 check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownB, threshold: 1)?.to == acct, "the removal is not a call to the account itself")
+// Gas paid in USDC (prd §1780): the paymaster's bytes in every hash, the
+// permit the account signs, and the cost by the contract's own arithmetic.
+// Pinned 2026-11-13 to Base's own answers for this operation: Safe's module
+// (`getOperationHash`) and EntryPoint v0.7 (`getUserOpHash`) both answered
+// these hashes for the bytes written here; USDC's `DOMAIN_SEPARATOR()` on
+// Base and on Base Sepolia are the two domains; viem's `hashTypedData` gave
+// the permit digest; `allowance` read back through the slot.
+var gop = YourAccountOp.Op(sender: want, nonce: 0, factory: YourAccount.proxyFactory,
+                           factoryData: YourAccountOp.factoryData(x: x, y: y),
+                           callData: YourAccountOp.callData([usdc], rotateTo: (x, y))!)
+gop.verificationGasLimit = 500000; gop.callGasLimit = 100000; gop.preVerificationGas = 60000
+gop.maxFeePerGas = 2000000; gop.maxPriorityFeePerGas = 1000000
+gop.signature = YourAccountOp.dummySignature
+let bare = (YourAccountOp.safeOpHash(gop, chainId: 8453), YourAccountOp.userOpHash(gop, chainId: 8453), gop.maxCost)
+let pm = YourAccountOp.base.usdcGas ?? ""
+let usdcToken = YourAccountOp.base.dollar
+check(pm == "0x6C973eBe80dCD8660841D4356bf15c32460271C9", "Base's paymaster is not Circle's for EntryPoint v0.7")
+check(YourAccountOp.ethereum.usdcGas == nil && YourAccountOp.robinhood.usdcGas == nil,
+      "a network with no v0.7 paymaster of Circle's names one (Ethereum's is v0.8, which this account does not speak)")
+let gdomain = YourAccountGas.domainSeparator(name: "USD Coin", version: "2", chainId: 8453, token: usdcToken)
+check(Keccak256.hexString(gdomain) == "02fa7265e7c5d81118673727957699e4d68f74cd74b7db77da710fe8a2c7834f", "USDC's domain on Base is not the token's own")
+check(YourAccountGas.tokenName(chainId: 84532).map { Keccak256.hexString(YourAccountGas.domainSeparator(name: $0.name, version: $0.version, chainId: 84532, token: YourAccountOp.baseSepolia.dollar)) }
+      == "71f17a3b2ff373b803d70a5a07c046c1a2bc8e89c09ef722fcb047abe94c9818", "USDC's domain on Base Sepolia is not the token's own")
+check(YourAccountGas.tokenName(chainId: 1) == nil, "a permit is written for a network with no paymaster")
+let gdigest = YourAccountGas.permitDigest(domain: gdomain, owner: want, spender: pm, value: YourAccountGas.cap, nonce: "0")
+check(gdigest.map(Keccak256.hexString) == "3ac8043df898a74cee4f2c89ac6920868312d2d457c14af8b97fef2387e65467", "the permit digest is not viem's for the same permit")
+check(YourAccountGas.cap == "5000000", "the cap is not five dollars (user, 2026-11-13: $5, refilled)")
+check(YourAccountGas.deadline == [UInt8](repeating: 0xFF, count: 32), "the permit has a deadline the paymaster never presents")
+let gsig = [UInt8]((0..<130).map { UInt8($0 & 0xff) })
+gop.paymaster = pm
+gop.paymasterVerificationGasLimit = 300000
+gop.paymasterPostOpGasLimit = 45000
+gop.paymasterData = YourAccountGas.permitData(token: usdcToken, amount: YourAccountGas.cap, signature: gsig) ?? []
+let pmad = gop.paymasterAndData
+check(pmad.count == 235 && Keccak256.hexString(Array(pmad.prefix(53))) == "6c973ebe80dcd8660841d4356bf15c32460271c9000000000000000000000000000493e00000000000000000000000000000afc800",
+      "paymasterAndData is not the address, the two limits as sixteen bytes each, then the byte the paymaster keeps")
+check(Array(pmad[53..<73]) == YourAccount.addressBytes(usdcToken) && Array(pmad.suffix(130)) == gsig, "the permit's token or signature is not where the paymaster reads it")
+check(Keccak256.hexString(YourAccountOp.safeOpHash(gop, chainId: 8453)) == "5b2c676bb6827d9de874e9ab0562bb77da9b4a05c48bf72e5a33c63ab90ed196",
+      "the SafeOp hash with a paymaster is not what Safe's module on Base answered")
+check(Keccak256.hexString(YourAccountOp.userOpHash(gop, chainId: 8453)) == "0879c55ff7991ff9237c7b96c30c9044eed39d6e6efa9d0de0ca2b15d9eeab07",
+      "the userOp id with a paymaster is not EntryPoint v0.7's")
+check(YourAccountOp.safeOpHash(gop, chainId: 8453) != bare.0 && YourAccountOp.userOpHash(gop, chainId: 8453) != bare.1,
+      "the paymaster is no part of what is signed: anyone could swap who pays")
+check(gop.maxCost == 2_010_000_000_000 && bare.2 == 1_320_000_000_000, "the most it can cost does not count the paymaster's two steps")
+check((gop.json["paymaster"] as? String) == pm && gop.json["paymasterData"] != nil && gop.json["paymasterPostOpGasLimit"] as? String == "0xafc8",
+      "the bundler is not told the paymaster")
+check(YourAccountGas.allowanceSlot(owner: want, spender: pm) == "0x33a8928046f7d7ace70a676d07d6fa56b6985ef64bbc695a6fcd2a32d7b7bd76",
+      "the allowance slot is not FiatToken's (read back through it on Base)")
+check(YourAccountGas.tokenCost(maxCost: 2_010_000_000_000, maxFeePerGas: 2_000_000, charge: 35_000, price: "1931152509", spreadBips: 0) == "4017",
+      "the cost is not the paymaster's own arithmetic")
+check(YourAccountGas.tokenCost(maxCost: 2_000_000_000_000_000, maxFeePerGas: 30_000_000_000, charge: 35_000, price: "1931152509", spreadBips: 1000) == "6479017",
+      "the paymaster's spread is not added as it adds it")
+check(YourAccountGas.needsPermit(allowance: "4016", cost: "4017") && !YourAccountGas.needsPermit(allowance: "4017", cost: "4017"),
+      "a send carries a permit it does not need, or none where the allowance is short")
+check(YourAccountGas.permitValue(cost: "4017") == "5000000" && YourAccountGas.permitValue(cost: "6000000") == "6000000", "a permit is for less than its send can cost, or more than the cap")
+check(YourAccountGas.spoken("4017") == "0.01" && YourAccountGas.spoken("33484") == "0.04" && YourAccountGas.spoken("5000000") == "5.00", "a fee is said as less than it can be")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 # Round-ups read the demo's own account (prd §1475), which needs the app; off here.
@@ -312,7 +368,7 @@ enum YourAccountDemo {
 enum PrivateMainnet { static let on = true }
 enum YourAccountKey { static var stubbed: String? = "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"; static var address: String? { stubbed } }
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "Casberi/Shared/AddressTail.swift" "$ACCOUNT" "$OP" "$SWAP" "$ACROSS" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "Casberi/Casberi/Model/YourAccountGas.swift" "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 

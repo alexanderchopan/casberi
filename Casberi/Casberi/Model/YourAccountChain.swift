@@ -1607,7 +1607,13 @@ enum YourAccountChain {
             let parts = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil, report: report)
             a = parts.assembled
             approvalCount = parts.approvalCount
+            #if DEBUG
+            // The gas dry run's empty account cannot send even 1 wei, and
+            // sends nothing: its simulation's verdict is not what it measures.
+            if !(dryRun && pretendsUSDC) { try require(a.simulated, on: net, swaps: a.mustCheck) }
+            #else
             try require(a.simulated, on: net, swaps: a.mustCheck)
+            #endif
         }
         // **ROUND-UPS INTO YOUR PRIVATE BALANCE RIDE THIS OPERATION (prd
         // §1567).** The batch's calls (the keystore the first time, USDC's
@@ -2192,12 +2198,48 @@ enum YourAccountChain {
             }
             coSigner = asked
         }
+        let knownNonce = try await nonceRead
         var op = try await build(net, account: account, deployed: deployed, entry: entry, calls: calls, rotateTo: next,
                                  signerOwner: signer.owner, coSignerOwner: coSigner?.owner,
                                  alsoSignerOwner: alsoSigner?.owner, pinned: pinned,
-                                 knownNonce: try await nonceRead, report: report)
-        guard let maxCost = op.maxCost else {
+                                 knownNonce: knownNonce, report: report)
+        guard var maxCost = op.maxCost else {
             throw Failure(message: String(localized: "\(net.name) could not price this send"))
+        }
+
+        // Enough ETH for everything it sends and the most the fee can be, or
+        // (prd §1780) the fee from the account's USDC where the network has
+        // Circle's paymaster and ETH is short for the fee alone. The ETH a
+        // send moves is never fronted.
+        guard let onHand = await ethRead else {
+            throw Failure(message: String(localized: "\(net.name) did not answer"))
+        }
+        let held = YourAccountOp.sum(onHand, await depositRead)
+        report("held=\(held) fee<=\(maxCost)")
+        let ethOut = out[""] ?? "0"
+        var usdcFee: String?
+        if !YourAccountOp.atMost(YourAccountOp.sum(ethOut, String(maxCost)), held) {
+            let dollar = YourAccountOp.dollar(on: net).contract?.lowercased()
+            let usdcOut = out.first { $0.key.lowercased() == dollar }?.value ?? "0"
+            var feeOnly = YourAccountOp.atMost(ethOut, held)
+            #if DEBUG
+            // The dry run's 1 wei to itself stands for a send of no ETH.
+            if dryRun, pretendsUSDC { feeOnly = true }
+            #endif
+            if feeOnly, alsoSigner == nil,
+               let paid = try await payInUSDC(net, account: account, deployed: deployed, entry: entry, calls: calls, rotateTo: next,
+                                              signer: signer, coSignerOwner: coSigner?.owner, knownNonce: knownNonce,
+                                              usdcOut: usdcOut, report: report, stage: stage),
+               let again = paid.op.maxCost {
+                op = paid.op
+                maxCost = again
+                usdcFee = paid.cost
+            } else {
+                let ethNeed = YourAccountOp.sum(ethOut, String(maxCost))
+                let need = YourAccountOp.spoken(ethNeed, decimals: 18)
+                guard dryRun else { throw Failure(message: shortOfETH(need: ethNeed, held: held, on: net, deployed: deployed)) }
+                report("short: needs \(need) ETH with the fee")
+            }
         }
 
         // What the person approves is computed HERE, and the module must
@@ -2222,20 +2264,9 @@ enum YourAccountChain {
         }
         async let theirsRead = theirsNow()
 
-        // Enough of each token for everything it sends, and ETH for the most
-        // the fee can be too.
+        // Enough of each token for everything it sends (the fee's USDC, where
+        // it is paid that way, was held to above).
         let fee = String(maxCost)
-        guard let onHand = await ethRead else {
-            throw Failure(message: String(localized: "\(net.name) did not answer"))
-        }
-        let held = YourAccountOp.sum(onHand, await depositRead)
-        report("held=\(held) fee<=\(fee)")
-        let ethNeed = YourAccountOp.sum(out[""] ?? "0", fee)
-        if !YourAccountOp.atMost(ethNeed, held) {
-            let need = YourAccountOp.spoken(ethNeed, decimals: 18)
-            guard dryRun else { throw Failure(message: shortOfETH(need: ethNeed, held: held, on: net, deployed: deployed)) }
-            report("short: needs \(need) ETH with the fee")
-        }
         // Every token the transaction moves, whatever list it came from
         // (prd §1438: the sentence sends and swaps any token you hold).
         let tokensHeld = await tokenRead
@@ -2259,7 +2290,9 @@ enum YourAccountChain {
 
         await stage(.signing)
         let feeText = YourAccountOp.spoken(fee, decimals: 18)
-        let (r, s) = try await signer.sign(digest, reason + " · " + String(localized: "fee up to \(feeText) ETH"))
+        let feeWords = usdcFee.map { String(localized: "fee up to $\(YourAccountGas.spoken($0)) from your USDC") }
+            ?? String(localized: "fee up to \(feeText) ETH")
+        let (r, s) = try await signer.sign(digest, reason + " · " + feeWords)
         // The exact bytes, checked by Safe's passkey factory before they go:
         // asked while the Signer is (prd §1601), and answered before anything is sent.
         guard let assertion = SafeWebAuthn.signatureBytes(r: r, s: s),
@@ -2373,6 +2406,7 @@ enum YourAccountChain {
                       signerOwner: String, coSignerOwner: String?, alsoSignerOwner: String? = nil,
                       pinned: YourAccountOp.Op? = nil,
                       knownNonce: UInt64? = nil,
+                      gas: UsdcGas? = nil,
                       report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> YourAccountOp.Op {
         // A token approved to Multicall3 would ride every spend limit's ETH
         // route (prd §1447 item 15): never, from any operation.
@@ -2409,11 +2443,23 @@ enum YourAccountChain {
         } else {
             op.signature = YourAccountOp.dummySignature(owner: signerOwner)
         }
+        // Gas in USDC (prd §1780): the paymaster and what it is handed are
+        // part of what is priced and signed. The two limits here only let
+        // the estimate run its steps; the estimate's own replace them.
+        if let gas {
+            op.paymaster = gas.paymaster
+            op.paymasterData = gas.data
+            op.paymasterVerificationGasLimit = 500_000
+            op.paymasterPostOpGasLimit = gas.charge + 15_000
+        }
         // A preview's own gas and fee, when its operation is this one byte
         // for byte: what Details showed, hash included, is what is signed.
         if let pinned, pinned.sender == op.sender, pinned.nonce == op.nonce, pinned.nonceKey == op.nonceKey,
            pinned.factory == op.factory, pinned.factoryData == op.factoryData, pinned.callData == op.callData,
-           pinned.entry == op.entry, pinned.signature.count == op.signature.count {
+           pinned.entry == op.entry, pinned.signature.count == op.signature.count,
+           pinned.paymaster == op.paymaster, pinned.paymasterData == op.paymasterData {
+            op.paymasterVerificationGasLimit = pinned.paymasterVerificationGasLimit
+            op.paymasterPostOpGasLimit = pinned.paymasterPostOpGasLimit
             op.verificationGasLimit = pinned.verificationGasLimit
             op.callGasLimit = pinned.callGasLimit
             op.preVerificationGas = pinned.preVerificationGas
@@ -2425,7 +2471,19 @@ enum YourAccountChain {
         try await price(&op, on: net)
         // A balance override lets the bundler estimate whatever the account
         // holds, so a short balance is said below in words.
-        let override: [String: Any] = [account: ["balance": "0xde0b6b3a7640000"]]
+        var override: [String: Any] = [account: ["balance": "0xde0b6b3a7640000"]]
+        // Priced as if the paymaster's allowance stood, where the permit
+        // that gives it is not signed yet (prd §1780). The estimate's alone.
+        if let gas {
+            var slots: [String: String] = [:]
+            if gas.assumeAllowance {
+                slots[YourAccountGas.allowanceSlot(owner: account, spender: gas.paymaster)] = "0x" + String(repeating: "f", count: 64)
+            }
+            #if DEBUG
+            if pretendsUSDC { slots[YourAccountGas.balanceSlot(owner: account)] = "0x" + String(repeating: "0", count: 56) + "3b9aca00" }
+            #endif
+            if !slots.isEmpty { override[gas.token] = ["stateDiff": slots] }
+        }
         let estimate = try await bundler(net, "eth_estimateUserOperationGas", [op.json, YourAccount.entryPoint, override]) as? [String: Any] ?? [:]
         // The dummy fails verification, so verification gas is the fallback
         // path's — an over-estimate, never short; a tenth more on each. A
@@ -2447,6 +2505,17 @@ enum YourAccountChain {
         op.verificationGasLimit = coSignerOwner == nil && alsoSignerOwner == nil ? vgl : vgl + 100_000
         op.callGasLimit = cgl
         op.preVerificationGas = pvg
+        if let gas {
+            // The paymaster's two steps, as the bundler measured them and a
+            // tenth more. Where the allowance was assumed the permit did not
+            // run: USDC's `permit` and the account's own check of its
+            // signature are gas the real operation pays, so that estimate is
+            // for a fee line and never signed with a permit in it
+            // (`payInUSDC` prices again with the permit it carries).
+            op.paymasterVerificationGasLimit = max(q("paymasterVerificationGasLimit") ?? 0, 150_000)
+            op.paymasterPostOpGasLimit = max(q("paymasterPostOpGasLimit") ?? 0, gas.charge + 15_000)
+            report("gas paymaster verification=\(op.paymasterVerificationGasLimit) postOp=\(op.paymasterPostOpGasLimit)")
+        }
         return op
     }
 

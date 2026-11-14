@@ -1,0 +1,121 @@
+import SwiftUI
+
+/// **THE WAY BACK TO MOVE'S MENU (prd §1781).** The verb in a sentence used
+/// to open the verbs; nothing in a sentence takes a touch now, so every
+/// sentence's foot leads with this card. Move's own sentence hands it the
+/// act; the sentences Move mounts (Lend, a private send, Receive privately,
+/// Receive on Aztec) read it from the environment Move sets over them.
+struct MoveBackCard: View {
+    /// The act, where the caller holds it; else the environment's.
+    var act: (() -> Void)?
+    var disabled = false
+    @Environment(\.moveBack) private var back
+
+    var body: some View {
+        if let go = act ?? back {
+            Button {
+                go()
+                DSHaptic.selection()
+            } label: {
+                Image(systemName: "chevron.left").dsGlyph(.title, weight: .bold)
+                    .foregroundStyle(disabled ? DS.textSecondary : DS.textPrimary)
+                    .frame(width: MoveSentence.actHeight, height: MoveSentence.actHeight)
+                    .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous).fill(DS.fillStrong))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressSpring())
+            .disabled(disabled)
+            .accessibilityLabel(Text("Back to the list"))
+        }
+    }
+}
+
+private struct MoveBackKey: EnvironmentKey {
+    static let defaultValue: (() -> Void)? = nil
+}
+
+extension EnvironmentValues {
+    /// Opens Move's menu, set by Move over the sentences it mounts.
+    var moveBack: (() -> Void)? {
+        get { self[MoveBackKey.self] }
+        set { self[MoveBackKey.self] = newValue }
+    }
+}
+
+/// **A SENTENCE'S CHOICES, AS ROWS (prd §1781).** The private sentences and
+/// Lend write their own words; what each word did is a row here, in the
+/// shape of Move's own: the name grey, what is picked in white, a chevron
+/// because something opens, "Choose" in the pick's pink where the first
+/// thing is still to be picked.
+struct MoveChoiceRow: Identifiable {
+    let id: String
+    let name: String
+    let value: String
+    var empty = false
+    var ink: Color?
+    let act: () -> Void
+}
+
+struct MoveChoiceRows: View {
+    let rows: [MoveChoiceRow]
+    var disabled = false
+    /// The ink of the first row still to be picked: the pick's, or Aztec's
+    /// own on an Aztec sentence (prd §1779).
+    var nextInk: Color = DS.pickInk
+
+    var body: some View {
+        if !rows.isEmpty {
+            let next = rows.first { $0.empty }?.id
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(rows) { r in
+                    Button {
+                        r.act()
+                        DSHaptic.selection()
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(DS.textSecondary)
+                            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
+                                .foregroundStyle(DS.textSecondary)
+                                .accessibilityHidden(true)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(verbatim: r.empty ? String(localized: "Choose") : r.value)
+                                .dsText(.body17)
+                                .foregroundStyle(r.id == next ? nextInk : r.ink ?? DS.textPrimary)
+                                .lineLimit(1)
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Changes it"))
+                }
+            }
+            .disabled(disabled)
+        }
+    }
+}
+
+/// A list's own name at its head, which closes it without a pick (prd
+/// §1781): the sentence's word used to, and takes no touch now.
+struct MoveListBack: View {
+    let name: String
+    var ink: Color = DS.pickInk
+    let act: () -> Void
+
+    var body: some View {
+        Button(action: act) {
+            // The glyph in the head column, as every section name's (prd §1496).
+            HStack(spacing: DSRoomChassis.headGap) {
+                Image(systemName: "chevron.left").dsGlyph(.body, weight: .semibold)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                Text(verbatim: name).dsText(.heading24)
+            }
+            .foregroundStyle(ink)
+            .frame(minHeight: MoveSentence.listRowHeight, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Closes the list"))
+    }
+}

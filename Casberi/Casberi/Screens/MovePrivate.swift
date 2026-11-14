@@ -68,6 +68,9 @@ struct MovePrivateSentence<Head: View>: View {
                         .padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
+                    // The sentence says the move and is no control (prd
+                    // §1781): its choices are the rows under it.
+                    .allowsHitTesting(false)
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
@@ -78,7 +81,11 @@ struct MovePrivateSentence<Head: View>: View {
                         choices(open)
                             .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
                     } else {
-                        line.transition(.opacity)
+                        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                            MoveChoiceRows(rows: choiceRows)
+                            line
+                        }
+                        .transition(.opacity)
                     }
                 }
                 .padding(.top, open != nil ? DS.Space.s4 : DS.Space.s6)
@@ -193,7 +200,7 @@ struct MovePrivateSentence<Head: View>: View {
             MovePhrase(move.onEthereum ? String(localized: "Reading Ethereum…") : String(localized: "Reading Sepolia…"), ink: DS.textSecondary)
         case .needsFunds(let address):
             MoveClause(glue: String(localized: "Fund")) {
-                Button { copy(address) } label: { MoveWord(YourAccount.short(address), ink: DS.pickInk) }
+                Button { copy(address) } label: { MoveWord(YourAccount.short(address), ink: DS.textPrimary) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(move.onEthereum ? Text("Your account, \(address)") : Text("This build's test account, \(address)"))
                     .accessibilityHint(Text("Copies the address"))
@@ -220,13 +227,13 @@ struct MovePrivateSentence<Head: View>: View {
             }
             if move.mode == .send {
                 MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
             }
             if move.mode == .deposit {
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                                ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
             } else {
@@ -374,10 +381,34 @@ struct MovePrivateSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
+    /// from, who it goes to and how much: what the sentence's words opened.
+    private var choiceRows: [MoveChoiceRow] {
+        let live = move.stage == .ready
+        guard live || failed, !isDone else { return [] }
+        let yours = String(localized: "Your private balance")
+        var rows: [MoveChoiceRow] = []
+        if move.mode == .send {
+            if live { rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) }) }
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
+                                      value: move.recipient.map(YourAccount.short) ?? "", empty: move.recipient == nil) { toggle(.recipient) })
+        } else if live {
+            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
+        }
+        if live { rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: figure) { toggle(.amount) }) }
+        return rows
+    }
+
+    /// A list's own name, which closes it without a pick (prd §1781).
+    private func listBack(_ name: String, _ blank: Blank) -> some View {
+        MoveListBack(name: name) { toggle(blank) }
+    }
+
     /// A blank's choices, on the tray in the sentence's column as Move
     /// opens them (prd §1616).
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            listBack(blank == .amount ? String(localized: "Amount") : String(localized: "To"), blank)
             switch blank {
             case .amount: amounts
             case .recipient: recipients
@@ -477,7 +508,8 @@ struct MovePrivateSentence<Head: View>: View {
         #if DEBUG
         if hiddenPreview, move.stage != .ready, let hidden { hiddenLine(hidden) }
         #endif
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            MoveBackCard()
             switch move.stage {
             case .needsFunds(let address):
                 Button {

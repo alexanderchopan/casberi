@@ -49,6 +49,9 @@ struct MoveAztecReceive<Head: View>: View {
                         }
                     }
                 }
+                // The sentence is no control (prd §1781): the address under
+                // it and the foot copy, and the foot's back leaves.
+                .allowsHitTesting(false)
                 if let address {
                     // Over the address, where it is seen before the copy.
                     Text("Aztec to Aztec only.")
@@ -119,7 +122,8 @@ struct MoveAztecReceive<Head: View>: View {
 
     /// "Copy" grey, leading; "Share" pink, trailing.
     private var foot: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            MoveBackCard()
             if let address {
                 Button { copy(address) } label: {
                     Text(copied ? "Copied" : "Copy for Aztec").dsText(.heading24).foregroundStyle(DS.textSecondary).frame(minHeight: 48)

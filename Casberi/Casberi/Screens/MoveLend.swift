@@ -34,6 +34,8 @@ struct MoveLendSentence<Head: View>: View {
                         .padding(.bottom, DS.Space.s4)
                 }
                 MoveFlow { sentence }
+                    // No control (prd §1781): its choices are the rows under it.
+                    .allowsHitTesting(false)
                     .animation(DS.Motion.standard, value: move.figure)
                     .animation(DS.Motion.standard, value: move.chainId)
                 Group {
@@ -41,7 +43,11 @@ struct MoveLendSentence<Head: View>: View {
                         choices(open)
                             .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
                     } else {
-                        line.transition(.opacity)
+                        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                            MoveChoiceRows(rows: choiceRows)
+                            line
+                        }
+                        .transition(.opacity)
                     }
                 }
                 .padding(.top, open != nil ? DS.Space.s4 : DS.Space.s6)
@@ -225,8 +231,17 @@ struct MoveLendSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** How much, and on
+    /// which network: what the sentence's two words opened.
+    private var choiceRows: [MoveChoiceRow] {
+        guard live, doneHash == nil else { return [] }
+        return [MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.figure) { toggle(.amount) },
+                MoveChoiceRow(id: "network", name: String(localized: "Network"), value: move.network?.name ?? "") { toggle(.network) }]
+    }
+
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            MoveListBack(name: blank == .amount ? String(localized: "Amount") : String(localized: "Network")) { toggle(blank) }
             switch blank {
             case .amount: amounts
             case .network: networks
@@ -334,7 +349,8 @@ struct MoveLendSentence<Head: View>: View {
                 .padding(.bottom, DS.Space.s1)
                 .transition(.opacity)
         }
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            MoveBackCard()
             Spacer(minLength: 0)
             switch move.stage {
             case .done:

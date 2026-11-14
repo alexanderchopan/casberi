@@ -3688,6 +3688,10 @@ enum ProbeHooks {
                     ?? YourAccountOp.baseSepolia
                 do {
                     let account = try YourAccountKey.create()
+                    // With `-usdcGasProbe YES` (prd §1780) the same 1 wei is
+                    // priced as if the account held USDC and no ETH, so the fee
+                    // goes through Circle's paymaster: its permit signed, the
+                    // bundler's estimate run with it. Nothing is sent.
                     let pay = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: "1",
                                                     to: account, toName: nil)
                     let sent = try await YourAccountChain.send([pay], reason: "Probe", dryRun: true,

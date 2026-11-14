@@ -37,6 +37,9 @@ extension YourAccountChain {
         /// Your Signer signs this too: both keys over the limit, or an
         /// account that already needs both on this network (prd §1456).
         var signerSigns = false
+        /// The fee comes from the account's USDC (prd §1780): the most it
+        /// could take, in USDC's base units. `feeWei` is then no ETH of yours.
+        var gasUSDC: String? = nil
     }
 
     /// An operation built for a preview, kept for signing (prd §1509).
@@ -176,7 +179,21 @@ extension YourAccountChain {
             // The module asked for this operation's hash now, beside the
             // balances (prd §1605), so the tap need not ask it.
             async let answer = try? moduleAnswer(net, entry: entry, op: op)
-            let refusal = await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed)
+            var refusal = await short(a.payments, fee: fee, net: net, account: account, deployed: a.deployed)
+            // Short of ETH for the fee, on a network where it can come from
+            // USDC (prd §1780): no refusal, and the fee line says so.
+            var gasUSDC: String?
+            if refusal != nil, net.usdcGas != nil {
+                let dollar = YourAccountOp.dollar(on: net).contract?.lowercased()
+                let ethOut = a.payments.filter { $0.token.contract == nil }.reduce("0") { YourAccountOp.sum($0, $1.amount) }
+                let usdcOut = a.payments.filter { $0.token.contract?.lowercased() == dollar }.reduce("0") { YourAccountOp.sum($0, $1.amount) }
+                if let cost = await gasPreview(net, account: account, deployed: a.deployed, entry: entry, calls: a.calls,
+                                               rotateTo: a.nextKey, signerOwner: a.signer.owner, coSignerOwner: coSigner,
+                                               ethOut: ethOut, usdcOut: usdcOut) {
+                    refusal = nil
+                    gasUSDC = cost
+                }
+            }
             // A preview the sentence has moved past is never kept: it would
             // take the place of the one now on screen.
             if !Task.isCancelled {
@@ -185,7 +202,8 @@ extension YourAccountChain {
             }
             return Preview(network: net, route: route, feeWei: fee, nonce: op.nonce, checked: a.simulated.checked,
                            words: a.words, approvals: a.approvals, sold: a.sold, hash: YourAccountOp.safeOpHash(op, chainId: net.chainId),
-                           hashKind: .eip712, callData: op.callData, refusal: refusal, signerSigns: coSigner != nil)
+                           hashKind: .eip712, callData: op.callData, refusal: refusal, signerSigns: coSigner != nil,
+                           gasUSDC: gasUSDC)
         } catch let failure as Failure {
             if let written { return empty(written, route: route, refusal: failure.message) }
             return Preview(network: net, route: route, feeWei: nil, nonce: nil, checked: .notChecked, words: [],
