@@ -72805,3 +72805,20 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`: every row, the three lines and the sentence on one screen. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (amends §1794, §1795, §1796, §1792 item 1, §1781's Added rows) (user, 2026-11-13 and -14, on the Design canvases: "lets do all the design work on mocks not sim. then build after"; "i want the rows to be network token to network token"; "we don't need to show the network icon bc you already show it in network"; "lets do D but perhaps the AND needs to be pink"; "Keep it locked"; "i'm good w/ these all of them")
+
+The whole settled design, with its canvases, is in `docs/specs/redesign-list-2026-11-13.md`. This ruling is what this build changes.
+
+1. **Swap's rows are Network, Token, "To", Network, Token, Amount, When.** "To" is a line of its own between the two sides (`toHead`). §1796's "To network" and "To token" row names are retired.
+2. **A token's mark carries no network badge** in Move's rows and menus: the Network row above it says where (`rowMark`). §1792's badge is retired; a network still wears its own mark.
+3. **Add another adds its rows under the first** (`choiceRows`, `lineOrder`). Each line of the transaction keeps its rows: the first as it was, each next under a pink "And" with an × that removes it. On the lines after the first, the network, a swap's To network and To token are the first line's, drawn grey with no menu; Send's From is not repeated. The To token stays locked (§1442c). The page scrolls to the new line. §1781's "Added" rows are deleted.
+4. **Nothing is picked for the new line.** Add no longer takes the next token you hold, and a send starts with nobody to send to. The × on the line being filled undoes Add: the line before it is the one being filled again.
+5. **A kept line's Token or Amount row makes it the line being filled, where it stands,** and opens that row's menu (`reopen`).
+6. **Facts are quieter than choices.** A line under the rows is grey, name and figure; "You get" is the one figure in white.
+7. **A swap's To network starts on the network picked** and stays changeable; its token's menu lists what can arrive there.
+8. The spacing is tightened so a whole same-network swap, its three lines and the sentence stand on one screen (the 44-point rows of §1796; "To" 32, the lines 28).
+
+**Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`: the whole swap on one screen; after Add another, the first swap's rows, the pink "And", the fixed rows in grey and "Choose" on Token. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

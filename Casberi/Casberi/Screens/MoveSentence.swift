@@ -1546,7 +1546,7 @@ struct MoveSentence: View {
                         // the home bar (prd §1616 item 5): with no card, a box
                         // ending above it clipped a row in mid-air.
                         space(room: geo.size.height, inset: listReach(geo))
-                            .padding(.top, inlineOpen == nil ? DS.Space.s6 : DS.Space.s4)
+                            .padding(.top, DS.Space.s4)
                     }
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
@@ -1559,6 +1559,13 @@ struct MoveSentence: View {
             // The row a figure is typed in stands clear of the keys and the
             // foot (prd §1791): the system brings the cursor into view, and
             // the foot's fade then covered the row.
+            .onChange(of: items.count) { was, now in
+                guard now > was else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(250))
+                    withAnimation(DS.Motion.standard) { reader.scrollTo("moveCurrentLine", anchor: .top) }
+                }
+            }
             .onChange(of: focus) { _, now in
                 guard now == .amount else { return }
                 Task { @MainActor in
@@ -2807,7 +2814,7 @@ struct MoveSentence: View {
 
     /// A kept line tapped: it becomes the line being filled, where it stands;
     /// a finished line that was being filled is kept in its place.
-    private func edit(_ id: UUID) {
+    private func edit(_ id: UUID, focusing: Bool = true) {
         guard stage == nil, let at = items.firstIndex(where: { $0.id == id }) else { return }
         let token: Op.Token, units: String
         switch items[at] {
@@ -2837,7 +2844,7 @@ struct MoveSentence: View {
             open = nil
         }
         DSHaptic.selection()
-        focus = .amount
+        if focusing { focus = .amount }
     }
 
     private func remove(_ id: UUID) {
@@ -3171,7 +3178,7 @@ struct MoveSentence: View {
                 // The box rises into the space and fades as its pick lands.
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
             } else {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
                     choiceRows
                     line
                     if offersPasteLink { pasteLinkRow }
@@ -3327,9 +3334,9 @@ struct MoveSentence: View {
     }
 
     /// The network a swap arrives on is known: picked, or the only one.
-    private var destinationShown: Bool {
-        networkPicked && (destinationPicked || buy != nil || destinations.count < 2)
-    }
+    /// **IT STARTS ON THE NETWORK PICKED (prd §1797):** most swaps stay
+    /// where they are, so the To network is the first one's until changed.
+    private var destinationShown: Bool { networkPicked }
 
     /// Swap's two pairs as four rows, in the order they are answered: the
     /// network it leaves, its token, the network it arrives on, its token.
@@ -3350,17 +3357,19 @@ struct MoveSentence: View {
     /// A row's mark (prd §1792): the token with its network's badge, or the
     /// network's own.
     private func rowMark(_ which: Blank) -> MoveRowMark? {
-        let here = networkPicked ? Self.networkMark(network) : nil
+        // **A TOKEN'S MARK CARRIES NO NETWORK BADGE (prd §1797, user: "we
+        // don't need to show the network icon bc you already show it in
+        // network").** The Network row above it says where.
         switch which {
-        case .with: return with.map { MoveRowMark(token: $0.token.symbol, network: here) }
+        case .with: return with.map { MoveRowMark(token: $0.token.symbol) }
         case .buy:
             guard verb == .swap, let buy else { return nil }
-            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol, network: destinationShown ? Self.networkMark(buyHome) : nil)
-        case .network, .depositNetwork: return here.map { MoveRowMark(network: $0) }
+            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol)
+        case .network, .depositNetwork: return networkPicked ? Self.networkMark(network).map { MoveRowMark(network: $0) } : nil
         case .destination: return destinationShown ? Self.networkMark(buyHome).map { MoveRowMark(network: $0) } : nil
-        case .depositCoin: return MoveRowMark(token: depositCoin.symbol, network: depositSeller == nil ? nil : here)
+        case .depositCoin: return MoveRowMark(token: depositCoin.symbol)
         case .elsewhereCoin: return elsewhere.map { MoveRowMark(token: $0.token.symbol) }
-        case .arrives: return elsewhere.map { MoveRowMark(token: $0.arrives.symbol, network: Self.networkMark($0.to)) }
+        case .arrives: return elsewhere.map { MoveRowMark(token: $0.arrives.symbol) }
         default: return nil
         }
     }
@@ -3389,12 +3398,13 @@ struct MoveSentence: View {
         case .to: String(localized: "To")
         case .amount: String(localized: "Amount")
         case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
-        case .buy: verb == .swap ? String(localized: "To token") : String(localized: "Token")
-        // **"NETWORK, TOKEN, THEN TO NETWORK, TO TOKEN" (prd §1796, user:
-        // "you can't say from and to here").** A network's row is named
-        // for what it is; "To" marks the side it arrives on.
+        case .buy: String(localized: "Token")
+        // **NETWORK, TOKEN, "TO", NETWORK, TOKEN (prd §1797, user: "i want
+        // the rows to be network token to network token").** A row is
+        // named for what it is on both sides of a swap; the one word "To"
+        // stands on a line of its own between them (`toHead`).
         case .network, .elsewhere, .depositNetwork: String(localized: "Network")
-        case .destination: String(localized: "To network")
+        case .destination: String(localized: "Network")
         case .arrives: String(localized: "Arrives as")
         case .elsewhereCoin, .depositCoin: String(localized: "Token")
         case .group: String(localized: "Category")
@@ -3418,18 +3428,6 @@ struct MoveSentence: View {
                               .with, .depositCoin, .elsewhereCoin, .buy, .amount,
                               .destination, .arrives, .when, .until, .verb]
         return order.firstIndex(of: which) ?? order.count
-    }
-
-    /// What Add kept, in Send and Swap: lines of the sentence, each a row
-    /// that opens it again and a mark that removes it (prd §1781: the
-    /// sentence's own lines took the tap and the long press before).
-    private var keptRowLines: [(id: UUID, words: String)] {
-        guard receipt == nil, stage == nil else { return [] }
-        switch verb {
-        case .send: return keptSends.map { ($0.id, Self.figure($0.amount, decimals: $0.token.decimals) + " " + $0.token.symbol) }
-        case .swap: return keptSwaps.map { ($0.id, Self.figure($0.amount, decimals: $0.sell.decimals) + " " + $0.sell.symbol) }
-        default: return []
-        }
     }
 
     /// Send can leave from your private balance, or your private account.
@@ -3460,71 +3458,203 @@ struct MoveSentence: View {
         }
     }
 
+    /// This verb's lines in order, the one being filled at its slot.
+    private var lineOrder: [SellLine] {
+        guard receipt == nil, stage == nil else { return [] }
+        switch verb {
+        case .swap: return sellOrder
+        case .send:
+            var lines = keptSends.map { SellLine.kept($0.id) }
+            lines.insert(.current, at: min(slot, lines.count))
+            return lines
+        default: return [.current]
+        }
+    }
+
+    /// **ADD ANOTHER ADDS ITS ROWS UNDER THE FIRST (prd §1797, the user of
+    /// the Add another canvas: "lets do D", "the AND needs to be pink").**
+    /// Each line of the transaction keeps its own rows: the first as it
+    /// was, each next one under a pink "And" with its ×. What every line
+    /// shares (the network, and a swap's To side) is filled in grey and
+    /// fixed on the lines after the first. The page scrolls.
     @ViewBuilder private var choiceRows: some View {
         let rows = choiceRowList
-        let kept = keptRowLines
-        if !rows.isEmpty || !kept.isEmpty {
+        let order = lineOrder
+        if !rows.isEmpty || order.count > 1 {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows) { r in
-                    Group {
-                        if r.opens == .amount {
-                            amountRow(r).id("moveAmountRow")
-                        } else {
-                            Button {
-                                guard let which = r.opens else { return }
-                                // Where it arrives is asked of a network it leaves from.
-                                tapBlank(which == .destination && !networkPicked ? .network : which)
-                            } label: {
-                                MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
-                            }
-                            .buttonStyle(RowPress())
-                            .accessibilityHint(Text("Changes it"))
-                        }
-                    }
-                    // Always under its row (user, 2026-11-13: "token menu opens
-                    // downward, but network one opens upward"): left to the
-                    // system, each row's menu went its own way.
-                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                        if let which = r.opens { menu(which) }
-                    }
-                    // A swap's two sides stand apart, and so does what is
-                    // asked of the whole swap (prd §1795, §1796).
-                    .padding(.top, verb == .swap && (r.opens == .destination || r.opens == .amount) ? DS.Space.s2 : 0)
-                }
-                ForEach(kept, id: \.id) { line in
-                    HStack(spacing: 0) {
-                        Button { edit(line.id) } label: {
-                            MoveChoiceRowLabel(name: String(localized: "Added"), value: line.words)
-                        }
-                        .buttonStyle(RowPress())
-                        .accessibilityHint(Text("Edits this line"))
-                        Button { remove(line.id) } label: {
-                            Image(systemName: "xmark")
-                                .dsGlyph(.caption, weight: .semibold)
-                                .foregroundStyle(DS.textSecondary)
-                                .frame(width: 44, height: 44)
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel(Text("Remove"))
+                ForEach(Array(order.enumerated()), id: \.element) { n, line in
+                    if n > 0 { andHead(line) }
+                    switch line {
+                    case .current: currentBlock(rows, follows: n > 0)
+                    case .kept(let id): keptBlock(id, follows: n > 0)
                     }
                 }
-                // **ADD IS A ROW (prd §1781, amending §1755's card):** the
-                // foot holds the way back and the act; keeping this line and
-                // starting the next is a row among the others, there once
-                // the line can be kept and not before.
-                // Not where Add would refuse (prd §83): an order, a tag paid
-                // from elsewhere and a swap to another network go alone.
+                // **ADD IS A ROW (prd §1781):** there once the line can be
+                // kept and not before, and not where Add would refuse (§83):
+                // an order, a tag paid from elsewhere and a swap to another
+                // network go alone.
                 if verb == .send || verb == .swap, !nothingToMove, pendingItem != nil,
                    !limiting, !tagConverts, !tagCrosses, crossTo == nil {
                     Button { add() } label: {
-                        ledgerRow(LedgerRow(id: "add", name: String(localized: "Add another"), ink: DS.textPrimary), chevron: "plus")
-                            .frame(minHeight: 44)
+                        HStack(spacing: DS.Space.s2) {
+                            Text("Add another").dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: DS.Space.s2)
+                            Image(systemName: "plus").dsGlyph(.caption, weight: .semibold)
+                                .foregroundStyle(DS.textPrimary)
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: MoveChoiceRowLabel.height)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
             }
         }
+    }
+
+    /// "To", on a line of its own between a swap's two sides (prd §1797).
+    private var toHead: some View {
+        Text("To")
+            .dsText(.heading17)
+            .foregroundStyle(DS.textPrimary)
+            .frame(minHeight: 30, alignment: .bottomLeading)
+            .padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The pink "And" that heads every line after the first, with its ×.
+    private func andHead(_ line: SellLine) -> some View {
+        HStack(alignment: .center, spacing: 0) {
+            Text("And")
+                .dsText(.heading24)
+                .foregroundStyle(DS.pickInk)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: DS.Space.s2)
+            Button {
+                switch line {
+                case .kept(let id): remove(id)
+                case .current: dropCurrentLine()
+                }
+            } label: {
+                Image(systemName: "xmark").dsGlyph(.caption, weight: .semibold)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: 44, height: 44, alignment: .trailing)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text("Remove"))
+        }
+        .frame(minHeight: 48)
+        .padding(.top, DS.Space.s4)
+        .id(line == .current ? "moveCurrentLine" : "moveKeptLine")
+    }
+
+    /// A row that states what the lines share and cannot change here:
+    /// grey, with no menu chevron.
+    private func fixedRow(_ name: String, _ value: String, _ mark: MoveRowMark?) -> some View {
+        MoveChoiceRowLabel(name: name, value: value, ink: DS.textSecondary, chevron: false, mark: mark)
+    }
+
+    /// The line being filled, as its rows. After another line (`follows`)
+    /// the network, a swap's To side and Send's From are the first line's.
+    @ViewBuilder private func currentBlock(_ rows: [LedgerRow], follows: Bool) -> some View {
+        ForEach(rows) { r in
+            if verb == .swap, r.opens == .destination { toHead }
+            if follows, r.opens == .from {
+                EmptyView()
+            } else if follows, r.opens == .network || r.opens == .destination || (r.opens == .buy && verb == .swap) {
+                fixedRow(r.name, r.value, r.mark)
+            } else {
+                Group {
+                    if r.opens == .amount {
+                        amountRow(r).id("moveAmountRow")
+                    } else {
+                        Button {
+                            guard let which = r.opens else { return }
+                            // Where it arrives is asked of a network it leaves from.
+                            tapBlank(which == .destination && !networkPicked ? .network : which)
+                        } label: {
+                            MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
+                        }
+                        .buttonStyle(RowPress())
+                        .accessibilityHint(Text("Changes it"))
+                    }
+                }
+                // Always under its row (user, 2026-11-13: "token menu opens
+                // downward, but network one opens upward").
+                .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    if let which = r.opens { menu(which) }
+                }
+                // What is asked of the whole swap stands apart (prd §1795).
+                .padding(.top, verb == .swap && r.opens == .amount ? DS.Space.s1 : 0)
+            }
+        }
+    }
+
+    /// A line Add kept, as its rows. A tap on its token or its amount makes
+    /// it the line being filled, where it stands, and opens that row's menu.
+    @ViewBuilder private func keptBlock(_ id: UUID, follows: Bool) -> some View {
+        if let s = keptSwaps.first(where: { $0.id == id }) {
+            let arrives = s.to ?? s.network
+            keptRow(String(localized: "Network"), s.network.name, Self.networkMark(s.network).map { MoveRowMark(network: $0) },
+                    fixed: follows) { tapBlank(.network) }
+            keptRow(String(localized: "Token"), s.sell.symbol, MoveRowMark(token: s.sell.symbol), fixed: false) { reopen(id, .with) }
+            toHead
+            keptRow(String(localized: "Network"), arrives.name, Self.networkMark(arrives).map { MoveRowMark(network: $0) },
+                    fixed: follows) { tapBlank(.destination) }
+            keptRow(String(localized: "Token"), s.buy.symbol, MoveRowMark(token: s.buy.symbol), fixed: follows) { tapBlank(.buy) }
+            keptRow(String(localized: "Amount"), Self.figure(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol, nil,
+                    fixed: false) { reopen(id, .amount) }
+                .padding(.top, DS.Space.s1)
+        } else if let p = keptSends.first(where: { $0.id == id }) {
+            keptRow(String(localized: "To"), p.toName ?? AddressTail.short(p.to), nil, fixed: false) { reopen(id, .to) }
+            keptRow(String(localized: "Network"), p.network.name, Self.networkMark(p.network).map { MoveRowMark(network: $0) },
+                    fixed: follows) { tapBlank(.network) }
+            keptRow(String(localized: "Token"), p.token.symbol, MoveRowMark(token: p.token.symbol), fixed: false) { reopen(id, .with) }
+            keptRow(String(localized: "Amount"), Self.figure(p.amount, decimals: p.token.decimals) + " " + p.token.symbol, nil,
+                    fixed: false) { reopen(id, .amount) }
+        }
+    }
+
+    @ViewBuilder private func keptRow(_ name: String, _ value: String, _ mark: MoveRowMark?, fixed: Bool,
+                                      act: @escaping () -> Void) -> some View {
+        if fixed {
+            fixedRow(name, value, mark)
+        } else {
+            Button(action: act) { MoveChoiceRowLabel(name: name, value: value, mark: mark) }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Changes it"))
+        }
+    }
+
+    /// A kept line becomes the line being filled, then its row's menu opens.
+    private func reopen(_ id: UUID, _ which: Blank) {
+        edit(id, focusing: false)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            tapBlank(which)
+        }
+    }
+
+    /// The × on the line being filled: it is emptied, and the line before
+    /// it is the one being filled again. Add another, undone.
+    private func dropCurrentLine() {
+        let kept: [UUID] = verb == .swap ? keptSwaps.map(\.id) : keptSends.map(\.id)
+        let at = min(slot, kept.count)
+        withAnimation(DS.Motion.standard) {
+            amount = ""
+            quote = nil
+            with = nil
+            open = nil
+            if verb == .send {
+                to = ""
+                resolved = nil
+            }
+        }
+        focus = nil
+        DSHaptic.selection()
+        if let before = at > 0 ? kept[at - 1] : kept.first { edit(before, focusing: false) }
     }
 
     /// **AMOUNT'S LIST (prd §1781).** The sums its row opens: dollars in
@@ -3999,7 +4129,7 @@ struct MoveSentence: View {
         var rows: [LedgerRow] = []
         // When is a choice, so it is a row among the choices (prd §1793).
         if verb == .swap, !limiting, let back = quotePrint {
-            rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back))
+            rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back, valueInk: DS.textPrimary))
         }
         if verb == .send {
             if let words = requestPrint { rows.append(LedgerRow(id: "request", name: words)) }
@@ -4171,12 +4301,15 @@ struct MoveSentence: View {
                 ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
                 Text(verbatim: r.value)
                     .dsText(r.strong ? .heading17 : .body17)
-                    .foregroundStyle(r.valueInk ?? r.ink ?? DS.textPrimary)
+                    // **FACTS ARE QUIETER THAN CHOICES (prd §1797).** A
+                    // line under the rows is grey, name and figure; what
+                    // comes back is the one figure in white.
+                    .foregroundStyle(r.valueInk ?? r.ink ?? (r.strong ? DS.textPrimary : DS.textSecondary))
                     .monospacedDigit()
                     .lineLimit(1)
             }
         }
-        .frame(minHeight: 30)
+        .frame(minHeight: 28)
         .contentShape(Rectangle())
     }
 
@@ -4658,7 +4791,7 @@ struct MoveSentence: View {
                 // amount; the dollars trail, as every Wallet row's do.
                 listRow(h.token.symbol,
                         sub: "\(row.net.name) · \(Op.spoken(left(h), decimals: h.token.decimals))",
-                        trailing: worth, mark: h.token.symbol, on: row.net) {
+                        trailing: worth, mark: h.token.symbol) {
                     pick {
                         if !networkPicked || row.net != network { switchNetwork(row.net) }
                         // Spend's amount is the card's value in dollars, whatever pays.
@@ -4758,7 +4891,7 @@ struct MoveSentence: View {
             // The network picked to arrive on leads (prd §1600).
             // The network decides the token (prd §1794): with a To network
             // picked, only what can arrive there is listed.
-            for n in destinationPicked ? [buyHome] : [buyHome] + destinations.filter({ $0 != buyHome }) {
+            for n in [buyHome] {
                 let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
                 var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: Tokens.offeredUnasked)
                 if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
@@ -6242,30 +6375,18 @@ struct MoveSentence: View {
         }
         spendZkMoney([item])
         DSHaptic.tap()
-        // The next sentence keeps what it is for or who it is to, and the
-        // network; it moves to the next token with something left.
+        // **NOTHING IS PICKED FOR THE NEXT LINE (prd §1797, user: "oh my god
+        // look what happened when i clicked add another").** It keeps what
+        // every line shares (the network, a swap's To side) and starts
+        // with no token, no amount and nobody to send to.
         amount = ""
         quote = nil
-        // The next line takes a token with something left that this swap
-        // has not sold, or this person has not been sent (§1442h).
-        let goingTo = resolved?.address
-        if let next = held.first(where: { h in
-            h.id != with?.id && left(h) != "0" && h.token != buy?.token && !items.contains { item in
-                switch item {
-                case .swap(let s): s.sell == h.token
-                case .send(let p): p.token == h.token && goingTo.map { WalletWatch.sameAddress($0, p.to) } == true
-                }
-            }
-        }) {
-            with = next
-            if next.price == nil { inDollars = false }
+        with = nil
+        if verb == .send {
+            to = ""
+            resolved = nil
         }
-        // The new line is a new row (a send regroups it), so the field it
-        // focuses exists only after this pass: raise the keys on the next.
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(120))
-            focus = .amount
-        }
+        focus = nil
     }
 
     /// Two swaps of one token for one token as one: the amounts summed,
