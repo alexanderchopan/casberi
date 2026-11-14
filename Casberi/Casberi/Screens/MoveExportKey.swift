@@ -181,7 +181,7 @@ struct MoveExportKey: View {
         Text("Aztec").dsText(.subhead12).foregroundStyle(DS.textSecondary)
         ZStack {
             Text(verbatim: keys.text)
-                .font(.system(.footnote, design: .monospaced).weight(.medium))
+                .dsText(.mono12)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .blur(radius: revealed ? 0 : 12)
@@ -227,7 +227,7 @@ struct MoveExportKey: View {
                         .background(Color.white, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
                 } else {
                     Text(verbatim: key.grouped)
-                        .font(.system(.title3, design: .monospaced).weight(.medium))
+                        .dsText(.mono17)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

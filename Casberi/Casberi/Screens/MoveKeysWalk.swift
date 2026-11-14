@@ -262,7 +262,7 @@ struct MoveKeysWalk: View {
             .frame(width: DS.Mark.tile, height: DS.Mark.tile)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: name).dsText(.heading20).foregroundStyle(DS.headInk)
+                Text(verbatim: name).dsText(.heading24).foregroundStyle(DS.headInk)
                 Text(verbatim: words).dsText(.subhead12).foregroundStyle(ink).lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)

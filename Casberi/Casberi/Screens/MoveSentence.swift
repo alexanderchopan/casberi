@@ -2600,11 +2600,11 @@ struct MoveSentence: View {
     /// A choice is the Wallet's own row (prd §1731, retiring §1681's
     /// heading24): the name at `body17` over its line at `subhead12`, the
     /// figure at `price17`, so a token reads here as it does in Holdings.
-    static let choiceRung: DSTextStyle = .body17
+    static let choiceRung: DSTextStyle = .heading17
     /// A choice's mark: the Wallet's list size (prd §1681, was 44).
     static let listMark: CGFloat = DS.Face.list
     /// A choice's row, at least: the word and its line with air (prd §1681).
-    static let listRowHeight: CGFloat = 52
+    static let listRowHeight: CGFloat = 48
     /// The space between a phrase's words, as a share of the size: Figtree's
     /// own space advance (measured 0.231em, Figtree Bold).
     static let wordSpace: CGFloat = 0.231
@@ -3453,7 +3453,7 @@ struct MoveSentence: View {
         }
     }
 
-    static let menuWidth: CGFloat = 320
+    static let menuWidth: CGFloat = 280
     static let menuRoom: CGFloat = 300
 
     /// **ROWS CHANGE IT, THE SENTENCE SAYS IT (prd §1781, completing §1779;
@@ -3782,7 +3782,7 @@ struct MoveSentence: View {
                 }
                 // Always under its row (user, 2026-11-13: "token menu opens
                 // downward, but network one opens upward").
-                .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                .popover(isPresented: menuShown(r.opens), attachmentAnchor: .point(UnitPoint(x: 0.82, y: 1)), arrowEdge: .top) {
                     if let which = r.opens { menu(which) }
                 }
                 // What is asked of the whole swap stands apart (prd §1795).
@@ -4940,7 +4940,7 @@ struct MoveSentence: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: title).dsText(rung)
-                        .foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.5)
                     if let sub {
                         Text(verbatim: sub).dsText(.subhead12)
@@ -4951,9 +4951,11 @@ struct MoveSentence: View {
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
                     // One line, always: a long name shrinks instead.
-                    Text(verbatim: trailing).dsText(.price17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                    Text(verbatim: trailing).dsText(.price17).foregroundStyle(DS.textSecondary).monospacedDigit()
                         .lineLimit(1).fixedSize()
                 }
+                // The pick is marked, not inked (prd §1804).
+                if picked { MoveMenuCheck() }
             }
             .frame(minHeight: Self.listRowHeight)
             .contentShape(Rectangle())
@@ -6221,9 +6223,11 @@ struct MoveSentence: View {
                         withAnimation(DS.Motion.standard) { receipt = nil; orderShown = nil }
                         DSHaptic.selection()
                     } label: {
-                        Text("Done").dsText(.heading34).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .trailing)
+                        // The finished move ends on the pick's card, checked
+                        // (prd §1804), where its act was.
+                        Self.actCard(String(localized: "Done"), on: true, done: true)
                     }
-                    .buttonStyle(RowPress())
+                    .buttonStyle(PressSpring())
                 }
             } else {
             // Add, then the verb (§1442d): the order you use them in, and the
@@ -6388,9 +6392,15 @@ struct MoveSentence: View {
     /// when it cannot act, amber or red when a warning stands. The one plate
     /// in Move, and it is the control (§759's exception).
     static func actCard(_ word: String, on: Bool, fill: Color = DS.pickInk, ink: Color = .white, faceID: Bool = false,
-                        figure: String? = nil) -> some View {
+                        figure: String? = nil, done: Bool = false) -> some View {
         HStack(spacing: DS.Space.s2) {
-            if faceID {
+            if done {
+                // **IT LANDED (prd §1804):** the glyph is a check, drawn in.
+                Image(systemName: "checkmark").dsGlyph(.title, weight: .bold)
+                    .symbolEffect(.bounce, options: .nonRepeating)
+                    .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                    .accessibilityHidden(true)
+            } else if faceID {
                 Image(systemName: "faceid").dsGlyph(.title, weight: .semibold)
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                     .accessibilityHidden(true)

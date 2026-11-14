@@ -190,6 +190,9 @@ struct MoveChoiceRows<Menu: View>: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
+                    // The row whose menu is up stays lit (prd §1804).
+                    .opacity(open.wrappedValue == nil || open.wrappedValue == r.id ? 1 : 0.5)
+                    .animation(DS.Motion.standard, value: open.wrappedValue)
                     .overlay(alignment: .trailing) {
                         if let field = r.field {
                             field
@@ -200,7 +203,7 @@ struct MoveChoiceRows<Menu: View>: View {
                     }
                     .popover(isPresented: Binding(get: { open.wrappedValue == r.id },
                                                   set: { if !$0, open.wrappedValue == r.id { open.wrappedValue = nil } }),
-                             attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                             attachmentAnchor: .point(UnitPoint(x: 0.82, y: 1)), arrowEdge: .top) {
                         MoveMenuBox { menu(r.id) }
                             .environment(chrome)
                     }
@@ -233,26 +236,30 @@ struct MoveAmountMenu: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let have {
-                Text(verbatim: have).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                    .frame(minHeight: 36, alignment: .leading)
+                // The scope, as a caption (prd §1804).
+                Text(verbatim: have).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .frame(minHeight: 28, alignment: .leading)
             }
-            ForEach(picks) { p in row(p.title, trailing: p.trailing, ink: p.picked ? ink : DS.textPrimary, act: p.act) }
-            row(String(localized: "Another amount"), trailing: nil, ink: DS.textPrimary, act: another)
+            ForEach(picks) { p in row(p.title, trailing: p.trailing, picked: p.picked, act: p.act) }
+            row(String(localized: "Another amount"), trailing: nil, picked: false, act: another)
         }
     }
 
-    private func row(_ title: String, trailing: String?, ink: Color, act: @escaping () -> Void) -> some View {
+    /// A menu's row is menu type (prd §1804): the name at `heading17`, its
+    /// figure grey beside it, and a mark on the pick.
+    private func row(_ title: String, trailing: String?, picked: Bool, act: @escaping () -> Void) -> some View {
         Button {
             act()
             DSHaptic.selection()
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Text(verbatim: title).dsText(.heading24).foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.6)
+                Text(verbatim: title).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
-                    Text(verbatim: trailing).dsText(.heading17).foregroundStyle(DS.textPrimary).monospacedDigit().lineLimit(1)
+                    Text(verbatim: trailing).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit().lineLimit(1)
                 }
+                if picked { MoveMenuCheck(ink: ink) }
             }
             .frame(minHeight: MoveSentence.listRowHeight)
             .contentShape(Rectangle())
@@ -275,7 +282,9 @@ struct MoveMenuBox<Content: View>: View {
         .frame(width: MoveSentence.menuWidth)
         .frame(maxHeight: MoveSentence.menuRoom)
         .presentationCompactAdaptation(.popover)
-        .presentationBackground(.ultraThickMaterial)
+        // **GLASS, NOT A SLAB (prd §1804):** the rows and the sentence
+        // show through it, blurred.
+        .presentationBackground(.ultraThinMaterial)
     }
 
     private var box: some View {
@@ -329,5 +338,18 @@ struct MoveVerbRowLabel: View {
         }
         .frame(minHeight: MoveChoiceRowLabel.height)
         .contentShape(Rectangle())
+    }
+}
+
+/// The mark on a menu's current pick (prd §1804): it draws itself in.
+struct MoveMenuCheck: View {
+    var ink: Color = DS.pickInk
+
+    var body: some View {
+        Image(systemName: "checkmark")
+            .dsGlyph(.caption, weight: .bold)
+            .foregroundStyle(ink)
+            .symbolEffect(.bounce, options: .nonRepeating)
+            .accessibilityLabel(Text("Picked"))
     }
 }

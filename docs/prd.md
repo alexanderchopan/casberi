@@ -72923,3 +72923,17 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo: `-movePreview keys -keysStep 0|4|5`, `-openRoom Wallet -openSection yourAccount` and its Nodes, Round-ups and Savings goal trays, Move › Receive and its three pages. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616, §1681) (user, 2026-11-14, of the boards on the Design canvas "Move, polished: the glass menus": "make the glass, delight, and font changes and then ship")
+
+1. **A row's menu is thin glass** (`.ultraThinMaterial`), a menu's width (280), hung from the row's value, not its middle.
+2. **Menu type, not headline type:** a menu's row is `heading17` at 48pt, its figure grey beside it; the scope ("You have $248.40") is a `subhead12` caption. The amount menu's rows were `heading24`.
+3. **The pick is marked, not inked:** a check in the pick's ink, which bounces once as it appears (`MoveMenuCheck`).
+4. **The row whose menu is up stays lit;** the other choice rows step back to half (`MoveChoiceRows`: Lend and the private sends).
+5. **A finished move ends on the pick's card, checked** ("Done"), where its act stood, in place of a grey word.
+6. **Type, levelled:** the walk's three places are `heading24`, the section rung Receive and Account use for the same names; the export page's key is on the ramp (`mono12`, `mono17`), not a system font.
+7. NOT BUILT from the boards: press and slide through a menu with the sentence following the finger; the card filling while a move is sent (no real progress to draw, §83); Move's own rows stepping back while a menu is up; the system popover's arrow stays.
+
+**Seen:** the simulator, demo, Send's Token menu. NOT SEEN: the check on a pick, the Done card. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
