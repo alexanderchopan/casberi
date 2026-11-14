@@ -1219,6 +1219,13 @@ final class ShellChrome {
         sourceRequest = CategoryFold.walletRoom
     }
 
+    /// One of the Wallet's pages, from Activity's rows (prd §1807).
+    func openWalletPage(_ section: WalletSection) {
+        walletScope = nil
+        walletSection = section
+        sourceRequest = CategoryFold.walletRoom
+    }
+
     /// The Wallet's Your account page (prd §1480 item 10, was Security's
     /// card under §1436): the recovery and Signer nudges land on its keys.
     /// The section's card reads `walletScrollRequest` as it appears.

@@ -79,8 +79,9 @@ enum HomeScope {
     /// **THE FIVE TABS SINCE prd §1327 item 6**: a swipe on a tab's own page
     /// walks the bar's order, Feed · Day · Wallet · Notes · Library.
     @MainActor static func phoneWalk(chips: [String]) -> [String] {
-        // Search is a tab with no place, so the swipe never lands on it.
-        PlaceTab.allCases.compactMap(\.source)
+        // Home and Activity, one swipe apart (prd §1807): Apps is a card on
+        // Home and no longer a page of the swipe; Move is no place.
+        PlaceTabBar.places.compactMap(\.source)
     }
 
     /// The categories the Feed stacks (prd §1208 item 2): every one with a

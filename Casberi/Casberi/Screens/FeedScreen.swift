@@ -1582,6 +1582,9 @@ struct FeedScreen: View {
         // The private account's page reads "Account · Private account" (prd §1786).
         if walletOnPrivateAccountPage { return WalletSection.yourAccount.label }
         if HomeScope.contains(source) { return youPlaceName }
+        // The Wallet's place is Home (prd §1807): the whole app is the
+        // wallet, so its own page takes the place's word.
+        if (hostRoom ?? source) == CategoryFold.walletRoom { return PlaceTab.wallet.label }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 

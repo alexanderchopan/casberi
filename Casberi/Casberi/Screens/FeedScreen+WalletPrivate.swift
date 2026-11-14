@@ -359,6 +359,56 @@ extension FeedScreen {
         chrome.moveTray = true
     }
 
+    /// The private dollars the balance counts: Privacy Pools' held rows, your
+    /// Aztec account's and Railgun's, as the Private section's head adds
+    /// them (prd §1700e, §1721).
+    var walletPrivateUSD: Double {
+        let store = PrivateMoneyStore.shared
+        let pools = store.rows.filter { $0.kind == .held }
+            .compactMap { PrivateMoney.rowUSD($0, prices: store.shownPrices) }.reduce(0, +)
+        let aztecStore = AztecAccountStore.shared
+        let aztec = aztecStore.isShown
+            ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0
+        let railgun = RailgunHoldings.shared
+        return pools + aztec + railgun.shown.compactMap { railgun.usd($0, units: $0.amount) }.reduce(0, +)
+    }
+
+    /// **PUBLIC AND PRIVATE, UNDER HOME'S BALANCE (prd §1807).** The balance
+    /// said as its two halves, each a figure; the line opens Holdings, where
+    /// both are listed. Yours and All only, as the Private section stands
+    /// (§1590), and nothing while there is no balance to split.
+    @ViewBuilder
+    var walletPublicPrivateLine: some View {
+        if selectedSeat == nil, !walletOnFollowing,
+           selectedWallet.map(YourAccountDemo.isYours) ?? true,
+           let total = portfolioShown?.totalUSD, total > 0 {
+            let hidden = min(total, walletPrivateUSD)
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            Button {
+                DSHaptic.selection()
+                chrome.walletSection = .holdings
+            } label: {
+                HStack(spacing: DS.Space.s4) {
+                    walletHalf(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
+                    walletHalf(String(localized: "Private"), mask ?? WalletValue.money(hidden))
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    /// One half of the balance: its word in the secondary ink, its figure.
+    private func walletHalf(_ word: String, _ figure: String) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Text(verbatim: figure).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .lineLimit(1)
+    }
+
     /// The section's total: the private dollars, as the box counts them; with
     /// none to count (test money, §949), one token's quantity, else nothing.
     private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double], plus aztec: Double = 0) -> String? {

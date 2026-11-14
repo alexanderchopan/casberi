@@ -96,6 +96,8 @@ WELL_ALLOWED = {
     "SafeAskSheet.swift": (1, "the pasted statement, an entry field (prd §913)"),
     "ThingContent.swift": (1, "a monospaced text block"),
     "NoteSheetViews.swift": (1, "a monospaced code block"),
+    "DSHomeCard.swift": (1, "Home's six cards, each one button: a control's face, ruled by the user (prd §1807: "
+                            "\"we do cards like buttons\"; the lifted ink card lost its bottom edge on the black page)"),
 }
 
 

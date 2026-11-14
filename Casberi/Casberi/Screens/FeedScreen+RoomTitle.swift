@@ -38,9 +38,9 @@ extension FeedScreen {
     /// never your name before it (Markets is the Wallet's tile, §1337).
     var youPlaceName: String {
         if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
-        // "Today" until prd §1203: beside "Wallet" it named a time where the
-        // other named a place, and said your money was not part of your day.
-        return String(localized: "Feed")
+        // Activity since prd §1807 ("Feed" from §1203, "Today" before it):
+        // what happened, beside Home, what you have.
+        return PlaceTab.feed.label
     }
 
     /// The room's title row: the room's name, and its pick after a dot
@@ -58,37 +58,11 @@ extension FeedScreen {
             DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick,
                            onSettings: appSettings)
                 .demoTagOnTitle()
-            appsDoor
             // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
             // §1405): the strip that floated over the rows in the band is
             // gone, and the Mac has no tray to pick from (§1402).
             accountTitleMenu
             peopleTitleMenu
-        }
-    }
-
-    /// **APPS ENDS THE TITLE ROW (prd §1783, user: "it has to be top right
-    /// because in rooms we have the settings switches by the room names").**
-    /// Apps left the phone's bar, so the Feed and the Wallet carry its door
-    /// at the trailing end of their title row, where it scrolls away with
-    /// the title: §752's one exception. It takes the door the tab took
-    /// (`PlaceTab.open`). Where the rail stands, Apps is on the rail.
-    @ViewBuilder
-    var appsDoor: some View {
-        if roomSizeClass == .compact, !inPresentedSheet, route.path.isEmpty,
-           let tab = PlaceTab.current(source), tab == .feed || tab == .wallet {
-            Button {
-                DSHaptic.selection()
-                PlaceTab.open(.library, chrome: chrome, route: route)
-            } label: {
-                Image(systemName: PlaceTab.library.glyph)
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(DS.brandInk)
-                    .frame(width: 44, height: DSRoomTitleRow.height)
-                    .dsTapTarget(Circle())
-            }
-            .buttonStyle(PressSpring())
-            .accessibilityLabel(Text(verbatim: PlaceTab.library.label))
         }
     }
 

@@ -287,7 +287,10 @@ extension FeedScreen {
         // with nothing in it yet — the newest thing kept, so the box is never
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
-        homeLead(homeCover, heroShown: heroShown)
+        // ACTIVITY DRAWS NO BOX (prd §1807): its sections are the page. The
+        // first run keeps its start box, and a pane or a room keeps its lead.
+        let drawsLead = !(scroll && source == "All") || feedStarts
+        if drawsLead { homeLead(homeCover, heroShown: heroShown) }
         // THE PANE'S FEED BOX CARRIES THE DAY (prd §1403): under today's
         // cover, the week, the next thing, Needs you and the days ahead —
         // the phone's Day section — in the pane's instance only. The list
@@ -303,7 +306,9 @@ extension FeedScreen {
         // Not on a first run (prd §1741, user: "they only show depending on
         // what a person picks"): with nothing added there is no section to
         // land on, and the box's six apps are the whole screen.
-        if source == "All", !feedStarts { feedCategoryRow }
+        // No tiles on Activity (prd §1807): the sections' names are the
+        // page's structure, and nothing is left to jump over.
+        if source == "All", !feedStarts, !scroll { feedCategoryRow }
         // What stopped working, named, before anything that arrived (prd §1162).
         if source == "All" { reconnectSection }
         // **NO SECOND NEWEST (prd §1734, retiring §1256's card and the
@@ -406,7 +411,13 @@ extension FeedScreen {
         // THE FEED IS ONE SCROLL ON THE PHONE (prd §1208): every category
         // in its own frame, stacked, in place of today's category runs.
         if scroll {
-            feedScrollSections(visible, hiding: Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []),
+            // Needs you, then Money, then each category (prd §1807).
+            if source == "All", !feedStarts {
+                activityNeedsSection(visible)
+                activityMoneySection(visible, nextEventID: nextEventID)
+            }
+            feedScrollSections(visible,
+                               hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
                                nextEventID: nextEventID)
             jumpRoom
         }

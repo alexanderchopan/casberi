@@ -79,6 +79,18 @@ extension FeedScreen {
                 if walletHasPrivatePlaces {
                     walletCard(String(localized: "Private"), glyph: "eye.slash") { walletPrivatePlaces() }
                 }
+                // FOLLOWING STANDS UNDER THE PRIVATE PLACES (prd §1807, user:
+                // "following becomes a row under private account"): the
+                // wallets you follow, or the verb with none yet.
+                walletDoorsSection {
+                    let followed = walletFollowingSlots
+                    if followed.isEmpty {
+                        walletDoor(.following, name: String(localized: "Follow an account"),
+                                   act: { feedSheet = .walletFollow })
+                    } else {
+                        walletDoor(.following, figure: "\(followed.count)")
+                    }
+                }
                 // Keys, Connection and Spending name themselves (prd §1786):
                 // no "Your account" over them, the page already says Account.
                 Section {
@@ -100,6 +112,26 @@ extension FeedScreen {
             if !walletOnPrivateAccount {
             WalletUnsignedSection(part: .safes, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
             // Nodes is a row under Connection now, with its tray (prd §1803).
+            }
+            // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807, user: "account
+            // and settings together … as one"): Casberi's own settings close
+            // the page, the rows Apps' folder drew.
+            if !walletOnPrivateAccount {
+                walletCard(String(localized: "Settings"), glyph: "gearshape") {
+                    // ACTIVITY'S ORDER IS A SETTING AGAIN (prd §1807, amending
+                    // §1345): the Reorder tile left with Activity's tile row,
+                    // so the same sheet opens from here.
+                    DSPushRow(title: Text("Activity order"), action: { feedSheet = .feedOrder }) {
+                        Image(systemName: ScopeTileGlyph.reorder)
+                            .dsGlyph(.body)
+                            .foregroundStyle(DS.brandInk)
+                            .frame(width: DS.Mark.row)
+                            .accessibilityHidden(true)
+                    }
+                    .walletListRow()
+                    SettingsRows(style: .rows)
+                        .walletStackRow()
+                }
             }
         }
     }

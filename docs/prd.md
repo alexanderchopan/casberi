@@ -72965,3 +72965,23 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402):** the same capsule and toast, both drawn by the shell.
 
 **Checks:** `aztec-connect-selftest.sh` (the slot, each engine's words, one at a time, the toast after the capsule, Railgun's wiring; four new mutations), `railgun-selftest.sh`. **Hooks:** `-privateStepsPreview away|awayfail|awayrailgun`; in the demo `-moveRailgun send -railgunStepsPreview send|fail`.
+
+## §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one row per app, and Account holds Following and Settings (amends §1783, §1741, §1480, §1489, §1734, §1328, §1208, §1536, §752, §1345) (user, 2026-11-14, of a tester's note that "there is a lot going on … it can be a little hard to know what's happening in the app or the exact benefit": "having feed and wallet two separate things is part of where the failure is", "it all becomes the wallet", "one is home one is activity", "i say build and ship")
+
+**Why.** The app was split by subject, life and money, so each half grew its own stream, its own Needs you, its own Following and its own tiles, and a newcomer met every shape twice. The audience is wallet people. One wallet answers three questions in three places: what do I have (Home), what happened (Activity), what do I want to do (Move).
+
+1. **The bar is Home · Activity, and Move beside it** (amends §1783). `PlaceTab.wallet` draws "Home" and leads; `PlaceTab.feed` draws "Activity". The swipe walks the two (`HomeScope.phoneWalk`). The app opens on Home unless Settings says Activity (`OpenOn`).
+2. **Nothing stands at the top** (amends §752's one exception, §1783's Apps control): Apps is a card on Home, and the title row is the title alone.
+3. **Home is the map and six cards** (amends §1480 item 1, §1480 item 2). The box leads with the balance and the holdings map (`holdingsBlockSection`, "Other" for what is too small to tap), then Public and Private as two figures (`walletPublicPrivateLine`), then Yours · Following · All. Home's box is 64pt taller than a page's, because no tiles stand under it. Under it, A–Z, six cards on the flat well (`DSHomeCard`): Account, Apps, Holdings, Permissions, Risks, Watchlist. Holdings wears its week as a line; the others trail a count or a state word in its ink. The Wallet's four tiles are deleted: `WalletSection.order` is Home alone, and Holdings, Activity and Spending are pages with Home behind their title.
+4. **Holdings' box is the balance and its line** (7d · 30d · Followed), the figure Home gave up for the map. One line, not a second for private money: only public wallets have a recorded history.
+5. **Activity is sections** (amends §1734, §1328, §1208, §1489). No box and no tile row. Needs you leads when anything waits: what your account still wants, and the Wallet's asks as one row with their count. Money is the latest three moves, never one that waits on you (`WalletNeedsYou.waiting` decides both), then "All money", which opens the Wallet's Activity page where Spending's doors stand. Then each category with one row per app, its newest thing, the newest app first (`FeedScreen.newestPerApp`); Day and Notes keep their own rows. The first run keeps its start box.
+6. **Account and Settings are one page** (amends §1536 for this page). Under the private places, Following is a row with its count; Casberi's settings close the page (`SettingsRows`). Home still has no Following door beside the switch.
+7. **An app or Following picked** keeps the doors it had on Home; the cards are the whole Wallet's.
+
+**Activity's order is a setting again** (amends §1345 on the phone): the Reorder tile left with the tile row, so "Activity order" opens the same sheet from Account's Settings.
+
+**Not built, said plainly.** The Aztec directory stays inside Apps. Needs you on Activity is one summary row, not each ask. The website's docs still describe Feed and Wallet.
+
+**Mac half (§1402).** The rail's order is Home · Activity · Apps, then Move; ⌘1 and ⌘2 follow it. Apps keeps its rail tile. Home's cards and Activity's sections are the same views; not yet run on the Mac.
+
+**Checks.** `wallet-section-selftest.sh` (one place, three pages behind it, Following on Account and never on Home; two new mutations, one retired with its reason), `needs-you-selftest.sh` (the Feed reads the Wallet's moves once, for three), `your-account-selftest.sh`, `wallet-row-audit.py`. **Seen** on the simulator with the demo: Home, Activity, Account. Shipped ahead of the full verify at the user's word.

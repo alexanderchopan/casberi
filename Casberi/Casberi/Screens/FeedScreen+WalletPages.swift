@@ -257,6 +257,13 @@ extension FeedScreen {
         // The walk's close re-reads the pending mark below (prd §1741b).
         let walkClosed = chrome.walkClosed
         walletDoorsSection {
+          // HOME IS SIX CARDS (prd §1807) on the whole Wallet; an app or
+          // Following picked keeps its doors, which are that pick's own.
+          if selectedSeat == nil, !walletOnFollowing {
+            walletHomeCards(yours: yours, walkClosed: walkClosed, onAll: onAll,
+                            yoursPicked: yoursPicked, permissions: permissions,
+                            flagged: counts.flagged)
+          } else {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
             if let yours, walkClosed >= 0, YourAccountFirstOpen.setupPending(yours), onAll || yoursPicked {
@@ -342,6 +349,7 @@ extension FeedScreen {
             // §1492's quiet state ("Nothing needs you on Railgun") is deleted
             // (prd §1729): the doors standing at 0 and None say it, and an app
             // picked draws its account and Needs you instead (§1618).
+          }
         }
         // **AN APP PICKED WITH NOTHING ON HOME OPENS ON ITS ACTIVITY (prd
         // §1615 item 6, user: "yes", reversing §1492's "never jumps").** Ten Wallet
@@ -387,6 +395,90 @@ extension FeedScreen {
             // A move sent and not yet seen is asked about here too (finding 2).
             if !PrivatePending.shared.ops.isEmpty { await PrivateWatch.findNotes(context: modelContext) }
         }
+    }
+
+    // MARK: - Home's cards
+
+    /// **HOME'S SIX CARDS, A–Z (prd §1807).** Account, Apps, Holdings,
+    /// Permissions, Risks, Watchlist: each a button onto its page, its state
+    /// on its top edge. Needs you left Home for Activity, where it leads.
+    @ViewBuilder
+    func walletHomeCards(yours: String?, walkClosed: Int, onAll: Bool, yoursPicked: Bool,
+                         permissions: Int, flagged: Int) -> some View {
+        let pending = yours.map { walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
+        let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
+        let riskWord: String? = flagged > 0
+            ? (unseen > 0 ? "\(unseen)" : String(localized: "All seen"))
+            : (walletPrivacySlots.contains { NymisScans.shared.reading($0.id) == nil }
+               ? String(localized: "Unscanned") : String(localized: "None"))
+        let tokens = Watchlist.shared.tokens
+        let mover = WatchlistRules.biggestMover(tokens, quotes: WatchlistPrices.shared.quotes)
+        let apps = bridges.bridges.count
+        let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
+        let week = (selectedWallet.map { wallet.valueSamples(forAddress: $0) }
+            ?? wallet.combinedValueSamples(only: walletFollowingOnly))
+            .filter { $0.at >= weekAgo }.map(\.usd)
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: DSHomeCardMetrics.gap), GridItem(.flexible())],
+                  spacing: DSHomeCardMetrics.gap) {
+            DSHomeCard(glyph: WalletSection.yourAccount.glyph,
+                       name: WalletSection.yourAccount.label,
+                       figure: yours == nil ? String(localized: "Create")
+                           : pending ? String(localized: "Finish setup") : yourAccountWants,
+                       figureTone: yours == nil ? DS.pickInk : DS.attentionInk) {
+                if yours == nil {
+                    chrome.moveTray = true
+                } else if pending {
+                    chrome.moveWalk = true
+                    chrome.moveTray = true
+                } else {
+                    chrome.yourAccountShowsAztec = false
+                    chrome.walletSection = .yourAccount
+                }
+            }
+            DSHomeCard(glyph: PlaceTab.library.glyph, name: PlaceTab.library.label,
+                       figure: apps > 0 ? "\(apps)" : nil) {
+                PlaceTab.open(.library, chrome: chrome, route: route)
+            }
+            // Holdings wears its week as a line (user: "honestly holdings
+            // tile could even have a sparkline"): the page behind it leads
+            // with the same line at full size. Two samples or none.
+            DSHomeCard(glyph: WalletSection.holdings.glyph, name: WalletSection.holdings.label,
+                       trailing: week.count >= 2
+                           ? AnyView(Sparkline(closes: week, up: (week.last ?? 0) >= (week.first ?? 0))
+                               .frame(width: 56, height: 22))
+                           : nil) {
+                chrome.walletSection = .holdings
+            }
+            DSHomeCard(glyph: WalletSection.permissions.glyph, name: WalletSection.permissions.label,
+                       figure: permissions > 0 ? "\(permissions)" : String(localized: "None")) {
+                chrome.walletSection = .permissions
+            }
+            DSHomeCard(glyph: WalletSection.threats.glyph, name: WalletSection.threats.label,
+                       figure: riskWord,
+                       figureTone: unseen > 0 ? DS.attentionInk : DS.textSecondary) {
+                chrome.walletSection = .threats
+            }
+            DSHomeCard(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,
+                       figure: tokens.isEmpty ? nil
+                           : mover.map { "\($0.symbol) \($0.change.words)" } ?? "\(tokens.count)",
+                       figureTone: mover.map { $0.change.tone == .up ? DS.confirmInk : DS.destructiveInk }
+                           ?? DS.textSecondary) {
+                if tokens.isEmpty { feedSheet = .watchToken } else { chrome.walletSection = .watchlist }
+            }
+        }
+        // HOME FITS ONE SCREEN (user, 2026-11-14: "i wish the home tiles
+        // didn't scroll!"): no air above the cards beyond the box's own, so
+        // the third row clears the bar.
+        .padding(.bottom, DS.Space.s2)
+        // The Wallet's one row insets (prd §1482): the cards stand in the
+        // rows' column.
+        .walletStackRow()
+        // Read when Home stands, never in a body (prd §1515, §628).
+        .task {
+            if yours == nil, onAll { YourAccountFirstOpen.makeIfFresh() }
+            RecoveryCheckState.shared.refresh()
+        }
+        .task(id: tokens.map(\.id)) { await WatchlistPrices.shared.refreshIfStale(tokens) }
     }
 
     // MARK: - Holdings' doors

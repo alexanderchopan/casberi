@@ -487,6 +487,9 @@ struct DSRoomSlot<Figure: View>: View {
     /// `DSRoomChassis.visualSlot` directly rather than from what it is
     /// offered.
     var reservesHeadline: Bool = true
+    /// Extra height over the fixed box, for the one lead the chrome lets
+    /// stand taller (`DSRoomScopeChrome.homeExtra`, prd §1807).
+    var extra: CGFloat = 0
     @ViewBuilder let figure: () -> Figure
 
     var body: some View {
@@ -502,8 +505,8 @@ struct DSRoomSlot<Figure: View>: View {
         // let the Home crowns drop the floor; §760 gives it back, because every
         // other room's lead is now held to this height and Home is the room the
         // height was taken from.
-        .frame(minHeight: DSRoomChassis.visualSlot,
-               maxHeight: DSRoomChassis.visualSlot,
+        .frame(minHeight: DSRoomChassis.visualSlot + extra,
+               maxHeight: DSRoomChassis.visualSlot + extra,
                alignment: .top)
         .clipped()
     }

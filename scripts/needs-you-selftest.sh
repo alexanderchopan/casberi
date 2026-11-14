@@ -118,7 +118,9 @@ grep -q 'let window = dayFeedWindow(visible)' "$INFEED" \
 # It repeated the top of the Wallet tab's Home: Needs you, then the moves. The
 # Feed's categories leave the Wallet out, the file that drew its Needs you is
 # gone, and nothing in the Feed's scroll names its reads again.
-FEED_WALLET_GONE='walletNeeds|walletNeedsRows|loadWalletNeeds|walletNeedsFirstRows|walletMoves'
+# Activity's Money (prd §1807) reads the Wallet's moves ONCE, for its latest
+# three; a second read is the deleted section's list coming back.
+FEED_WALLET_GONE='walletNeeds|walletNeedsRows|loadWalletNeeds|walletNeedsFirstRows'
 feed_wallet_gone() { # $1 a root holding the files below; prints the breach and fails
   local root="$1"
   [[ -e "$root/Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift" ]] \
@@ -132,6 +134,14 @@ feed_wallet_gone() { # $1 a root holding the files below; prints the breach and 
       return 1
     fi
   done
+  local moves
+  moves=$(grep -v '^[[:space:]]*//' "$root/$SCROLL" | grep -Ewc 'walletMoves' || true)
+  [[ "$moves" -le 1 ]] \
+    || { echo "✗ $SCROLL reads the Wallet's moves $moves times — Money's latest three is the one read (prd §1807, §1489)"; return 1; }
+  grep -v '^[[:space:]]*//' "$root/$FEED" | grep -Ewq 'walletMoves' \
+    && { echo "✗ $FEED reads the Wallet's moves — the Feed has no Wallet section (prd §1489)"; return 1; }
+  grep -q 'prefix(3)' "$root/$SCROLL" \
+    || { echo "✗ Money on Activity is no longer the latest three (prd §1807)"; return 1; }
   return 0
 }
 feed_wallet_gone . || exit 1

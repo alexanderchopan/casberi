@@ -27,14 +27,17 @@ import SwiftUI
 /// **Move is in every build** (prd §1435): no feature is hidden or dormant
 /// in a release (App Review 2.3.1).
 enum PlaceTab: String, Identifiable, CaseIterable {
-    case feed, wallet, library, move
+    // Home leads (prd §1807): the app is one wallet, and what you have is
+    // the place you land. `feed` and `wallet` keep their names in code; the
+    // words drawn are Activity and Home.
+    case wallet, feed, library, move
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .feed:    String(localized: "Feed")
-        case .wallet:  String(localized: "Wallet")
+        case .feed:    String(localized: "Activity")
+        case .wallet:  String(localized: "Home")
         case .library: String(localized: "Apps")
         case .move:    String(localized: "Move")
         }
@@ -55,7 +58,7 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     /// (prd §1741, retiring your face on this tab).
     @MainActor var glyph: String {
         switch self {
-        case .feed:    ScopeTileGlyph.feed
+        case .feed:    ScopeTileGlyph.activity
         case .wallet:  ScopeTileGlyph.wallets
         case .library: ScopeTileGlyph.apps
         case .move:    ScopeTileGlyph.move
@@ -127,7 +130,10 @@ struct PlaceTabBar: View {
     /// is still the page past the Wallet on the swipe, as the App Library
     /// is; with it gone nothing stands between the Wallet and Move. The rail
     /// keeps all three places (§1402).
-    static let places: [PlaceTab] = [.feed, .wallet]
+    /// **HOME · ACTIVITY (prd §1807, amends §1783).** One wallet: what you
+    /// have, then what happened. Apps left the swipe and the title row for a
+    /// card on Home.
+    static let places: [PlaceTab] = [.wallet, .feed]
     /// One tab's width in the hugging capsule.
     static let tabWidth: CGFloat = 88
     var body: some View {

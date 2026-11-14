@@ -27,7 +27,7 @@ struct SettingsRows: View {
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
-    @AppStorage(OpenOn.key) private var opensOn = OpenOn.feed.rawValue
+    @AppStorage(OpenOn.key) private var opensOn = OpenOn.wallet.rawValue
     /// The highest round number the corpus has been congratulated for, so a
     /// crossing is celebrated once and never re-celebrated on the next open.
     @AppStorage("settings.thingsRung") private var celebratedRung = 0
@@ -347,14 +347,14 @@ struct SettingsRows: View {
             // Where the app opens (`OpenOn`): two choices, so the row flips
             // as Theme does and its glyph is the place's own tab mark.
             RowSpec(title: "Open on",
-                    value: (OpenOn(rawValue: opensOn) ?? .feed).label,
+                    value: (OpenOn(rawValue: opensOn) ?? .wallet).label,
                     trail: .flips,
-                    badge: ((OpenOn(rawValue: opensOn) ?? .feed) == .wallet
-                                ? ScopeTileGlyph.wallets : ScopeTileGlyph.feed, DS.textPrimary),
+                    badge: ((OpenOn(rawValue: opensOn) ?? .wallet) == .wallet
+                                ? ScopeTileGlyph.wallets : ScopeTileGlyph.activity, DS.textPrimary),
                     action: {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) {
-                            opensOn = (OpenOn(rawValue: opensOn) ?? .feed).flipped.rawValue
+                            opensOn = (OpenOn(rawValue: opensOn) ?? .wallet).flipped.rawValue
                         }
                     }),
             // "Color" is GONE (prd §635, 2026-09-06). It picked the crown
@@ -563,7 +563,7 @@ struct SettingsRows: View {
     private static func glyph(_ row: RowSpec) -> String {
         switch row.title {
         // The tile wears the place it opens on, so a tap shows its answer.
-        case "Open on": row.badge?.0 ?? ScopeTileGlyph.feed
+        case "Open on": row.badge?.0 ?? ScopeTileGlyph.wallets
         case "Apps": "square.grid.2x2"
         case "Avatar": "person.crop.circle"
         case "Name": "signature"

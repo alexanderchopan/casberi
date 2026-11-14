@@ -50,6 +50,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// (`DSScopeTiles.scrollsColumns`, prd §1328; the Wallet's five since
     /// §1468). Never a second row.
     var scrollsColumns: Bool = false
+    /// Extra height for Home's box alone (prd §1807): the Wallet's Home
+    /// leads with the map, the line and the switch, and has no tiles under
+    /// it for a taller box to move.
+    var homeExtra: CGFloat = 0
     let onPick: (Scope) -> Void
 
     let accounts: [DSAccountSlot]
@@ -121,7 +125,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;
             // the room's own list follows the chrome now, as in every room.
-            if !pinned, boxPlace != .paneBox {
+            // A room with one scope draws no tiles (prd §1807): a lone tile
+            // picks nothing.
+            if !pinned, boxPlace != .paneBox, sections.count > 1 {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     if boxPlace == .listWithoutBox {
                         // BESIDE A PANE THE SCOPES ARE PILLS UNDER THE TITLE
@@ -184,7 +190,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             // that").** A bar figure's box followed its content for one build
             // and the tiles under it jumped on every scope change. The box is
             // `visualSlot`, always.
-            .frame(height: DSRoomChassis.visualSlot)
+            // Home may ask for more (prd §1807): with no tiles under it
+            // there is nothing for a taller box to move.
+            .frame(height: DSRoomChassis.visualSlot + (active == home ? homeExtra : 0))
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     if active == home {

@@ -84,7 +84,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// The tiles, in the publication's order: the ones that are never empty
     /// first (§483), so the strip's head is the same on every wallet. They
     /// draw in this order, not A–Z (prd §1686). `allCases` adds the pages.
-    static let order: [WalletSection] = [.home, .holdings, .activity, .spending]
+    /// **ONE TILE, SO NONE (prd §1807).** Home is the Wallet's only place;
+    /// Holdings, Activity and Spending are pages reached from Home's cards
+    /// and from Activity's Money, each with Home behind its title.
+    static let order: [WalletSection] = [.home]
 
     /// Home's doors, in the row's order (prd §1480 item 2; Markets left for
     /// its tile, §1498).

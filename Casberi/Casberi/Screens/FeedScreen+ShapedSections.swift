@@ -463,7 +463,9 @@ extension FeedScreen {
                     // §1787) are gone from it: Holdings lists both.
                     walletHomeDoors(upcoming: upcoming)
                     // The tokens you watch, open (prd §1632 item 2).
-                    if walletWatchlistShows { walletWatchlistHomeSection }
+                    // Watchlist is a card on the whole Wallet's Home (prd
+                    // §1807); a pick keeps its door.
+                    if walletWatchlistShows, selectedSeat != nil || walletOnFollowing { walletWatchlistHomeSection }
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,

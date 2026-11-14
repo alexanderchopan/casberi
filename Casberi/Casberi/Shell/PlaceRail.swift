@@ -35,8 +35,8 @@ struct PlaceRail: View {
         VStack(spacing: DS.Space.s2) {
             // The bar's order (prd §1741): Apps led the rail only while it
             // wore your face.
-            tile(.feed)
             tile(.wallet)
+            tile(.feed)
             tile(.library)
             // Move stands apart at the end, as the phone's circle does
             // beside its three places (prd §1715).

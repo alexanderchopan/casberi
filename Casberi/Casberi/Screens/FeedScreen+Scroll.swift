@@ -125,9 +125,107 @@ extension FeedScreen {
             let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
             // deleted a row the body's own filter saw alive.
+            // ONE ROW PER APP (prd §1807, user: "if someone is following
+            // multiple socials … they wanna be able to scan list and know
+            // what is most recent"): each app's newest thing, the newest app
+            // first. Day and Notes are gathered, not one app's, and keep
+            // their own rows.
+            let rows = category == HomeScope.notesSection ? notesFeedRows.live : (byCategory[category] ?? []).live
             scrollSection(category,
-                          category == HomeScope.notesSection ? notesFeedRows.live : (byCategory[category] ?? []).live,
+                          category == HomeScope.notesSection || category == RoomAccounts.dayRoom
+                              ? rows : Self.newestPerApp(rows),
                           nextEventID: nextEventID)
+        }
+    }
+
+    /// Each app's newest thing, the newest app first (prd §1807).
+    static func newestPerApp(_ things: [Thing]) -> [Thing] {
+        var seen = Set<String>()
+        return things.sorted { $0.capturedAt > $1.capturedAt }.filter { seen.insert($0.source).inserted }
+    }
+
+    // MARK: - Activity's own sections (prd §1807)
+
+    /// The Wallet's rows in the Feed's corpus. The scroll draws no Wallet
+    /// category (prd §1489); Activity's Needs you and Money read them.
+    func activityMoneyRows(_ visible: [Thing]) -> [Thing] {
+        visible.filter { $0.isLive && Self.scrollCategory(ofSource: $0.source) == CategoryFold.walletRoom }
+    }
+
+    /// **NEEDS YOU LEADS ACTIVITY (prd §1807).** It left Home with the
+    /// doors: what your account still wants, and what waits on you in the
+    /// Wallet, each a row onto its page. Nothing waiting, no section.
+    @ViewBuilder
+    func activityNeedsSection(_ visible: [Thing]) -> some View {
+        let needs = walletNeedsCount(upcoming: walletUpcoming(activityMoneyRows(visible)))
+        let yours = YourAccountDemo.shownAddress
+        let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
+        let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
+        if needs > 0 || wants != nil {
+            panelSection(WalletSection.needsYou.label, glyph: WalletSection.needsYou.glyph, things: []) {
+                if let wants {
+                    activityAskRow(glyph: WalletSection.yourAccount.glyph,
+                                   name: WalletSection.yourAccount.label, word: wants) {
+                        if pending {
+                            chrome.moveWalk = true
+                            chrome.moveTray = true
+                        } else {
+                            chrome.openWalletPage(.yourAccount)
+                        }
+                    }
+                }
+                if needs > 0 {
+                    activityAskRow(glyph: ScopeTileGlyph.wallets, name: String(localized: "Money"),
+                                   word: "\(needs)") {
+                        chrome.openWalletPage(.needsYou)
+                    }
+                }
+            }
+        }
+    }
+
+    /// One ask: its glyph in the attention hue, its name, its state in the
+    /// attention ink (prd §1004), the chevron of a row that opens.
+    func activityAskRow(glyph: String, name: String, word: String, act: @escaping () -> Void) -> some View {
+        DSPushRow(title: Text(verbatim: name), fact: Text(verbatim: word), factTone: DS.attentionInk,
+                  action: act) {
+            Image(systemName: glyph)
+                .dsGlyph(.body)
+                .foregroundStyle(DS.attention)
+                .frame(width: DS.Mark.row)
+                .accessibilityHidden(true)
+        }
+        .feedRowBackground()
+        .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                             bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .listRowSeparator(.hidden)
+    }
+
+    /// **MONEY, THE LATEST THREE (prd §1807).** What moved, newest first,
+    /// then the door to all of it: the Wallet's Activity page, where
+    /// Spending's doors stand.
+    @ViewBuilder
+    func activityMoneySection(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let money = activityMoneyRows(visible)
+        // What waits on you is Needs you's, never a move (user, 2026-11-14:
+        // "one of money moves as a transfer that needs attention is needs
+        // you"): a stuck transfer or a dated ask leaves this list.
+        let asks = Set(walletUpcoming(money).map(\.id))
+        let moves = Array(Self.walletMoves(money).filter { !asks.contains($0.id) }
+            .sorted { $0.capturedAt > $1.capturedAt }.prefix(3))
+        if !moves.isEmpty {
+            panelSection(String(localized: "Money"), glyph: ScopeTileGlyph.wallets, things: moves) {
+                let _ = { Self.sectionCapNow = (CategoryFold.walletRoom, 3) }()
+                categorySections(CategoryFold.walletRoom, moves, nextEventID: nextEventID)
+                let _ = { Self.sectionCapNow = nil }()
+                DSMoreRow(title: Text("All money")) { chrome.openWalletActivity() }
+                    .padding(.leading, DS.Mark.row + DS.Space.s3)
+                    .feedRowBackground()
+                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+                    .listRowSeparator(.hidden)
+            }
+            .environment(\.dsTitleOnly, true)
         }
     }
 

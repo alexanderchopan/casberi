@@ -97,6 +97,12 @@ extension FeedScreen {
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section, reading: holdingsReads > 0)
+        // **HOLDINGS' BOX IS THE BALANCE AND ITS LINE (prd §1807, user: "i
+        // guess balance line goes on holdings").** The map leads Home now, so
+        // Holdings takes the figure Home gave up: the number, its 7d · 30d ·
+        // Followed line and the switch at its foot.
+        case .holdings where selectedSeat == nil:
+            walletTilesSection(visible, drawsChart: true)
         // Holdings' pages keep Holdings' box: the treemap says which tile
         // you are in (prd §1480).
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
@@ -136,6 +142,12 @@ extension FeedScreen {
     /// was the last tile (§1039, §1105); watching adds an account, so it
     /// stands at the head of the list the account will join, and raises the
     /// same Watch tray (§1090).
+    /// What Home's box stands over the standard one (prd §1807): the map
+    /// shares it with the Public · Private line and the switch. The whole
+    /// Wallet with something held; an app picked, or an empty wallet, keeps
+    /// the standard box.
+    var walletHomeExtra: CGFloat { selectedSeat == nil && !walletScopeIsEmpty(.holdings) ? 56 : 0 }
+
     @ViewBuilder
     func walletScopeChromeSection(_ active: WalletSection,
                                   visible: [Thing],
@@ -173,6 +185,10 @@ extension FeedScreen {
                 // Spending peeks past Security; a second row with one tile
                 // on it was the wrap this rules out.
                 scrollsColumns: true,
+                // The map, the Public · Private line and the switch share
+                // Home's box (prd §1807); at the standard height the map
+                // kept two holdings and Other.
+                homeExtra: walletHomeExtra,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -196,7 +212,7 @@ extension FeedScreen {
                     // does, or the box drew nothing on a fresh demo.
                     let crownScope = walletOnFollowing || YourAccountDemo.isDemo(chrome.walletScope ?? "")
                         ? nil : chrome.walletScope
-                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                    DSRoomSlot(headline: nil, reservesHeadline: false, extra: walletHomeExtra) {
                         if slot.isShowing(crownScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
@@ -248,6 +264,17 @@ extension FeedScreen {
                                     .contentShape(Rectangle())
                                     .onTapGesture { openThing(newest) }
                                     .dsTapCard()
+                            } else if selectedSeat == nil, !walletScopeIsEmpty(.holdings) {
+                                // **HOME LEADS WITH THE MAP (prd §1807, user:
+                                // "i think we need the treemap no matter
+                                // what!").** The balance and what it is made
+                                // of, the figure Holdings draws; the switch
+                                // takes its foot as it does there (§1526).
+                                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                    holdingsBlockSection
+                                    walletPublicPrivateLine
+                                    if WalletWhoseSwitch.shows(chrome) { WalletWhoseSwitch() }
+                                }
                             } else {
                                 walletTilesSection(visible, streamTotal: streamTotal,
                                                    drawsChart: true)

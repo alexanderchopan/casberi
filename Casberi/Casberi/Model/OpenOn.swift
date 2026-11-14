@@ -1,8 +1,8 @@
 import Foundation
 
 /// **WHERE THE APP OPENS (user, 2026-11-14: "a setting in settings for which
-/// screen to open on by default, wallet or feed").** The Feed unless you say
-/// the Wallet; Settings' "Open on" row flips it. Read once, as a window's
+/// screen to open on by default, wallet or feed").** Home unless you say
+/// Activity (prd §1807: the app is one wallet, and Home leads); Settings' "Open on" row flips it. Read once, as a window's
 /// `FeedFilter` is made, so a pick takes hold on the next open and never
 /// moves the screen you are on.
 enum OpenOn: String {
@@ -11,7 +11,7 @@ enum OpenOn: String {
     static let key = "launch.opensOn"
 
     static var current: OpenOn {
-        OpenOn(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .feed
+        OpenOn(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .wallet
     }
 
     /// The `filter.source` a new window starts on.
@@ -24,8 +24,8 @@ enum OpenOn: String {
 
     var label: String {
         switch self {
-        case .feed:   String(localized: "Feed")
-        case .wallet: String(localized: "Wallet")
+        case .feed:   String(localized: "Activity")
+        case .wallet: String(localized: "Home")
         }
     }
 

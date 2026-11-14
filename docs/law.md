@@ -252,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1983 of 2057 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1984 of 2058 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2237,6 +2237,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616…
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
+- §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one…
 
 ## Dead rulings → what replaced them (generated)
 

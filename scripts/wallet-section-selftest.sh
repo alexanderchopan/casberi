@@ -53,8 +53,15 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .activity, .spending],
-      "order is home → holdings → activity → spending (prd §1480, §1529, §1686)")
+// **ONE TILE, SO NONE (prd §1807).** Home is the Wallet's only place: the map,
+// then six cards. Holdings, Activity and Spending are pages reached from
+// Home's cards and from Activity's Money, each with Home behind its title.
+check(WalletSection.order == [.home],
+      "Home is the Wallet's one place; Holdings, Activity and Spending are pages (prd §1807)")
+let homePages: [WalletSection] = [.holdings, .activity, .spending]
+for s in homePages {
+    check(!s.isTile && s.parent == .home, "\(s.rawValue) is a page that goes back to Home (prd §1807)")
+}
 // **FOUR TILES (prd §1480, §1529).** Security is deleted — its parts are Your
 // account, Permissions and Threats, each a page off Home — and Markets is
 // deleted (§1529). A remembered "security" or "markets" must resolve to Home,
@@ -62,7 +69,7 @@ check(WalletSection.order == [.home, .holdings, .activity, .spending],
 for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts", "markets"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1480)")
 }
-check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1529)")
+check(WalletSection.order.count == 1, "the wallet draws no tile row: one place is a label, not a control (prd §1807, §83)")
 check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
@@ -73,9 +80,9 @@ check(WalletSection.spending.label == "Spending", "the tile reads Spending — H
 let watchlistPages: [WalletSection] = [.watchlist, .watchedToken]
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
     + WalletSection.yourAccountDoors + watchlistPages
-check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
-      && WalletSection.order.count + doors.count == WalletSection.allCases.count,
-      "the tiles and the doors list every case once (prd §1480)")
+check(Set(WalletSection.order).union(homePages).union(doors) == Set(WalletSection.allCases)
+      && WalletSection.order.count + homePages.count + doors.count == WalletSection.allCases.count,
+      "Home, its pages and the doors list every case once (prd §1480, §1807)")
 check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats],
       "Home's doors are Your account, Following, Needs you, Permissions, Threats (prd §1480, §1498)")
 check(WalletSection.holdingsDoors == [.holdingAccounts, .apps, .positions, .nfts],
@@ -96,7 +103,6 @@ check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
-check(WalletSection.order.last == .spending, "spending is last (prd §1529)")
 check(WalletSection.order.first == .home, "home leads")
 
 check(WalletSection.home.isAlwaysPresent, "home is always present")
@@ -135,7 +141,7 @@ for s in WalletSection.order {
 
 // RESOLVE falls back to Home, never to "the first present scope".
 check(WalletSection.resolve(nil, present: all) == .home, "nothing remembered resolves to home")
-check(WalletSection.resolve(.spending, present: all) == .spending, "a present scope resolves to itself")
+check(WalletSection.resolve(.spending, present: WalletSection.pages(tiles: all)) == .spending, "a page resolves to itself (prd §1807)")
 check(WalletSection.resolve(.spending, present: [.home, .holdings]) == .home,
       "an absent scope resolves to home")
 check(WalletSection.resolve(.holdings, present: [.holdings, .spending]) == .holdings,
@@ -198,20 +204,22 @@ mutate() {
   echo "  ok   catches  $why"
 }
 
-mutate "spending no longer last (prd §1529)" \
-  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .spending, .activity]/'
-mutate "spending dropped from the row, its case still compiling (prd §1468)" \
-  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .activity]/'
+mutate "the tile row comes back: Holdings is a tile again beside Home (prd §1807)" \
+  's/static let order: \[WalletSection\] = \[\.home\]/static let order: [WalletSection] = [.home, .holdings]/'
+mutate "the four tiles come back (prd §1807)" \
+  's/static let order: \[WalletSection\] = \[\.home\]/static let order: [WalletSection] = [.home, .holdings, .activity, .spending]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
+  's/static let order: \[WalletSection\] = \[\.home\]/static let order: [WalletSection] = [.holdings]/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "the retired Security tile comes back as a scope (prd §1480)" \
   's/    case spending\n/    case spending\n    case security\n/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
-mutate "every tile gated again, so tiles vanish on the wallet that most needs them" \
-  's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
+# "Every tile gated again" is retired with the tile row (prd §1807): with Home
+# the one place, gating `present()` on `isConditional` changes nothing, and a
+# mutation that changes nothing proves nothing. The two mutations above hold
+# the row to one.
 mutate "an empty page left with nothing to say — the dead control this ruling depends on avoiding" \
   's/An address made to look like yours, a fake token or a fake transfer\./ /'
 mutate "a Holdings page goes back to Home instead of Holdings (prd §1480 item 9)" \
@@ -661,8 +669,16 @@ guard DSChip.swift "if ranges.count > 1" \
 # switch's choice a second time.
 guard FeedScreen.swift "if walletOnFollowing { walletFollowingPage }" \
   "Home under Following no longer lists the wallets you follow (prd §1536)"
-deny FeedScreen.swift "walletDoor(.following, figure:" \
+# **ON ACCOUNT, NEVER ON HOME (prd §1807, user: "following sut becomes a row
+# under private account").** The Account page lists who you follow under its
+# private places; Home, where the switch stands, still has no Following door.
+perl -0ne 'print $1 if /(func walletHomeDoors\(upcoming.*?)\n    \/\/ MARK: - Holdings. doors/s' \
+  Casberi/Casberi/Screens/FeedScreen+WalletPages.swift | perl -pe 's{//.*$}{}g' > "$work/WalletHome.bare"
+[[ -s "$work/WalletHome.bare" ]] || fail "drift: Home's doors and cards could not be read — the Following check proves nothing"
+deny WalletHome "walletDoor(.following, figure:" \
   "Home has a Following door again beside the switch's Following (prd §1536)"
+grep -q -- "walletDoor(.following, figure:" Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift \
+  || fail "drift: the Account page no longer lists who you follow (prd §1807)"
 # The switch: three words, Following lit for any wallet you follow, its lit
 # word a way back (a second tap on Following leaves one wallet for all).
 guard WalletWhose.swift "case yours, following, everything" \
