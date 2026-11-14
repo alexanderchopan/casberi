@@ -120,9 +120,10 @@ on Privacy Pools; the merchant's mark on Spend's Merchant row.
 
 **Mocked 2026-11-14, awaiting the user's ruling, nothing built:** the screens
 outside Move, on the canvas "Outside Move: Receive, Account, Round-ups, the
-walk" (https://claude.ai/artifact/RSAEs2ZCLomcxMqqVE9LH4). Receive as one
-screen whose first row, To, picks Public account, Private balance or Private
-account (5, 7, 14), with a second option listing all three at once; the two
+walk" (https://claude.ai/artifact/RSAEs2ZCLomcxMqqVE9LH4). Receive lists
+all three addresses at once, each with a Copy and a page behind its name
+(5, 7, 14; user, 2026-11-14, over a To row: "all three at once is better
+b/c then its one less tap"); the two
 Aztec blocked states (6, 7); Account with "Public account" over the address,
 one Backup row, "Move to another wallet", Nodes under Connection and a Saving
 section (4, 8, 9, 10); the Round-ups, Savings goal and Nodes sheets (2, 9,
