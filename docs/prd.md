@@ -72758,3 +72758,14 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** the simulator, Send's whole draft. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1793 — Swap is two pairs: a token on its network, for a token on its network (amends §1754, §1600, §1555) (user, 2026-11-13: "you shoudl be able to pick network A token A on network B token B", "moving to another network is same as swap")
+
+1. **Rows: From, To, Amount, When.** From is the token you sell with its network ("USDC · Base"); To is the token you get with its network ("ETH · Ethereum"). Each row wears the token's mark with the network's badge (§1792).
+2. **"Arrives on" is deleted as a row.** To's list offers each token on every network it can arrive on, so the network is picked with the token; moving to another network is a swap like any other.
+3. **When is a choice row**, "Now" until a price is picked, there once the pair is known. It left the ledger.
+4. **Both networks are always said:** "Swap 20 USDC on Base for ETH on Base." (restoring §1600's "always" over §1754's "said once"). What comes back is the ledger's "You get", never a figure in the sentence.
+
+**Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
