@@ -87,7 +87,7 @@ struct MoveChoiceRowLabel: View {
         .accessibilityElement(children: .combine)
     }
 
-    static let height: CGFloat = 50
+    static let height: CGFloat = 44
 }
 
 /// A choice's answer with its mark and the menu chevron: a whole row's

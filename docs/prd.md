@@ -72793,3 +72793,15 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3, 6 and 8) (user, 2026-11-13: "you can't say from and to here it should say network token then to network token", "that looks terrible that you have to scroll in it too")
+
+1. **A network's row is named Network.** Swap reads Network, Token, To network, To token, Amount, When. "From" and "To" as the names of network rows are retired.
+2. **Nothing in Move scrolls unless it must** (`scrollBounceBehavior(.basedOnSize)`), and a whole swap must not. To fit: a row is 44 points (was 50); the lines under the rows are 30.
+3. **The total is said once, on the button.** Its line under the rows is not drawn; Details opens from the Fee line.
+4. **"You have" is at the head of the amount's menu**, where the amount is picked, and no longer a line under the rows.
+5. **Add another is drawn only where a line can be kept:** not on an order, a tag paid from elsewhere, or a swap to another network, which go alone (§83).
+
+**Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`: every row, the three lines and the sentence on one screen. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

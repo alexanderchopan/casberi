@@ -1553,7 +1553,7 @@ struct MoveSentence: View {
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
                 // Scrolled to the end, the last line clears the foot's fade;
                 // an open list has no foot and runs to the edge itself.
-                .padding(.bottom, inlineOpen == nil ? DS.Space.s4 + Self.footFade : 0)
+                .padding(.bottom, inlineOpen == nil ? (sentenceLow ? Self.footFade : DS.Space.s4 + Self.footFade) : 0)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
             }
             // The row a figure is typed in stands clear of the keys and the
@@ -1573,6 +1573,7 @@ struct MoveSentence: View {
         .ignoresSafeArea(.container, edges: reachesEdge ? .bottom : [])
         .padding(.bottom, reachesEdge ? -DSTray<EmptyView>.bottomPadding : 0)
         .scrollContentBackground(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
         // While a blank is open the foot steps aside: its verb cannot sign a
         // half-picked sentence, and the list takes its room (§1442a).
@@ -3388,10 +3389,12 @@ struct MoveSentence: View {
         case .to: String(localized: "To")
         case .amount: String(localized: "Amount")
         case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
-        case .buy: String(localized: "Token")
-        case .network: verb == .swap ? String(localized: "From") : String(localized: "Network")
-        case .elsewhere, .depositNetwork: String(localized: "Network")
-        case .destination: String(localized: "To")
+        case .buy: verb == .swap ? String(localized: "To token") : String(localized: "Token")
+        // **"NETWORK, TOKEN, THEN TO NETWORK, TO TOKEN" (prd §1796, user:
+        // "you can't say from and to here").** A network's row is named
+        // for what it is; "To" marks the side it arrives on.
+        case .network, .elsewhere, .depositNetwork: String(localized: "Network")
+        case .destination: String(localized: "To network")
         case .arrives: String(localized: "Arrives as")
         case .elsewhereCoin, .depositCoin: String(localized: "Token")
         case .group: String(localized: "Category")
@@ -3484,10 +3487,9 @@ struct MoveSentence: View {
                     .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         if let which = r.opens { menu(which) }
                     }
-                    // **A SWAP'S TWO SIDES STAND APART (prd §1795):** a
-                    // network over its token, air before the next side and
-                    // before what is asked of the whole swap.
-                    .padding(.top, verb == .swap && (r.opens == .destination || r.opens == .amount) ? DS.Space.s4 : 0)
+                    // A swap's two sides stand apart, and so does what is
+                    // asked of the whole swap (prd §1795, §1796).
+                    .padding(.top, verb == .swap && (r.opens == .destination || r.opens == .amount) ? DS.Space.s2 : 0)
                 }
                 ForEach(kept, id: \.id) { line in
                     HStack(spacing: 0) {
@@ -3510,7 +3512,10 @@ struct MoveSentence: View {
                 // foot holds the way back and the act; keeping this line and
                 // starting the next is a row among the others, there once
                 // the line can be kept and not before.
-                if verb == .send || verb == .swap, !nothingToMove, pendingItem != nil {
+                // Not where Add would refuse (prd §83): an order, a tag paid
+                // from elsewhere and a swap to another network go alone.
+                if verb == .send || verb == .swap, !nothingToMove, pendingItem != nil,
+                   !limiting, !tagConverts, !tagCrosses, crossTo == nil {
                     Button { add() } label: {
                         ledgerRow(LedgerRow(id: "add", name: String(localized: "Add another"), ink: DS.textPrimary), chevron: "plus")
                             .frame(minHeight: 44)
@@ -3992,13 +3997,6 @@ struct MoveSentence: View {
     private var ledgerRows: [LedgerRow] {
         guard receipt == nil else { return [] }
         var rows: [LedgerRow] = []
-        // **WHAT YOU HAVE, WHERE THE AMOUNT IS DECIDED (prd §1794).**
-        if verb == .send || verb == .swap, let with {
-            let symbol = with.token.symbol
-            let have = with.usd.map { Self.money($0) + " " + String(localized: "of") + " " + symbol }
-                ?? Op.spoken(left(with), decimals: with.token.decimals) + " " + symbol
-            rows.append(LedgerRow(id: "have", name: String(localized: "You have"), value: have))
-        }
         // When is a choice, so it is a row among the choices (prd §1793).
         if verb == .swap, !limiting, let back = quotePrint {
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back))
@@ -4056,6 +4054,13 @@ struct MoveSentence: View {
             HStack(alignment: .center, spacing: DS.Space.s2) {
                 // Its list is named at its head already (prd §1781).
                 if !closes { Text("Amount").dsText(.body17).foregroundStyle(DS.textSecondary) }
+                // **WHAT YOU HAVE, WHERE THE AMOUNT IS PICKED (prd §1796,
+                // moving §1794's line under the rows):** at the head of
+                // the amount's own menu.
+                if closes {
+                    let have = h.usd.map { Self.money($0) } ?? Op.spoken(left(h), decimals: h.token.decimals) + " " + h.token.symbol
+                    Text("You have \(have)").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1).minimumScaleFactor(0.7)
+                }
                 Spacer(minLength: DS.Space.s2)
                 unitSwitch
             }
@@ -4112,11 +4117,17 @@ struct MoveSentence: View {
     /// The ledger drawn. With `door`, its last row opens Details under it
     /// (a chevron after the figure), and a second tap closes it.
     @ViewBuilder private func ledger(door: Bool) -> some View {
-        let rows = ledgerRows.isEmpty && door ? [LedgerRow(id: "details", name: String(localized: "Details"))] : ledgerRows
+        // **THE TOTAL IS SAID ONCE, ON THE BUTTON (prd §1796).** Its line
+        // is not drawn; Details opens from the last line that is.
+        let lines = ledgerRows.filter { $0.id != "total" }
+        let rows = lines.isEmpty && door ? [LedgerRow(id: "details", name: String(localized: "Details"))] : lines
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
+                // Details opens from the fee's line, where one stands:
+                // "Through" with a chevron read as a choice of exchange.
+                let doorAt = rows.firstIndex { $0.id == "fee" } ?? rows.count - 1
                 ForEach(Array(rows.enumerated()), id: \.element.id) { n, r in
-                    if door, n == rows.count - 1 {
+                    if door, n == doorAt {
                         Button {
                             withAnimation(DS.Motion.standard) { details.toggle() }
                             DSHaptic.selection()
@@ -4165,7 +4176,7 @@ struct MoveSentence: View {
                     .lineLimit(1)
             }
         }
-        .frame(minHeight: 32)
+        .frame(minHeight: 30)
         .contentShape(Rectangle())
     }
 
