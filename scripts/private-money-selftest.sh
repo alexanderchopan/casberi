@@ -1163,7 +1163,7 @@ for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
 done
 use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
 # prd §1782: bigger rows, the next list by itself; no pay again, no token chosen.
-use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary)' "Move's rows no longer lead with their answer (prd §1782)"
+use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)' "Move's rows no longer draw their answer and its mark (prd §1782, §1794)"
 use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
 # prd §1784: a row's list is a menu on the row, in every sentence; the next
 # one waits for the last to be gone.

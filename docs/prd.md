@@ -72868,3 +72868,15 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo, Move › Lend. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1801 — The private sends take Move's layout (amends §1781, §1755) (user, 2026-11-14, of the private send's board on the Design canvas: "ok for now")
+
+1. **Privacy Pools', Aztec's and Railgun's sentences stand over their button, under the verb as title,** as Move's own verbs do (§1794).
+2. **Their act is Move's card** (`MoveSentence.actCard`), in place of the pink word at the foot: pink for Privacy Pools and Railgun, Aztec's own ink with black words for Aztec.
+3. **Token stands before Amount** in Aztec's and Railgun's rows (§1789).
+4. **A row's menu never shows from under a sentence Move has mounted over it** (`coveredByAnother`). Send's page stays mounted beneath a private send, and its Token menu rose over the private screen once menus became popovers (§1784).
+5. Not changed here, and still to bring to the board: the Half · All chips and the "you have" line; the amount is still typed in the sentence's own field on Aztec and Railgun; Privacy Pools' sentence still says "to address" before one is picked; none has a Network row.
+
+**Seen:** the simulator, demo: `-movePrivateSend YES -privateMoneySample YES`, `-moveToAztec YES -aztecDoorSample YES`, `-moveRailgun send`. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `private-money-selftest.sh` reads the row's new label.

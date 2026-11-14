@@ -63,17 +63,10 @@ struct MovePrivateSentence<Head: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // The verb leads the sentence it acts in (prd §1681); a
                 // sentence that is not yet one keeps it on a line above.
-                if !leadsWithVerb {
-                    head()
-                        .padding(.bottom, DS.Space.s4)
-                }
-                MoveFlow { sentence }
-                    // The sentence says the move and is no control (prd
-                    // §1781): its choices are the rows under it.
+                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
+                // (prd §1794, §1801):** as Move's own verbs.
+                head()
                     .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.stage)
-                    .animation(DS.Motion.standard, value: move.amount)
-                    .animation(DS.Motion.standard, value: move.recipient)
                 // No switch (prd §1700f item 11): "from your private balance"
                 // opens Send's networks to send from somewhere else.
                 Group {
@@ -501,6 +494,16 @@ struct MovePrivateSentence<Head: View>: View {
     /// where there is a second thing to do.
     private var foot: some View {
         VStack(spacing: 0) {
+            MoveFlow { sentence }
+                // The sentence says the move and is no control (prd
+                // §1781): its choices are the rows under it.
+                .allowsHitTesting(false)
+                .animation(DS.Motion.standard, value: move.stage)
+                .animation(DS.Motion.standard, value: move.amount)
+                .animation(DS.Motion.standard, value: move.recipient)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s3)
         if move.stage == .ready, let hidden { hiddenLine(hidden) }
         #if DEBUG
         if hiddenPreview, move.stage != .ready, let hidden { hiddenLine(hidden) }
@@ -635,15 +638,9 @@ struct MovePrivateSentence<Head: View>: View {
     }
 
     private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(verbatim: word)
-                .dsText(.heading34)
-                .foregroundStyle(on ? DS.pickInk : DS.textTertiary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(minHeight: 48, alignment: .trailing)
-        }
-        .buttonStyle(RowPress())
+        // Move's one act: the card (prd §1755, §1801), in this place's ink.
+        Button(action: act) { MoveSentence.actCard(word, on: on, fill: DS.pickInk) }
+            .buttonStyle(PressSpring())
     }
 
     /// One Activity row for the move, by its transaction: the eye-slash

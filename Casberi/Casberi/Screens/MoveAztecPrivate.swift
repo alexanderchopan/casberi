@@ -558,17 +558,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if !leadsWithVerb {
-                    head().padding(.bottom, DS.Space.s4)
-                }
-                MoveFlow { sentence }
-                    // The sentence says the move and is no control (prd
-                    // §1781): its choices are the rows under it, and the
-                    // amount's field is focused from its row.
+                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
+                // (prd §1794, §1801):** as Move's own verbs.
+                head()
                     .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.stage)
-                    .animation(DS.Motion.standard, value: move.amount)
-                    .animation(DS.Motion.standard, value: move.recipient)
                 // The world's rule, in view wherever Aztec is (prd §1779): a
                 // send from your private account reaches Aztec addresses.
                 // Taking money out to Ethereum is the one crossing, and its
@@ -864,11 +857,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
                                       value: move.recipient.map { AddressTail.short($0) } ?? "", empty: move.recipient == nil) { toggle(.recipient) })
         }
+        // The token before its amount (prd §1789).
+        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty) {
             withAnimation(DS.Motion.standard) { open = nil }
             typing = true
         })
-        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         return rows
     }
 
@@ -1004,6 +998,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
+            MoveFlow { sentence }
+                // The sentence says the move and is no control (prd
+                // §1781): its choices are the rows under it, and the
+                // amount's field is focused from its row.
+                .allowsHitTesting(false)
+                .animation(DS.Motion.standard, value: move.stage)
+                .animation(DS.Motion.standard, value: move.amount)
+                .animation(DS.Motion.standard, value: move.recipient)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s3)
             // ONE THING AT A TIME over the act (prd §1700y, agreed with the
             // Railgun session): the steps while it works and after, the
             // warming row while the balance is read, the cost while ready.
@@ -1128,15 +1133,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     }
 
     private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(verbatim: word)
-                .dsText(.heading34)
-                .foregroundStyle(on ? DS.aztecInk : DS.textTertiary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(minHeight: 48, alignment: .trailing)
-        }
-        .buttonStyle(RowPress())
+        // Move's one act: the card (prd §1755, §1801), in this place's ink.
+        Button(action: act) { MoveSentence.actCard(word, on: on, fill: DS.aztecInk, ink: .black) }
+            .buttonStyle(PressSpring())
     }
 
     private func copy(_ address: String) {

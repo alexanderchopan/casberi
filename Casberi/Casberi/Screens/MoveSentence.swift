@@ -1408,7 +1408,7 @@ struct MoveSentence: View {
         // The verbs open on the account page over any verb's own sentence
         // (Lend, Send privately, a fresh Receive), so every verb word opens
         // the one list (prd §1681).
-        let ownSentence = (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
+        let ownSentence = coveredByAnother
         ZStack {
             accountPage
                 .opacity(ownSentence ? 0 : 1)
@@ -3228,10 +3228,19 @@ struct MoveSentence: View {
     /// The list drawn in the page: the verbs', or one with no row to hang from.
     private var inlineOpen: Blank? { menuOpen == nil ? open : nil }
 
+    /// Another sentence is mounted over this page (Lend, a private send,
+    /// Receive privately): this one is hidden and takes no touch.
+    private var coveredByAnother: Bool {
+        (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
+    }
+
     /// Whether this row's menu is up; closed by a tap outside it, the list
     /// closes with no pick.
     private func menuShown(_ which: Blank?) -> Binding<Bool> {
-        Binding(get: { which != nil && menuOpen == which },
+        // Never from under a sentence Move has mounted over this one (a
+        // private send, Lend, Receive privately): this page is still
+        // mounted beneath it, and its menu rose over theirs (prd §1801).
+        Binding(get: { which != nil && menuOpen == which && !coveredByAnother },
                 set: { shown in if !shown, open == which { open = nil } })
     }
 
@@ -3376,6 +3385,9 @@ struct MoveSentence: View {
     /// is asked first; nothing opens while a figure is being typed.
     private func advance() {
         guard verb == .send || verb == .swap, open == nil, focus == nil, receipt == nil, stage == nil else { return }
+        // Never from under a sentence Move has mounted over this one (a
+        // private send, Receive privately, Lend): its menu rose over theirs.
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !freshReceive, !aztecReceive, chrome.moveLend == nil else { return }
         let pick = String(localized: "Choose")
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil ? .with : next)
@@ -6207,7 +6219,8 @@ struct MoveSentence: View {
     /// move comes to at its trailing edge, white on the pick's pink; grey
     /// when it cannot act, amber or red when a warning stands. The one plate
     /// in Move, and it is the control (§759's exception).
-    static func actCard(_ word: String, on: Bool, fill: Color = DS.pickInk, faceID: Bool = false, figure: String? = nil) -> some View {
+    static func actCard(_ word: String, on: Bool, fill: Color = DS.pickInk, ink: Color = .white, faceID: Bool = false,
+                        figure: String? = nil) -> some View {
         HStack(spacing: DS.Space.s2) {
             if faceID {
                 Image(systemName: "faceid").dsGlyph(.title, weight: .semibold)
@@ -6225,7 +6238,7 @@ struct MoveSentence: View {
                     .transition(.opacity)
             }
         }
-        .foregroundStyle(on ? Color.white : DS.textTertiary)
+        .foregroundStyle(on ? ink : DS.textTertiary)
         .padding(.horizontal, DS.Space.s6)
         .frame(maxWidth: .infinity, minHeight: actHeight)
         .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous).fill(on ? fill : DS.fillStrong))
