@@ -72953,3 +72953,15 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo: the menu, "Choose who", "Choose an amount", "New", "to someone", "an amount of USDC", Send with two rows (`-moveOnlyChoice YES`), the swap's row in Activity. NOT SEEN: Swap's two gaps, the one-choice detection on a real account with one token, "See in your activity", a two-line answer. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** `wallet-row-words-selftest.sh`: the swap's name leads with its verb, and a mutation that drops it fails.
+
+## §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777) (user, 2026-11-14: "what wallet actions can be done in the background so a user doesn't have to stay looking at the screen and can navigate away", then "we need to have toasts when these background actions complete", and of the three ways drawn on the Design canvas "Moves behind the sheet": "B, plain toast")
+
+1. **Landed is a toast** (amends §1777's "Sent to Aztec" for two seconds on the capsule): when a send behind its sheet lands, the capsule over the tab bar goes and the app's own toast says it, with no button: "Sent to Aztec", "Sent privately". The move's own code has already felt the success, so the toast adds no haptic. A failure is unchanged: the capsule says "Not sent" and stays until its tap opens the sentence again.
+2. **A Railgun send to someone goes behind its sheet** once Face ID has answered (through a broadcaster, or from a fresh sender): it is the last ask, and the proof and the broadcaster need nobody. Its capsule wears the page's ink, not Aztec's (§1779 is Aztec's alone). Move opened on that send again shows the same sentence, running or failed (`RailgunMove.kept`).
+3. **What stays in its sheet, and why:** moving in to Railgun (signed, and seconds long), taking back from Railgun (proved first and signed by your account after, so it may ask again), Aztec's move-in and exit (§1777), and every Privacy Pools move (its sentence writes the Activity row when the send lands, so its sheet cannot close first; moving that into the model is its own change).
+4. **One behind the sheet at a time, across both engines** (`PrivateSendSteps.sendAway` refuses a second; that send stays in its sheet). Each engine's words reach only its own send: Aztec's through `received`, Railgun's through `mark(_:from:)`, and a caller's `mark`/`finish` are always the sheet's own run. Before this a move-in finishing in the sheet ended the send behind it.
+5. **Not built:** nothing here survives leaving the app. The engines are web views and iOS suspends them; a toast is only seen while Casberi is open.
+
+**Mac half (§1402):** the same capsule and toast, both drawn by the shell.
+
+**Checks:** `aztec-connect-selftest.sh` (the slot, each engine's words, one at a time, the toast after the capsule, Railgun's wiring; four new mutations), `railgun-selftest.sh`. **Hooks:** `-privateStepsPreview away|awayfail|awayrailgun`; in the demo `-moveRailgun send -railgunStepsPreview send|fail`.

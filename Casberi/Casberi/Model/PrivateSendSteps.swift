@@ -23,6 +23,9 @@ final class PrivateSendSteps {
     /// Who started the send: Move, or an app in the Aztec browser.
     enum Kind: String { case move, app }
 
+    /// Whose engine proves a send behind its sheet, so only its words reach it.
+    enum Source { case aztec, railgun }
+
     /// The engines' step names, as their messages spell them.
     enum Key: String { case checking, proving, signing, sent, screening }
 
@@ -62,6 +65,9 @@ final class PrivateSendSteps {
     /// A send's steps, in order. The first is under way from `begin`.
     struct Plan: Equatable {
         let steps: [Step]
+
+        /// It ends on Aztec: its words wear Aztec's ink (prd §1779).
+        var isAztec: Bool { steps.last == .sent(.aztec) }
 
         /// A private send with a proof: Checking · Proving · Sent.
         @MainActor static func send(_ place: Place) -> Plan { Plan(steps: [.checking, .proving, .sent(place)]) }
@@ -103,24 +109,35 @@ final class PrivateSendSteps {
 
     private(set) var run: Run?
 
-    /// **A SEND THAT GOES ON BEHIND ITS SHEET (prd §1777).** Once every ask
-    /// is answered a send within Aztec needs nobody for a minute or two, so
-    /// its sheet closes and the run moves here, where the shell's capsule
-    /// draws it (`MoveStepCapsule`). Its own slot: a second move started
-    /// meanwhile begins in `run` and cannot overwrite it, and the engine's
-    /// words about it still reach it (`received`).
+    /// **A SEND THAT GOES ON BEHIND ITS SHEET (prd §1777, §1806).** Once
+    /// every ask is answered a private send (within Aztec, or from Railgun
+    /// to someone) needs nobody for a minute or two, so its sheet closes and
+    /// the run moves here, where the shell's capsule draws it
+    /// (`MoveStepCapsule`). Its own slot: a second move started meanwhile
+    /// begins in `run` and cannot overwrite it, and its own engine's words
+    /// still reach it (`received`, `mark(_:from:)`).
     private(set) var away: Run?
+    /// Whose engine is proving the send behind the sheet.
+    private(set) var awayFrom: Source?
+    /// What the toast says once it lands (prd §1806).
+    private(set) var awayLanded: String?
 
     /// The caller starts the clock at its tap, before a cold engine has said anything.
     func begin(_ kind: Kind, plan: Plan) {
         run = Run(kind: kind, plan: plan, started: .now)
     }
 
-    /// Move's running send leaves its sheet.
-    func sendAway() {
-        guard let current = run, current.kind == .move, current.isRunning else { return }
+    /// Move's running send leaves its sheet. One at a time: false while
+    /// another is still going behind its own.
+    @discardableResult
+    func sendAway(from source: Source, landed: String) -> Bool {
+        guard let current = run, current.kind == .move, current.isRunning else { return false }
+        guard away?.isRunning != true else { return false }
         away = current
+        awayFrom = source
+        awayLanded = landed
         run = nil
+        return true
     }
 
     /// Its sheet is open again: the rows there draw it, running or failed.
@@ -129,6 +146,7 @@ final class PrivateSendSteps {
         guard let current = away, run?.isRunning != true else { return }
         run = current
         away = nil
+        awayFrom = nil
     }
 
     /// The send behind the sheet failed in the caller's own code.
@@ -149,17 +167,20 @@ final class PrivateSendSteps {
         away = current
     }
 
-    /// The capsule has said "Sent" for its two seconds, or a failure was opened.
-    func clearAway() { away = nil }
+    /// The toast has said it landed, or a failure was opened.
+    func clearAway() {
+        away = nil
+        awayFrom = nil
+        awayLanded = nil
+    }
 
-    /// One `engineStep` message. `plan` is the engine's own, for a send it
-    /// began itself (an app's transaction in the browser).
+    /// One `engineStep` message from Aztec's engine. `plan` is the engine's
+    /// own, for a send it began itself (an app's transaction in the browser).
     func received(_ body: [String: Any], plan: Plan) {
         guard let step = body["step"] as? String, let kind = Kind(rawValue: body["kind"] as? String ?? "") else { return }
         // The engine's words about a send behind its sheet go to it there
-        // (prd §1777): only Aztec's engine speaks here, and only an Aztec
-        // send is ever away.
-        if let behind = away, behind.kind == kind, behind.isRunning {
+        // (prd §1777), and only its own engine's (prd §1806).
+        if let behind = away, awayFrom == .aztec, behind.kind == kind, behind.isRunning {
             if step != "checking" { away = Self.advanced(behind, step: step, body: body) }
             return
         }
@@ -191,16 +212,23 @@ final class PrivateSendSteps {
     }
 
     /// A step reached, said by the caller (a send its own Swift drives, like
-    /// a Shield deposit signed by Your account). Same rules as an engine's.
-    func mark(_ key: Key) {
-        guard let current = run else { return }
-        received(["step": key.rawValue, "kind": current.kind.rawValue], plan: current.plan)
+    /// a Shield deposit signed by Your account) or by an engine that names
+    /// itself. An engine's word goes to its send behind the sheet while one
+    /// is going; a caller's is always about the sheet's own run, never the
+    /// one behind it (prd §1806).
+    func mark(_ key: Key, from source: Source? = nil) {
+        if let source, source == awayFrom, let behind = away, behind.isRunning {
+            away = Self.advanced(behind, step: key.rawValue, body: [:])
+            return
+        }
+        guard let current = run, current.isRunning, key != .checking else { return }
+        run = Self.advanced(current, step: key.rawValue, body: [:])
     }
 
-    /// The caller's own success.
+    /// The caller's own success, of the sheet's own run.
     func finish() {
-        guard let current = run else { return }
-        received(["step": "done", "kind": current.kind.rawValue], plan: current.plan)
+        guard let current = run, current.isRunning else { return }
+        run = Self.advanced(current, step: "done", body: [:])
     }
 
     /// The caller is starting a new send: a finished run of its kind goes.

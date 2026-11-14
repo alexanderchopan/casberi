@@ -1,7 +1,7 @@
 import SwiftUI
 
 #if DEBUG
-/// `-privateStepsPreview move|app|fail|signed|away|awayfail|ask` (prd §1700w, §1700x, §1777): plays one
+/// `-privateStepsPreview move|app|fail|signed|away|awayfail|awayrailgun|ask` (prd §1700w, §1700x, §1777, §1806): plays one
 /// private send's steps on a timeline over the shell, through the real
 /// `PrivateSendSteps` and the views Move and the Aztec browser draw.
 ///   - `move`: an Aztec send (checking 2 s, proving 9 s, sent 8 s, done),
@@ -20,7 +20,7 @@ import SwiftUI
 /// how the drawing is seen. NSLogs `privateStepsPreview| <mode> | <step>`.
 struct PrivateStepsPreview: View {
     private let mode = UserDefaults.standard.string(forKey: "privateStepsPreview")
-        .flatMap { ["move", "app", "fail", "signed", "away", "awayfail", "ask"].contains($0) ? $0 : nil }
+        .flatMap { ["move", "app", "fail", "signed", "away", "awayfail", "awayrailgun", "ask"].contains($0) ? $0 : nil }
     @State private var steps = PrivateSendSteps.shared
 
     var body: some View {
@@ -76,15 +76,24 @@ struct PrivateStepsPreview: View {
     private func play(_ mode: String) async {
         let s = PrivateSendSteps.shared
         let kind: PrivateSendSteps.Kind = mode == "app" ? .app : .move
-        let plan: PrivateSendSteps.Plan = mode == "signed" ? .signed(.ethereum) : .send(.aztec)
+        // `awayrailgun`: a Railgun send to someone, behind its sheet (prd §1806).
+        let railgun = mode == "awayrailgun"
+        let plan: PrivateSendSteps.Plan = mode == "signed" ? .signed(.ethereum) : railgun ? .send(.ethereum) : .send(.aztec)
         func say(_ step: String, after seconds: Double, extra: [String: Any] = [:]) async {
             try? await Task.sleep(for: .seconds(seconds))
-            s.received(["step": step, "kind": kind.rawValue, "sent": step == "done"].merging(extra) { $1 }, plan: plan)
+            if railgun {
+                // Railgun's engine names itself; its caller says the end.
+                if step == "done" { s.finishAway() } else if let key = PrivateSendSteps.Key(rawValue: step) { s.mark(key, from: .railgun) }
+            } else {
+                s.received(["step": step, "kind": kind.rawValue, "sent": step == "done"].merging(extra) { $1 }, plan: plan)
+            }
             NSLog("privateStepsPreview| %@ | %@", mode, step)
         }
         try? await Task.sleep(for: .seconds(4))
         if kind == .move { s.begin(.move, plan: plan) }
-        if mode.hasPrefix("away") { s.sendAway() }
+        if mode.hasPrefix("away") {
+            s.sendAway(from: railgun ? .railgun : .aztec, landed: railgun ? RailgunMove.landedWords : PrivateSendSteps.Place.aztec.sent)
+        }
         await say("checking", after: 0)
         switch mode {
         case "fail", "awayfail":

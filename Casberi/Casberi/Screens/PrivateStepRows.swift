@@ -151,10 +151,10 @@ struct StepCapsuleLabel: View {
             } else {
                 DSSpinner(size: .small)
             }
-            // Both capsules carry Aztec's sends, so their words wear its ink
-            // (prd §1779); a failure keeps the page's.
+            // A send on Aztec wears its ink (prd §1779); one on Ethereum
+            // and a failure keep the page's (prd §1806).
             Text(verbatim: failed ? String(localized: "Not sent") : run.ended == nil ? step.running : step.done)
-                .dsText(.body17).foregroundStyle(failed ? DS.textPrimary : DS.aztecInk).lineLimit(1)
+                .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk).lineLimit(1)
             if !failed {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
@@ -171,9 +171,10 @@ struct StepCapsuleLabel: View {
 /// Aztec took 34 s to prove and 75 s to send: "would be good if checking and
 /// proving and then sending is in the background").** Once Face ID and the
 /// co-signer have answered, the sheet closes and this floats over the tab
-/// bar, the browser's capsule exactly: the step under way and its seconds,
-/// "Sent to Aztec" for two seconds, then gone. A failure stays, and its tap
-/// opens the sentence again with the reason on its step and Try again.
+/// bar: the step under way and its seconds. Landed, it goes and the app's
+/// own toast says so (prd §1806; user: "we need to have toasts when these
+/// background actions complete"). A failure stays, and its tap opens the
+/// sentence again with the reason on its step and Try again.
 /// Mounted on the shell, and it ticks only while there is a send to draw.
 struct MoveStepCapsule: View {
     @State private var steps = PrivateSendSteps.shared
@@ -181,24 +182,24 @@ struct MoveStepCapsule: View {
 
     var body: some View {
         ZStack {
-            if let run = steps.away {
+            if let run = steps.away, run.ok != true {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     capsule(run, now: context.date)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                // "Sent" stands two seconds, as the browser's does.
-                .task(id: run.ended) {
-                    guard run.ended != nil, run.ok == true else { return }
-                    try? await Task.sleep(for: .seconds(Self.sentStands))
-                    guard !Task.isCancelled else { return }
-                    withAnimation(DS.Motion.standard) { steps.clearAway() }
-                }
             }
         }
-        .animation(DS.Motion.standard, value: steps.away != nil)
+        .animation(DS.Motion.standard, value: steps.away.map { $0.ok != true } ?? false)
+        // Landed: the capsule goes and the toast says it (prd §1806). The
+        // move's own code already felt the success, so the toast is quiet.
+        .onChange(of: steps.away?.ok) { _, ok in
+            guard ok == true, let run = steps.away else { return }
+            let words = steps.awayLanded ?? run.plan.steps[run.currentIndex].done
+            steps.clearAway()
+            chrome.flash(words)
+            NSLog("moveStepCapsule| landed | %@", words)
+        }
     }
-
-    static let sentStands: Double = 2
     /// Clear of the tab bar (62 pt and its gap), under the toast's line.
     static let overBand: CGFloat = 84
 
@@ -207,8 +208,11 @@ struct MoveStepCapsule: View {
             Button {
                 // The sentence it came from, with its reason and Try again;
                 // with no sentence kept, there is only the word to put away.
-                if AztecMove.kept != nil {
+                if AztecMove.kept != nil, steps.awayFrom == .aztec {
                     chrome.moveAztec = .send
+                    chrome.moveTray = true
+                } else if let kept = RailgunMove.kept, steps.awayFrom == .railgun {
+                    chrome.moveRailgun = .init(contract: kept.wanted, takeBack: true, recipient: kept.recipient)
                     chrome.moveTray = true
                 } else {
                     withAnimation(DS.Motion.standard) { steps.clearAway() }

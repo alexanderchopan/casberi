@@ -357,7 +357,7 @@ enum RailgunPocket {
                                                         [["from": sender.address, "to": u.tx.to, "data": u.tx.data, "value": "0x0"]])) ?? 0
         guard estimate > 0, estimate <= FreshTx.railgunSendGas else { throw Failure.notRailgun }
         stage(String(localized: "Sending…"))
-        PrivateSendSteps.shared.mark(.sent)
+        PrivateSendSteps.shared.mark(.sent, from: .railgun)
         let hash = try await FreshSigner.send(to: u.tx.to, data: u.tx.data, value: "0x0", index: sender.index, root: sender.root,
                                               from: sender.address, network: network, gas: FreshTx.railgunSendGas,
                                               tip: fees.tip, maxFee: fees.maxFee) { _, _ in

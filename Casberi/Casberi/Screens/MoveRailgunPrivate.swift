@@ -88,6 +88,24 @@ final class RailgunMove {
     /// Out to someone else (prd §1721 item 3); nil, or your own account's
     /// address, is taking it back.
     var recipient: String?
+
+    /// **THE SEND BEHIND ITS SHEET (prd §1806, as Aztec's §1777).** A send to
+    /// someone asks for Face ID, then needs nobody while it is proved and
+    /// handed to a broadcaster. So the sheet closes at that point and the
+    /// move is kept here: the shell's capsule draws its steps, a toast says
+    /// it landed, and Move opened on it again shows this same sentence.
+    /// Moving in and taking back are signed by your account after, and stay.
+    static var kept: RailgunMove?
+    /// Closes the sheet; nil where the sentence is a page, which stays.
+    var onAway: (() -> Void)?
+    /// Another send is still proving behind its sheet: the engine proves
+    /// one at a time, and its words name no send.
+    private var anotherIsGoing: Bool {
+        guard let other = Self.kept, other !== self, case .working = other.stage else { return false }
+        return true
+    }
+    /// What the toast says when a send behind its sheet lands.
+    static var landedWords: String { String(localized: "Sent privately") }
     /// The broadcaster's terms for the picked amount.
     private(set) var quote: RailgunEngineWire.Quote?
     /// The fee token's symbol and decimals, for the line.
@@ -174,6 +192,7 @@ final class RailgunMove {
     /// Reads what can move: your account's tokens on Ethereum (in) or your
     /// Railgun wallet's spendable tokens (back), and Railgun's fee.
     func read() async {
+        if Self.kept === self { Self.kept = nil }
         stage = .reading
         quoteTask?.cancel()
         quote = nil
@@ -480,6 +499,7 @@ final class RailgunMove {
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
         guard let picked, amountOK, !DemoMode.isActive else { return }
+        guard mode != .takeBack || !anotherIsGoing else { stage = .failed(String(localized: "A send is still on its way")); return }
         let steps = PrivateSendSteps.shared
         // Last send's rows go; this send's start with it.
         steps.forget(.move)
@@ -497,15 +517,15 @@ final class RailgunMove {
             case .takeBack where toSomeoneElse && viaFresh:
                 stage = .working(String(localized: "Confirm with Face ID"))
                 _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
-                                                          unlocked: { [weak self] in self?.started(.send(.ethereum)) }) { _ in }
-                steps.finish()
+                                                          unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse:
                 guard let q = quote else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.send(q, unlocked: { [weak self] in self?.started(.send(.ethereum)) })
+                _ = try await RailgunPocket.send(q, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
                 quote = nil
-                steps.finish()
+                finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack:
                 guard let account = YourAccountKey.address else { stage = .failed(String(localized: "No account on this iPhone")); return }
@@ -517,13 +537,27 @@ final class RailgunMove {
                 steps.finish()
                 stage = .done(String(localized: "Back in your account."))
             }
+            if Self.kept === self { Self.kept = nil }
             DSHaptic.success()
             await RailgunHoldings.shared.refresh(force: true)
         } catch {
-            // The rows keep the failure on the step it reached (§1700x).
-            steps.fail(Self.words(error))
+            // The rows keep the failure on the step it reached (§1700x),
+            // in the sheet or behind it (prd §1806).
+            if Self.kept === self, steps.away != nil { steps.failAway(Self.words(error)) } else { steps.fail(Self.words(error)) }
             stage = .failed(Self.words(error))
+            if Self.kept === self { DSHaptic.failure() }
         }
+    }
+
+    /// The send came back good: behind its sheet, or in it.
+    private func finishSteps() {
+        let steps = PrivateSendSteps.shared
+        if Self.kept === self, steps.away != nil { steps.finishAway() } else { steps.finish() }
+    }
+
+    /// The sheet closed over a send still going (prd §1806).
+    func goAway() {
+        PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords)
     }
 
     #if DEBUG
@@ -537,8 +571,8 @@ final class RailgunMove {
         let steps = PrivateSendSteps.shared
         func step(_ key: PrivateSendSteps.Key, after s: Double) async {
             try? await Task.sleep(for: .seconds(s))
-            steps.mark(key)
-            NSLog("railgunStepsPreview| %@ | %@", kind, key.rawValue)
+            steps.mark(key, from: .railgun)
+            NSLog("railgunStepsPreview| %@ | %@ | %@", kind, key.rawValue, steps.away != nil ? "behind the sheet" : "in the sheet")
         }
         try? await Task.sleep(for: .seconds(3))
         steps.forget(.move)
@@ -553,27 +587,36 @@ final class RailgunMove {
             stage = .done(String(localized: "On its way: private in about an hour."))
             return
         }
-        started(.send(.ethereum))
+        // As a real send to someone: behind its sheet from here (prd §1806).
+        started(.send(.ethereum), away: true)
         await step(.proving, after: 2)
         if kind == "fail" {
             try? await Task.sleep(for: .seconds(5))
-            steps.fail(Self.words(RailgunPocket.Failure.noBroadcaster))
-            stage = .failed(Self.words(RailgunPocket.Failure.noBroadcaster))
+            let words = Self.words(RailgunPocket.Failure.noBroadcaster)
+            if Self.kept === self, steps.away != nil { steps.failAway(words) } else { steps.fail(words) }
+            stage = .failed(words)
             return
         }
         await step(.sent, after: 8)
         try? await Task.sleep(for: .seconds(3))
-        steps.finish()
+        finishSteps()
         stage = .done(String(localized: "Sent privately."))
+        if Self.kept === self { Self.kept = nil }
     }
     #endif
 
     /// Face ID said yes: the rows' clock starts, and "Confirmed with Face
     /// ID" leads them.
-    private func started(_ plan: PrivateSendSteps.Plan) {
+    private func started(_ plan: PrivateSendSteps.Plan, away: Bool = false) {
         unlockedFirst = true
         PrivateSendSteps.shared.begin(.move, plan: plan)
         stage = .working(String(localized: "Sending…"))
+        // Face ID was the last ask: the rest needs nobody, so the sheet
+        // goes and the shell's capsule says the rest (prd §1806).
+        if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords) {
+            Self.kept = self
+            onAway()
+        }
     }
 
     /// Face ID came before this send's clock (a send out, never a move-in).
@@ -671,7 +714,23 @@ struct MoveRailgunSentence<Head: View>: View {
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         .onChange(of: open) { _, now in if now { chrome.moveTall = true } }
-        .task(id: move.mode) { await move.read() }
+        // A send kept behind its sheet is shown as it stands, running or
+        // failed, never read over (prd §1806).
+        .task(id: move.mode) { if RailgunMove.kept !== move { await move.read() } }
+        .onAppear {
+            move.onAway = inTray ? { chrome.moveTray = false } : nil
+            if RailgunMove.kept === move { PrivateSendSteps.shared.bringBack() }
+        }
+        .onDisappear {
+            guard RailgunMove.kept === move else { return }
+            if case .working = move.stage {
+                move.goAway()
+            } else {
+                // A failure seen is put away with its sheet.
+                RailgunMove.kept = nil
+                PrivateSendSteps.shared.forget(.move)
+            }
+        }
     }
 
     private var isDone: Bool { if case .done = move.stage { true } else { false } }
@@ -1068,6 +1127,7 @@ struct MoveRailgunSentence<Head: View>: View {
                         .buttonStyle(PressSpring())
                     } else {
                         footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
+                            move.onAway = inTray ? { chrome.moveTray = false } : nil
                             Task { await move.run() }
                         }
                         .disabled(!ready)

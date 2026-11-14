@@ -62,10 +62,15 @@ struct MoveSentence: View {
         let aztecMove = (aztec == .send ? AztecMove.kept : nil) ?? AztecMove()
         aztecMove.mode = aztec ?? .deposit
         _aztecMove = State(initialValue: aztecMove)
-        let railgunMove = RailgunMove()
-        railgunMove.mode = railgun?.takeBack == true ? .takeBack : .deposit
-        railgunMove.wanted = railgun?.contract
-        railgunMove.recipient = railgun?.recipient
+        // A send to someone still going, or failed, behind its sheet is the
+        // sentence Move opens on (prd §1806).
+        let keptRailgun = railgun?.takeBack == true && railgun?.recipient != nil ? RailgunMove.kept : nil
+        let railgunMove = keptRailgun ?? RailgunMove()
+        if keptRailgun == nil {
+            railgunMove.mode = railgun?.takeBack == true ? .takeBack : .deposit
+            railgunMove.wanted = railgun?.contract
+            railgunMove.recipient = railgun?.recipient
+        }
         _railgunMove = State(initialValue: railgunMove)
         _railgunOpen = State(initialValue: railgun != nil)
         picksUpDraft = mode == nil && aztec == nil && railgun == nil && !toFresh && opening == nil && arrival == nil && !lends
@@ -107,6 +112,13 @@ struct MoveSentence: View {
     /// `recipient`: out to someone else through a broadcaster (prd §1721
     /// item 3); nil or your own account is taking it back.
     private func goRailgun(_ mode: RailgunMove.Mode, contract: String?, recipient: String? = nil) {
+        if mode == .takeBack, recipient != nil, let kept = RailgunMove.kept {
+            // The one behind its sheet, as it stands (prd §1806).
+            railgunMove = kept
+            withAnimation(DS.Motion.standard) { open = nil; railgunOpen = true }
+            DSHaptic.selection()
+            return
+        }
         railgunMove.mode = mode
         railgunMove.wanted = contract
         railgunMove.recipient = mode == .takeBack ? recipient : nil

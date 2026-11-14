@@ -189,7 +189,7 @@ use "$MOVEF" 'guard let feeWords, let feeUSD = broadcasterFeeUSD else { return n
 use "$MOVEF" "PrivateStepRows(run: run, confirmed: move.unlockedFirst" "the steps stand in Move's foot, Aztec's rows (§1728 item 5)"
 use "$MOVEF" "steps.fail(Self.words(error))" "a failure stays on the step it reached"
 use "$MOVEF" "steps.begin(.move, plan: .signed(.ethereum))" "a move-in's rows are signed, as Aztec's Shield deposit's"
-use "Casberi/Casberi/Model/RailgunEngine.swift" 'PrivateSendSteps.shared.mark(key)' "the engine's step lines move the rows"
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'PrivateSendSteps.shared.mark(key, from: .railgun)' "the engine's step lines move the rows"
 [[ $(grep -c "say('step proving')" "$ENGINE") == 3 && $(grep -c "say('step sent')" "$ENGINE") == 1 ]] \
   && echo "  ✓ every proof says it starts, and the broadcaster's hand-over says it left" \
   || { echo "  ✗ a Railgun proof or hand-over no longer says its step (§1728 item 5)"; fail=1; }

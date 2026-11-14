@@ -488,9 +488,8 @@ final class AztecMove {
                     // Every ask is answered: the rest needs nobody, so the
                     // sheet goes and the shell's capsule says the rest
                     // (prd §1777).
-                    if let onAway {
+                    if let onAway, steps.sendAway(from: .aztec, landed: PrivateSendSteps.Place.aztec.sent) {
                         Self.kept = self
-                        steps.sendAway()
                         onAway()
                     }
                     let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units, AztecGas.unminted]) as? [String: Any]
@@ -604,7 +603,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .onDisappear {
             guard AztecMove.kept === move else { return }
             if case .working = move.stage {
-                PrivateSendSteps.shared.sendAway()
+                PrivateSendSteps.shared.sendAway(from: .aztec, landed: PrivateSendSteps.Place.aztec.sent)
             } else {
                 // A failure seen is put away with its sheet.
                 AztecMove.kept = nil

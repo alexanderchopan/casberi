@@ -102,21 +102,30 @@ enum DeviceWord {
     var fails = 0
     func check(_ name: String, _ ok: Bool) { if !ok { print("  ✗ \(name)"); fails += 1 } }
     let s = PrivateSendSteps.shared
-    s.sendAway()
-    check("nothing running, nothing goes away", s.away == nil)
+    check("nothing running, nothing goes away", !s.sendAway(from: .aztec, landed: "Sent to Aztec") && s.away == nil)
     s.begin(.app, plan: .send(.aztec))
-    s.sendAway()
+    s.sendAway(from: .aztec, landed: "Sent to Aztec")
     check("an app's send never leaves its page", s.away == nil && s.run?.kind == .app)
     s.clear()
     s.begin(.move, plan: .send(.aztec))
-    s.sendAway()
-    check("Move's send leaves the sheet's slot", s.run == nil && s.away?.isRunning == true)
+    check("Move's send leaves the sheet's slot", s.sendAway(from: .aztec, landed: "Sent to Aztec") && s.run == nil && s.away?.isRunning == true)
+    check("it keeps what its toast will say", s.awayLanded == "Sent to Aztec" && s.awayFrom == .aztec)
     s.begin(.move, plan: .signed(.ethereum))
     s.received(["step": "proving", "kind": "move"], plan: .send(.aztec))
     check("the engine's words reach the send behind the sheet", s.away?.currentIndex == 1)
     check("a second move in the sheet is not moved by them", s.run?.currentIndex == 0 && s.run?.plan == .signed(.ethereum))
     s.received(["step": "checking", "kind": "move"], plan: .send(.aztec))
     check("a checking for it starts no new run", s.run?.plan == .signed(.ethereum) && s.away?.currentIndex == 1)
+    // prd §1806: one behind the sheet at a time, and each engine's words
+    // reach only its own send; a caller's words are the sheet's own.
+    check("a second send does not take the slot of one still going", !s.sendAway(from: .railgun, landed: "Sent privately") && s.awayFrom == .aztec && s.run?.isRunning == true)
+    s.mark(.sent, from: .railgun)
+    check("Railgun's engine does not move Aztec's send behind the sheet", s.away?.currentIndex == 1 && s.away?.reachedNetwork == false)
+    check("its word goes to the sheet's own run", s.run?.reachedNetwork == true)
+    s.finish()
+    check("the sheet's own success does not end the send behind it", s.away?.isRunning == true && s.run?.ok == true)
+    s.forget(.move)
+    s.begin(.move, plan: .signed(.ethereum))
     s.bringBack()
     check("never brought back over a move still running", s.away != nil && s.run?.plan == .signed(.ethereum))
     s.received(["step": "done", "kind": "move", "sent": true], plan: .send(.aztec))
@@ -126,18 +135,33 @@ enum DeviceWord {
     s.forget(.move)
     check("both put away", s.run == nil && s.away == nil)
     s.begin(.move, plan: .send(.aztec))
-    s.sendAway()
+    s.sendAway(from: .aztec, landed: "Sent to Aztec")
     s.failAway("Aztec's node did not answer")
     check("its failure keeps its reason", s.away?.ok == false && s.away?.reason == "Aztec's node did not answer")
     s.bringBack()
     check("a failed send comes back to its sheet", s.run?.ok == false && s.run?.reason != nil && s.away == nil)
     s.clear()
     s.begin(.move, plan: .send(.aztec))
-    s.sendAway()
+    s.sendAway(from: .aztec, landed: "Sent to Aztec")
     s.finishAway()
     check("a send handed back without the engine's word is done", s.away?.ok == true && s.away?.reachedNetwork == true)
     s.failAway("late")
     check("a finished send is not failed afterwards", s.away?.ok == true)
+    s.clearAway()
+    check("put away, its toast's words go with it", s.awayLanded == nil && s.awayFrom == nil)
+    // A Railgun send to someone, behind its sheet (prd §1806).
+    s.begin(.move, plan: .send(.ethereum))
+    s.sendAway(from: .railgun, landed: "Sent privately")
+    s.mark(.proving, from: .railgun)
+    check("Railgun's engine moves its own send behind the sheet", s.away?.currentIndex == 1)
+    s.received(["step": "sent", "kind": "move"], plan: .send(.aztec))
+    check("Aztec's engine does not", s.away?.currentIndex == 1)
+    s.mark(.sent)
+    check("nor does a caller with no send in the sheet", s.away?.currentIndex == 1 && s.run == nil)
+    s.mark(.sent, from: .railgun)
+    s.finishAway()
+    check("it lands with Railgun's words for the toast", s.away?.ok == true && s.awayLanded == "Sent privately" && !(s.away?.plan.isAztec ?? true))
+    s.clearAway()
     return fails
 }
 let fails = MainActor.assumeIsolated { runChecks() }
@@ -154,13 +178,16 @@ away_mutant() { # name, sed expression
   if $TMP/steps-mrun >/dev/null 2>&1; then echo "✗ mutation '$1' passed: the checks cannot see it"; exit 1; fi
   echo "✓ mutation '$1' fails the checks"
 }
-away_mutant "the engine's words go to the sheet's run" 's/if let behind = away, behind.kind == kind, behind.isRunning {/if let behind = away, behind.kind == kind, false {/'
-away_mutant "an app's send goes away" 's/guard let current = run, current.kind == .move, current.isRunning else { return }/guard let current = run, current.isRunning else { return }/'
+away_mutant "the engine's words go to the sheet's run" 's/if let behind = away, awayFrom == .aztec, behind.kind == kind, behind.isRunning {/if let behind = away, awayFrom == .aztec, behind.kind == kind, false {/'
+away_mutant "any engine's words reach the send behind the sheet" 's/if let behind = away, awayFrom == .aztec, behind.kind == kind, behind.isRunning {/if let behind = away, behind.kind == kind, behind.isRunning {/'
+away_mutant "Railgun's engine moves any send behind the sheet" 's/if let source, source == awayFrom, let behind = away, behind.isRunning {/if source != nil, let behind = away, behind.isRunning {/'
+away_mutant "a second send takes the slot" 's/guard away?.isRunning != true else { return false }/guard away?.isRunning != true || true else { return false }/'
+away_mutant "an app's send goes away" 's/guard let current = run, current.kind == .move, current.isRunning else { return false }/guard let current = run, current.isRunning else { return false }/'
 away_mutant "brought back over a running move" 's/guard let current = away, run?.isRunning != true else { return }/guard let current = away else { return }/'
 away_mutant "a send that went away stays in the sheet too" 's/^        run = nil$/        _ = run/'
 # The wiring no compiled function can prove: the sheet closes only after
 # every ask, one send at a time, and the shell draws it.
-awk '/try await AztecCoSign.approve\(/{a=NR} /steps.sendAway\(\)/{if(!s)s=NR} /AztecEngine.shared.call\("sendPrivately"/{c=NR} END{exit !(a && s && c && a<s && s<c)}' $AZTEC_MOVE \
+awk '/try await AztecCoSign.approve\(/{a=NR} /steps.sendAway\(from: .aztec/{if(!s)s=NR} /AztecEngine.shared.call\("sendPrivately"/{c=NR} END{exit !(a && s && c && a<s && s<c)}' $AZTEC_MOVE \
   || { echo "✗ the sheet closes before Face ID and the co-signer answered, or after the send began (prd §1777)"; exit 1; }
 grep -q 'guard mode != .send || !anotherIsGoing else {' $AZTEC_MOVE \
   || { echo "✗ a second send can start while one is behind its sheet (prd §1777)"; exit 1; }
@@ -174,8 +201,25 @@ grep -q 'let aztecMove = (aztec == .send ? AztecMove.kept : nil) ?? AztecMove()'
   || { echo "✗ Move opened on Aztec no longer shows the send behind its sheet (prd §1777)"; exit 1; }
 grep -q 'MoveStepCapsule()' Casberi/Casberi/Shell/RootShell.swift \
   || { echo "✗ the shell no longer draws a send behind its sheet (prd §1777)"; exit 1; }
-grep -q 'if let run = steps.away {' $ROWS_SWIFT \
+grep -q 'if let run = steps.away, run.ok != true {' $ROWS_SWIFT \
   || { echo "✗ the shell's capsule ticks with nothing to draw, or draws the sheet's own run (prd §1777)"; exit 1; }
+# Landed, the toast says it and the capsule is gone (prd §1806).
+awk '/guard ok == true, let run = steps.away else/{g=NR} /steps.clearAway\(\)/{if(g && !c)c=NR} /chrome.flash\(words\)/{f=NR} END{exit !(g && c && f && g<c && c<f)}' $ROWS_SWIFT \
+  || { echo "✗ a send behind its sheet lands with no toast, or its capsule stays (prd §1806)"; exit 1; }
+# Railgun's send to someone goes behind its sheet after Face ID, and only it.
+RAILGUN_MOVE=Casberi/Casberi/Screens/MoveRailgunPrivate.swift
+[[ $(grep -c 'started(.send(.ethereum), away: true)' $RAILGUN_MOVE) -ge 2 ]] \
+  || { echo "✗ a Railgun send to someone stays in its sheet (prd §1806)"; exit 1; }
+grep -q 'started(Self.takeBackPlan) }' $RAILGUN_MOVE \
+  || { echo "✗ taking back from Railgun leaves its sheet before your account has signed (prd §1806)"; exit 1; }
+grep -q 'if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords) {' $RAILGUN_MOVE \
+  || { echo "✗ Railgun's sheet closes before Face ID, or over another send (prd §1806)"; exit 1; }
+grep -q '.task(id: move.mode) { if RailgunMove.kept !== move { await move.read() } }' $RAILGUN_MOVE \
+  || { echo "✗ a Railgun send behind its sheet is read over when its sentence opens again (prd §1806)"; exit 1; }
+grep -q 'guard mode != .takeBack || !anotherIsGoing else {' $RAILGUN_MOVE \
+  || { echo "✗ a second Railgun proof can start while one is behind its sheet (prd §1806)"; exit 1; }
+grep -q 'PrivateSendSteps.shared.mark(key, from: .railgun)' Casberi/Casberi/Model/RailgunEngine.swift \
+  || { echo "✗ Railgun's engine no longer names itself, so its send behind the sheet never moves (prd §1806)"; exit 1; }
 echo "✓ a send behind its sheet: its own slot, the engine's words, one at a time, the shell's capsule"
 
 # ── Private gas (prd §1700aa) ───────────────────────────────────────────
