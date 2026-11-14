@@ -147,7 +147,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Fees is Spending's third row (prd §1476): Zerion's fee on the sent leg as a rowless `.fee` fact, one per transaction, by network, apart from the total; "Fees · from <day>" while a window holds an unstamped send (`spending-selftest.sh`)** → prd §1476
 - **Swap to another network is Across's: the phone writes the deposit, ETH via its handler, one Activity row (`WalletAcross`, `across-swap-selftest.sh`, `-acrossSample`)** → docs/hooks/wallet.md · prd §1555
 - **Swap asks Uniswap v4 on all three networks: standard keys for every pair, measured keys for their own (`scripts/uniswap-v4-pools.py`; `--check` nightly in `live-integrations.sh`, `--self-test` in verify); a swap moving the price ≥1% says "Moves the price N%" in the foot (`-swapImpactSample 0.064` on the demo)** → prd §1678 · §1680 · §1682
-- **Wallet (prd §1480, supersedes §1107/§1232/§1468's tiles): Home · Holdings · Activity · Spending, drawn in that order, not A–Z (`keepsOrder`, §1686); Home is the balance and six doors (Your account, Following, Needs you, Permissions, Risks, Markets), every list behind a door, Security, Cards and the category index dissolved; `-openSection home|activity|holdings|spending`** → prd §1480
+- **Wallet pages (prd §1480, under §1807): Holdings, Money (`.activity`) and Spending are pages behind Home, every list behind a door; `-openSection home|activity|holdings|spending`** → prd §1480 · §1808
 - **Holdings is Public · Private, lines network · fact · place (`walletPlaceRow`, `-moveToAztec YES`)** → prd §1718
 - **Your private balance is one place, told apart by network; no Private switch (`MoveAztecReceive`)** → prd §1719
 - **Railgun, every build: your account sends only to you, a broadcaster to anyone else (`railgun-selftest.sh`, `-moveRailgun in|back|send`); Move says dollars and one cost, the wallet syncs on the Wallet's open (`-railgunDemoUnder YES`: under $10)** → prd §1721 · §1723 · §1728
@@ -231,7 +231,7 @@ deliberately does not check are in `docs/verify.md`.
 ## Design law (read docs/build-brief.md §8 before UI work)
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
-- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The tab bar (Feed · Wallet, Move the circle, Apps at the title row's top right, prd §1783 amending §1715, §1741; the Mac's rail keeps Apps, §1402) retired §100's "no tab bar" → docs/hooks/design.md
+- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The tab bar (Home · Activity, Move the circle, prd §1807; the Mac's rail keeps Apps, §1402) retired §100's "no tab bar" → docs/hooks/design.md
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - **Every text rung is named for the size it draws, and a glyph takes a `DSGlyph` rung, never a number (prd §762).**
 - **One section rung (prd §1496): every section name and Wallet door is `heading24` with its glyph in the head column; a door has no line, its state is the figure's ink or one amber word; Your account is Keys and Spending in one-word rows; the second key is the Co-signer; `heading28` is the lede's alone** → prd §1496 → docs/hooks/design.md · prd §762
@@ -261,8 +261,8 @@ deliberately does not check are in `docs/verify.md`.
 - **Every room head composes `DSRoomChassis.Head` (prd §745): a lead, notes, blocks, footnotes, one surface and one door.** → docs/hooks/design.md · prd §745
 - **Every chart head draws into `DSRoomChassis.figureHeight` (56pt) and caps at `headRowCap` (8, raised from 3 by §760: `LeadFit` draws as many rows as the box holds); a head with no chart is deleted and the room leads with its newest thing (prd §749, §751).** The models spell the cap literally, and `room-heads-selftest.sh` holds them to it → prd §751 · §760
 - **Every feed row composes ONE anatomy, `DSFeedRow` (prd §744): a 30pt lead in a 44pt head (§1071), one line; every Wallet list row at that pitch through `walletListRow()`/`walletStackRow()`/`walletRowPitch()` (`wallet-row-audit.py`, §1482)** → docs/hooks/design.md · prd §744 · §1482
-- **No controls at the top of the screen, anywhere (user, prd §752).** A picker, a scope or a back control sits in the content (under the head or figure) or in the bottom band. One exception: Apps ends the Feed's and the Wallet's title row (§1783). → docs/hooks/design.md · prd §752 · §752b
-- **One wallet (prd §1807): the bar is Home · Activity with Move beside it; Home is the balance over the holdings map, Public · Private, and six cards A–Z (`DSHomeCard`: Account, Apps, Holdings, Permissions, Risks, Watchlist); the Wallet has no tiles (`WalletSection.order` is Home alone); Activity is Needs you, Money's latest three and one row per app in each category; Account holds Following and Settings; nothing stands at the top, Apps included** → prd §1807
+- **No controls at the top of the screen, anywhere (user, prd §752).** A picker, a scope or a back control sits in the content (under the head or figure) or in the bottom band. No exception since §1807. → docs/hooks/design.md · prd §752 · §752b
+- **One wallet (prd §1807): the bar is Home · Activity with Move beside it; Home is the balance over the holdings map, Public · Private, and six cards A–Z (`DSHomeCard`: Account, Apps, Holdings, Permissions, Risks, Watchlist); the Wallet has no tiles (`WalletSection.order` is Home alone); Activity is Needs you, Money's latest three and one row per app in each category; Account holds Following and Settings (no Settings folder in Apps, §1808); a category's name in Activity raises its page** → prd §1807 · §1808
 - **The wallet family has NO BAR (prd §747, supersedes §547); the account is picked from the menu under the tiles (§936), and the acts are tiles on every page (§774, §1039).** → docs/hooks/design.md · prd §747 · §774 · §1039
 - **The dock's face opens APPS (was Accounts) — search, then the one catalogue; Manage is deleted, a connected row with a room is a status (no chevron) whose tap LANDS IN ITS ROOM (prd §1040, amends §1033/§1036), and a room's own sliders disc beside its name raises its account page (prd §1033; §796, §863).** → docs/hooks/design.md · prd §796 · §933 · §1033
 - **SETTINGS HOLDS NO KEY (prd §871).** "Your key", `AccountDetail.key` and `AgentKeyPicker` are deleted. → docs/hooks/design.md · prd §871
@@ -294,7 +294,7 @@ deliberately does not check are in `docs/verify.md`.
 ## Mac (Catalyst)
 
 - **The pane is the room's second column (prd §1742): Wallet activity under the box (`walletPaneActivity`), a 620pt measure (`PadLayout.paneMeasure`), an 11pt floor (`macFloor`), the start box in the list on a first run; `-firstRunPreview YES`**
-- **Every shell ruling names its Mac half before it ships (RULE, prd §1402).** The rail is the tab bar — Feed · Wallet · Apps (`.library` in code, §1741), Move wearing your face once you pick one (`Shell/PlaceRail.swift`, `MoveMark`); ⌘1–⌘4 open them, ⌘F focuses Apps' field (§1715); never a sidebar (§875).
+- **Every shell ruling names its Mac half before it ships (RULE, prd §1402).** The rail is the tab bar — Home · Activity · Apps (`.library` in code, §1807), Move wearing your face once you pick one (`Shell/PlaceRail.swift`, `MoveMark`); ⌘1–⌘4 open them, ⌘F focuses Apps' field (§1715); never a sidebar (§875).
 
 ## Website (casberi.app)
 
