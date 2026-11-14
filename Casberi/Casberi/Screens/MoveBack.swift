@@ -53,6 +53,7 @@ struct MoveChoiceRow: Identifiable {
     let value: String
     var empty = false
     var ink: Color?
+    var mark: MoveRowMark?
     let act: () -> Void
 }
 
@@ -64,20 +65,29 @@ struct MoveChoiceRowLabel: View {
     let name: String
     let value: String
     var ink: Color = DS.textPrimary
+    /// No chevron while the row's value is being typed in place.
+    var chevron = true
+    /// The token's or the network's own mark, before the value.
+    var mark: MoveRowMark?
 
     var body: some View {
         HStack(alignment: .center, spacing: DS.Space.s2) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: name).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                Text(verbatim: value)
-                    .dsText(.heading24)
-                    .foregroundStyle(ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .frame(height: MoveChoiceRowLabel.nameHeight, alignment: .leading)
+                HStack(spacing: DS.Space.s2 + 2) {
+                    if let mark { mark }
+                    Text(verbatim: value)
+                        .dsText(.heading24)
+                        .foregroundStyle(ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
             }
             Spacer(minLength: DS.Space.s2)
             Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
+                .opacity(chevron ? 1 : 0)
                 .accessibilityHidden(true)
         }
         .frame(minHeight: MoveChoiceRowLabel.height)
@@ -86,6 +96,40 @@ struct MoveChoiceRowLabel: View {
     }
 
     static let height: CGFloat = 60
+    /// The name's line, which a field typed in the row stands under.
+    static let nameHeight: CGFloat = 17
+}
+
+/// **A NETWORK ALWAYS SHOWS ITS MARK (prd §1792, user: "are we going to
+/// show icons for networks? we should always imo").** A token wears its
+/// own mark with its network's as a badge; a network alone wears its own.
+/// In rows and menus, never inside Move's sentence.
+struct MoveRowMark: View {
+    /// A token's symbol.
+    var token: String?
+    /// A network's bundled mark (`MoveSentence.networkMark`).
+    var network: String?
+    var size: CGFloat = 24
+
+    var body: some View {
+        if let token {
+            AssetMark(name: token, size: size)
+                .overlay(alignment: .bottomTrailing) {
+                    if let network {
+                        disc(network, size / 2)
+                            .overlay(Circle().stroke(DS.page, lineWidth: 2))
+                            .offset(x: size / 6, y: size / 6)
+                    }
+                }
+                .accessibilityHidden(true)
+        } else if let network {
+            disc(network, size).accessibilityHidden(true)
+        }
+    }
+
+    private func disc(_ name: String, _ side: CGFloat) -> some View {
+        Image(name).resizable().scaledToFill().frame(width: side, height: side).clipShape(Circle())
+    }
 }
 
 struct MoveChoiceRows<Menu: View>: View {
@@ -111,7 +155,8 @@ struct MoveChoiceRows<Menu: View>: View {
                         DSHaptic.selection()
                     } label: {
                         MoveChoiceRowLabel(name: r.name, value: r.empty ? String(localized: "Choose") : r.value,
-                                           ink: r.id == next ? nextInk : r.ink ?? DS.textPrimary)
+                                           ink: r.id == next ? nextInk : r.ink ?? DS.textPrimary,
+                                           mark: r.empty ? nil : r.mark)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))

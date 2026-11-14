@@ -72734,3 +72734,27 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** see the build's check below. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1791 — Move's template: the sentence says only what is picked, and the amount is typed in its row (amends §1754, §1781, §1518) (user, 2026-11-13, of the Move template canvas: "it should be a template that applies to all of them")
+
+1. **What is not picked is not in the sentence.** No "token", "address", "network", "category", "merchant" or "0". A verb with nothing picked is the whole sentence, with its full stop: "Send." It grows as rows are answered: "Send to Ana.", "Send USDC to Ana on Base.", "Send $20 of USDC to Ana on Base." The full stop stands on the last word said (`MoveSentence.verbStops`, `sellStops`).
+2. **Every choice still has its row.** A row was read off the sentence's words; a choice not yet said reports itself from `hiddenBlanks`, so the rows are the same from the first frame.
+3. **The amount is typed in its row.** "Another amount" puts the field in the Amount row at the row's size, with the keys under it; the sentence says the figure and never holds the cursor (`amountRow`, `amountFigure`). The row is brought clear of the keys.
+4. **Done, while a figure is typed.** The foot's act is a grey "Done" that puts the keys away; the verb that signs comes back after it.
+5. **Nothing to move is a button.** "Send needs money first." keeps its sentence and the foot's act is Receive; the pink line under the sentence is deleted.
+6. **Spend reads "Spend $25 on a gift card at Amazon with USDC on Base."** The noun has its article ("a top-up", "an eSIM"); the category leaves the sentence once a merchant is picked and stays in its row.
+7. **Buy reads "Buy $50 of USDC on Base."**, the network said once it is picked.
+8. The amount's menu shows all its sums and "Another amount" without a scroll.
+
+**Seen:** the simulator, demo: "Send.", then "Send USDC on Base." with To's menu open, the whole draft, and "Another amount" typing in the row over Done. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
+
+## §1792 — A network always shows its mark, and a token wears its network's as a badge (user, 2026-11-13: "are we going to show icons for networks? we should always imo")
+
+1. **Move's rows** (`MoveRowMark`): the Network row leads with the network's mark; the Token row leads with the token's, the network's a badge at its corner. Never inside the sentence.
+2. **Move's menus:** a token's row in a list wears the same badge.
+
+**Seen:** the simulator, Send's whole draft. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
