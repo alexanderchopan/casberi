@@ -3243,9 +3243,13 @@ struct MoveSentence: View {
         }
     }
 
-    /// The rows' order, the same in every verb: who, how much, of what.
+    /// The rows' order, the same in every verb: who, of what, how much.
     static func rowRank(_ which: Blank) -> Int {
-        let order: [Blank] = [.from, .to, .group, .merchant, .amount, .with, .depositCoin, .elsewhereCoin, .buy,
+        // **TO, FROM, TOKEN, AMOUNT (prd §1789, user: "before you pick from
+        // you would pick to", "i think the order is to, from, token,
+        // amount").** Who it goes to leads; the token stands before its
+        // amount, since an amount is a sum of a token and is asked second.
+        let order: [Blank] = [.to, .from, .group, .merchant, .with, .depositCoin, .elsewhereCoin, .buy, .amount,
                               .network, .elsewhere, .depositNetwork, .destination, .arrives, .when, .until, .verb]
         return order.firstIndex(of: which) ?? order.count
     }

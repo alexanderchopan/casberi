@@ -72714,3 +72714,13 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** `private-money-selftest.sh` reads the popover's edge.
+
+## §1789 — Move's rows read To, From, Token, Amount (amends §1781) (user, 2026-11-13, of the Move template canvas: "on send, i think before you pick from you would pick to", then "i think the order is to, from, token, amount")
+
+1. **Send's rows are To, From, Token, Amount** (`MoveSentence.rowRank`). Who it goes to leads; where it leaves from follows.
+2. **The token stands before its amount in every verb.** An amount is a sum of a token, and the token is already asked first (§1782): the rows now stand in the order they are answered. So Swap reads Token, For, Amount, Arrives on; Buy reads Token, Amount, Network; Spend reads Category, Merchant, Pay with, Amount.
+3. The private sentences and Lend keep their own order until the Move template is built (`docs/specs/redesign-list-2026-11-13.md`, item 13).
+
+**Seen:** see the build's check below. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

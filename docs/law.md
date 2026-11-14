@@ -252,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1965 of 2039 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1966 of 2040 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2219,6 +2219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1786 — Account is your public account; the private places are doors, and Aztec's address stands only on its own page (amends…
 - §1787 — On its way leaves Home; Holdings' waiting rows open its steps (amends §1779)
 - §1788 — Fixes from the screen-by-screen walk: the private account's door stands from the first frame, its rows carry no line,…
+- §1789 — Move's rows read To, From, Token, Amount (amends §1781)
 
 ## Dead rulings → what replaced them (generated)
 
