@@ -94,7 +94,7 @@ Move is where you do something with your money. It opens on a menu of every verb
 
 #### Pay someone
 
-- Send money. Pick who it's to, the network, the token and the amount. To lists your contacts, your own private places and the addresses you paid last, and takes a name, an ENS name or a pasted address. Add puts another send in the same transaction.
+- Send money. Pick who it's to, the network, the token and the amount. To lists your contacts, your own private places and the addresses you paid last, and takes a name, an ENS name or a pasted address. Add another puts a second send in the same transaction.
 - Pay a name. Type a zk.money tag, or @name, in To and Send sets the payment up. Any token on Ethereum is swapped into USDC in the same transaction; from another network, Across carries the dollar there. Each payment goes to a fresh address. Paste link reads a zk.money request. Save a tag and it's a contact with Pay.
 - Pay a contact. A contact with a wallet has Send on their page in Contacts. Move opens with their name filled in.
 
@@ -105,7 +105,7 @@ Move is where you do something with your money. It opens on a menu of every verb
 
 #### Change what you hold
 
-- Swap. Your phone asks Uniswap and Aerodrome directly for the best price and writes the swap itself, with no aggregator in between. The line under the sentence names the exchange and its pool fee, which is in the price.
+- Swap. Your phone asks Uniswap and Aerodrome directly for the best price and writes the swap itself, with no aggregator in between. Move names the exchange and its pool fee, which is in the price.
 - Swap to another network. Pick the network for what you get, and Across carries it: ETH arrives as ETH, USDC as USDC. Activity shows it arriving.
 - Clear out dust. Sweep swaps every token worth under $1, or $5, on one network for ETH, in one transaction. A token it won't touch stays listed with the reason — most dust is sent by strangers.
 
@@ -121,10 +121,10 @@ Move is where you do something with your money. It opens on a menu of every verb
 
 #### Before you approve
 
-- The fee. Before Face ID asks, the line under the sentence says the most the fee can be.
+- The fee. Before Face ID asks, the Fee row says the most it can be.
 - Pay the fee without ETH. On Base, a send short of ETH for its fee pays it from your USDC, up to $5 at a time. Face ID asks once to allow that, then once for the send.
 - What you sign. Details shows the whole move and whether this exact move was run on the network and lands as written. What Details shows is what Face ID signs.
-- A warning. It takes the fee line's place: the move would fail, the address is sanctioned or reported, it looks like an address you've paid, it's a new contract, or it's your first send there. Then the verb reads Send anyway: the first tap arms it, the second signs.
+- A warning. It stands over the Fee row: the move would fail, the address is sanctioned or reported, it looks like an address you've paid, it's a new contract, or it's your first send there. Then the button reads Send anyway: the first tap arms it, the second signs.
 - Your co-signer. When you require it, every send and swap needs it too.
 
 ### Private money
@@ -147,7 +147,7 @@ Where it sits, and who carries it:
 
 All three show together under Private in Holdings. You send from whichever one holds the money. Who sends to you, and with what, decides where it lands.
 
-- Into your private balance. ETH and USDC go into 0xBow's Privacy Pools, which approves each deposit before it can be spent, and once approved it earns on Aave. Any other token goes into Railgun and is private in about an hour; Railgun takes 0.25% in and 0.25% out. The line under the sentence names which one.
+- Into your private balance. ETH and USDC go into 0xBow's Privacy Pools, which approves each deposit before it can be spent, and once approved it earns on Aave. Any other token goes into Railgun and is private in about an hour; Railgun takes 0.25% in and 0.25% out. Move names which one.
 - Into your private account. USDC or ETH moves into your Aztec account through Shield. Shield first asks for a Human Passport score, and the first time, 30 AZTEC goes along as its gas.
 - Who posts a payment. From Privacy Pools, 0xBow's relayer. From Railgun, a Railgun broadcaster, which takes its fee inside Railgun, shown before Face ID; if none answers, a fresh address of yours posts it, its gas paid from your private ETH. From your Aztec account, a payment to an Aztec address stays private on Aztec; to an Ethereum address it leaves through Shield, and Needs you offers Finish about an hour later.
 - What arrives at a fresh address. It moves in by the table above, its gas paid from your private ETH.
@@ -248,7 +248,7 @@ An agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok,
 - My screenshots aren't updating — Photos needs full access, not selected photos: iOS Settings → Casberi → Photos → All Photos. That's also what lets a screenshot you delete in Photos disappear here.
 - An account shows no balance — Give the first read a moment, then pull to refresh. Pick Following on the Wallet's switch and check the address.
 - Tor can't connect, or my wallets aren't refreshing — Wallet › Account shows Tor as On, Connecting or Can't connect. Some networks block Tor: try another Wi-Fi, or cellular. Casberi starts Tor's connections again when your network changes. Until it connects, each wallet shows its last reading, with its time.
-- A swap was refused before Face ID — Before you sign, the network runs this exact swap. If it would pay less than the least you accept — the price moved since the quote — or would fail, Casberi won't sign it, and the line under the sentence says why. Nothing was sent or paid. Try again for a fresh price, or a smaller amount.
+- A swap was refused before Face ID — Before you sign, the network runs this exact swap. If it would pay less than the least you accept — the price moved since the quote — or would fail, Casberi won't sign it, and Move says why. Nothing was sent or paid. Try again for a fresh price, or a smaller amount.
 - A swap to another network is still on its way — Activity shows it arriving until a relayer fills it on the other network. If none fills it in time, Across's contract refunds it on the network it left. ETH comes back as WETH, which Swap turns back into ETH one for one.
 - A subscription is missing — Casberi counts a charge once it has repeated at the same price, about a month apart. Connect the card or Apple Wallet it's paid from, or add it yourself with Track a subscription in Apps.
 
