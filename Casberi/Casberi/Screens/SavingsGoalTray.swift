@@ -46,6 +46,7 @@ struct SavingsGoalTray: View {
                 .frame(minHeight: 48)
                 .contentShape(Rectangle())
                 .onTapGesture { focused = true }
+                .accessibilityAddTraits(.isButton)
                 DSToggleRow(title: Text("By a date"), isOn: $dated.animation(DS.Motion.standard))
                     .frame(minHeight: 48)
                 if dated {

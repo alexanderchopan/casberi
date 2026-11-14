@@ -137,7 +137,7 @@ struct MoveRowMark: View {
 
     var body: some View {
         if let brand {
-            BridgeIcon(name: brand, size: size, circular: true).accessibilityHidden(true)
+            BridgeIcon(name: brand, size: size).accessibilityHidden(true)
         } else if let token {
             AssetMark(name: token, size: size)
                 .overlay(alignment: .bottomTrailing) {
