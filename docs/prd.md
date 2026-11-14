@@ -72605,3 +72605,21 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 
 **Checks.** `private-money-selftest.sh`, by reading: the menu is `offeredVerbs`, no Make private or ranking in Move, `blank` holds no button and reports its row, the rows read the sentence, every sentence Move draws or mounts takes no touch and leads its foot with the back card, the four that write their own words draw `MoveChoiceRows`.
 
+## §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781) (user, 2026-11-13, of a canvas of four improvements: "i don't want to choose the token for them. but the rest is fine if you think it is better", "don't say 'someone' it is 'address' b/c may not be a person", then "don't do the pay again rows")
+
+**The design** is a canvas of four screens (https://claude.ai/artifact/3ap6u5LhUuqsWK4bvM5cRG, private to the user), drawn after §1781 shipped in build 994 to take back what it cost: a form's plainness, and a tap or two for someone who knows what they want.
+
+1. **A choice's row leads with its answer** (`MoveChoiceRowLabel`): the name small above (`subhead12`), what is picked large beneath (`heading24`), a chevron at the trailing edge. In Move's own sentence, in Lend and in the private sentences. The ledger's facts (Fee, Total, When) keep their one line.
+2. **The next list opens by itself, after a pick** (`advance`). The first row still saying "Choose" opens its list, so a send is pick, pick, pick with no row tapped between. Only after a pick: a list closed by its name, the keys raised, or a sheet made short leaves the rows as they are. Amount's list is sums of a token, so with none picked the token is asked first. Send and Swap.
+3. **No pay again.** The canvas drew "$20 again" under a recent recipient, filling who and how much in one pick. It was built, seen on the simulator, and removed before it shipped (user: "don't do the pay again rows"). The store it kept is deleted with it.
+4. **The token is never chosen for you.** The canvas drew Send opening on the largest balance; the user refused it.
+5. **"address", never "someone".** The sentence's unfilled recipient is "address", as it was: it may not be a person.
+
+**Not built, from the canvas.** The button reading "Send $20 to Ana": a long name would not fit the act, and the sentence over it says who.
+
+**Seen** (simulator, the demo): the bigger rows with To in pink; a pick in To's list and the Token list opening by itself; USDC picked, the rows whole and Send lit. **Not seen:** a list closed by its name leaving the rows alone, Swap's rows opening in turn, the light page, the Mac, a phone.
+
+**Mac half (§1402).** The same on Catalyst.
+
+**Checks.** `private-money-selftest.sh`, by reading: the rows draw `MoveChoiceRowLabel`, a pick sets `advances` and the list that opens is the first still to be filled, and nothing of Pay again is in To.
+

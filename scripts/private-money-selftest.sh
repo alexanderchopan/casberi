@@ -1162,6 +1162,12 @@ for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveChoiceRows(rows: choiceRows' "$f's choices are not rows (prd §1781)"
 done
 use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
+# prd §1782: bigger rows, the next list by itself; no pay again, no token chosen.
+use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary)' "Move's rows no longer lead with their answer (prd §1782)"
+use "$SENT" 'guard now == nil, advances else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
+use "$SENT" 'guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }' "the list that opens by itself is not the first still to be filled (prd §1782)"
+use "$SENT" 'tapBlank(next == .amount && with == nil ? .with : next)' "Amount is asked before its token (prd §1782)"
+! grep -q 'recentAmounts\|rememberAmounts' "$SENT" || { echo "✗ Pay again is back in To (prd §1782: declined)"; exit 1; }
 use "$SENT" 'Button { if let which = r.opens { tapBlank(which) } } label: {' "a choice row no longer opens the list its word opens (prd §1779)"
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"

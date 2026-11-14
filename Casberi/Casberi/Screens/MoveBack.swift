@@ -56,6 +56,38 @@ struct MoveChoiceRow: Identifiable {
     let act: () -> Void
 }
 
+/// **A CHOICE'S ROW (prd §1782).** The name small above, what is picked
+/// large beneath it, a chevron at the trailing edge: the answer is the
+/// thing seen and pressed, where a small figure at the far edge read as a
+/// settings form.
+struct MoveChoiceRowLabel: View {
+    let name: String
+    let value: String
+    var ink: Color = DS.textPrimary
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: name).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                Text(verbatim: value)
+                    .dsText(.heading24)
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .accessibilityHidden(true)
+        }
+        .frame(minHeight: MoveChoiceRowLabel.height)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    static let height: CGFloat = 60
+}
+
 struct MoveChoiceRows: View {
     let rows: [MoveChoiceRow]
     var disabled = false
@@ -72,19 +104,8 @@ struct MoveChoiceRows: View {
                         r.act()
                         DSHaptic.selection()
                     } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(DS.textSecondary)
-                            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
-                                .foregroundStyle(DS.textSecondary)
-                                .accessibilityHidden(true)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(verbatim: r.empty ? String(localized: "Choose") : r.value)
-                                .dsText(.body17)
-                                .foregroundStyle(r.id == next ? nextInk : r.ink ?? DS.textPrimary)
-                                .lineLimit(1)
-                        }
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
+                        MoveChoiceRowLabel(name: r.name, value: r.empty ? String(localized: "Choose") : r.value,
+                                           ink: r.id == next ? nextInk : r.ink ?? DS.textPrimary)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))

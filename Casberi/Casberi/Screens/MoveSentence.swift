@@ -234,6 +234,9 @@ struct MoveSentence: View {
     @State private var resolved: Recipient?
     @State private var malformed = false
     @State private var open: Blank?
+    /// A pick just closed its list (prd §1782): the next row still to be
+    /// filled opens by itself, once. A list closed by hand sets nothing.
+    @State private var advances = false
     @State private var search = ""
     @State private var pasted: [Int: Tokens.Listed] = [:]
     @State private var items: [Chain.Item] = []
@@ -1585,6 +1588,20 @@ struct MoveSentence: View {
             open = .verb
         }
         .onDisappear { chrome.moveDraft = keptDraft }
+        // **THE NEXT LIST OPENS BY ITSELF (prd §1782).** After a pick, the
+        // first row still saying "Choose" opens its list, so a send is pick,
+        // pick, pick with no row tapped in between. Only after a pick: a
+        // list closed by its name, the keys raised, or a sheet made short
+        // leaves the rows as they are.
+        .onChange(of: open) { _, now in
+            guard now == nil, advances else { return }
+            advances = false
+            Task { @MainActor in
+                // The rows are read off the sentence, which draws the pick first.
+                try? await Task.sleep(for: .milliseconds(280))
+                advance()
+            }
+        }
         .alert("Name this address", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
             TextField("Name", text: $nameDraft)
                 .textInputAutocapitalization(.words)
@@ -3121,6 +3138,16 @@ struct MoveSentence: View {
         return sorted
     }
 
+    /// Opens the list of the first row still to be filled (prd §1782). The
+    /// amount's list is sums of a token, so with no token picked the token
+    /// is asked first; nothing opens while a figure is being typed.
+    private func advance() {
+        guard verb == .send || verb == .swap, open == nil, focus == nil, receipt == nil, stage == nil else { return }
+        let pick = String(localized: "Choose")
+        guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
+        tapBlank(next == .amount && with == nil ? .with : next)
+    }
+
     /// A word of the sentence as its row's value: without the full stop the
     /// sentence ends on.
     static func rowValue(_ text: String) -> String {
@@ -3201,7 +3228,7 @@ struct MoveSentence: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(rows) { r in
                     Button { if let which = r.opens { tapBlank(which) } } label: {
-                        ledgerRow(r, chevron: "chevron.right").frame(minHeight: 44)
+                        MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
@@ -3209,9 +3236,7 @@ struct MoveSentence: View {
                 ForEach(kept, id: \.id) { line in
                     HStack(spacing: 0) {
                         Button { edit(line.id) } label: {
-                            ledgerRow(LedgerRow(id: "kept\(line.id)", name: String(localized: "Added"), value: line.words),
-                                      chevron: "chevron.right")
-                                .frame(minHeight: 44)
+                            MoveChoiceRowLabel(name: String(localized: "Added"), value: line.words)
                         }
                         .buttonStyle(RowPress())
                         .accessibilityHint(Text("Edits this line"))
@@ -3785,7 +3810,7 @@ struct MoveSentence: View {
                         withAnimation(DS.Motion.standard) {
                             inDollars = true
                             amount = "\(step)"
-                            if closes { open = nil }
+                            if closes { advances = true; open = nil }
                         }
                         DSHaptic.selection()
                     }
@@ -3795,7 +3820,7 @@ struct MoveSentence: View {
                     picked: now == 50, rung: .heading24) {
                 withAnimation(DS.Motion.standard) {
                     share.wrappedValue = 50
-                    if closes { open = nil }
+                    if closes { advances = true; open = nil }
                 }
                 DSHaptic.selection()
             }
@@ -3806,7 +3831,7 @@ struct MoveSentence: View {
                 withAnimation(DS.Motion.standard) {
                     inDollars = false
                     share.wrappedValue = 100
-                    if closes { open = nil }
+                    if closes { advances = true; open = nil }
                 }
                 DSHaptic.snap()
             }
@@ -4912,6 +4937,7 @@ struct MoveSentence: View {
     }
 
     private func pick(_ change: () -> Void) {
+        advances = true
         withAnimation(DS.Motion.standard) {
             change()
             open = nil
