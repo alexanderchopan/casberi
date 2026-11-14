@@ -2998,9 +2998,15 @@ struct RootShell: View {
             sceneState.filter.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
             if part == "latest" {
-                openFromShell((try? modelContext.fetch(FetchDescriptor<Thing>(
+                // The newest thing KEPT, never one dated ahead: a calendar
+                // event weeks away sorts above everything you saved today.
+                let now = Date()
+                var latest = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.capturedAt <= now },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-                )))?.first)
+                )
+                latest.fetchLimit = 1
+                openFromShell((try? modelContext.fetch(latest))?.first)
             } else if let part, let uuid = UUID(uuidString: part) {
                 openFromShell((try? modelContext.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.id == uuid }

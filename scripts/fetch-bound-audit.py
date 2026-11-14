@@ -227,11 +227,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "predicated form. Guarded by the stored migration number and, since "
         "2026-09-01, chunked at 500 with a yield — `scanPaged`'s answer: slice "
         "the WALK, not the fetch.",
-    ("Shell/RootShell.swift", "route"):
-        "`casberi://thing/latest` — a deep link, taken once when a link is "
-        "opened and never during a body pass. It is nonetheless the one entry "
-        "here that a `fetchLimit = 1` would simply delete rather than excuse; "
-        "it should go the next time that file is opened for other reasons.",
 
     # --- Check 2: @Query-backed, predicated, and unbounded on purpose --------
     ("Screens/WalletHistoryScreen.swift", "descriptor"):
