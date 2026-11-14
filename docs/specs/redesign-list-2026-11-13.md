@@ -103,9 +103,11 @@ following; Add another as "And" blocks for Swap and Send; Sweep ("Tokens
 under", dollars first); Buy (two lines, "Continue with Stripe"); Spend ("Pay
 with", Network, Token); Lend (title, sentence over the button, Network first).
 
-**Mocked and NOT built:** the sheet as tall as its content (it conflicts with
-§1681b's fixed short height, kept so nothing jitters: needs a decision and
-care); the private sends (Privacy Pools, Aztec, Railgun) with the sentence
+**Declined after the mock (user, 2026-11-14: "Leave the sheet"):** the sheet
+as tall as its content. §1681b's fixed short height stays, so nothing moves
+as you pick.
+
+**Mocked and NOT built:** the private sends (Privacy Pools, Aztec, Railgun) with the sentence
 over the button; Lend's chips, "you have" line and cost line as its board
 draws them; a merchant's mark on Spend's Merchant row; Send's From row in a
 kept first line.
