@@ -3189,9 +3189,11 @@ struct MoveSentence: View {
         var seen: Set<String> = []
         for b in sentenceBlanks {
             // The verb is the foot's back button's; the network rides its
-            // token's row in Send and Swap, where a token is on one network.
+            // token's row in Swap, where each side names its own. Send
+            // asks the network on a row of its own, before the token
+            // (prd §1790).
             guard b.names != .verb else { continue }
-            let folds = verb == .send || verb == .swap
+            let folds = verb == .swap
             if b.names == .network, folds { continue }
             // A swap that can only stay where it is has no row to say so.
             if b.names == .destination, destinations.count < 2 { continue }
@@ -3249,8 +3251,11 @@ struct MoveSentence: View {
         // you would pick to", "i think the order is to, from, token,
         // amount").** Who it goes to leads; the token stands before its
         // amount, since an amount is a sum of a token and is asked second.
-        let order: [Blank] = [.to, .from, .group, .merchant, .with, .depositCoin, .elsewhereCoin, .buy, .amount,
-                              .network, .elsewhere, .depositNetwork, .destination, .arrives, .when, .until, .verb]
+        // **THE NETWORK STANDS BEFORE ITS TOKEN (prd §1790, user: "on send i
+        // think the order is to from network token amount").**
+        let order: [Blank] = [.to, .from, .group, .merchant, .network, .elsewhere, .depositNetwork,
+                              .with, .depositCoin, .elsewhereCoin, .buy, .amount,
+                              .destination, .arrives, .when, .until, .verb]
         return order.firstIndex(of: which) ?? order.count
     }
 

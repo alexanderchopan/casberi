@@ -72724,3 +72724,13 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** see the build's check below. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1790 — Send's rows read To, From, Network, Token, Amount (amends §1789) (user, 2026-11-13: "on send i think the order is to from network token amount")
+
+1. **Send asks the network on a row of its own, between From and Token** (`MoveSentence.choiceRowList`: only Swap folds the network into its token's row now). With a network picked, Token lists what you hold there; with none, it lists every network and picking a token picks its network.
+2. **A network stands before its token in every verb** (`MoveSentence.rowRank`): Buy reads Network, Token, Amount.
+3. The Token row no longer repeats the network in Send; the Network row says it.
+
+**Seen:** see the build's check below. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.
