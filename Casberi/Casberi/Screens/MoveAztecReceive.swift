@@ -66,6 +66,7 @@ struct MoveAztecReceive<Head: View>: View {
                         DSHaptic.selection()
                         addMoney()
                     }
+                    .aztecDoor()
                     .padding(.top, DS.Space.s4)
                 }
             }

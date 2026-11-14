@@ -151,8 +151,10 @@ struct StepCapsuleLabel: View {
             } else {
                 DSSpinner(size: .small)
             }
+            // Both capsules carry Aztec's sends, so their words wear its ink
+            // (prd §1779); a failure keeps the page's.
             Text(verbatim: failed ? String(localized: "Not sent") : run.ended == nil ? step.running : step.done)
-                .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                .dsText(.body17).foregroundStyle(failed ? DS.textPrimary : DS.aztecInk).lineLimit(1)
             if !failed {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()

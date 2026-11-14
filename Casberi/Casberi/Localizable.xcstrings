@@ -17382,6 +17382,34 @@
         }
       }
     },
+    "%@ · step %lld of %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · paso %2$lld de %3$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · ステップ %2$lld/%3$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %3$lld단계 중 %2$lld단계"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 第 %2$lld 步，共 %3$lld 步"
+          }
+        }
+      }
+    },
     "%@ · testnet reset %@" : {
       "localizations" : {
         "es" : {
@@ -57242,6 +57270,34 @@
         }
       }
     },
+    "Arrived at your private address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegó a tu dirección privada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベートアドレスに到着"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 주소에 도착"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已到达你的私密地址"
+          }
+        }
+      }
+    },
     "Arrived on %@" : {
       "localizations" : {
         "es" : {
@@ -59467,6 +59523,34 @@
         }
       }
     },
+    "Aztec is carrying it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec lo está llevando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec が運んでいます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec이 옮기는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 正在传送"
+          }
+        }
+      }
+    },
     "Aztec key not on this iPhone" : {
       "localizations" : {
         "es" : {
@@ -59547,6 +59631,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Aztec 提案 %1$lld 将于 %2$@ 开放投票"
+          }
+        }
+      }
+    },
+    "Aztec to Aztec only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo de Aztec a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec から Aztec のみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 Aztec으로만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 Aztec 到 Aztec"
           }
         }
       }
@@ -69162,6 +69274,34 @@
         }
       }
     },
+    "Claimed for you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reclamado para ti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのために受け取り済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대신 수령함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已为你领取"
+          }
+        }
+      }
+    },
     "Claiming the token…" : {
       "localizations" : {
         "es" : {
@@ -73371,6 +73511,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制摘要"
+          }
+        }
+      }
+    },
+    "Copy for %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 用にコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@용으로 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制用于 %@"
           }
         }
       }
@@ -98876,6 +99044,34 @@
         }
       }
     },
+    "Gas for the move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas para el movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動のためのガス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동에 필요한 가스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入所需的 gas"
+          }
+        }
+      }
+    },
     "Gas is on its way to Aztec. Approve in a few minutes." : {
       "localizations" : {
         "es" : {
@@ -117243,6 +117439,34 @@
         }
       }
     },
+    "Moved into Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Movido a Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun に移動済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun으로 이동함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已转入 Railgun"
+          }
+        }
+      }
+    },
     "Moved money into or out of the vault as discrete pieces, rather than as a balance." : {
       "localizations" : {
         "es" : {
@@ -117631,6 +117855,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在把 ETH 转给你的共同签名人…"
+          }
+        }
+      }
+    },
+    "Moving in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Entrando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在转入"
           }
         }
       }
@@ -139693,6 +139945,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开 Kindle 磁盘中的 documents → My Clippings.txt,并将其复制到“文件”应用。"
+          }
+        }
+      }
+    },
+    "Open the address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir la dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开地址"
           }
         }
       }
@@ -170074,6 +170354,34 @@
         }
       }
     },
+    "Send on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec で送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上发送"
+          }
+        }
+      }
+    },
     "Send privately on Aztec" : {
       "localizations" : {
         "es" : {
@@ -175440,6 +175748,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Dock 上方显示其来源"
+          }
+        }
+      }
+    },
+    "Shows its steps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra sus pasos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ステップを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "단계를 표시합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示其步骤"
           }
         }
       }
@@ -206109,6 +206445,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待批准"
+          }
+        }
+      }
+    },
+    "Waiting for gas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando gas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガスを待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "等待 gas"
           }
         }
       }

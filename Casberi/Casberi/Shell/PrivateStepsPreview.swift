@@ -1,7 +1,7 @@
 import SwiftUI
 
 #if DEBUG
-/// `-privateStepsPreview move|app|fail|signed|away|awayfail` (prd §1700w, §1700x, §1777): plays one
+/// `-privateStepsPreview move|app|fail|signed|away|awayfail|ask` (prd §1700w, §1700x, §1777): plays one
 /// private send's steps on a timeline over the shell, through the real
 /// `PrivateSendSteps` and the views Move and the Aztec browser draw.
 ///   - `move`: an Aztec send (checking 2 s, proving 9 s, sent 8 s, done),
@@ -14,15 +14,22 @@ import SwiftUI
 ///   - `away`, `awayfail`: Move's send behind its sheet, drawn by the
 ///     shell's own capsule over the tab bar (`MoveStepCapsule`); this view
 ///     draws nothing and only plays the steps.
+///   - `ask`: an Aztec app's Connect sheet over a sample host, to see the
+///     act in Aztec's own fill (prd §1779). Nothing is connected.
 /// No engine, no money: a simulator cannot prove a mainnet send, and this is
 /// how the drawing is seen. NSLogs `privateStepsPreview| <mode> | <step>`.
 struct PrivateStepsPreview: View {
     private let mode = UserDefaults.standard.string(forKey: "privateStepsPreview")
-        .flatMap { ["move", "app", "fail", "signed", "away", "awayfail"].contains($0) ? $0 : nil }
+        .flatMap { ["move", "app", "fail", "signed", "away", "awayfail", "ask"].contains($0) ? $0 : nil }
     @State private var steps = PrivateSendSteps.shared
 
     var body: some View {
-        if let mode, mode.hasPrefix("away") {
+        if mode == "ask" {
+            ZStack(alignment: .bottom) {
+                DS.surfaceSheet.ignoresSafeArea()
+                AztecAskSheet(ask: .connect(requestId: "preview", host: "app.example"), answer: { _ in })
+            }
+        } else if let mode, mode.hasPrefix("away") {
             Color.clear.allowsHitTesting(false).task { await play(mode) }
         } else if let mode {
             ZStack(alignment: .bottom) {

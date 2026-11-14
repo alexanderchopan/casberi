@@ -152,7 +152,7 @@ struct MoveSentence: View {
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
-    enum Blank: Equatable { case verb, with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until }
+    enum Blank: Equatable { case verb, with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until, from }
     enum Field: Hashable { case amount, search, to, price }
 
     struct Recipient: Equatable {
@@ -3084,6 +3084,7 @@ struct MoveSentence: View {
                             case .depositNetwork: depositNetworkList
                             case .when: whenList
                             case .until: untilList
+                            case .from: fromList
                             }
                         }
                         .id(open)
@@ -3112,6 +3113,11 @@ struct MoveSentence: View {
         guard receipt == nil, stage == nil, verb == .send || verb == .swap else { return [] }
         let pick = String(localized: "Choose")
         var rows: [LedgerRow] = []
+        // Where the money leaves from (prd §1779): the one visible place to
+        // step into your private balance or your private account.
+        if verb == .send, sendsPrivately || sendsFromAztec {
+            rows.append(LedgerRow(id: "choiceFrom", name: String(localized: "From"), value: String(localized: "Public"), opens: .from))
+        }
         if verb == .send {
             let shown = resolved?.name ?? resolved.map { YourAccount.short($0.address) }
                 ?? (to.isEmpty ? pick : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))
@@ -3123,6 +3129,34 @@ struct MoveSentence: View {
         }
         rows.append(LedgerRow(id: "choiceNetwork", name: String(localized: "Network"), value: networkPicked ? network.name : pick, opens: .network))
         return rows
+    }
+
+    /// Send can leave from your private balance, or your private account.
+    private var sendsPrivately: Bool { PrivateMove.available }
+    private var sendsFromAztec: Bool { AztecProver.isAvailable && AztecAccountStore.shared.shown.address != nil }
+
+    /// **FROM (prd §1779).** Three places at most, each named as the Wallet
+    /// names it. Picking a private one opens its own sentence, which is
+    /// where its rules are said; an Aztec address already typed goes along.
+    private var fromList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            listRow(String(localized: "Public"), sub: network.name, symbol: "chart.pie", picked: true) {
+                withAnimation(DS.Motion.standard) { open = nil }
+                DSHaptic.selection()
+            }
+            if sendsPrivately {
+                listRow(String(localized: "Your private balance"),
+                        sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {
+                    goPrivate(.send)
+                }
+            }
+            if sendsFromAztec {
+                listRow(String(localized: "Your private account"), sub: "Aztec", symbol: "diamond") {
+                    let typed = to.trimmingCharacters(in: .whitespaces)
+                    goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)
+                }
+            }
+        }
     }
 
     @ViewBuilder private var choiceRows: some View {
@@ -3447,6 +3481,7 @@ struct MoveSentence: View {
                             withAnimation(DS.Motion.standard) { open = nil; aztecReceive = true }
                             DSHaptic.selection()
                         }
+                        .aztecDoor()
                     }
                     DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
                         ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))

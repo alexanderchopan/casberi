@@ -136,7 +136,11 @@ grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'retu
     || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
 # would be a private flow outside Move.
-[[ -z "$(grep 'feedSheet' "$HOLD" | grep -v 'feedSheet = \.savingsGoal')" ]] || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
+# On its way's steps (prd §1779) are a read: the sheet moves nothing, and its
+# one door opens Move.
+[[ -z "$(grep 'feedSheet' "$HOLD" | grep -v 'feedSheet = \.savingsGoal' | grep -v 'feedSheet = \.onItsWay(item)')" ]] || { echo "✗ Holdings raises a private flow of its own"; exit 1; }
+! grep -q 'PrivateMove\|PrivateSender\|sendPrivately\|FreshReceive.shared.move' Casberi/Casberi/Screens/OnItsWaySheet.swift \
+    || { echo "✗ On its way's steps sheet moves money: that is Move's alone (prd §1779)"; exit 1; }
 [[ ! -e Casberi/Casberi/Screens/MovePrivateSheet.swift ]] || { echo "✗ the standalone Move to private sheet is back"; exit 1; }
 use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.pickInk)' "the address to fund is no longer drawn by its tail"
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: MoveSentence.settledInk)' "the recipient is no longer drawn by its tail"
@@ -1155,5 +1159,57 @@ use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule und
 use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),' "Your account lost its private balance row (prd §1779)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
-echo "  ok   simplified: the menu ranked, rows that change the sentence, private doors in view, Aztec in its own ink, Pay the gas"
-echo "  ok   79 mutations"
+use "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" 'walletPlaceRows' "Home lost its three places (prd §1779)"
+use "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" 'walletOnItsWaySection' "Home lost On its way: money in transit is invisible there again (prd §1779)"
+use "$HOLD" 'if !items.isEmpty {' "On its way draws with nothing on its way (prd §1779)"
+use "$HOLD" 'feedSheet = .onItsWay(item)' "an On its way row no longer opens its steps (prd §1779)"
+use "$HOLD" 'Text(verbatim: item.line)' "an On its way row no longer says which step it is on (prd §1779)"
+for kind in 'OnItsWay.atAddress(' 'OnItsWay.waitingApproval(' 'OnItsWay.railgun(' 'OnItsWay.aztec('; do
+    use "$HOLD" "$kind" "On its way misses a kind of waiting: $kind (prd §1779)"
+done
+use "$PAGES" 'Text(verbatim: YourAccountOp.networks.map(\.name).joined(separator: " · "))' "the public address no longer says which networks it is good on (prd §1779)"
+use "Casberi/Casberi/Screens/AztecBrowser.swift" 'tint: asksAztec ? DS.aztecFill : DS.pickInk,' "an Aztec app's ask wears the pick's pink again (prd §1779)"
+# On its way's steps, run: which step each trip is on, and the row's count.
+WAY="Casberi/Casberi/Model/OnItsWay.swift"
+[[ -f "$WAY" ]] || { echo "✗ $WAY not found"; exit 1; }
+mkdir -p "$TMP/way"
+cat > "$TMP/way/main.swift" <<'SWIFT'
+import Foundation
+var failures = 0
+func check(_ ok: Bool, _ what: String) { if !ok { print("✗ " + what); failures += 1 } }
+let gas = OnItsWay.atAddress(id: "a", title: "1,000 USDC", usd: 1000, needsGas: true)
+check(gas.steps.count == 4 && gas.current == 1, "money short of gas is not on step 2 of 4")
+check(gas.needs != nil, "money short of gas does not say it waits on you")
+check(gas.line.hasSuffix("step 2 of 4"), "its row does not count: \(gas.line)")
+check(gas.line.hasPrefix(gas.needs ?? "?"), "its row leads with the step's name, not what it needs")
+let failed = OnItsWay.atAddress(id: "a", title: "1 ETH", usd: nil, needsGas: false)
+check(failed.current == 2 && failed.needs != nil, "a move that failed is not waiting on step 3")
+let approval = OnItsWay.waitingApproval(id: "w", title: "1 ETH", usd: nil)
+check(approval.current == 3 && approval.needs == nil && approval.steps == gas.steps, "approval is not the last step of the same trip, or it waits on you")
+check(approval.line.hasPrefix(approval.steps[3]) && approval.line.hasSuffix("step 4 of 4"), "approval's row: \(approval.line)")
+let railgun = OnItsWay.railgun(id: "r", title: "5 USDC", usd: 5)
+check(railgun.steps.count == 2 && railgun.current == 1 && railgun.needs == nil, "Railgun's hour is not step 2 of 2")
+let aztec = OnItsWay.aztec(id: "z", title: "5 USDC", usd: 5)
+check(aztec.steps.count == 3 && aztec.current == 1 && aztec.needs == nil, "Aztec's carry is not step 2 of 3")
+check(Set([gas.id, approval.id, railgun.id, aztec.id]).count == 4 && gas.id != "a", "two trips can share an id")
+if failures > 0 { exit(1) }
+SWIFT
+run_way() { swiftc -Onone "$1" "$TMP/way/main.swift" -o "$TMP/way/run" 2>"$TMP/way/err" || { head -20 "$TMP/way/err"; return 2; }; "$TMP/way/run" >/dev/null 2>&1; }
+swiftc -Onone "$WAY" "$TMP/way/main.swift" -o "$TMP/way/run" 2>"$TMP/way/err" || { head -20 "$TMP/way/err"; echo "✗ OnItsWay does not compile alone"; exit 1; }
+"$TMP/way/run" || { echo "✗ On its way names the wrong step"; exit 1; }
+wmutate() {
+    local name="$1" perl_expr="$2"
+    cp "$WAY" "$TMP/way-mut.swift"
+    perl -0pi -e "$perl_expr" "$TMP/way-mut.swift"
+    if cmp -s "$WAY" "$TMP/way-mut.swift"; then echo "✗ mutation did not apply: $name"; exit 1; fi
+    if run_way "$TMP/way-mut.swift"; then echo "✗ SURVIVED  $name"; exit 1; fi
+    echo "  ok   catches  $name"
+}
+wmutate "money short of gas reads as moving in" 's/current: needsGas \? 1 : 2/current: 2/'
+wmutate "a row counts from zero" 's/step \\\(current \+ 1\) of/step \\(current) of/'
+wmutate "a waiting step hides what it needs" 's/let step = needs \?\? steps\[current\]/let step = steps[current]/'
+wmutate "approval waits on you" 's/steps: addressSteps, current: 3, needs: nil/steps: addressSteps, current: 3, needs: "Waiting"/'
+use "$SENT" 'rows.append(LedgerRow(id: "choiceFrom", name: String(localized: "From"), value: String(localized: "Public"), opens: .from))' "Send lost its From row (prd §1779)"
+use "$SENT" 'goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)' "From's private account drops the Aztec address already typed (prd §1779)"
+echo "  ok   simplified: the menu ranked, rows that change the sentence, private doors in view, Aztec in its own ink, Pay the gas, Home's places, On its way step by step, the public address's networks"
+echo "  ok   83 mutations"

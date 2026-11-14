@@ -287,6 +287,10 @@ enum DS {
     /// The lime of the AZTEC mark the app already draws; darker on the light
     /// page, where the lime itself cannot be read.
     static var aztecInk: Color { Color.adaptive(dark: "#c8f53c", light: "#4f6b00") }
+    /// Aztec's fill for the one act on an Aztec sheet: the lime itself on
+    /// either page, with black on it (white cannot be read on lime).
+    static let aztecFill = Color.fixed("#c8f53c")
+    static let onAztecFill = Color.black
     /// The pick's wash — `pickInk` at `tintDim`'s opacity — for a ground that
     /// says picked (the section switcher's slide, a face rail's circle, a verb
     /// disc's rest).

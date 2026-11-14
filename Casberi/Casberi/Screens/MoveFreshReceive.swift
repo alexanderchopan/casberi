@@ -84,6 +84,10 @@ struct MoveFreshSentence<Head: View>: View {
                 if let entry {
                     code(entry.address)
                         .padding(.top, DS.Space.s4)
+                    // The copy names where it is good (prd §1779).
+                    DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
+                              title: Text(copied ? "Copied" : "Copy for \(network.name)")) { copy(entry.address) }
+                        .padding(.top, DS.Space.s2)
                 }
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)

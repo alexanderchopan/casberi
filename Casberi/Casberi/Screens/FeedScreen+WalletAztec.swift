@@ -68,6 +68,21 @@ extension FeedScreen {
         }
     }
 
+    /// What Aztec has not handed over yet, for Home's On its way (prd §1779):
+    /// the same grey rows Holdings draws.
+    @ViewBuilder
+    var walletAztecArrivingRows: some View {
+        if walletShowsAztec {
+            let store = AztecAccountStore.shared
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            ForEach(store.arriving) { deposit in
+                aztecRow(title: deposit.symbol, line: "Aztec · " + String(localized: "On its way"),
+                         figure: mask ?? store.usd(deposit).map(WalletValue.money) ?? AztecAccountStore.figure(deposit),
+                         mark: nil, tone: DS.textSecondary, arriving: true)
+            }
+        }
+    }
+
     /// **PUBLIC ON AZTEC, UNDER TOKENS.** Fee Juice first: AZTEC made gas,
     /// public on Aztec by design, wearing AZTEC's mark ("it should be the
     /// Aztec token"), its amount alone and never in dollars or the total —
@@ -204,9 +219,10 @@ extension FeedScreen {
                     .lineLimit(1)
                 // The line's word carries the place (prd §1718): no small
                 // mark beside it.
+                // Aztec's own ink on its line (prd §1779): a different world, seen in the list.
                 Text(verbatim: line)
                     .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.aztecInk)
                     .lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)
@@ -333,6 +349,23 @@ extension FeedScreen {
                                line: String(localized: "\(AddressTail.short(aztec)) · Aztec to Aztec only"),
                                lineInk: DS.aztecInk,
                                lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
+                // **THE PRIVATE ACCOUNT'S OWN VERBS (prd §1779).** With it
+                // picked, the two ways money moves stand under it: in from
+                // Ethereum, and on within Aztec. Crossing is named as
+                // crossing, never as an ordinary send.
+                if chrome.yourAccountShowsAztec {
+                    accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"),
+                                   line: String(localized: "Through Shield"), glyphInk: DS.aztecInk, lit: true) {
+                        chrome.moveAztec = .deposit
+                        chrome.moveTray = true
+                    }
+                    accountListRow(glyph: "arrow.up", title: String(localized: "Send on Aztec"),
+                                   line: String(localized: "Aztec to Aztec only"), lineInk: DS.aztecInk,
+                                   glyphInk: DS.aztecInk, lit: true) {
+                        chrome.moveAztec = .send
+                        chrome.moveTray = true
+                    }
+                }
             }
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
@@ -345,7 +378,7 @@ extension FeedScreen {
     /// The Holdings row's anatomy: the mark, the name over its line; the lit
     /// row's name in the primary ink, the other's secondary.
     private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String,
-                                lineInk: Color = DS.textSecondary, lit: Bool,
+                                lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary, lit: Bool,
                                 pick: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
@@ -354,7 +387,7 @@ extension FeedScreen {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             Group {
                 if let glyph {
-                    Image(systemName: glyph).dsGlyph(.body).foregroundStyle(DS.textSecondary)
+                    Image(systemName: glyph).dsGlyph(.body).foregroundStyle(glyphInk)
                 } else {
                     ProtocolInlineMark(mark: mark)
                 }

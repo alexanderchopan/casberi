@@ -69,6 +69,8 @@ extension FeedScreen {
         case savingsGoal
         /// Gas on Aztec, and Add gas (prd §1761).
         case aztecGas
+        /// One thing on its way, its steps (prd §1779).
+        case onItsWay(OnItsWay.Item)
         /// Watch a token (prd §1632 item 4).
         case watchToken
         /// One subscription, by its key (prd §1105).
@@ -108,6 +110,7 @@ extension FeedScreen {
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
             case .aztecGas: "aztecGas"
+            case .onItsWay(let item): "onItsWay:\(item.id)"
             case .watchToken: "watchToken"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
@@ -315,6 +318,11 @@ extension FeedScreen {
             SavingsGoalTray()
         case .aztecGas:
             AztecGasTray()
+        case .onItsWay(let item):
+            OnItsWaySheet(item: item) {
+                chrome.moveFreshReceive = true
+                chrome.moveTray = true
+            }
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

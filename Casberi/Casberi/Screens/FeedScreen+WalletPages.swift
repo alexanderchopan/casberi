@@ -42,7 +42,7 @@ extension FeedScreen {
     }
 
     /// A door's row, drawn for a section or by hand.
-    func walletDoorRow(glyph: String, name: String, figure: String? = nil,
+    func walletDoorRow(glyph: String, glyphTone: Color = DS.brandInk, name: String, figure: String? = nil,
                        figureTone: Color = DS.textPrimary, word: String? = nil,
                        wordTone: Color = DS.textSecondary, act: @escaping () -> Void) -> some View {
         Button {
@@ -52,7 +52,7 @@ extension FeedScreen {
             HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                 Image(systemName: glyph)
                     .dsGlyph(.body)
-                    .foregroundStyle(DS.brandInk)
+                    .foregroundStyle(glyphTone)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
                 Text(verbatim: name)
@@ -1160,6 +1160,17 @@ struct WalletYourAccountFigure: View {
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text(verbatim: address))
                     .accessibilityHint(Text("Copies the address"))
+                // The networks this one address is good on, as facts under
+                // it (prd §1779: every address wears its rule).
+                // One line, the row lines' rung: three quiet stamps side by
+                // side read as one run of grey words on the simulator.
+                if aztec == nil {
+                    Text(verbatim: YourAccountOp.networks.map(\.name).joined(separator: " · "))
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
                 Button { copy(address) } label: {
                     HStack(spacing: DS.Space.s1) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")

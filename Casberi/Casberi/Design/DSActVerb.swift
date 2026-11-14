@@ -49,6 +49,9 @@ struct DSActVerb: View {
     /// (secondary) half of the identity stays `DevnetSendPanel`'s until a
     /// second surface needs a pair.
     var tint: Color = DS.pickInk
+    /// What stands on the fill: white on the pick's pink; Aztec's lime takes
+    /// black (prd §1779), which white cannot be read on.
+    var ink: Color = .white
     var busy = false
     var disabled = false
     /// Something to sit beside the disc in the tile's header band — today the
@@ -72,13 +75,13 @@ struct DSActVerb: View {
                 HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
                     Text(title)
                         .dsText(.price40)
-                        .foregroundStyle(disabled ? DS.textTertiary : .white)
+                        .foregroundStyle(disabled ? DS.textTertiary : ink)
                         .fixedSize(horizontal: false, vertical: true)
                     if let unit {
                         Text(unit)
                             .dsText(.price17)
                             .foregroundStyle(disabled ? DS.textTertiary
-                                                      : Color.white.opacity(0.78))
+                                                      : ink.opacity(0.78))
                             .lineLimit(1)
                     }
                 }
@@ -100,15 +103,15 @@ struct DSActVerb: View {
             // 36pt — the old devnet tile mark's value, spelled here because Design/
             // does not reach into Screens/. Under `DS.Hit.min` deliberately:
             // the disc is not a target, the whole tile is.
-            Circle().fill(Color.white.opacity(disabled ? 0.10 : 0.22))
+            Circle().fill(ink.opacity(disabled ? 0.10 : 0.22))
                 .frame(width: 36, height: 36)
             if busy {
-                ProgressView().controlSize(.small).tint(.white)
+                ProgressView().controlSize(.small).tint(ink)
             } else {
                 Image(systemName: glyph)
                     .accessibilityHidden(true)
                     .dsGlyph(.title, weight: .semibold)
-                    .foregroundStyle(disabled ? DS.textTertiary : .white)
+                    .foregroundStyle(disabled ? DS.textTertiary : ink)
             }
         }
     }

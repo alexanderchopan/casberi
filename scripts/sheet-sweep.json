@@ -1206,6 +1206,29 @@
    "anchor": "button:=Add gas"
   },
   {
+   "id": "wallet-on-its-way",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#onItsWay"
+   ],
+   "launch": [
+    "demo",
+    "-freshWaitingSample",
+    "YES"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^1,000 USDC"
+    }
+   ],
+   "anchor": "button:=Open the address"
+  },
+  {
    "id": "wallet-token",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletToken"

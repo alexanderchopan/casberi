@@ -34,6 +34,9 @@ struct DSDoorRow: View {
     let icon: String
     let title: Text
     var role: ButtonRole? = nil
+    /// A door into another world wears that world's ink on its glyph (prd
+    /// §1779: Aztec's); nil is the brand's, as every glyph's.
+    var glyphInk: Color? = nil
     let act: () -> Void
 
     init(icon: String, label: LocalizedStringKey, role: ButtonRole? = nil,
@@ -54,10 +57,19 @@ struct DSDoorRow: View {
 
     var body: some View {
         Button(role: role, action: act) {
-            DSDoorRowLabel(icon: icon, title: title, role: role)
+            DSDoorRowLabel(icon: icon, title: title, role: role, glyphInk: glyphInk)
         }
         .buttonStyle(RowPress())
         .dsHover()
+    }
+}
+
+extension DSDoorRow {
+    /// A door into Aztec: its glyph in Aztec's ink (prd §1779).
+    func aztecDoor() -> DSDoorRow {
+        var row = self
+        row.glyphInk = DS.aztecInk
+        return row
     }
 }
 
@@ -72,6 +84,7 @@ struct DSDoorRowLabel: View {
     let icon: String
     let title: Text
     var role: ButtonRole? = nil
+    var glyphInk: Color? = nil
 
     private var ink: Color { role == .destructive ? DS.destructiveInk : DS.textPrimary }
 
@@ -80,7 +93,7 @@ struct DSDoorRowLabel: View {
             Image(systemName: icon)
                 .dsGlyph(.caption, weight: .regular)
                 // Pink, as every glyph is since prd §1252 (§1266).
-                .foregroundStyle(role == .destructive ? DS.destructive : DS.brandInk)
+                .foregroundStyle(role == .destructive ? DS.destructive : glyphInk ?? DS.brandInk)
                 // The column, not the glyph's own width: SF Symbols are
                 // not uniform, so without it a stack of doors staircases.
                 .frame(width: Self.glyphColumn, alignment: .center)

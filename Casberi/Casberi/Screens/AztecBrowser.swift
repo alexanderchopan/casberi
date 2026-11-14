@@ -933,7 +933,11 @@ struct AztecAskSheet: View {
                 // app turned your account's sign-in down (prd §1700l), else the yes.
                 DSActVerb(title: leadsWithCoSigner ? String(localized: "Use your co-signer")
                                  : needsCoSigner ? String(localized: "Add a co-signer") : acceptWord,
-                          glyph: leadsWithCoSigner || needsCoSigner ? "person.badge.key" : acceptGlyph) {
+                          glyph: leadsWithCoSigner || needsCoSigner ? "person.badge.key" : acceptGlyph,
+                          // An Aztec ask wears Aztec's own fill (prd §1779); one
+                          // your account answers on Ethereum keeps the pick's.
+                          tint: asksAztec ? DS.aztecFill : DS.pickInk,
+                          ink: asksAztec ? DS.onAztecFill : .white) {
                     if leadsWithCoSigner { useCoSigner() }
                     else if needsCoSigner, let addCoSigner { addCoSigner() }
                     else { answer(true) }
@@ -986,7 +990,7 @@ struct AztecAskSheet: View {
                 .buttonStyle(RowPress())
                 Spacer(minLength: DS.Space.s4)
                 Button { answer(true) } label: {
-                    Text(verbatim: acceptWord).dsText(.heading24).foregroundStyle(DS.pickInk)
+                    Text(verbatim: acceptWord).dsText(.heading24).foregroundStyle(DS.aztecInk)
                         .frame(minHeight: 44)
                 }
                 .buttonStyle(RowPress())
@@ -1186,6 +1190,15 @@ struct AztecAskSheet: View {
         height += CGFloat(max(0, calls.count - 1)) * 48
         if failed, gasLine(fee)?.missing == true { height += 44 }
         return min(height, 760)
+    }
+
+    /// Whether this sheet answers for your private account on Aztec, rather
+    /// than for your account on Ethereum (prd §1779).
+    private var asksAztec: Bool {
+        switch ask {
+        case .connect, .emoji, .send: true
+        case .ethConnect, .ethSend, .ethTopUp, .ethSign: false
+        }
     }
 
     private var acceptWord: String {

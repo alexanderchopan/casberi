@@ -109,6 +109,167 @@ extension FeedScreen {
         }
     }
 
+    /// Private money is yours alone: Yours and All, never a followed wallet
+    /// or an app's pick (prd §1590).
+    var walletShowsPrivatePlaces: Bool {
+        selectedSeat == nil && !walletOnFollowing && (selectedWallet.map(YourAccountDemo.isYours) ?? true)
+    }
+
+    /// **THREE PLACES, ON HOME (prd §1779; the canvas's first screen).** What
+    /// is yours is in one of three: Public, your private balance, your
+    /// private account. Each is a row with its dollars, and its tap opens
+    /// where that money is. A place you do not have draws no row.
+    @ViewBuilder
+    var walletPlaceRows: some View {
+        if walletShowsPrivatePlaces, YourAccountDemo.shownAddress != nil, PrivateMove.available || walletShowsAztec {
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []
+            let lent = walletLentStanding.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0
+            let store = PrivateMoneyStore.shared
+            let railgun = RailgunHoldings.shared
+            let privately = store.rows.filter { $0.kind == .held }.compactMap { PrivateMoney.rowUSD($0, prices: store.shownPrices) }.reduce(0, +)
+                + railgun.spendableShown.compactMap { railgun.usd($0, units: $0.spendable) }.reduce(0, +)
+            let aztec = AztecAccountStore.shared
+            let onAztec = aztec.privateHeld.compactMap { aztec.usd($0, units: $0.privateUnits) }.reduce(0, +)
+            walletDoorsSection {
+                walletDoorRow(glyph: WalletSection.holdings.glyph, name: String(localized: "Public"),
+                              figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd } + lent)) {
+                    chrome.walletSection = .holdings
+                }
+                // The three figures are read where they stand: Holdings read
+                // them only once its Private head had appeared.
+                .task {
+                    await store.refresh()
+                    await store.readPrices()
+                    await railgun.refresh()
+                    _ = await aztec.walletHolding()
+                }
+                if PrivateMove.available {
+                    walletDoorRow(glyph: "eye.slash", name: String(localized: "Private balance"),
+                                  figure: mask ?? WalletValue.money(privately)) {
+                        chrome.walletSection = .holdings
+                        chrome.walletScrollRequest = ShellChrome.privateAnchor
+                    }
+                }
+                if walletShowsAztec {
+                    walletDoorRow(glyph: "diamond", glyphTone: DS.aztecInk, name: String(localized: "Private account"),
+                                  figure: mask ?? WalletValue.money(onAztec)) {
+                        chrome.yourAccountShowsAztec = true
+                        chrome.walletSection = .yourAccount
+                    }
+                }
+            }
+        }
+    }
+
+    /// **ON ITS WAY, ON HOME (prd §1779: money is never invisible).** What
+    /// has left one place and not arrived in another, gathered where the
+    /// Wallet opens: waiting at a one-time address, waiting for approval,
+    /// Railgun's hour, Aztec carrying a deposit. The same rows Holdings
+    /// draws under Private, so a state reads the same in both. Nothing on
+    /// its way, no section.
+    /// Everything still travelling, in the order it most needs you: what
+    /// waits at an address, then approvals, Railgun's hour, Aztec's carry.
+    var walletOnItsWayItems: [OnItsWay.Item] {
+        guard walletShowsPrivatePlaces else { return [] }
+        let store = PrivateMoneyStore.shared
+        let prices = store.shownPrices
+        func usd(_ symbol: String, _ amount: String, _ decimals: Int) -> Double? {
+            guard let price = prices[symbol.lowercased()], let units = Decimal(string: amount) else { return nil }
+            return NSDecimalNumber(decimal: units / pow(10, decimals)).doubleValue * price
+        }
+        var items: [OnItsWay.Item] = walletFreshWaiting.map { entry in
+            let symbol = entry.token
+            let decimals = FreshTx.railgunToken(symbol: symbol)?.decimals ?? (symbol == "USDC" ? 6 : 18)
+            let (amount, needsGas): (String, Bool) = switch entry.state {
+            case .needsGas(let amount): (amount, true)
+            case .failed(let amount): (amount, false)
+            default: ("0", false)
+            }
+            return OnItsWay.atAddress(id: entry.id, title: PrivateMoney.figure(amount, decimals: decimals, symbol: symbol),
+                                      usd: usd(symbol, amount, decimals), needsGas: needsGas)
+        }
+        items += store.rows.filter { $0.kind == .waiting }.map { row in
+            OnItsWay.waitingApproval(id: row.id, title: PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol),
+                                     usd: PrivateMoney.rowUSD(row, prices: prices))
+        }
+        let railgun = RailgunHoldings.shared
+        items += railgun.pendingShown.map { h in
+            OnItsWay.railgun(id: h.id, title: RailgunHoldings.figure(h.pending, decimals: h.decimals) + " " + h.symbol,
+                             usd: railgun.usd(h, units: h.pending))
+        }
+        if walletShowsAztec {
+            let aztec = AztecAccountStore.shared
+            items += aztec.arriving.map { d in
+                OnItsWay.aztec(id: String(d.nonce), title: AztecAccountStore.figure(d), usd: aztec.usd(d))
+            }
+        }
+        return items
+    }
+
+    /// **ON ITS WAY, ON HOME (prd §1779: money is never invisible).** What
+    /// has left one place and not arrived in another, gathered where the
+    /// Wallet opens. Each row says the step it is on and how many there are
+    /// ("Waiting for gas · step 2 of 4"); amber only when it waits on you.
+    /// Its tap opens the steps. Nothing on its way, no section.
+    @ViewBuilder
+    var walletOnItsWaySection: some View {
+        let items = walletOnItsWayItems
+        if !items.isEmpty {
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            walletDoorsSection {
+                walletDoorRow(glyph: "clock", name: String(localized: "On its way")) {
+                    chrome.walletSection = .holdings
+                    chrome.walletScrollRequest = ShellChrome.privateAnchor
+                }
+                .task {
+                    await PrivateMoneyStore.shared.refresh()
+                    await FreshReceive.shared.check(context: modelContext)
+                }
+                ForEach(items) { item in
+                    walletOnItsWayRow(item, mask: mask)
+                }
+            }
+        }
+    }
+
+    private func walletOnItsWayRow(_ item: OnItsWay.Item, mask: String?) -> some View {
+        let figure = mask ?? item.usd.map(WalletValue.money) ?? ""
+        return Button {
+            DSHaptic.selection()
+            feedSheet = .onItsWay(item)
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Image(systemName: "clock")
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(item.needs != nil ? DS.attention : DS.textSecondary)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: item.title)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Text(verbatim: item.line)
+                        .dsText(.subhead12)
+                        .foregroundStyle(item.needs != nil ? DS.attentionInk : DS.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure, tone: DS.textSecondary)
+            }
+            .walletRowPitch()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [item.title, item.line, figure].filter { !$0.isEmpty }.joined(separator: ". ")))
+        .accessibilityHint(Text("Shows its steps"))
+        .walletListRow()
+    }
+
     /// **WAITING AT A ONE-TIME ADDRESS (prd §1778; a tester, 2026-11-13,
     /// who paid a private address 1,000 USDC and saw no balance anywhere:
     /// "panik").** Money that arrived at a fresh address and has not moved in
