@@ -72769,3 +72769,18 @@ One Wallet row per transaction Casberi sent for an Aztec app, and per authorizat
 **Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1794 — Move: the sentence over the button, one-line rows, a network and its token on each side of a swap (amends §1781, §1782, §1791, §1793; retires §1442b's "the sentence stands at the top") (user, 2026-11-13, of the canvases: "board 3 is better", then asked whether the sentence should be on the bottom: "Yes, bottom"; of the first mocks: "you aren't showing network as a choice. the network decides the token")
+
+1. **The sentence stands over the button.** It is what is read before the press. It grows upward into empty space as it gains words, so the rows above never move (`MoveSentence.sentenceLow`, drawn at the head of `foot`). A receipt and an arrival keep their sentence at the top.
+2. **The verb is the page's title**, where "Move" stands on the menu and at its size.
+3. **A row is one line** (`MoveChoiceRowLabel`): the name at the leading edge in grey (`body17`), the answer at the trailing edge (`heading20`) with its mark, then the system's menu chevron (`chevron.up.chevron.down`): a menu opens here, never a page. 50 points high. The private sentences and Lend draw the same row.
+4. **One thing asks at a time.** The next unanswered row says "Choose" in the pick's pink; the others wait in grey.
+5. **The network is always its own choice, before its token.** Send: To, From, Network, Token, Amount (§1790). Swap: "From" is a network's menu and its token's menu on one line, "To" the same, then Amount and When (`swapPairRows`, `pairRow`). With a To network picked, its token's menu lists only what can arrive there; nothing is picked for you (`destinationPicked`). §1793's "USDC · Base" in one row is retired.
+6. **"You have $248.40 of USDC"** leads the lines under the rows, where the amount is decided.
+7. The amount is typed at the row's trailing edge (§1791 item 3).
+8. Total stays a line under the rows: it is the door to Details.
+
+**Seen:** the simulator, demo: Send's whole draft and Swap's (`-moveSwapDraft "20|USDC|ETH"`). **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

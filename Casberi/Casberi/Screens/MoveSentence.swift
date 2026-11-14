@@ -167,6 +167,9 @@ struct MoveSentence: View {
     /// The network is a blank too until it is picked (§1438c): the sentence
     /// starts "0 token for token on network." and the network comes first.
     @State private var networkPicked = false
+    /// A swap's "To" network is picked, by its own menu or by a token
+    /// picked on it (prd §1794): nothing is picked for you.
+    @State private var destinationPicked = false
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
     /// The networks no node answered for: their empty list is unknown,
     /// never "nothing there".
@@ -1527,12 +1530,18 @@ struct MoveSentence: View {
                             if open == .verb {
                                 word(String(localized: "Move"), ink: DS.textPrimary)
                                     .accessibilityAddTraits(.isHeader)
+                            } else if sentenceLow {
+                                // **THE VERB IS THE TITLE, THE SENTENCE IS
+                                // OVER THE BUTTON (prd §1794).** Where
+                                // "Move" stood on the menu, at its size.
+                                word(title(verb), ink: DS.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
                             } else {
                                 sentence
+                                    .onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }
                             }
                         }
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
-                        .onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }
                         // An open list runs to the tray's bottom edge, under
                         // the home bar (prd §1616 item 5): with no card, a box
                         // ending above it clipped a row in mid-air.
@@ -1894,7 +1903,7 @@ struct MoveSentence: View {
         // "said once"):** "Swap $20 of USDC on Base for ETH on Ethereum."
         // Each token is said with where it is, so a swap to another
         // network reads as any other swap does.
-        if networkPicked, with != nil { MoveClause(glue: String(localized: "on")) { originWord } }
+        if networkPicked { MoveClause(glue: String(localized: "on")) { originWord } }
         if buy != nil { MoveClause(glue: String(localized: "for")) { buyWord } }
         if networkPicked, buy != nil { MoveClause(glue: String(localized: "on")) { destinationWord } }
         if whenSpoken { whenClause }
@@ -2936,8 +2945,9 @@ struct MoveSentence: View {
         TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
             .keyboardType(.decimalPad)
             .focused($focus, equals: .amount)
-            .dsText(.heading24)
+            .dsText(.heading20)
             .monospacedDigit()
+            .multilineTextAlignment(.trailing)
             .foregroundStyle(DS.textPrimary)
             .tint(DS.pickInk)
             .fixedSize()
@@ -2957,6 +2967,35 @@ struct MoveSentence: View {
     /// Spend and Buy are always in dollars; Send and Swap as picked.
     private var amountInDollars: Bool { inDollars || verb == .buy || verb == .deposit }
 
+    /// One side of a swap: its name, then the network's menu and the token's.
+    private func pairRow(_ name: String, _ network: LedgerRow, _ token: LedgerRow?) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.s4) {
+            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            pairHalf(network)
+            if let token { pairHalf(token) }
+        }
+        .frame(minHeight: MoveChoiceRowLabel.height)
+    }
+
+    private func pairHalf(_ r: LedgerRow) -> some View {
+        Button {
+            guard let which = r.opens else { return }
+            // Where it arrives is asked of a network it leaves from.
+            tapBlank(which == .destination && !networkPicked ? .network : which)
+        } label: {
+            MoveChoiceValue(value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark)
+                .frame(minHeight: MoveChoiceRowLabel.height)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text(verbatim: Self.rowName(r.opens ?? .network, verb: verb) + ", " + r.value))
+        .accessibilityHint(Text("Changes it"))
+        .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+            if let which = r.opens { menu(which) }
+        }
+    }
+
     /// The Amount row: its list on a tap, and the field in the value's
     /// place while a figure is typed.
     private func amountRow(_ r: LedgerRow) -> some View {
@@ -2966,16 +3005,15 @@ struct MoveSentence: View {
         }
         .buttonStyle(RowPress())
         .accessibilityHint(Text("Changes it"))
-        .overlay(alignment: .leading) {
+        .overlay(alignment: .trailing) {
+            // Where the row's value stands, at its size.
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                if amountInDollars { Text(verbatim: "$").dsText(.heading24).foregroundStyle(DS.textPrimary) }
+                if amountInDollars { Text(verbatim: "$").dsText(.heading20).foregroundStyle(DS.textPrimary) }
                 amountField
                 if !amountInDollars, let with {
-                    Text(verbatim: " " + with.token.symbol).dsText(.heading24).foregroundStyle(DS.textSecondary)
+                    Text(verbatim: " " + with.token.symbol).dsText(.heading20).foregroundStyle(DS.textSecondary)
                 }
             }
-            // Under the row's name, where its value stands.
-            .padding(.top, MoveChoiceRowLabel.nameHeight)
             .opacity(typing ? 1 : 0)
             .allowsHitTesting(typing)
             .accessibilityHidden(!typing)
@@ -3281,10 +3319,12 @@ struct MoveSentence: View {
             // asks the network on a row of its own, before the token
             // (prd §1790).
             guard b.names != .verb else { continue }
-            let folds = verb == .swap
-            if b.names == .network, folds { continue }
-            // **A SWAP IS TWO PAIRS (prd §1793):** the network it arrives
-            // on rides the token it arrives as, as the one it leaves does.
+            let folds = false
+            // **A SWAP IS TWO PAIRS (prd §1793, §1794):** each side a
+            // network and its token, on one line. Its four rows are read
+            // off the swap itself (`swapPairRows`), so each is there from
+            // the first frame, picked or not.
+            if verb == .swap, [.network, .with, .destination, .buy].contains(b.names) { continue }
             if b.names == .destination { continue }
             let id = "choice\(b.names)"
             guard seen.insert(id).inserted else { continue }
@@ -3296,6 +3336,7 @@ struct MoveSentence: View {
             if !b.empty { row.mark = rowMark(b.names) }
             rows.append((Self.rowRank(b.names), row))
         }
+        if verb == .swap { rows.append(contentsOf: swapPairRows) }
         // **WHEN IS A CHOICE (prd §1793).** "Now" until a price is picked,
         // there once the pair is known and not before: nothing is picked
         // for a swap that is not yet a swap.
@@ -3304,8 +3345,32 @@ struct MoveSentence: View {
                                                         value: String(localized: "Now"), opens: .when)))
         }
         var sorted = rows.enumerated().sorted { ($0.element.rank, $0.offset) < ($1.element.rank, $1.offset) }.map(\.element.row)
+        // One thing asks at a time (prd §1794): the next row is pink, the
+        // rest wait in grey.
+        for i in sorted.indices where sorted[i].value == pick { sorted[i].valueInk = DS.textSecondary }
         if let next = sorted.firstIndex(where: { $0.value == pick }) { sorted[next].valueInk = DS.pickInk }
         return sorted
+    }
+
+    /// The network a swap arrives on is known: picked, or the only one.
+    private var destinationShown: Bool {
+        networkPicked && (destinationPicked || buy != nil || destinations.count < 2)
+    }
+
+    /// Swap's two pairs as four rows, in the order they are answered: the
+    /// network it leaves, its token, the network it arrives on, its token.
+    private var swapPairRows: [(rank: Int, row: LedgerRow)] {
+        let pick = String(localized: "Choose")
+        func row(_ which: Blank, _ rank: Int, _ value: String?) -> (rank: Int, row: LedgerRow) {
+            var r = LedgerRow(id: "choice\(which)", name: Self.rowName(which, verb: verb), value: value ?? pick, opens: which)
+            if value != nil { r.mark = rowMark(which) }
+            return (rank, r)
+        }
+        let at = Self.rowRank(.network)
+        return [row(.network, at, networkPicked ? network.name : nil),
+                row(.with, at + 1, with?.token.symbol),
+                row(.destination, at + 2, destinationShown ? buyHome.name : nil),
+                row(.buy, at + 3, buy.map { crossBuy?.symbol ?? $0.token.symbol })]
     }
 
     /// A row's mark (prd §1792): the token with its network's badge, or the
@@ -3316,9 +3381,9 @@ struct MoveSentence: View {
         case .with: return with.map { MoveRowMark(token: $0.token.symbol, network: here) }
         case .buy:
             guard verb == .swap, let buy else { return nil }
-            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol, network: networkPicked ? Self.networkMark(buyHome) : nil)
+            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol, network: destinationShown ? Self.networkMark(buyHome) : nil)
         case .network, .depositNetwork: return here.map { MoveRowMark(network: $0) }
-        case .destination: return networkPicked ? Self.networkMark(buyHome).map { MoveRowMark(network: $0) } : nil
+        case .destination: return destinationShown ? Self.networkMark(buyHome).map { MoveRowMark(network: $0) } : nil
         case .depositCoin: return MoveRowMark(token: depositCoin.symbol, network: depositSeller == nil ? nil : here)
         case .elsewhereCoin: return elsewhere.map { MoveRowMark(token: $0.token.symbol) }
         case .arrives: return elsewhere.map { MoveRowMark(token: $0.arrives.symbol, network: Self.networkMark($0.to)) }
@@ -3349,10 +3414,10 @@ struct MoveSentence: View {
         case .from: String(localized: "From")
         case .to: String(localized: "To")
         case .amount: String(localized: "Amount")
-        case .with: verb == .buy ? String(localized: "Pay with") : verb == .swap ? String(localized: "From") : String(localized: "Token")
-        case .buy: String(localized: "To")
+        case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
+        case .buy: String(localized: "Token")
         case .network, .elsewhere, .depositNetwork: String(localized: "Network")
-        case .destination: String(localized: "Arrives on")
+        case .destination: String(localized: "To network")
         case .arrives: String(localized: "Arrives as")
         case .elsewhereCoin, .depositCoin: String(localized: "Token")
         case .group: String(localized: "Category")
@@ -3370,6 +3435,8 @@ struct MoveSentence: View {
         // amount, since an amount is a sum of a token and is asked second.
         // **THE NETWORK STANDS BEFORE ITS TOKEN (prd §1790, user: "on send i
         // think the order is to from network token amount").**
+        // Swap's two pairs take the four ranks from the network's on
+        // (`swapPairRows`); none of the others there is a swap's.
         let order: [Blank] = [.to, .from, .group, .merchant, .network, .elsewhere, .depositNetwork,
                               .with, .depositCoin, .elsewhereCoin, .buy, .amount,
                               .destination, .arrives, .when, .until, .verb]
@@ -3421,9 +3488,14 @@ struct MoveSentence: View {
         let kept = keptRowLines
         if !rows.isEmpty || !kept.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows) { r in
+                ForEach(rows.filter { r in verb != .swap || (r.opens != .with && r.opens != .buy) }) { r in
                     Group {
-                        if r.opens == .amount {
+                        if verb == .swap, r.opens == .network || r.opens == .destination {
+                            // **A NETWORK AND ITS TOKEN, ONE LINE (prd §1794):**
+                            // the network first, since it decides the token.
+                            let token = rows.first { $0.opens == (r.opens == .network ? .with : .buy) }
+                            pairRow(r.opens == .network ? String(localized: "From") : String(localized: "To"), r, token)
+                        } else if r.opens == .amount {
                             amountRow(r).id("moveAmountRow")
                         } else {
                             Button { if let which = r.opens { tapBlank(which) } } label: {
@@ -3436,7 +3508,8 @@ struct MoveSentence: View {
                     // Always under its row (user, 2026-11-13: "token menu opens
                     // downward, but network one opens upward"): left to the
                     // system, each row's menu went its own way.
-                    .popover(isPresented: menuShown(r.opens), attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    .popover(isPresented: verb == .swap && (r.opens == .network || r.opens == .destination) ? .constant(false) : menuShown(r.opens),
+                             attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         if let which = r.opens { menu(which) }
                     }
                 }
@@ -3943,6 +4016,13 @@ struct MoveSentence: View {
     private var ledgerRows: [LedgerRow] {
         guard receipt == nil else { return [] }
         var rows: [LedgerRow] = []
+        // **WHAT YOU HAVE, WHERE THE AMOUNT IS DECIDED (prd §1794).**
+        if verb == .send || verb == .swap, let with {
+            let symbol = with.token.symbol
+            let have = with.usd.map { Self.money($0) + " " + String(localized: "of") + " " + symbol }
+                ?? Op.spoken(left(with), decimals: with.token.decimals) + " " + symbol
+            rows.append(LedgerRow(id: "have", name: String(localized: "You have"), value: have))
+        }
         // When is a choice, so it is a row among the choices (prd §1793).
         if verb == .swap, !limiting, let back = quotePrint {
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back))
@@ -4689,7 +4769,9 @@ struct MoveSentence: View {
         // can arrive there, its ETH and USDC until something is typed (§1617).
         if crossesInFor {
             // The network picked to arrive on leads (prd §1600).
-            for n in [buyHome] + destinations.filter({ $0 != buyHome }) {
+            // The network decides the token (prd §1794): with a To network
+            // picked, only what can arrive there is listed.
+            for n in destinationPicked ? [buyHome] : [buyHome] + destinations.filter({ $0 != buyHome }) {
                 let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
                 var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: Tokens.offeredUnasked)
                 if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
@@ -4738,6 +4820,7 @@ struct MoveSentence: View {
                             switchNetwork(row.net)
                         }
                         buy = l
+                        destinationPicked = true
                     }
                 }
             }
@@ -5073,6 +5156,7 @@ struct MoveSentence: View {
                     pick {
                         self.buy = there
                         buyOn = n == network ? nil : n
+                        destinationPicked = true
                     }
                     if there == nil { open = .buy }
                 }
@@ -5179,6 +5263,7 @@ struct MoveSentence: View {
         with = nil
         buy = nil
         buyOn = nil
+        destinationPicked = false
         sweepLeftOut = []
         if !inDollars { amount = "" }
         quote = nil
@@ -5772,8 +5857,26 @@ struct MoveSentence: View {
         }, disabled: stage != nil)
     }
 
+    /// **THE SENTENCE STANDS OVER THE BUTTON (prd §1794, user, asked whether
+    /// it should be on the bottom: "Yes, bottom").** It is what is read
+    /// before the press, and it grows upward into empty space: the rows
+    /// above never move as it gains words. A receipt and an arrival keep
+    /// their sentence at the top, where there is nothing else to read.
+    private var sentenceLow: Bool { receipt == nil && !fresh }
+
     private var foot: some View {
         VStack(spacing: DS.Space.s2) {
+            if sentenceLow {
+                sentence
+                    .onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s3)
+                    // With nothing picked it would only repeat the title;
+                    // it keeps its line, and its rows are still read off it.
+                    .opacity(verbStops ? 0 : 1)
+                    .accessibilityHidden(verbStops)
+            }
             if receipt != nil {
                 HStack {
                     // An order still waiting can be withdrawn here (prd §1673 item 7).

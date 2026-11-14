@@ -71,33 +71,47 @@ struct MoveChoiceRowLabel: View {
     var mark: MoveRowMark?
 
     var body: some View {
+        // **ONE LINE (prd §1794, the user of the Apple canvas: "board 3 is
+        // better").** The name at the leading edge in grey, the answer at
+        // the trailing edge a step under the sentence, and the system's
+        // menu chevron after it: a menu opens here, never a page.
         HStack(alignment: .center, spacing: DS.Space.s2) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: name).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .frame(height: MoveChoiceRowLabel.nameHeight, alignment: .leading)
-                HStack(spacing: DS.Space.s2 + 2) {
-                    if let mark { mark }
-                    Text(verbatim: value)
-                        .dsText(.heading24)
-                        .foregroundStyle(ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                }
-            }
-            Spacer(minLength: DS.Space.s2)
-            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
-                .foregroundStyle(DS.textSecondary)
-                .opacity(chevron ? 1 : 0)
-                .accessibilityHidden(true)
+            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .layoutPriority(1)
+            Spacer(minLength: DS.Space.s3)
+            MoveChoiceValue(value: value, ink: ink, chevron: chevron, mark: mark)
         }
         .frame(minHeight: MoveChoiceRowLabel.height)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    static let height: CGFloat = 60
-    /// The name's line, which a field typed in the row stands under.
-    static let nameHeight: CGFloat = 17
+    static let height: CGFloat = 50
+}
+
+/// A choice's answer with its mark and the menu chevron: a whole row's
+/// trailing edge, or one half of a pair (Swap's network and token).
+struct MoveChoiceValue: View {
+    let value: String
+    var ink: Color = DS.textPrimary
+    var chevron = true
+    var mark: MoveRowMark?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            if let mark { mark }
+            Text(verbatim: value)
+                .dsText(.heading20)
+                .foregroundStyle(ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Image(systemName: "chevron.up.chevron.down").dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .opacity(chevron ? 1 : 0)
+                .accessibilityHidden(true)
+        }
+    }
 }
 
 /// **A NETWORK ALWAYS SHOWS ITS MARK (prd §1792, user: "are we going to
@@ -155,7 +169,7 @@ struct MoveChoiceRows<Menu: View>: View {
                         DSHaptic.selection()
                     } label: {
                         MoveChoiceRowLabel(name: r.name, value: r.empty ? String(localized: "Choose") : r.value,
-                                           ink: r.id == next ? nextInk : r.ink ?? DS.textPrimary,
+                                           ink: r.id == next ? nextInk : r.empty ? DS.textSecondary : r.ink ?? DS.textPrimary,
                                            mark: r.empty ? nil : r.mark)
                     }
                     .buttonStyle(RowPress())
