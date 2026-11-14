@@ -2170,7 +2170,3 @@ body { overflow-x: clip; }
   #catalog .store-flow .shelf::after { top: 22px; right: 16px; }
 }
 
-/* Private money (2026-10-28): the 0xBow release reel, after the catalog. */
-.wallet-reel { max-width: 1040px; margin: 0 auto; text-align: center; }
-.wallet-reel .m-h2 { margin-left: auto; margin-right: auto; margin-bottom: 26px; }
-.wallet-reel .showreel { margin-top: 0; }
