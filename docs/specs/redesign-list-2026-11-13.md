@@ -107,10 +107,14 @@ with", Network, Token); Lend (title, sentence over the button, Network first).
 as tall as its content. §1681b's fixed short height stays, so nothing moves
 as you pick.
 
-**Mocked and NOT built:** the private sends (Privacy Pools, Aztec, Railgun) with the sentence
-over the button; Lend's chips, "you have" line and cost line as its board
-draws them; a merchant's mark on Spend's Merchant row; Send's From row in a
-kept first line.
+**Built since (prd §1801):** the private sends (Privacy Pools, Aztec, Railgun)
+with the verb as title, the sentence over the button and Move's card.
+
+**Mocked and NOT built:** the Half · All chips, the "you have" line and
+"Take back" on Lend and the private sends, as their boards draw them; the
+amount typed in its row on Aztec and Railgun; a Network row on the private
+sends; a merchant's mark on Spend's Merchant row; Send's From row in a kept
+first line.
 
 **Still to mock:** Receive and the "which address do I give out" screens
 (5, 6, 7, 14), Account (4, 8, 9, 10), Round-ups (2), the walk's first and last
