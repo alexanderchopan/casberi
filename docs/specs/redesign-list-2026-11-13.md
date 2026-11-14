@@ -97,11 +97,18 @@ sentence top or bottom, https://claude.ai/artifact/RdmZttjGVfB4fWXrwqaj56
   facts are quieter than choices (Fee and Through values grey, "You get"
   white); Swap's To network starts on the network picked and stays changeable.
 
-**Built so far (commits f06e1dbcb … e5d65898d):** the sentence over the button,
-one-line rows, Send, Swap as Network / Token / To network / To token (labels
-to change to the list above), the amount typed in its row. **Not built:** the
-"To" line, no network badge, Option D, the other verbs' own changes, the three
-further improvements.
+**Built, 2026-11-14 (prd §1797, §1799, §1800; through commit of §1800):** the
+layout; Send and Swap with the "To" line, no badge, grey facts, the To network
+following; Add another as "And" blocks for Swap and Send; Sweep ("Tokens
+under", dollars first); Buy (two lines, "Continue with Stripe"); Spend ("Pay
+with", Network, Token); Lend (title, sentence over the button, Network first).
+
+**Mocked and NOT built:** the sheet as tall as its content (it conflicts with
+§1681b's fixed short height, kept so nothing jitters: needs a decision and
+care); the private sends (Privacy Pools, Aztec, Railgun) with the sentence
+over the button; Lend's chips, "you have" line and cost line as its board
+draws them; a merchant's mark on Spend's Merchant row; Send's From row in a
+kept first line.
 
 **Still to mock:** Receive and the "which address do I give out" screens
 (5, 6, 7, 14), Account (4, 8, 9, 10), Round-ups (2), the walk's first and last
