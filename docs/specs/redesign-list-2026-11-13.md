@@ -118,9 +118,15 @@ on Privacy Pools; the merchant's mark on Spend's Merchant row.
 
 **Mocked and NOT built:** Send's From row in a kept first line.
 
-**Still to mock:** Receive and the "which address do I give out" screens
-(5, 6, 7, 14), Account (4, 8, 9, 10), Round-ups (2), the walk's first and last
-screens (1, 3).
+**Mocked 2026-11-14, awaiting the user's ruling, nothing built:** the screens
+outside Move, on the canvas "Outside Move: Receive, Account, Round-ups, the
+walk" (https://claude.ai/artifact/RSAEs2ZCLomcxMqqVE9LH4). Receive as one
+screen whose first row, To, picks Public account, Private balance or Private
+account (5, 7, 14), with a second option listing all three at once; the two
+Aztec blocked states (6, 7); Account with "Public account" over the address,
+one Backup row, "Move to another wallet", Nodes under Connection and a Saving
+section (4, 8, 9, 10); the Round-ups, Savings goal and Nodes sheets (2, 9,
+10); the walk's first, Round-ups and last screens (1, 2, 3).
 
 ## To consider
 - The grey word in a title is the way back and does not look like a button.
