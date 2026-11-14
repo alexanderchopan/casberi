@@ -152,7 +152,7 @@ struct MoveSentence: View {
     /// buying crypto, drawn **Buy** (prd §1599: money in is Buy, money out
     /// is Spend). The cases keep their first names.
     enum Verb: CaseIterable { case swap, send, receive, buy, sweep, deposit, lend }
-    enum Blank: Equatable { case verb, with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until, from, amount }
+    enum Blank: Equatable { case verb, with, buy, to, network, destination, elsewhere, elsewhereCoin, arrives, group, merchant, depositCoin, depositNetwork, when, until, from, amount, under }
     enum Field: Hashable { case amount, search, to, price }
 
     struct Recipient: Equatable {
@@ -2058,40 +2058,31 @@ struct MoveSentence: View {
         }
     }
 
+    /// **"SWEEP 2 TOKENS UNDER $1 INTO ETH ON BASE." (prd §1798).** It says
+    /// what it does: tokens under a line, into ETH. The line is a row
+    /// ("Tokens under"), as every choice is; what comes back is the line
+    /// "You get" under the rows, dollars first.
     @ViewBuilder private var sweepAmountClauses: some View {
         MoveClause { word(sweepCountWord, ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "under")) {
-            sweepUnderMenu { MoveWord("$\(sweepUnder)", ink: MoveSentence.settledInk) }
+            blank("$\(sweepUnder)", ink: MoveSentence.settledInk, .under, label: Text("Sweep what is under $\(sweepUnder)"))
         }
-        MoveClause(glue: String(localized: "for")) {
-            let back = word(sweepBackWord, ink: DS.textPrimary)
-            if sweepPricing {
-                // While the pools price it, the word breathes, as Swap's does.
-                back.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
-            } else {
-                back
-            }
-        }
+        MoveClause(glue: String(localized: "into")) { word(Op.eth.symbol, ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "on")) { networkWord }
     }
 
-    /// The line's menu, $1 or $5: the sentence's word and, on an empty
-    /// sweep, the word in the line under it.
-    private func sweepUnderMenu<Label: View>(@ViewBuilder label: () -> Label) -> some View {
-        Menu {
-            Picker(selection: Binding(get: { sweepUnder }, set: { under in
-                withAnimation(DS.Motion.standard) { sweepUnder = under }
-                DustSweep.under = under
-                DSHaptic.selection()
-            })) {
-                ForEach(DustSweep.choices, id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
-            } label: { EmptyView() }
-            .pickerStyle(.inline)
-        } label: {
-            label().contentTransition(.opacity)
+    /// The line's choices, $1 or $5.
+    private var underList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(DustSweep.choices, id: \.self) { step in
+                listRow("$\(step)", picked: sweepUnder == step, rung: .heading24) {
+                    pick {
+                        sweepUnder = step
+                        DustSweep.under = step
+                    }
+                }
+            }
         }
-        .disabled(stage != nil)
-        .accessibilityLabel(Text("Sweep what is under $\(sweepUnder)"))
     }
 
     /// The network is read and nothing on it would be swept.
@@ -2140,10 +2131,8 @@ struct MoveSentence: View {
         } else if let plan = sweepPlan {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 if plan.rows.isEmpty {
-                    sweepUnderMenu {
-                        Text("No tokens under \(Text(verbatim: "$\(sweepUnder)").foregroundStyle(DS.pickInk))")
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    }
+                    Text("No tokens under \(Text(verbatim: "$\(sweepUnder)"))")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(plan.rows) { row in sweepRow(row) }
@@ -2168,9 +2157,10 @@ struct MoveSentence: View {
             guard case .swap(let s) = item, (s.sell.contract?.lowercased() ?? s.sell.symbol) == h.id else { return nil }
             return s.quote.exchange.map(YourAccountSwap.on)
         }.first
-        let swept = [worth, exchange].compactMap { $0 }.joined(separator: " · ")
-        return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? (swept.isEmpty ? nil : swept),
-                       trailing: row.stay == nil ? nil : worth, mark: h.symbol, dim: row.stay != nil) {
+        // Every row's dollars stand at the trailing edge (prd §1798); a
+        // swept one's line names its exchange, a staying one's says why.
+        return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? exchange,
+                       trailing: worth, mark: h.symbol, dim: row.stay != nil) {
             switch row.stay {
             case nil:
                 withAnimation(DS.Motion.standard) { _ = sweepLeftOut.insert(h.id) }
@@ -2770,11 +2760,17 @@ struct MoveSentence: View {
             }
             if buyGroup == nil { out.append(hole(.group)) }
             if buyProduct == nil { out.append(hole(.merchant)) }
+            if !networkPicked { out.append(hole(.network)) }
+            else if buyBare { out.append(MoveSentenceBlank(opens: .network, names: .network, text: network.name, empty: false)) }
             if with == nil { out.append(hole(.with)) }
             if amount.isEmpty { out.append(hole(.amount)) }
         case .deposit:
             if amount.isEmpty { out.append(hole(.amount)) }
             if depositSeller == nil { out.append(hole(.depositNetwork)) }
+        case .sweep:
+            if sweepsNothing {
+                out.append(MoveSentenceBlank(opens: .under, names: .under, text: "$\(sweepUnder)", empty: false))
+            }
         default: break
         }
         return out
@@ -3211,6 +3207,7 @@ struct MoveSentence: View {
         case .depositNetwork: depositNetworkList
         case .when: whenList
         case .until: untilList
+        case .under: underList
         case .from: fromList
         case .amount: amountList
         }
@@ -3397,7 +3394,7 @@ struct MoveSentence: View {
         case .from: String(localized: "From")
         case .to: String(localized: "To")
         case .amount: String(localized: "Amount")
-        case .with: verb == .buy ? String(localized: "Pay with") : String(localized: "Token")
+        case .with: String(localized: "Token")
         case .buy: String(localized: "Token")
         // **NETWORK, TOKEN, "TO", NETWORK, TOKEN (prd §1797, user: "i want
         // the rows to be network token to network token").** A row is
@@ -3411,6 +3408,7 @@ struct MoveSentence: View {
         case .merchant: String(localized: "Merchant")
         case .when: String(localized: "When")
         case .until: String(localized: "Until")
+        case .under: String(localized: "Tokens under")
         }
     }
 
@@ -3424,7 +3422,7 @@ struct MoveSentence: View {
         // think the order is to from network token amount").**
         // Swap's two pairs take the four ranks from the network's on
         // (`swapPairRows`); none of the others there is a swap's.
-        let order: [Blank] = [.to, .from, .group, .merchant, .network, .elsewhere, .depositNetwork,
+        let order: [Blank] = [.to, .from, .group, .merchant, .network, .elsewhere, .depositNetwork, .under,
                               .with, .depositCoin, .elsewhereCoin, .buy, .amount,
                               .destination, .arrives, .when, .until, .verb]
         return order.firstIndex(of: which) ?? order.count
@@ -3523,6 +3521,15 @@ struct MoveSentence: View {
             .accessibilityAddTraits(.isHeader)
     }
 
+    private var payHead: some View {
+        Text("Pay with")
+            .dsText(.heading17)
+            .foregroundStyle(DS.textPrimary)
+            .frame(minHeight: 30, alignment: .bottomLeading)
+            .padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
+    }
+
     /// The pink "And" that heads every line after the first, with its ×.
     private func andHead(_ line: SellLine) -> some View {
         HStack(alignment: .center, spacing: 0) {
@@ -3561,6 +3568,9 @@ struct MoveSentence: View {
     @ViewBuilder private func currentBlock(_ rows: [LedgerRow], follows: Bool) -> some View {
         ForEach(rows) { r in
             if verb == .swap, r.opens == .destination { toHead }
+            // "Pay with" heads Spend's network and token, as "To" heads a
+            // swap's second side (prd §1798).
+            if verb == .buy, r.opens == .network { payHead }
             if follows, r.opens == .from {
                 EmptyView()
             } else if follows, r.opens == .network || r.opens == .destination || (r.opens == .buy && verb == .swap) {
@@ -4130,6 +4140,19 @@ struct MoveSentence: View {
         // When is a choice, so it is a row among the choices (prd §1793).
         if verb == .swap, !limiting, let back = quotePrint {
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back, valueInk: DS.textPrimary))
+        }
+        if verb == .sweep, !sweepPricing, !sweepItems.isEmpty, DustSweep.isPositive(sweepBack) {
+            // Dollars first, then the ETH (prd §1798).
+            let eth = "≈ " + Self.short(sweepBack, decimals: Op.eth.decimals) + " " + Op.eth.symbol
+            let usd = ethPrice.flatMap { DustSweep.dollars(sweepBack, decimals: Op.eth.decimals, price: $0) }
+            rows.append(LedgerRow(id: "get", name: String(localized: "You get"),
+                                  value: usd.map { Self.money($0) + " · " + eth } ?? eth, valueInk: DS.textPrimary))
+        }
+        if verb == .deposit, let seller = depositSeller {
+            // **WHERE IT ARRIVES, AND WHO TAKES THE CARD (prd §1798).**
+            rows.append(LedgerRow(id: "arrives", name: String(localized: "Arrives in"),
+                                  value: String(localized: "Your account \(AddressTail.short(account))")))
+            rows.append(LedgerRow(id: "card", name: String(localized: "Card taken by"), value: seller.name, marks: [seller.name]))
         }
         if verb == .send {
             if let words = requestPrint { rows.append(LedgerRow(id: "request", name: words)) }
@@ -4773,7 +4796,9 @@ struct MoveSentence: View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
         // Spend looks on every network (prd §1666): what pays is turned into
         // USDC on Base first, wherever it is.
-        let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = (verb == .buy ? networksByWorth : lookIn).flatMap { n in
+        // The network decides the token (prd §1797): with one picked, what
+        // you hold there; with none, every network.
+        let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = lookIn.flatMap { n in
             (heldBy[n.chainId] ?? []).map { ("\(n.chainId)|\($0.id)", n, $0) }
         }
         .filter { q.isEmpty || $0.held.token.symbol.lowercased().hasPrefix(q) }
@@ -5243,7 +5268,10 @@ struct MoveSentence: View {
 
     private var networkList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(networksByWorth) { n in
+            // Spend pays from Base or Ethereum only (prd §1666).
+            ForEach(networksByWorth.filter { n in
+                verb != .buy || SpendTopUp.pays(contract: nil, dollar: n.dollar, chainId: n.chainId)
+            }) { n in
                 let total = (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +)
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its tokens have no value") : nil,
                         trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
@@ -6135,18 +6163,7 @@ struct MoveSentence: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s1)
             }
-            // The seller signs Buy's foot (prd §1599): its page is where
-            // the card is typed.
-            if verb == .deposit, let seller = depositSeller {
-                HStack(spacing: DS.Space.s1) {
-                    Text("Powered by \(seller.name)")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textTertiary)
-                    Self.mark(of: seller.name)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, DS.Space.s1)
-            }
+            // Buy's seller is named in its line and on its button (prd §1798).
             // Bitrefill's credit signs Buy's foot the same way (§1473, user:
             // "put bitrefill logo like we do w/ relay").
             if verb == .buy, receipt == nil {
@@ -6251,7 +6268,10 @@ struct MoveSentence: View {
         case nil: break
         }
         if verb == .receive { return String(localized: "Copy address") }
-        if verb == .deposit { return String(localized: "Buy") }
+        if verb == .deposit {
+            // The act opens the seller's page, and says so (prd §1798).
+            return depositSeller.map { String(localized: "Continue with \($0.name)") } ?? String(localized: "Buy")
+        }
         if verb == .buy { return String(localized: "Spend") }
         if verb == .sweep {
             return sweepItems.count < 2 ? String(localized: "Sweep") : String(localized: "Sweep all \(sweepItems.count)")
@@ -7356,17 +7376,11 @@ struct MoveSentence: View {
 
     /// Under the sentence: the whole address, to check against the seller's
     /// page, and the one line saying what that page does.
+    /// Buy's lines under its rows: where it arrives and who takes the card
+    /// (`ledgerRows`). The address is copied for a seller whose page cannot
+    /// take it, said when the button is tapped.
     @ViewBuilder private var depositLine: some View {
-        if let seller = depositSeller {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                addressBlock(account)
-                Text(seller.takesAddress
-                     ? "\(seller.name)'s page shows its fee before you pay, with this address filled in."
-                     : "\(seller.name)'s page shows its fee before you pay. This address is copied to paste there.")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+        if depositSeller != nil { ledger(door: false) }
     }
 
     /// Dollars, and the one network a card can buy on picked when there is
@@ -7433,7 +7447,11 @@ struct MoveSentence: View {
                     blank(with.token.symbol, ink: MoveSentence.settledInk, .with, label: Text("Pick what pays"))
                 }
             }
-            MoveClause(glue: String(localized: "on")) { word(network.name + ".", ink: DS.textPrimary) }
+            if networkPicked {
+                MoveClause(glue: String(localized: "on")) {
+                    blank(network.name + ".", ink: MoveSentence.settledInk, .network, label: Text("On \(network.name), change"))
+                }
+            }
         }
     }
 
