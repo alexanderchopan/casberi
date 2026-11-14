@@ -98,7 +98,7 @@ Move is where you do something with your money. It opens on a menu of every verb
 - Swap to another network. Pick the network for what you get, and Across carries it: ETH arrives as ETH, USDC as USDC. Activity shows it arriving.
 - Clear out dust. Sweep swaps every token worth under $1, or $5, on one network for ETH, in one transaction. A token it won't touch stays listed with the reason — most dust is sent by strangers.
 - Receive. Receive shows your three addresses at once — public account, private balance and private account — each with the networks it's good on and a Copy (see Private money). From another network lets someone send a token Relay bridges, and it lands as the one you pick. From another wallet connects a wallet of yours to send in from.
-- Buy with a card. Buy takes a token and an amount. The card is taken on the seller's own page, never by Casberi, and what you bought arrives in your account.
+- Buy with a card. Buy takes a token and an amount. The card is taken on Stripe's own page, never by Casberi, and what you bought arrives in your account.
 - Spend on a gift card. Spend takes a merchant on Bitrefill and pays from your account, on Base or Ethereum.
 - Lend. Lend puts a token of yours on Aave, where it earns; Take back returns it. What's lent has its own rows in Holdings.
 - Pay the fee without ETH. On Base, a send short of ETH for its fee pays it from your USDC, up to $5 at a time. Face ID asks once to allow that, then once for the send.
