@@ -110,11 +110,13 @@ as you pick.
 **Built since (prd §1801):** the private sends (Privacy Pools, Aztec, Railgun)
 with the verb as title, the sentence over the button and Move's card.
 
-**Mocked and NOT built:** the Half · All chips, the "you have" line and
-"Take back" on Lend and the private sends, as their boards draw them; the
-amount typed in its row on Aztec and Railgun; a Network row on the private
-sends; a merchant's mark on Spend's Merchant row; Send's From row in a kept
-first line.
+**Built since (prd §1802):** the amount as a menu on its row on Lend and the
+private sends ("You have", Half, All, "Another amount"), typed in the Amount
+row on Aztec and Railgun; "Take back" as a row on Lend; a fixed Network row
+on the private sends, rows To, From, Network, Token, Amount; no "to address"
+on Privacy Pools; the merchant's mark on Spend's Merchant row.
+
+**Mocked and NOT built:** Send's From row in a kept first line.
 
 **Still to mock:** Receive and the "which address do I give out" screens
 (5, 6, 7, 14), Account (4, 8, 9, 10), Round-ups (2), the walk's first and last

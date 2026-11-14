@@ -54,6 +54,14 @@ struct MoveChoiceRow: Identifiable {
     var empty = false
     var ink: Color?
     var mark: MoveRowMark?
+    /// The row's own field, drawn where its value stands while `typing`
+    /// (prd §1791: an amount is typed in its row). Always mounted, so it
+    /// can take the focus.
+    var field: AnyView?
+    var typing = false
+    /// A fact every line shares and this sentence cannot change (its one
+    /// network): grey, with no menu chevron, and no button.
+    var fixed = false
     let act: () -> Void
 }
 
@@ -123,10 +131,14 @@ struct MoveRowMark: View {
     var token: String?
     /// A network's bundled mark (`MoveSentence.networkMark`).
     var network: String?
+    /// A merchant's or an app's mark, by its catalogue name.
+    var brand: String?
     var size: CGFloat = 24
 
     var body: some View {
-        if let token {
+        if let brand {
+            BridgeIcon(name: brand, size: size, circular: true).accessibilityHidden(true)
+        } else if let token {
             AssetMark(name: token, size: size)
                 .overlay(alignment: .bottomTrailing) {
                     if let network {
@@ -164,26 +176,88 @@ struct MoveChoiceRows<Menu: View>: View {
             let next = rows.first { $0.empty }?.id
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(rows) { r in
+                    if r.fixed {
+                        MoveChoiceRowLabel(name: r.name, value: r.value, ink: DS.textSecondary, chevron: false, mark: r.mark)
+                    } else {
                     Button {
+                        guard !r.typing else { return }
                         r.act()
                         DSHaptic.selection()
                     } label: {
-                        MoveChoiceRowLabel(name: r.name, value: r.empty ? String(localized: "Choose") : r.value,
+                        MoveChoiceRowLabel(name: r.name, value: r.typing ? " " : r.empty ? String(localized: "Choose") : r.value,
                                            ink: r.id == next ? nextInk : r.empty ? DS.textSecondary : r.ink ?? DS.textPrimary,
-                                           mark: r.empty ? nil : r.mark)
+                                           chevron: !r.typing, mark: r.empty || r.typing ? nil : r.mark)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
+                    .overlay(alignment: .trailing) {
+                        if let field = r.field {
+                            field
+                                .opacity(r.typing ? 1 : 0)
+                                .allowsHitTesting(r.typing)
+                                .accessibilityHidden(!r.typing)
+                        }
+                    }
                     .popover(isPresented: Binding(get: { open.wrappedValue == r.id },
                                                   set: { if !$0, open.wrappedValue == r.id { open.wrappedValue = nil } }),
                              attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         MoveMenuBox { menu(r.id) }
                             .environment(chrome)
                     }
+                    }
                 }
             }
             .disabled(disabled)
         }
+    }
+}
+
+/// One sum in an amount's menu.
+struct MoveAmountPick: Identifiable {
+    let id: String
+    let title: String
+    var trailing: String?
+    var picked = false
+    let act: () -> Void
+}
+
+/// **AN AMOUNT'S MENU, FOR EVERY SENTENCE (prd §1802).** What you have at
+/// its head, the sums as rows, then "Another amount", which raises the keys
+/// in the row. The Half · All pills under a sentence are retired for it.
+struct MoveAmountMenu: View {
+    var have: String?
+    let picks: [MoveAmountPick]
+    var ink: Color = DS.pickInk
+    let another: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let have {
+                Text(verbatim: have).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(minHeight: 36, alignment: .leading)
+            }
+            ForEach(picks) { p in row(p.title, trailing: p.trailing, ink: p.picked ? ink : DS.textPrimary, act: p.act) }
+            row(String(localized: "Another amount"), trailing: nil, ink: DS.textPrimary, act: another)
+        }
+    }
+
+    private func row(_ title: String, trailing: String?, ink: Color, act: @escaping () -> Void) -> some View {
+        Button {
+            act()
+            DSHaptic.selection()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: title).dsText(.heading24).foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.6)
+                Spacer(minLength: DS.Space.s2)
+                if let trailing {
+                    Text(verbatim: trailing).dsText(.heading17).foregroundStyle(DS.textPrimary).monospacedDigit().lineLimit(1)
+                }
+            }
+            .frame(minHeight: MoveSentence.listRowHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
     }
 }
 

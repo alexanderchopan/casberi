@@ -323,6 +323,13 @@ final class RailgunMove {
         return YourAccountOp.dollars(units, decimals: h.decimals, price: price)
     }
 
+    /// "You have $120.00": the head of the amount's menu (prd §1802).
+    var haveLine: String? {
+        guard let h = holding else { return nil }
+        return h.price.map { String(localized: "You have \(Self.usd(YourAccountOp.dollars(h.units, decimals: h.decimals, price: $0)))") }
+            ?? String(localized: "You have \(RailgunHoldings.figure(h.units, decimals: h.decimals) + " " + h.symbol)")
+    }
+
     /// The line under the sentence: "$25.00 · from $10 · you have $120.00".
     /// No price: what you have, in the token.
     var amountLine: String? {
@@ -631,6 +638,8 @@ struct MoveRailgunSentence<Head: View>: View {
 
     /// The token list is open.
     @State private var open = false
+    /// The amount's menu is up (prd §1802).
+    @State private var amountOpen = false
     @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
@@ -645,7 +654,10 @@ struct MoveRailgunSentence<Head: View>: View {
                     // The tokens are a menu on their row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
                         MoveChoiceRows(rows: choiceRows,
-                                       open: Binding(get: { open && picking ? "token" : nil }, set: { if $0 == nil { open = false } })) { _ in tokens }
+                                       open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : nil },
+                                                     set: { if $0 == nil { open = false; amountOpen = false } })) { id in
+                            if id == "amount" { amountMenu } else { tokens }
+                        }
                         line
                     }
                 }
@@ -706,7 +718,7 @@ struct MoveRailgunSentence<Head: View>: View {
             if !isDone { head() }
             if picking {
                 // The amount typed, the token its own word (prd §1727).
-                MoveClause { amountField }
+                if !move.amount.isEmpty { MoveClause { MoveWord(move.amount, ink: MoveSentence.settledInk) } }
                 MoveClause {
                     Button { toggle() } label: {
                         MoveWord(move.holding?.symbol ?? "", ink: MoveSentence.settledInk)
@@ -754,13 +766,11 @@ struct MoveRailgunSentence<Head: View>: View {
         case .ready, .quoting:
             // The amount in dollars, the floor beside it, and three choices
             // (prd §1728 item 1).
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                if let words = move.amountLine {
-                    Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                chips
+            // What you have and the sums are the amount's menu (prd §1802).
+            // The floor is still said: it is a rule, and no menu shows it.
+            if move.mode == .deposit {
+                Text(verbatim: String(localized: "\(RailgunMove.floorText) or more"))
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
         case .working(let words):
             // The steps stand in the foot; the sentence stands alone.
@@ -890,36 +900,54 @@ struct MoveRailgunSentence<Head: View>: View {
         case .deposit:
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
         case .takeBack:
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
                                       value: move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")) {
                 leave(.pickRecipient)
             })
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
         }
+        // Its one network, said as a row and fixed (prd §1802).
+        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Ethereum"),
+                                  mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) }, fixed: true) {})
         // The token before its amount (prd §1789).
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.holding?.symbol ?? "") { toggle() })
-        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty) {
-            withAnimation(DS.Motion.standard) { open = false }
-            typing = true
+        // Its sums are a menu, and any other is typed in the row (prd §1802).
+        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
+                                  field: AnyView(amountField), typing: typing) {
+            withAnimation(DS.Motion.standard) { open = false; amountOpen.toggle() }
         })
         return rows
+    }
+
+    /// The amount's menu: what you have, the sums, and the keys.
+    private var amountMenu: some View {
+        let picks = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
+        return MoveAmountMenu(have: move.haveLine,
+                              picks: picks.map { item in
+                                  MoveAmountPick(id: chipWord(item.pick), title: chipWord(item.pick),
+                                                 trailing: item.value + " " + (move.holding?.symbol ?? ""),
+                                                 picked: move.amount == item.value) {
+                                      withAnimation(DS.Motion.standard) { move.amount = item.value; amountOpen = false }
+                                  }
+                              }) {
+            withAnimation(DS.Motion.standard) { amountOpen = false }
+            typing = true
+        }
     }
 
     /// The amount, typed (prd §1727): the decimal pad, the token's places at
     /// most, the figure in the sentence's own rung — as Aztec's (§1700q).
     private var amountField: some View {
-        MoveRungReader { rung in
-            TextField(text: $move.amount,
-                      prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
-                .keyboardType(.decimalPad)
-                .focused($typing)
-                .dsText(rung)
-                .monospacedDigit()
-                // Pink while it is typed, as Move's own figure is; white at
-                // rest, where pink would read as a thing to tap (prd §1781).
-                .foregroundStyle(typing ? DS.pickInk : DS.textPrimary)
-                .fixedSize()
-        }
+        TextField(text: $move.amount,
+                  prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+            .keyboardType(.decimalPad)
+            .focused($typing)
+            .dsText(.heading20)
+            .monospacedDigit()
+            .multilineTextAlignment(.trailing)
+            .foregroundStyle(DS.textPrimary)
+            .tint(DS.pickInk)
+            .fixedSize()
         .accessibilityLabel(Text("Amount"))
         .onChange(of: move.amount) { _, now in
             if open, typing { open = false }
@@ -940,25 +968,6 @@ struct MoveRailgunSentence<Head: View>: View {
     /// match how we do roundups").** Its halves share the row's width, 4 pt
     /// apart, each a `Chip` that fills, the pick crossfading
     /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
-    @ViewBuilder private var chips: some View {
-        let picks = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
-        if !picks.isEmpty, !open {
-            HStack(spacing: DS.Space.s1) {
-                ForEach(picks, id: \.pick) { item in
-                    let on = move.amount == item.value
-                    Button {
-                        typing = false
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { move.amount = item.value }
-                    } label: {
-                        Chip(text: chipWord(item.pick), selected: on, fills: true)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-            }
-        }
-    }
 
     private func chipWord(_ pick: RailgunMove.Pick) -> String {
         switch pick {
@@ -1009,6 +1018,9 @@ struct MoveRailgunSentence<Head: View>: View {
     private var foot: some View {
         VStack(spacing: 0) {
             MoveFlow { sentence }
+                // The keys bring the typed row to the foot's edge: air
+                // between that row and the sentence (prd §1802).
+                .padding(.top, typing ? DS.Space.s6 : 0)
                 // The sentence says the move and is no control (prd
                 // §1781): its choices are the rows under it.
                 .allowsHitTesting(false)
@@ -1048,10 +1060,18 @@ struct MoveRailgunSentence<Head: View>: View {
                     }
                     .disabled(DemoMode.isActive)
                 default:
-                    footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
-                        Task { await move.run() }
+                    if typing {
+                        // Done, while a figure is typed (prd §1791 item 4).
+                        Button { typing = false } label: {
+                            MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
+                        }
+                        .buttonStyle(PressSpring())
+                    } else {
+                        footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
+                            Task { await move.run() }
+                        }
+                        .disabled(!ready)
                     }
-                    .disabled(!ready)
                 }
             }
             if move.stage != .reading, move.stage != .nothing, !isDone { credit }

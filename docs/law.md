@@ -252,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1978 of 2052 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1979 of 2053 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2232,6 +2232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755)
+- §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro…
 
 ## Dead rulings → what replaced them (generated)
 

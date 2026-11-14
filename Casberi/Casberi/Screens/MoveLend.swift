@@ -115,13 +115,8 @@ struct MoveLendSentence<Head: View>: View {
             if stepsRun == nil {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let market {
-                    // In dollars, as every Move sentence says them, Half · All
-                    // under it; Aave's rate is the cost line's (prd §1700z).
-                    Text(verbatim: move.amountLine ?? "")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .fixedSize(horizontal: false, vertical: true)
-                    if live { chips }
+                    // What you have and Half · All are the amount's own
+                    // menu (prd §1802); Aave's rate is the cost line's.
                     if move.units == nil {
                         Text(move.mode == .lend ? String(localized: "No \(market.symbol) on \(market.network) to lend")
                              : String(localized: "Nothing lent on \(market.network)"))
@@ -153,32 +148,6 @@ struct MoveLendSentence<Head: View>: View {
         }
     }
 
-    /// Half · All (prd §1700z), as Aztec's and Railgun's sentences: each
-    /// picks its amount; the ladder stays in the amount's own choices.
-    /// **ONE CONTROL, AS ROUND-UPS' (user, 2026-11-10: "the design needs to
-    /// match how we do roundups").** Its halves share the row's width, 4 pt
-    /// apart, each a `Chip` that fills, the pick crossfading
-    /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
-    @ViewBuilder private var chips: some View {
-        let half = move.half
-        HStack(spacing: DS.Space.s1) {
-            if let half {
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { move.pick(half, all: false) }
-                } label: { Chip(text: String(localized: "Half"), selected: !move.all && move.amount == half, fills: true) }
-                .buttonStyle(PressSpring())
-            }
-            if let m = market, (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 {
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { move.pick(nil, all: true) }
-                } label: { Chip(text: String(localized: "All"), selected: move.all, fills: true) }
-                .buttonStyle(PressSpring())
-            }
-        }
-    }
-
     /// The other half of the verb, as a word: Take back where something is
     /// lent, Lend more from Take back.
     @ViewBuilder private var switchMode: some View {
@@ -198,11 +167,19 @@ struct MoveLendSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// The other half of the verb is a row, as Add another is (prd §1802):
+    /// white, with its glyph at the trailing edge.
     private func word(_ text: String, act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Text(verbatim: text).dsText(.body17).foregroundStyle(DS.pickInk)
-                .frame(minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "arrow.left.arrow.right").dsGlyph(.caption, weight: .semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: MoveChoiceRowLabel.height)
+            .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
     }
@@ -251,7 +228,11 @@ struct MoveLendSentence<Head: View>: View {
 
     /// Each token on this network: its amounts up the ladder, then all of it.
     /// Picking one picks its token too.
-    private var amounts: some View {
+    @ViewBuilder private var amounts: some View {
+        if let have = move.haveLine {
+            Text(verbatim: have).dsText(.body17).foregroundStyle(DS.textSecondary)
+                .frame(minHeight: 36, alignment: .leading)
+        }
         ForEach(AaveLend.markets.filter { $0.chainId == move.chainId && !move.refused.contains(LendMove.key($0)) },
                 id: \.symbol) { m in
             ForEach(move.choices(m), id: \.self) { step in
@@ -260,6 +241,14 @@ struct MoveLendSentence<Head: View>: View {
                        picked: !move.all && move.amount == step && move.symbol == m.symbol) {
                     move.symbol = m.symbol
                     move.pick(step, all: false)
+                }
+            }
+            if m.symbol == move.market?.symbol, let half = move.half {
+                let units = PrivateMoney.baseUnits(half, decimals: m.decimals) ?? "0"
+                choice(String(localized: "Half, \(PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol))"), mark: m.symbol,
+                       picked: !move.all && move.amount == half && move.symbol == m.symbol) {
+                    move.symbol = m.symbol
+                    move.pick(half, all: false)
                 }
             }
             if let all = move.available(m), all != "0" {

@@ -72880,3 +72880,17 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo: `-movePrivateSend YES -privateMoneySample YES`, `-moveToAztec YES -aztecDoorSample YES`, `-moveRailgun send`. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** `private-money-selftest.sh` reads the row's new label.
+
+## §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a row (amends §1800 item 4, §1801 item 5) (user, 2026-11-14: "Finish Move's details", of the boards already agreed: "ok i'm good w/ these all of them")
+
+1. **The amount is a menu on its row,** on Aztec's and Railgun's sends as on Move's own: "You have" at its head, then Half, All and "Another amount". Lend's menu leads with the same "You have" line and offers Half. The Half · All chips and the "you have" line under the rows are deleted (`MoveAmountMenu`).
+2. **"Another amount" is typed in the Amount row itself** (`MoveChoiceRow.field`, `typing`). The sentence says the figure as a word and holds no field. While the keys are up the button reads "Done", and there is air between the typed row and the sentence: the system brings that row to the foot's edge, and a scroll asked of it moved nothing (measured on the simulator, before and after the keys showed).
+3. **Lend's "Take back" and "Lend more" are a row,** white, with a trailing glyph, in place of the pink word.
+4. **Each private send says its one network as a row,** grey, with no menu and no chevron (`MoveChoiceRow.fixed`): Aztec, Ethereum for Railgun, Ethereum or Sepolia for Privacy Pools. Their rows read To, From, Network, Token, Amount (§1789).
+5. **Privacy Pools' sentence says nobody until somebody is picked:** no "to address" (§1791).
+6. **Spend's Merchant row wears the merchant's mark,** the one its list drew (`MoveRowMark.brand`).
+7. Not done: a kept first Send line does not show its From row.
+
+**Seen:** the simulator, demo: `-moveToAztec YES -aztecDoorSample YES`, `-moveRailgun send` (menu, then "Another amount"), `-movePrivateSend YES -privateMoneySample YES`, Move › Lend. **Mac half (§1402).** The same on Catalyst; no keys rise there, so item 2's air never shows.
+
+**Checks.** `private-money-selftest.sh` reads the row tap's new code string.

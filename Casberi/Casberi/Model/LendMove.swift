@@ -219,6 +219,14 @@ final class LendMove {
         return parts.joined(separator: " · ")
     }
 
+    /// "You have $250.00" (lend) or "$500.00 lent" (take back): the head of
+    /// the amount's menu (prd §1802).
+    var haveLine: String? {
+        guard let m = market, let have = available(m) else { return nil }
+        let text = dollars(have, in: m).map(Self.usd) ?? PrivateMoney.figure(have, decimals: m.decimals, symbol: m.symbol)
+        return mode == .lend ? String(localized: "You have \(text)") : String(localized: "\(text) lent")
+    }
+
     /// Half of what is available, in the token's own places, rounded down;
     /// nil when there is nothing to halve.
     var half: String? {

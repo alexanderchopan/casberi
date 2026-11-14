@@ -3376,6 +3376,8 @@ struct MoveSentence: View {
         case .depositCoin: return MoveRowMark(token: depositCoin.symbol)
         case .elsewhereCoin: return elsewhere.map { MoveRowMark(token: $0.token.symbol) }
         case .arrives: return elsewhere.map { MoveRowMark(token: $0.arrives.symbol) }
+        // The merchant wears the mark its list drew (prd §1802).
+        case .merchant: return buyProduct.flatMap { Self.merchantMark(BitrefillBuy.shortName($0.name)) }.map { MoveRowMark(brand: $0) }
         default: return nil
         }
     }

@@ -136,6 +136,13 @@ final class AztecMove {
         return NSDecimalNumber(decimal: u / pow(10, places)).doubleValue * price
     }
 
+    /// "You have $120.00": the head of the amount's menu (prd §1802).
+    var haveLine: String? {
+        guard let available else { return nil }
+        return dollars(available, symbol: symbol).map { String(localized: "You have \(Self.usd($0))") }
+            ?? String(localized: "You have \(PrivateMoney.figure(available, decimals: decimals, symbol: symbol))")
+    }
+
     /// The line under the sentence: "$25.00 · you have $120.00" (prd §1700y).
     /// No price: what you have, in the token.
     var amountLine: String? {
@@ -546,7 +553,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     var leave: (MovePrivateLeave) -> Void = { _ in }
     @ViewBuilder let head: () -> Head
 
-    private enum Blank { case token, recipient }
+    private enum Blank { case token, recipient, amount }
     @State private var open: Blank?
     @FocusState private var typing: Bool
     @State private var typed = ""
@@ -658,7 +665,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         default:
             if !isDone { head() }
             if move.stage == .ready {
-                MoveClause { amountField }
+                if !move.amount.isEmpty { MoveClause { MoveWord(move.amount, ink: DS.aztecInk) } }
                 MoveClause {
                     Button { toggle(.token) } label: {
                         MoveWord(move.symbol, ink: MoveSentence.settledInk)
@@ -710,24 +717,24 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// The amount, typed (prd §1700q): the decimal pad, the token's places
     /// at most, and the figure in the sentence's own rung.
     private var amountField: some View {
-        MoveRungReader { rung in
-            TextField(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
-                      prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
-                .keyboardType(.decimalPad)
-                .focused($typing)
-                .dsText(rung)
-                .monospacedDigit()
-                .foregroundStyle(DS.aztecInk)
-                .fixedSize()
-        }
-        .accessibilityLabel(Text("Amount"))
-        .onChange(of: move.amount) { _, now in
-            if open != nil, typing { open = nil }
-            if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
-               now.distance(from: dot, to: now.endIndex) - 1 > move.decimals {
-                move.amount = String(now[...now.index(dot, offsetBy: move.decimals)])
+        TextField(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
+                  prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+            .keyboardType(.decimalPad)
+            .focused($typing)
+            .dsText(.heading20)
+            .monospacedDigit()
+            .multilineTextAlignment(.trailing)
+            .foregroundStyle(DS.textPrimary)
+            .tint(DS.aztecInk)
+            .fixedSize()
+            .accessibilityLabel(Text("Amount"))
+            .onChange(of: move.amount) { _, now in
+                if open != nil, typing { open = nil }
+                if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
+                   now.distance(from: dot, to: now.endIndex) - 1 > move.decimals {
+                    move.amount = String(now[...now.index(dot, offsetBy: move.decimals)])
+                }
             }
-        }
     }
 
     // MARK: - The line
@@ -744,14 +751,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             } else if move.stage == .ready {
                 // The amount in dollars and two choices (prd §1700y, as
                 // Railgun's §1728 item 1); what it costs is the foot's.
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    if let words = move.amountLine {
-                        Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    chips
-                }
+                // What you have and Half · All are the amount's menu (prd §1802).
+                EmptyView()
             } else {
                 Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -833,7 +834,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
     /// up; a tap outside it closes the list with no pick.
     private var menuRow: Binding<String?> {
-        Binding(get: { open.map { $0 == .token ? "token" : "to" } }, set: { if $0 == nil { open = nil } })
+        Binding(get: { open.map { $0 == .token ? "token" : $0 == .amount ? "amount" : "to" } }, set: { if $0 == nil { open = nil } })
     }
 
     @ViewBuilder private var menu: some View { if let open { choices(open) } }
@@ -853,17 +854,35 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         if move.mode == .deposit {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours, ink: DS.aztecInk) { leave(.pickRecipient) })
         } else {
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours, ink: DS.aztecInk) { leave(.switchOff) })
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
                                       value: move.recipient.map { AddressTail.short($0) } ?? "", empty: move.recipient == nil) { toggle(.recipient) })
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours, ink: DS.aztecInk) { leave(.switchOff) })
         }
+        // Its one network, said as a row and fixed (prd §1802).
+        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Aztec"), fixed: true) {})
         // The token before its amount (prd §1789).
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
-        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty) {
+        // Its sums are a menu, and any other is typed in the row (prd §1802).
+        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
+                                  field: AnyView(amountField), typing: typing) { toggle(.amount) })
+        return rows
+    }
+
+    /// The amount's menu: what you have, Half, All, and the keys.
+    private var amountMenu: some View {
+        let picks = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
+        return MoveAmountMenu(have: move.haveLine,
+                              picks: picks.map { item in
+                                  MoveAmountPick(id: item.pick == .half ? "half" : "all",
+                                                 title: item.pick == .half ? String(localized: "Half") : String(localized: "All"),
+                                                 trailing: item.value + " " + move.symbol, picked: move.amount == item.value) {
+                                      withAnimation(DS.Motion.standard) { move.amount = item.value; open = nil }
+                                  }
+                              },
+                              ink: DS.aztecInk) {
             withAnimation(DS.Motion.standard) { open = nil }
             typing = true
-        })
-        return rows
+        }
     }
 
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
@@ -871,6 +890,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             switch blank {
             case .token: tokens
             case .recipient: recipients
+            case .amount: amountMenu
             }
         }
         .padding(.vertical, DS.Space.s2)
@@ -999,6 +1019,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     private var foot: some View {
         VStack(spacing: 0) {
             MoveFlow { sentence }
+                // The keys bring the typed row to the foot's edge: air
+                // between that row and the sentence (prd §1802).
+                .padding(.top, typing ? DS.Space.s6 : 0)
                 // The sentence says the move and is no control (prd
                 // §1781): its choices are the rows under it, and the
                 // amount's field is focused from its row.
@@ -1062,13 +1085,21 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     Spacer(minLength: 0)
                 default:
                     Spacer(minLength: 0)
-                    footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
-                        open = nil
-                        typing = false
-                        move.onAway = inTray ? { chrome.moveTray = false } : nil
-                        Task { await move.run() }
+                    if typing {
+                        // Done, while a figure is typed (prd §1791 item 4).
+                        Button { typing = false } label: {
+                            MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
+                        }
+                        .buttonStyle(PressSpring())
+                    } else {
+                        footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
+                            open = nil
+                            typing = false
+                            move.onAway = inTray ? { chrome.moveTray = false } : nil
+                            Task { await move.run() }
+                        }
+                        .disabled(!ready)
                     }
-                    .disabled(!ready)
                 }
             }
             if move.stage != .reading, !isDone { credit }
@@ -1084,26 +1115,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// match how we do roundups").** Its halves share the row's width, 4 pt
     /// apart, each a `Chip` that fills, the pick crossfading
     /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
-    @ViewBuilder private var chips: some View {
-        let picks = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
-        if !picks.isEmpty {
-            HStack(spacing: DS.Space.s1) {
-                ForEach(picks, id: \.pick) { item in
-                    let on = move.amount == item.value
-                    Button {
-                        typing = false
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { move.amount = item.value }
-                    } label: {
-                        Chip(text: item.pick == .half ? String(localized: "Half") : String(localized: "All"), selected: on, fills: true)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-            }
-        }
-    }
-
     /// Fits beside the act, never cut (prd §1700f item 13).
     private var checkAgain: some View {
         Button {

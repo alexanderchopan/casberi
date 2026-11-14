@@ -224,7 +224,8 @@ struct MovePrivateSentence<Head: View>: View {
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
-            } else {
+            } else if move.recipient != nil {
+                // Nobody picked is not said (prd §1791): no "to address".
                 MoveClause(glue: String(localized: "to")) { recipientWord }
             }
             MovePhrase(move.onEthereum ? String(localized: "Ethereum.") : String(localized: "Sepolia."), glue: String(localized: "on"))
@@ -384,13 +385,18 @@ struct MovePrivateSentence<Head: View>: View {
         guard live || failed, !isDone else { return [] }
         let yours = String(localized: "Your private balance")
         var rows: [MoveChoiceRow] = []
+        // To, From, Network, Amount (prd §1789, §1802).
         if move.mode == .send {
-            if live { rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) }) }
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
                                       value: move.recipient.map(YourAccount.short) ?? "", empty: move.recipient == nil) { toggle(.recipient) })
+            if live { rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) }) }
         } else if live {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
         }
+        // Its one network, said as a row and fixed (prd §1802).
+        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
+                                  value: move.onEthereum ? String(localized: "Ethereum") : String(localized: "Sepolia"),
+                                  mark: move.onEthereum ? MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) } : nil, fixed: true) {})
         if live { rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: figure) { toggle(.amount) }) }
         return rows
     }

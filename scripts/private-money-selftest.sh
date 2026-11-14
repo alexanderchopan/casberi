@@ -1178,7 +1178,7 @@ done
 use "$SENT" 'guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }' "the list that opens by itself is not the first still to be filled (prd §1782)"
 use "$SENT" 'tapBlank(next == .amount && with == nil ? .with : next)' "Amount is asked before its token (prd §1782)"
 ! grep -q 'recentAmounts\|rememberAmounts' "$SENT" || { echo "✗ Pay again is back in To (prd §1782: declined)"; exit 1; }
-use "$SENT" 'Button { if let which = r.opens { tapBlank(which) } } label: {' "a choice row no longer opens the list its word opens (prd §1779)"
+use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which)' "a choice row no longer opens the list its word opens (prd §1779)"
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
 use "$SENT" 'DSDoorRow(icon: "eye.slash", label: "Receive privately") { goFresh() }' "Receive's private door is hidden again (prd §1779)"
