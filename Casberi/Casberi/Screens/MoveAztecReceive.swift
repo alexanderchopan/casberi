@@ -10,10 +10,20 @@ import SwiftUI
 /// copies the whole, no QR), and the foot: "Copy" grey at the leading edge,
 /// "Share" pink at the trailing. It is your account's one address, the same
 /// every time; anyone on Aztec pays it privately.
+///
+/// **AZTEC TO AZTEC ONLY, SAID (prd §1779; user: "they may see their aztec
+/// address and send to it", "whenever there is an aztec in view it should
+/// be totally clear only aztec to aztec").** An Aztec address is not an
+/// Ethereum one: a wallet or an exchange on Ethereum refuses it, and nothing
+/// here said why. One line over the address says it, in Aztec's own ink,
+/// the same words wherever the address stands; one row under it is the way
+/// in for money on Ethereum: Send's own sentence to your private account.
 struct MoveAztecReceive<Head: View>: View {
     var inTray = false
     /// "your private balance" tapped: back to Receive's "on" list.
     var leave: () -> Void = {}
+    /// Money on Ethereum comes in through Send (prd §1779).
+    var addMoney: () -> Void = {}
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
@@ -25,8 +35,8 @@ struct MoveAztecReceive<Head: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 MoveFlow {
                     head()
-                    MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                    ink: DS.pickInk, action: leave, hint: Text("Picks where it lands"))
+                    MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
+                                    ink: DS.aztecInk, action: leave, hint: Text("Picks where it lands"))
                     MovePhrase("Aztec", glue: String(localized: "on"))
                     if let address {
                         MoveClause(glue: String(localized: "at")) {
@@ -40,12 +50,23 @@ struct MoveAztecReceive<Head: View>: View {
                     }
                 }
                 if let address {
+                    // Over the address, where it is seen before the copy.
+                    Text("Aztec to Aztec only.")
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.aztecInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s2)
                     Button { copy(address) } label: { Self.grid(address) }
                         .buttonStyle(RowPress())
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, DS.Space.s4)
                         .accessibilityLabel(Text(verbatim: address))
                         .accessibilityHint(Text("Copies the address"))
+                    DSDoorRow(icon: "plus", label: "Add money from Ethereum") {
+                        DSHaptic.selection()
+                        addMoney()
+                    }
+                    .padding(.top, DS.Space.s4)
                 }
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
@@ -100,14 +121,14 @@ struct MoveAztecReceive<Head: View>: View {
         HStack(alignment: .firstTextBaseline) {
             if let address {
                 Button { copy(address) } label: {
-                    Text(copied ? "Copied" : "Copy").dsText(.heading24).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+                    Text(copied ? "Copied" : "Copy for Aztec").dsText(.heading24).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
                 }
                 .buttonStyle(RowPress())
                 Spacer(minLength: DS.Space.s3)
                 ShareLink(item: address) {
                     Text("Share")
                         .dsText(.heading34)
-                        .foregroundStyle(DS.pickInk)
+                        .foregroundStyle(DS.aztecInk)
                         .frame(minHeight: 48, alignment: .trailing)
                 }
                 .buttonStyle(RowPress())

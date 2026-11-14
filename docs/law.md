@@ -160,6 +160,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Private in Holdings ends in Add money, a row that stays whether or not anything is held; it opens Send to the private balance you have, or Send's To list when you have two (§1776, §1719). Move draws no slider: an amount is typed or picked from its rows, $20 · $50 · $100, Half, All (§1754, §1776).
 - A send within Aztec goes on behind its sheet: the sheet closes once Face ID and the co-signer have answered, and a capsule over the tab bar says the step under way, "Sent to Aztec" for two seconds, or "Not sent", whose tap opens the sentence again. One send at a time; a move-in and an exit stay in their sheet (§1777, §1700w).
 - A one-time private address moves a token first while the ETH beside it pays its gas, then the ETH; money waiting there that will not move by itself is a row under Private in Holdings, amber, opening Receive (§1778, §1567).
+- Move opens on a ranked menu every time (Send, Receive, Swap, Make private, then the rest); under Send's and Swap's sentence each choice is also a row. Receive shows its private doors as rows. Your private balance is Ethereum's, your private account is Aztec, in its own ink (`DS.aztecInk`), with "Aztec to Aztec only." wherever its address stands. A token waiting for gas offers Pay the gas from your account, and says it links the address to you (§1779).
 - Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before the key signs (Face ID itself is asked at the tap, §1687). The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
 - Round-ups round to the next $1 or $5, picked in the walk and the tray; the walk says "Save your change, earn interest, privately." (§1741). Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every send's change to the next dollar goes to Round-ups (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
@@ -251,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1955 of 2029 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1956 of 2030 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1825,7 +1826,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
 - §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and… (amended by §1480)
 - §1437 — Revoke in the app: your account takes back what it let others spend, in Wallet › Security (builds §1436 item 2; the p…
-- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… (amended by §1547, §1776) [+3 sub-entries]
+- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… (amended by §1547, §1776, §1779) [+3 sub-entries]
 - §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) [+1 sub-entries]
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
@@ -1933,7 +1934,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
 - §1546 — Tor is watched for as long as it runs: "On" is tor's answer of the last five seconds, a return renews circuits, a new… (amended by §1597)
-- §1547 — Move's verbs read A–Z; Move opens on Swap
+- §1547 — Move's verbs read A–Z; Move opens on Swap (amended by §1779)
 - §1548 — Your account's keys read until every network answers, and a failed read keeps the last one
 - §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends… (amended by §1597)
 - §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §14…
@@ -1952,7 +1953,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's… (part superseded by §1688)
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu… (amended by §1675)
-- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694, §1778)
+- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694, §1778, §1779)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet… (amended by §1778)
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider…
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1647)
@@ -2101,7 +2102,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e)
 - §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700ac, §1700k, §1720)
-- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720, §1776)
+- §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720, §1776, §1779)
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
 - §1700i — Apps on Aztec: one door on the Wallet's Home opens Aztec's own directory in Casberi's browser (amended by §1700j, §1700k, §1700p)
@@ -2144,7 +2145,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
 - §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720, §1776, §1778)
-- §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private…
+- §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private… (amended by §1779)
 - §1720 — Into your private balance on Aztec from your co-signer: when Shield scores your co-signer and not your account, Move'…
 - §1721 — Railgun in Holdings and Move, in every build: its tokens in the one Private block, moving in by the token you picked,… (amended by §1727)
 - §1722 — The balance is dated when it is old and read again when it changed, and Zerion is read three at a time with holdings…
@@ -2161,7 +2162,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1733 — Library leads with what is yours: a Recent row, apps you lack stepped back and no dot on the ones you have, a folder'…
 - §1734 — The Feed's box holds one thing and says so: "Newest" leads its line and a short thing is set larger; the Newest list…
 - §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at… (amended by §1739)
-- §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once
+- §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once (amended by §1779)
 - §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
 - §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle… (amended by §1738a)
 - §1738a — The three retired picks' model is deleted: the Railgun and Privacy Pools heads, the Safe card, their probes and the p…
@@ -2183,7 +2184,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
 - §1753 — Your Aztec account's engine starts over when its store stops answering
-- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776)
+- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776, §1779)
 - §1755 — Move's act is a pink card
 - §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view
 - §1757 — The Aztec apps you have connected stand as tiles beside the directory (extends §1700m; keeps §1700c's "no list of app… (amended by §1758)
@@ -2207,7 +2208,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1775 — Save on a transfer asks who the address is: someone you have, or a new name
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
-- §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings
+- §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779)
+- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A…
 
 ## Dead rulings → what replaced them (generated)
 

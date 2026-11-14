@@ -565,6 +565,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     .animation(DS.Motion.standard, value: move.stage)
                     .animation(DS.Motion.standard, value: move.amount)
                     .animation(DS.Motion.standard, value: move.recipient)
+                // The world's rule, in view wherever Aztec is (prd §1779): a
+                // send from your private account reaches Aztec addresses.
+                // Taking money out to Ethereum is the one crossing, and its
+                // sentence says Ethereum itself.
+                if move.mode == .send, !move.toEthereum, !isDone {
+                    Text("Aztec to Aztec only.")
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.aztecInk)
+                        .padding(.top, DS.Space.s2)
+                }
                 Group {
                     if let open, move.stage == .ready {
                         choices(open)
@@ -636,7 +646,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             MovePhrase(String(localized: "Reading Aztec…"), ink: DS.textSecondary)
         case .needsFunds(let address):
             MoveClause(glue: String(localized: "Fund")) {
-                Button { copy(address) } label: { MoveWord(YourAccount.short(address), ink: DS.pickInk) }
+                Button { copy(address) } label: { MoveWord(YourAccount.short(address), ink: DS.aztecInk) }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Copies the address"))
             }
@@ -671,14 +681,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 // "Your private balance", as on Ethereum (prd §1719): in Move
                 // a balance is where money sits; "account" stays where it
                 // has an address and apps (Your account, Receive).
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
+                                ink: move.stage == .ready ? DS.aztecInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
                 MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
             } else {
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance on Aztec"),
-                                ink: move.stage == .ready ? DS.pickInk : DS.textPrimary,
+                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private account on Aztec"),
+                                ink: move.stage == .ready ? DS.aztecInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
                 MoveClause(glue: String(localized: "to")) { recipientWord }
@@ -693,7 +703,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 if let to = move.recipient {
                     MoveWord(AddressTail.short(to) + ".", ink: MoveSentence.settledInk)
                 } else {
-                    MoveWord(String(localized: "address."), ink: open == .recipient ? DS.pickInk : DS.textTertiary)
+                    MoveWord(String(localized: "address."), ink: open == .recipient ? DS.aztecInk : DS.textTertiary)
                 }
             }
         }
@@ -711,7 +721,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .focused($typing)
                 .dsText(rung)
                 .monospacedDigit()
-                .foregroundStyle(DS.pickInk)
+                .foregroundStyle(DS.aztecInk)
                 .fixedSize()
         }
         .accessibilityLabel(Text("Amount"))
@@ -899,7 +909,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
             .onSubmit { take(typed) }
         Button { take(UIPasteboard.general.string ?? "") } label: {
-            Text("Paste").dsText(.body17).foregroundStyle(DS.pickInk)
+            Text("Paste").dsText(.body17).foregroundStyle(DS.aztecInk)
                 .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight + DS.Space.s3, alignment: .leading)
                 .contentShape(Rectangle())
         }
@@ -1087,7 +1097,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         Button(action: act) {
             Text(verbatim: word)
                 .dsText(.heading34)
-                .foregroundStyle(on ? DS.pickInk : DS.textTertiary)
+                .foregroundStyle(on ? DS.aztecInk : DS.textTertiary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(minHeight: 48, alignment: .trailing)

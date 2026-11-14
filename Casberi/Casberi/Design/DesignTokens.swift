@@ -280,6 +280,13 @@ enum DS {
     /// own name so the pick can turn in one line. `ds-template-audit.py` check
     /// E holds `Screens/` to it.
     static var pickInk: Color { brandInk }
+    /// **AZTEC IS A DIFFERENT WORLD, AND LOOKS IT (prd §1779; user,
+    /// 2026-11-13: "when doing anything aztec it shoudl be clear it's a
+    /// different world", then "yes it's own color").** Where a screen is
+    /// Aztec's, this takes the pick's place: its words, its glyphs, its act.
+    /// The lime of the AZTEC mark the app already draws; darker on the light
+    /// page, where the lime itself cannot be read.
+    static var aztecInk: Color { Color.adaptive(dark: "#c8f53c", light: "#4f6b00") }
     /// The pick's wash — `pickInk` at `tintDim`'s opacity — for a ground that
     /// says picked (the section switcher's slide, a face rail's circle, a verb
     /// disc's rest).

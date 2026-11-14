@@ -318,6 +318,18 @@ enum FreshAddress {
         return (PrivateMoney.plain(need), PrivateMoney.plain(max(need - held, 0)))
     }
 
+    /// **PAY THE GAS (prd §1779).** What your account sends a fresh address so
+    /// a token waiting there can move: the shortfall at today's cap and half
+    /// again (a fee can rise before it lands), in ETH to six places, rounded
+    /// up. Nil when the address already holds enough.
+    static func gasToPay(ethHeld: String, maxFee: String) -> String? {
+        guard let gas = tokenGas(ethHeld: ethHeld, maxFee: maxFee), let short = Decimal(string: gas.shortfall), short > 0 else { return nil }
+        var eth = short * Decimal(string: "1.5")! / pow(10, 18)
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &eth, 6, .up)
+        return NSDecimalNumber(decimal: rounded).stringValue
+    }
+
     /// **A RAILGUN TOKEN AT A FRESH ADDRESS (prd §1724): its gas.** The
     /// approval of Railgun's proxy and the shield, at most, at `maxFee`; the
     /// shortfall is paid from your private ETH, relayed, as USDC's is.

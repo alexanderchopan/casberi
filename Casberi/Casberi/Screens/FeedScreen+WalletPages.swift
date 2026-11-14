@@ -1134,7 +1134,29 @@ struct WalletYourAccountFigure: View {
                     .lineLimit(1)
                     .padding(.top, DS.Space.s1)
                     .contentTransition(.opacity)
-                Button { copy(address) } label: { AddressGroupsGrid(address: address) }
+                // Beside the Aztec address wherever it can be copied (prd
+                // §1779): an Ethereum wallet refuses it, and this says why.
+                // Its 64 digits stand in Receive's two rows of eight, which
+                // is the room the line takes in the box's fixed height.
+                if aztec != nil {
+                    Text("Aztec to Aztec only.")
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.aztecInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Button { copy(address) } label: {
+                    if aztec != nil {
+                        // Two rows at most: an address that is not 64 digits
+                        // (the demo's) falls back to plain text, which took
+                        // three and pushed Copy out of the box.
+                        MoveAztecReceive<EmptyView>.grid(address)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    } else {
+                        AddressGroupsGrid(address: address)
+                    }
+                }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text(verbatim: address))
                     .accessibilityHint(Text("Copies the address"))
@@ -1143,10 +1165,10 @@ struct WalletYourAccountFigure: View {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
                             .dsSymbolSwap(copied)
                             .dsGlyph(.caption)
-                        Text(copied ? "Copied" : "Copy address")
+                        Text(copied ? "Copied" : aztec != nil ? "Copy for Aztec" : "Copy address")
                             .dsText(.heading17)
                     }
-                    .foregroundStyle(copied ? DS.confirmInk : DS.pickInk)
+                    .foregroundStyle(copied ? DS.confirmInk : aztec != nil ? DS.aztecInk : DS.pickInk)
                     .dsTapTarget()
                 }
                 .buttonStyle(RowPress())

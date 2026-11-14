@@ -21,9 +21,13 @@ struct MoveFreshSentence<Head: View>: View {
     var inTray = false
     /// "your private balance" tapped: back to Receive's "on" list.
     var leave: () -> Void = {}
+    /// Pay the gas (prd §1779): Send, filled with this address and the ETH
+    /// it is short of.
+    var payGas: (_ address: String, _ eth: String) -> Void = { _, _ in }
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
+    @State private var reading = false
     @Environment(\.modelContext) private var context
     private var book: FreshReceive { .shared }
     private var entry: FreshAddress.Entry? { book.current }
@@ -59,6 +63,24 @@ struct MoveFreshSentence<Head: View>: View {
                 // it, a phone's foot covers it until scrolled.
                 line
                     .padding(.top, DS.Space.s2)
+                // **A WAY ON FROM "NEEDS A LITTLE PRIVATE ETH" (prd §1779; user,
+                // of a tester's 1,000 USDC: "do 1 and 2 before we ship").** A
+                // new account has no private ETH to pay with, so the line was
+                // a dead end. Your account can pay it: one send, yours to
+                // confirm, and the line under it says what that costs you.
+                if let entry, case .needsGas = entry.state, !DemoMode.isActive {
+                    DSDoorRow(icon: "fuelpump", title: Text(reading ? "Reading the fee…" : "Pay the gas")) {
+                        guard !reading else { return }
+                        reading = true
+                        Task {
+                            let eth = await book.gasToPay(entry)
+                            reading = false
+                            if let eth { payGas(entry.address, eth) }
+                        }
+                    }
+                    .padding(.top, DS.Space.s2)
+                    DSFootnote("From your account, in the open. It links this address to you.")
+                }
                 if let entry {
                     code(entry.address)
                         .padding(.top, DS.Space.s4)
@@ -136,6 +158,14 @@ struct MoveFreshSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
         } else if let entry, let said = words(entry.state, symbol: entry.token) {
             Text(verbatim: said.0).dsText(.body17).foregroundStyle(said.1)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if entry != nil {
+            // Before anything arrives (prd §1779): the address is a plain
+            // one, good on every network of its kind, and only this network
+            // is watched. And a token cannot pay its own gas: sent alone it
+            // waits (a tester's 1,000 USDC, 2026-11-13).
+            Text("On \(network.name) only. Any token but ETH needs a little ETH sent with it.")
+                .dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

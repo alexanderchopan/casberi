@@ -118,7 +118,7 @@ HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 # Your private balance is a recipient, one noun told apart by network (prd §1719).
 use "$SENT" 'listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {' "your private balance on Ethereum is no longer a recipient"
-use "$SENT" 'listRow(balanceWord, sub: "Aztec", symbol: "eye.slash") {' "your private balance on Aztec is no longer a recipient"
+use "$SENT" 'listRow(String(localized: "Your private account"), sub: "Aztec", symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
 use "$SENT" 'ForEach(privateWithRows(q), id: \.key) { p in' "private money is no longer rows in Send's token list (prd §1719)"
@@ -880,6 +880,11 @@ let waitBook: [F.Entry] = [
 ]
 check(F.waiting(waitBook, on: 1).map(\.address) == ["0xb", "0xa"], "Holdings misses money waiting at a one-time address, or lists money that is not waiting")
 check(F.waiting(waitBook, on: 11_155_111).map(\.address) == ["0xf"], "money waiting on one network is listed on another")
+// prd §1779: Pay the gas sends the shortfall and half again, in ETH, rounded up; nothing when the address holds enough.
+check(F.gasToPay(ethHeld: "27643633810000", maxFee: "95972657") == "0.00015", "Pay the gas sends another amount than the shortfall and half again")
+check(F.gasToPay(ethHeld: "200000000000000", maxFee: "95972657") == nil, "Pay the gas offers ETH to an address that holds enough")
+check(F.gasToPay(ethHeld: "0", maxFee: "95972657").flatMap { Decimal(string: $0) }.map { $0 > Decimal(string: "0.000127")! && $0 < Decimal(string: "0.0003")! } == true,
+      "Pay the gas for an empty address is not its whole gas and half again")
 
 if failures > 0 { print("✗ \(failures) failure(s)"); exit(1) }
 print("ok")
@@ -942,6 +947,7 @@ mutate "the token goes first whatever ETH is beside it" "$FRESH" 's/return \(Dec
 mutate "token dust goes first" "$FRESH" 's/have >= least,\n              let gas = tokenGas/have >= 0,\n              let gas = tokenGas/'
 mutate "a move that failed is not listed as waiting" "$FRESH" 's/case \.needsGas, \.failed: return true/case .needsGas: return true/'
 mutate "money waiting on another network is listed" "$FRESH" 's/guard entry\.network == chainId else \{ return false \}/guard entry.network >= 0 else { return false }/'
+mutate "Pay the gas sends the bare shortfall" "$FRESH" 's/var eth = short \* Decimal\(string: "1\.5"\)! \/ pow\(10, 18\)/var eth = short \/ pow(10, 18)/'
 mutate "a fresh address is reused" "$FRESH" 's/\}\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/}.map(\\.index).max()/'
 mutate "a move under way is asked again" "$FRESH" 's/entries\.filter \{ if case \.moving = \$0\.state \{ false \} else \{ true \} \}/entries/'
 mutate "the gas is not taken out of what arrived" "$FRESH" 's/let spare = have - reserve/let spare = have/'
@@ -1133,4 +1139,21 @@ use "$HOLD" 'walletFreshWaitingRows(mask: mask, prices: store.shownPrices)' "Hol
 use "$HOLD" 'return FreshAddress.waiting(FreshReceive.shared.entries, on: network.chainId)' "Holdings lists waiting money by another rule than the model's (prd §1778)"
 use "$HOLD" 'chrome.moveFreshReceive = true' "a waiting row no longer opens Receive, where the move is made (prd §1778)"
 echo "  ok   a one-time address: the token first while its own ETH pays, what waits shown in Holdings"
-echo "  ok   78 mutations"
+# prd §1779: the redesign's wiring, by reading.
+use "$SENT" 'static let leadVerbs: [Verb] = [.send, .receive, .swap]' "Move's menu no longer leads with Send, Receive and Swap (prd §1779)"
+use "$SENT" 'listRow(String(localized: "Make private"), symbol: "eye.slash", bareSymbol: true, rung: .heading34) { makePrivate() }' "Make private left Move's menu (prd §1779)"
+use "$SENT" 'Button { if let which = r.opens { tapBlank(which) } } label: {' "a choice row no longer opens the list its word opens (prd §1779)"
+use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
+use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
+use "$SENT" 'DSDoorRow(icon: "eye.slash", label: "Receive privately") { goFresh() }' "Receive's private door is hidden again (prd §1779)"
+use "$SENT" 'DSDoorRow(icon: "diamond", label: "Receive on Aztec") {' "Receive's Aztec door is hidden again (prd §1779)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let entry, case .needsGas = entry.state, !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("On \(network.name) only. Any token but ETH needs a little ETH sent with it.")' "the private address no longer says what it takes before it is copied (prd §1779)"
+use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule on Receive (prd §1779)"
+use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),' "Your account lost its private balance row (prd §1779)"
+! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
+    || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
+echo "  ok   simplified: the menu ranked, rows that change the sentence, private doors in view, Aztec in its own ink, Pay the gas"
+echo "  ok   79 mutations"

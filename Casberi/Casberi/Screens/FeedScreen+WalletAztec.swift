@@ -59,8 +59,8 @@ extension FeedScreen {
             // Aztec, saying what it takes, its tap Move's sentence to your
             // private account on Aztec.
             if store.privateHeld.isEmpty, store.arriving.isEmpty {
-                walletPlaceRow(String(localized: "Your private balance"), line: "Aztec", mark: nil,
-                               hint: String(localized: "Sends to your private balance on Aztec")) {
+                walletPlaceRow(String(localized: "Your private account"), line: "Aztec", mark: nil,
+                               hint: String(localized: "Sends to your private account on Aztec")) {
                     chrome.moveAztec = .deposit
                     chrome.moveTray = true
                 }
@@ -303,16 +303,39 @@ extension FeedScreen {
     @ViewBuilder
     func walletAccountList(safe: String) -> some View {
         let store = AztecAccountStore.shared
-        if store.isShown, let aztec = store.shown.address {
+        let aztec = store.isShown ? store.shown.address : nil
+        // **YOUR PRIVATE BALANCE HAS A ROW (prd §1779; user: "a brand new
+        // user ... will want to do privacy pools or railgun", "how do we make
+        // it so that in 'your account' it shows a row for private balance").**
+        // The list stood only once Aztec was used, and never named the
+        // private balance. It stands as soon as there is a second place, and
+        // the private balance leads Aztec: it is what a new person wants.
+        let privately = PrivateMove.freshAvailable
+        if aztec != nil || privately {
             // Each row picks the address Your Account's header shows (prd
             // §1700f item 2): the lit one is the one showing.
             accountListRow(mark: "safe", title: String(localized: "Safe"),
                            line: String(localized: "Public · \(AddressTail.short(safe))"),
                            lit: !chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = false }
-            accountListRow(mark: "aztec", title: String(localized: "Aztec"),
-                           line: String(localized: "Private · \(AddressTail.short(aztec))"),
-                           lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
-        } else if store.isShown, !DemoMode.isActive, AztecProver.isAvailable {
+            if privately {
+                // No one address to show: it is new each time, and the row
+                // says so. Its tap is Receive privately, where one is made.
+                accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),
+                               line: String(localized: "Ethereum · a new address each time"),
+                               lit: false) {
+                    chrome.moveFreshReceive = true
+                    chrome.moveTray = true
+                }
+            }
+            if let aztec {
+                // Its rule beside its tail, in its own ink (prd §1779).
+                accountListRow(mark: "aztec", title: String(localized: "Aztec"),
+                               line: String(localized: "\(AddressTail.short(aztec)) · Aztec to Aztec only"),
+                               lineInk: DS.aztecInk,
+                               lit: chrome.yourAccountShowsAztec) { chrome.yourAccountShowsAztec = true }
+            }
+        }
+        if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
             // The account is yours from the start (prd §1700t) but its
             // address comes from the engine: read it once, here, and keep it.
             Color.clear.frame(height: 0).task { _ = await store.refresh() }
@@ -321,14 +344,21 @@ extension FeedScreen {
 
     /// The Holdings row's anatomy: the mark, the name over its line; the lit
     /// row's name in the primary ink, the other's secondary.
-    private func accountListRow(mark: String, title: String, line: String, lit: Bool,
+    private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String,
+                                lineInk: Color = DS.textSecondary, lit: Bool,
                                 pick: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { pick() }
         } label: {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-            ProtocolInlineMark(mark: mark)
+            Group {
+                if let glyph {
+                    Image(systemName: glyph).dsGlyph(.body).foregroundStyle(DS.textSecondary)
+                } else {
+                    ProtocolInlineMark(mark: mark)
+                }
+            }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -338,7 +368,7 @@ extension FeedScreen {
                     .lineLimit(1)
                 Text(verbatim: line)
                     .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(lineInk)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)

@@ -195,6 +195,16 @@ final class FreshReceive {
         }
     }
 
+    /// What Pay the gas sends this address (prd §1779): read now, from the
+    /// chain's own fees and what the address holds. Nil when it cannot be
+    /// read, or nothing is short.
+    func gasToPay(_ entry: FreshAddress.Entry) async -> String? {
+        guard let network = PrivacyNetwork.forChain(entry.network), !network.isTest,
+              let fees = try? await PrivateRPC.fees(network),
+              let held = try? await PrivateRPC.decimal(network, "eth_getBalance", [entry.address, "latest"]) else { return nil }
+        return FreshAddress.gasToPay(ethHeld: held, maxFee: String(fees.maxFee))
+    }
+
     // MARK: - A new phone (prd §1562)
 
     private func walkKey(_ root: String, _ network: PrivacyNetwork) -> String {

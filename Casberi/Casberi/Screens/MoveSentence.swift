@@ -597,6 +597,10 @@ struct MoveSentence: View {
         /// The blank that stands open when the sentence appears: Add money's
         /// To, where your private balances lead (prd §1776).
         var opens: Blank? = nil
+        /// The sentence Move itself kept when its sheet closed, as against
+        /// one a door wrote (Pay, Again, Add money): it comes back under the
+        /// verbs, never in place of them (prd §1779).
+        var kept = false
     }
 
     /// **ADD MONEY (prd §1776).** Send with To open, for someone with two
@@ -716,10 +720,16 @@ struct MoveSentence: View {
 
     private var keptDraft: Draft? {
         guard receipt == nil, stage == nil, privateMode == nil, !freshReceive, !fresh else { return nil }
+        // Only what was filled in is a sentence to come back to (prd §1779):
+        // a verb picked and nothing else kept Move on that verb for five
+        // minutes, and a tester took it for stuck ("it opens on send every
+        // time", "restart app to access anything else").
         let filled = !amount.isEmpty || with != nil || buy != nil || !to.isEmpty
-        guard filled || verb != .swap else { return nil }
-        return Draft(verb: verb, network: network, networkPicked: networkPicked, amount: amount, inDollars: inDollars,
-                     withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date(), request: payingRequest)
+        guard filled else { return nil }
+        var draft = Draft(verb: verb, network: network, networkPicked: networkPicked, amount: amount, inDollars: inDollars,
+                          withID: with?.id, buy: buy, buyOn: buyOn, to: to, at: Date(), request: payingRequest)
+        draft.kept = true
+        return draft
     }
 
     /// A Send with To filled, for "Send" on a transfer's sheet (prd §1587).
@@ -1404,6 +1414,24 @@ struct MoveSentence: View {
                 // "your private balance" goes back to where it lands.
                 MoveFreshSentence(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { freshReceive = false; open = .elsewhere }
+                }, payGas: { address, eth in
+                    // **PAY THE GAS (prd §1779).** Send's own sentence, filled:
+                    // a little ETH from your account to the address that is
+                    // waiting, yours to confirm like any send.
+                    withAnimation(DS.Motion.standard) {
+                        freshReceive = false
+                        verb = .send
+                        network = Op.ethereum
+                        networkPicked = true
+                        to = address
+                        inDollars = false
+                        amount = eth
+                        open = nil
+                    }
+                    Task {
+                        await readNetwork()
+                        with = (heldBy[Op.ethereum.chainId] ?? []).first { $0.token.symbol.caseInsensitiveCompare("ETH") == .orderedSame }
+                    }
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
@@ -1426,6 +1454,11 @@ struct MoveSentence: View {
             if aztecReceive, privateMode == nil, open != .verb {
                 MoveAztecReceive(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { aztecReceive = false; open = .elsewhere }
+                }, addMoney: {
+                    // Money on Ethereum comes in through Send's sentence to
+                    // your private balance on Aztec (prd §1779).
+                    withAnimation(DS.Motion.standard) { aztecReceive = false; verb = .send }
+                    goAztec(.deposit)
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
@@ -1522,12 +1555,15 @@ struct MoveSentence: View {
         // "once"): the menu of what Move does is seen each time, Swap's
         // sentence live above it, so a tap on a blank still goes straight on.
         // Only a plain open from the tab: a verb asked for, an arrival or a
-        // private move has its verb already, and so has a draft carried in
-        // or a sentence left half-filled in the last five minutes
-        // (`pickUpDraft`, which runs after this and takes the same draft).
+        // private move has its verb already, and so has a draft a door
+        // carried in. **A sentence Move kept comes back UNDER the verbs
+        // (prd §1779, amending §1736's "or a sentence left half-filled"):**
+        // it stands above the menu as Swap's does, a tap on any of its words
+        // goes on with it, and every other verb is one tap away. Reopening
+        // straight onto it hid the menu behind a word nobody knew to tap.
         .onAppear {
             guard picksUpDraft, receipt == nil, stage == nil else { return }
-            if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60 { return }
+            if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }
             open = .verb
         }
         .onDisappear { chrome.moveDraft = keptDraft }
@@ -2385,50 +2421,56 @@ struct MoveSentence: View {
     /// A word that opens its choices under the sentence.
     /// `lit` is the blank whose list lights the word; a word that opens
     /// another's list (an unanswerable "when") stays its own colour.
+    /// A blank's tap, the word's in the sentence and its row's under it (prd
+    /// §1779): the same refusals, the same list.
+    private func tapBlank(_ which: Blank) {
+        // One transaction is one network: with lines kept, the word says
+        // so rather than doing nothing (prd §83).
+        if which == .network, !items.isEmpty {
+            say(String(localized: "One transaction is one network. Sign this one first"))
+            return
+        }
+        if which == .destination, !items.isEmpty {
+            say(String(localized: "A swap to another network goes alone"))
+            return
+        }
+        // Nowhere else to arrive: the word says so rather than opening a
+        // list of one (prd §83, §1600).
+        if which == .destination, destinations.count < 2 {
+            say(String(localized: "Swaps on \(network.name) stay on \(network.name)"))
+            return
+        }
+        if which == .buy, lockedBuy != nil {
+            say(String(localized: "One token for the whole swap"))
+            return
+        }
+        // A token tapped before a network opens the tokens of every
+        // network, each row naming its own; picking one picks both
+        // (§1442a, user: "i clicked token and network came up").
+        withAnimation(DS.Motion.standard) {
+            if open == which { open = nil } else {
+                open = which
+                search = ""
+                // To opens on the whole book, the person above first
+                // ("Same as above", §1442h): what the line carried is a
+                // choice there, not a filter.
+                if which == .to {
+                    toBefore = (to, resolved)
+                    to = ""
+                    resolved = nil
+                }
+                // Every list opens with the keyboard down, so it has the
+                // room to the foot; its search row raises the keys (§1442b).
+                focus = nil
+            }
+        }
+        DSHaptic.selection()
+    }
+
     private func blank(_ text: String, ink: Color, _ which: Blank, lit: Blank? = nil, label: Text) -> some View {
         let lit = lit ?? which
         return Button {
-            // One transaction is one network: with lines kept, the word says
-            // so rather than doing nothing (prd §83).
-            if which == .network, !items.isEmpty {
-                say(String(localized: "One transaction is one network. Sign this one first"))
-                return
-            }
-            if which == .destination, !items.isEmpty {
-                say(String(localized: "A swap to another network goes alone"))
-                return
-            }
-            // Nowhere else to arrive: the word says so rather than opening a
-            // list of one (prd §83, §1600).
-            if which == .destination, destinations.count < 2 {
-                say(String(localized: "Swaps on \(network.name) stay on \(network.name)"))
-                return
-            }
-            if which == .buy, lockedBuy != nil {
-                say(String(localized: "One token for the whole swap"))
-                return
-            }
-            // A token tapped before a network opens the tokens of every
-            // network, each row naming its own; picking one picks both
-            // (§1442a, user: "i clicked token and network came up").
-            withAnimation(DS.Motion.standard) {
-                if open == which { open = nil } else {
-                    open = which
-                    search = ""
-                    // To opens on the whole book, the person above first
-                    // ("Same as above", §1442h): what the line carried is a
-                    // choice there, not a filter.
-                    if which == .to {
-                        toBefore = (to, resolved)
-                        to = ""
-                        resolved = nil
-                    }
-                    // Every list opens with the keyboard down, so it has the
-                    // room to the foot; its search row raises the keys (§1442b).
-                    focus = nil
-                }
-            }
-            DSHaptic.selection()
+            tapBlank(which)
         } label: {
             word(text, ink: open == lit ? DS.pickInk : ink)
         }
@@ -2707,13 +2749,62 @@ struct MoveSentence: View {
 
     /// The verbs as Move's list rows (prd §1681): a glyph and the verb, no
     /// line under it (a verb says what it does); the current one pink.
+    /// **THE MENU, RANKED (prd §1779, amending §1547's A–Z).** What people
+    /// come to Move for leads at the sentence's size: Send, Receive, Swap and
+    /// Make private. The rest follow a step down, A–Z as before.
+    static let leadVerbs: [Verb] = [.send, .receive, .swap]
+
+    /// Whether Send offers your private account on Aztec (its To list's rule).
+    private var aztecTakesMoney: Bool {
+        (YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable
+    }
+
     private var verbList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(offeredVerbs, id: \.self) { v in
+            ForEach(Self.leadVerbs, id: \.self) { v in
                 listRow(title(v), symbol: glyph(v),
                         picked: v == verb && privateMode == nil && !freshReceive,
-                        bareSymbol: true, rung: .heading24) { pickVerb(v) }
+                        bareSymbol: true, rung: .heading34) { pickVerb(v) }
             }
+            if PrivateMove.available || aztecTakesMoney {
+                listRow(String(localized: "Make private"), symbol: "eye.slash", bareSymbol: true, rung: .heading34) { makePrivate() }
+            }
+            ForEach(offeredVerbs.filter { !Self.leadVerbs.contains($0) }, id: \.self) { v in
+                listRow(title(v), symbol: glyph(v),
+                        picked: v == verb && privateMode == nil && !freshReceive,
+                        bareSymbol: true, rung: .heading17) { pickVerb(v) }
+            }
+        }
+    }
+
+    /// **MAKE PRIVATE (prd §1779).** Money into the private place you have:
+    /// your private balance on Ethereum, or your private account on Aztec.
+    /// With both, Send's To list, which leads with the two. The sentence it
+    /// opens is Send's own; the verb only names what it is for.
+    private func makePrivate() {
+        withAnimation(DS.Motion.standard) {
+            privateMode = nil
+            railgunOpen = false
+            aztecMode = nil
+            freshReceive = false
+            aztecReceive = false
+            verb = .send
+            receipt = nil
+            open = nil
+        }
+        switch (PrivateMove.available, aztecTakesMoney) {
+        case (true, true):
+            withAnimation(DS.Motion.standard) {
+                network = Op.ethereum
+                networkPicked = true
+                to = ""
+                resolved = nil
+                search = ""
+                open = .to
+            }
+            DSHaptic.selection()
+        case (false, true): goAztec(.deposit)
+        default: goPrivate(.deposit)
         }
     }
 
@@ -3003,10 +3094,48 @@ struct MoveSentence: View {
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
             } else {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    choiceRows
                     line
                     if offersPasteLink { pasteLinkRow }
                 }
                 .transition(.opacity)
+            }
+        }
+    }
+
+    /// **ROWS CHANGE IT, THE SENTENCE SAYS IT (prd §1779; a tester, 2026-11-13:
+    /// "I had no idea words are tappable").** Every choice Send and Swap ask
+    /// for is a row under the sentence too: its name grey, what is picked in
+    /// white, a chevron because a list opens. The sentence is still tappable
+    /// word by word; nobody has to know that to change anything.
+    private var choiceRowList: [LedgerRow] {
+        guard receipt == nil, stage == nil, verb == .send || verb == .swap else { return [] }
+        let pick = String(localized: "Choose")
+        var rows: [LedgerRow] = []
+        if verb == .send {
+            let shown = resolved?.name ?? resolved.map { YourAccount.short($0.address) }
+                ?? (to.isEmpty ? pick : to.contains(where: { ".@ ".contains($0) }) ? to : AddressTail.short(to))
+            rows.append(LedgerRow(id: "choiceTo", name: String(localized: "To"), value: shown, opens: .to))
+        }
+        rows.append(LedgerRow(id: "choiceToken", name: String(localized: "Token"), value: with?.token.symbol ?? pick, opens: .with))
+        if verb == .swap {
+            rows.append(LedgerRow(id: "choiceFor", name: String(localized: "For"), value: (crossBuy?.symbol ?? buy?.token.symbol) ?? pick, opens: .buy))
+        }
+        rows.append(LedgerRow(id: "choiceNetwork", name: String(localized: "Network"), value: networkPicked ? network.name : pick, opens: .network))
+        return rows
+    }
+
+    @ViewBuilder private var choiceRows: some View {
+        let rows = choiceRowList
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(rows) { r in
+                    Button { if let which = r.opens { tapBlank(which) } } label: {
+                        ledgerRow(r, chevron: "chevron.right").frame(minHeight: 44)
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Changes it"))
+                }
             }
         }
     }
@@ -3305,6 +3434,20 @@ struct MoveSentence: View {
                 // no network picked, so it stands from the first moment; the
                 // demo's other wallet is made up too, and nothing connects.
                 if elsewhere == nil {
+                    // **THE PRIVATE DOORS, VISIBLE (prd §1779; a tester:
+                    // "when user hits receive they can't see private balance
+                    // either", "it always goes back to main").** §1719 put
+                    // both behind the network's word, which nobody knew to
+                    // tap. Rows, as "Private" was a row before it.
+                    if PrivateMove.freshAvailable {
+                        DSDoorRow(icon: "eye.slash", label: "Receive privately") { goFresh() }
+                    }
+                    if AztecProver.isAvailable, AztecAccountStore.shared.shown.address != nil {
+                        DSDoorRow(icon: "diamond", label: "Receive on Aztec") {
+                            withAnimation(DS.Motion.standard) { open = nil; aztecReceive = true }
+                            DSHaptic.selection()
+                        }
+                    }
                     DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
                         ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
                     }
@@ -4323,7 +4466,9 @@ struct MoveSentence: View {
                 }
             }
             if aztecHere {
-                listRow(balanceWord, sub: "Aztec", symbol: "eye.slash") {
+                // Two nouns (prd §1779, reversing §1719's one): your private
+                // balance is Ethereum's, your private account is Aztec.
+                listRow(String(localized: "Your private account"), sub: "Aztec", symbol: "diamond") {
                     goAztec(.deposit)
                 }
             }
@@ -4427,7 +4572,7 @@ struct MoveSentence: View {
                 }
             }
             if receivesAztec {
-                listRow(String(localized: "Your private balance"), sub: "Aztec", symbol: "eye.slash", picked: aztecReceive) {
+                listRow(String(localized: "Your private account"), sub: "Aztec", symbol: "diamond", picked: aztecReceive) {
                     pick {}
                     if fresh { fresh = false; arrived = true }
                     withAnimation(DS.Motion.standard) { open = nil; aztecReceive = true }
