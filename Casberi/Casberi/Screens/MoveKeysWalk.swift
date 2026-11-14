@@ -53,10 +53,17 @@ struct MoveKeysWalk: View {
     /// The networks this phone's account is on, as the Create screen names them.
     private var networks: [YourAccountOp.Network] { YourAccountOp.networks.filter { !$0.isTest } }
 
-    /// "1 of 4": the limit is a step only with a co-signer, so once the
-    /// co-signer is skipped the walk is three steps long.
-    private var stepCount: Int { step.rawValue <= Step.signer.rawValue || choice.signer != nil ? 4 : 3 }
-    private var stepNumber: Int { step == .roundUps && choice.signer == nil ? 3 : step.rawValue }
+    /// "1 of 3", and it never changes midway (user, 2026-11-13: it read
+    /// "of 4" then "of 3"): the limit is the co-signer's second half, so
+    /// it keeps the co-signer's number.
+    private var stepCount: Int { 3 }
+    private var stepNumber: Int {
+        switch step {
+        case .intro, .recovery: 1
+        case .signer, .limit: 2
+        case .roundUps, .created: 3
+        }
+    }
 
     var body: some View {
         ScrollView {

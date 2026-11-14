@@ -297,11 +297,15 @@ struct MoveScreen: View {
                     }
                     // Creating, every network; recovering, only where the
                     // recovery key can bring it (§1442k).
-                    MovePhrase(recoverable == nil
-                               ? YourAccountReach.words(YourAccountOp.networks.filter { !$0.isTest })
-                               : recoverableOn.map(YourAccountReach.words) ?? "…",
-                               glue: String(localized: "on"),
-                               ink: recoverable != nil && recoverableOn == nil ? DS.textTertiary : DS.textPrimary)
+                    // A found account whose networks read back empty names
+                    // none: "on ." was drawn (user, 2026-11-13).
+                    if recoverable == nil || recoverableOn?.isEmpty != true {
+                        MovePhrase(recoverable == nil
+                                   ? YourAccountReach.words(YourAccountOp.networks.filter { !$0.isTest })
+                                   : recoverableOn.map(YourAccountReach.words) ?? "…",
+                                   glue: String(localized: "on"),
+                                   ink: recoverable != nil && recoverableOn == nil ? DS.textTertiary : DS.textPrimary)
+                    }
                 }
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if let recoverable {
@@ -366,7 +370,7 @@ struct MoveScreen: View {
     /// The one act, at the trailing edge; recovering, a quiet choice beside it.
     private var beforeFoot: some View {
         HStack(alignment: .firstTextBaseline) {
-            if recoverable != nil {
+            if recoverable != nil, !YourAccountKey.holdsRecord {
                 Button { create() } label: {
                     Text("New account")
                         .dsText(.heading17)

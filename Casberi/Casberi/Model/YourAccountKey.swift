@@ -241,6 +241,12 @@ enum YourAccountKey {
         return account
     }
 
+    /// Whether this phone's own record already names an account: `create`
+    /// then restores that one and can make no other, so the found-account
+    /// screen offers no "New account" (user, 2026-11-13: it ended on the
+    /// address it had just found).
+    static var holdsRecord: Bool { address != nil || readRecord() != nil }
+
     /// Take an account back onto this phone (prd §1427). When this phone's
     /// own record names it (the app was reinstalled), the keys here already
     /// sign and nothing needs recovering: nil. Otherwise a NEW key, after
