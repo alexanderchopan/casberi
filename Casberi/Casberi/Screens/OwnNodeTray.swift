@@ -126,7 +126,7 @@ struct OwnNodeTray: View {
         .transition(.opacity)
     }
 
-    /// "https://my-node.local:8080/rpc" → "my-node.local:8080".
+    /// A typed address shortened to its host and port, no scheme or path.
     static func host(_ address: String) -> String {
         guard let url = URL(string: address), let host = url.host else { return address }
         return url.port.map { "\(host):\($0)" } ?? host
